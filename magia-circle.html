@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="カメラで魔法陣を読み取り、英語の呪文と紋の性質をブラウザ内で判定するマギアサークル" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <title>マギアサークル - 魔法陣判定ツール</title>
+  <style>
+    :root{--ink:#f7efd9;--muted:#c5c7c7;--gold:#f5d879;--cyan:#8be0f3;--blue:#183143;--panel:rgba(15,23,35,.9);--line:rgba(139,224,243,.28);--bad:#ff9d91;--good:#92e5ae}
+    *{box-sizing:border-box}html,body{min-height:100%}
+    body{margin:0;color:var(--ink);font-family:ui-serif,Georgia,"Yu Mincho",serif;background:radial-gradient(circle at 15% 8%,rgba(41,120,151,.28),transparent 28%),radial-gradient(circle at 88% 20%,rgba(133,75,180,.22),transparent 28%),linear-gradient(135deg,#070b12,#101f2d 45%,#080910);overflow-x:hidden}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.1;background-image:linear-gradient(90deg,transparent 97%,rgba(139,224,243,.55) 100%),linear-gradient(0deg,transparent 97%,rgba(139,224,243,.55) 100%);background-size:72px 72px}
+    .wrap{max-width:1220px;margin:0 auto;padding:24px 18px 70px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}.back{color:var(--cyan);font:700 14px ui-sans-serif,system-ui,sans-serif;text-decoration:none}.back:hover{text-decoration:underline}.privacy{padding:8px 12px;border:1px solid rgba(146,229,174,.32);border-radius:999px;color:var(--good);font:700 12px ui-sans-serif,system-ui,sans-serif}
+    header{padding:22px 24px 25px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(135deg,rgba(12,34,49,.94),rgba(25,18,42,.92));box-shadow:0 22px 72px rgba(0,0,0,.42),inset 0 0 60px rgba(139,224,243,.06)}h1{margin:0;font-size:clamp(34px,6vw,66px);line-height:1.05;letter-spacing:.04em;text-shadow:0 0 20px rgba(139,224,243,.25)}.subtitle{max-width:850px;margin:14px 0 0;color:#cbd7dc;font:16px/1.75 ui-sans-serif,system-ui,sans-serif}
+    .workspace{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr);gap:18px;align-items:start;margin-top:18px}@media(max-width:900px){.workspace{grid-template-columns:1fr}}
+    .card{position:relative;padding:20px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,rgba(20,35,49,.95),var(--panel));box-shadow:0 18px 60px rgba(0,0,0,.38),inset 0 0 45px rgba(139,224,243,.04)}.card h2{margin:0 0 14px;font-size:22px}.card h3{margin:24px 0 10px;font-size:18px;color:#dcecf0}.stage{position:relative;min-height:310px;display:grid;place-items:center;border:1px solid rgba(139,224,243,.25);border-radius:18px;overflow:hidden;background:radial-gradient(circle,rgba(44,112,142,.25),transparent 55%),#071019}.stage video,.stage canvas{display:block;width:100%;max-height:62vh;object-fit:contain;background:#03070b}.stage video{aspect-ratio:4/3}.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.stage .empty{padding:32px;text-align:center;color:#9db5bd;font:15px/1.7 ui-sans-serif,system-ui,sans-serif}.stage.captured video{visibility:hidden}.stage canvas.hidden{display:none}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}button,.file-label{cursor:pointer;padding:12px 15px;border:1px solid rgba(245,216,121,.46);border-radius:12px;color:#1b1720;font:800 14px ui-sans-serif,system-ui,sans-serif;background:linear-gradient(180deg,#ffe99a,#c58b34);box-shadow:0 8px 18px rgba(0,0,0,.24)}button.secondary,.file-label.secondary{color:var(--ink);border-color:rgba(139,224,243,.38);background:linear-gradient(180deg,#2d5467,#1a3042)}button:disabled{cursor:not-allowed;opacity:.48}.file-label input{display:none}.status{min-height:24px;margin:11px 0 0;color:#a9c6cf;font:14px/1.6 ui-sans-serif,system-ui,sans-serif}.status.error{color:var(--bad)}.status.good{color:var(--good)}.hint{margin:12px 0 0;padding:11px 13px;border-radius:12px;color:#c8dbe0;background:rgba(139,224,243,.07);font:13px/1.65 ui-sans-serif,system-ui,sans-serif}
+    label{display:block;margin:16px 0 7px;color:#dcecf0;font:700 14px ui-sans-serif,system-ui,sans-serif}textarea{width:100%;min-height:92px;resize:vertical;padding:12px 13px;border:1px solid rgba(139,224,243,.32);border-radius:12px;outline:none;color:var(--ink);background:rgba(2,10,17,.72);font:16px/1.65 ui-sans-serif,system-ui,sans-serif}textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(139,224,243,.12)}
+    .result-empty{padding:17px;border:1px dashed rgba(139,224,243,.28);border-radius:14px;color:#9db5bd;font:14px/1.65 ui-sans-serif,system-ui,sans-serif}.result-main{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;padding:18px;border:1px solid rgba(245,216,121,.45);border-radius:16px;background:linear-gradient(135deg,rgba(70,54,24,.72),rgba(25,29,44,.9));}.result-main .label{color:#c7b788;font:700 12px ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em}.result-main .value{margin-top:4px;color:#ffe89a;font-size:34px;font-weight:900}.result-main .score{color:var(--cyan);font:800 20px ui-sans-serif,system-ui,sans-serif}.bars{display:grid;gap:9px;margin-top:12px}.bar-row{display:grid;grid-template-columns:110px 1fr 58px;gap:10px;align-items:center;color:#dbe7e8;font:13px ui-sans-serif,system-ui,sans-serif}.bar{height:10px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.12)}.bar span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4389a2,#f4d77d)}.shape{margin-top:16px;padding:15px;border:1px solid rgba(139,224,243,.24);border-radius:16px;background:rgba(4,12,22,.44)}.shape-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.shape-title b{font-size:25px;color:#9be7f5}.shape-title span{color:#c8d6d8;font:700 13px ui-sans-serif,system-ui,sans-serif}.note{margin:9px 0 0;color:#9db5bd;font:13px/1.6 ui-sans-serif,system-ui,sans-serif}.meta{margin-top:14px;color:#9db5bd;font:12px/1.6 ui-sans-serif,system-ui,sans-serif}.meta code{color:#d9eaff}
+    details{margin-top:18px;border-top:1px solid rgba(139,224,243,.2);padding-top:16px}summary{cursor:pointer;color:var(--gold);font-weight:800}details p,details li{color:#b9c9cb;font:13px/1.7 ui-sans-serif,system-ui,sans-serif}details ul{padding-left:20px}details a{color:#9be7f5}.footer{margin-top:18px;text-align:center;color:#8da5ac;font:12px ui-sans-serif,system-ui,sans-serif}
+    @media(max-width:560px){.wrap{padding:16px 12px 50px}.topbar{align-items:flex-start;flex-direction:column}.card{padding:16px}.bar-row{grid-template-columns:90px 1fr 50px;gap:7px;font-size:12px}.stage{min-height:250px}}
+  </style>
+  <script src="https://docs.opencv.org/4.10.0/opencv.js" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar"><a class="back" href="index.html">← 作品選択へ戻る</a><span class="privacy">画像は端末内で処理します</span></div>
+    <header>
+      <h1>マギアサークル</h1>
+      <p class="subtitle">魔法陣をカメラに映し、円環に刻まれた英語の呪文と、内円に描かれた紋の性質をブラウザ内で判定します。</p>
+    </header>
+
+    <main class="workspace">
+      <section class="card">
+        <h2>魔法陣を読み取る</h2>
+        <div id="stage" class="stage"><div id="stageEmpty" class="empty">カメラを起動して、二重円の魔法陣を正面から映してください。</div><video id="video" autoplay playsinline muted hidden></video><canvas id="captureCanvas" class="hidden"></canvas><canvas id="overlayCanvas" class="hidden"></canvas></div>
+        <div class="controls">
+          <button id="startCamera" type="button">カメラを起動</button>
+          <button id="capture" class="secondary" type="button" disabled>魔法陣を撮影</button>
+          <button id="analyze" type="button" disabled>判定する</button>
+          <label class="file-label secondary">画像を選ぶ<input id="fileInput" type="file" accept="image/*"></label>
+        </div>
+        <p id="cameraStatus" class="status" aria-live="polite">カメラの許可が必要です。</p>
+        <p class="hint">外円と内円の間に英語の呪文を一周書き、内円の中に紋を描いてください。明るく、影の少ない場所で撮影すると読み取りやすくなります。</p>
+
+        <h3>読み取った呪文</h3>
+        <label for="spell">英語の呪文</label>
+        <textarea id="spell" spellcheck="false" placeholder="例: Burn the enemy beneath an endless crimson flame.">Burn the enemy beneath an endless crimson flame.</textarea>
+        <div class="controls"><button id="readSpell" class="secondary" type="button" disabled>円環から呪文を読む</button><button id="judgeSpell" type="button">呪文を判定</button></div>
+        <p id="modelStatus" class="status" aria-live="polite">判定にはブラウザ内モデルの読み込みが必要です。</p>
+      </section>
+
+      <aside class="card" aria-live="polite">
+        <h2>判定結果</h2>
+        <div id="structureResult" class="result-empty">魔法陣を撮影すると、二重円・呪文・紋の構造を確認します。</div>
+        <div id="attributeResult" class="result-empty" style="margin-top:12px">呪文を判定すると、最も近い属性がここに表示されます。</div>
+        <div id="shapeResult" class="result-empty" style="margin-top:12px">紋を判定すると、攻撃・防御・回復／支援・デバフの割合が表示されます。</div>
+        <div class="meta">文章Embedding: <code>all-MiniLM-L6-v2</code> / 画像処理: <code>OpenCV.js</code> / OCR: <code>Tesseract.js</code></div>
+      </aside>
+    </main>
+
+    <section id="attribution" class="card" style="margin-top:18px">
+      <h2>外典の由来</h2>
+      <p class="note">マギアサークルは、以下の第三者ライブラリ・モデルをブラウザ内で利用します。正式な配布時には各ライセンス全文と著作権表示を同梱してください。</p>
+      <details>
+        <summary>使用ライブラリとモデル</summary>
+        <ul>
+          <li><strong>OpenCV.js</strong><br>Source: <a href="https://github.com/opencv/opencv" target="_blank" rel="noreferrer">opencv/opencv</a><br>Work: Open Source Computer Vision Library<br>License: Apache License 2.0<br>備考: 二重円、輪郭、紋の画像解析に使用。</li>
+          <li><strong>Tesseract.js</strong><br>Source: <a href="https://github.com/naptha/tesseract.js" target="_blank" rel="noreferrer">naptha/tesseract.js</a><br>Work: Tesseract.js OCR library<br>License: Apache License 2.0<br>備考: 円環に書かれた英語の呪文を読み取るために使用。</li>
+          <li><strong>Tesseract OCR model</strong><br>Source: <a href="https://github.com/tesseract-ocr/tessdata_fast" target="_blank" rel="noreferrer">tesseract-ocr/tessdata_fast</a><br>Work: <code>eng.traineddata</code><br>License: Apache License 2.0<br>備考: 英語OCRモデルとして使用。</li>
+          <li><strong>Transformers.js</strong><br>Source: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noreferrer">huggingface/transformers.js</a><br>Work: Transformers.js<br>License: Apache License 2.0<br>備考: 文章Embeddingモデルをブラウザ内で実行するために使用。</li>
+          <li><strong>文章Embeddingモデル</strong><br>Source: <a href="https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2" target="_blank" rel="noreferrer">sentence-transformers/all-MiniLM-L6-v2</a><br>Work: <code>all-MiniLM-L6-v2</code> / Transformers.js用ONNX変換版<br>License: Apache License 2.0<br>備考: 英語の呪文と属性説明文の意味比較に使用。</li>
+        </ul>
+      </details>
+      <details>
+        <summary>処理について</summary>
+        <p>カメラ画像は外部サーバーへ送信しません。カメラ映像、OCR、画像解析、文章Embeddingはこのブラウザ上で実行します。ライブラリやモデルの初回ファイル取得にはネットワーク接続が必要です。</p>
+      </details>
+    </section>
+    <p class="footer">マギアサークルの判定は画像の状態や文字の書き方によって結果が変わることがあります。</p>
+  </div>
+
+  <script type="module">
+    const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
+    const ATTRIBUTES = {
+      flame:{label:'炎',icon:'🔥',descriptions:['A spell that controls fire and heat.','A spell that burns enemies with intense crimson flames.','A destructive spell that creates explosions and blazing fire.']},
+      aqua:{label:'水',icon:'💧',descriptions:['A spell that controls water and flowing currents.','A spell that summons rain, waves, rivers, or the sea.','A fluid spell that washes away danger and restores calm.']},
+      bolt:{label:'雷',icon:'⚡',descriptions:['A spell that commands lightning and electric energy.','A sudden attack that strikes with thunder and flashing light.','A fast spell that releases a powerful electrical shock.']},
+      gravity:{label:'重力',icon:'⬤',descriptions:['A spell that controls gravity, weight, and falling force.','A heavy spell that pulls enemies down toward the ground.','A spell that bends mass, orbit, and the force of attraction.']},
+      storm:{label:'嵐',icon:'🌪',descriptions:['A spell that commands wind, clouds, rain, and thunder together.','A violent spell that summons a raging storm across the sky.','A swirling spell that tears through the air with weather and wind.']},
+      law:{label:'法',icon:'⚖',descriptions:['A spell that creates order, rules, justice, and binding contracts.','A precise spell that judges enemies and enforces a command.','A protective spell that establishes a system and restores order.']},
+      chaos:{label:'混沌',icon:'☄',descriptions:['A spell that spreads disorder, randomness, and confusion.','A wild spell that breaks rules and twists reality unpredictably.','A strange destructive spell filled with noise, madness, and entropy.']}
+    };
+    const $ = id => document.getElementById(id);
+    const video = $('video');
+    const captureCanvas = $('captureCanvas');
+    const overlayCanvas = $('overlayCanvas');
+    const captureContext = captureCanvas.getContext('2d', {willReadFrequently:true});
+    const overlayContext = overlayCanvas.getContext('2d');
+    let stream = null;
+    let captured = false;
+    let detected = null;
+    let ocrWorker = null;
+    let extractor = null;
+    let attributeVectors = null;
+    let embeddingModulePromise = null;
+
+    function setStatus(id, text, kind=''){ const el=$(id); el.textContent=text; el.className=`status${kind ? ` ${kind}` : ''}`; }
+    function clamp(v,min=0,max=1){ return Math.max(min,Math.min(max,v)); }
+    function escapeHtml(value){ return String(value).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+    function waitFor(check, timeout=20000, interval=120){ return new Promise((resolve,reject)=>{ const start=Date.now(); const tick=()=>{ try{ const value=check(); if(value){resolve(value);return;} }catch{} if(Date.now()-start>timeout){reject(new Error('必要なブラウザモデルを読み込めませんでした。'));return;} setTimeout(tick,interval); }; tick(); }); }
+    function canvasFromImage(image){ const max=1400; const scale=Math.min(1,max/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height)); captureCanvas.width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale)); captureCanvas.height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale)); captureContext.drawImage(image,0,0,captureCanvas.width,captureCanvas.height); showCaptured(); }
+    function showCaptured(){ captured=true; $('stage').classList.add('captured'); video.hidden=true; $('stageEmpty').hidden=true; captureCanvas.classList.remove('hidden'); overlayCanvas.classList.remove('hidden'); $('capture').disabled=true; $('analyze').disabled=false; drawOverlay(); }
+    function drawOverlay(){ overlayCanvas.width=captureCanvas.width; overlayCanvas.height=captureCanvas.height; overlayContext.clearRect(0,0,overlayCanvas.width,overlayCanvas.height); if(!detected) return; overlayContext.save(); overlayContext.strokeStyle='#8be0f3'; overlayContext.lineWidth=Math.max(2,overlayCanvas.width/420); overlayContext.setLineDash([10,7]); for(const c of [detected.outer,detected.inner]){ overlayContext.beginPath();overlayContext.arc(c.x,c.y,c.r,0,Math.PI*2);overlayContext.stroke(); } overlayContext.setLineDash([]); overlayContext.fillStyle='#f5d879';overlayContext.font=`${Math.max(14,overlayCanvas.width/55)}px ui-sans-serif`;overlayContext.fillText('二重円',detected.outer.x-detected.outer.r,Math.max(24,detected.outer.y-detected.outer.r-12)); overlayContext.restore(); }
+    async function startCamera(){
+      if(!navigator.mediaDevices?.getUserMedia){ setStatus('cameraStatus','このブラウザではカメラを利用できません。画像ファイルを選んでください。','error'); return; }
+      try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false}); video.srcObject=stream; video.hidden=false; $('stage').classList.remove('captured');$('stageEmpty').hidden=true;captureCanvas.classList.add('hidden');overlayCanvas.classList.add('hidden');captured=false;detected=null; $('capture').disabled=false; $('analyze').disabled=true; setStatus('cameraStatus','カメラが起動しました。魔法陣が画面に収まったら撮影してください。','good'); }
+      catch(error){ setStatus('cameraStatus','カメラを起動できませんでした。権限を確認するか、画像ファイルを選んでください。','error'); }
+    }
+    function captureFrame(){ if(!stream || video.readyState<2) return; captureCanvas.width=video.videoWidth;captureCanvas.height=video.videoHeight;captureContext.drawImage(video,0,0,captureCanvas.width,captureCanvas.height);showCaptured();setStatus('cameraStatus','撮影しました。判定するか、呪文欄を確認してください。','good'); }
+    function loadFile(file){ if(!file) return; const image=new Image();image.onload=()=>{canvasFromImage(image);setStatus('cameraStatus','画像を読み込みました。判定する準備ができています。','good');};image.onerror=()=>setStatus('cameraStatus','画像を読み込めませんでした。','error');image.src=URL.createObjectURL(file); }
+
+    function detectCircles(canvas){
+      if(!window.cv?.Mat) throw new Error('画像処理ライブラリがまだ読み込み中です。少し待ってから再試行してください。');
+      const cv=window.cv;
+      const src=cv.imread(canvas), gray=new cv.Mat(), circles=new cv.Mat();
+      try{
+        cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.medianBlur(gray,gray,5);
+        cv.HoughCircles(gray,circles,cv.HOUGH_GRADIENT,1,Math.max(24,gray.rows/8),100,28,Math.max(20,Math.round(Math.min(gray.cols,gray.rows)*.08)),Math.round(Math.min(gray.cols,gray.rows)*.49));
+        const found=[];for(let i=0;i<circles.cols;i++){const x=circles.data32F[i*3],y=circles.data32F[i*3+1],r=circles.data32F[i*3+2];if(Number.isFinite(x+y+r))found.push({x,y,r});}
+        found.sort((a,b)=>b.r-a.r);let best=null,bestScore=-Infinity;
+        for(let i=0;i<found.length;i++) for(let j=i+1;j<found.length;j++){const outer=found[i],inner=found[j];if(outer.r<=inner.r*1.25)continue;const centerError=Math.hypot(outer.x-inner.x,outer.y-inner.y)/outer.r;if(centerError>.16)continue;const ratio=inner.r/outer.r;if(ratio<.28||ratio>.78)continue;const score=(1-centerError)*2+ratio; if(score>bestScore){bestScore=score;best={outer,inner,confidence:clamp((score-1)/2)};}}
+        if(!best) throw new Error('二重円を検出できませんでした。魔法陣を正面から、外円全体が見えるように撮影してください。');
+        return best;
+      }finally{src.delete();gray.delete();circles.delete();}
+    }
+    function samplePolar(canvas,circle,innerGap=10,outerGap=10,width=1200,height=180){
+      const out=document.createElement('canvas');out.width=width;out.height=height;const ctx=out.getContext('2d');const source=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,canvas.width,canvas.height);const data=ctx.createImageData(width,height);const inner=circle.inner.r+innerGap,outer=circle.outer.r-outerGap;
+      for(let x=0;x<width;x++){const theta=(x/width)*Math.PI*2;const cos=Math.cos(theta),sin=Math.sin(theta);for(let y=0;y<height;y++){const r=inner+(y/(height-1))*Math.max(1,outer-inner);const sx=Math.round(circle.outer.x+cos*r),sy=Math.round(circle.outer.y+sin*r),di=(y*width+x)*4;if(sx<0||sy<0||sx>=canvas.width||sy>=canvas.height){data.data[di]=data.data[di+1]=data.data[di+2]=0;data.data[di+3]=255;continue;}const si=(sy*canvas.width+sx)*4;data.data[di]=source.data[si];data.data[di+1]=source.data[si+1];data.data[di+2]=source.data[si+2];data.data[di+3]=255;}}
+      ctx.putImageData(data,0,0);return out;
+    }
+    function ringCoverage(polar){const data=polar.getContext('2d',{willReadFrequently:true}).getImageData(0,0,polar.width,polar.height).data;let covered=0;for(let x=0;x<polar.width;x++){let dark=0;for(let y=0;y<polar.height;y++){const i=(y*polar.width+x)*4;const lum=(data[i]*.299+data[i+1]*.587+data[i+2]*.114);if(lum<150)dark++;}if(dark>=Math.max(2,polar.height*.055))covered++;}return covered/polar.width;}
+    function cropCircle(canvas,circle){const size=Math.round(circle.inner.r*2);const out=document.createElement('canvas');out.width=size;out.height=size;out.getContext('2d').drawImage(canvas,circle.inner.x-circle.inner.r,circle.inner.y-circle.inner.r,size,size);return out;}
+    function analyzeSigil(canvas,circle){
+      if(!window.cv?.Mat) throw new Error('画像処理ライブラリがまだ読み込み中です。');
+      const cv=window.cv;
+      const src=cv.imread(canvas),gray=new cv.Mat(),mask=new cv.Mat(),edges=new cv.Mat(),contours=new cv.MatVector(),hierarchy=new cv.Mat();
+      try{
+        cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.threshold(gray,mask,0,255,cv.THRESH_BINARY_INV+cv.THRESH_OTSU);const center=new cv.Point(circle.inner.r,circle.inner.r);const circleMask=cv.Mat.zeros(mask.rows,mask.cols,cv.CV_8UC1);cv.circle(circleMask,center,Math.max(2,circle.inner.r-8),new cv.Scalar(255),-1);cv.bitwise_and(mask,circleMask,mask);circleMask.delete();cv.Canny(gray,edges,70,150);const edgeDensity=clamp(cv.countNonZero(edges)/(Math.PI*Math.max(1,circle.inner.r-8)**2)*3.8);cv.findContours(mask,contours,hierarchy,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE);
+        let largest=null,largestArea=0,contourCount=0;for(let i=0;i<contours.size();i++){const c=contours.get(i),a=cv.contourArea(c);if(a>30)contourCount++;if(a>largestArea){if(largest)largest.delete();largest=c;largestArea=a;}else c.delete();}
+        const inkRatio=clamp(cv.countNonZero(mask)/(mask.rows*mask.cols));let roundness=.2,angularity=.25,spiky=.2;
+        if(largest){const perimeter=cv.arcLength(largest,true),approx=new cv.Mat();cv.approxPolyDP(largest,approx,Math.max(2,perimeter*.025),true);roundness=clamp((4*Math.PI*Math.max(1,largestArea))/(Math.max(1,perimeter*perimeter))*1.15);angularity=clamp((approx.rows-2)/12*.72+(1-roundness)*.28);const hullIndices=new cv.Mat(),defects=new cv.Mat();try{cv.convexHull(largest,hullIndices,false,false);if(hullIndices.rows>3){cv.convexityDefects(largest,hullIndices,defects);let deep=0;for(let i=0;i<defects.rows;i++){const depth=defects.data32S[i*4+3]/256;if(depth>perimeter*.018)deep++;}spiky=clamp(deep/8*.7+(1-roundness)*.3);}}catch{}hullIndices.delete();defects.delete();approx.delete();}
+        const lineDensity=clamp(edgeDensity*.58+clamp(contourCount/18)*.22+inkRatio*.2);const raw={attack:spiky*.62+edgeDensity*.22+(1-roundness)*.16,defense:angularity*.7+edgeDensity*.12+(1-roundness)*.18,support:roundness*.78+(1-edgeDensity)*.12+(1-angularity)*.1,debuff:lineDensity*.75+edgeDensity*.25};const total=Object.values(raw).reduce((a,b)=>a+b,0)||1;return {attack:raw.attack/total,defense:raw.defense/total,support:raw.support/total,debuff:raw.debuff/total};
+      }finally{src.delete();gray.delete();mask.delete();edges.delete();contours.delete();hierarchy.delete();}
+    }
+    function renderStructure(circle,ring,shape){const rows=[['二重円',circle?'検出':'未検出',circle?.confidence??0],['呪文の環',ring>=.58?'一周を確認':'一周を確認できない',ring],['内円の紋',shape?'検出':'未検出',shape?1:0]];$('structureResult').className='';$('structureResult').innerHTML='<b>魔法陣の構造</b><div class="bars">'+rows.map(([label,value,score])=>`<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(clamp(score)*100)}%"></span></div><strong>${escapeHtml(value)}</strong></div>`).join('')+'</div>'+(ring<.58?'<p class="note">外円と内円の間に、円周方向へ続く呪文が必要です。</p>':'');}
+    function renderShape(scores){const names={attack:'攻撃',defense:'防御',support:'回復／支援',debuff:'デバフ'};const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);const [top,second]=sorted;const certainty=clamp((top[1]-second[1])/.32);$('shapeResult').className='shape';$('shapeResult').innerHTML=`<div class="shape-title"><b>${names[top[0]]}</b><span>判定確度 ${Math.round(certainty*100)}%</span></div><div class="bars">${sorted.map(([key,value])=>`<div class="bar-row"><span>${names[key]}</span><div class="bar"><span style="width:${Math.round(value*100)}%"></span></div><strong>${Math.round(value*100)}%</strong></div>`).join('')}</div><p class="note">${certainty<.35?'複数の性質が近く、やや曖昧な紋です。':'最も高い性質を紋の判定として採用しました。'}</p>`;}
+    async function ensureOcr(){if(ocrWorker)return ocrWorker;await waitFor(()=>window.Tesseract);setStatus('modelStatus','OCRモデルを準備しています…');ocrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status)setStatus('modelStatus',`OCRモデル: ${m.status} ${m.progress?Math.round(m.progress*100)+'%':''}`);}});return ocrWorker;}
+    async function readSpell(){if(!detected){setStatus('cameraStatus','先に魔法陣を撮影してください。','error');return;}try{const worker=await ensureOcr();const polar=samplePolar(captureCanvas,detected);const result=await worker.recognize(polar,{tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,!\'-'});const text=(result.data.text||'').replace(/\s+/g,' ').trim();$('spell').value=text;setStatus('modelStatus',text?'円環から呪文を読み取りました。':'呪文を読み取れませんでした。呪文欄へ直接入力してください。',text?'good':'error');}catch(error){setStatus('modelStatus',`OCRに失敗しました: ${error.message}`,'error');}}
+    async function ensureExtractor(){if(extractor)return extractor;if(!embeddingModulePromise)embeddingModulePromise=import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');const {pipeline}=await embeddingModulePromise;setStatus('modelStatus','文章Embeddingモデルを読み込んでいます…');extractor=await pipeline('feature-extraction',MODEL_ID,{dtype:'q8',progress_callback:info=>{if(info?.status)setStatus('modelStatus',`Embeddingモデル: ${info.status} ${info.progress?Math.round(info.progress*100)+'%':''}`);}});return extractor;}
+    async function embed(texts,prefix){const model=await ensureExtractor();const output=await model(texts.map(t=>`${prefix}: ${t}`),{pooling:'mean',normalize:true});const values=output.tolist();return texts.length===1?[Array.isArray(values[0])?values[0]:values]:values;}
+    async function ensureAttributeVectors(){if(attributeVectors)return attributeVectors;const keys=Object.keys(ATTRIBUTES),texts=[];for(const key of keys)for(const description of ATTRIBUTES[key].descriptions)texts.push(description);const rows=await embed(texts,'passage');attributeVectors={};let index=0;for(const key of keys){attributeVectors[key]=ATTRIBUTES[key].descriptions.map(()=>rows[index++]);}return attributeVectors;}
+    function cosine(a,b){let dot=0,aa=0,bb=0;for(let i=0;i<a.length;i++){dot+=a[i]*b[i];aa+=a[i]*a[i];bb+=b[i]*b[i];}return dot/(Math.sqrt(aa)*Math.sqrt(bb)||1);}
+    async function judgeSpell(){const text=$('spell').value.trim();if(!text){setStatus('modelStatus','呪文を入力してください。','error');return;}try{const query=(await embed([text],'query'))[0],vectors=await ensureAttributeVectors();const scores=Object.entries(vectors).map(([key,rows])=>{const values=rows.map(v=>cosine(query,v)).sort((a,b)=>b-a);return [key,values.slice(0,2).reduce((a,b)=>a+b,0)/Math.min(2,values.length)];}).sort((a,b)=>b[1]-a[1]);const min=scores[scores.length-1][1],max=scores[0][1],spread=Math.max(.0001,max-min),top=scores[0],second=scores[1];const confidence=clamp((top[1]-second[1])/.12);$('attributeResult').className='';$('attributeResult').innerHTML=`<div class="result-main"><div><div class="label">呪文の属性</div><div class="value">${ATTRIBUTES[top[0]].icon} ${ATTRIBUTES[top[0]].label}</div></div><div class="score">確度 ${Math.round(confidence*100)}%</div></div><div class="bars">${scores.map(([key,score])=>`<div class="bar-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:${Math.round(((score-min)/spread)*100)}%"></span></div><strong>${Math.round(((score-min)/spread)*100)}%</strong></div>`).join('')}</div><p class="note">意味の近さを属性説明文と比較しています。1位と2位が近い場合は確度が下がります。</p>`;setStatus('modelStatus','呪文の判定が完了しました。','good');}catch(error){setStatus('modelStatus',`Embedding判定に失敗しました: ${error.message}`,'error');}}
+    async function analyze(){if(!captured){setStatus('cameraStatus','先に魔法陣を撮影してください。','error');return;}$('analyze').disabled=true;setStatus('cameraStatus','画像を解析しています…');try{detected=detectCircles(captureCanvas);drawOverlay();const polar=samplePolar(captureCanvas,detected);const ring=ringCoverage(polar);const innerCanvas=cropCircle(captureCanvas,detected);const shape=analyzeSigil(innerCanvas,{inner:{r:detected.inner.r,x:detected.inner.r,y:detected.inner.r}});renderStructure(detected,ring,shape);renderShape(shape);$('readSpell').disabled=false;setStatus('cameraStatus','魔法陣の構造と紋を確認しました。呪文を読み取るか入力して判定してください。','good');}catch(error){detected=null;drawOverlay();$('structureResult').className='result-empty';$('structureResult').textContent=error.message;$('shapeResult').className='result-empty';$('shapeResult').textContent='構造を確認できるまで紋の判定を行いません。';setStatus('cameraStatus',error.message,'error');}finally{$('analyze').disabled=false;}}
+
+    $('startCamera').addEventListener('click',startCamera);$('capture').addEventListener('click',captureFrame);$('analyze').addEventListener('click',analyze);$('fileInput').addEventListener('change',e=>loadFile(e.target.files[0]));$('readSpell').addEventListener('click',readSpell);$('judgeSpell').addEventListener('click',judgeSpell);window.addEventListener('resize',drawOverlay);window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(track=>track.stop());if(ocrWorker)ocrWorker.terminate();});
+  </script>
+</body>
+</html>
