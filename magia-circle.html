@@ -29,35 +29,35 @@
     <div class="topbar"><a class="back" href="index.html">← 作品選択へ戻る</a><span class="privacy">画像は端末内で処理します</span></div>
     <header>
       <h1>マギアサークル</h1>
-      <p class="subtitle">魔法陣をカメラに映し、円環に刻まれた英語の呪文と、内円に描かれた紋の性質をブラウザ内で判定します。</p>
+      <p class="subtitle">二つの円は、呪文を受け止める器。円環に英語の言葉を巡らせ、内円に紋を置けば、眠っていた相がひとつ姿を現す。</p>
     </header>
 
     <main class="workspace">
       <section class="card">
-        <h2>魔法陣を読み取る</h2>
-        <div id="stage" class="stage"><div id="stageEmpty" class="empty">カメラを起動して、二重円の魔法陣を正面から映してください。</div><video id="video" autoplay playsinline muted hidden></video><canvas id="captureCanvas" class="hidden"></canvas><canvas id="overlayCanvas" class="hidden"></canvas></div>
+        <h2>円環の頁</h2>
+        <div id="stage" class="stage"><div id="stageEmpty" class="empty">水晶眼をひらき、二重円の魔法陣を正面から映してください。円環が見つかれば、頁は読みを始めます。</div><video id="video" autoplay playsinline muted hidden></video><canvas id="captureCanvas" class="hidden"></canvas><canvas id="overlayCanvas" class="hidden"></canvas></div>
         <div class="controls">
-          <button id="startCamera" type="button">カメラを起動</button>
-          <button id="capture" class="secondary" type="button" disabled>魔法陣を撮影</button>
-          <button id="analyze" type="button" disabled>判定する</button>
-          <label class="file-label secondary">画像を選ぶ<input id="fileInput" type="file" accept="image/*"></label>
+          <button id="startCamera" type="button">水晶眼をひらく</button>
+          <button id="capture" class="secondary" type="button" disabled>円環を写し取る</button>
+          <button id="analyze" type="button" disabled>頁を読む</button>
+          <label class="file-label secondary">写し絵を選ぶ<input id="fileInput" type="file" accept="image/*"></label>
         </div>
-        <p id="cameraStatus" class="status" aria-live="polite">カメラの許可が必要です。</p>
-        <p class="hint">外円と内円の間に英語の呪文を一周書き、内円の中に紋を描いてください。明るく、影の少ない場所で撮影すると読み取りやすくなります。</p>
+        <p id="cameraStatus" class="status" aria-live="polite">水晶眼はまだ眠っている。魔法陣を映す準備を整えてください。</p>
+        <p class="hint">外円と内円のあいだへ、英語の呪文を途切れず一周させる。内円には、あなたの紋を置く。明るい場所なら、円環の声はよく届く。</p>
 
-        <h3>読み取った呪文</h3>
-        <label for="spell">英語の呪文</label>
+        <h3>円環に刻んだ呪文</h3>
+        <label for="spell">呪文の原文（英語）</label>
         <textarea id="spell" spellcheck="false" placeholder="例: Burn the enemy beneath an endless crimson flame.">Burn the enemy beneath an endless crimson flame.</textarea>
-        <div class="controls"><button id="readSpell" class="secondary" type="button" disabled>円環から呪文を読む</button><button id="judgeSpell" type="button">呪文を判定</button></div>
-        <p id="modelStatus" class="status" aria-live="polite">判定にはブラウザ内モデルの読み込みが必要です。</p>
+        <div class="controls"><button id="readSpell" class="secondary" type="button" disabled>円環の声を聴く</button><button id="judgeSpell" type="button">呪文の相を読む</button></div>
+        <p id="modelStatus" class="status" aria-live="polite">呪文の相はまだ眠っている。言葉を捧げると、意味の近い相を探します。</p>
       </section>
 
       <aside class="card" aria-live="polite">
-        <h2>判定結果</h2>
-        <div id="structureResult" class="result-empty">魔法陣を撮影すると、二重円・呪文・紋の構造を確認します。</div>
-        <div id="attributeResult" class="result-empty" style="margin-top:12px">呪文を判定すると、最も近い属性がここに表示されます。</div>
-        <div id="shapeResult" class="result-empty" style="margin-top:12px">紋を判定すると、攻撃・防御・回復／支援・デバフの割合が表示されます。</div>
-        <div class="meta">文章Embedding: <code>all-MiniLM-L6-v2</code> / 画像処理: <code>OpenCV.js</code> / OCR: <code>Tesseract.js</code></div>
+        <h2>顕現の記録</h2>
+        <div id="structureResult" class="result-empty">魔法陣を写し取れば、二重円、呪文の環、内円の紋が順に姿を現します。</div>
+        <div id="attributeResult" class="result-empty" style="margin-top:12px">呪文を捧げると、その言葉に最も近い属性の相が目を覚まします。</div>
+        <div id="shapeResult" class="result-empty" style="margin-top:12px">紋を読めば、攻撃・防御・回復／支援・デバフの性質が力の割合として現れます。</div>
+        <div class="meta">意味を測る器: <code>all-MiniLM-L6-v2</code> / 輪郭を視る眼: <code>OpenCV.js</code> / 呪文を拾う書記: <code>Tesseract.js</code></div>
       </aside>
     </main>
 
@@ -79,7 +79,7 @@
         <p>カメラ画像は外部サーバーへ送信しません。カメラ映像、OCR、画像解析、文章Embeddingはこのブラウザ上で実行します。ライブラリやモデルの初回ファイル取得にはネットワーク接続が必要です。</p>
       </details>
     </section>
-    <p class="footer">マギアサークルの判定は画像の状態や文字の書き方によって結果が変わることがあります。</p>
+    <p class="footer">円環の読みは、光、筆跡、紋の形によって揺らぐ。何度か姿勢を変え、最も納得できる読みを採用してください。</p>
   </div>
 
   <script type="module">
@@ -115,15 +115,15 @@
     function showCaptured(){ captured=true; $('stage').classList.add('captured'); video.hidden=true; $('stageEmpty').hidden=true; captureCanvas.classList.remove('hidden'); overlayCanvas.classList.remove('hidden'); $('capture').disabled=true; $('analyze').disabled=false; drawOverlay(); }
     function drawOverlay(){ overlayCanvas.width=captureCanvas.width; overlayCanvas.height=captureCanvas.height; overlayContext.clearRect(0,0,overlayCanvas.width,overlayCanvas.height); if(!detected) return; overlayContext.save(); overlayContext.strokeStyle='#8be0f3'; overlayContext.lineWidth=Math.max(2,overlayCanvas.width/420); overlayContext.setLineDash([10,7]); for(const c of [detected.outer,detected.inner]){ overlayContext.beginPath();overlayContext.arc(c.x,c.y,c.r,0,Math.PI*2);overlayContext.stroke(); } overlayContext.setLineDash([]); overlayContext.fillStyle='#f5d879';overlayContext.font=`${Math.max(14,overlayCanvas.width/55)}px ui-sans-serif`;overlayContext.fillText('二重円',detected.outer.x-detected.outer.r,Math.max(24,detected.outer.y-detected.outer.r-12)); overlayContext.restore(); }
     async function startCamera(){
-      if(!navigator.mediaDevices?.getUserMedia){ setStatus('cameraStatus','このブラウザではカメラを利用できません。画像ファイルを選んでください。','error'); return; }
-      try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false}); video.srcObject=stream; video.hidden=false; $('stage').classList.remove('captured');$('stageEmpty').hidden=true;captureCanvas.classList.add('hidden');overlayCanvas.classList.add('hidden');captured=false;detected=null; $('capture').disabled=false; $('analyze').disabled=true; setStatus('cameraStatus','カメラが起動しました。魔法陣が画面に収まったら撮影してください。','good'); }
-      catch(error){ setStatus('cameraStatus','カメラを起動できませんでした。権限を確認するか、画像ファイルを選んでください。','error'); }
+      if(!navigator.mediaDevices?.getUserMedia){ setStatus('cameraStatus','この器では水晶眼をひらけません。画像の写し絵を選んでください。','error'); return; }
+      try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false}); video.srcObject=stream; video.hidden=false; $('stage').classList.remove('captured');$('stageEmpty').hidden=true;captureCanvas.classList.add('hidden');overlayCanvas.classList.add('hidden');captured=false;detected=null; $('capture').disabled=false; $('analyze').disabled=true; setStatus('cameraStatus','水晶眼がひらいた。魔法陣を画面に収めたら、円環を写し取ってください。','good'); }
+      catch(error){ setStatus('cameraStatus','水晶眼が曇っている。許可を確かめるか、画像の写し絵を選んでください。','error'); }
     }
-    function captureFrame(){ if(!stream || video.readyState<2) return; captureCanvas.width=video.videoWidth;captureCanvas.height=video.videoHeight;captureContext.drawImage(video,0,0,captureCanvas.width,captureCanvas.height);showCaptured();setStatus('cameraStatus','撮影しました。判定するか、呪文欄を確認してください。','good'); }
-    function loadFile(file){ if(!file) return; const image=new Image();image.onload=()=>{canvasFromImage(image);setStatus('cameraStatus','画像を読み込みました。判定する準備ができています。','good');};image.onerror=()=>setStatus('cameraStatus','画像を読み込めませんでした。','error');image.src=URL.createObjectURL(file); }
+    function captureFrame(){ if(!stream || video.readyState<2) return; captureCanvas.width=video.videoWidth;captureCanvas.height=video.videoHeight;captureContext.drawImage(video,0,0,captureCanvas.width,captureCanvas.height);showCaptured();setStatus('cameraStatus','円環を写し取った。頁に読ませるか、呪文の原文を確かめてください。','good'); }
+    function loadFile(file){ if(!file) return; const image=new Image();image.onload=()=>{canvasFromImage(image);setStatus('cameraStatus','写し絵を受け取った。円環を読ませる準備ができています。','good');};image.onerror=()=>setStatus('cameraStatus','写し絵を読み込めなかった。別の画像を選んでください。','error');image.src=URL.createObjectURL(file); }
 
     function detectCircles(canvas){
-      if(!window.cv?.Mat) throw new Error('画像処理ライブラリがまだ読み込み中です。少し待ってから再試行してください。');
+      if(!window.cv?.Mat) throw new Error('画像を視る眼がまだ目を覚ましていない。少し待ってから、もう一度頁を読ませてください。');
       const cv=window.cv;
       const src=cv.imread(canvas), gray=new cv.Mat(), circles=new cv.Mat();
       try{
@@ -132,7 +132,7 @@
         const found=[];for(let i=0;i<circles.cols;i++){const x=circles.data32F[i*3],y=circles.data32F[i*3+1],r=circles.data32F[i*3+2];if(Number.isFinite(x+y+r))found.push({x,y,r});}
         found.sort((a,b)=>b.r-a.r);let best=null,bestScore=-Infinity;
         for(let i=0;i<found.length;i++) for(let j=i+1;j<found.length;j++){const outer=found[i],inner=found[j];if(outer.r<=inner.r*1.25)continue;const centerError=Math.hypot(outer.x-inner.x,outer.y-inner.y)/outer.r;if(centerError>.16)continue;const ratio=inner.r/outer.r;if(ratio<.28||ratio>.78)continue;const score=(1-centerError)*2+ratio; if(score>bestScore){bestScore=score;best={outer,inner,confidence:clamp((score-1)/2)};}}
-        if(!best) throw new Error('二重円を検出できませんでした。魔法陣を正面から、外円全体が見えるように撮影してください。');
+        if(!best) throw new Error('二重円の姿をつかめなかった。外円全体が見えるよう、魔法陣を正面から写してください。');
         return best;
       }finally{src.delete();gray.delete();circles.delete();}
     }
@@ -144,7 +144,7 @@
     function ringCoverage(polar){const data=polar.getContext('2d',{willReadFrequently:true}).getImageData(0,0,polar.width,polar.height).data;let covered=0;for(let x=0;x<polar.width;x++){let dark=0;for(let y=0;y<polar.height;y++){const i=(y*polar.width+x)*4;const lum=(data[i]*.299+data[i+1]*.587+data[i+2]*.114);if(lum<150)dark++;}if(dark>=Math.max(2,polar.height*.055))covered++;}return covered/polar.width;}
     function cropCircle(canvas,circle){const size=Math.round(circle.inner.r*2);const out=document.createElement('canvas');out.width=size;out.height=size;out.getContext('2d').drawImage(canvas,circle.inner.x-circle.inner.r,circle.inner.y-circle.inner.r,size,size);return out;}
     function analyzeSigil(canvas,circle){
-      if(!window.cv?.Mat) throw new Error('画像処理ライブラリがまだ読み込み中です。');
+      if(!window.cv?.Mat) throw new Error('輪郭を視る眼がまだ目を覚ましていない。少し待ってから、もう一度頁を読ませてください。');
       const cv=window.cv;
       const src=cv.imread(canvas),gray=new cv.Mat(),mask=new cv.Mat(),edges=new cv.Mat(),contours=new cv.MatVector(),hierarchy=new cv.Mat();
       try{
@@ -155,16 +155,16 @@
         const lineDensity=clamp(edgeDensity*.58+clamp(contourCount/18)*.22+inkRatio*.2);const raw={attack:spiky*.62+edgeDensity*.22+(1-roundness)*.16,defense:angularity*.7+edgeDensity*.12+(1-roundness)*.18,support:roundness*.78+(1-edgeDensity)*.12+(1-angularity)*.1,debuff:lineDensity*.75+edgeDensity*.25};const total=Object.values(raw).reduce((a,b)=>a+b,0)||1;return {attack:raw.attack/total,defense:raw.defense/total,support:raw.support/total,debuff:raw.debuff/total};
       }finally{src.delete();gray.delete();mask.delete();edges.delete();contours.delete();hierarchy.delete();}
     }
-    function renderStructure(circle,ring,shape){const rows=[['二重円',circle?'検出':'未検出',circle?.confidence??0],['呪文の環',ring>=.58?'一周を確認':'一周を確認できない',ring],['内円の紋',shape?'検出':'未検出',shape?1:0]];$('structureResult').className='';$('structureResult').innerHTML='<b>魔法陣の構造</b><div class="bars">'+rows.map(([label,value,score])=>`<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(clamp(score)*100)}%"></span></div><strong>${escapeHtml(value)}</strong></div>`).join('')+'</div>'+(ring<.58?'<p class="note">外円と内円の間に、円周方向へ続く呪文が必要です。</p>':'');}
-    function renderShape(scores){const names={attack:'攻撃',defense:'防御',support:'回復／支援',debuff:'デバフ'};const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);const [top,second]=sorted;const certainty=clamp((top[1]-second[1])/.32);$('shapeResult').className='shape';$('shapeResult').innerHTML=`<div class="shape-title"><b>${names[top[0]]}</b><span>判定確度 ${Math.round(certainty*100)}%</span></div><div class="bars">${sorted.map(([key,value])=>`<div class="bar-row"><span>${names[key]}</span><div class="bar"><span style="width:${Math.round(value*100)}%"></span></div><strong>${Math.round(value*100)}%</strong></div>`).join('')}</div><p class="note">${certainty<.35?'複数の性質が近く、やや曖昧な紋です。':'最も高い性質を紋の判定として採用しました。'}</p>`;}
-    async function ensureOcr(){if(ocrWorker)return ocrWorker;await waitFor(()=>window.Tesseract);setStatus('modelStatus','OCRモデルを準備しています…');ocrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status)setStatus('modelStatus',`OCRモデル: ${m.status} ${m.progress?Math.round(m.progress*100)+'%':''}`);}});return ocrWorker;}
-    async function readSpell(){if(!detected){setStatus('cameraStatus','先に魔法陣を撮影してください。','error');return;}try{const worker=await ensureOcr();const polar=samplePolar(captureCanvas,detected);const result=await worker.recognize(polar,{tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,!\'-'});const text=(result.data.text||'').replace(/\s+/g,' ').trim();$('spell').value=text;setStatus('modelStatus',text?'円環から呪文を読み取りました。':'呪文を読み取れませんでした。呪文欄へ直接入力してください。',text?'good':'error');}catch(error){setStatus('modelStatus',`OCRに失敗しました: ${error.message}`,'error');}}
-    async function ensureExtractor(){if(extractor)return extractor;if(!embeddingModulePromise)embeddingModulePromise=import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');const {pipeline}=await embeddingModulePromise;setStatus('modelStatus','文章Embeddingモデルを読み込んでいます…');extractor=await pipeline('feature-extraction',MODEL_ID,{dtype:'q8',progress_callback:info=>{if(info?.status)setStatus('modelStatus',`Embeddingモデル: ${info.status} ${info.progress?Math.round(info.progress*100)+'%':''}`);}});return extractor;}
+    function renderStructure(circle,ring,shape){const rows=[['二重円の器',circle?'起きている':'眠っている',circle?.confidence??0],['呪文の環',ring>=.58?'一周している':'環が途切れている',ring],['内円の紋',shape?'姿を現した':'まだ見えない',shape?1:0]];$('structureResult').className='';$('structureResult').innerHTML='<b>円環の記録</b><div class="bars">'+rows.map(([label,value,score])=>`<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(clamp(score)*100)}%"></span></div><strong>${escapeHtml(value)}</strong></div>`).join('')+'</div>'+(ring<.58?'<p class="note">外円と内円のあいだを、途切れない呪文で満たす必要があります。</p>':'');}
+    function renderShape(scores){const names={attack:'攻撃の相',defense:'防御の相',support:'回復／支援の相',debuff:'弱体の相'};const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);const [top,second]=sorted;const certainty=clamp((top[1]-second[1])/.32);$('shapeResult').className='shape';$('shapeResult').innerHTML=`<div class="shape-title"><b>${names[top[0]]}</b><span>読みの確かさ ${Math.round(certainty*100)}%</span></div><div class="bars">${sorted.map(([key,value])=>`<div class="bar-row"><span>${names[key]}</span><div class="bar"><span style="width:${Math.round(value*100)}%"></span></div><strong>${Math.round(value*100)}%</strong></div>`).join('')}</div><p class="note">${certainty<.35?'複数の相が近く、紋の声はまだ揺れている。':'最も強く現れた相を、この紋の性質として記します。'}</p>`;}
+    async function ensureOcr(){if(ocrWorker)return ocrWorker;await waitFor(()=>window.Tesseract);setStatus('modelStatus','円環の文字を拾う書記を呼び出しています…');ocrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status)setStatus('modelStatus',`書記の準備: ${m.status} ${m.progress?Math.round(m.progress*100)+'%':''}`);}});return ocrWorker;}
+    async function readSpell(){if(!detected){setStatus('cameraStatus','まだ写し取った魔法陣がない。先に円環を写し取ってください。','error');return;}try{const worker=await ensureOcr();const polar=samplePolar(captureCanvas,detected);const result=await worker.recognize(polar,{tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,!\'-'});const text=(result.data.text||'').replace(/\s+/g,' ').trim();$('spell').value=text;setStatus('modelStatus',text?'円環の声を拾い上げた。':'円環の声を拾えなかった。呪文の原文を頁へ書き写してください。',text?'good':'error');}catch(error){setStatus('modelStatus',`書記がつまずいた。${error.message}`,'error');}}
+    async function ensureExtractor(){if(extractor)return extractor;if(!embeddingModulePromise)embeddingModulePromise=import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');const {pipeline}=await embeddingModulePromise;setStatus('modelStatus','言葉の相を測る器を呼び出しています…');extractor=await pipeline('feature-extraction',MODEL_ID,{dtype:'q8',progress_callback:info=>{if(info?.status)setStatus('modelStatus',`器の準備: ${info.status} ${info.progress?Math.round(info.progress*100)+'%':''}`);}});return extractor;}
     async function embed(texts,prefix){const model=await ensureExtractor();const output=await model(texts.map(t=>`${prefix}: ${t}`),{pooling:'mean',normalize:true});const values=output.tolist();return texts.length===1?[Array.isArray(values[0])?values[0]:values]:values;}
     async function ensureAttributeVectors(){if(attributeVectors)return attributeVectors;const keys=Object.keys(ATTRIBUTES),texts=[];for(const key of keys)for(const description of ATTRIBUTES[key].descriptions)texts.push(description);const rows=await embed(texts,'passage');attributeVectors={};let index=0;for(const key of keys){attributeVectors[key]=ATTRIBUTES[key].descriptions.map(()=>rows[index++]);}return attributeVectors;}
     function cosine(a,b){let dot=0,aa=0,bb=0;for(let i=0;i<a.length;i++){dot+=a[i]*b[i];aa+=a[i]*a[i];bb+=b[i]*b[i];}return dot/(Math.sqrt(aa)*Math.sqrt(bb)||1);}
-    async function judgeSpell(){const text=$('spell').value.trim();if(!text){setStatus('modelStatus','呪文を入力してください。','error');return;}try{const query=(await embed([text],'query'))[0],vectors=await ensureAttributeVectors();const scores=Object.entries(vectors).map(([key,rows])=>{const values=rows.map(v=>cosine(query,v)).sort((a,b)=>b-a);return [key,values.slice(0,2).reduce((a,b)=>a+b,0)/Math.min(2,values.length)];}).sort((a,b)=>b[1]-a[1]);const min=scores[scores.length-1][1],max=scores[0][1],spread=Math.max(.0001,max-min),top=scores[0],second=scores[1];const confidence=clamp((top[1]-second[1])/.12);$('attributeResult').className='';$('attributeResult').innerHTML=`<div class="result-main"><div><div class="label">呪文の属性</div><div class="value">${ATTRIBUTES[top[0]].icon} ${ATTRIBUTES[top[0]].label}</div></div><div class="score">確度 ${Math.round(confidence*100)}%</div></div><div class="bars">${scores.map(([key,score])=>`<div class="bar-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:${Math.round(((score-min)/spread)*100)}%"></span></div><strong>${Math.round(((score-min)/spread)*100)}%</strong></div>`).join('')}</div><p class="note">意味の近さを属性説明文と比較しています。1位と2位が近い場合は確度が下がります。</p>`;setStatus('modelStatus','呪文の判定が完了しました。','good');}catch(error){setStatus('modelStatus',`Embedding判定に失敗しました: ${error.message}`,'error');}}
-    async function analyze(){if(!captured){setStatus('cameraStatus','先に魔法陣を撮影してください。','error');return;}$('analyze').disabled=true;setStatus('cameraStatus','画像を解析しています…');try{detected=detectCircles(captureCanvas);drawOverlay();const polar=samplePolar(captureCanvas,detected);const ring=ringCoverage(polar);const innerCanvas=cropCircle(captureCanvas,detected);const shape=analyzeSigil(innerCanvas,{inner:{r:detected.inner.r,x:detected.inner.r,y:detected.inner.r}});renderStructure(detected,ring,shape);renderShape(shape);$('readSpell').disabled=false;setStatus('cameraStatus','魔法陣の構造と紋を確認しました。呪文を読み取るか入力して判定してください。','good');}catch(error){detected=null;drawOverlay();$('structureResult').className='result-empty';$('structureResult').textContent=error.message;$('shapeResult').className='result-empty';$('shapeResult').textContent='構造を確認できるまで紋の判定を行いません。';setStatus('cameraStatus',error.message,'error');}finally{$('analyze').disabled=false;}}
+    async function judgeSpell(){const text=$('spell').value.trim();if(!text){setStatus('modelStatus','捧げる呪文がまだない。英語の言葉を頁へ書いてください。','error');return;}try{const query=(await embed([text],'query'))[0],vectors=await ensureAttributeVectors();const scores=Object.entries(vectors).map(([key,rows])=>{const values=rows.map(v=>cosine(query,v)).sort((a,b)=>b-a);return [key,values.slice(0,2).reduce((a,b)=>a+b,0)/Math.min(2,values.length)];}).sort((a,b)=>b[1]-a[1]);const min=scores[scores.length-1][1],max=scores[0][1],spread=Math.max(.0001,max-min),top=scores[0],second=scores[1];const confidence=clamp((top[1]-second[1])/.12);$('attributeResult').className='';$('attributeResult').innerHTML=`<div class="result-main"><div><div class="label">呪文に近い相</div><div class="value">${ATTRIBUTES[top[0]].icon} ${ATTRIBUTES[top[0]].label}</div></div><div class="score">読みの確かさ ${Math.round(confidence*100)}%</div></div><div class="bars">${scores.map(([key,score])=>`<div class="bar-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:${Math.round(((score-min)/spread)*100)}%"></span></div><strong>${Math.round(((score-min)/spread)*100)}%</strong></div>`).join('')}</div><p class="note">呪文の意味を属性の言葉と重ね、最も近い相を選びました。二つの相が近いとき、読みの確かさは下がります。</p>`;setStatus('modelStatus','呪文の相がひとつ、頁の上に現れた。','good');}catch(error){setStatus('modelStatus',`言葉の器がつまずいた。${error.message}`,'error');}}
+    async function analyze(){if(!captured){setStatus('cameraStatus','まだ写し取った魔法陣がない。先に円環を写し取ってください。','error');return;}$('analyze').disabled=true;setStatus('cameraStatus','円環の奥へ、読みの糸を通しています…');try{detected=detectCircles(captureCanvas);drawOverlay();const polar=samplePolar(captureCanvas,detected);const ring=ringCoverage(polar);const innerCanvas=cropCircle(captureCanvas,detected);const shape=analyzeSigil(innerCanvas,{inner:{r:detected.inner.r,x:detected.inner.r,y:detected.inner.r}});renderStructure(detected,ring,shape);renderShape(shape);$('readSpell').disabled=false;setStatus('cameraStatus','二重円と紋の輪郭を読み取った。円環の声を聴くか、呪文を頁へ写してください。','good');}catch(error){detected=null;drawOverlay();$('structureResult').className='result-empty';$('structureResult').textContent=error.message;$('shapeResult').className='result-empty';$('shapeResult').textContent='紋の姿が見えるまで、内円の記録は眠ったままです。';setStatus('cameraStatus',error.message,'error');}finally{$('analyze').disabled=false;}}
 
     $('startCamera').addEventListener('click',startCamera);$('capture').addEventListener('click',captureFrame);$('analyze').addEventListener('click',analyze);$('fileInput').addEventListener('change',e=>loadFile(e.target.files[0]));$('readSpell').addEventListener('click',readSpell);$('judgeSpell').addEventListener('click',judgeSpell);window.addEventListener('resize',drawOverlay);window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(track=>track.stop());if(ocrWorker)ocrWorker.terminate();});
   </script>
