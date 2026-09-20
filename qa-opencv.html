@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><pre id="out">running</pre><script type="module">
+const out=document.getElementById('out');
+function log(value){out.textContent+=`\n${value}`;}
+const models={detectionPath:'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_det_infer.onnx',recognitionPath:'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_rec_infer.onnx',dictionaryPath:'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ppocr_keys_v1.txt'};
+class BrowserImageRaw{
+  constructor({data,width,height}){this.data=Uint8ClampedArray.from(data);this.width=width;this.height=height;}
+  async resize({width,height}){const source=document.createElement('canvas');source.width=this.width;source.height=this.height;source.getContext('2d').putImageData(new ImageData(this.data,this.width,this.height),0,0);const target=document.createElement('canvas');target.width=width;target.height=height;target.getContext('2d').drawImage(source,0,0,width,height);const image=target.getContext('2d').getImageData(0,0,width,height);return new BrowserImageRaw(image);}
+  async write(){}
+  async drawBox(){return this;}
+  static async open(url){const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;canvas.getContext('2d').drawImage(image,0,0);return new BrowserImageRaw(canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height));}
+}
+try{
+  const cvModule=await import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm'),cv=cvModule.default??cvModule;if(!cv.Mat)await new Promise(resolve=>{const previous=cv.onRuntimeInitialized;cv.onRuntimeInitialized=()=>{previous?.();resolve();};});
+  cv.matFromImageData=imageData=>{const data=imageData instanceof ImageData?imageData:new ImageData(Uint8ClampedArray.from(imageData.data),imageData.width,imageData.height),mat=new cv.Mat(data.height,data.width,cv.CV_8UC4);mat.data.set(data.data);return mat;};
+  const splitSource=await (await fetch('https://cdn.jsdelivr.net/npm/@gutenye/ocr-common@1.4.9/splitIntoLineImages/+esm')).text();
+  const support='class BrowserLineImage{constructor({data,width,height}){this.data=Uint8ClampedArray.from(data);this.width=width;this.height=height;}}\n';
+  const patchedSource=support+splitSource.replace('from"/npm/@techstark/opencv-js@4.9.0-release.3/+esm"','from"https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm"').replace('from"/npm/js-clipper@1.0.1/+esm"','from"https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm"').replace('let v;','let v=BrowserLineImage;');
+  const splitUrl=URL.createObjectURL(new Blob([patchedSource],{type:'text/javascript'})),{splitIntoLineImages}=await import(splitUrl);URL.revokeObjectURL(splitUrl);log('patched split import ok');
+  const {default:Ocr}=await import('https://cdn.jsdelivr.net/npm/@gutenye/ocr-browser@1.4.9/+esm'),common=await import('https://cdn.jsdelivr.net/npm/@gutenye/ocr-common@1.4.9/+esm'),ort=await import('https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/+esm');
+  class BrowserFileUtils{static async read(url){return await (await fetch(url)).text();}}
+  common.registerBackend({FileUtils:BrowserFileUtils,ImageRaw:BrowserImageRaw,InferenceSession:ort.InferenceSession,splitIntoLineImages,defaultModels:models});log('patched backend registered');
+  const ocr=await Ocr.create({models});log('ocr created');
+  const data=new Uint8ClampedArray(320*160*4).fill(255);for(let y=45;y<115;y++)for(let x=35;x<285;x++){const i=(y*320+x)*4;data[i]=data[i+1]=data[i+2]=0;}
+  const result=await ocr.detect({data,width:320,height:160});log(`detect ok texts=${result.texts.length}`);
+}catch(error){log(error?.stack||String(error));}
+</script>

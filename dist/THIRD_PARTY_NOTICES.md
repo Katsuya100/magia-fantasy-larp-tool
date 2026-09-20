@@ -4,11 +4,16 @@
 
 ## Magia Circle
 
-- OpenCV.js — Source: https://github.com/opencv/opencv — Apache License 2.0
+- OpenCV.js browser loader `@opencvjs/web@5.0.0-release.2` — Source: https://github.com/ocavue/opencvjs — Apache License 2.0
 - Tesseract.js — Source: https://github.com/naptha/tesseract.js — Apache License 2.0
 - Tesseract `eng.traineddata` — Source: https://github.com/tesseract-ocr/tessdata_fast — Apache License 2.0
+- `@gutenye/ocr-browser` and `@gutenye/ocr-common` — Source: https://github.com/gutenye/ocr — MIT License for the library. Used for browser-side PP-OCRv4 text detection and recognition.
+- `@techstark/opencv-js` — Source: https://github.com/TechStark/opencv-js — Apache License 2.0. Used by the browser OCR pipeline for perspective correction and line extraction.
 - Transformers.js — Source: https://github.com/huggingface/transformers.js — Apache License 2.0
 - `all-MiniLM-L6-v2` — Source: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2 — Apache License 2.0
+- `trocr-small-handwritten` — Source: https://huggingface.co/Xenova/trocr-small-handwritten — The model repository does not currently state a license; verify upstream Microsoft/TrOCR terms before redistribution. Used for handwriting OCR fallback and preloaded in the browser.
+- `@gutenye/ocr-node` and bundled PP-OCRv4 models — Source: https://github.com/gutenye/ocr — MIT License for the library; verify the model terms before redistribution. Used by the reproducible Node.js batch OCR test.
+- `sharp` — Source: https://github.com/lovell/sharp — Apache License 2.0. Used to rotate detected text-line images during the batch OCR test.
 
 ## Kotodama Gear
 
