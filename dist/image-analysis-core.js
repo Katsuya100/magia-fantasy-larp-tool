@@ -57,6 +57,24 @@
     return visible ? total / visible / 255 : 0;
   }
 
+  function polarCornerAngle(radii, index, span) {
+    const size = radii.length;
+    const point = offset => {
+      const sample = (index + offset + size) % size;
+      const theta = sample / size * Math.PI * 2;
+      return [radii[sample] * Math.cos(theta), radii[sample] * Math.sin(theta)];
+    };
+    const current = point(0);
+    const before = point(-span);
+    const after = point(span);
+    const first = [before[0] - current[0], before[1] - current[1]];
+    const second = [after[0] - current[0], after[1] - current[1]];
+    const magnitude = Math.hypot(...first) * Math.hypot(...second);
+    if (!magnitude) return Math.PI;
+    const cosine = clamp((first[0] * second[0] + first[1] * second[1]) / magnitude, -1, 1);
+    return Math.acos(cosine);
+  }
+
   function detectCirclesJs(buffer, width, height) {
     const image = makeGrayImage(buffer, width, height);
     const edge = makeEdgeImage(image.gray, image.width, image.height);
@@ -130,26 +148,42 @@
     const variance = valid.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (valid.length || 1);
     let roughness = 0;
     let turns = 0;
+    let measuredCorners = 0;
+    let broadCorners = 0;
+    let sharpCorners = 0;
     for (let index = 0; index < samples; index += 1) {
       const previous = radii[(index + samples - 1) % samples];
       const current = radii[index];
       const next = radii[(index + 1) % samples];
       roughness += Math.abs(current - previous);
-      if ((current - previous) * (next - current) < -.002) turns += 1;
+      if ((current - previous) * (next - current) < -.002) {
+        turns += 1;
+        if (previous > 0 && current > 0 && next > 0) {
+          const angle = polarCornerAngle(radii, index, 5);
+          measuredCorners += 1;
+          if (angle >= Math.PI / 2) broadCorners += 1;
+          if (angle < Math.PI / 3) sharpCorners += 1;
+        }
+      }
     }
     roughness /= samples;
     const dark = darkRatio.reduce((sum, value) => sum + value, 0) / (samples * Math.max(1, Math.round(radius * .82)));
-    const roundness = clamp(1 - variance * 14);
-    const spiky = clamp(roughness * 5 + variance * 7);
     const angularity = clamp(turns / 48 + roughness * 2);
     const lineDensity = clamp(dark * 6 + roughness * 1.4);
-    // 尖った紋は、半径の分散だけでなく輪郭の方向転換も攻撃性として拾う。
-    // 丸さだけで支援が勝たないよう、支援側の重みは少し抑える。
+    const missingRayRatio = radii.filter(value => value === 0).length / samples;
+    const closedness = clamp(1 - missingRayRatio);
+    const solidContour = clamp(closedness * (1 - roughness * 6));
+    const compactness = clamp(1 - mean);
+    const cornerCountFactor = clamp(measuredCorners / 12);
+    const broadCornerScore = measuredCorners ? broadCorners / measuredCorners * cornerCountFactor : 0;
+    const sharpCornerScore = measuredCorners ? sharpCorners / measuredCorners * cornerCountFactor : 0;
+    // 中心寄りの閉じた尖りは攻撃、途切れた放射線は弱体として読む。
+    // 90度以上の角が複数ある大きな閉輪郭は防御へ、鋭角の多い輪郭は攻撃へ寄せる。
     const raw = {
-      attack: spiky * .9 + angularity * .7 + (1 - roundness) * .2,
-      defense: angularity * .7 + (1 - roundness) * .2,
-      support: roundness * .6 + (1 - spiky) * .12 + (1 - angularity) * .05,
-      debuff: lineDensity * .72 + roughness * .28,
+      attack: Math.max(0, compactness * solidContour * 1.5 + sharpCornerScore * .8),
+      defense: (angularity * 1.8 + broadCornerScore * .8 + (1 - lineDensity) * .25 + (1 - roughness) * .05) * solidContour,
+      support: mean * Math.max(0, 1 - angularity * 1.7) + (1 - roughness) * .08,
+      debuff: roughness * 4 + missingRayRatio * 2 + lineDensity * .2,
     };
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
     return { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };

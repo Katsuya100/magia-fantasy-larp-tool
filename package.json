@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "calculate-power": "node tools/calculate-power.mjs",
     "test:image-analysis": "node tools/test-image-analysis.mjs",
+    "test:power-calculation": "node tools/test-power-calculation.mjs",
     "test:spell-ocr": "node tools/test-spell-ocr.mjs"
   },
   "devDependencies": {
