@@ -143,7 +143,14 @@
     const spiky = clamp(roughness * 5 + variance * 7);
     const angularity = clamp(turns / 48 + roughness * 2);
     const lineDensity = clamp(dark * 6 + roughness * 1.4);
-    const raw = { attack: spiky * .62 + (1 - roundness) * .2, defense: angularity * .7 + (1 - roundness) * .2, support: roundness * .78 + (1 - spiky) * .18, debuff: lineDensity * .72 + roughness * .28 };
+    // 尖った紋は、半径の分散だけでなく輪郭の方向転換も攻撃性として拾う。
+    // 丸さだけで支援が勝たないよう、支援側の重みは少し抑える。
+    const raw = {
+      attack: spiky * .9 + angularity * .7 + (1 - roundness) * .2,
+      defense: angularity * .7 + (1 - roundness) * .2,
+      support: roundness * .6 + (1 - spiky) * .12 + (1 - angularity) * .05,
+      debuff: lineDensity * .72 + roughness * .28,
+    };
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
     return { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
   }
