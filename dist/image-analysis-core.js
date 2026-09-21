@@ -122,7 +122,7 @@
     return { outer: restore(best.outer), inner: restore(best.inner), confidence: best.confidence };
   }
 
-  function analyzeSigilJs(buffer, width, height, circle) {
+  function analyzeSigilMetricsJs(buffer, width, height, circle) {
     const image = makeGrayImage(buffer, width, height);
     const cx = circle.inner.x * image.scale;
     const cy = circle.inner.y * image.scale;
@@ -186,8 +186,16 @@
       debuff: roughness * 4 + missingRayRatio * 2 + lineDensity * .2,
     };
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
-    return { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
+    return {
+      scores: { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total },
+      // Angular contour changes are a proxy for wobble in the drawn lines.
+      lineStraightness: clamp(1 - roughness * 6),
+    };
   }
 
-  global.ImageAnalysisCore = { detectCirclesJs, analyzeSigilJs };
+  function analyzeSigilJs(buffer, width, height, circle) {
+    return analyzeSigilMetricsJs(buffer, width, height, circle).scores;
+  }
+
+  global.ImageAnalysisCore = { detectCirclesJs, analyzeSigilJs, analyzeSigilMetricsJs };
 }(typeof globalThis !== 'undefined' ? globalThis : self));

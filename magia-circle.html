@@ -21,6 +21,7 @@
     .result-empty{padding:17px;border:1px dashed rgba(139,224,243,.28);border-radius:14px;color:#9db5bd;font:14px/1.65 ui-sans-serif,system-ui,sans-serif}.result-main{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;padding:18px;border:1px solid rgba(245,216,121,.45);border-radius:16px;background:linear-gradient(135deg,rgba(70,54,24,.72),rgba(25,29,44,.9));}.result-main .label{color:#c7b788;font:700 12px ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em}.result-main .value{margin-top:4px;color:#ffe89a;font-size:34px;font-weight:900}.result-main .score{color:var(--cyan);font:800 20px ui-sans-serif,system-ui,sans-serif}.bars{display:grid;gap:9px;margin-top:12px}.bar-row{display:grid;grid-template-columns:110px 1fr 58px;gap:10px;align-items:center;color:#dbe7e8;font:13px ui-sans-serif,system-ui,sans-serif}.bar{height:10px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.12)}.bar span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4389a2,#f4d77d)}.shape{margin-top:16px;padding:15px;border:1px solid rgba(139,224,243,.24);border-radius:16px;background:rgba(4,12,22,.44)}.shape-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.shape-title b{font-size:25px;color:#9be7f5}.shape-title span{color:#c8d6d8;font:700 13px ui-sans-serif,system-ui,sans-serif}.note{margin:9px 0 0;color:#9db5bd;font:13px/1.6 ui-sans-serif,system-ui,sans-serif}.meta{margin-top:14px;color:#9db5bd;font:12px/1.6 ui-sans-serif,system-ui,sans-serif}.meta code{color:#d9eaff}
     details{margin-top:18px;border-top:1px solid rgba(139,224,243,.2);padding-top:16px}summary{cursor:pointer;color:var(--gold);font-weight:800}details p,details li{color:#b9c9cb;font:13px/1.7 ui-sans-serif,system-ui,sans-serif}details ul{padding-left:20px}details a{color:#9be7f5}.footer{margin-top:18px;text-align:center;color:#8da5ac;font:12px ui-sans-serif,system-ui,sans-serif}
     @media(max-width:560px){.wrap{padding:16px 12px 50px}.topbar{align-items:flex-start;flex-direction:column}.card{padding:16px}.bar-row{grid-template-columns:90px 1fr 50px;gap:7px;font-size:12px}.stage{min-height:250px}}
+    .power-count{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 12px;border:1px solid rgba(139,224,243,.22);border-radius:10px;color:#dbe7e8;font:13px ui-sans-serif,system-ui,sans-serif}.power-count strong{color:#ffe89a;font-size:16px}
   </style>
 </head>
 <body>
@@ -50,6 +51,7 @@
 
       <aside class="card" aria-live="polite">
         <h2>顕現の記録</h2>
+        <div id="powerResult" class="result-empty" style="margin-top:12px">円、線、属性、紋、単語の5つを読み取ると、威力が現れます。</div>
         <div id="structureResult" class="result-empty">魔法陣を写し取れば、二重円、呪文の環、内円の紋が順に姿を現します。</div>
         <div id="attributeResult" class="result-empty" style="margin-top:12px">呪文を捧げると、その言葉に最も近い属性の相が目を覚まします。</div>
         <div id="shapeResult" class="result-empty" style="margin-top:12px">紋を読めば、攻撃・防御・回復／支援・デバフの性質が力の割合として現れます。</div>
@@ -79,6 +81,7 @@
   </div>
   <script src="spell-ocr.js"></script>
   <script src="image-analysis-core.js"></script>
+  <script src="power-calculation.js"></script>
   <script src="magia-circle-app.js"></script>
 </body>
 </html>

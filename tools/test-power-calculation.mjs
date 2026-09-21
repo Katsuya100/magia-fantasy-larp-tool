@@ -7,7 +7,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const source = await readFile(resolve(here, '../power-calculation.js'), 'utf8');
 const context = vm.createContext({});
 vm.runInContext(source, context, { filename: 'power-calculation.js' });
-const { calculatePower, WORD_COUNT_CAP } = context.PowerCalculationCore;
+const { calculatePower } = context.PowerCalculationCore;
 
 function assert(condition, message) {
   if (!condition) throw new Error(`ASSERT power_calculation=FAIL: ${message}`);
@@ -18,9 +18,9 @@ const maximum = calculatePower({
   lineStraightness: 1,
   attributeCertainty: 1,
   sigilCertainty: 1,
-  wordCount: WORD_COUNT_CAP,
+  wordCount: 10,
 });
-assert(maximum.power === 100, 'maximum inputs must produce 100');
+assert(maximum.power === 1000, 'ten words with maximum quality must produce 1000');
 
 const minimum = calculatePower({
   circleAccuracy: 0,
@@ -38,18 +38,19 @@ const example = calculatePower({
   sigilCertainty: 0.9,
   wordCount: 5,
 });
-assert(example.power === 70, 'example score must use the five equal-weight parameters');
+assert(example.power === 375, 'example score must multiply quality by word count');
 assert(example.normalized.wordCount === 5, 'word count must remain available as a raw parameter');
-assert(example.wordCountScore === 0.5, 'word count must be normalized against the cap');
+assert(Math.abs(example.qualityAverage - 0.75) < 0.000001, 'quality average must use the four quality parameters');
 
 const bounded = calculatePower({
   circleAccuracy: 2,
   lineStraightness: -1,
   attributeCertainty: 0.5,
   sigilCertainty: 0.5,
-  wordCount: WORD_COUNT_CAP + 20,
+  wordCount: 30,
 });
-assert(bounded.power === 60, 'quality inputs must clamp and word count must cap');
+assert(bounded.power === 1500, 'quality inputs must clamp without capping word count');
+assert(bounded.power > maximum.power, 'power must grow beyond the ten-word example');
 
 let rejected = false;
 try {

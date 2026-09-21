@@ -14,7 +14,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const analysisCoreSource = await readFile(resolve(here, '../image-analysis-core.js'), 'utf8');
 const analysisContext = vm.createContext({});
 vm.runInContext(analysisCoreSource, analysisContext, { filename: 'image-analysis-core.js' });
-const { analyzeSigilJs, detectCirclesJs } = analysisContext.ImageAnalysisCore;
+const { analyzeSigilMetricsJs, detectCirclesJs } = analysisContext.ImageAnalysisCore;
 const decoder = resolve(here, 'decode-jpeg.ps1');
 const decoded = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', decoder, '-InputPath', resolve(imagePath)], {
   encoding: null,
@@ -47,11 +47,12 @@ for (let i = 0; i < bgra.length; i += 4) {
 
 const image = { data: rgba, width, height };
 const circle = detectCirclesJs(rgba, width, height);
-const shape = analyzeSigilJs(rgba, width, height, circle);
+const metrics = analyzeSigilMetricsJs(rgba, width, height, circle);
+const shape = metrics.scores;
 const shapeTotal = Object.values(shape).reduce((sum, value) => sum + value, 0);
 const shapeTop = Object.entries(shape).sort((a, b) => b[1] - a[1])[0];
 
-if (!(circle.outer.r > circle.inner.r && shapeTop && Math.abs(shapeTotal - 1) < 0.001)) {
+if (!(circle.outer.r > circle.inner.r && shapeTop && Math.abs(shapeTotal - 1) < 0.001 && Number.isFinite(metrics.lineStraightness))) {
   console.error('ASSERT image_analysis=FAIL');
   process.exit(1);
 }
@@ -65,6 +66,7 @@ console.log(JSON.stringify({
     confidence: circle.confidence,
   },
   shape,
+  lineStraightness: metrics.lineStraightness,
   topShape: shapeTop[0],
 }, null, 2));
 console.log('ASSERT image_analysis=PASS');

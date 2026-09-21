@@ -5,6 +5,8 @@
   if (!core) throw new Error('spell-ocr.js must load before magia-circle-app.js');
   const imageAnalysis = global.ImageAnalysisCore;
   if (!imageAnalysis) throw new Error('image-analysis-core.js must load before magia-circle-app.js');
+  const powerCalculation = global.PowerCalculationCore;
+  if (!powerCalculation) throw new Error('power-calculation.js must load before magia-circle-app.js');
 
   const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
@@ -36,6 +38,7 @@
   const structureResult = requireElement('structureResult');
   const attributeResult = requireElement('attributeResult');
   const shapeResult = requireElement('shapeResult');
+  const powerResult = requireElement('powerResult');
   const captureContext = captureCanvas.getContext('2d', { willReadFrequently: true });
   const overlayContext = overlayCanvas.getContext('2d');
 
@@ -47,6 +50,13 @@
   let embeddingModulePromise = null;
   let extractor = null;
   let attributeVectors = null;
+  const powerInputs = {
+    circleAccuracy: null,
+    lineStraightness: null,
+    attributeCertainty: null,
+    sigilCertainty: null,
+    wordCount: null,
+  };
 
   function setStatus(element, text, kind = '') {
     element.textContent = text;
@@ -66,6 +76,32 @@
     if (!Number.isFinite(value)) return '';
     const percent = value <= 1 ? value * 100 : value;
     return `${Math.round(Math.max(0, Math.min(100, percent)))}%`;
+  }
+
+  function resetPowerInputs() {
+    powerInputs.circleAccuracy = null;
+    powerInputs.lineStraightness = null;
+    powerInputs.attributeCertainty = null;
+    powerInputs.sigilCertainty = null;
+    powerInputs.wordCount = null;
+  }
+
+  function renderPower() {
+    const ready = Object.values(powerInputs).every(value => Number.isFinite(value));
+    if (!ready) {
+      powerResult.className = 'result-empty';
+      powerResult.textContent = '円、線、属性、紋、単語の5つを読み取ると、威力が現れます。';
+      return;
+    }
+    const result = powerCalculation.calculatePower(powerInputs);
+    const rows = [
+      ['円の正確さ', result.scores.circleAccuracy, `${Math.round(result.normalized.circleAccuracy * 100)}%`],
+      ['線の真っ直ぐさ', result.scores.lineStraightness, `${Math.round(result.normalized.lineStraightness * 100)}%`],
+      ['属性の確かさ', result.scores.attributeCertainty, `${Math.round(result.normalized.attributeCertainty * 100)}%`],
+      ['紋の断定の確かさ', result.scores.sigilCertainty, `${Math.round(result.normalized.sigilCertainty * 100)}%`],
+    ];
+    powerResult.className = 'power';
+    powerResult.innerHTML = `<div class="result-main"><div><div class="label">総合威力</div><div class="value">${result.power}</div></div></div><div class="bars">${rows.map(([label, score, value]) => `<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(score * 100)}%"></span></div><strong>${value}</strong></div>`).join('')}</div><div class="power-count"><span>単語の数</span><strong>${result.normalized.wordCount}語</strong></div><p class="note">4つの確かさの平均に単語数を掛けて算出します。</p>`;
   }
 
   function yieldToBrowser() {
@@ -115,8 +151,8 @@
           const circle = imageAnalysis.detectCirclesJs(image.data.buffer, image.width, image.height);
           setStatus(cameraStatus, '二重円を読み取っています…', 'busy');
           await yieldToBrowser();
-          const shape = imageAnalysis.analyzeSigilJs(image.data.buffer, image.width, image.height, circle);
-          resolve({ circle: scaleCircle(circle, 1 / scale), shape });
+          const metrics = imageAnalysis.analyzeSigilMetricsJs(image.data.buffer, image.width, image.height, circle);
+          resolve({ circle: scaleCircle(circle, 1 / scale), shape: metrics.scores, lineStraightness: metrics.lineStraightness });
         } catch (error) {
           reject(error);
         }
@@ -258,7 +294,7 @@
     if (!scores) {
       shapeResult.className = 'result-empty';
       shapeResult.textContent = '紋の姿が見えるまで、内円の記録は眠ったままです。';
-      return;
+      return null;
     }
     const names = { attack: '攻撃の相', defense: '防御の相', support: '回復／支援の相', debuff: '弱体の相' };
     const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
@@ -266,6 +302,7 @@
     const certainty = clamp((top[1] - second[1]) / .32);
     shapeResult.className = 'shape';
     shapeResult.innerHTML = `<div class="shape-title"><b>${names[top[0]]}</b><span>読みの確かさ ${Math.round(certainty * 100)}%</span></div><div class="bars">${sorted.map(([key, value]) => `<div class="bar-row"><span>${names[key]}</span><div class="bar"><span style="width:${Math.round(value * 100)}%"></span></div><strong>${Math.round(value * 100)}%</strong></div>`).join('')}</div><p class="note">${certainty < .35 ? '複数の相が近く、紋の声はまだ揺れている。' : '最も強く現れた相を、この紋の性質として記します。'}</p>`;
+    return certainty;
   }
 
   async function analyzeStructure() {
@@ -277,7 +314,10 @@
       const polar = await samplePolar(captureCanvas, detectedCircle);
       const ring = await ringCoverage(polar);
       renderStructure(detectedCircle, ring, result.shape);
-      renderShape(result.shape);
+      powerInputs.circleAccuracy = result.circle.confidence;
+      powerInputs.lineStraightness = result.lineStraightness;
+      powerInputs.sigilCertainty = renderShape(result.shape);
+      renderPower();
       setStatus(cameraStatus, '二重円と紋の輪郭を読み取った。続けて呪文を読み取ります。', 'good');
       return result;
     } catch (error) {
@@ -286,6 +326,10 @@
       structureResult.className = 'result-empty';
       structureResult.textContent = error.message;
       renderShape(null);
+      powerInputs.circleAccuracy = null;
+      powerInputs.lineStraightness = null;
+      powerInputs.sigilCertainty = null;
+      renderPower();
       setStatus(cameraStatus, '二重円の検出に失敗した。呪文の読み取りを続けます。', 'error');
       return null;
     }
@@ -529,10 +573,12 @@
     attributeResult.className = '';
     attributeResult.innerHTML = `<div class="result-main"><div><div class="label">呪文に近い相</div><div class="value">${ATTRIBUTES[top[0]].icon} ${ATTRIBUTES[top[0]].label}</div></div><div class="score">読みの確かさ ${Math.round(confidence * 100)}%</div></div><div class="bars">${scores.map(([key, score]) => `<div class="bar-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:${Math.round(((score - min) / spread) * 100)}%"></span></div><strong>${Math.round(((score - min) / spread) * 100)}%</strong></div>`).join('')}</div><p class="note">呪文の意味を属性の言葉と重ね、最も近い相を選びました。二つの相が近いとき、読みの確かさは下がります。</p>`;
     setStatus(modelStatus, '呪文の相がひとつ、頁の上に現れた。', 'good');
+    return confidence;
   }
 
   function resetResults() {
     detectedCircle = null;
+    resetPowerInputs();
     spellOutput.textContent = SPELL_PLACEHOLDER;
     structureResult.className = 'result-empty';
     structureResult.textContent = '魔法陣を写し取れば、二重円、呪文の環、内円の紋が順に姿を現します。';
@@ -540,6 +586,7 @@
     attributeResult.textContent = '呪文を捧げると、その言葉に最も近い属性の相が目を覚まします。';
     shapeResult.className = 'result-empty';
     shapeResult.textContent = '紋を読めば、攻撃・防御・回復／支援・デバフの性質が力の割合として現れます。';
+    renderPower();
     captureCanvas.classList.add('hidden');
     overlayCanvas.classList.add('hidden');
     stage.classList.remove('captured');
@@ -562,13 +609,16 @@
         setStatus(modelStatus, '共通 OCR フローで円環の文字を読み取っています…', 'busy');
         const result = await recognizeSpell(captureCanvas);
         const text = result.path.text;
+        powerInputs.wordCount = result.path.words.length;
+        renderPower();
         spellOutput.textContent = text || '円環から呪文を読み取れませんでした。';
         if (!text) {
           setStatus(modelStatus, '円環から呪文を読み取れませんでした。', 'error');
           return;
         }
         setStatus(modelStatus, '円環の声を拾い上げた。属性を判定しています…', 'busy');
-        await judgeSpell(text);
+        powerInputs.attributeCertainty = await judgeSpell(text);
+        renderPower();
         setStatus(cameraStatus, '検出、OCR、呪文表示、属性判定まで完了しました。', 'good');
       } catch (error) {
         setStatus(cameraStatus, `写し絵の解析に失敗しました。${error.message}`, 'error');
