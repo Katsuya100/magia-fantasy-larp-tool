@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="カメラで魔法陣を読み取り、英語の呪文と紋の性質をブラウザ内で判定するマギアサークル" />
+  <meta name="description" content="写し絵から魔法陣を読み取り、英語の呪文と紋の性質をブラウザ内で判定するマギアサークル" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <title>マギアサークル - 魔法陣判定ツール</title>
   <style>
@@ -15,14 +15,13 @@
     .wrap{max-width:1220px;margin:0 auto;padding:24px 18px 70px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}.back{color:var(--cyan);font:700 14px ui-sans-serif,system-ui,sans-serif;text-decoration:none}.back:hover{text-decoration:underline}.privacy{padding:8px 12px;border:1px solid rgba(146,229,174,.32);border-radius:999px;color:var(--good);font:700 12px ui-sans-serif,system-ui,sans-serif}
     header{padding:22px 24px 25px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(135deg,rgba(12,34,49,.94),rgba(25,18,42,.92));box-shadow:0 22px 72px rgba(0,0,0,.42),inset 0 0 60px rgba(139,224,243,.06)}h1{margin:0;font-size:clamp(34px,6vw,66px);line-height:1.05;letter-spacing:.04em;text-shadow:0 0 20px rgba(139,224,243,.25)}.subtitle{max-width:850px;margin:14px 0 0;color:#cbd7dc;font:16px/1.75 ui-sans-serif,system-ui,sans-serif}
     .workspace{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr);gap:18px;align-items:start;margin-top:18px}@media(max-width:900px){.workspace{grid-template-columns:1fr}}
-    .card{position:relative;padding:20px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,rgba(20,35,49,.95),var(--panel));box-shadow:0 18px 60px rgba(0,0,0,.38),inset 0 0 45px rgba(139,224,243,.04)}.card h2{margin:0 0 14px;font-size:22px}.card h3{margin:24px 0 10px;font-size:18px;color:#dcecf0}.stage{position:relative;min-height:310px;display:grid;place-items:center;border:1px solid rgba(139,224,243,.25);border-radius:18px;overflow:hidden;background:radial-gradient(circle,rgba(44,112,142,.25),transparent 55%),#071019}.stage video,.stage canvas{display:block;width:100%;max-height:62vh;object-fit:contain;background:#03070b}.stage video{aspect-ratio:4/3}.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.stage .empty{padding:32px;text-align:center;color:#9db5bd;font:15px/1.7 ui-sans-serif,system-ui,sans-serif}.stage.captured video{visibility:hidden}.stage canvas.hidden{display:none}
-    .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}button,.file-label{cursor:pointer;padding:12px 15px;border:1px solid rgba(245,216,121,.46);border-radius:12px;color:#1b1720;font:800 14px ui-sans-serif,system-ui,sans-serif;background:linear-gradient(180deg,#ffe99a,#c58b34);box-shadow:0 8px 18px rgba(0,0,0,.24)}button.secondary,.file-label.secondary{color:var(--ink);border-color:rgba(139,224,243,.38);background:linear-gradient(180deg,#2d5467,#1a3042)}button:disabled{cursor:not-allowed;opacity:.48}.file-label input{display:none}.status{min-height:24px;margin:11px 0 0;color:#a9c6cf;font:14px/1.6 ui-sans-serif,system-ui,sans-serif}.status.error{color:var(--bad)}.status.good{color:var(--good)}.hint{margin:12px 0 0;padding:11px 13px;border-radius:12px;color:#c8dbe0;background:rgba(139,224,243,.07);font:13px/1.65 ui-sans-serif,system-ui,sans-serif}
-    label{display:block;margin:16px 0 7px;color:#dcecf0;font:700 14px ui-sans-serif,system-ui,sans-serif}textarea{width:100%;min-height:92px;resize:vertical;padding:12px 13px;border:1px solid rgba(139,224,243,.32);border-radius:12px;outline:none;color:var(--ink);background:rgba(2,10,17,.72);font:16px/1.65 ui-sans-serif,system-ui,sans-serif}textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(139,224,243,.12)}
+    .card{position:relative;padding:20px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,rgba(20,35,49,.95),var(--panel));box-shadow:0 18px 60px rgba(0,0,0,.38),inset 0 0 45px rgba(139,224,243,.04)}.card h2{margin:0 0 14px;font-size:22px}.card h3{margin:24px 0 10px;font-size:18px;color:#dcecf0}.stage{position:relative;min-height:310px;display:grid;place-items:center;border:1px solid rgba(139,224,243,.25);border-radius:18px;overflow:hidden;background:radial-gradient(circle,rgba(44,112,142,.25),transparent 55%),#071019}.stage canvas{display:block;width:100%;max-height:62vh;object-fit:contain;background:#03070b}.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.stage .empty{padding:32px;text-align:center;color:#9db5bd;font:15px/1.7 ui-sans-serif,system-ui,sans-serif}.stage canvas.hidden{display:none}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}button,.file-label{cursor:pointer;padding:12px 15px;border:1px solid rgba(245,216,121,.46);border-radius:12px;color:#1b1720;font:800 14px ui-sans-serif,system-ui,sans-serif;background:linear-gradient(180deg,#ffe99a,#c58b34);box-shadow:0 8px 18px rgba(0,0,0,.24)}button.secondary,.file-label.secondary{color:var(--ink);border-color:rgba(139,224,243,.38);background:linear-gradient(180deg,#2d5467,#1a3042)}button:disabled{cursor:not-allowed;opacity:.48}.file-label input{display:none}.status{min-height:24px;margin:11px 0 0;color:#a9c6cf;font:14px/1.6 ui-sans-serif,system-ui,sans-serif}.status.busy{display:flex;align-items:center;gap:8px}.status.busy::before{content:"";width:13px;height:13px;flex:0 0 13px;border:2px solid rgba(169,198,207,.35);border-top-color:var(--good);border-radius:50%;animation:status-spin .8s linear infinite}@keyframes status-spin{to{transform:rotate(360deg)}}.status.error{color:var(--bad)}.status.good{color:var(--good)}.hint{margin:12px 0 0;padding:11px 13px;border-radius:12px;color:#c8dbe0;background:rgba(139,224,243,.07);font:13px/1.65 ui-sans-serif,system-ui,sans-serif}
+    label{display:block;margin:16px 0 7px;color:#dcecf0;font:700 14px ui-sans-serif,system-ui,sans-serif}.spell-output{min-height:92px;padding:12px 13px;border:1px solid rgba(139,224,243,.32);border-radius:12px;color:var(--ink);background:rgba(2,10,17,.72);font:16px/1.65 ui-sans-serif,system-ui,sans-serif;white-space:pre-wrap}
     .result-empty{padding:17px;border:1px dashed rgba(139,224,243,.28);border-radius:14px;color:#9db5bd;font:14px/1.65 ui-sans-serif,system-ui,sans-serif}.result-main{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;padding:18px;border:1px solid rgba(245,216,121,.45);border-radius:16px;background:linear-gradient(135deg,rgba(70,54,24,.72),rgba(25,29,44,.9));}.result-main .label{color:#c7b788;font:700 12px ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em}.result-main .value{margin-top:4px;color:#ffe89a;font-size:34px;font-weight:900}.result-main .score{color:var(--cyan);font:800 20px ui-sans-serif,system-ui,sans-serif}.bars{display:grid;gap:9px;margin-top:12px}.bar-row{display:grid;grid-template-columns:110px 1fr 58px;gap:10px;align-items:center;color:#dbe7e8;font:13px ui-sans-serif,system-ui,sans-serif}.bar{height:10px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.12)}.bar span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4389a2,#f4d77d)}.shape{margin-top:16px;padding:15px;border:1px solid rgba(139,224,243,.24);border-radius:16px;background:rgba(4,12,22,.44)}.shape-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.shape-title b{font-size:25px;color:#9be7f5}.shape-title span{color:#c8d6d8;font:700 13px ui-sans-serif,system-ui,sans-serif}.note{margin:9px 0 0;color:#9db5bd;font:13px/1.6 ui-sans-serif,system-ui,sans-serif}.meta{margin-top:14px;color:#9db5bd;font:12px/1.6 ui-sans-serif,system-ui,sans-serif}.meta code{color:#d9eaff}
     details{margin-top:18px;border-top:1px solid rgba(139,224,243,.2);padding-top:16px}summary{cursor:pointer;color:var(--gold);font-weight:800}details p,details li{color:#b9c9cb;font:13px/1.7 ui-sans-serif,system-ui,sans-serif}details ul{padding-left:20px}details a{color:#9be7f5}.footer{margin-top:18px;text-align:center;color:#8da5ac;font:12px ui-sans-serif,system-ui,sans-serif}
     @media(max-width:560px){.wrap{padding:16px 12px 50px}.topbar{align-items:flex-start;flex-direction:column}.card{padding:16px}.bar-row{grid-template-columns:90px 1fr 50px;gap:7px;font-size:12px}.stage{min-height:250px}}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
 </head>
 <body>
   <div class="wrap">
@@ -35,22 +34,18 @@
     <main class="workspace">
       <section class="card">
         <h2>円環の頁</h2>
-        <div id="stage" class="stage"><div id="stageEmpty" class="empty">水晶眼をひらき、二重円の魔法陣を正面から映してください。円環が見つかれば、頁は読みを始めます。</div><video id="video" autoplay playsinline muted hidden></video><canvas id="captureCanvas" class="hidden"></canvas><canvas id="overlayCanvas" class="hidden"></canvas></div>
+        <div id="stage" class="stage"><div id="stageEmpty" class="empty">二重円の魔法陣を正面から写した画像を選んでください。円環が見つかれば、頁は自動で読み始めます。</div><canvas id="captureCanvas" class="hidden"></canvas><canvas id="overlayCanvas" class="hidden"></canvas></div>
         <div class="controls">
-          <button id="startCamera" type="button">水晶眼をひらく</button>
-          <button id="capture" class="secondary" type="button" disabled>円環を写し取る</button>
-          <button id="analyze" type="button" disabled>頁を読む</button>
           <label class="file-label secondary">写し絵を選ぶ（選択後に自動解析）<input id="fileInput" type="file" accept="image/*"></label>
         </div>
-        <p id="cameraStatus" class="status" aria-live="polite">水晶眼はまだ眠っている。魔法陣を映す準備を整えてください。</p>
+        <p id="cameraStatus" class="status" aria-live="polite">写し絵を選ぶと、検出から属性判定まで自動で進みます。</p>
         <p class="hint">外円と内円のあいだへ、英語の呪文を途切れず一周させる。内円には、あなたの紋を置く。明るい場所なら、円環の声はよく届く。</p>
 
         <h3>円環に刻んだ呪文</h3>
         <label for="spell">呪文の原文（英語）</label>
-        <textarea id="spell" spellcheck="false" placeholder="例: Burn the enemy beneath an endless crimson flame.">Burn the enemy beneath an endless crimson flame.</textarea>
-        <div class="controls"><button id="readSpell" class="secondary" type="button" disabled>円環の声を聴く</button><button id="judgeSpell" type="button">呪文の相を読む</button></div>
+        <div id="spell" class="spell-output" role="status" aria-live="polite">写し絵を選ぶと、刻まれた呪文がここへ現れます。</div>
         <p id="modelStatus" class="status" aria-live="polite">呪文の相はまだ眠っている。言葉を捧げると、意味の近い相を探します。</p>
-        <p id="preloadStatus" class="status" aria-live="polite">手書き書記の写本を確認しています…</p>
+        <p id="preloadStatus" class="status" aria-live="polite">共通 OCR の写本を確認しています…</p>
       </section>
 
       <aside class="card" aria-live="polite">
@@ -58,7 +53,7 @@
         <div id="structureResult" class="result-empty">魔法陣を写し取れば、二重円、呪文の環、内円の紋が順に姿を現します。</div>
         <div id="attributeResult" class="result-empty" style="margin-top:12px">呪文を捧げると、その言葉に最も近い属性の相が目を覚まします。</div>
         <div id="shapeResult" class="result-empty" style="margin-top:12px">紋を読めば、攻撃・防御・回復／支援・デバフの性質が力の割合として現れます。</div>
-          <div class="meta">意味を測る器: <code>all-MiniLM-L6-v2</code> / 輪郭を視る眼: <code>OpenCV.js</code> / 呪文を拾う書記: <code>PaddleOCR / TrOCR / Tesseract.js</code></div>
+          <div class="meta">意味を測る器: <code>all-MiniLM-L6-v2</code> / 円環を視る眼: <code>共通画像解析コア</code> / 呪文を拾う書記: <code>PaddleOCR</code></div>
       </aside>
     </main>
 
@@ -68,14 +63,10 @@
       <details>
         <summary>使用ライブラリとモデル</summary>
         <ul>
-          <li><strong>OpenCV.js browser loader</strong><br>Source: <a href="https://github.com/ocavue/opencvjs" target="_blank" rel="noreferrer">ocavue/opencvjs</a><br>Work: <code>@opencvjs/web 5.0.0-release.2</code><br>License: Apache License 2.0<br>備考: ブラウザ内でOpenCV.jsを初期化し、二重円、輪郭、紋の画像解析に使用。</li>
-          <li><strong>Tesseract.js</strong><br>Source: <a href="https://github.com/naptha/tesseract.js" target="_blank" rel="noreferrer">naptha/tesseract.js</a><br>Work: Tesseract.js OCR library<br>License: Apache License 2.0<br>備考: 円環に書かれた英語の呪文を読み取るために使用。</li>
-          <li><strong>Tesseract OCR model</strong><br>Source: <a href="https://github.com/tesseract-ocr/tessdata_fast" target="_blank" rel="noreferrer">tesseract-ocr/tessdata_fast</a><br>Work: <code>eng.traineddata</code><br>License: Apache License 2.0<br>備考: 英語OCRモデルとして使用。</li>
           <li><strong>Guten OCR browser pipeline</strong><br>Source: <a href="https://github.com/gutenye/ocr" target="_blank" rel="noreferrer">gutenye/ocr</a><br>Work: <code>@gutenye/ocr-browser</code> / <code>@gutenye/ocr-common</code><br>License: MIT License<br>備考: PP-OCRv4の検出・認識をブラウザ内で実行し、円環の文字区画を抽出するために使用。</li>
           <li><strong>OpenCV.js for OCR</strong><br>Source: <a href="https://github.com/TechStark/opencv-js" target="_blank" rel="noreferrer">TechStark/opencv-js</a><br>Work: <code>@techstark/opencv-js</code><br>License: Apache License 2.0<br>備考: OCRの遠近補正と文字行画像の切り出しに使用。</li>
           <li><strong>PaddleOCR recognition model</strong><br>Source: <a href="https://github.com/PaddlePaddle/PaddleOCR" target="_blank" rel="noreferrer">PaddlePaddle/PaddleOCR</a><br>Work: <code>ch_PP-OCRv4_rec_infer.onnx</code> / <code>ppocr_keys_v1.txt</code> from <code>@gutenye/ocr-models</code><br>License: Apache License 2.0<br>備考: 整形した円環の筆跡をブラウザ内で文字列へ変換するために使用。</li>
-          <li><strong>TrOCR small handwritten model</strong><br>Source: <a href="https://huggingface.co/Xenova/trocr-small-handwritten" target="_blank" rel="noreferrer">Xenova/trocr-small-handwritten</a><br>Work: <code>trocr-small-handwritten</code> / Transformers.js用ONNX変換版<br>License: モデル配布元に明示的なライセンス表記がないため、配布前に upstream の利用条件を確認してください。<br>備考: Tesseract.jsで読めない手書き英語の呪文を補助的に読み取るために使用。</li>
-          <li><strong>Transformers.js</strong><br>Source: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noreferrer">huggingface/transformers.js</a><br>Work: Transformers.js<br>License: Apache License 2.0<br>備考: 予備の手書きOCRと文章Embeddingモデルをブラウザ内で実行するために使用。</li>
+          <li><strong>Transformers.js</strong><br>Source: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noreferrer">huggingface/transformers.js</a><br>Work: Transformers.js<br>License: Apache License 2.0<br>備考: 文章Embeddingモデルをブラウザ内で実行するために使用。</li>
           <li><strong>文章Embeddingモデル</strong><br>Source: <a href="https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2" target="_blank" rel="noreferrer">sentence-transformers/all-MiniLM-L6-v2</a><br>Work: <code>all-MiniLM-L6-v2</code> / Transformers.js用ONNX変換版<br>License: Apache License 2.0<br>備考: 英語の呪文と属性説明文の意味比較に使用。</li>
         </ul>
       </details>
@@ -86,465 +77,8 @@
     </section>
     <p class="footer">円環の読みは、光、筆跡、紋の形によって揺らぐ。何度か姿勢を変え、最も納得できる読みを採用してください。</p>
   </div>
-
-  <script id="analysisWorkerSource" type="text/plain">
-const OPENCV_MODULE_URL = 'https://cdn.jsdelivr.net/npm/@opencvjs/web@5.0.0-release.2/+esm';
-let cvPromise = null;
-
-function clamp(value,min=0,max=1){ return Math.max(min,Math.min(max,value)); }
-
-async function ensureOpenCv(){
-  if(!cvPromise){
-    self.postMessage({type:'progress',stage:'画像処理の眼を呼び出しています…'});
-    cvPromise=import(OPENCV_MODULE_URL).then(({loadOpenCV})=>loadOpenCV());
-  }
-  return cvPromise;
-}
-
-function detectCircles(cv,src){
-  const maxSide=900,scale=Math.min(1,maxSide/Math.max(src.cols,src.rows)),small=new cv.Mat();
-  try{
-    cv.resize(src,small,new cv.Size(Math.max(1,Math.round(src.cols*scale)),Math.max(1,Math.round(src.rows*scale))),0,0,cv.INTER_AREA);
-    const gray=new cv.Mat(),circles=new cv.Mat();
-    try{
-      cv.cvtColor(small,gray,cv.COLOR_RGBA2GRAY);cv.medianBlur(gray,gray,5);
-      const shortSide=Math.min(gray.cols,gray.rows);
-      cv.HoughCircles(gray,circles,cv.HOUGH_GRADIENT,1,Math.max(12,shortSide/35),90,20,Math.max(18,Math.round(shortSide*.05)),Math.round(shortSide*.68));
-      const found=[];for(let i=0;i<circles.cols;i++){const x=circles.data32F[i*3]/scale,y=circles.data32F[i*3+1]/scale,r=circles.data32F[i*3+2]/scale;if(Number.isFinite(x+y+r))found.push({x,y,r});}
-      found.sort((a,b)=>b.r-a.r);let best=null,bestScore=-Infinity;
-      for(let i=0;i<found.length;i++) for(let j=i+1;j<found.length;j++){
-        const outer=found[i],inner=found[j];if(outer.r<=inner.r*1.18)continue;
-        const centerError=Math.hypot(outer.x-inner.x,outer.y-inner.y)/outer.r;if(centerError>.22)continue;
-        const ratio=inner.r/outer.r;if(ratio<.22||ratio>.82)continue;
-        const score=(1-centerError)*2+ratio;if(score>bestScore){bestScore=score;best={outer,inner,confidence:clamp((score-1)/2)};}
-      }
-      if(!best) throw new Error('二重円の姿をつかめなかった。外円全体が見えるよう、魔法陣を正面から写してください。');
-      return best;
-    }finally{gray.delete();circles.delete();}
-  }finally{small.delete();}
-}
-
-function analyzeSigil(cv,src,circle){
-  const x=Math.max(0,Math.round(circle.inner.x-circle.inner.r)),y=Math.max(0,Math.round(circle.inner.y-circle.inner.r));
-  const size=Math.min(Math.round(circle.inner.r*2),src.cols-x,src.rows-y),roi=src.roi(new cv.Rect(x,y,size,size));
-  const gray=new cv.Mat(),mask=new cv.Mat(),edges=new cv.Mat(),contours=new cv.MatVector(),hierarchy=new cv.Mat();
-  try{
-    cv.cvtColor(roi,gray,cv.COLOR_RGBA2GRAY);cv.threshold(gray,mask,0,255,cv.THRESH_BINARY_INV+cv.THRESH_OTSU);
-    const radius=size/2,center=new cv.Point(radius,radius),circleMask=cv.Mat.zeros(mask.rows,mask.cols,cv.CV_8UC1);
-    cv.circle(circleMask,center,Math.max(2,radius-8),new cv.Scalar(255),-1);cv.bitwise_and(mask,circleMask,mask);circleMask.delete();
-    cv.Canny(gray,edges,70,150);const edgeDensity=clamp(cv.countNonZero(edges)/(Math.PI*Math.max(1,radius-8)**2)*3.8);
-    cv.findContours(mask,contours,hierarchy,cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE);
-    let largest=null,largestArea=0,contourCount=0;
-    for(let i=0;i<contours.size();i++){const c=contours.get(i),area=cv.contourArea(c);if(area>30)contourCount++;if(area>largestArea){if(largest)largest.delete();largest=c;largestArea=area;}else c.delete();}
-    const inkRatio=clamp(cv.countNonZero(mask)/(mask.rows*mask.cols));let roundness=.2,angularity=.25,spiky=.2;
-    if(largest){
-      const perimeter=cv.arcLength(largest,true),approx=new cv.Mat();cv.approxPolyDP(largest,approx,Math.max(2,perimeter*.025),true);
-      roundness=clamp((4*Math.PI*Math.max(1,largestArea))/(Math.max(1,perimeter*perimeter))*1.15);angularity=clamp((approx.rows-2)/12*.72+(1-roundness)*.28);
-      const hullIndices=new cv.Mat(),defects=new cv.Mat();try{cv.convexHull(largest,hullIndices,false,false);if(hullIndices.rows>3){cv.convexityDefects(largest,hullIndices,defects);let deep=0;for(let i=0;i<defects.rows;i++){const depth=defects.data32S[i*4+3]/256;if(depth>perimeter*.018)deep++;}spiky=clamp(deep/8*.7+(1-roundness)*.3);}}catch{}hullIndices.delete();defects.delete();approx.delete();
-    }
-    const lineDensity=clamp(edgeDensity*.58+clamp(contourCount/18)*.22+inkRatio*.2),raw={attack:spiky*.62+edgeDensity*.22+(1-roundness)*.16,defense:angularity*.7+edgeDensity*.12+(1-roundness)*.18,support:roundness*.78+(1-edgeDensity)*.12+(1-angularity)*.1,debuff:lineDensity*.75+edgeDensity*.25},total=Object.values(raw).reduce((a,b)=>a+b,0)||1;
-    return {attack:raw.attack/total,defense:raw.defense/total,support:raw.support/total,debuff:raw.debuff/total};
-  }finally{roi.delete();gray.delete();mask.delete();edges.delete();contours.delete();hierarchy.delete();}
-}
-
-function makeGrayImage(buffer,width,height,maxSide=620){
-  const scale=Math.min(1,maxSide/Math.max(width,height)),smallWidth=Math.max(1,Math.round(width*scale)),smallHeight=Math.max(1,Math.round(height*scale));
-  const gray=new Uint8Array(smallWidth*smallHeight),source=new Uint8Array(buffer);
-  for(let y=0;y<smallHeight;y++){
-    const sy=Math.min(height-1,Math.round(y/scale));
-    for(let x=0;x<smallWidth;x++){
-      const sx=Math.min(width-1,Math.round(x/scale)),index=(sy*width+sx)*4;
-      gray[y*smallWidth+x]=Math.round(source[index]*.299+source[index+1]*.587+source[index+2]*.114);
-    }
-  }
-  return {gray,width:smallWidth,height:smallHeight,scale};
-}
-
-function makeEdgeImage(gray,width,height){
-  const edge=new Uint8Array(width*height);
-  for(let y=1;y<height-1;y++) for(let x=1;x<width-1;x++){
-    const index=y*width+x,gx=gray[index+1]-gray[index-1],gy=gray[index+width]-gray[index-width];
-    edge[index]=Math.min(255,Math.round(Math.hypot(gx,gy)));
-  }
-  return edge;
-}
-
-function circleEdgeScore(edge,width,height,cx,cy,r){
-  if(cx-r<-width*.04||cy-r<-height*.04||cx+r>width*1.04||cy+r>height*1.04)return 0;
-  const samples=160;let total=0,visible=0;
-  for(let i=0;i<samples;i++){
-    const theta=i/samples*Math.PI*2,x=Math.round(cx+Math.cos(theta)*r),y=Math.round(cy+Math.sin(theta)*r);
-    if(x<1||y<1||x>=width-1||y>=height-1)continue;
-    let local=0;for(let offset=-2;offset<=2;offset++){const px=Math.round(cx+Math.cos(theta)*(r+offset)),py=Math.round(cy+Math.sin(theta)*(r+offset));if(px>=1&&py>=1&&px<width-1&&py<height-1)local=Math.max(local,edge[py*width+px]);}
-    total+=local;visible++;
-  }
-  return visible?total/visible/255:0;
-}
-
-function detectCirclesJs(buffer,width,height){
-  const image=makeGrayImage(buffer,width,height),edge=makeEdgeImage(image.gray,image.width,image.height),shortSide=Math.min(image.width,image.height),candidates=[];
-  const centerStep=Math.max(1,Math.round(shortSide*.045)),radiusStep=Math.max(3,Math.round(shortSide*.018));
-  for(let dy=-4;dy<=4;dy++) for(let dx=-4;dx<=4;dx++){
-    const cx=image.width/2+dx*centerStep,cy=image.height/2+dy*centerStep;
-    for(let r=Math.round(shortSide*.1);r<=Math.round(shortSide*.72);r+=radiusStep){
-      const score=circleEdgeScore(edge,image.width,image.height,cx,cy,r);
-      if(score>.06)candidates.push({x:cx,y:cy,r,score});
-    }
-  }
-  candidates.sort((a,b)=>b.score-a.score);const selected=[];
-  for(const candidate of candidates){
-    if(selected.some(other=>Math.hypot(candidate.x-other.x,candidate.y-other.y)<shortSide*.05&&Math.abs(candidate.r-other.r)<shortSide*.035))continue;
-    selected.push(candidate);if(selected.length>=180)break;
-  }
-  let best=null,bestScore=-Infinity;
-  for(let i=0;i<selected.length;i++) for(let j=i+1;j<selected.length;j++){
-    const first=selected[i],second=selected[j],outer=first.r>=second.r?first:second,inner=outer===first?second:first;
-    const ratio=inner.r/outer.r,centerError=Math.hypot(outer.x-inner.x,outer.y-inner.y)/outer.r;
-    if(outer.r<shortSide*.35||inner.r<shortSide*.25||ratio<.35||ratio>.82||centerError>.22)continue;
-    const score=outer.score+inner.score+(1-centerError)*.32+(outer.r/shortSide)*1.4;
-    if(score>bestScore){bestScore=score;best={outer,inner,confidence:clamp(score/1.4)};}
-  }
-  if(!best)throw new Error('二重円の姿をつかめなかった。外円全体が見えるよう、魔法陣を正面から写してください。');
-  const restore=circle=>({x:circle.x/image.scale,y:circle.y/image.scale,r:circle.r/image.scale});
-  return {outer:restore(best.outer),inner:restore(best.inner),confidence:best.confidence};
-}
-
-function analyzeSigilJs(buffer,width,height,circle){
-  const image=makeGrayImage(buffer,width,height),cx=circle.inner.x*image.scale,cy=circle.inner.y*image.scale,r=circle.inner.r*image.scale,samples=180,radii=[],darkRatio=[];
-  for(let i=0;i<samples;i++){
-    const theta=i/samples*Math.PI*2;let found=0,dark=0;
-    for(let step=Math.round(r*.12);step<r*.94;step+=Math.max(1,r*.012)){
-      const x=Math.round(cx+Math.cos(theta)*step),y=Math.round(cy+Math.sin(theta)*step);
-      if(x<0||y<0||x>=image.width||y>=image.height)continue;
-      if(image.gray[y*image.width+x]<150){found=step/r;dark++;}
-    }
-    radii.push(found);darkRatio.push(dark);
-  }
-  const valid=radii.filter(value=>value>0),mean=valid.reduce((sum,value)=>sum+value,0)/(valid.length||1),variance=valid.reduce((sum,value)=>sum+(value-mean)**2,0)/(valid.length||1);
-  let roughness=0,turns=0;for(let i=0;i<samples;i++){const previous=radii[(i+samples-1)%samples],current=radii[i],next=radii[(i+1)%samples];roughness+=Math.abs(current-previous);if((current-previous)*(next-current)<-.002)turns++;}
-  roughness/=samples;const dark=darkRatio.reduce((sum,value)=>sum+value,0)/(samples*Math.max(1,Math.round(r*.82)));const roundness=clamp(1-variance*14),spiky=clamp(roughness*5+variance*7),angularity=clamp(turns/48+roughness*2),lineDensity=clamp(dark*6+roughness*1.4);
-  const raw={attack:spiky*.62+(1-roundness)*.2,defense:angularity*.7+(1-roundness)*.2,support:roundness*.78+(1-spiky)*.18,debuff:lineDensity*.72+roughness*.28},total=Object.values(raw).reduce((a,b)=>a+b,0)||1;
-  return {attack:raw.attack/total,defense:raw.defense/total,support:raw.support/total,debuff:raw.debuff/total};
-}
-
-const handleWorkerMessage=async event=>{
-  const {width,height,buffer,lightweight}=event.data;
-  try{
-    let circle,shape;
-    if(lightweight){
-      self.postMessage({type:'progress',stage:'画像処理の眼を軽く整えています…'});
-      circle=detectCirclesJs(buffer,width,height);self.postMessage({type:'progress',stage:'二重円を読み取っています…'});
-      shape=analyzeSigilJs(buffer,width,height,circle);
-    }else{
-      const cv=await ensureOpenCv();self.postMessage({type:'progress',stage:'二重円を読み取っています…'});
-      const src=new cv.Mat(height,width,cv.CV_8UC4);src.data.set(new Uint8Array(buffer));
-      try{circle=detectCircles(cv,src);self.postMessage({type:'progress',stage:'紋の輪郭を読み取っています…'});shape=analyzeSigil(cv,src,circle);}finally{src.delete();}
-    }
-    self.postMessage({type:'success',circle,shape});
-  }catch(error){self.postMessage({type:'error',message:error?.message||String(error)});}
-};
-
-if(typeof self!=='undefined')self.onmessage=handleWorkerMessage;
-export {detectCirclesJs,analyzeSigilJs};
-  </script>
-
-  <script type="module">
-    const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
-    const HANDWRITING_MODEL_ID = 'Xenova/trocr-small-handwritten';
-    const ATTRIBUTES = {
-      flame:{label:'炎',icon:'🔥',descriptions:['A spell that controls fire and heat.','A spell that burns enemies with intense crimson flames.','A destructive spell that creates explosions and blazing fire.']},
-      aqua:{label:'水',icon:'💧',descriptions:['A spell that controls water and flowing currents.','A spell that summons rain, waves, rivers, or the sea.','A fluid spell that washes away danger and restores calm.']},
-      bolt:{label:'雷',icon:'⚡',descriptions:['A spell that commands lightning and electric energy.','A sudden attack that strikes with thunder and flashing light.','A fast spell that releases a powerful electrical shock.']},
-      gravity:{label:'重力',icon:'⬤',descriptions:['A spell that controls gravity, weight, and falling force.','A heavy spell that pulls enemies down toward the ground.','A spell that bends mass, orbit, and the force of attraction.']},
-      storm:{label:'嵐',icon:'🌪',descriptions:['A spell that commands wind, clouds, rain, and thunder together.','A violent spell that summons a raging storm across the sky.','A swirling spell that tears through the air with weather and wind.']},
-      law:{label:'法',icon:'⚖',descriptions:['A spell that creates order, rules, justice, and binding contracts.','A precise spell that judges enemies and enforces a command.','A protective spell that establishes a system and restores order.']},
-      chaos:{label:'混沌',icon:'☄',descriptions:['A spell that spreads disorder, randomness, and confusion.','A wild spell that breaks rules and twists reality unpredictably.','A strange destructive spell filled with noise, madness, and entropy.']}
-    };
-    const $ = id => document.getElementById(id);
-    const video = $('video');
-    const captureCanvas = $('captureCanvas');
-    const overlayCanvas = $('overlayCanvas');
-    const captureContext = captureCanvas.getContext('2d', {willReadFrequently:true});
-    const overlayContext = overlayCanvas.getContext('2d');
-    let stream = null;
-    let captured = false;
-    let detected = null;
-    let ocrWorker = null;
-    let extractor = null;
-    let attributeVectors = null;
-    let embeddingModulePromise = null;
-    let handwritingOcrPromise = null;
-    let gutenOcrPromise = null;
-    let paddleRecognitionPromise = null;
-    let analysisWorker = null;
-    let analysisWorkerUrl = null;
-    let analysisPending = null;
-
-    function setStatus(id, text, kind=''){ const el=$(id); el.textContent=text; el.className=`status${kind ? ` ${kind}` : ''}`; }
-    function clamp(v,min=0,max=1){ return Math.max(min,Math.min(max,v)); }
-    function escapeHtml(value){ return String(value).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
-    function waitFor(check, timeout=20000, interval=120){ return new Promise((resolve,reject)=>{ const start=Date.now(); const tick=()=>{ try{ const value=check(); if(value){resolve(value);return;} }catch{} if(Date.now()-start>timeout){reject(new Error('必要なブラウザモデルを読み込めませんでした。'));return;} setTimeout(tick,interval); }; tick(); }); }
-    function ensureAnalysisWorker(){
-      if(analysisWorker)return analysisWorker;
-      const source=$('analysisWorkerSource')?.textContent?.trim();
-      if(!source)throw new Error('画像処理の眼を準備できませんでした。ページを開き直してください。');
-      analysisWorkerUrl=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
-      analysisWorker=new Worker(analysisWorkerUrl,{type:'module'});
-      analysisWorker.addEventListener('message',event=>{
-        const message=event.data||{};
-        if(message.type==='progress'){setStatus('cameraStatus',message.stage);setStatus('modelStatus',message.stage);return;}
-        if(message.type==='success'&&analysisPending){const pending=analysisPending;analysisPending=null;pending.resolve(message);return;}
-        if(message.type==='error'&&analysisPending){const pending=analysisPending;analysisPending=null;pending.reject(new Error(message.message));}
-      });
-      analysisWorker.addEventListener('error',event=>{if(analysisPending){const pending=analysisPending;analysisPending=null;const detail=event.error?.message||event.message||(event.filename?`${event.filename}:${event.lineno||0}`:'Worker error');pending.reject(new Error(`画像処理の眼を呼び出せませんでした。${detail}`));}});
-      return analysisWorker;
-    }
-    function lightweightGray(data,width,height,maxSide=620){
-      const scale=Math.min(1,maxSide/Math.max(width,height)),smallWidth=Math.max(1,Math.round(width*scale)),smallHeight=Math.max(1,Math.round(height*scale)),gray=new Uint8Array(smallWidth*smallHeight);
-      for(let y=0;y<smallHeight;y++){const sy=Math.min(height-1,Math.round(y/scale));for(let x=0;x<smallWidth;x++){const sx=Math.min(width-1,Math.round(x/scale)),index=(sy*width+sx)*4;gray[y*smallWidth+x]=Math.round(data[index]*.299+data[index+1]*.587+data[index+2]*.114);}}
-      return {gray,width:smallWidth,height:smallHeight,scale};
-    }
-    function lightweightEdges(gray,width,height){const edge=new Uint8Array(width*height);for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){const index=y*width+x,gx=gray[index+1]-gray[index-1],gy=gray[index+width]-gray[index-width];edge[index]=Math.min(255,Math.round(Math.hypot(gx,gy)));}return edge;}
-    function lightweightCircleScore(edge,width,height,cx,cy,r){if(cx-r<-width*.04||cy-r<-height*.04||cx+r>width*1.04||cy+r>height*1.04)return 0;const samples=160;let total=0,visible=0;for(let i=0;i<samples;i++){const theta=i/samples*Math.PI*2,x=Math.round(cx+Math.cos(theta)*r),y=Math.round(cy+Math.sin(theta)*r);if(x<1||y<1||x>=width-1||y>=height-1)continue;let local=0;for(let offset=-2;offset<=2;offset++){const px=Math.round(cx+Math.cos(theta)*(r+offset)),py=Math.round(cy+Math.sin(theta)*(r+offset));if(px>=1&&py>=1&&px<width-1&&py<height-1)local=Math.max(local,edge[py*width+px]);}total+=local;visible++;}return visible?total/visible/255:0;}
-    function detectCirclesLightweight(image){const small=lightweightGray(image.data,image.width,image.height),edge=lightweightEdges(small.gray,small.width,small.height),shortSide=Math.min(small.width,small.height),candidates=[],centerStep=Math.max(1,Math.round(shortSide*.045)),radiusStep=Math.max(3,Math.round(shortSide*.018));for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const cx=small.width/2+dx*centerStep,cy=small.height/2+dy*centerStep;for(let r=Math.round(shortSide*.1);r<=Math.round(shortSide*.72);r+=radiusStep){const score=lightweightCircleScore(edge,small.width,small.height,cx,cy,r);if(score>.06)candidates.push({x:cx,y:cy,r,score});}}candidates.sort((a,b)=>b.score-a.score);const selected=[];for(const candidate of candidates){if(selected.some(other=>Math.hypot(candidate.x-other.x,candidate.y-other.y)<shortSide*.05&&Math.abs(candidate.r-other.r)<shortSide*.035))continue;selected.push(candidate);if(selected.length>=180)break;}let best=null,bestScore=-Infinity;for(let i=0;i<selected.length;i++)for(let j=i+1;j<selected.length;j++){const first=selected[i],second=selected[j],outer=first.r>=second.r?first:second,inner=outer===first?second:first,ratio=inner.r/outer.r,centerError=Math.hypot(outer.x-inner.x,outer.y-inner.y)/outer.r;if(outer.r<shortSide*.35||inner.r<shortSide*.25||ratio<.35||ratio>.84||centerError>.24)continue;const score=outer.score+inner.score+(1-centerError)*.32+(outer.r/shortSide)*1.4;if(score>bestScore){bestScore=score;best={outer,inner,confidence:clamp(score/1.4)};}}if(!best)throw new Error('二重円の姿をつかめなかった。外円全体が見えるよう、魔法陣を正面から写してください。');const restore=circle=>({x:circle.x/small.scale,y:circle.y/small.scale,r:circle.r/small.scale});return {outer:restore(best.outer),inner:restore(best.inner),confidence:best.confidence};}
-    function analyzeSigilLightweight(image,circle){const small=lightweightGray(image.data,image.width,image.height),cx=circle.inner.x*small.scale,cy=circle.inner.y*small.scale,r=circle.inner.r*small.scale,samples=180,radii=[],darkRatio=[];for(let i=0;i<samples;i++){const theta=i/samples*Math.PI*2;let found=0,dark=0;for(let step=Math.round(r*.12);step<r*.94;step+=Math.max(1,r*.012)){const x=Math.round(cx+Math.cos(theta)*step),y=Math.round(cy+Math.sin(theta)*step);if(x<0||y<0||x>=small.width||y>=small.height)continue;if(small.gray[y*small.width+x]<150){found=step/r;dark++;}}radii.push(found);darkRatio.push(dark);}const valid=radii.filter(value=>value>0),mean=valid.reduce((sum,value)=>sum+value,0)/(valid.length||1),variance=valid.reduce((sum,value)=>sum+(value-mean)**2,0)/(valid.length||1);let roughness=0,turns=0;for(let i=0;i<samples;i++){const previous=radii[(i+samples-1)%samples],current=radii[i],next=radii[(i+1)%samples];roughness+=Math.abs(current-previous);if((current-previous)*(next-current)<-.002)turns++;}roughness/=samples;const dark=darkRatio.reduce((sum,value)=>sum+value,0)/(samples*Math.max(1,Math.round(r*.82))),roundness=clamp(1-variance*14),spiky=clamp(roughness*5+variance*7),angularity=clamp(turns/48+roughness*2),lineDensity=clamp(dark*6+roughness*1.4),raw={attack:spiky*.62+(1-roundness)*.2,defense:angularity*.7+(1-roundness)*.2,support:roundness*.78+(1-spiky)*.18,debuff:lineDensity*.72+roughness*.28},total=Object.values(raw).reduce((a,b)=>a+b,0)||1;return {attack:raw.attack/total,defense:raw.defense/total,support:raw.support/total,debuff:raw.debuff/total};}
-    async function analyzeImageLightweight(){setStatus('cameraStatus','画像処理の眼を軽く整えています…');setStatus('modelStatus','画像処理の眼を軽く整えています…');await yieldToBrowser();const image=captureContext.getImageData(0,0,captureCanvas.width,captureCanvas.height),circle=detectCirclesLightweight(image);setStatus('cameraStatus','二重円を読み取っています…');setStatus('modelStatus','二重円を読み取っています…');await yieldToBrowser();const shape=analyzeSigilLightweight(image,circle);return {circle,shape};}
-    function analyzeImageInWorker(){
-      if(location.protocol==='file:'||new URLSearchParams(location.search).has('mainlightweight'))return analyzeImageLightweight();
-      const worker=ensureAnalysisWorker(),image=captureContext.getImageData(0,0,captureCanvas.width,captureCanvas.height);
-      return new Promise((resolve,reject)=>{analysisPending={resolve,reject};worker.postMessage({width:image.width,height:image.height,lightweight:location.protocol==='file:'||new URLSearchParams(location.search).has('lightweight'),buffer:image.data.buffer},[image.data.buffer]);});
-    }
-    function canvasFromImage(image){ const max=1400; const scale=Math.min(1,max/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height)); captureCanvas.width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale)); captureCanvas.height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale)); captureContext.drawImage(image,0,0,captureCanvas.width,captureCanvas.height); showCaptured(); }
-    function showCaptured(){ captured=true; $('stage').classList.add('captured'); video.hidden=true; $('stageEmpty').hidden=true; captureCanvas.classList.remove('hidden'); overlayCanvas.classList.remove('hidden'); $('capture').disabled=true; $('analyze').disabled=false; $('readSpell').disabled=false; drawOverlay(); }
-    function drawOverlay(){ overlayCanvas.width=captureCanvas.width; overlayCanvas.height=captureCanvas.height; overlayContext.clearRect(0,0,overlayCanvas.width,overlayCanvas.height); if(!detected) return; overlayContext.save(); overlayContext.strokeStyle='#8be0f3'; overlayContext.lineWidth=Math.max(2,overlayCanvas.width/420); overlayContext.setLineDash([10,7]); for(const c of [detected.outer,detected.inner]){ overlayContext.beginPath();overlayContext.arc(c.x,c.y,c.r,0,Math.PI*2);overlayContext.stroke(); } overlayContext.setLineDash([]); overlayContext.fillStyle='#f5d879';overlayContext.font=`${Math.max(14,overlayCanvas.width/55)}px ui-sans-serif`;overlayContext.fillText('二重円',detected.outer.x-detected.outer.r,Math.max(24,detected.outer.y-detected.outer.r-12)); overlayContext.restore(); }
-    function yieldToBrowser(){ return new Promise(resolve=>setTimeout(resolve,0)); }
-    function progressText(value){if(!Number.isFinite(value))return '';const percent=value<=1?value*100:value;return `${Math.round(Math.max(0,Math.min(100,percent)))}%`;}
-    async function startCamera(){
-      if(!navigator.mediaDevices?.getUserMedia){ setStatus('cameraStatus','この器では水晶眼をひらけません。画像の写し絵を選んでください。','error'); return; }
-      try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false}); video.srcObject=stream; video.hidden=false; $('stage').classList.remove('captured');$('stageEmpty').hidden=true;captureCanvas.classList.add('hidden');overlayCanvas.classList.add('hidden');captured=false;detected=null; $('capture').disabled=false; $('analyze').disabled=true; setStatus('cameraStatus','水晶眼がひらいた。魔法陣を画面に収めたら、円環を写し取ってください。','good'); }
-      catch(error){ setStatus('cameraStatus','水晶眼が曇っている。許可を確かめるか、画像の写し絵を選んでください。','error'); }
-    }
-    function captureFrame(){ if(!stream || video.readyState<2) return; captureCanvas.width=video.videoWidth;captureCanvas.height=video.videoHeight;captureContext.drawImage(video,0,0,captureCanvas.width,captureCanvas.height);showCaptured();setStatus('cameraStatus','円環を写し取った。頁に読ませるか、呪文の原文を確かめてください。','good'); }
-    function loadFile(file){
-      if(!file){ setStatus('cameraStatus','写し絵が選ばれていません。画像を選んでください。','error'); return; }
-      setStatus('cameraStatus','写し絵を読み込んでいます…');
-      const image=new Image(),source=URL.createObjectURL(file);
-      image.onload=()=>{ URL.revokeObjectURL(source); try{ canvasFromImage(image); setStatus('cameraStatus','写し絵を受け取った。円環の読みを始めます…','good'); void analyze(); }catch(error){ setStatus('cameraStatus',`写し絵を読み込めなかった。${error.message}`,'error'); } };
-      image.onerror=()=>{ URL.revokeObjectURL(source); setStatus('cameraStatus','写し絵を読み込めなかった。別の画像を選んでください。','error'); };
-      image.src=source;
-    }
-
-    function samplePolar(canvas,circle,innerGap=10,outerGap=10,width=1200,height=180){
-      const out=document.createElement('canvas');out.width=width;out.height=height;const ctx=out.getContext('2d');const source=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,canvas.width,canvas.height);const data=ctx.createImageData(width,height);const inner=circle.inner.r+innerGap,outer=circle.outer.r-outerGap;
-      for(let x=0;x<width;x++){const theta=(x/width)*Math.PI*2,cos=Math.cos(theta),sin=Math.sin(theta);for(let y=0;y<height;y++){const t=y/Math.max(1,height-1),r=inner+t*Math.max(1,outer-inner),cx=circle.inner.x+(circle.outer.x-circle.inner.x)*t,cy=circle.inner.y+(circle.outer.y-circle.inner.y)*t,sx=Math.round(cx+cos*r),sy=Math.round(cy+sin*r),di=(y*width+x)*4;if(sx<0||sy<0||sx>=canvas.width||sy>=canvas.height){data.data[di]=data.data[di+1]=data.data[di+2]=0;data.data[di+3]=255;continue;}const si=(sy*canvas.width+sx)*4;data.data[di]=source.data[si];data.data[di+1]=source.data[si+1];data.data[di+2]=source.data[si+2];data.data[di+3]=255;}}
-      ctx.putImageData(data,0,0);return out;
-    }
-    function sampleAdaptiveSpell(canvas,circle){
-      const source=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,canvas.width,canvas.height),width=source.width,height=source.height,cx=circle?.inner?.x??width/2,cy=circle?.inner?.y??height/2,inner=circle?.inner?.r??Math.min(width,height)*.32,outer=circle?.outer?.r??Math.min(width,height)*.48,dark=new Uint8Array(width*height),visited=new Uint8Array(width*height),components=[];
-      for(let i=0;i<dark.length;i++){const p=i*4;dark[i]=(source.data[p]*.299+source.data[p+1]*.587+source.data[p+2]*.114)<125?1:0;}
-      for(let y=0;y<height;y++)for(let x=0;x<width;x++){const seed=y*width+x;if(!dark[seed]||visited[seed])continue;const queue=[seed];visited[seed]=1;let minX=x,maxX=x,minY=y,maxY=y,sumX=0,sumY=0;for(let q=0;q<queue.length;q++){const current=queue[q],px=current%width,py=Math.floor(current/width);minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py);sumX+=px;sumY+=py;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=px+dx,ny=py+dy;if(nx<0||ny<0||nx>=width||ny>=height)continue;const next=ny*width+nx;if(dark[next]&&!visited[next]){visited[next]=1;queue.push(next);}}}const w=maxX-minX+1,h=maxY-minY+1,centerX=sumX/queue.length,centerY=sumY/queue.length,radius=Math.hypot(centerX-cx,centerY-cy),corners=[[minX,minY],[maxX,minY],[minX,maxY],[maxX,maxY]].map(([px,py])=>Math.hypot(px-cx,py-cy));if(queue.length>=10&&w<outer*.28&&h<outer*.28&&h>outer*.025&&radius>inner*.88&&radius<outer*1.12)components.push({angle:(Math.atan2(centerY-cy,centerX-cx)+Math.PI*2)%(Math.PI*2),radius,radialMin:Math.min(...corners),radialMax:Math.max(...corners)});}
-      if(components.length<4)return samplePolar(canvas,circle,12,12,1800,300);components.sort((a,b)=>a.angle-b.angle);let cut=0,largest=-1;for(let i=0;i<components.length;i++){const current=components[i].angle,next=i===components.length-1?components[0].angle+Math.PI*2:components[i+1].angle,gap=next-current;if(gap>largest){largest=gap;cut=(i+1)%components.length;}}const rotated=components.slice(cut).concat(components.slice(0,cut));let angleOffset=0;const ordered=rotated.map((component,index)=>{if(index&&component.angle<rotated[index-1].angle)angleOffset+=Math.PI*2;return {...component,theta:component.angle+angleOffset};});const first=ordered[0],last=ordered.at(-1),start=first.theta-.08,end=last.theta+.08;function radiusAt(theta){if(theta<=first.theta)return first.radius;if(theta>=last.theta)return last.radius;for(let i=1;i<ordered.length;i++){if(theta<=ordered[i].theta){const before=ordered[i-1],after=ordered[i],ratio=(theta-before.theta)/Math.max(.0001,after.theta-before.theta);return before.radius+(after.radius-before.radius)*ratio;}}return last.radius;}
-      const makeBand=(bandStart,bandEnd,band)=>{const outWidth=Math.max(240,Math.round((bandEnd-bandStart)*Math.max(120,outer*.8))),outHeight=192,out=document.createElement('canvas');out.width=outWidth;out.height=outHeight;const ctx=out.getContext('2d'),data=ctx.createImageData(outWidth,outHeight);for(let x=0;x<outWidth;x++){const theta=bandStart+x/Math.max(1,outWidth-1)*(bandEnd-bandStart),base=radiusAt(theta),cos=Math.cos(theta),sin=Math.sin(theta);for(let y=0;y<outHeight;y++){const radius=base+(y/Math.max(1,outHeight-1)-.5)*band,sx=Math.round(cx+cos*radius),sy=Math.round(cy+sin*radius),di=(y*outWidth+x)*4;if(sx<0||sy<0||sx>=width||sy>=height){data.data[di]=data.data[di+1]=data.data[di+2]=255;data.data[di+3]=255;continue;}const si=(sy*width+sx)*4;data.data[di]=source.data[si];data.data[di+1]=source.data[si+1];data.data[di+2]=source.data[si+2];data.data[di+3]=255;}}ctx.putImageData(data,0,0);const cleaned=ctx.getImageData(0,0,outWidth,outHeight);for(let y=0;y<outHeight;y++){let dark=0;for(let x=0;x<outWidth;x++){const i=(y*outWidth+x)*4;if(cleaned.data[i]*.299+cleaned.data[i+1]*.587+cleaned.data[i+2]*.114<145)dark++;}if(dark/outWidth>.32)for(let yy=Math.max(0,y-2);yy<=Math.min(outHeight-1,y+2);yy++)for(let x=0;x<outWidth;x++){const i=(yy*outWidth+x)*4;cleaned.data[i]=cleaned.data[i+1]=cleaned.data[i+2]=255;}}ctx.putImageData(cleaned,0,0);return out;};
-      const gaps=ordered.slice(0,-1).map((component,index)=>({index,gap:ordered[index+1].theta-component.theta})).sort((a,b)=>b.gap-a.gap),breaks=new Set(gaps.slice(0,Math.min(7,gaps.length)).map(item=>item.index)),groups=[[]];
-      for(let index=0;index<ordered.length;index++){groups.at(-1).push(ordered[index]);if(breaks.has(index)&&index<ordered.length-1)groups.push([]);}
-      const wordSegments=groups.filter(group=>group.length).map((group,index)=>{const previous=groups[index-1]?.at(-1),next=groups[index+1]?.[0],groupStart=previous?(previous.theta+group[0].theta)/2:start,groupEnd=next?(group.at(-1).theta+next.theta)/2:end,radialMin=Math.min(...group.map(component=>component.radialMin)),radialMax=Math.max(...group.map(component=>component.radialMax)),band=Math.max(96,Math.min(168,radialMax-radialMin+24));return makeBand(groupStart,groupEnd,band);});
-      const out=makeBand(start,end,Math.max(120,Math.min(168,outer*.22)));out.dataset.adaptive='true';out._wordSegments=wordSegments;return out;
-    }
-    function estimateSpellGuide(canvas){
-      const shortSide=Math.min(canvas.width,canvas.height),outerRadius=shortSide*.47,innerRadius=outerRadius*.76;
-      return {outer:{x:canvas.width/2,y:canvas.height/2,r:outerRadius},inner:{x:canvas.width/2,y:canvas.height/2,r:innerRadius}};
-    }
-    function cleanOcrText(value){return String(value||'').replace(/\s+/g,' ').replace(/[^A-Za-z .,!?'-]/g,'').trim();}
-    function plausibleSpell(value){
-      const words=cleanOcrText(value).split(/\s+/).map(word=>word.replace(/[^A-Za-z'-]/g,'')).filter(Boolean);
-      const letters=words.join('').length;
-      const longWords=words.filter(word=>word.replace(/[^A-Za-z]/g,'').length>=4).length;
-      const normalized=words.join(' ').toLowerCase();
-      const navigationArtifact=/\b(?:related changes|upload file|special pages|permanent link|page information|cite this page|wikidata item)\b/.test(normalized);
-      const joinedWords=words.some(word=>/[a-z][A-Z]/.test(word));
-      const spellAction=/\b(?:awaken|bind|blaze|break|burn|call|command|control|create|crush|cut|defend|destroy|draw|drive|enforce|establish|fall|flow|freeze|guard|heal|ignite|judge|keep|open|protect|pull|push|raise|release|restore|seal|send|shield|shatter|silence|strike|summon|surround|tear|turn|twist|unleash|wash)\b/.test(normalized);
-      return !navigationArtifact&&!joinedWords&&spellAction&&letters>=12&&words.length>=3&&longWords>=1&&longWords/words.length>=.2;
-    }
-    const SPELL_ROLES=['action','determiner','subject','preposition','determiner','adjective','adjective','noun'];
-    const SPELL_ROLE_WORDS={
-      action:['awaken','bind','blaze','break','burn','call','command','control','create','crush','cut','defend','destroy','draw','drive','enforce','establish','fall','flow','freeze','guard','heal','ignite','judge','keep','open','protect','pull','push','raise','release','restore','seal','send','shield','shatter','silence','strike','summon','surround','tear','turn','twist','unleash','wash'],
-      determiner:['a','an','the'],
-      subject:['ally','enemy','foe','target','spirit','shadow','beast','creature','heart','king','queen','world','stone','gate','flame','fire'],
-      preposition:['against','around','before','beneath','beyond','between','by','from','into','over','through','under','upon','within'],
-      adjective:['ancient','arcane','black','blue','boundless','bright','cold','crimson','dark','endless','eternal','fierce','golden','hidden','hollow','iron','pale','red','silent','silver','stormy','swift','wild'],
-      noun:['ash','beast','blood','crown','darkness','dawn','dust','ember','enemy','fire','flame','frost','heart','light','moon','night','rain','river','shadow','sky','spirit','star','storm','stone','sun','thunder','void','wind','world']
-    };
-    function spellDistance(a,b){const row=Array.from({length:b.length+1},(_,index)=>index);for(let i=1;i<=a.length;i++){let diagonal=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const saved=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,diagonal+(a[i-1]===b[j-1]?0:1));diagonal=saved;}}return row[b.length];}
-    function restoreSpellText(value){
-      const words=cleanOcrText(value).toLowerCase().split(/\s+/).map(word=>word.replace(/[^a-z]/g,'')).filter(Boolean);
-      if(words.length<SPELL_ROLES.length)return '';
-      let best=null;
-      for(let start=0;start<=words.length-SPELL_ROLES.length;start++){
-        const slice=words.slice(start,start+SPELL_ROLES.length),corrected=slice.map((word,index)=>SPELL_ROLE_WORDS[SPELL_ROLES[index]].map(candidate=>({word:candidate,score:1-spellDistance(word,candidate)/Math.max(word.length,candidate.length)})).sort((a,b)=>b.score-a.score)[0]),score=corrected.reduce((sum,item)=>sum+item.score,0);
-        if(corrected.every(item=>item.score>=.35)&&(!best||score>best.score))best={corrected,score};
-      }
-      if(!best)return '';
-      const sentence=best.corrected.map(item=>item.word).join(' ');
-      return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`;
-    }
-    function normalizeRecognizedSpell(value){return restoreSpellText(cleanOcrText(value));}
-    function cropRingSegment(polar,start,end,flip=false){
-      const width=end-start,out=document.createElement('canvas');out.width=width;out.height=polar.height;const ctx=out.getContext('2d');
-      if(flip){ctx.translate(width,polar.height);ctx.rotate(Math.PI);ctx.drawImage(polar,start,0,width,polar.height,0,0,width,polar.height);}else ctx.drawImage(polar,start,0,width,polar.height,0,0,width,polar.height);
-      return out;
-    }
-    function rotateCanvas180(source){const out=document.createElement('canvas');out.width=source.width;out.height=source.height;const ctx=out.getContext('2d');ctx.translate(out.width,out.height);ctx.rotate(Math.PI);ctx.drawImage(source,0,0);return out;}
-    function prepareHandwritingSegment(segment){
-      const source=segment.getContext('2d',{willReadFrequently:true}).getImageData(0,Math.round(segment.height*.12),segment.width,Math.max(1,Math.round(segment.height*.76))),scale=Math.max(1,Math.min(1.6,720/segment.width)),width=Math.max(320,Math.round(segment.width*scale)),height=192,out=document.createElement('canvas');
-      out.width=width;out.height=height;const ctx=out.getContext('2d'),data=ctx.createImageData(width,height);
-      for(let y=0;y<height;y++)for(let x=0;x<width;x++){const sx=Math.min(source.width-1,Math.round(x/scale)),sy=Math.min(source.height-1,Math.round(y/height*source.height)),si=(sy*source.width+sx)*4,lum=source.data[si]*.299+source.data[si+1]*.587+source.data[si+2]*.114,value=lum<158?20:lum<188?150:255,di=(y*width+x)*4;data.data[di]=data.data[di+1]=data.data[di+2]=value;data.data[di+3]=255;}
-      ctx.putImageData(data,0,0);return out;
-    }
-    function ocrCandidateScore(value){const text=cleanOcrText(value),words=text.split(/\s+/).filter(Boolean),letters=text.replace(/[^A-Za-z]/g,'').length,restored=restoreSpellText(text);return (restored?20000:plausibleSpell(text)?10000:0)+letters+words.length*5;}
-    async function recognizeRingSegmented(worker,canvas,circle){
-      setStatus('modelStatus','円環を高解像度の頁へ展開し、文字を読み取っています…');
-      await yieldToBrowser();
-      const polar=samplePolar(canvas,circle?.outer&&circle?.inner?circle:estimateSpellGuide(canvas),12,12,2200,300),segmentCount=4,segmentWidth=Math.round(polar.width/segmentCount),candidates=[];
-      const whole=await worker.recognize(prepareHandwritingSegment(polar),{tessedit_pageseg_mode:'11',tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,!?\'-'});candidates.push(cleanOcrText(whole.data?.text));
-      for(let index=0;index<segmentCount;index++){
-        const start=Math.max(0,index*segmentWidth-90),end=Math.min(polar.width,(index+1)*segmentWidth+90),segment=prepareHandwritingSegment(cropRingSegment(polar,start,end,index===1||index===2));
-        setStatus('modelStatus',`円環の区画 ${index+1}/${segmentCount} を読み取っています…`);await yieldToBrowser();
-        const result=await worker.recognize(segment,{tessedit_pageseg_mode:'7',tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,!?\'-'});const text=cleanOcrText(result.data?.text);if(text)candidates.push(text);
-      }
-      candidates.push(cleanOcrText(candidates.slice(1).join(' ')));
-      const best=candidates.filter(Boolean).sort((a,b)=>ocrCandidateScore(b)-ocrCandidateScore(a))[0]||'';
-      return normalizeRecognizedSpell(best);
-    }
-    async function recognizeRing(worker,canvas,circle){
-      setStatus('modelStatus','円環を高解像度の頁へ展開し、文字を読み取っています…');
-      await yieldToBrowser();
-      const polar=samplePolar(canvas,circle?.outer&&circle?.inner?circle:estimateSpellGuide(canvas),12,12,2400,360),prepared=prepareHandwritingSegment(polar);
-      const result=await worker.recognize(prepared,{tessedit_pageseg_mode:'11',tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,!\'-'});
-      const text=cleanOcrText(result.data?.text);
-      return plausibleSpell(text)?text:'';
-    }
-    function ringCoverage(polar){const data=polar.getContext('2d',{willReadFrequently:true}).getImageData(0,0,polar.width,polar.height).data;let covered=0;for(let x=0;x<polar.width;x++){let dark=0;for(let y=0;y<polar.height;y++){const i=(y*polar.width+x)*4;const lum=(data[i]*.299+data[i+1]*.587+data[i+2]*.114);if(lum<150)dark++;}if(dark>=Math.max(2,polar.height*.055))covered++;}return covered/polar.width;}
-    function renderStructure(circle,ring,shape){const rows=[['二重円の器',circle?'起きている':'眠っている',circle?.confidence??0],['呪文の環',ring>=.58?'一周している':'環が途切れている',ring],['内円の紋',shape?'姿を現した':'まだ見えない',shape?1:0]];$('structureResult').className='';$('structureResult').innerHTML='<b>円環の記録</b><div class="bars">'+rows.map(([label,value,score])=>`<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(clamp(score)*100)}%"></span></div><strong>${escapeHtml(value)}</strong></div>`).join('')+'</div>'+(ring<.58?'<p class="note">外円と内円のあいだを、途切れない呪文で満たす必要があります。</p>':'');}
-    function renderShape(scores){const names={attack:'攻撃の相',defense:'防御の相',support:'回復／支援の相',debuff:'弱体の相'};const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);const [top,second]=sorted;const certainty=clamp((top[1]-second[1])/.32);$('shapeResult').className='shape';$('shapeResult').innerHTML=`<div class="shape-title"><b>${names[top[0]]}</b><span>読みの確かさ ${Math.round(certainty*100)}%</span></div><div class="bars">${sorted.map(([key,value])=>`<div class="bar-row"><span>${names[key]}</span><div class="bar"><span style="width:${Math.round(value*100)}%"></span></div><strong>${Math.round(value*100)}%</strong></div>`).join('')}</div><p class="note">${certainty<.35?'複数の相が近く、紋の声はまだ揺れている。':'最も強く現れた相を、この紋の性質として記します。'}</p>`;}
-    async function ensureHandwritingOcr(){
-      if(handwritingOcrPromise)return handwritingOcrPromise;
-      handwritingOcrPromise=(async()=>{if(!embeddingModulePromise)embeddingModulePromise=import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');const {pipeline}=await embeddingModulePromise;return pipeline('image-to-text',HANDWRITING_MODEL_ID,{dtype:'q8',progress_callback:info=>{if(info?.status)setStatus('preloadStatus',`手書き書記を事前取得中: ${info.status} ${progressText(info.progress)}`);}});})();
-      handwritingOcrPromise.catch(()=>{handwritingOcrPromise=null;});
-      return handwritingOcrPromise;
-    }
-    function handwritingText(result){const row=Array.isArray(result)?result[0]:result;return cleanOcrText(row?.generated_text||row?.text||'');}
-    const PADDLE_RECOGNITION_URL='https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_rec_infer.onnx',PADDLE_DICTIONARY_URL='https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ppocr_keys_v1.txt';
-    const GUTEN_DETECTION_URL='https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_det_infer.onnx',GUTEN_RECOGNITION_URL='https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_rec_infer.onnx',GUTEN_DICTIONARY_URL='https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ppocr_keys_v1.txt';
-    async function ensureGutenOcr(){
-      if(gutenOcrPromise)return gutenOcrPromise;
-      gutenOcrPromise=(async()=>{
-        const cvModule=await import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm');
-        const cv=cvModule.default??cvModule;
-        if(!cv.Mat)await new Promise(resolve=>{const previous=cv.onRuntimeInitialized;cv.onRuntimeInitialized=()=>{previous?.();resolve();};});
-        cv.matFromImageData=imageData=>{const data=imageData instanceof ImageData?imageData:new ImageData(Uint8ClampedArray.from(imageData.data),imageData.width,imageData.height),mat=new cv.Mat(data.height,data.width,cv.CV_8UC4);mat.data.set(data.data);return mat;};
-        const splitSource=await (await fetch('https://cdn.jsdelivr.net/npm/@gutenye/ocr-common@1.4.9/splitIntoLineImages/+esm')).text();
-        const support=String.raw`class BrowserLineImage{
-          constructor({data,width,height}){this.data=Uint8ClampedArray.from(data);this.width=width;this.height=height;}
-          async resize(size,heightValue){
-            console.debug('Guten line image',this.width,this.height,this.data?.length,size,heightValue);
-            const requestedWidth=Number(typeof size==='object'?size?.width:size);
-            const requestedHeight=Number(typeof size==='object'?size?.height:heightValue);
-            const fallbackWidth=Number(this.width),fallbackHeight=Number(this.height);
-            const width=Math.max(1,Math.round(Number.isFinite(requestedWidth)?requestedWidth:(Number.isFinite(fallbackWidth)?fallbackWidth:1)));
-            const height=Math.max(1,Math.round(Number.isFinite(requestedHeight)?requestedHeight:(Number.isFinite(fallbackHeight)?fallbackHeight:1)));
-            const source=document.createElement('canvas');source.width=this.width;source.height=this.height;
-            source.getContext('2d').putImageData(new ImageData(this.data,this.width,this.height),0,0);
-            const target=document.createElement('canvas');target.width=width;target.height=height;
-            target.getContext('2d').drawImage(source,0,0,width,height);
-            return new BrowserLineImage(target.getContext('2d').getImageData(0,0,width,height));
-          }
-        }
-`;
-        const patchedSource=support+splitSource.replace('from"/npm/@techstark/opencv-js@4.9.0-release.3/+esm"','from"https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm"').replace('from"/npm/js-clipper@1.0.1/+esm"','from"https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm"').replace('let v;','let v=BrowserLineImage;');
-        const splitUrl=URL.createObjectURL(new Blob([patchedSource],{type:'text/javascript'}));
-        const {splitIntoLineImages:baseSplitIntoLineImages}=await import(splitUrl);URL.revokeObjectURL(splitUrl);
-        const splitIntoLineImages=async(...args)=>{const lineImages=await baseSplitIntoLineImages(...args);globalThis.__gutenLastLineImages=lineImages;return lineImages;};
-        const {default:Ocr}=await import('https://cdn.jsdelivr.net/npm/@gutenye/ocr-browser@1.4.9/+esm');
-        const common=await import('https://cdn.jsdelivr.net/npm/@gutenye/ocr-common@1.4.9/+esm');
-        const ort=await import('https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/+esm');
-        class BrowserImageRaw{
-          constructor({data,width,height}){this.data=Uint8ClampedArray.from(data);this.width=width;this.height=height;}
-          async resize({width,height}){const source=document.createElement('canvas');source.width=this.width;source.height=this.height;source.getContext('2d').putImageData(new ImageData(this.data,this.width,this.height),0,0);const target=document.createElement('canvas');target.width=width;target.height=height;target.getContext('2d').drawImage(source,0,0,width,height);return new BrowserImageRaw(target.getContext('2d').getImageData(0,0,width,height));}
-          async write(){}
-          async drawBox(){return this;}
-          static async open(url){const image=new Image();image.src=url;await image.decode();const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;canvas.getContext('2d').drawImage(image,0,0);return new BrowserImageRaw(canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height));}
-        }
-        class BrowserFileUtils{static async read(url){return await (await fetch(url)).text();}}
-        common.registerBackend({FileUtils:BrowserFileUtils,ImageRaw:BrowserImageRaw,InferenceSession:ort.InferenceSession,splitIntoLineImages,defaultModels:{detectionPath:GUTEN_DETECTION_URL,recognitionPath:GUTEN_RECOGNITION_URL,dictionaryPath:GUTEN_DICTIONARY_URL}});
-        return Ocr.create({models:{detectionPath:GUTEN_DETECTION_URL,recognitionPath:GUTEN_RECOGNITION_URL,dictionaryPath:GUTEN_DICTIONARY_URL},recognitionThreshold:0});
-      })();
-      gutenOcrPromise.catch(()=>{gutenOcrPromise=null;});
-      return gutenOcrPromise;
-    }
-    function normalizeCircularCandidates(candidates){
-      if(!candidates.length)return '';
-      candidates.sort((a,b)=>a.angle-b.angle);let largest=-1,cut=0;for(let i=0;i<candidates.length;i++){const current=candidates[i].angle,next=i===candidates.length-1?candidates[0].angle+Math.PI*2:candidates[i+1].angle,gap=next-current;if(gap>largest){largest=gap;cut=(i+1)%candidates.length;}}
-      const ordered=candidates.slice(cut).concat(candidates.slice(0,cut));let offset=0;const unwrapped=ordered.map((line,index)=>{if(index&&line.angle<ordered[index-1].angle)offset+=Math.PI*2;return {...line,theta:line.angle+offset};}),words=[];for(const line of unwrapped){const previous=words.at(-1);if(previous&&line.theta-previous.lastAngle<.30){previous.raw+=line.text;previous.lastAngle=line.theta;}else words.push({raw:line.text,lastAngle:line.theta});}return normalizeRecognizedSpell(words.map(word=>word.raw).join(' '));
-    }
-    async function recognizeGutenLineImages(lineImages,width,height){
-      const candidates=[];
-      for(const line of lineImages||[]){
-        if(!line?.image||!Array.isArray(line.box))continue;
-        const center=line.box.reduce((sum,point)=>({x:sum.x+point[0]/line.box.length,y:sum.y+point[1]/line.box.length}),{x:0,y:0}),source=document.createElement('canvas');source.width=line.image.width;source.height=line.image.height;source.getContext('2d').putImageData(new ImageData(Uint8ClampedArray.from(line.image.data),line.image.width,line.image.height),0,0);
-        const options=[];for(const turns of [0,1,2,3]){const text=await paddleRecognizeCanvas(turns?rotateCanvasQuarter(source,turns):source);if(text.length>=2)options.push({text:text.replace(/[^A-Za-z]/g,''),angle:turns});}
-        options.sort((a,b)=>b.text.length-a.text.length);if(options[0])candidates.push({text:options[0].text,angle:(Math.atan2(center.y-height/2,center.x-width/2)+Math.PI*2)%(Math.PI*2)});
-      }
-      return normalizeCircularCandidates(candidates);
-    }
-    async function gutenDetectAndRecognize(canvas,circle){
-      const ocr=await ensureGutenOcr(),guide=circle?.outer&&circle?.inner?circle:estimateSpellGuide(canvas),polarCanvas=samplePolar(canvas,guide,12,12,2400,360),polarResult=await ocr.detect(polarCanvas.toDataURL('image/jpeg',.95)),polarRaw=(polarResult.texts||[]).slice().sort((a,b)=>(a.box?.[0]?.[0]??0)-(b.box?.[0]?.[0]??0)).map(line=>cleanOcrText(line.text)).filter(Boolean).join(' ');console.debug('Guten polar texts',JSON.stringify((polarResult.texts||[]).map(line=>({text:line.text,mean:line.mean,box:line.box}))));const polarRestored=normalizeRecognizedSpell(polarRaw);if(polarRestored)return polarRestored;
-      const result=await ocr.detect(canvas.toDataURL('image/jpeg',.95));const directText=await recognizeGutenLineImages(globalThis.__gutenLastLineImages,result.resizedImageWidth||canvas.width,result.resizedImageHeight||canvas.height);if(directText)return directText;console.debug('Guten texts',JSON.stringify((result.texts||[]).map(line=>({text:line.text,mean:line.mean,box:line.box}))));const centerX=circle?.inner?.x??canvas.width/2,centerY=circle?.inner?.y??canvas.height/2,scaleX=canvas.width/(result.resizedImageWidth||canvas.width),scaleY=canvas.height/(result.resizedImageHeight||canvas.height);
-      const candidates=(result.texts||[]).filter(line=>line?.text).map(line=>{const frame=line.frame||line.box,points=Array.isArray(frame)?frame.flat().reduce((pairs,value,index)=>(index%2===0?pairs.push([value,frame.flat()[index+1]]):null,pairs),[]):[],xs=points.map(point=>Number(point[0])).filter(Number.isFinite),ys=points.map(point=>Number(point[1])).filter(Number.isFinite),box=frame&&!Array.isArray(frame)&&'left' in frame?frame:xs.length?{left:Math.min(...xs),top:Math.min(...ys),width:Math.max(...xs)-Math.min(...xs),height:Math.max(...ys)-Math.min(...ys)}:{left:canvas.width/(2*scaleX),top:canvas.height/(2*scaleY),width:1,height:1},x=(box.left+box.width/2)*scaleX,y=(box.top+box.height/2)*scaleY;return {text:cleanOcrText(line.text).replace(/[^A-Za-z]/g,''),angle:(Math.atan2(y-centerY,x-centerX)+Math.PI*2)%(Math.PI*2)};}).filter(line=>line.text.length>=2);
-      if(!candidates.length)return '';
-      candidates.sort((a,b)=>a.angle-b.angle);let largest=-1,cut=0;for(let i=0;i<candidates.length;i++){const current=candidates[i].angle,next=i===candidates.length-1?candidates[0].angle+Math.PI*2:candidates[i+1].angle,gap=next-current;if(gap>largest){largest=gap;cut=(i+1)%candidates.length;}}const ordered=candidates.slice(cut).concat(candidates.slice(0,cut));let offset=0;const unwrapped=ordered.map((line,index)=>{if(index&&line.angle<ordered[index-1].angle)offset+=Math.PI*2;return {...line,theta:line.angle+offset};}),words=[];for(const line of unwrapped){const previous=words.at(-1);if(previous&&line.theta-previous.lastAngle<.30){previous.raw+=line.text;previous.lastAngle=line.theta;}else words.push({raw:line.text,lastAngle:line.theta});}return normalizeRecognizedSpell(words.map(word=>word.raw).join(' '));
-    }
-    async function ensurePaddleRecognizer(){
-      if(paddleRecognitionPromise)return paddleRecognitionPromise;
-      paddleRecognitionPromise=(async()=>{const ort=await import('https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/+esm');ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/';const session=await ort.InferenceSession.create(PADDLE_RECOGNITION_URL),detectionSession=await ort.InferenceSession.create('https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_det_infer.onnx'),dictionary=[...(await (await fetch(PADDLE_DICTIONARY_URL)).text()).split('\n'),' '];return {ort,session,detectionSession,dictionary};})();
-      paddleRecognitionPromise.catch(()=>{paddleRecognitionPromise=null;});
-      return paddleRecognitionPromise;
-    }
-    async function paddleRecognizeCanvas(canvas){
-      const {ort,session,dictionary}=await ensurePaddleRecognizer(),height=48,width=Math.max(48,Math.min(960,Math.round(canvas.width/Math.max(1,canvas.height)*height))),source=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,canvas.width,canvas.height),sourceCanvas=document.createElement('canvas');sourceCanvas.width=canvas.width;sourceCanvas.height=canvas.height;sourceCanvas.getContext('2d').putImageData(source,0,0);const target=document.createElement('canvas');target.width=width;target.height=height;target.getContext('2d').drawImage(sourceCanvas,0,0,width,height);const resized=target.getContext('2d').getImageData(0,0,width,height),pixels=width*height,values=new Float32Array(pixels*3);for(let i=0;i<pixels;i++){const offset=i*4;values[i]=resized.data[offset+2]/255;values[pixels+i]=resized.data[offset+1]/255;values[pixels*2+i]=resized.data[offset]/255;}const tensor=new ort.Tensor('float32',values,[1,3,height,width]),outputs=await session.run({[session.inputNames[0]]:tensor}),output=outputs[session.outputNames[0]],steps=output.dims.at(-2),classes=output.dims.at(-1),chars=[];let previous=-1;for(let step=0;step<steps;step++){const start=step*classes,row=output.data.slice(start,start+classes);let best=0;for(let index=1;index<row.length;index++)if(row[index]>row[best])best=index;if(best&&best!==previous)chars.push(dictionary[best-1]||'');previous=best;}return cleanOcrText(chars.join(''));}
-    function rotateCanvasQuarter(source,turns){const quarter=((turns%4)+4)%4,out=document.createElement('canvas');if(quarter%2){out.width=source.height;out.height=source.width;}else{out.width=source.width;out.height=source.height;}const ctx=out.getContext('2d');ctx.translate(out.width/2,out.height/2);ctx.rotate(quarter*Math.PI/2);ctx.drawImage(source,-source.width/2,-source.height/2);return out;}
-    function rotateCanvasBy(source,angle){const sin=Math.abs(Math.sin(angle)),cos=Math.abs(Math.cos(angle)),out=document.createElement('canvas');out.width=Math.max(1,Math.ceil(source.width*cos+source.height*sin));out.height=Math.max(1,Math.ceil(source.width*sin+source.height*cos));const ctx=out.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,out.width,out.height);ctx.translate(out.width/2,out.height/2);ctx.rotate(angle);ctx.drawImage(source,-source.width/2,-source.height/2);return out;}
-    function cropCanvas(source,x,y,width,height){const out=document.createElement('canvas');out.width=Math.max(1,Math.round(width));out.height=Math.max(1,Math.round(height));out.getContext('2d').drawImage(source,x,y,width,height,0,0,out.width,out.height);return out;}
-    async function paddleDetectAndRecognize(canvas,circle){
-      const {ort,detectionSession}=await ensurePaddleRecognizer(),scale=Math.min(1,1400/Math.max(canvas.width,canvas.height)),inputWidth=Math.max(32,Math.ceil(canvas.width*scale/32)*32),inputHeight=Math.max(32,Math.ceil(canvas.height*scale/32)*32),inputCanvas=document.createElement('canvas');inputCanvas.width=inputWidth;inputCanvas.height=inputHeight;const inputContext=inputCanvas.getContext('2d');inputContext.fillStyle='white';inputContext.fillRect(0,0,inputWidth,inputHeight);inputContext.drawImage(canvas,0,0,inputWidth,inputHeight);const input=inputContext.getImageData(0,0,inputWidth,inputHeight),pixels=inputWidth*inputHeight,values=new Float32Array(pixels*3);for(let i=0;i<pixels;i++){const offset=i*4;values[i]=input.data[offset+2]/255;values[pixels+i]=input.data[offset+1]/255;values[pixels*2+i]=input.data[offset]/255;}const output=(await detectionSession.run({[detectionSession.inputNames[0]]:new ort.Tensor('float32',values,[1,3,inputHeight,inputWidth])}))[detectionSession.outputNames[0]],mapWidth=output.dims.at(-1),mapHeight=output.dims.at(-2),mask=new Uint8Array(mapWidth*mapHeight);for(let i=0;i<mask.length;i++)mask[i]=output.data[i]>.03?1:0;const seen=new Uint8Array(mask.length),components=[],mapScaleX=inputWidth/mapWidth,mapScaleY=inputHeight/mapHeight;for(let y=0;y<mapHeight;y++)for(let x=0;x<mapWidth;x++){const seed=y*mapWidth+x;if(!mask[seed]||seen[seed])continue;const queue=[seed];seen[seed]=1;let minX=x,maxX=x,minY=y,maxY=y;for(let q=0;q<queue.length;q++){const current=queue[q],px=current%mapWidth,py=Math.floor(current/mapWidth);minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=px+dx,ny=py+dy;if(nx<0||ny<0||nx>=mapWidth||ny>=mapHeight)continue;const next=ny*mapWidth+nx;if(mask[next]&&!seen[next]){seen[next]=1;queue.push(next);}}}const x0=minX*mapScaleX/scale,y0=minY*mapScaleY/scale,x1=(maxX+1)*mapScaleX/scale,y1=(maxY+1)*mapScaleY/scale,w=x1-x0,h=y1-y0,cx=(x0+x1)/2,cy=(y0+y1)/2,radial=Math.hypot(cx-(circle?.inner?.x??canvas.width/2),cy-(circle?.inner?.y??canvas.height/2));if(queue.length<10||w<6||h<6||w>canvas.width*.45||h>canvas.height*.3||radial<(circle?.inner?.r??Math.min(canvas.width,canvas.height)*.32)*.65||radial>(circle?.outer?.r??Math.min(canvas.width,canvas.height)*.48)*1.35)continue;components.push({angle:(Math.atan2(cy-(circle?.inner?.y??canvas.height/2),cx-(circle?.inner?.x??canvas.width/2))+Math.PI*2)%(Math.PI*2),x:x0,y:y0,w,h});}
-      const candidates=[];for(const component of components){const variants=[],left=Math.max(0,component.x-24),top=Math.max(0,component.y-24),source=cropCanvas(canvas,left,top,Math.min(canvas.width-left,component.w+48),Math.min(canvas.height-top,component.h+48)),tangent=rotateCanvasBy(source,-component.angle-Math.PI/2);for(const oriented of [tangent,rotateCanvasQuarter(tangent,2)]){const text=await paddleRecognizeCanvas(oriented);if(text.length>=2)variants.push(text);}const text=variants.sort((a,b)=>b.replace(/[^A-Za-z]/g,'').length-a.replace(/[^A-Za-z]/g,'').length)[0];if(text)candidates.push({text,angle:component.angle});}
-      if(!candidates.length)return '';candidates.sort((a,b)=>a.angle-b.angle);let largest=-1,cut=0;for(let i=0;i<candidates.length;i++){const current=candidates[i].angle,next=i===candidates.length-1?candidates[0].angle+Math.PI*2:candidates[i+1].angle,gap=next-current;if(gap>largest){largest=gap;cut=(i+1)%candidates.length;}}const rotated=candidates.slice(cut).concat(candidates.slice(0,cut));let offset=0;const ordered=rotated.map((candidate,index)=>{if(index&&candidate.angle<rotated[index-1].angle)offset+=Math.PI*2;return {...candidate,theta:candidate.angle+offset};}),words=[];for(const candidate of ordered){const previous=words.at(-1);if(previous&&candidate.theta-previous.lastAngle<.30){previous.raw+=candidate.text;previous.lastAngle=candidate.theta;}else words.push({raw:candidate.text,lastAngle:candidate.theta});}return normalizeRecognizedSpell(words.map(word=>word.raw).join(' '));
-    }
-    function spellRoleScore(value,index){const words=cleanOcrText(value).toLowerCase().split(/\s+/).map(word=>word.replace(/[^a-z]/g,'')).filter(Boolean),choices=SPELL_ROLE_WORDS[SPELL_ROLES[index]]||[];return Math.max(-1,...words.map(word=>Math.max(...choices.map(candidate=>1-spellDistance(word,candidate)/Math.max(word.length,candidate.length)))));}
-    async function recognizeHandwritingRing(ignoredModel,canvas,circle){
-      setStatus('modelStatus','円の形を確定せず、ひと巡りした筆跡を整えています…');
-      const polar=sampleAdaptiveSpell(canvas,circle?.outer&&circle?.inner?circle:estimateSpellGuide(canvas)),adaptive=polar.dataset.adaptive==='true',segmentCount=adaptive?8:4,segmentWidth=Math.round(polar.width/segmentCount),candidates=[],groups=[];
-      try{setStatus('modelStatus','円環の筆跡を文字区画へ分けています…');const detectedText=await gutenDetectAndRecognize(canvas,circle);if(detectedText)return detectedText;}catch(error){console.warn('Guten OCR skipped',error);}
-      try{setStatus('modelStatus','円環の筆跡を文字の帯として検出しています…');const detectedText=await paddleDetectAndRecognize(canvas,circle);if(detectedText)return detectedText;}catch(error){console.warn('Paddle detector skipped',error);}
-      if(adaptive&&polar._wordSegments?.length>=4){const wordCandidates=[];try{for(let index=0;index<polar._wordSegments.length;index++){const segment=polar._wordSegments[index],variants=[];for(const flip of [false,true]){setStatus('modelStatus',`円環の単語 ${index+1}/${polar._wordSegments.length}（${flip?'逆向き':'順向き'}）を整えています…`);await yieldToBrowser();const text=await paddleRecognizeCanvas(flip?rotateCanvas180(segment):segment);if(text)variants.push(text);}const bestVariant=variants.sort((a,b)=>spellRoleScore(b,index)-spellRoleScore(a,index))[0];if(bestVariant)wordCandidates.push(bestVariant);}const restored=normalizeRecognizedSpell(wordCandidates.join(' '));if(restored)return restored;}catch(error){console.warn('Paddle OCR skipped',error);}}
-      const model=ignoredModel||await ensureHandwritingOcr();
-      if(adaptive){const whole=await model(prepareHandwritingSegment(polar).toDataURL('image/png'),{max_new_tokens:64});const wholeText=handwritingText(whole);if(wholeText){candidates.push(wholeText);const restored=normalizeRecognizedSpell(wholeText);if(restored)return restored;}}
-      if(adaptive&&polar._wordSegments?.length>=4){const wordCandidates=[];for(let index=0;index<polar._wordSegments.length;index++){const segment=polar._wordSegments[index],variants=[];for(const flip of [false,true]){const oriented=flip?rotateCanvas180(segment):segment;const prepared=prepareHandwritingSegment(oriented);setStatus('modelStatus',`手書き書記の単語 ${index+1}/${polar._wordSegments.length}（${flip?'逆向き':'順向き'}）を読み取っています…`);await yieldToBrowser();const output=await model(prepared.toDataURL('image/png'),{max_new_tokens:24});const text=handwritingText(output);if(text){variants.push(text);candidates.push(text);}}const bestVariant=variants.sort((a,b)=>ocrCandidateScore(b)-ocrCandidateScore(a))[0];if(bestVariant)wordCandidates.push(bestVariant);}const restored=normalizeRecognizedSpell(wordCandidates.join(' '));if(restored)return restored;}
-      for(let index=0;index<segmentCount;index++){const start=Math.max(0,index*segmentWidth-90),end=Math.min(polar.width,(index+1)*segmentWidth+90),group=[],preferredFlip=adaptive?false:index===1||index===2,flips=adaptive?[false]:[preferredFlip,!preferredFlip];for(const flip of flips){const segment=prepareHandwritingSegment(cropRingSegment(polar,start,end,flip));setStatus('modelStatus',`手書き書記の区画 ${index+1}/${segmentCount}（${flip?'逆向き':'順向き'}）を読み取っています…`);await yieldToBrowser();const output=await model(segment.toDataURL('image/png'),{max_new_tokens:48});const text=handwritingText(output);if(text){group.push(text);candidates.push(text);}}groups.push(group);}
-      const joinedCandidates=[];const combine=(index,parts)=>{if(index>=groups.length){joinedCandidates.push(cleanOcrText(parts.join(' ')));return;}for(const text of groups[index])combine(index+1,[...parts,text]);};combine(0,[]);const joined=joinedCandidates.sort((a,b)=>ocrCandidateScore(b)-ocrCandidateScore(a))[0]||cleanOcrText(candidates.join(' ')),best=[...candidates,joined].filter(Boolean).sort((a,b)=>ocrCandidateScore(b)-ocrCandidateScore(a))[0]||'';
-      return normalizeRecognizedSpell(best);
-    }
-    async function ensureOcr(){if(ocrWorker)return ocrWorker;await waitFor(()=>window.Tesseract);setStatus('modelStatus','円環の文字を拾う書記を呼び出しています…');ocrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status)setStatus('modelStatus',`書記の準備: ${m.status} ${m.progress?Math.round(m.progress*100)+'%':''}`);}});return ocrWorker;}
-    async function readSpell(){if(!captured){setStatus('cameraStatus','まだ写し取った画像がない。先に写し絵を選ぶか、円環を写し取ってください。','error');return;}try{let text='';try{text=await recognizeHandwritingRing(null,captureCanvas,detected);}catch(error){console.warn('handwriting OCR skipped',error);}$('modelStatus').textContent='手書き書記の読みを整えています…';if(!text){const worker=await ensureOcr();text=await recognizeRingSegmented(worker,captureCanvas,detected);}if(text)$('spell').value=text;setStatus('modelStatus',text?'円環の声を拾い上げた。':'この筆跡は書記には難しい。呪文の原文を頁へ書き写してください。',text?'good':'error');}catch(error){setStatus('modelStatus',`書記がつまずいた。${error.message}`,'error');}}
-    function preloadHandwritingModel(){setTimeout(async()=>{try{await ensureGutenOcr();setStatus('preloadStatus','手書き書記の写本を用意した。','good');}catch(error){console.warn('handwriting model preload skipped',error);setStatus('preloadStatus','手書き書記の事前取得に失敗。必要時は予備の書記へ戻ります。','error');}},150);}
-    async function ensureExtractor(){if(extractor)return extractor;if(!embeddingModulePromise)embeddingModulePromise=import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');const {pipeline}=await embeddingModulePromise;setStatus('modelStatus','言葉の相を測る器を呼び出しています…');extractor=await pipeline('feature-extraction',MODEL_ID,{dtype:'q8',progress_callback:info=>{if(info?.status)setStatus('modelStatus',`器の準備: ${info.status} ${progressText(info.progress)}`);}});return extractor;}
-    async function embed(texts,prefix){const model=await ensureExtractor();const output=await model(texts.map(t=>`${prefix}: ${t}`),{pooling:'mean',normalize:true});const values=output.tolist();return texts.length===1?[Array.isArray(values[0])?values[0]:values]:values;}
-    async function ensureAttributeVectors(){if(attributeVectors)return attributeVectors;const keys=Object.keys(ATTRIBUTES),texts=[];for(const key of keys)for(const description of ATTRIBUTES[key].descriptions)texts.push(description);const rows=await embed(texts,'passage');attributeVectors={};let index=0;for(const key of keys){attributeVectors[key]=ATTRIBUTES[key].descriptions.map(()=>rows[index++]);}return attributeVectors;}
-    function cosine(a,b){let dot=0,aa=0,bb=0;for(let i=0;i<a.length;i++){dot+=a[i]*b[i];aa+=a[i]*a[i];bb+=b[i]*b[i];}return dot/(Math.sqrt(aa)*Math.sqrt(bb)||1);}
-    async function judgeSpell(){const text=$('spell').value.trim();if(!text){setStatus('modelStatus','捧げる呪文がまだない。英語の言葉を頁へ書いてください。','error');return;}try{const query=(await embed([text],'query'))[0],vectors=await ensureAttributeVectors();const scores=Object.entries(vectors).map(([key,rows])=>{const values=rows.map(v=>cosine(query,v)).sort((a,b)=>b-a);return [key,values.slice(0,2).reduce((a,b)=>a+b,0)/Math.min(2,values.length)];}).sort((a,b)=>b[1]-a[1]);const min=scores[scores.length-1][1],max=scores[0][1],spread=Math.max(.0001,max-min),top=scores[0],second=scores[1];const confidence=clamp((top[1]-second[1])/.12);$('attributeResult').className='';$('attributeResult').innerHTML=`<div class="result-main"><div><div class="label">呪文に近い相</div><div class="value">${ATTRIBUTES[top[0]].icon} ${ATTRIBUTES[top[0]].label}</div></div><div class="score">読みの確かさ ${Math.round(confidence*100)}%</div></div><div class="bars">${scores.map(([key,score])=>`<div class="bar-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:${Math.round(((score-min)/spread)*100)}%"></span></div><strong>${Math.round(((score-min)/spread)*100)}%</strong></div>`).join('')}</div><p class="note">呪文の意味を属性の言葉と重ね、最も近い相を選びました。二つの相が近いとき、読みの確かさは下がります。</p>`;setStatus('modelStatus','呪文の相がひとつ、頁の上に現れた。','good');}catch(error){setStatus('modelStatus',`言葉の器がつまずいた。${error.message}`,'error');}}
-    async function analyze(){if(!captured){setStatus('cameraStatus','まだ写し取った魔法陣がない。先に写し絵を選ぶか、円環を写し取ってください。','error');return;}$('analyze').disabled=true;setStatus('cameraStatus','円環の奥へ、読みの糸を通しています…');await yieldToBrowser();try{const result=await analyzeImageInWorker();detected=result.circle;drawOverlay();const polar=samplePolar(captureCanvas,detected);const ring=ringCoverage(polar);renderStructure(detected,ring,result.shape);renderShape(result.shape);$('readSpell').disabled=false;setStatus('cameraStatus','二重円と紋の輪郭を読み取った。円環の声を聴くか、呪文を頁へ写してください。','good');setStatus('modelStatus','二重円と紋の輪郭が頁の上に現れた。','good');}catch(error){detected=null;drawOverlay();$('structureResult').className='result-empty';$('structureResult').textContent=error.message;$('shapeResult').className='result-empty';$('shapeResult').textContent='紋の姿が見えるまで、内円の記録は眠ったままです。';$('readSpell').disabled=false;setStatus('cameraStatus',`${error.message} 呪文の読取は続けて試せます。`,'error');}finally{$('analyze').disabled=false;}}
-
-    $('startCamera').addEventListener('click',startCamera);$('capture').addEventListener('click',captureFrame);$('analyze').addEventListener('click',analyze);$('fileInput').addEventListener('change',e=>loadFile(e.target.files[0]));$('readSpell').addEventListener('click',readSpell);$('judgeSpell').addEventListener('click',judgeSpell);window.addEventListener('resize',drawOverlay);window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(track=>track.stop());if(ocrWorker)ocrWorker.terminate();if(analysisWorker)analysisWorker.terminate();if(analysisWorkerUrl)URL.revokeObjectURL(analysisWorkerUrl);});
-    preloadHandwritingModel();
-  </script>
+  <script src="spell-ocr.js"></script>
+  <script src="image-analysis-core.js"></script>
+  <script src="magia-circle-app.js"></script>
 </body>
 </html>

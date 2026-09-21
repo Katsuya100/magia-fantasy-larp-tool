@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Local package-manager cache and logs
+.npm-cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Codex local backups
+.codex-backup-*/
+
+# OS metadata
+.DS_Store
+Thumbs.db

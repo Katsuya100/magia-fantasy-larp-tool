@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { analyzeSigilJs, detectCirclesJs } from '../image-analysis-worker.js';
+import vm from 'node:vm';
 
 const imagePath = process.argv[2];
 if (!imagePath) {
@@ -11,6 +11,10 @@ if (!imagePath) {
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
+const analysisCoreSource = await readFile(resolve(here, '../image-analysis-core.js'), 'utf8');
+const analysisContext = vm.createContext({});
+vm.runInContext(analysisCoreSource, analysisContext, { filename: 'image-analysis-core.js' });
+const { analyzeSigilJs, detectCirclesJs } = analysisContext.ImageAnalysisCore;
 const decoder = resolve(here, 'decode-jpeg.ps1');
 const decoded = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', decoder, '-InputPath', resolve(imagePath)], {
   encoding: null,

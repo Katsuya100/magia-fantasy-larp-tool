@@ -1,62 +1,88 @@
+import { readFile } from 'node:fs/promises';
+import * as ort from 'onnxruntime-node';
+import models from '@gutenye/ocr-models/node';
 import '@gutenye/ocr-node';
 import { Detection } from '../node_modules/@gutenye/ocr-common/build/models/Detection.js';
-import { Recognition } from '../node_modules/@gutenye/ocr-common/build/models/Recognition.js';
-import { ImageRaw } from '../node_modules/@gutenye/ocr-node/build/ImageRaw.js';
 import sharp from 'sharp';
 
+await import('../spell-ocr.js');
+const core = globalThis.SpellOcrCore;
 const input = process.argv[2];
-const detection = await Detection.create({});
-const recognition = await Recognition.create({});
-const detected = await detection.run(input);
-const rawCandidates = [];
-for (const [index, line] of detected.lineImages.entries()) {
-  const center = line.box.reduce((sum, point) => ({ x: sum.x + point[0] / line.box.length, y: sum.y + point[1] / line.box.length }), { x: 0, y: 0 });
-  const sourceAngle = (Math.atan2(center.y - detected.resizedImageHeight / 2, center.x - detected.resizedImageWidth / 2) + Math.PI * 2) % (Math.PI * 2);
-  const options = [];
-  for (const angle of [0, 90, 180, 270]) {
-    const raw = await sharp(Buffer.from(line.image.data), { raw: { width: line.image.width, height: line.image.height, channels: 4 } }).rotate(angle).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    const image = new ImageRaw({ data: raw.data, width: raw.info.width, height: raw.info.height });
-    for (const row of await recognition.run([{ box: line.box, image }])) {
-      const text = String(row.text || '').replace(/[^A-Za-z]/g, '').toLowerCase();
-      if (!text || row.mean < .5 || (text.length === 1 && !/^[ab]$/.test(text))) continue;
-      options.push({ text, confidence: row.mean, angle });
-    }
-  }
-  options.sort((a, b) => b.text.length - a.text.length || b.confidence - a.confidence);
-  if (options[0]) rawCandidates.push({ line: index + 1, sourceAngle, ...options[0] });
+if (!input) {
+  console.error('Usage: npm run test:spell-ocr -- <image-path>');
+  process.exit(2);
 }
 
-function distance(a, b) {
-  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
-  for (let i = 1; i <= a.length; i += 1) { let diagonal = previous[0]; previous[0] = i; for (let j = 1; j <= b.length; j += 1) { const saved = previous[j]; previous[j] = Math.min(previous[j] + 1, previous[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1)); diagonal = saved; } }
-  return previous[b.length];
+const detection = await Detection.create({ models });
+const recognitionSession = await ort.InferenceSession.create(models.recognitionPath);
+const dictionary = [...(await readFile(models.dictionaryPath, 'utf8')).split(/\r?\n/), ' '];
+function rgbaData(raw) {
+  if (raw.info.channels === 4) return raw.data;
+  const channels = raw.info.channels;
+  const pixels = raw.info.width * raw.info.height;
+  const data = Buffer.alloc(pixels * 4);
+  for (let index = 0; index < pixels; index += 1) {
+    const source = index * channels;
+    const value = raw.data[source] ?? 255;
+    const target = index * 4;
+    data[target] = value;
+    data[target + 1] = value;
+    data[target + 2] = value;
+    data[target + 3] = channels === 2 ? (raw.data[source + 1] ?? 255) : 255;
+  }
+  return data;
 }
-const roleWords = {
-  action: ['awaken','bind','blaze','break','burn','call','command','create','crush','cut','defend','destroy','draw','drive','enforce','establish','fall','flow','freeze','guard','heal','ignite','judge','keep','open','protect','pull','push','raise','release','restore','seal','send','shield','shatter','silence','strike','summon','surround','tear','turn','twist','unleash','wash'],
-  determiner: ['a','an','the'],
-  subject: ['ally','enemy','foe','target','spirit','shadow','beast','creature','heart','king','queen','world','stone','gate','flame','fire'],
-  preposition: ['against','around','before','beneath','beyond','between','by','from','into','over','through','under','upon','within'],
-  adjective: ['ancient','arcane','black','blue','boundless','bright','cold','crimson','dark','endless','eternal','fierce','golden','hidden','hollow','iron','pale','red','silent','silver','stormy','swift','wild'],
-  noun: ['ash','beast','blood','crown','darkness','dawn','dust','ember','enemy','fire','flame','frost','heart','light','moon','night','rain','river','shadow','sky','spirit','star','storm','stone','sun','thunder','void','wind','world']
-};
-function bestFor(raw, role) { const choices = roleWords[role]; return choices.map(word => ({ word, score: 1 - distance(raw, word) / Math.max(raw.length, word.length) })).sort((a, b) => b.score - a.score)[0]; }
-function restore(words) {
-  const roles = ['action','determiner','subject','preposition','determiner','adjective','adjective','noun'];
-  if (words.length !== roles.length) return null;
-  const corrected = words.map((word, index) => bestFor(word, roles[index]));
-  if (corrected.some(item => item.score < .35)) return null;
-  return { text: `${corrected.map(item => item.word).join(' ')}.`, corrected };
+
+async function paddleRecognize(raw) {
+  const width = Math.max(48, Math.min(960, Math.round(raw.info.width / Math.max(1, raw.info.height) * 48)));
+  const resized = await sharp(rgbaData(raw), { raw: { width: raw.info.width, height: raw.info.height, channels: 4 } })
+    .resize(width, 48)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const pixels = width * 48;
+  const values = new Float32Array(pixels * 3);
+  for (let index = 0; index < pixels; index += 1) {
+    const offset = index * 4;
+    values[index] = resized.data[offset + 2] / 255;
+    values[pixels + index] = resized.data[offset + 1] / 255;
+    values[pixels * 2 + index] = resized.data[offset] / 255;
+  }
+  const outputs = await recognitionSession.run({
+    [recognitionSession.inputNames[0]]: new ort.Tensor('float32', values, [1, 3, 48, width]),
+  });
+  const output = outputs[recognitionSession.outputNames[0]];
+  return core.decodeGreedyCtc(output, dictionary);
 }
-const ordered = rawCandidates.sort((a, b) => a.sourceAngle - b.sourceAngle);
-let largestGap = -1, cut = 0;
-for (let i = 0; i < ordered.length; i += 1) { const gap = (i === ordered.length - 1 ? ordered[0].sourceAngle + Math.PI * 2 : ordered[i + 1].sourceAngle) - ordered[i].sourceAngle; if (gap > largestGap) { largestGap = gap; cut = (i + 1) % ordered.length; } }
-const clockwise = ordered.slice(cut).concat(ordered.slice(0, cut));
-let angleOffset = 0;
-const unwrapped = clockwise.map((candidate, index) => {
-  if (index && candidate.sourceAngle < clockwise[index - 1].sourceAngle) angleOffset += Math.PI * 2;
-  return { ...candidate, theta: candidate.sourceAngle + angleOffset };
+
+const pipeline = await core.run({
+  detect: () => detection.run(input),
+  recognizeVariants: async line => {
+    const source = { data: line.image.data, width: line.image.width, height: line.image.height };
+    return core.runRecognizeVariants({
+      source,
+      preprocess: (image, mode) => {
+        const base = sharp(Buffer.from(image.data), { raw: { width: image.width, height: image.height, channels: 4 } });
+        if (mode === 'contrast') return base.grayscale().linear(1.35, -44.8).ensureAlpha();
+        if (mode === 'binary') return base.grayscale().threshold(160).ensureAlpha();
+        return base.ensureAlpha();
+      },
+      rotate: (image, angle) => image.rotate(angle).ensureAlpha(),
+      recognize: async image => paddleRecognize(await image.raw().toBuffer({ resolveWithObject: true })),
+    });
+  },
 });
-const words = [];
-for (const candidate of unwrapped) { const previous = words.at(-1); if (previous && candidate.theta - previous.lastAngle < .30) { previous.raw += candidate.text; previous.lastAngle = candidate.theta; } else words.push({ raw: candidate.text, lastAngle: candidate.theta }); }
-const restored = restore(words.map(word => word.raw));
-console.log(JSON.stringify({ rawCandidates, sequence: words.map(word => word.raw), restored, assertion: restored?.text === 'burn the enemy beneath an endless crimson flame.' ? 'PASS' : 'FAIL' }, null, 2));
+const { rawCandidates, candidates, path } = pipeline;
+const rawWords = new Set(candidates.map(candidate => candidate.text));
+const outputWords = core.words(path.text);
+const inventedWords = outputWords.filter(word => !rawWords.has(word));
+const literalPreservation = core.normalize('breath') === 'Breath.' && core.normalize('be') === 'Be.';
+const assertion = path.text && !inventedWords.length && literalPreservation ? 'PASS_NO_INVENTION' : 'FAIL';
+
+if (assertion === 'PASS_NO_INVENTION') {
+  console.log(path.text);
+  console.log(assertion);
+} else {
+  console.error(JSON.stringify({ rawCandidates, sequence: path.words, text: path.text, inventedWords, literalPreservation, assertion }, null, 2));
+  console.log(assertion);
+  process.exit(1);
+}
