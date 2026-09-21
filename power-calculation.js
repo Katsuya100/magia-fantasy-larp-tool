@@ -29,13 +29,22 @@
     return Math.floor(count);
   }
 
+  function countUniqueWords(words) {
+    if (!Array.isArray(words)) throw new TypeError('words must be an array');
+    const normalizedWords = words
+      .map(word => String(word).toLowerCase().replace(/[^a-z]/g, ''))
+      .filter(Boolean);
+    return new Set(normalizedWords).size;
+  }
+
   function normalizeInputs(input = {}) {
+    const wordCount = input.words !== undefined ? countUniqueWords(input.words) : input.wordCount;
     return {
       circleAccuracy: normalizeQuality(input.circleAccuracy, 'circleAccuracy'),
       lineStraightness: normalizeQuality(input.lineStraightness, 'lineStraightness'),
       attributeCertainty: normalizeQuality(input.attributeCertainty, 'attributeCertainty'),
       sigilCertainty: normalizeQuality(input.sigilCertainty, 'sigilCertainty'),
-      wordCount: normalizeWordCount(input.wordCount),
+      wordCount: normalizeWordCount(wordCount),
     };
   }
 
@@ -60,6 +69,7 @@
   global.PowerCalculationCore = Object.freeze({
     PARAMETER_KEYS,
     clamp,
+    countUniqueWords,
     normalizeInputs,
     calculatePower,
   });

@@ -101,7 +101,7 @@
       ['紋の断定の確かさ', result.scores.sigilCertainty, `${Math.round(result.normalized.sigilCertainty * 100)}%`],
     ];
     powerResult.className = 'power';
-    powerResult.innerHTML = `<div class="result-main"><div><div class="label">総合威力</div><div class="value">${result.power}</div></div></div><div class="bars">${rows.map(([label, score, value]) => `<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(score * 100)}%"></span></div><strong>${value}</strong></div>`).join('')}</div><div class="power-count"><span>単語の数</span><strong>${result.normalized.wordCount}語</strong></div><p class="note">4つの確かさの平均に単語数を掛けて算出します。</p>`;
+    powerResult.innerHTML = `<div class="result-main"><div><div class="label">総合威力</div><div class="value">${result.power}</div></div></div><div class="bars">${rows.map(([label, score, value]) => `<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(score * 100)}%"></span></div><strong>${value}</strong></div>`).join('')}</div><div class="power-count"><span>単語の数</span><strong>${result.normalized.wordCount}語</strong></div><p class="note">4つの確かさの平均に単語数を掛けて算出します。重複する単語は一度だけ数えます。</p>`;
   }
 
   function yieldToBrowser() {
@@ -609,7 +609,7 @@
         setStatus(modelStatus, '共通 OCR フローで円環の文字を読み取っています…', 'busy');
         const result = await recognizeSpell(captureCanvas);
         const text = result.path.text;
-        powerInputs.wordCount = result.path.words.length;
+        powerInputs.wordCount = powerCalculation.countUniqueWords(result.path.words);
         renderPower();
         spellOutput.textContent = text || '円環から呪文を読み取れませんでした。';
         if (!text) {

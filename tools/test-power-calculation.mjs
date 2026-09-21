@@ -52,6 +52,16 @@ const bounded = calculatePower({
 assert(bounded.power === 1500, 'quality inputs must clamp without capping word count');
 assert(bounded.power > maximum.power, 'power must grow beyond the ten-word example');
 
+const uniqueWords = calculatePower({
+  circleAccuracy: 1,
+  lineStraightness: 1,
+  attributeCertainty: 1,
+  sigilCertainty: 1,
+  words: ['Fire', 'fire', 'water', 'WATER', 'storm!'],
+});
+assert(uniqueWords.normalized.wordCount === 3, 'duplicate words must be counted once');
+assert(uniqueWords.power === 300, 'power must use the unique word count');
+
 let rejected = false;
 try {
   calculatePower({ circleAccuracy: 1, lineStraightness: 1, attributeCertainty: 1, sigilCertainty: 1, wordCount: -1 });
