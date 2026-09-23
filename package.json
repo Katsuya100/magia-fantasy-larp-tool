@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "calculate-power": "node tools/calculate-power.mjs",
+    "serve": "node tools/serve-dist.mjs",
     "test:image-analysis": "node tools/test-image-analysis.mjs",
     "test:power-calculation": "node tools/test-power-calculation.mjs",
     "test:spell-ocr": "node tools/test-spell-ocr.mjs"

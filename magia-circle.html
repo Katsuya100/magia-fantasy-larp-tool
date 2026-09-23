@@ -7,61 +7,188 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <title>マギアサークル - 魔法陣判定ツール</title>
   <style>
-    .stage #overlayCanvas{background:transparent}
-    :root{--ink:#f7efd9;--muted:#c5c7c7;--gold:#f5d879;--cyan:#8be0f3;--blue:#183143;--panel:rgba(15,23,35,.9);--line:rgba(139,224,243,.28);--bad:#ff9d91;--good:#92e5ae}
-    *{box-sizing:border-box}html,body{min-height:100%}
-    body{margin:0;color:var(--ink);font-family:ui-serif,Georgia,"Yu Mincho",serif;background:radial-gradient(circle at 15% 8%,rgba(41,120,151,.28),transparent 28%),radial-gradient(circle at 88% 20%,rgba(133,75,180,.22),transparent 28%),linear-gradient(135deg,#070b12,#101f2d 45%,#080910);overflow-x:hidden}
-    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.1;background-image:linear-gradient(90deg,transparent 97%,rgba(139,224,243,.55) 100%),linear-gradient(0deg,transparent 97%,rgba(139,224,243,.55) 100%);background-size:72px 72px}
-    .wrap{max-width:1220px;margin:0 auto;padding:24px 18px 70px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}.back{color:var(--cyan);font:700 14px ui-sans-serif,system-ui,sans-serif;text-decoration:none}.back:hover{text-decoration:underline}.privacy{padding:8px 12px;border:1px solid rgba(146,229,174,.32);border-radius:999px;color:var(--good);font:700 12px ui-sans-serif,system-ui,sans-serif}
-    header{padding:22px 24px 25px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(135deg,rgba(12,34,49,.94),rgba(25,18,42,.92));box-shadow:0 22px 72px rgba(0,0,0,.42),inset 0 0 60px rgba(139,224,243,.06)}h1{margin:0;font-size:clamp(34px,6vw,66px);line-height:1.05;letter-spacing:.04em;text-shadow:0 0 20px rgba(139,224,243,.25)}.subtitle{max-width:850px;margin:14px 0 0;color:#cbd7dc;font:16px/1.75 ui-sans-serif,system-ui,sans-serif}
-    .workspace{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr);gap:18px;align-items:start;margin-top:18px}@media(max-width:900px){.workspace{grid-template-columns:1fr}}
-    .card{position:relative;padding:20px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,rgba(20,35,49,.95),var(--panel));box-shadow:0 18px 60px rgba(0,0,0,.38),inset 0 0 45px rgba(139,224,243,.04)}.card h2{margin:0 0 14px;font-size:22px}.card h3{margin:24px 0 10px;font-size:18px;color:#dcecf0}.stage{position:relative;min-height:310px;display:grid;place-items:center;border:1px solid rgba(139,224,243,.25);border-radius:18px;overflow:hidden;background:radial-gradient(circle,rgba(44,112,142,.25),transparent 55%),#071019}.stage canvas{display:block;width:100%;max-height:62vh;object-fit:contain;background:#03070b}.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.stage .empty{padding:32px;text-align:center;color:#9db5bd;font:15px/1.7 ui-sans-serif,system-ui,sans-serif}.stage canvas.hidden{display:none}
-    .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}button,.file-label{cursor:pointer;padding:12px 15px;border:1px solid rgba(245,216,121,.46);border-radius:12px;color:#1b1720;font:800 14px ui-sans-serif,system-ui,sans-serif;background:linear-gradient(180deg,#ffe99a,#c58b34);box-shadow:0 8px 18px rgba(0,0,0,.24)}button.secondary,.file-label.secondary{color:var(--ink);border-color:rgba(139,224,243,.38);background:linear-gradient(180deg,#2d5467,#1a3042)}button:disabled{cursor:not-allowed;opacity:.48}.file-label input{display:none}.status{min-height:24px;margin:11px 0 0;color:#a9c6cf;font:14px/1.6 ui-sans-serif,system-ui,sans-serif}.status.busy{display:flex;align-items:center;gap:8px}.status.busy::before{content:"";width:13px;height:13px;flex:0 0 13px;border:2px solid rgba(169,198,207,.35);border-top-color:var(--good);border-radius:50%;animation:status-spin .8s linear infinite}@keyframes status-spin{to{transform:rotate(360deg)}}.status.error{color:var(--bad)}.status.good{color:var(--good)}.hint{margin:12px 0 0;padding:11px 13px;border-radius:12px;color:#c8dbe0;background:rgba(139,224,243,.07);font:13px/1.65 ui-sans-serif,system-ui,sans-serif}
-    label{display:block;margin:16px 0 7px;color:#dcecf0;font:700 14px ui-sans-serif,system-ui,sans-serif}.spell-output{min-height:92px;padding:12px 13px;border:1px solid rgba(139,224,243,.32);border-radius:12px;color:var(--ink);background:rgba(2,10,17,.72);font:16px/1.65 ui-sans-serif,system-ui,sans-serif;white-space:pre-wrap}
-    .result-empty{padding:17px;border:1px dashed rgba(139,224,243,.28);border-radius:14px;color:#9db5bd;font:14px/1.65 ui-sans-serif,system-ui,sans-serif}.result-main{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;padding:18px;border:1px solid rgba(245,216,121,.45);border-radius:16px;background:linear-gradient(135deg,rgba(70,54,24,.72),rgba(25,29,44,.9));}.result-main .label{color:#c7b788;font:700 12px ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em}.result-main .value{margin-top:4px;color:#ffe89a;font-size:34px;font-weight:900}.result-main .score{color:var(--cyan);font:800 20px ui-sans-serif,system-ui,sans-serif}.bars{display:grid;gap:9px;margin-top:12px}.bar-row{display:grid;grid-template-columns:110px 1fr 58px;gap:10px;align-items:center;color:#dbe7e8;font:13px ui-sans-serif,system-ui,sans-serif}.bar{height:10px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.12)}.bar span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4389a2,#f4d77d)}.shape{margin-top:16px;padding:15px;border:1px solid rgba(139,224,243,.24);border-radius:16px;background:rgba(4,12,22,.44)}.shape-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.shape-title b{font-size:25px;color:#9be7f5}.shape-title span{color:#c8d6d8;font:700 13px ui-sans-serif,system-ui,sans-serif}.note{margin:9px 0 0;color:#9db5bd;font:13px/1.6 ui-sans-serif,system-ui,sans-serif}.meta{margin-top:14px;color:#9db5bd;font:12px/1.6 ui-sans-serif,system-ui,sans-serif}.meta code{color:#d9eaff}
-    details{margin-top:18px;border-top:1px solid rgba(139,224,243,.2);padding-top:16px}summary{cursor:pointer;color:var(--gold);font-weight:800}details p,details li{color:#b9c9cb;font:13px/1.7 ui-sans-serif,system-ui,sans-serif}details ul{padding-left:20px}details a{color:#9be7f5}.footer{margin-top:18px;text-align:center;color:#8da5ac;font:12px ui-sans-serif,system-ui,sans-serif}
-    @media(max-width:560px){.wrap{padding:16px 12px 50px}.topbar{align-items:flex-start;flex-direction:column}.card{padding:16px}.bar-row{grid-template-columns:90px 1fr 50px;gap:7px;font-size:12px}.stage{min-height:250px}}
-    .power-count{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 12px;border:1px solid rgba(139,224,243,.22);border-radius:10px;color:#dbe7e8;font:13px ui-sans-serif,system-ui,sans-serif}.power-count strong{color:#ffe89a;font-size:16px}
+    :root{
+      --ink:#f7efd9; --muted:#aebec1; --gold:#f5d879; --gold-deep:#c58b34;
+      --cyan:#8be0f3; --blue:#183143; --panel:rgba(15,23,35,.93);
+      --line:rgba(139,224,243,.28); --line-soft:rgba(139,224,243,.16);
+      --bad:#ff9d91; --good:#92e5ae; --shadow:rgba(0,0,0,.42);
+    }
+    *{box-sizing:border-box}
+    html,body{min-height:100%}
+    body{
+      margin:0; color:var(--ink); overflow-x:hidden;
+      font-family:ui-serif,Georgia,"Yu Mincho",serif;
+      background:
+        radial-gradient(circle at 15% 8%,rgba(41,120,151,.28),transparent 28%),
+        radial-gradient(circle at 88% 20%,rgba(133,75,180,.22),transparent 28%),
+        linear-gradient(135deg,#070b12,#101f2d 45%,#080910);
+    }
+    body:before{
+      content:""; position:fixed; inset:0; pointer-events:none; opacity:.1;
+      background-image:linear-gradient(90deg,transparent 97%,rgba(139,224,243,.55) 100%),linear-gradient(0deg,transparent 97%,rgba(139,224,243,.55) 100%);
+      background-size:72px 72px;
+    }
+    .wrap{width:min(100% - 24px,780px);margin:0 auto;padding:14px 0 48px}
+    .hero,.manual,.chapter,.details-shell,.archive-card{
+      position:relative; border:1px solid var(--line); border-radius:22px;
+      background:linear-gradient(145deg,rgba(20,35,49,.95),var(--panel));
+      box-shadow:0 18px 60px var(--shadow),inset 0 0 45px rgba(139,224,243,.04);
+    }
+    .hero{padding:22px 18px 18px;background:linear-gradient(135deg,rgba(12,34,49,.96),rgba(25,18,42,.94));box-shadow:0 22px 72px var(--shadow),inset 0 0 60px rgba(139,224,243,.06)}
+    h1{margin:0;font-size:clamp(36px,12vw,66px);line-height:1.02;letter-spacing:.04em;text-shadow:0 0 20px rgba(139,224,243,.25)}
+    .subtitle{margin:12px 0 0;color:#d8e2e4;font:700 17px/1.7 ui-sans-serif,system-ui,sans-serif;letter-spacing:.02em}
+    .hero-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line-soft)}
+    .back{color:var(--cyan);font:700 13px ui-sans-serif,system-ui,sans-serif;text-decoration:none}.back:hover{text-decoration:underline}
+    .privacy{padding:7px 10px;border:1px solid rgba(146,229,174,.32);border-radius:999px;color:var(--good);font:700 11px ui-sans-serif,system-ui,sans-serif}
+    .manual,.chapter,.details-shell,.archive-card{margin-top:14px;padding:18px}
+    .manual{background:radial-gradient(circle at 80% 0,rgba(245,216,121,.11),transparent 35%),linear-gradient(145deg,rgba(45,39,35,.95),rgba(20,27,37,.95))}
+    .eyebrow{margin:0 0 6px;color:var(--gold);font:800 11px/1.4 ui-sans-serif,system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase}
+    .chapter-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    h2{margin:0;font-size:24px;line-height:1.2;letter-spacing:.03em}h3{margin:0;font-size:18px;line-height:1.3}
+    .chapter-heading p{margin:5px 0 0;color:var(--muted);font:13px/1.6 ui-sans-serif,system-ui,sans-serif}
+    .chapter-mark{flex:0 0 auto;color:rgba(245,216,121,.72);font-size:24px;line-height:1}
+    .flavor{margin:0;color:#e4d8bf;font-size:16px;line-height:1.9}
+    .manual details{margin-top:14px;padding-top:13px;border-top:1px solid rgba(245,216,121,.2)}
+    details summary{cursor:pointer;color:var(--gold);font-weight:800;list-style-position:inside}
+    details summary::marker{color:var(--cyan)}
+    .manual-copy{margin:10px 0 0;color:#c6d3d5;font:13px/1.75 ui-sans-serif,system-ui,sans-serif}
+    .stage{
+      position:relative;display:grid;place-items:center;width:100%;min-height:270px;aspect-ratio:4/3;
+      border:1px solid rgba(139,224,243,.3);border-radius:17px;overflow:hidden;
+      background:radial-gradient(circle,rgba(44,112,142,.25),transparent 55%),#071019;
+    }
+    .stage video{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;background:#03070b}.stage video.hidden{display:none}
+    .stage canvas{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;background:#03070b}.stage #overlayCanvas{background:transparent}.stage canvas.hidden{display:none}
+    .stage .empty{max-width:300px;padding:24px;text-align:center;color:#9db5bd;font:14px/1.75 ui-sans-serif,system-ui,sans-serif}
+    .controls{display:grid;gap:10px;margin-top:12px}.file-label,.camera-button{display:flex;align-items:center;justify-content:center;min-height:52px;cursor:pointer;padding:13px 15px;border:1px solid rgba(245,216,121,.52);border-radius:13px;color:#1b1720;text-align:center;font:800 15px ui-sans-serif,system-ui,sans-serif;background:linear-gradient(180deg,#ffe99a,#c58b34);box-shadow:0 8px 18px rgba(0,0,0,.24)}.camera-button:disabled{cursor:wait;opacity:.7}.file-label input{display:none}
+    .status{min-height:22px;margin:9px 0 0;color:#a9c6cf;font:13px/1.55 ui-sans-serif,system-ui,sans-serif}.status.busy{display:flex;align-items:center;gap:8px}.status.busy::before{content:"";width:12px;height:12px;flex:0 0 12px;border:2px solid rgba(169,198,207,.35);border-top-color:var(--good);border-radius:50%;animation:status-spin .8s linear infinite}@keyframes status-spin{to{transform:rotate(360deg)}}.status.error{color:var(--bad)}.status.good{color:var(--good)}.status.subtle{color:#80969c;font-size:12px}
+    .process-card{margin-top:14px;padding:14px;border:1px solid var(--line-soft);border-radius:16px;background:rgba(3,12,20,.5)}.process-title{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#dcecf0;font:800 14px ui-sans-serif,system-ui,sans-serif}.process-title span{color:var(--muted);font-size:11px;font-weight:600}.progress-log{display:grid;gap:7px;max-height:270px;overflow:auto;margin-top:10px;padding-right:2px}.progress-entry{display:grid;grid-template-columns:15px 1fr;gap:7px;align-items:start;color:#c8d9dc;font:12px/1.55 ui-sans-serif,system-ui,sans-serif}.progress-entry::before{content:"✦";color:var(--cyan);font-size:11px}.progress-entry.good::before{content:"✓";color:var(--good)}.progress-entry.error::before{content:"!";color:var(--bad);font-weight:900}.progress-empty{color:#80969c;font:12px/1.55 ui-sans-serif,system-ui,sans-serif}
+    .altar-grid{display:grid;gap:10px}.altar-card{min-width:0;padding:14px;border:1px solid var(--line-soft);border-radius:16px;background:rgba(4,12,22,.52)}.altar-card h3{color:#dcecf0}.altar-card .result-empty{margin-top:10px}.altar-result{margin-top:10px}.altar-result--attribute,.altar-result--shape{display:grid;grid-template-columns:auto 1fr;column-gap:11px;align-items:center}.altar-symbol{display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(245,216,121,.45);border-radius:50%;background:radial-gradient(circle,rgba(245,216,121,.23),transparent 70%);font-size:25px}.altar-kicker{color:#a8bdc1;font:700 11px ui-sans-serif,system-ui,sans-serif}.altar-value{display:block;margin-top:2px;color:#ffe89a;font-size:27px;font-weight:900}.altar-confidence{grid-column:2;color:#a9c6cf;font:12px ui-sans-serif,system-ui,sans-serif}.altar-result--power{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.altar-result--power .altar-value{font-size:36px}.altar-result--power .altar-unit{color:#c7b788;font:700 12px ui-sans-serif,system-ui,sans-serif}.altar-placeholder{color:#9db5bd;font:13px/1.65 ui-sans-serif,system-ui,sans-serif}
+    .details-shell{padding:0;overflow:hidden}.details-shell>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px;list-style:none;font-size:20px}.details-shell>summary::-webkit-details-marker{display:none}.details-shell>summary:after{content:"＋";color:var(--cyan);font-size:22px}.details-shell[open]>summary:after{content:"−"}.summary-hint{color:var(--muted);font:12px ui-sans-serif,system-ui,sans-serif}.detail-pages{display:grid;gap:10px;padding:0 12px 12px}.detail-page{padding:15px;border:1px solid var(--line-soft);border-radius:16px;background:rgba(3,12,20,.46)}.detail-page h3{color:#dcecf0}.detail-caption{margin:5px 0 0;color:#8fa8ad;font:12px/1.55 ui-sans-serif,system-ui,sans-serif}
+    .spell-output{min-height:78px;margin-top:11px;padding:13px;border:1px solid rgba(139,224,243,.32);border-radius:12px;color:var(--ink);background:rgba(2,10,17,.72);font:16px/1.65 ui-sans-serif,system-ui,sans-serif;white-space:pre-wrap}.detail-result{margin-top:11px}.result-empty{padding:14px;border:1px dashed rgba(139,224,243,.28);border-radius:14px;color:#9db5bd;font:13px/1.65 ui-sans-serif,system-ui,sans-serif}.bars{display:grid;gap:8px;margin-top:12px}.bar-row{display:grid;grid-template-columns:minmax(90px,1.05fr) 1fr 48px;gap:8px;align-items:center;color:#dbe7e8;font:12px ui-sans-serif,system-ui,sans-serif}.bar{height:9px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.12)}.bar span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4389a2,#f4d77d)}.bar-row strong{text-align:right;color:#ffe89a;font-size:12px}.power-lead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:13px;border:1px solid rgba(245,216,121,.45);border-radius:14px;background:linear-gradient(135deg,rgba(70,54,24,.72),rgba(25,29,44,.9))}.power-lead .label{color:#c7b788;font:700 11px ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em}.power-lead .value{color:#ffe89a;font-size:34px;font-weight:900}.power-count{display:flex;justify-content:space-between;align-items:center;margin-top:11px;padding:10px 12px;border:1px solid rgba(139,224,243,.22);border-radius:10px;color:#dbe7e8;font:12px ui-sans-serif,system-ui,sans-serif}.power-count strong{color:#ffe89a;font-size:15px}.note{margin:9px 0 0;color:#9db5bd;font:12px/1.6 ui-sans-serif,system-ui,sans-serif}.shape-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.shape-title b{font-size:21px;color:#9be7f5}.shape-title span{color:#c8d6d8;font:700 12px ui-sans-serif,system-ui,sans-serif}.attribute-detail-row{grid-template-columns:minmax(108px,1.2fr) 1fr 48px}.attribute-detail-row small{display:block;margin-top:2px;color:#81999f;font-size:10px}.meta{margin-top:12px;color:#81999f;font:11px/1.6 ui-sans-serif,system-ui,sans-serif}.meta code{color:#d9eaff}
+    .archive-card{padding:17px}.archive-card h2{font-size:18px}.archive-card .note{margin-top:8px}.archive-card details{margin-top:14px;padding-top:13px;border-top:1px solid var(--line-soft)}.archive-card p,.archive-card li{color:#b9c9cb;font:12px/1.7 ui-sans-serif,system-ui,sans-serif}.archive-card ul{padding-left:20px}.archive-card a{color:#9be7f5}.footer{margin-top:14px;text-align:center;color:#8da5ac;font:11px/1.6 ui-sans-serif,system-ui,sans-serif}
+    @media(min-width:620px){.wrap{padding-top:22px}.hero{padding:28px 24px 20px}.manual,.chapter,.archive-card{padding:20px}.altar-grid{grid-template-columns:repeat(3,1fr)}.details-shell>summary{padding:20px}.detail-pages{grid-template-columns:repeat(2,1fr);padding:0 16px 16px}.detail-page:last-child{grid-column:1/-1}.stage{min-height:340px}}
+    @media(max-width:380px){.wrap{width:min(100% - 18px,780px)}.hero,.manual,.chapter{padding:15px}.hero-tools{align-items:flex-start;flex-direction:column}.bar-row{grid-template-columns:minmax(78px,1.1fr) 1fr 43px;gap:6px;font-size:11px}.attribute-detail-row{grid-template-columns:minmax(93px,1.25fr) 1fr 43px}}
+
+    /* Keep the original Magia Circle visual language while using the new page order. */
+    :root{--muted:#c5c7c7;--panel:rgba(15,23,35,.9)}
+    .wrap{max-width:1220px;padding:24px 18px 70px}
+    .hero{margin-bottom:16px;padding:22px 24px 25px}
+    .hero>.back{display:inline-block;margin-bottom:18px;color:var(--cyan);font:700 14px ui-sans-serif,system-ui,sans-serif}
+    .hero-tools{justify-content:flex-end;margin-top:0;padding-top:0;border-top:0}
+    h1{font-size:clamp(34px,6vw,66px)}
+    .subtitle{max-width:850px;margin:14px 0 0;color:#cbd7dc;font:16px/1.75 ui-sans-serif,system-ui,sans-serif}
+    .book{display:block}
+    .page{position:relative;margin-top:18px;padding:20px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,rgba(20,35,49,.95),var(--panel));box-shadow:0 18px 60px rgba(0,0,0,.38),inset 0 0 45px rgba(139,224,243,.04)}
+    .page>*{position:relative;z-index:1}
+    .rune-title{display:flex;align-items:center;gap:10px;margin:0 0 14px;color:#dcecf0;font-size:22px;letter-spacing:.03em}
+    .rune-title:before,.rune-title:after{content:"✦";color:var(--gold);font-size:18px}
+    .rulebox{padding:14px 16px;margin-bottom:14px;border:1px solid var(--line);border-radius:16px;background:rgba(139,224,243,.07);line-height:1.65;color:#c8dbe0;font:13px/1.65 ui-sans-serif,system-ui,sans-serif}
+    .rulebox b{color:#ffe89a}
+    .flavor{margin:0;color:#d8e2e4;font-size:16px;line-height:1.9}
+    .manual-page details{margin-top:14px;padding-top:13px;border-top:1px solid rgba(139,224,243,.2)}
+    .manual-copy,.page .small,.page-lead,.page-note{color:#b9c9cb;font:13px/1.7 ui-sans-serif,system-ui,sans-serif}
+    .page-lead{margin:0 0 12px}.page-note{margin:13px 0 0}
+    .stage{min-height:310px}
+    .file-label{min-height:48px}
+    .process-card{margin-top:14px;padding:14px;border:1px solid var(--line-soft);border-radius:16px;background:rgba(3,12,20,.5)}
+    .process-title{color:#dcecf0;font:800 14px ui-sans-serif,system-ui,sans-serif}
+    .progress-log{display:grid;gap:7px;margin-top:8px}
+    .progress-row{display:flex;align-items:flex-start;gap:8px;margin:0;color:#c8d9dc;font:13px/1.6 ui-sans-serif,system-ui,sans-serif}
+    .progress-row:before{content:"✦";flex:0 0 auto;color:var(--cyan)}.progress-row.busy:before{content:"◌";display:inline-block;color:var(--good);animation:status-spin .8s linear infinite}.progress-row.good:before{content:"✓";color:var(--good)}.progress-row.error:before{content:"!";color:var(--bad);font-weight:900}
+    .altar-card{border-color:var(--line-soft);background:rgba(4,12,22,.52)}.altar-card h3{color:#dcecf0}.altar-card .result-empty{color:#9db5bd;border-color:rgba(139,224,243,.28)}
+    .altar-kicker{color:#a8bdc1}.altar-value{color:#ffe89a}.altar-confidence{color:#a9c6cf}.altar-unit{color:#c7b788!important}.altar-symbol{border-color:rgba(245,216,121,.45);background:radial-gradient(circle,rgba(245,216,121,.23),transparent 70%)}.altar-placeholder{color:#9db5bd}
+    .details-shell{padding:0;overflow:hidden}.details-shell>summary{padding:18px;color:var(--gold)}.details-shell>summary .rune-title{margin:0;color:var(--gold)}.summary-hint{color:var(--muted)}
+    .detail-pages{padding:0 12px 12px}.detail-page{border-color:var(--line-soft);background:rgba(3,12,20,.46)}.detail-page h3{color:#dcecf0}.detail-caption{color:#8fa8ad}.page .result-empty{color:#9db5bd;border-color:rgba(139,224,243,.28)}.page .bar-row{color:#dbe7e8}.page .bar{background:rgba(255,255,255,.12)}.page .bar-row strong{color:#ffe89a}.page .note{color:#9db5bd}.page .power-count{border-color:rgba(139,224,243,.22);color:#dbe7e8}.page .power-count strong{color:#ffe89a}.page .shape-title b{color:#9be7f5}.page .shape-title span{color:#c8d6d8}.page .attribute-detail-row small{color:#81999f}
+    .archive-page{margin-top:18px}.archive-page .rulebox{font-size:13px}.archive-page details{margin-top:14px;padding-top:13px;border-top:1px solid rgba(139,224,243,.2)}.archive-page p,.archive-page li{color:#b9c9cb;font:12px/1.7 ui-sans-serif,system-ui,sans-serif}.archive-page a{color:#9be7f5}
+    @media(min-width:900px){.book{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr);gap:18px;align-items:start}.book>.page{margin-top:0}.manual-page,.details-shell{grid-column:1/-1}.circle-page{grid-column:1}.altar-page{grid-column:2}.details-shell{grid-row:3}.detail-pages{grid-template-columns:repeat(2,1fr)}.detail-page:last-child{grid-column:1/-1}}
+    @media(max-width:560px){.wrap{padding:16px 12px 50px}.hero{padding:18px 16px 20px}.page{padding:16px}.stage{min-height:250px}.bar-row{grid-template-columns:90px 1fr 50px;gap:7px;font-size:12px}}
+    @media(max-width:380px){.wrap{width:min(100% - 18px,780px)}.hero>.back{margin-bottom:14px}.details-shell>summary{padding:16px}.bar-row{grid-template-columns:minmax(78px,1.1fr) 1fr 43px;gap:6px;font-size:11px}.attribute-detail-row{grid-template-columns:minmax(93px,1.25fr) 1fr 43px}}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="topbar"><a class="back" href="index.html">← 作品選択へ戻る</a><span class="privacy">画像は端末内で処理します</span></div>
-    <header>
+    <header class="hero">
+      <a class="back" href="index.html">← 作品選択へ戻る</a>
       <h1>マギアサークル</h1>
-      <p class="subtitle">二つの円は、呪文を受け止める器。円環に英語の言葉を巡らせ、内円に紋を置けば、眠っていた相がひとつ姿を現す。</p>
+      <p class="subtitle">描いた陣により魔法を顕現する</p>
+      <div class="hero-tools"><span class="privacy">画像は端末内で処理します</span></div>
     </header>
 
-    <main class="workspace">
-      <section class="card">
-        <h2>円環の頁</h2>
-        <div id="stage" class="stage"><div id="stageEmpty" class="empty">二重円の魔法陣を正面から写した画像を選んでください。円環が見つかれば、頁は自動で読み始めます。</div><canvas id="captureCanvas" class="hidden"></canvas><canvas id="overlayCanvas" class="hidden"></canvas></div>
-        <div class="controls">
-          <label class="file-label secondary">写し絵を選ぶ（選択後に自動解析）<input id="fileInput" type="file" accept="image/*"></label>
+    <main class="book">
+      <section class="page manual-page" aria-labelledby="manualTitle">
+        <h2 id="manualTitle" class="rune-title">マギアサークルの頁</h2>
+        <div class="rulebox">
+          <b>陣の掟</b><br>
+          1. 外円と内円は、描いた魔法の器である<br>
+          2. 円環に呪文を巡らせ、内円に紋を置く<br>
+          3. 書き手は相を選べない。もっとも共鳴した相が <b>自ら顕現</b> する<br>
+          4. 円・環・紋の輪郭が整うほど、威力は深く共鳴する<br>
+          5. 写し絵は端末の中で読み取られ、結果はこの頁に残る
         </div>
-        <p id="cameraStatus" class="status" aria-live="polite">写し絵を選ぶと、検出から属性判定まで自動で進みます。</p>
-        <p class="hint">外円と内円のあいだへ、英語の呪文を途切れず一周させる。内円には、あなたの紋を置く。明るい場所なら、円環の声はよく届く。</p>
-
-        <h3>円環に刻んだ呪文</h3>
-        <label for="spell">呪文の原文（英語）</label>
-        <div id="spell" class="spell-output" role="status" aria-live="polite">写し絵を選ぶと、刻まれた呪文がここへ現れます。</div>
-        <p id="modelStatus" class="status" aria-live="polite">呪文の相はまだ眠っている。言葉を捧げると、意味の近い相を探します。</p>
-        <p id="preloadStatus" class="status" aria-live="polite">共通 OCR の写本を確認しています…</p>
+        <p class="flavor">二つの円は、呪文を受け止める器。円環に呪文を巡らせ、内円に紋を置けば、眠っていた相がひとつ姿を現す。</p>
+      <details>
+        <summary>この頁の読み方</summary>
+        <p class="manual-copy">陣の章で写し絵を選ぶと、二重円・呪文・紋を順に読み取ります。途中経過はその場の記録に残り、顕現した結果は祭壇に集まります。相の揺らぎや陣の評価は、最後の頁を開いて確かめてください。</p>
+      </details>
       </section>
 
-      <aside class="card" aria-live="polite">
-        <h2>顕現の記録</h2>
-        <div id="powerResult" class="result-empty" style="margin-top:12px">円、線、属性、紋、単語の5つを読み取ると、威力が現れます。</div>
-        <div id="structureResult" class="result-empty">魔法陣を写し取れば、二重円、呪文の環、内円の紋が順に姿を現します。</div>
-        <div id="attributeResult" class="result-empty" style="margin-top:12px">呪文を捧げると、その言葉に最も近い属性の相が目を覚まします。</div>
-        <div id="shapeResult" class="result-empty" style="margin-top:12px">紋を読めば、攻撃・防御・回復／支援・デバフの性質が力の割合として現れます。</div>
-          <div class="meta">意味を測る器: <code>all-MiniLM-L6-v2</code> / 円環を視る眼: <code>共通画像解析コア</code> / 呪文を拾う書記: <code>PaddleOCR</code></div>
-      </aside>
+      <section class="page circle-page" aria-labelledby="circleChapterTitle">
+        <h2 id="circleChapterTitle" class="rune-title">陣の章</h2>
+        <p class="small page-lead">描いた陣を写し、円環の声と内円の紋を読み取る。</p>
+        <div id="stage" class="stage"><div id="stageEmpty" class="empty">二重円の魔法陣を正面から写した画像を選んでください。円環が見つかれば、頁は自動で読み始めます。</div><video id="cameraVideo" class="hidden" autoplay playsinline muted></video><canvas id="captureCanvas" class="hidden"></canvas><canvas id="overlayCanvas" class="hidden"></canvas></div>
+        <div class="controls"><button id="cameraButton" class="camera-button" type="button">写し絵を撮影</button><label class="file-label secondary">写し絵を選定<input id="fileInput" type="file" accept="image/*"></label></div>
+        <div class="process-card">
+          <div class="process-title">処理の記録</div>
+          <div id="progressLog" class="progress-log" role="log" aria-live="polite">
+            <p id="cameraStatus" class="progress-row" aria-live="polite">紋：写し絵を選ぶと、円と紋を読み取ります。</p>
+            <p id="modelStatus" class="progress-row" aria-live="polite">呪文：紋を読み取ったあと、相を判定します。</p>
+          </div>
+          <span id="preloadStatus" hidden aria-hidden="true"></span>
+        </div>
+      </section>
+
+      <section id="altarSection" class="page altar-page" aria-labelledby="altarTitle" hidden>
+        <h2 id="altarTitle" class="rune-title">顕現の祭壇</h2>
+        <p class="small page-lead">読み取った陣から、いま現れている三つの答え。</p>
+        <div class="altar-grid">
+          <article class="altar-card"><h3>相</h3><div id="attributeResult" class="result-empty">呪文を捧げると、相が目を覚まします。</div></article>
+          <article class="altar-card"><h3>紋</h3><div id="shapeResult" class="result-empty">紋を読めば、その性質が現れます。</div></article>
+          <article class="altar-card"><h3>威力</h3><div id="powerResult" class="result-empty">円、線、属性、紋、単語を読み取ると現れます。</div></article>
+        </div>
+        <p class="small page-note">陣の読みは、円・環・紋の形と、円環に刻まれた言葉の響きから生まれます。</p>
+      </section>
+
+      <details class="page details-shell" id="detailsChapter" hidden>
+        <summary><span class="rune-title">詳細の章</span><span class="summary-hint">頁を開く</span></summary>
+        <div class="detail-pages">
+          <article class="detail-page">
+            <h3>呪文の頁</h3><p class="detail-caption">円環から読み取った呪文の原文。</p>
+            <div id="spell" class="spell-output" role="status" aria-live="polite">写し絵を選ぶと、刻まれた呪文がここへ現れます。</div>
+          </article>
+          <article class="detail-page">
+            <h3>威力の頁</h3><p class="detail-caption">顕現を支える四つの共鳴率。</p>
+            <div id="powerDetail" class="detail-result result-empty">威力の内訳は、すべての共鳴率が揃うと現れます。</div>
+          </article>
+          <article class="detail-page">
+            <h3>相の頁</h3><p class="detail-caption">flame / bolt / aqua / gravity / storm / law / chaos</p>
+            <div id="attributeDetail" class="detail-result result-empty">呪文を読み取ると、七つの相との共鳴率が現れます。</div>
+          </article>
+          <article class="detail-page">
+            <h3>紋の頁</h3><p class="detail-caption">攻撃 / 回復 / 防御 / 弱体</p>
+            <div id="shapeDetail" class="detail-result result-empty">内円の紋を読み取ると、四つの性質が現れます。</div>
+          </article>
+          <article class="detail-page">
+            <h3>陣の頁</h3><p class="detail-caption">円・環・紋、それぞれの評価。</p>
+            <div id="structureDetail" class="detail-result result-empty">魔法陣を写し取ると、陣の評価が現れます。</div>
+          </article>
+        </div>
+      </details>
     </main>
 
-    <section id="attribution" class="card" style="margin-top:18px">
-      <h2>外典の由来</h2>
-      <p class="note">マギアサークルは、以下の第三者ライブラリ・モデルをブラウザ内で利用します。正式な配布時には各ライセンス全文と著作権表示を同梱してください。</p>
+    <section id="attribution" class="page archive-page">
+      <h2 class="rune-title">外典の扉</h2>
+      <div class="rulebox">マギアサークルが頁の中で使う第三者ライブラリとモデルの由来を記します。正式な配布時には各ライセンス全文と著作権表示を同梱してください。</div>
       <details>
         <summary>使用ライブラリとモデル</summary>
         <ul>
