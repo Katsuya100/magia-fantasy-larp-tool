@@ -11,13 +11,13 @@
   const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
   const ATTRIBUTES = {
-    flame: { label: '炎', icon: '🔥', descriptions: ['A spell that controls fire and heat.', 'A spell that burns enemies with intense crimson flames.', 'A destructive spell that creates explosions and blazing fire.'] },
-    bolt: { label: '雷', icon: '⚡', descriptions: ['A spell that commands lightning and electric energy.', 'A sudden attack that strikes with thunder and flashing light.', 'A fast spell that releases a powerful electrical shock.'] },
-    aqua: { label: '水', icon: '💧', descriptions: ['A spell that controls water and flowing currents.', 'A spell that summons rain, waves, rivers, or the sea.', 'A fluid spell that washes away danger and restores calm.'] },
-    gravity: { label: '重力', icon: '⬤', descriptions: ['A spell that controls gravity, weight, and falling force.', 'A heavy spell that pulls enemies down toward the ground.', 'A spell that bends mass, orbit, and the force of attraction.'] },
-    storm: { label: '嵐', icon: '🌪', descriptions: ['A spell that commands wind, clouds, rain, and thunder together.', 'A violent spell that summons a raging storm across the sky.', 'A swirling spell that tears through the air with weather and wind.'] },
-    law: { label: '法', icon: '⚖', descriptions: ['A spell that creates order, rules, justice, and binding contracts.', 'A precise spell that judges enemies and enforces a command.', 'A protective spell that establishes a system and restores order.'] },
-    chaos: { label: '混沌', icon: '☄', descriptions: ['A spell that spreads disorder, randomness, and confusion.', 'A wild spell that breaks rules and twists reality unpredictably.', 'A strange destructive spell filled with noise, madness, and entropy.'] },
+    flame: { label: 'flame', icon: '🔥', descriptions: ['A spell that controls fire and heat.', 'A spell that burns enemies with intense crimson flames.', 'A destructive spell that creates explosions and blazing fire.'] },
+    bolt: { label: 'bolt', icon: '⚡', descriptions: ['A spell that commands lightning and electric energy.', 'A sudden attack that strikes with thunder and flashing light.', 'A fast spell that releases a powerful electrical shock.'] },
+    aqua: { label: 'aqua', icon: '💧', descriptions: ['A spell that controls water and flowing currents.', 'A spell that summons rain, waves, rivers, or the sea.', 'A fluid spell that washes away danger and restores calm.'] },
+    gravity: { label: 'gravity', icon: '⬤', descriptions: ['A spell that controls gravity, weight, and falling force.', 'A heavy spell that pulls enemies down toward the ground.', 'A spell that bends mass, orbit, and the force of attraction.'] },
+    storm: { label: 'storm', icon: '🌪', descriptions: ['A spell that commands wind, clouds, rain, and thunder together.', 'A violent spell that summons a raging storm across the sky.', 'A swirling spell that tears through the air with weather and wind.'] },
+    law: { label: 'law', icon: '⚖', descriptions: ['A spell that creates order, rules, justice, and binding contracts.', 'A precise spell that judges enemies and enforces a command.', 'A protective spell that establishes a system and restores order.'] },
+    chaos: { label: 'chaos', icon: '☄', descriptions: ['A spell that spreads disorder, randomness, and confusion.', 'A wild spell that breaks rules and twists reality unpredictably.', 'A strange destructive spell filled with noise, madness, and entropy.'] },
   };
   const DEFAULT_SHAPE_SCORES = Object.freeze({ attack: .25, defense: .25, support: .25, debuff: .25 });
 
@@ -49,7 +49,7 @@
   const captureContext = captureCanvas.getContext('2d', { willReadFrequently: true });
   const overlayContext = overlayCanvas.getContext('2d');
 
-  let detectedCircle = null;
+  let detectedPaths = null;
   let analysisWorker = null;
   let analysisPending = null;
   let cameraStream = null;
@@ -61,6 +61,7 @@
   let structureReady = false;
   let spellReady = false;
   const powerInputs = {
+    circleAccuracy: null,
     lineStraightness: null,
     ringCoverage: null,
     attributeCertainty: null,
@@ -87,6 +88,13 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function normalizeScores(scores) {
+    const weights = scores.map(([key, score]) => [key, Math.max(0, score)]);
+    const total = weights.reduce((sum, [, score]) => sum + score, 0);
+    if (!total) return weights.map(([key]) => [key, 1 / weights.length]);
+    return weights.map(([key, score]) => [key, score / total]);
+  }
+
   function escapeHtml(value) {
     return String(value).replace(/[&<>\"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[character]));
   }
@@ -98,6 +106,7 @@
   }
 
   function resetPowerInputs() {
+    powerInputs.circleAccuracy = null;
     powerInputs.lineStraightness = null;
     powerInputs.ringCoverage = null;
     powerInputs.attributeCertainty = null;
@@ -116,15 +125,16 @@
     }
     const result = powerCalculation.calculatePower(powerInputs);
     const rows = [
+      ['円の共鳴率', result.scores.circleAccuracy, `${Math.round(result.normalized.circleAccuracy * 100)}%`],
       ['線の共鳴率', result.scores.lineStraightness, `${Math.round(result.normalized.lineStraightness * 100)}%`],
-      ['環への呪文配置', result.scores.ringCoverage, `${Math.round(result.normalized.ringCoverage * 100)}%`],
-      ['属性の共鳴率', result.scores.attributeCertainty, `${Math.round(result.normalized.attributeCertainty * 100)}%`],
+      ['環と呪文の共鳴率', result.scores.ringCoverage, `${Math.round(result.normalized.ringCoverage * 100)}%`],
+      ['相の共鳴率', result.scores.attributeCertainty, `${Math.round(result.normalized.attributeCertainty * 100)}%`],
       ['紋の共鳴率', result.scores.sigilCertainty, `${Math.round(result.normalized.sigilCertainty * 100)}%`],
     ];
     powerResult.className = 'altar-result altar-result--power';
-    powerResult.innerHTML = `<div><div class="altar-kicker">総合威力</div><strong class="altar-value">${result.power}</strong></div><span class="altar-unit">${result.normalized.wordCount}語</span>`;
+    powerResult.innerHTML = `<strong class="altar-value">${result.power}</strong>`;
     powerDetail.className = 'detail-result';
-    powerDetail.innerHTML = `<div class="power-lead"><span class="label">総合威力</span><strong class="value">${result.power}</strong></div><div class="bars">${rows.map(([label, score, value]) => `<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(score * 100)}%"></span></div><strong>${value}</strong></div>`).join('')}</div><div class="power-count"><span>単語の数</span><strong>${result.normalized.wordCount}語</strong></div><p class="note">4つの判定値の平均に単語数を掛けて算出します。重複する単語は一度だけ数えます。</p>`;
+    powerDetail.innerHTML = `<div class="power-lead"><span class="label">総合威力</span><strong class="value">${result.power}</strong></div><div class="bars">${rows.map(([label, score, value]) => `<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(score * 100)}%"></span></div><strong>${value}</strong></div>`).join('')}</div><div class="power-count"><span>単語の数</span><strong>${result.normalized.wordCount}語</strong></div>`;
   }
 
   function yieldToBrowser() {
@@ -159,10 +169,16 @@
     return analysisWorker;
   }
 
-  function scaleCircle(circle, factor) {
-    if (!circle || factor === 1) return circle;
-    const scale = value => ({ x: value.x * factor, y: value.y * factor, r: value.r * factor });
-    return { ...circle, outer: scale(circle.outer), inner: scale(circle.inner) };
+  function scalePaths(paths, factor) {
+    if (!paths || factor === 1) return paths;
+    const scale = value => value && ({
+      ...value,
+      x: value.x * factor,
+      y: value.y * factor,
+      r: value.r * factor,
+      radii: value.radii?.map(radius => radius * factor),
+    });
+    return { ...paths, outer: scale(paths.outer), inner: scale(paths.inner) };
   }
 
   function analyzeImageOnMain(image, scale) {
@@ -171,11 +187,11 @@
         try {
           setStatus(cameraStatus, '画像処理の眼を軽く整えています…', 'busy');
           await yieldToBrowser();
-          const circle = imageAnalysis.detectCirclesJs(image.data.buffer, image.width, image.height);
-          setStatus(cameraStatus, '二重円を読み取っています…', 'busy');
+          const paths = imageAnalysis.detectClosedPathsJs(image.data.buffer, image.width, image.height);
+          setStatus(cameraStatus, '閉じたパスを読み取っています…', 'busy');
           await yieldToBrowser();
-          const metrics = imageAnalysis.analyzeSigilMetricsJs(image.data.buffer, image.width, image.height, circle);
-          resolve({ circle: scaleCircle(circle, 1 / scale), shape: metrics.scores, lineStraightness: metrics.lineStraightness });
+          const metrics = imageAnalysis.analyzeSigilMetricsJs(image.data.buffer, image.width, image.height, paths);
+          resolve({ paths: scalePaths(paths, 1 / scale), shape: metrics.scores, lineStraightness: metrics.lineStraightness });
         } catch (error) {
           reject(error);
         }
@@ -199,7 +215,7 @@
     const worker = ensureAnalysisWorker();
     return new Promise((resolve, reject) => {
       analysisPending = {
-        resolve: result => resolve({ ...result, circle: scaleCircle(result.circle, 1 / scale) }),
+        resolve: result => resolve({ ...result, paths: scalePaths(result.paths, 1 / scale) }),
         reject,
         fallback: () => analyzeImageOnMain(image, scale).then(resolve, reject),
       };
@@ -241,41 +257,61 @@
     overlayCanvas.width = captureCanvas.width;
     overlayCanvas.height = captureCanvas.height;
     overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-    if (!detectedCircle) return;
+    if (!detectedPaths) return;
     overlayContext.save();
     overlayContext.strokeStyle = '#8be0f3';
     overlayContext.lineWidth = Math.max(2, overlayCanvas.width / 420);
     overlayContext.setLineDash([10, 7]);
-    for (const circle of [detectedCircle.outer, detectedCircle.inner]) {
+    for (const path of [detectedPaths.outer, detectedPaths.inner].filter(Boolean)) {
       overlayContext.beginPath();
-      overlayContext.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2);
+        const samples = path.radii?.length || 96;
+        for (let index = 0; index < samples; index += 1) {
+          const theta = index / samples * Math.PI * 2;
+        const radius = path.radii?.[index] || path.r;
+        const x = path.x + Math.cos(theta) * radius;
+        const y = path.y + Math.sin(theta) * radius;
+        if (index === 0) overlayContext.moveTo(x, y);
+        else overlayContext.lineTo(x, y);
+      }
+      overlayContext.closePath();
       overlayContext.stroke();
     }
     overlayContext.setLineDash([]);
     overlayContext.fillStyle = '#f5d879';
     overlayContext.font = `${Math.max(14, overlayCanvas.width / 55)}px ui-sans-serif`;
-    overlayContext.fillText('二重円', detectedCircle.outer.x - detectedCircle.outer.r, Math.max(24, detectedCircle.outer.y - detectedCircle.outer.r - 12));
+    overlayContext.fillText('閉じたパス', detectedPaths.outer.x - detectedPaths.outer.r, Math.max(24, detectedPaths.outer.y - detectedPaths.outer.r - 12));
     overlayContext.restore();
   }
 
-  async function samplePolar(canvas, circle, innerGap = 10, outerGap = 10, width = 1200, height = 180) {
+  async function samplePolar(canvas, paths, innerGap = 10, outerGap = 10, width = 1200, height = 180) {
     const output = document.createElement('canvas');
     output.width = width;
     output.height = height;
     const outputContext = output.getContext('2d');
     const source = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, canvas.width, canvas.height);
     const data = outputContext.createImageData(width, height);
-    const inner = circle.inner.r + innerGap;
-    const outer = circle.outer.r - outerGap;
+    const pathRadius = (path, sampleIndex) => {
+      const profile = path.radii;
+      if (!profile?.length) return path.r;
+      const lower = Math.floor(sampleIndex) % profile.length;
+      const upper = (lower + 1) % profile.length;
+      const fraction = sampleIndex - Math.floor(sampleIndex);
+      const first = profile[lower] || path.r;
+      const second = profile[upper] || path.r;
+      return first + (second - first) * fraction;
+    };
     for (let x = 0; x < width; x += 1) {
       const theta = x / width * Math.PI * 2;
       const cos = Math.cos(theta);
       const sin = Math.sin(theta);
+      const sampleIndex = x / width * (paths.inner.radii?.length || 96);
+      const inner = pathRadius(paths.inner, sampleIndex) + innerGap;
+      const outer = pathRadius(paths.outer, sampleIndex) - outerGap;
       for (let y = 0; y < height; y += 1) {
         const t = y / Math.max(1, height - 1);
         const radius = inner + t * Math.max(1, outer - inner);
-        const centerX = circle.inner.x + (circle.outer.x - circle.inner.x) * t;
-        const centerY = circle.inner.y + (circle.outer.y - circle.inner.y) * t;
+        const centerX = paths.inner.x + (paths.outer.x - paths.inner.x) * t;
+        const centerY = paths.inner.y + (paths.outer.y - paths.inner.y) * t;
         const sourceX = Math.round(centerX + cos * radius);
         const sourceY = Math.round(centerY + sin * radius);
         const outputIndex = (y * width + x) * 4;
@@ -316,36 +352,40 @@
     if (!scores) {
       scores = DEFAULT_SHAPE_SCORES;
     }
-    const names = { attack: '攻撃の相', defense: '防御の相', support: '回復／支援の相', debuff: '弱体の相' };
-    const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-    const [top, second] = sorted;
-    const certainty = clamp((top[1] - second[1]) / .32);
+    const names = { attack: '攻撃の紋', defense: '防御の紋', support: '回復の紋', debuff: '弱体の紋' };
+    const icons = { attack: '⚔️', defense: '🛡️', support: '✚', debuff: '🕸️' };
+    const rates = normalizeScores(Object.entries(scores)).sort((a, b) => b[1] - a[1]);
+    const [top] = rates;
     shapeResult.className = 'altar-result altar-result--shape';
-    shapeResult.innerHTML = `<span class="altar-symbol">✧</span><div><div class="altar-kicker">最も強い性質</div><strong class="altar-value">${names[top[0]].replace('の相', '')}</strong><span class="altar-confidence">共鳴率 ${Math.round(certainty * 100)}%</span></div>`;
+    shapeResult.innerHTML = `<span class="altar-symbol">${icons[top[0]]}</span><div><div class="altar-kicker">最も共鳴した紋</div><strong class="altar-value">${names[top[0]].replace('の紋', '')}</strong></div>`;
     shapeDetail.className = 'detail-result';
-    shapeDetail.innerHTML = `<div class="shape-title"><b>${names[top[0]]}</b><span>共鳴率 ${Math.round(certainty * 100)}%</span></div><div class="bars">${sorted.map(([key, value]) => `<div class="bar-row"><span>${names[key]}</span><div class="bar"><span style="width:${Math.round(value * 100)}%"></span></div><strong>${Math.round(value * 100)}%</strong></div>`).join('')}</div><p class="note">${certainty < .35 ? '複数の相の共鳴率が近く、紋の声はまだ揺れている。' : '最も共鳴した相を、この紋の性質として記します。'}</p>`;
-    return certainty;
+    shapeDetail.innerHTML = `<div class="shape-title"><b>${icons[top[0]]} ${names[top[0]]}</b></div><div class="bars">${rates.map(([key, rate]) => { const percentage = Math.round(rate * 100); return `<div class="bar-row"><span>${icons[key]} ${names[key]}</span><div class="bar"><span style="width:${percentage}%"></span></div><strong>${percentage}%</strong></div>`; }).join('')}</div>`;
+    return top[1];
   }
 
-  async function analyzeStructure() {
-    setStatus(cameraStatus, '二重円と紋の輪郭を読み取っています…', 'busy');
+  async function analyzeStructure(spellPoints = []) {
+    setStatus(cameraStatus, '閉じたパスと紋の輪郭を読み取っています…', 'busy');
     try {
       const result = await analyzeImageInWorker();
-      detectedCircle = result.circle;
+      detectedPaths = result.paths;
       drawOverlay();
-      const polar = await samplePolar(captureCanvas, detectedCircle);
-      const ring = await ringCoverage(polar);
+      const polar = detectedPaths.inner ? await samplePolar(captureCanvas, detectedPaths) : null;
+      const inkCoverage = polar ? await ringCoverage(polar) : 0;
+      const textCoverage = imageAnalysis.scorePointsOnRing(detectedPaths, spellPoints, captureCanvas.width, captureCanvas.height);
+      const ring = spellPoints.length ? (inkCoverage + textCoverage) / 2 : inkCoverage;
+      powerInputs.circleAccuracy = result.paths.circleAccuracy;
       powerInputs.ringCoverage = ring;
       powerInputs.lineStraightness = result.lineStraightness;
-      powerInputs.sigilCertainty = renderShape(result.shape);
+      powerInputs.sigilCertainty = renderShape(detectedPaths.inner ? result.shape : null);
       renderPower();
       structureReady = true;
       updateResultVisibility();
-      setStatus(cameraStatus, '二重円と紋の輪郭を読み取った。続けて呪文を読み取ります。', 'good');
+      setStatus(cameraStatus, '閉じたパスと紋の輪郭を読み取った。続けて呪文を読み取ります。', 'good');
       return result;
     } catch (error) {
-      detectedCircle = null;
+      detectedPaths = null;
       drawOverlay();
+      powerInputs.circleAccuracy = 0;
       powerInputs.ringCoverage = 0;
       powerInputs.lineStraightness = 0;
       powerInputs.sigilCertainty = renderShape(DEFAULT_SHAPE_SCORES);
@@ -588,18 +628,14 @@
       const values = rows.map(vector => cosine(query, vector)).sort((a, b) => b - a);
       return [key, values.slice(0, 2).reduce((sum, value) => sum + value, 0) / Math.min(2, values.length)];
     }).sort((a, b) => b[1] - a[1]);
-    const min = scores[scores.length - 1][1];
-    const max = scores[0][1];
-    const spread = Math.max(.0001, max - min);
-    const top = scores[0];
-    const second = scores[1];
-    const confidence = clamp((top[1] - second[1]) / .12);
+    const rates = normalizeScores(scores);
+    const [top] = rates;
     attributeResult.className = 'altar-result altar-result--attribute';
-    attributeResult.innerHTML = `<span class="altar-symbol">${ATTRIBUTES[top[0]].icon}</span><div><div class="altar-kicker">最も共鳴した相</div><strong class="altar-value">${ATTRIBUTES[top[0]].label}</strong><span class="altar-confidence">共鳴率 ${Math.round(confidence * 100)}%</span></div>`;
+    attributeResult.innerHTML = `<span class="altar-symbol">${ATTRIBUTES[top[0]].icon}</span><div><div class="altar-kicker">最も共鳴した相</div><strong class="altar-value">${ATTRIBUTES[top[0]].label}</strong></div>`;
     attributeDetail.className = 'detail-result';
-    attributeDetail.innerHTML = `<div class="bars">${scores.map(([key, score]) => { const normalized = Math.round(((score - min) / spread) * 100); return `<div class="bar-row attribute-detail-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}<small>${key}</small></span><div class="bar"><span style="width:${normalized}%"></span></div><strong>${normalized}%</strong></div>`; }).join('')}</div><p class="note">呪文の意味を属性の言葉と重ね、最も共鳴した相を選びました。二つの相が近いとき、共鳴率は下がります。</p>`;
+    attributeDetail.innerHTML = `<div class="shape-title"><b>${ATTRIBUTES[top[0]].label}</b></div><div class="bars">${rates.map(([key, rate]) => { const percentage = Math.round(rate * 100); return `<div class="bar-row attribute-detail-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:${percentage}%"></span></div><strong>${percentage}%</strong></div>`; }).join('')}</div>`;
     setStatus(modelStatus, '呪文の相がひとつ、頁の上に現れた。', 'good');
-    return confidence;
+    return top[1];
     } catch {
       return renderAttributeFallback();
     }
@@ -609,23 +645,23 @@
     const scores = Object.keys(ATTRIBUTES).map(key => [key, 0]);
     const [top] = scores;
     attributeResult.className = 'altar-result altar-result--attribute';
-    attributeResult.innerHTML = `<span class="altar-symbol">${ATTRIBUTES[top[0]].icon}</span><div><div class="altar-kicker">最も共鳴した相</div><strong class="altar-value">${ATTRIBUTES[top[0]].label}</strong><span class="altar-confidence">共鳴率 0%</span></div>`;
+    attributeResult.innerHTML = `<span class="altar-symbol">${ATTRIBUTES[top[0]].icon}</span><div><div class="altar-kicker">最も共鳴した相</div><strong class="altar-value">${ATTRIBUTES[top[0]].label}</strong></div>`;
     attributeDetail.className = 'detail-result';
-    attributeDetail.innerHTML = `<div class="bars">${scores.map(([key]) => `<div class="bar-row attribute-detail-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}<small>${key}</small></span><div class="bar"><span style="width:0%"></span></div><strong>0%</strong></div>`).join('')}</div><p class="note">呪文から最も近い相を選びました。</p>`;
+    attributeDetail.innerHTML = `<div class="shape-title"><b>${ATTRIBUTES[top[0]].label}</b></div><div class="bars">${scores.map(([key]) => `<div class="bar-row attribute-detail-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:0%"></span></div><strong>0%</strong></div>`).join('')}</div><p class="note">呪文から相を判定できませんでした。</p>`;
     setStatus(modelStatus, '相がひとつ、頁の上に現れた。', 'good');
     return 0;
   }
 
   function resetResults() {
     stopCamera();
-    detectedCircle = null;
+    detectedPaths = null;
     resetPowerInputs();
     structureReady = false;
     spellReady = false;
     updateResultVisibility();
     detailsChapter.open = false;
     cameraStatus.className = 'progress-row';
-    cameraStatus.textContent = '紋：写し絵を選ぶと、円と紋を読み取ります。';
+    cameraStatus.textContent = '紋：写し絵を選ぶと、閉じたパスと紋を読み取ります。';
     modelStatus.className = 'progress-row';
     modelStatus.textContent = '呪文：紋を読み取ったあと、相を判定します。';
     spellOutput.textContent = SPELL_PLACEHOLDER;
@@ -636,7 +672,7 @@
     shapeResult.className = 'result-empty';
     shapeResult.textContent = '紋を読めば、その性質が現れます。';
     shapeDetail.className = 'detail-result result-empty';
-    shapeDetail.textContent = '内円の紋を読み取ると、四つの性質が現れます。';
+    shapeDetail.textContent = '紋の輪郭を読み取ると、四つの性質が現れます。';
     renderPower();
     captureCanvas.classList.add('hidden');
     overlayCanvas.classList.add('hidden');
@@ -656,15 +692,22 @@
       URL.revokeObjectURL(source);
       try {
         canvasFromImage(image);
-        setStatus(cameraStatus, '写し絵を受け取った。二重円を検出しています…', 'busy');
-        await analyzeStructure();
-        setStatus(modelStatus, '円環の呪文を読み取っています…', 'busy');
-        const result = await recognizeSpell(captureCanvas);
-        const text = result.path?.text || '';
-        powerInputs.wordCount = powerCalculation.countUniqueWords(result.path?.words || []);
+        setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
+        let recognition = null;
+        try {
+          recognition = await recognizeSpell(captureCanvas);
+        } catch {
+          setStatus(modelStatus, '呪文を読み取れず、位置情報なしで相を選びます。');
+        }
+        const path = recognition?.path;
+        const text = path?.text || '';
+        const spellPoints = path?.points || [];
+        powerInputs.wordCount = powerCalculation.countUniqueWords(path?.words || []);
+        setStatus(cameraStatus, '写し絵を受け取り、閉じたパスと環内の文字位置を調べています…', 'busy');
+        await analyzeStructure(spellPoints);
         renderPower();
-        spellOutput.textContent = text || '円環から呪文を読み取れませんでした。';
-        setStatus(modelStatus, text ? '円環の声を拾い上げた。属性を判定しています…' : '呪文を読み取れず、相を選んでいます…', 'busy');
+        spellOutput.textContent = text || '環から呪文を読み取れませんでした。';
+        setStatus(modelStatus, text ? '環の声を拾い上げた。相を判定しています…' : '呪文を読み取れず、相を選んでいます…', 'busy');
         powerInputs.attributeCertainty = await judgeSpell(text);
         renderPower();
         spellReady = true;
@@ -673,6 +716,7 @@
       } catch (error) {
         if (!Number.isFinite(powerInputs.wordCount)) powerInputs.wordCount = 0;
         if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback();
+        if (!Number.isFinite(powerInputs.circleAccuracy)) powerInputs.circleAccuracy = 0;
         if (!Number.isFinite(powerInputs.lineStraightness)) powerInputs.lineStraightness = 0;
         if (!Number.isFinite(powerInputs.ringCoverage)) powerInputs.ringCoverage = 0;
         if (!Number.isFinite(powerInputs.sigilCertainty)) powerInputs.sigilCertainty = renderShape(null);

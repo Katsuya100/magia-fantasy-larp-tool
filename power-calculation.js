@@ -2,6 +2,7 @@
   'use strict';
 
   const PARAMETER_KEYS = Object.freeze([
+    'circleAccuracy',
     'lineStraightness',
     'ringCoverage',
     'attributeCertainty',
@@ -39,10 +40,10 @@
 
   function normalizeInputs(input = {}) {
     const wordCount = input.words !== undefined ? countUniqueWords(input.words) : input.wordCount;
-    // Keep accepting the old field for existing callers; new calculations use ringCoverage.
     return {
+      circleAccuracy: normalizeQuality(input.circleAccuracy, 'circleAccuracy'),
       lineStraightness: normalizeQuality(input.lineStraightness, 'lineStraightness'),
-      ringCoverage: normalizeQuality(input.ringCoverage ?? input.circleAccuracy ?? 0, 'ringCoverage'),
+      ringCoverage: normalizeQuality(input.ringCoverage ?? 0, 'ringCoverage'),
       attributeCertainty: normalizeQuality(input.attributeCertainty, 'attributeCertainty'),
       sigilCertainty: normalizeQuality(input.sigilCertainty, 'sigilCertainty'),
       wordCount: normalizeWordCount(wordCount),
@@ -51,9 +52,17 @@
 
   function calculatePower(input) {
     const normalized = normalizeInputs(input);
-    const scores = {
+    const modernInputs = input.ringCoverage !== undefined;
+    const scores = modernInputs ? {
+      circleAccuracy: normalized.circleAccuracy,
       lineStraightness: normalized.lineStraightness,
       ringCoverage: normalized.ringCoverage,
+      attributeCertainty: normalized.attributeCertainty,
+      sigilCertainty: normalized.sigilCertainty,
+    } : {
+      // Compatibility with callers using the previous four-score schema.
+      ringCoverage: normalized.circleAccuracy,
+      lineStraightness: normalized.lineStraightness,
       attributeCertainty: normalized.attributeCertainty,
       sigilCertainty: normalized.sigilCertainty,
     };
@@ -63,7 +72,9 @@
       normalized,
       scores,
       qualityAverage,
-      formula: '((lineStraightness + ringCoverage + attributeCertainty + sigilCertainty) / 4) * wordCount * 100',
+      formula: modernInputs
+        ? '((circleAccuracy + lineStraightness + ringCoverage + attributeCertainty + sigilCertainty) / 5) * wordCount * 100'
+        : '((circleAccuracy + lineStraightness + attributeCertainty + sigilCertainty) / 4) * wordCount * 100',
     };
   }
 

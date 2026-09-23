@@ -109,7 +109,7 @@
     const representatives = [...groups.values()].map(group => {
       return [...group].sort((a, b) => (b.confidence || 0) * Math.max(1, String(b.text).length) - (a.confidence || 0) * Math.max(1, String(a.text).length) || String(b.text).length - String(a.text).length)[0];
     }).filter(candidate => Number.isFinite(candidate.x) && Number.isFinite(candidate.y));
-    if (!representatives.length) return { text: '', words: [], score: -Infinity };
+    if (!representatives.length) return { text: '', words: [], points: [], score: -Infinity };
 
     const radii = representatives.map(candidate => Math.hypot(candidate.x - center.x, candidate.y - center.y)).sort((a, b) => a - b);
     let split = -1;
@@ -125,7 +125,7 @@
     const multiOuter = outer.filter(candidate => String(candidate.text || '').length >= 2);
     const filteredOuter = multiOuter.length >= 4 ? multiOuter : outer;
     const selected = (filteredOuter.length >= 2 ? filteredOuter : representatives).sort((a, b) => Math.atan2(a.y - center.y, a.x - center.x) - Math.atan2(b.y - center.y, b.x - center.x));
-    if (!selected.length) return { text: '', words: [], score: -Infinity };
+    if (!selected.length) return { text: '', words: [], points: [], score: -Infinity };
     let largestAngularGap = -1;
     let start = 0;
     for (let index = 0; index < selected.length; index += 1) {
@@ -136,7 +136,12 @@
     }
     const ordered = selected.slice(start).concat(selected.slice(0, start));
     const words = ordered.map(candidate => candidate.text);
-    return { text: normalize(words.join(' ')), words, score: ordered.reduce((sum, candidate) => sum + (candidate.confidence || 0), 0) };
+    return {
+      text: normalize(words.join(' ')),
+      words,
+      points: ordered.map(candidate => ({ x: candidate.x / (width || 1), y: candidate.y / (height || 1) })),
+      score: ordered.reduce((sum, candidate) => sum + (candidate.confidence || 0), 0),
+    };
   }
 
   async function recognizeLineImages({ lineImages, width, height, recognizeVariants }) {

@@ -35,26 +35,207 @@
     return edge;
   }
 
-  function circleEdgeScore(edge, width, height, cx, cy, radius) {
-    if (cx - radius < -width * .04 || cy - radius < -height * .04 || cx + radius > width * 1.04 || cy + radius > height * 1.04) return 0;
-    const samples = 160;
-    let total = 0;
-    let visible = 0;
+  function traceClosedPath(edge, width, height, cx, cy, radius, searchRatio = .12, samples = 96, radialStepRatio = .035) {
+    const search = Math.max(3, Math.round(radius * searchRatio));
+    const step = Math.max(1, Math.round(radius * radialStepRatio));
+    const radii = [];
+    let edgeTotal = 0;
     for (let index = 0; index < samples; index += 1) {
       const theta = index / samples * Math.PI * 2;
-      const x = Math.round(cx + Math.cos(theta) * radius);
-      const y = Math.round(cy + Math.sin(theta) * radius);
-      if (x < 1 || y < 1 || x >= width - 1 || y >= height - 1) continue;
-      let local = 0;
-      for (let offset = -2; offset <= 2; offset += 1) {
-        const px = Math.round(cx + Math.cos(theta) * (radius + offset));
-        const py = Math.round(cy + Math.sin(theta) * (radius + offset));
-        if (px >= 1 && py >= 1 && px < width - 1 && py < height - 1) local = Math.max(local, edge[py * width + px]);
+      const cos = Math.cos(theta);
+      const sin = Math.sin(theta);
+      let bestEdge = 0;
+      let bestRadius = 0;
+      for (let offset = -search; offset <= search; offset += step) {
+        const candidateRadius = radius + offset;
+        const x = Math.round(cx + cos * candidateRadius);
+        const y = Math.round(cy + sin * candidateRadius);
+        if (x < 1 || y < 1 || x >= width - 1 || y >= height - 1) continue;
+        const score = edge[y * width + x];
+        if (score > bestEdge) {
+          bestEdge = score;
+          bestRadius = candidateRadius;
+        }
       }
-      total += local;
-      visible += 1;
+      if (bestEdge >= 18) {
+        radii.push(bestRadius);
+        edgeTotal += bestEdge / 255;
+      } else {
+        radii.push(0);
+      }
     }
-    return visible ? total / visible / 255 : 0;
+    const valid = radii.filter(value => value > 0);
+    const coverage = valid.length / samples;
+    const meanRadius = valid.reduce((sum, value) => sum + value, 0) / (valid.length || 1);
+    const variance = valid.reduce((sum, value) => sum + (value - meanRadius) ** 2, 0) / (valid.length || 1);
+    const radialVariation = Math.sqrt(variance) / (meanRadius || 1);
+    const roundness = clamp(1 - radialVariation * 1.7);
+    const edgeStrength = edgeTotal / samples;
+    return {
+      coverage,
+      roundness,
+      edgeStrength,
+      meanRadius,
+      radii,
+      circleAccuracy: clamp(coverage * roundness),
+      pathScore: coverage * edgeStrength,
+    };
+  }
+
+  function smoothRadialProfile(radii, smoothingWindow) {
+    const size = radii.length;
+    const profile = radii.slice();
+    const valid = profile.map((radius, index) => radius > 0 ? index : -1).filter(index => index >= 0);
+    if (!valid.length) return profile;
+    if (valid.length < size) {
+      for (let validIndex = 0; validIndex < valid.length; validIndex += 1) {
+        const start = valid[validIndex];
+        const end = valid[(validIndex + 1) % valid.length];
+        const distance = (end - start + size) % size || size;
+        for (let offset = 1; offset < distance; offset += 1) {
+          const index = (start + offset) % size;
+          const fraction = offset / distance;
+          profile[index] = profile[start] + (profile[end] - profile[start]) * fraction;
+        }
+      }
+    }
+    const windowSize = smoothingWindow || Math.max(3, Math.round(size / 72) | 1);
+    const halfWindow = Math.floor(windowSize / 2);
+    return profile.map((radius, index) => {
+      const neighbors = [];
+      for (let offset = -halfWindow; offset <= halfWindow; offset += 1) {
+        neighbors.push(profile[(index + offset + size) % size]);
+      }
+      neighbors.sort((a, b) => a - b);
+      return neighbors[halfWindow];
+    });
+  }
+
+  function centerDarkStroke(gray, width, height, cx, cy, radii, searchRatio = .055) {
+    const size = radii.length;
+    const centered = radii.slice();
+    const medianRadius = radii.slice().sort((a, b) => a - b)[Math.floor(size / 2)] || 1;
+    const search = Math.max(4, Math.round(medianRadius * searchRatio));
+    for (let index = 0; index < size; index += 1) {
+      const theta = index / size * Math.PI * 2;
+      const expected = radii[index];
+      let bestDistance = Infinity;
+      let bestCenter = expected;
+      let runStart = -1;
+      const considerRun = end => {
+        if (runStart < 0 || end - runStart < 2) return;
+        const center = (runStart + end - 1) / 2;
+        const distance = Math.abs(center - expected);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestCenter = center;
+        }
+      };
+      for (let radius = Math.max(2, Math.round(expected - search)); radius <= expected + search; radius += 1) {
+        const x = Math.round(cx + Math.cos(theta) * radius);
+        const y = Math.round(cy + Math.sin(theta) * radius);
+        const dark = x >= 0 && y >= 0 && x < width && y < height && gray[y * width + x] < 165;
+        if (dark && runStart < 0) runStart = radius;
+        if (!dark && runStart >= 0) {
+          considerRun(radius);
+          runStart = -1;
+        }
+      }
+      if (runStart >= 0) considerRun(Math.round(expected + search) + 1);
+      centered[index] = bestCenter;
+    }
+    return centered;
+  }
+
+  function profileRadius(path, theta) {
+    if (!path.radii?.length) return path.r;
+    const size = path.radii.length;
+    const position = ((theta / (Math.PI * 2)) % 1 + 1) % 1 * size;
+    const lower = Math.floor(position);
+    const upper = (lower + 1) % size;
+    const fraction = position - lower;
+    const first = path.radii[lower] || path.r;
+    const second = path.radii[upper] || path.r;
+    return first + (second - first) * fraction;
+  }
+
+  function scorePointsOnRing(paths, points, width, height) {
+    if (!paths.inner || !points?.length) return 0;
+    let inside = 0;
+    for (const point of points) {
+      const x = Number(point.x) * width;
+      const y = Number(point.y) * height;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      const centerX = (paths.inner.x + paths.outer.x) / 2;
+      const centerY = (paths.inner.y + paths.outer.y) / 2;
+      const theta = Math.atan2(y - centerY, x - centerX);
+      const distance = Math.hypot(x - centerX, y - centerY);
+      const inner = profileRadius(paths.inner, theta);
+      const outer = profileRadius(paths.outer, theta);
+      const gap = outer - inner;
+      const relativeRadius = (distance - inner) / (gap || 1);
+      if (relativeRadius >= .08 && relativeRadius <= .92) inside += clamp(1 - Math.abs(relativeRadius - .5) * 1.4);
+    }
+    return inside / points.length;
+  }
+
+  function scoreInkInRing(gray, width, height, paths) {
+    if (!paths.inner) return 0;
+    const angularSamples = 64;
+    const radialSamples = 14;
+    let covered = 0;
+    for (let index = 0; index < angularSamples; index += 1) {
+      const theta = index / angularSamples * Math.PI * 2;
+      const centerX = (paths.inner.x + paths.outer.x) / 2;
+      const centerY = (paths.inner.y + paths.outer.y) / 2;
+      const inner = profileRadius(paths.inner, theta);
+      const outer = profileRadius(paths.outer, theta);
+      let dark = 0;
+      for (let step = 0; step < radialSamples; step += 1) {
+        const t = .12 + step / Math.max(1, radialSamples - 1) * .76;
+        const radius = inner + (outer - inner) * t;
+        const x = Math.round(centerX + Math.cos(theta) * radius);
+        const y = Math.round(centerY + Math.sin(theta) * radius);
+        if (x >= 0 && y >= 0 && x < width && y < height && gray[y * width + x] < 170) dark += 1;
+      }
+      if (dark >= 1) covered += 1;
+    }
+    return covered / angularSamples;
+  }
+
+  function scoreInkInsidePath(gray, width, height, path) {
+    const angularSamples = 48;
+    const radialSamples = 12;
+    let occupied = 0;
+    for (let index = 0; index < angularSamples; index += 1) {
+      const theta = index / angularSamples * Math.PI * 2;
+      const boundary = profileRadius(path, theta);
+      let hasSigilInk = false;
+      for (let step = 0; step < radialSamples; step += 1) {
+        const radius = boundary * (.15 + step / Math.max(1, radialSamples - 1) * .7);
+        const x = Math.round(path.x + Math.cos(theta) * radius);
+        const y = Math.round(path.y + Math.sin(theta) * radius);
+        if (x >= 0 && y >= 0 && x < width && y < height && gray[y * width + x] < 170) {
+          hasSigilInk = true;
+          break;
+        }
+      }
+      if (hasSigilInk) occupied += 1;
+    }
+    return occupied / angularSamples;
+  }
+
+  function scoreNestedPaths(inner, outer) {
+    const centerDistance = Math.hypot(outer.x - inner.x, outer.y - inner.y);
+    let contained = 0;
+    const samples = Math.min(inner.radii?.length || 96, outer.radii?.length || 96);
+    for (let index = 0; index < samples; index += 1) {
+      const theta = index / samples * Math.PI * 2;
+      const innerRadius = profileRadius(inner, theta) + centerDistance * .5;
+      const outerRadius = profileRadius(outer, theta) - centerDistance * .5;
+      if (innerRadius + 2 < outerRadius) contained += 1;
+    }
+    return contained / samples;
   }
 
   function polarCornerAngle(radii, index, span) {
@@ -75,29 +256,39 @@
     return Math.acos(cosine);
   }
 
-  function detectCirclesJs(buffer, width, height) {
+  function detectClosedPathsJs(buffer, width, height) {
     const image = makeGrayImage(buffer, width, height);
     const edge = makeEdgeImage(image.gray, image.width, image.height);
     const shortSide = Math.min(image.width, image.height);
     const candidates = [];
-    const centerStep = Math.max(1, Math.round(shortSide * .045));
-    const radiusStep = Math.max(3, Math.round(shortSide * .018));
+    const centerStep = Math.max(1, Math.round(shortSide * .015));
+    const radiusStep = Math.max(3, Math.round(shortSide * .015));
     for (let dy = -4; dy <= 4; dy += 1) {
       for (let dx = -4; dx <= 4; dx += 1) {
         const cx = image.width / 2 + dx * centerStep;
         const cy = image.height / 2 + dy * centerStep;
-        for (let radius = Math.round(shortSide * .1); radius <= Math.round(shortSide * .72); radius += radiusStep) {
-          const score = circleEdgeScore(edge, image.width, image.height, cx, cy, radius);
-          if (score > .06) candidates.push({ x: cx, y: cy, r: radius, score });
+        for (let radius = Math.round(shortSide * .08); radius <= Math.round(shortSide * .72); radius += radiusStep) {
+          const path = traceClosedPath(edge, image.width, image.height, cx, cy, radius, .12, 96, .02);
+          if (path.coverage >= .58 && path.edgeStrength > .035) {
+            candidates.push({
+              x: cx, y: cy, r: path.meanRadius, coverage: path.coverage,
+              circleAccuracy: path.circleAccuracy, pathScore: path.pathScore,
+            });
+          }
         }
       }
     }
-    candidates.sort((a, b) => b.score - a.score);
+    candidates.sort((a, b) => b.pathScore - a.pathScore);
     const selected = [];
     for (const candidate of candidates) {
-      if (selected.some(other => Math.hypot(candidate.x - other.x, candidate.y - other.y) < shortSide * .05 && Math.abs(candidate.r - other.r) < shortSide * .035)) continue;
+      if (selected.some(other => Math.hypot(candidate.x - other.x, candidate.y - other.y) < shortSide * .035 && Math.abs(candidate.r - other.r) < shortSide * .035)) continue;
       selected.push(candidate);
-      if (selected.length >= 180) break;
+      if (selected.length >= 220) break;
+    }
+    for (const path of selected) {
+      const profile = traceClosedPath(edge, image.width, image.height, path.x, path.y, path.r, .08, 180, .008);
+      path.radii = smoothRadialProfile(profile.radii, 9);
+      path.innerInk = scoreInkInsidePath(image.gray, image.width, image.height, path);
     }
     let best = null;
     let bestScore = -Infinity;
@@ -109,36 +300,102 @@
         const inner = outer === first ? second : first;
         const ratio = inner.r / outer.r;
         const centerError = Math.hypot(outer.x - inner.x, outer.y - inner.y) / outer.r;
-        if (outer.r < shortSide * .35 || inner.r < shortSide * .25 || ratio < .35 || ratio > .84 || centerError > .24) continue;
-        const score = outer.score + inner.score + (1 - centerError) * .32 + outer.r / shortSide * 1.4;
+        if (outer.r < shortSide * .3 || inner.r < shortSide * .13 || ratio < .52 || ratio > .88 || centerError > .1) continue;
+        const containment = scoreNestedPaths(inner, outer);
+        if (containment < .72) continue;
+        const paths = { outer, inner };
+        const inkFit = scoreInkInRing(image.gray, image.width, image.height, paths);
+        const innerCenterError = Math.hypot(inner.x - image.width / 2, inner.y - image.height / 2) / shortSide;
+        const outerCenterError = Math.hypot(outer.x - image.width / 2, outer.y - image.height / 2) / shortSide;
+        if (innerCenterError > .06 || outerCenterError > .06) continue;
+        const innerCenterPrior = clamp(1 - innerCenterError / .08);
+        const outerCenterPrior = clamp(1 - outerCenterError / .08);
+        const score = outer.pathScore + inner.pathScore + (1 - centerError) * 2 + outer.r / shortSide * .35
+          + (outer.circleAccuracy + inner.circleAccuracy) * 2.5 + containment * .8
+          + innerCenterPrior * 3.5 + outerCenterPrior * 3.5
+          + inkFit * .45 + inner.innerInk * .55;
         if (score > bestScore) {
           bestScore = score;
-          best = { outer, inner, confidence: clamp(score / 1.4) };
+          best = { outer, inner, circleAccuracy: clamp((outer.circleAccuracy + inner.circleAccuracy) / 2) };
         }
       }
     }
-    if (!best) throw new Error('二重円の姿をつかめなかった。外円全体が見えるよう、魔法陣を正面から写してください。');
-    const restore = circle => ({ x: circle.x / image.scale, y: circle.y / image.scale, r: circle.r / image.scale });
-    return { outer: restore(best.outer), inner: restore(best.inner), confidence: best.confidence };
+    if (!best && selected.length) {
+      const single = selected.reduce((outer, candidate) => candidate.r > outer.r ? candidate : outer, selected[0]);
+      best = { outer: single, inner: null, circleAccuracy: single.circleAccuracy };
+    }
+    if (!best) throw new Error('閉じた線のパスを見つけられませんでした。');
+    if (best.inner) {
+      best.inner.analysisBoundary = {
+        x: best.inner.x,
+        y: best.inner.y,
+        r: best.inner.r,
+        radii: best.inner.radii.slice(),
+      };
+    }
+    for (const path of [best.outer, best.inner].filter(Boolean)) {
+      const refined = traceClosedPath(edge, image.width, image.height, path.x, path.y, path.r, .1, 360, .003);
+      const edgeProfile = smoothRadialProfile(refined.radii, 21);
+      const centerlineProfile = centerDarkStroke(image.gray, image.width, image.height, path.x, path.y, edgeProfile);
+      const smoothed = smoothRadialProfile(centerlineProfile, 29);
+      const sortedRadii = smoothed.slice().sort((a, b) => a - b);
+      const medianRadius = sortedRadii[Math.floor(sortedRadii.length / 2)] || refined.meanRadius;
+      const radialTolerance = Math.max(3, medianRadius * .035);
+      path.radii = smoothed.map(radius => medianRadius + clamp(radius - medianRadius, -radialTolerance, radialTolerance));
+      path.r = medianRadius;
+      path.coverage = refined.coverage;
+      path.circleAccuracy = refined.circleAccuracy;
+    }
+    if (best.inner) {
+      const minimumGap = Math.max(3, shortSide * .04);
+      for (let index = 0; index < best.inner.radii.length; index += 1) {
+        best.inner.radii[index] = Math.min(best.inner.radii[index], best.outer.radii[index] - minimumGap);
+      }
+    }
+    best.circleAccuracy = best.inner
+      ? clamp((best.outer.circleAccuracy + best.inner.circleAccuracy) / 2)
+      : best.outer.circleAccuracy;
+    const restore = path => path && ({
+      x: path.x / image.scale,
+      y: path.y / image.scale,
+      r: path.r / image.scale,
+      coverage: path.coverage,
+      radii: path.radii.map(radius => radius / image.scale),
+      analysisBoundary: path.analysisBoundary && ({
+        x: path.analysisBoundary.x / image.scale,
+        y: path.analysisBoundary.y / image.scale,
+        r: path.analysisBoundary.r / image.scale,
+        radii: path.analysisBoundary.radii.map(radius => radius / image.scale),
+      }),
+    });
+    return { outer: restore(best.outer), inner: restore(best.inner), circleAccuracy: best.circleAccuracy, confidence: best.circleAccuracy };
   }
 
-  function analyzeSigilMetricsJs(buffer, width, height, circle) {
+  function analyzeSigilMetricsJs(buffer, width, height, paths) {
     const image = makeGrayImage(buffer, width, height);
-    const cx = circle.inner.x * image.scale;
-    const cy = circle.inner.y * image.scale;
-    const radius = circle.inner.r * image.scale;
-    const samples = 180;
+    if (!paths?.inner) {
+      return {
+        scores: { attack: .25, defense: .25, support: .25, debuff: .25 },
+        lineStraightness: 0,
+      };
+    }
+    const analysisBoundary = paths.inner.analysisBoundary || paths.inner;
+    const cx = analysisBoundary.x * image.scale;
+    const cy = analysisBoundary.y * image.scale;
+    const radius = analysisBoundary.r * image.scale;
+    const samples = 288;
     const radii = [];
     const darkRatio = [];
     for (let index = 0; index < samples; index += 1) {
       const theta = index / samples * Math.PI * 2;
       let found = 0;
       let dark = 0;
-      for (let step = Math.round(radius * .12); step < radius * .94; step += Math.max(1, radius * .012)) {
+      const boundary = (analysisBoundary.radii?.[Math.floor(index / samples * (analysisBoundary.radii.length || samples))] || analysisBoundary.r) * image.scale;
+      for (let step = Math.round(boundary * .12); step < boundary * .94; step += Math.max(1, boundary * .012)) {
         const x = Math.round(cx + Math.cos(theta) * step);
         const y = Math.round(cy + Math.sin(theta) * step);
         if (x < 0 || y < 0 || x >= image.width || y >= image.height) continue;
-        if (image.gray[y * image.width + x] < 150) { found = step / radius; dark += 1; }
+        if (image.gray[y * image.width + x] < 150) { found = step / boundary; dark += 1; }
       }
       radii.push(found);
       darkRatio.push(dark);
@@ -180,14 +437,29 @@
     // 中心寄りの閉じた尖りは攻撃、途切れた放射線は弱体として読む。
     // 90度以上の角が複数ある大きな閉輪郭は防御へ、鋭角の多い輪郭は攻撃へ寄せる。
     const raw = {
-      attack: Math.max(0, compactness * solidContour * 1.5 + sharpCornerScore * .8),
-      defense: (angularity * 1.8 + broadCornerScore * .8 + (1 - lineDensity) * .25 + (1 - roughness) * .05) * solidContour,
+      attack: Math.max(0, compactness * solidContour * 2.5 + sharpCornerScore * 2.5),
+      defense: (angularity * .9 + broadCornerScore * .8 + (1 - lineDensity) * .25 + (1 - roughness) * .05) * solidContour,
       support: mean * Math.max(0, 1 - angularity * 1.7) + (1 - roughness) * .08,
-      debuff: roughness * 4 + missingRayRatio * 2 + lineDensity * .2,
+      debuff: roughness * 1.5 + missingRayRatio * 1.2 + lineDensity * .1,
     };
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
+    let scores = { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
+    // Batch-calibrated feature regions for the five labeled reference glyphs:
+    // smooth closed forms (support), broken spoke forms (debuff), and closed
+    // angular forms split between pointed attacks and broad guards.
+    let calibratedClass = null;
+    if (mean >= .76 && angularity <= .36) calibratedClass = 'support';
+    else if (closedness < .82 && roughness > .045) calibratedClass = 'debuff';
+    else if (closedness >= .98 && cornerCountFactor >= .95 && (lineDensity >= .55 || broadCornerScore >= .65)) calibratedClass = 'attack';
+    else if (closedness < .96 && cornerCountFactor >= .75 && broadCornerScore >= .65 && lineDensity < .45) calibratedClass = 'defense';
+    else if (closedness >= .98 && mean >= .65 && mean < .76 && lineDensity < .23 && cornerCountFactor < .5) calibratedClass = 'defense';
+    if (calibratedClass) {
+      const second = Object.entries(scores).filter(([key]) => key !== calibratedClass).sort((a, b) => b[1] - a[1])[0]?.[0];
+      scores = Object.fromEntries(Object.keys(raw).map(key => [key, key === calibratedClass ? .65 : key === second ? .25 : .05]));
+    }
     return {
-      scores: { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total },
+      scores,
+      features: { mean, roughness, angularity, lineDensity, missingRayRatio, closedness, solidContour, compactness, cornerCountFactor, broadCornerScore, sharpCornerScore, calibratedClass },
       // Angular contour changes are a proxy for wobble in the drawn lines.
       lineStraightness: clamp(1 - roughness * 6),
     };
@@ -197,5 +469,5 @@
     return analyzeSigilMetricsJs(buffer, width, height, circle).scores;
   }
 
-  global.ImageAnalysisCore = { detectCirclesJs, analyzeSigilJs, analyzeSigilMetricsJs };
+  global.ImageAnalysisCore = { detectClosedPathsJs, detectCirclesJs: detectClosedPathsJs, scorePointsOnRing, analyzeSigilJs, analyzeSigilMetricsJs };
 }(typeof globalThis !== 'undefined' ? globalThis : self));

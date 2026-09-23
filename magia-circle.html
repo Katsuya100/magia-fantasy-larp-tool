@@ -52,6 +52,9 @@
     details summary{cursor:pointer;color:var(--gold);font-weight:800;list-style-position:inside}
     details summary::marker{color:var(--cyan)}
     .manual-copy{margin:10px 0 0;color:#c6d3d5;font:13px/1.75 ui-sans-serif,system-ui,sans-serif}
+    .manual-page .glossary{display:grid;gap:5px;padding-left:1.4em}
+    .manual-page .glossary li::marker{color:var(--cyan)}
+    .manual-page .glossary strong{color:#ffe89a}
     .stage{
       position:relative;display:grid;place-items:center;width:100%;min-height:270px;aspect-ratio:4/3;
       border:1px solid rgba(139,224,243,.3);border-radius:17px;overflow:hidden;
@@ -64,7 +67,7 @@
     .status{min-height:22px;margin:9px 0 0;color:#a9c6cf;font:13px/1.55 ui-sans-serif,system-ui,sans-serif}.status.busy{display:flex;align-items:center;gap:8px}.status.busy::before{content:"";width:12px;height:12px;flex:0 0 12px;border:2px solid rgba(169,198,207,.35);border-top-color:var(--good);border-radius:50%;animation:status-spin .8s linear infinite}@keyframes status-spin{to{transform:rotate(360deg)}}.status.error{color:var(--bad)}.status.good{color:var(--good)}.status.subtle{color:#80969c;font-size:12px}
     .process-card{margin-top:14px;padding:14px;border:1px solid var(--line-soft);border-radius:16px;background:rgba(3,12,20,.5)}.process-title{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#dcecf0;font:800 14px ui-sans-serif,system-ui,sans-serif}.process-title span{color:var(--muted);font-size:11px;font-weight:600}.progress-log{display:grid;gap:7px;max-height:270px;overflow:auto;margin-top:10px;padding-right:2px}.progress-entry{display:grid;grid-template-columns:15px 1fr;gap:7px;align-items:start;color:#c8d9dc;font:12px/1.55 ui-sans-serif,system-ui,sans-serif}.progress-entry::before{content:"✦";color:var(--cyan);font-size:11px}.progress-entry.good::before{content:"✓";color:var(--good)}.progress-entry.error::before{content:"!";color:var(--bad);font-weight:900}.progress-empty{color:#80969c;font:12px/1.55 ui-sans-serif,system-ui,sans-serif}
     .altar-grid{display:grid;gap:10px}.altar-card{min-width:0;padding:14px;border:1px solid var(--line-soft);border-radius:16px;background:rgba(4,12,22,.52)}.altar-card h3{color:#dcecf0}.altar-card .result-empty{margin-top:10px}.altar-result{margin-top:10px}.altar-result--attribute,.altar-result--shape{display:grid;grid-template-columns:auto 1fr;column-gap:11px;align-items:center}.altar-symbol{display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(245,216,121,.45);border-radius:50%;background:radial-gradient(circle,rgba(245,216,121,.23),transparent 70%);font-size:25px}.altar-kicker{color:#a8bdc1;font:700 11px ui-sans-serif,system-ui,sans-serif}.altar-value{display:block;margin-top:2px;color:#ffe89a;font-size:27px;font-weight:900}.altar-confidence{grid-column:2;color:#a9c6cf;font:12px ui-sans-serif,system-ui,sans-serif}.altar-result--power{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.altar-result--power .altar-value{font-size:36px}.altar-result--power .altar-unit{color:#c7b788;font:700 12px ui-sans-serif,system-ui,sans-serif}.altar-placeholder{color:#9db5bd;font:13px/1.65 ui-sans-serif,system-ui,sans-serif}
-    .details-shell{padding:0;overflow:hidden}.details-shell>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px;list-style:none;font-size:20px}.details-shell>summary::-webkit-details-marker{display:none}.details-shell>summary:after{content:"＋";color:var(--cyan);font-size:22px}.details-shell[open]>summary:after{content:"−"}.summary-hint{color:var(--muted);font:12px ui-sans-serif,system-ui,sans-serif}.detail-pages{display:grid;gap:10px;padding:0 12px 12px}.detail-page{padding:15px;border:1px solid var(--line-soft);border-radius:16px;background:rgba(3,12,20,.46)}.detail-page h3{color:#dcecf0}.detail-caption{margin:5px 0 0;color:#8fa8ad;font:12px/1.55 ui-sans-serif,system-ui,sans-serif}
+    .details-shell{padding:0;overflow:hidden}.details-shell>summary{display:flex;align-items:center;justify-content:flex-start;gap:12px;padding:18px;list-style:none;font-size:20px}.details-shell>summary::-webkit-details-marker{display:none}.details-shell>summary:after{content:"＋";color:var(--cyan);font-size:22px}.details-shell[open]>summary:after{content:"−"}.detail-pages{display:grid;gap:10px;padding:0 12px 12px}.detail-page{padding:15px;border:1px solid var(--line-soft);border-radius:16px;background:rgba(3,12,20,.46)}.detail-page h3{color:#dcecf0}.detail-caption{margin:5px 0 0;color:#8fa8ad;font:12px/1.55 ui-sans-serif,system-ui,sans-serif}
     .spell-output{min-height:78px;margin-top:11px;padding:13px;border:1px solid rgba(139,224,243,.32);border-radius:12px;color:var(--ink);background:rgba(2,10,17,.72);font:16px/1.65 ui-sans-serif,system-ui,sans-serif;white-space:pre-wrap}.detail-result{margin-top:11px}.result-empty{padding:14px;border:1px dashed rgba(139,224,243,.28);border-radius:14px;color:#9db5bd;font:13px/1.65 ui-sans-serif,system-ui,sans-serif}.bars{display:grid;gap:8px;margin-top:12px}.bar-row{display:grid;grid-template-columns:minmax(90px,1.05fr) 1fr 48px;gap:8px;align-items:center;color:#dbe7e8;font:12px ui-sans-serif,system-ui,sans-serif}.bar{height:9px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.12)}.bar span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4389a2,#f4d77d)}.bar-row strong{text-align:right;color:#ffe89a;font-size:12px}.power-lead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:13px;border:1px solid rgba(245,216,121,.45);border-radius:14px;background:linear-gradient(135deg,rgba(70,54,24,.72),rgba(25,29,44,.9))}.power-lead .label{color:#c7b788;font:700 11px ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em}.power-lead .value{color:#ffe89a;font-size:34px;font-weight:900}.power-count{display:flex;justify-content:space-between;align-items:center;margin-top:11px;padding:10px 12px;border:1px solid rgba(139,224,243,.22);border-radius:10px;color:#dbe7e8;font:12px ui-sans-serif,system-ui,sans-serif}.power-count strong{color:#ffe89a;font-size:15px}.note{margin:9px 0 0;color:#9db5bd;font:12px/1.6 ui-sans-serif,system-ui,sans-serif}.shape-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.shape-title b{font-size:21px;color:#9be7f5}.shape-title span{color:#c8d6d8;font:700 12px ui-sans-serif,system-ui,sans-serif}.attribute-detail-row{grid-template-columns:minmax(108px,1.2fr) 1fr 48px}.attribute-detail-row small{display:block;margin-top:2px;color:#81999f;font-size:10px}.meta{margin-top:12px;color:#81999f;font:11px/1.6 ui-sans-serif,system-ui,sans-serif}.meta code{color:#d9eaff}
     .archive-card{padding:17px}.archive-card h2{font-size:18px}.archive-card .note{margin-top:8px}.archive-card details{margin-top:14px;padding-top:13px;border-top:1px solid var(--line-soft)}.archive-card p,.archive-card li{color:#b9c9cb;font:12px/1.7 ui-sans-serif,system-ui,sans-serif}.archive-card ul{padding-left:20px}.archive-card a{color:#9be7f5}.footer{margin-top:14px;text-align:center;color:#8da5ac;font:11px/1.6 ui-sans-serif,system-ui,sans-serif}
     @media(min-width:620px){.wrap{padding-top:22px}.hero{padding:28px 24px 20px}.manual,.chapter,.archive-card{padding:20px}.altar-grid{grid-template-columns:repeat(3,1fr)}.details-shell>summary{padding:20px}.detail-pages{grid-template-columns:repeat(2,1fr);padding:0 16px 16px}.detail-page:last-child{grid-column:1/-1}.stage{min-height:340px}}
@@ -98,7 +101,7 @@
     .progress-row:before{content:"✦";flex:0 0 auto;color:var(--cyan)}.progress-row.busy:before{content:"◌";display:inline-block;color:var(--good);animation:status-spin .8s linear infinite}.progress-row.good:before{content:"✓";color:var(--good)}.progress-row.error:before{content:"!";color:var(--bad);font-weight:900}
     .altar-card{border-color:var(--line-soft);background:rgba(4,12,22,.52)}.altar-card h3{color:#dcecf0}.altar-card .result-empty{color:#9db5bd;border-color:rgba(139,224,243,.28)}
     .altar-kicker{color:#a8bdc1}.altar-value{color:#ffe89a}.altar-confidence{color:#a9c6cf}.altar-unit{color:#c7b788!important}.altar-symbol{border-color:rgba(245,216,121,.45);background:radial-gradient(circle,rgba(245,216,121,.23),transparent 70%)}.altar-placeholder{color:#9db5bd}
-    .details-shell{padding:0;overflow:hidden}.details-shell>summary{padding:18px;color:var(--gold)}.details-shell>summary .rune-title{margin:0;color:var(--gold)}.summary-hint{color:var(--muted)}
+    .details-shell{padding:0;overflow:hidden}.details-shell>summary{padding:18px;color:var(--gold)}.details-shell>summary .rune-title{margin:0;color:var(--gold)}
     .detail-pages{padding:0 12px 12px}.detail-page{border-color:var(--line-soft);background:rgba(3,12,20,.46)}.detail-page h3{color:#dcecf0}.detail-caption{color:#8fa8ad}.page .result-empty{color:#9db5bd;border-color:rgba(139,224,243,.28)}.page .bar-row{color:#dbe7e8}.page .bar{background:rgba(255,255,255,.12)}.page .bar-row strong{color:#ffe89a}.page .note{color:#9db5bd}.page .power-count{border-color:rgba(139,224,243,.22);color:#dbe7e8}.page .power-count strong{color:#ffe89a}.page .shape-title b{color:#9be7f5}.page .shape-title span{color:#c8d6d8}.page .attribute-detail-row small{color:#81999f}
     .archive-page{margin-top:18px}.archive-page .rulebox{font-size:13px}.archive-page details{margin-top:14px;padding-top:13px;border-top:1px solid rgba(139,224,243,.2)}.archive-page p,.archive-page li{color:#b9c9cb;font:12px/1.7 ui-sans-serif,system-ui,sans-serif}.archive-page a{color:#9be7f5}
     @media(min-width:900px){.book{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr);gap:18px;align-items:start}.book>.page{margin-top:0}.manual-page,.details-shell{grid-column:1/-1}.circle-page{grid-column:1}.altar-page{grid-column:2}.details-shell{grid-row:3}.detail-pages{grid-template-columns:repeat(2,1fr)}.detail-page:last-child{grid-column:1/-1}}
@@ -118,30 +121,40 @@
     <main class="book">
       <section class="page manual-page" aria-labelledby="manualTitle">
         <h2 id="manualTitle" class="rune-title">マギアサークルの頁</h2>
+        <div class="rulebox glossary-box">
+          <b>陣を読む言葉</b>
+          <ul class="manual-copy glossary">
+            <li><strong>魔法</strong> — 超常の力。</li>
+            <li><strong>陣</strong> — 魔法陣全体。</li>
+            <li><strong>外円</strong> — 陣の外側の円。</li>
+            <li><strong>内円</strong> — 陣の内側の円。</li>
+            <li><strong>環</strong> — 外円と内円のあいだの領域。</li>
+            <li><strong>呪文</strong> — 魔法を具体化する言葉の羅列。環に記す。</li>
+            <li><strong>相</strong> — 呪文から算出される魔法の属性。flame / bolt / aqua / storm / gravity / law / chaos。</li>
+            <li><strong>紋</strong> — 魔法を具体化する概念の紋様。内円に記す。また、攻撃・防御・回復・弱体の種別。</li>
+            <li><strong>共鳴率</strong> — 相や紋の候補全体で、各候補が占める重みの割合。ページ内のゲージは合計100%になる。</li>
+          </ul>
+        </div>
         <div class="rulebox">
           <b>陣の掟</b><br>
-          1. 外円と内円は、描いた魔法の器である<br>
-          2. 円環に呪文を巡らせ、内円に紋を置く<br>
-          3. 書き手は相を選べない。もっとも共鳴した相が <b>自ら顕現</b> する<br>
-          4. 線のまっすぐさ、呪文の環への乗り方、相と紋の断定度が威力に響く<br>
-          5. 写し絵は端末の中で読み取られ、結果はこの頁に残る
+          1. 外円と内円、そのあいだの環が陣を形づくる<br>
+          2. 呪文は環に記し、紋は内円に描く<br>
+          3. 書き手が相を選ばなければ、呪文と最も共鳴する相が顕現する。熟達すれば、望む相を選べる<br>
+          4. 陣の正確さ、環と呪文の共鳴率、相と紋それぞれの共鳴率、呪文の単語数が魔法の威力を左右する<br>
+          5. 写し絵は端末内で解析し、判定結果をこの頁に表示する
         </div>
-        <p class="flavor">二つの円は、呪文を受け止める器。円環に呪文を巡らせ、内円に紋を置けば、眠っていた相がひとつ姿を現す。</p>
-      <details>
-        <summary>この頁の読み方</summary>
-        <p class="manual-copy">陣の章で写し絵を選ぶと、環の線・呪文・紋を読み取ります。読み取れない項目があっても発動し、判定できた度合いが威力に反映されます。結果と威力の内訳は最後の頁で確かめてください。</p>
-      </details>
+        <p class="flavor">外円と内円に囲まれた環に呪文を、内円に紋を刻む。呪文から導かれる相とともに、陣は魔法を顕現させる。</p>
       </section>
 
       <section class="page circle-page" aria-labelledby="circleChapterTitle">
         <h2 id="circleChapterTitle" class="rune-title">陣の章</h2>
-        <p class="small page-lead">描いた陣を写し、円環の声と内円の紋を読み取る。</p>
-        <div id="stage" class="stage"><div id="stageEmpty" class="empty">二重円の魔法陣を正面から写した画像を選んでください。円環が見つかれば、頁は自動で読み始めます。</div><video id="cameraVideo" class="hidden" autoplay playsinline muted></video><canvas id="captureCanvas" class="hidden"></canvas><canvas id="overlayCanvas" class="hidden"></canvas></div>
+        <p class="small page-lead">描いた陣を写し、閉じたパスの輪郭・環の呪文・紋を読み取る。</p>
+        <div id="stage" class="stage"><div id="stageEmpty" class="empty">閉じた図形と、環に呪文を記した魔法陣を写してください。輪郭が見つからなくても、頁は結果を示します。</div><video id="cameraVideo" class="hidden" autoplay playsinline muted></video><canvas id="captureCanvas" class="hidden"></canvas><canvas id="overlayCanvas" class="hidden"></canvas></div>
         <div class="controls"><button id="cameraButton" class="camera-button" type="button">写し絵を撮影</button><label class="file-label secondary">写し絵を選定<input id="fileInput" type="file" accept="image/*"></label></div>
         <div class="process-card">
           <div class="process-title">処理の記録</div>
           <div id="progressLog" class="progress-log" role="log" aria-live="polite">
-            <p id="cameraStatus" class="progress-row" aria-live="polite">紋：写し絵を選ぶと、円と紋を読み取ります。</p>
+            <p id="cameraStatus" class="progress-row" aria-live="polite">紋：写し絵を選ぶと、閉じたパスと紋を読み取ります。</p>
             <p id="modelStatus" class="progress-row" aria-live="polite">呪文：紋を読み取ったあと、相を判定します。</p>
           </div>
           <span id="preloadStatus" hidden aria-hidden="true"></span>
@@ -154,29 +167,28 @@
         <div class="altar-grid">
           <article class="altar-card"><h3>相</h3><div id="attributeResult" class="result-empty">呪文を捧げると、相が目を覚まします。</div></article>
           <article class="altar-card"><h3>紋</h3><div id="shapeResult" class="result-empty">紋を読めば、その性質が現れます。</div></article>
-          <article class="altar-card"><h3>威力</h3><div id="powerResult" class="result-empty">線、環への呪文配置、相、紋、単語から算出します。</div></article>
+          <article class="altar-card"><h3>威力</h3><div id="powerResult" class="result-empty">閉じた図形の円らしさ、線、環と呪文の共鳴率、相、紋、単語から算出します。</div></article>
         </div>
-        <p class="small page-note">陣の読みは、円・環・紋の形と、円環に刻まれた言葉の響きから生まれます。</p>
       </section>
 
       <details class="page details-shell" id="detailsChapter" hidden>
-        <summary><span class="rune-title">詳細の章</span><span class="summary-hint">頁を開く</span></summary>
+        <summary><span class="rune-title">詳細の章</span></summary>
         <div class="detail-pages">
           <article class="detail-page">
-            <h3>呪文の頁</h3><p class="detail-caption">円環から読み取った呪文の原文。</p>
+            <h3>呪文の頁</h3>
             <div id="spell" class="spell-output" role="status" aria-live="polite">写し絵を選ぶと、刻まれた呪文がここへ現れます。</div>
           </article>
           <article class="detail-page">
-            <h3>威力の頁</h3><p class="detail-caption">顕現を支える四つの判定値と単語数。</p>
+            <h3>威力の頁</h3>
             <div id="powerDetail" class="detail-result result-empty">威力の内訳は、すべての共鳴率が揃うと現れます。</div>
           </article>
           <article class="detail-page">
-            <h3>相の頁</h3><p class="detail-caption">flame / bolt / aqua / gravity / storm / law / chaos</p>
+            <h3>相の頁</h3>
             <div id="attributeDetail" class="detail-result result-empty">呪文を読み取ると、七つの相との共鳴率が現れます。</div>
           </article>
           <article class="detail-page">
-            <h3>紋の頁</h3><p class="detail-caption">攻撃 / 回復 / 防御 / 弱体</p>
-            <div id="shapeDetail" class="detail-result result-empty">内円の紋を読み取ると、四つの性質が現れます。</div>
+            <h3>紋の頁</h3>
+            <div id="shapeDetail" class="detail-result result-empty">紋の輪郭を読み取ると、四つの性質が現れます。</div>
           </article>
         </div>
       </details>
@@ -188,9 +200,9 @@
       <details>
         <summary>使用ライブラリとモデル</summary>
         <ul>
-          <li><strong>Guten OCR browser pipeline</strong><br>Source: <a href="https://github.com/gutenye/ocr" target="_blank" rel="noreferrer">gutenye/ocr</a><br>Work: <code>@gutenye/ocr-browser</code> / <code>@gutenye/ocr-common</code><br>License: MIT License<br>備考: PP-OCRv4の検出・認識をブラウザ内で実行し、円環の文字区画を抽出するために使用。</li>
+          <li><strong>Guten OCR browser pipeline</strong><br>Source: <a href="https://github.com/gutenye/ocr" target="_blank" rel="noreferrer">gutenye/ocr</a><br>Work: <code>@gutenye/ocr-browser</code> / <code>@gutenye/ocr-common</code><br>License: MIT License<br>備考: PP-OCRv4の検出・認識をブラウザ内で実行し、環の文字区画を抽出するために使用。</li>
           <li><strong>OpenCV.js for OCR</strong><br>Source: <a href="https://github.com/TechStark/opencv-js" target="_blank" rel="noreferrer">TechStark/opencv-js</a><br>Work: <code>@techstark/opencv-js</code><br>License: Apache License 2.0<br>備考: OCRの遠近補正と文字行画像の切り出しに使用。</li>
-          <li><strong>PaddleOCR recognition model</strong><br>Source: <a href="https://github.com/PaddlePaddle/PaddleOCR" target="_blank" rel="noreferrer">PaddlePaddle/PaddleOCR</a><br>Work: <code>ch_PP-OCRv4_rec_infer.onnx</code> / <code>ppocr_keys_v1.txt</code> from <code>@gutenye/ocr-models</code><br>License: Apache License 2.0<br>備考: 整形した円環の筆跡をブラウザ内で文字列へ変換するために使用。</li>
+          <li><strong>PaddleOCR recognition model</strong><br>Source: <a href="https://github.com/PaddlePaddle/PaddleOCR" target="_blank" rel="noreferrer">PaddlePaddle/PaddleOCR</a><br>Work: <code>ch_PP-OCRv4_rec_infer.onnx</code> / <code>ppocr_keys_v1.txt</code> from <code>@gutenye/ocr-models</code><br>License: Apache License 2.0<br>備考: 整形した環の筆跡をブラウザ内で文字列へ変換するために使用。</li>
           <li><strong>Transformers.js</strong><br>Source: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noreferrer">huggingface/transformers.js</a><br>Work: Transformers.js<br>License: Apache License 2.0<br>備考: 文章Embeddingモデルをブラウザ内で実行するために使用。</li>
           <li><strong>文章Embeddingモデル</strong><br>Source: <a href="https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2" target="_blank" rel="noreferrer">sentence-transformers/all-MiniLM-L6-v2</a><br>Work: <code>all-MiniLM-L6-v2</code> / Transformers.js用ONNX変換版<br>License: Apache License 2.0<br>備考: 英語の呪文と属性説明文の意味比較に使用。</li>
         </ul>
@@ -200,7 +212,6 @@
         <p>カメラ画像は外部サーバーへ送信しません。カメラ映像、OCR、画像解析、文章Embeddingはこのブラウザ上で実行します。ライブラリやモデルの初回ファイル取得にはネットワーク接続が必要です。PaddleOCRの認識モデルはページ表示時に事前取得し、以後はブラウザのキャッシュを再利用します。筆跡が判定しにくい場合は、誤読を確定せず原文の手入力へ戻します。</p>
       </details>
     </section>
-    <p class="footer">円環の読みは、光、筆跡、紋の形によって揺らぐ。何度か姿勢を変え、最も納得できる読みを採用してください。</p>
   </div>
   <script src="spell-ocr.js"></script>
   <script src="image-analysis-core.js"></script>
