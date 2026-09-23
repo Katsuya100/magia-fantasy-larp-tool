@@ -55,6 +55,25 @@ async function paddleRecognize(raw) {
   return core.decodeGreedyCtc(output, dictionary);
 }
 
+async function combineLineImages(first, second, firstAngle, secondAngle) {
+  const targetHeight = 240;
+  const gap = 15;
+  const rotated = async (line, angle) => {
+    const source = sharp(Buffer.from(line.image.data), { raw: { width: line.image.width, height: line.image.height, channels: 4 } });
+    const dimensions = angle % 180 ? { width: line.image.height, height: line.image.width } : { width: line.image.width, height: line.image.height };
+    const width = Math.max(1, Math.round(dimensions.width * targetHeight / dimensions.height));
+    return { width, data: await source.rotate(angle).resize(width, targetHeight, { kernel: 'linear' }).png().toBuffer() };
+  };
+  const left = await rotated(first, firstAngle);
+  const right = await rotated(second, secondAngle);
+  const width = left.width + gap + right.width;
+  const data = await sharp({ create: { width, height: targetHeight, channels: 4, background: '#fff' } })
+    .composite([{ input: left.data, left: 0, top: 0 }, { input: right.data, left: left.width + gap, top: 0 }])
+    .raw()
+    .toBuffer();
+  return { image: { data, width, height: targetHeight } };
+}
+
 const pipeline = await core.run({
   detect: () => detection.run(input),
   recognizeVariants: async line => {
@@ -71,6 +90,7 @@ const pipeline = await core.run({
       recognize: async image => paddleRecognize(await image.raw().toBuffer({ resolveWithObject: true })),
     });
   },
+  combineLines: combineLineImages,
 });
 const { rawCandidates, candidates, path } = pipeline;
 const rawWords = new Set(candidates.map(candidate => candidate.text));

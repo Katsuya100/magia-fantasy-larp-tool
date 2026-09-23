@@ -61,10 +61,43 @@
       const ordered = reverse ? [...recognized].reverse() : recognized;
       ordered.forEach((word, index) => {
         const offset = ((index + 0.5) / ordered.length - 0.5) * geometry.length * 0.72;
-        output.push({ text: word, x: geometry.x + axis.x * offset, y: geometry.y + axis.y * offset, groupId, confidence });
+        const wordIndex = reverse ? recognized.length - index - 1 : index;
+        output.push({ text: word, x: geometry.x + axis.x * offset, y: geometry.y + axis.y * offset, groupId: `${groupId}:${wordIndex}`, confidence });
       });
     }
     return output;
+  }
+
+  function editDistance(left, right) {
+    const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+    for (let row = 1; row <= left.length; row += 1) {
+      let diagonal = previous[0];
+      previous[0] = row;
+      for (let column = 1; column <= right.length; column += 1) {
+        const above = previous[column];
+        previous[column] = Math.min(
+          previous[column] + 1,
+          previous[column - 1] + 1,
+          diagonal + (left[row - 1] === right[column - 1] ? 0 : 1),
+        );
+        diagonal = above;
+      }
+    }
+    return previous[right.length];
+  }
+
+  function chooseConsensus(options) {
+    const ranked = [...options].sort((left, right) => right.votes - left.votes || right.text.length - left.text.length);
+    const primary = ranked[0];
+    if (!primary) return null;
+    const mode = option => Math.max(-1, ...option.observations.map(({ variant }) => variant ?? -1));
+    const closeAlternate = ranked.filter(option =>
+      option !== primary && primary.votes - option.votes <= 1 &&
+      mode(option) > mode(primary) && option.text.length >= primary.text.length && editDistance(primary.text, option.text) <= 1,
+    ).sort((left, right) => mode(right) - mode(left) || right.votes - left.votes)[0];
+    // When preprocessing variants disagree by one glyph, let the thresholded
+    // pass break the tie; otherwise retain the strongest exact OCR vote.
+    return closeAlternate || primary;
   }
 
   async function runRecognizeVariants({ source, preprocess, rotate, recognize }) {
@@ -111,20 +144,15 @@
     }).filter(candidate => Number.isFinite(candidate.x) && Number.isFinite(candidate.y));
     if (!representatives.length) return { text: '', words: [], points: [], score: -Infinity };
 
-    const radii = representatives.map(candidate => Math.hypot(candidate.x - center.x, candidate.y - center.y)).sort((a, b) => a - b);
-    let split = -1;
-    let largestGap = 0;
-    for (let index = 0; index + 1 < radii.length; index += 1) {
-      const gap = radii[index + 1] - radii[index];
-      if (gap > largestGap) { largestGap = gap; split = index; }
-    }
-    const threshold = split >= 0 && largestGap >= Math.min(width, height) * 0.12
-      ? (radii[split] + radii[split + 1]) / 2
-      : radii[Math.floor(radii.length / 2)];
-    const outer = representatives.filter(candidate => Math.hypot(candidate.x - center.x, candidate.y - center.y) >= threshold);
-    const multiOuter = outer.filter(candidate => String(candidate.text || '').length >= 2);
-    const filteredOuter = multiOuter.length >= 4 ? multiOuter : outer;
-    const selected = (filteredOuter.length >= 2 ? filteredOuter : representatives).sort((a, b) => Math.atan2(a.y - center.y, a.x - center.x) - Math.atan2(b.y - center.y, b.x - center.x));
+    // Spell text can occupy more than one concentric track. A largest-radius-gap
+    // split drops every word on the inner track, so retain word-sized detections
+    // across the annulus and reject only detections close to the central sigil.
+    const ringFloor = Math.min(width, height) * 0.28;
+    const onRing = representatives.filter(candidate => Math.hypot(candidate.x - center.x, candidate.y - center.y) >= ringFloor);
+    const selected = onRing.filter(candidate => {
+      const text = String(candidate.text || '');
+      return text.length >= 2 || (/^(a|i)$/i.test(text) && (candidate.confidence || 0) >= 2 / 12);
+    }).sort((a, b) => Math.atan2(a.y - center.y, a.x - center.x) - Math.atan2(b.y - center.y, b.x - center.x));
     if (!selected.length) return { text: '', words: [], points: [], score: -Infinity };
     let largestAngularGap = -1;
     let start = 0;
@@ -144,12 +172,14 @@
     };
   }
 
-  async function recognizeLineImages({ lineImages, width, height, recognizeVariants }) {
+  async function recognizeLineImages({ lineImages, width, height, recognizeVariants, combineLines }) {
     const rawCandidates = [];
     const candidates = [];
+    const recognizedLines = [];
     for (const [lineIndex, line] of (lineImages || []).entries()) {
       if (!line?.image) continue;
       const geometry = lineGeometry(line.box);
+      const groupId = line.groupId ?? lineIndex;
       const votes = new Map();
       for (const observation of await recognizeVariants(line)) {
         const text = words(observation?.text ?? observation).join(' ');
@@ -162,15 +192,81 @@
         }
         votes.set(text, current);
       }
-      for (const option of [...votes.values()].sort((a, b) => b.votes - a.votes)) {
+      const options = [...votes.values()];
+      for (const option of options) {
         rawCandidates.push({ line: lineIndex, text: option.text, votes: option.votes, observations: option.observations });
-        candidates.push(...expandWords(option.text, geometry, lineIndex, option.votes / 12));
       }
+      const selected = chooseConsensus(options);
+      if (selected) recognizedLines.push({ line, lineIndex, geometry, groupId, selected });
+    }
+
+    const suppressedLines = new Set();
+    if (combineLines && recognizedLines.length > 1) {
+      const minSide = Math.min(width, height);
+      const pairs = [];
+      for (const shortLine of recognizedLines) {
+        if (String(shortLine.selected.text).replace(/[^a-z]/gi, '').length !== 1) continue;
+        for (const longLine of recognizedLines) {
+          if (shortLine === longLine || String(longLine.selected.text).replace(/[^a-z]/gi, '').length < 2) continue;
+          if (shortLine.geometry.length > longLine.geometry.length * 0.6) continue;
+          const center = { x: width / 2, y: height / 2 };
+          const shortRadius = Math.hypot(shortLine.geometry.x - center.x, shortLine.geometry.y - center.y);
+          const longRadius = Math.hypot(longLine.geometry.x - center.x, longLine.geometry.y - center.y);
+          if (Math.abs(shortRadius - longRadius) > minSide * 0.06) continue;
+          const shortAngle = Math.atan2(shortLine.geometry.y - center.y, shortLine.geometry.x - center.x);
+          const longAngle = Math.atan2(longLine.geometry.y - center.y, longLine.geometry.x - center.x);
+          const angularGap = Math.abs(shortAngle - longAngle);
+          if (Math.min(angularGap, Math.PI * 2 - angularGap) > 0.35) continue;
+          const distance = Math.hypot(shortLine.geometry.x - longLine.geometry.x, shortLine.geometry.y - longLine.geometry.y);
+          if (distance > minSide * 0.15) continue;
+          const first = shortAngle < longAngle ? shortLine : longLine;
+          const second = first === shortLine ? longLine : shortLine;
+          pairs.push({ first, second, shortLine, longLine, distance });
+        }
+      }
+      pairs.sort((left, right) => left.distance - right.distance);
+      for (const { first, second, shortLine } of pairs) {
+        if (suppressedLines.has(first.lineIndex) || suppressedLines.has(second.lineIndex)) continue;
+        const firstLength = String(first.selected.text).replace(/[^a-z]/gi, '').length;
+        const secondLength = String(second.selected.text).replace(/[^a-z]/gi, '').length;
+
+        for (const quarterTurn of [90, 0, 270]) {
+          const joined = await combineLines(first.line, second.line, first === shortLine ? quarterTurn : 0, second === shortLine ? quarterTurn : 0);
+          if (!joined?.image) continue;
+          const optionsByText = new Map();
+          for (const observation of await recognizeVariants(joined)) {
+            const text = words(observation?.text ?? observation).join(' ');
+            if (!text) continue;
+            const current = optionsByText.get(text) || { text, votes: 0, observations: [] };
+            current.votes += 1;
+            if (observation && typeof observation === 'object') {
+              const { angle, variant } = observation;
+              if (angle !== undefined || variant !== undefined) current.observations.push({ angle, variant });
+            }
+            optionsByText.set(text, current);
+          }
+          const options = [...optionsByText.values()];
+          for (const option of options) rawCandidates.push({ line: `${first.lineIndex}+${second.lineIndex}`, text: option.text, votes: option.votes, observations: option.observations });
+          const selected = chooseConsensus(options);
+          const joinedLength = String(selected?.text || '').replace(/[^a-z]/gi, '').length;
+          if (!selected || joinedLength < Math.max(firstLength, secondLength) + 1) continue;
+
+          // Keep a successful composite OCR result in place of its fragments.
+          suppressedLines.add(first.lineIndex);
+          suppressedLines.add(second.lineIndex);
+          const midpoint = { x: (first.geometry.x + second.geometry.x) / 2, y: (first.geometry.y + second.geometry.y) / 2 };
+          candidates.push(...expandWords(selected.text, { ...midpoint, angle: 0, length: Math.max(first.geometry.length, second.geometry.length) }, `joined:${first.groupId}:${second.groupId}`, selected.votes / 12));
+          break;
+        }
+      }
+    }
+    for (const record of recognizedLines) {
+      if (!suppressedLines.has(record.lineIndex)) candidates.push(...expandWords(record.selected.text, record.geometry, record.groupId, record.selected.votes / 12));
     }
     return { rawCandidates, candidates, path: selectPath(candidates, width || 1, height || 1) };
   }
 
-  async function run({ detect, recognizeVariants }) {
+  async function run({ detect, recognizeVariants, combineLines }) {
     const detected = await detect();
     const width = detected.resizedImageWidth || detected.width || 1;
     const height = detected.resizedImageHeight || detected.height || 1;
@@ -179,6 +275,7 @@
       width,
       height,
       recognizeVariants,
+      combineLines,
     });
     return { ...detected, ...recognition };
   }

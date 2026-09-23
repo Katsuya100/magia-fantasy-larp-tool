@@ -372,6 +372,24 @@
     return canvas;
   }
 
+  function combineSpellLineImages(first, second, firstAngle, secondAngle) {
+    const targetHeight = 240;
+    const gap = 15;
+    const left = rotateOcrCanvas(lineImageCanvas(first), firstAngle);
+    const right = rotateOcrCanvas(lineImageCanvas(second), secondAngle);
+    const leftWidth = Math.max(1, Math.round(left.width * targetHeight / left.height));
+    const rightWidth = Math.max(1, Math.round(right.width * targetHeight / right.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = leftWidth + gap + rightWidth;
+    canvas.height = targetHeight;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(left, 0, 0, leftWidth, targetHeight);
+    context.drawImage(right, leftWidth + gap, 0, rightWidth, targetHeight);
+    return { image: context.getImageData(0, 0, canvas.width, canvas.height) };
+  }
+
   async function ensureRecognizer() {
     if (recognizerPromise) return recognizerPromise;
     recognizerPromise = (async () => {
@@ -506,6 +524,7 @@
         return { ...detected, lineImages: global.__gutenLastLineImages || detected.lineImages || [] };
       },
       recognizeVariants: recognizeBrowserLineVariants,
+      combineLines: combineSpellLineImages,
     });
   }
 
