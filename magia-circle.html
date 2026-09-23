@@ -123,13 +123,13 @@
           1. 外円と内円は、描いた魔法の器である<br>
           2. 円環に呪文を巡らせ、内円に紋を置く<br>
           3. 書き手は相を選べない。もっとも共鳴した相が <b>自ら顕現</b> する<br>
-          4. 円・環・紋の輪郭が整うほど、威力は深く共鳴する<br>
+          4. 線のまっすぐさ、呪文の環への乗り方、相と紋の断定度が威力に響く<br>
           5. 写し絵は端末の中で読み取られ、結果はこの頁に残る
         </div>
         <p class="flavor">二つの円は、呪文を受け止める器。円環に呪文を巡らせ、内円に紋を置けば、眠っていた相がひとつ姿を現す。</p>
       <details>
         <summary>この頁の読み方</summary>
-        <p class="manual-copy">陣の章で写し絵を選ぶと、二重円・呪文・紋を順に読み取ります。途中経過はその場の記録に残り、顕現した結果は祭壇に集まります。相の揺らぎや陣の評価は、最後の頁を開いて確かめてください。</p>
+        <p class="manual-copy">陣の章で写し絵を選ぶと、環の線・呪文・紋を読み取ります。読み取れない項目があっても発動し、判定できた度合いが威力に反映されます。結果と威力の内訳は最後の頁で確かめてください。</p>
       </details>
       </section>
 
@@ -154,7 +154,7 @@
         <div class="altar-grid">
           <article class="altar-card"><h3>相</h3><div id="attributeResult" class="result-empty">呪文を捧げると、相が目を覚まします。</div></article>
           <article class="altar-card"><h3>紋</h3><div id="shapeResult" class="result-empty">紋を読めば、その性質が現れます。</div></article>
-          <article class="altar-card"><h3>威力</h3><div id="powerResult" class="result-empty">円、線、属性、紋、単語を読み取ると現れます。</div></article>
+          <article class="altar-card"><h3>威力</h3><div id="powerResult" class="result-empty">線、環への呪文配置、相、紋、単語から算出します。</div></article>
         </div>
         <p class="small page-note">陣の読みは、円・環・紋の形と、円環に刻まれた言葉の響きから生まれます。</p>
       </section>
@@ -167,7 +167,7 @@
             <div id="spell" class="spell-output" role="status" aria-live="polite">写し絵を選ぶと、刻まれた呪文がここへ現れます。</div>
           </article>
           <article class="detail-page">
-            <h3>威力の頁</h3><p class="detail-caption">顕現を支える四つの共鳴率。</p>
+            <h3>威力の頁</h3><p class="detail-caption">顕現を支える四つの判定値と単語数。</p>
             <div id="powerDetail" class="detail-result result-empty">威力の内訳は、すべての共鳴率が揃うと現れます。</div>
           </article>
           <article class="detail-page">
@@ -177,10 +177,6 @@
           <article class="detail-page">
             <h3>紋の頁</h3><p class="detail-caption">攻撃 / 回復 / 防御 / 弱体</p>
             <div id="shapeDetail" class="detail-result result-empty">内円の紋を読み取ると、四つの性質が現れます。</div>
-          </article>
-          <article class="detail-page">
-            <h3>陣の頁</h3><p class="detail-caption">円・環・紋、それぞれの評価。</p>
-            <div id="structureDetail" class="detail-result result-empty">魔法陣を写し取ると、陣の評価が現れます。</div>
           </article>
         </div>
       </details>

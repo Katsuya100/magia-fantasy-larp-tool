@@ -28,7 +28,7 @@ try {
   console.log(JSON.stringify(result, null, 2));
 } catch (error) {
   console.error(`威力計算に失敗しました: ${error.message}`);
-  console.error('Usage: npm run calculate-power -- --circle-accuracy 0.9 --line-straightness 0.8 --attribute-certainty 0.7 --sigil-certainty 0.85 --word-count 5');
-  console.error('   or: npm run calculate-power -- "{\"circleAccuracy\":0.9,\"lineStraightness\":0.8,\"attributeCertainty\":0.7,\"sigilCertainty\":0.85,\"wordCount\":5}"');
+  console.error('Usage: npm run calculate-power -- --line-straightness 0.8 --ring-coverage 0.9 --attribute-certainty 0.7 --sigil-certainty 0.85 --word-count 5');
+  console.error('   or: npm run calculate-power -- "{\"lineStraightness\":0.8,\"ringCoverage\":0.9,\"attributeCertainty\":0.7,\"sigilCertainty\":0.85,\"wordCount\":5}"');
   process.exitCode = 1;
 }

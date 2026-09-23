@@ -19,6 +19,7 @@
     law: { label: '法', icon: '⚖', descriptions: ['A spell that creates order, rules, justice, and binding contracts.', 'A precise spell that judges enemies and enforces a command.', 'A protective spell that establishes a system and restores order.'] },
     chaos: { label: '混沌', icon: '☄', descriptions: ['A spell that spreads disorder, randomness, and confusion.', 'A wild spell that breaks rules and twists reality unpredictably.', 'A strange destructive spell filled with noise, madness, and entropy.'] },
   };
+  const DEFAULT_SHAPE_SCORES = Object.freeze({ attack: .25, defense: .25, support: .25, debuff: .25 });
 
   function requireElement(id) {
     const element = document.getElementById(id);
@@ -45,7 +46,6 @@
   const shapeDetail = requireElement('shapeDetail');
   const powerResult = requireElement('powerResult');
   const powerDetail = requireElement('powerDetail');
-  const structureDetail = requireElement('structureDetail');
   const captureContext = captureCanvas.getContext('2d', { willReadFrequently: true });
   const overlayContext = overlayCanvas.getContext('2d');
 
@@ -61,8 +61,8 @@
   let structureReady = false;
   let spellReady = false;
   const powerInputs = {
-    circleAccuracy: null,
     lineStraightness: null,
+    ringCoverage: null,
     attributeCertainty: null,
     sigilCertainty: null,
     wordCount: null,
@@ -98,8 +98,8 @@
   }
 
   function resetPowerInputs() {
-    powerInputs.circleAccuracy = null;
     powerInputs.lineStraightness = null;
+    powerInputs.ringCoverage = null;
     powerInputs.attributeCertainty = null;
     powerInputs.sigilCertainty = null;
     powerInputs.wordCount = null;
@@ -116,15 +116,15 @@
     }
     const result = powerCalculation.calculatePower(powerInputs);
     const rows = [
-      ['円の共鳴率', result.scores.circleAccuracy, `${Math.round(result.normalized.circleAccuracy * 100)}%`],
       ['線の共鳴率', result.scores.lineStraightness, `${Math.round(result.normalized.lineStraightness * 100)}%`],
+      ['環への呪文配置', result.scores.ringCoverage, `${Math.round(result.normalized.ringCoverage * 100)}%`],
       ['属性の共鳴率', result.scores.attributeCertainty, `${Math.round(result.normalized.attributeCertainty * 100)}%`],
       ['紋の共鳴率', result.scores.sigilCertainty, `${Math.round(result.normalized.sigilCertainty * 100)}%`],
     ];
     powerResult.className = 'altar-result altar-result--power';
     powerResult.innerHTML = `<div><div class="altar-kicker">総合威力</div><strong class="altar-value">${result.power}</strong></div><span class="altar-unit">${result.normalized.wordCount}語</span>`;
     powerDetail.className = 'detail-result';
-    powerDetail.innerHTML = `<div class="power-lead"><span class="label">総合威力</span><strong class="value">${result.power}</strong></div><div class="bars">${rows.map(([label, score, value]) => `<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(score * 100)}%"></span></div><strong>${value}</strong></div>`).join('')}</div><div class="power-count"><span>単語の数</span><strong>${result.normalized.wordCount}語</strong></div><p class="note">4つの共鳴率の平均に単語数を掛けて算出します。重複する単語は一度だけ数えます。</p>`;
+    powerDetail.innerHTML = `<div class="power-lead"><span class="label">総合威力</span><strong class="value">${result.power}</strong></div><div class="bars">${rows.map(([label, score, value]) => `<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(score * 100)}%"></span></div><strong>${value}</strong></div>`).join('')}</div><div class="power-count"><span>単語の数</span><strong>${result.normalized.wordCount}語</strong></div><p class="note">4つの判定値の平均に単語数を掛けて算出します。重複する単語は一度だけ数えます。</p>`;
   }
 
   function yieldToBrowser() {
@@ -312,23 +312,9 @@
     return covered / polar.width;
   }
 
-  function renderStructure(circle, ring, shape) {
-    const rows = [
-      ['円の評価', circle ? '起きている' : '眠っている', circle?.confidence ?? 0],
-      ['環の評価', ring >= .58 ? '一周している' : '環が途切れている', ring],
-      ['紋の評価', shape ? '姿を現した' : 'まだ見えない', shape ? 1 : 0],
-    ];
-    structureDetail.className = 'detail-result';
-    structureDetail.innerHTML = '<b>陣の評価</b><div class="bars">' + rows.map(([label, value, score]) => `<div class="bar-row"><span>${label}</span><div class="bar"><span style="width:${Math.round(clamp(score) * 100)}%"></span></div><strong>${escapeHtml(value)}</strong></div>`).join('') + '</div>' + (ring < .58 ? '<p class="note">外円と内円のあいだを、途切れない呪文で満たす必要があります。</p>' : '');
-  }
-
   function renderShape(scores) {
     if (!scores) {
-      shapeResult.className = 'result-empty';
-      shapeResult.textContent = '紋を読めば、その性質が現れます。';
-      shapeDetail.className = 'detail-result result-empty';
-      shapeDetail.textContent = '内円の紋を読み取ると、四つの性質が現れます。';
-      return null;
+      scores = DEFAULT_SHAPE_SCORES;
     }
     const names = { attack: '攻撃の相', defense: '防御の相', support: '回復／支援の相', debuff: '弱体の相' };
     const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
@@ -349,8 +335,7 @@
       drawOverlay();
       const polar = await samplePolar(captureCanvas, detectedCircle);
       const ring = await ringCoverage(polar);
-      renderStructure(detectedCircle, ring, result.shape);
-      powerInputs.circleAccuracy = result.circle.confidence;
+      powerInputs.ringCoverage = ring;
       powerInputs.lineStraightness = result.lineStraightness;
       powerInputs.sigilCertainty = renderShape(result.shape);
       renderPower();
@@ -361,16 +346,13 @@
     } catch (error) {
       detectedCircle = null;
       drawOverlay();
-      structureDetail.className = 'detail-result result-empty';
-      structureDetail.textContent = error.message;
-      renderShape(null);
-      powerInputs.circleAccuracy = null;
-      powerInputs.lineStraightness = null;
-      powerInputs.sigilCertainty = null;
+      powerInputs.ringCoverage = 0;
+      powerInputs.lineStraightness = 0;
+      powerInputs.sigilCertainty = renderShape(DEFAULT_SHAPE_SCORES);
       renderPower();
-      structureReady = false;
+      structureReady = true;
       updateResultVisibility();
-      setStatus(cameraStatus, '二重円の検出に失敗した。呪文の読み取りを続けます。', 'error');
+      setStatus(cameraStatus, '陣の一部を読み取れず、威力に反映しました。呪文の読み取りを続けます。');
       return null;
     }
   }
@@ -598,6 +580,8 @@
   }
 
   async function judgeSpell(text) {
+    if (!text?.trim()) return renderAttributeFallback();
+    try {
     const query = (await embed([text], 'query'))[0];
     const vectors = await ensureAttributeVectors();
     const scores = Object.entries(vectors).map(([key, rows]) => {
@@ -616,6 +600,20 @@
     attributeDetail.innerHTML = `<div class="bars">${scores.map(([key, score]) => { const normalized = Math.round(((score - min) / spread) * 100); return `<div class="bar-row attribute-detail-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}<small>${key}</small></span><div class="bar"><span style="width:${normalized}%"></span></div><strong>${normalized}%</strong></div>`; }).join('')}</div><p class="note">呪文の意味を属性の言葉と重ね、最も共鳴した相を選びました。二つの相が近いとき、共鳴率は下がります。</p>`;
     setStatus(modelStatus, '呪文の相がひとつ、頁の上に現れた。', 'good');
     return confidence;
+    } catch {
+      return renderAttributeFallback();
+    }
+  }
+
+  function renderAttributeFallback() {
+    const scores = Object.keys(ATTRIBUTES).map(key => [key, 0]);
+    const [top] = scores;
+    attributeResult.className = 'altar-result altar-result--attribute';
+    attributeResult.innerHTML = `<span class="altar-symbol">${ATTRIBUTES[top[0]].icon}</span><div><div class="altar-kicker">最も共鳴した相</div><strong class="altar-value">${ATTRIBUTES[top[0]].label}</strong><span class="altar-confidence">共鳴率 0%</span></div>`;
+    attributeDetail.className = 'detail-result';
+    attributeDetail.innerHTML = `<div class="bars">${scores.map(([key]) => `<div class="bar-row attribute-detail-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}<small>${key}</small></span><div class="bar"><span style="width:0%"></span></div><strong>0%</strong></div>`).join('')}</div><p class="note">呪文から最も近い相を選びました。</p>`;
+    setStatus(modelStatus, '相がひとつ、頁の上に現れた。', 'good');
+    return 0;
   }
 
   function resetResults() {
@@ -631,8 +629,6 @@
     modelStatus.className = 'progress-row';
     modelStatus.textContent = '呪文：紋を読み取ったあと、相を判定します。';
     spellOutput.textContent = SPELL_PLACEHOLDER;
-    structureDetail.className = 'detail-result result-empty';
-    structureDetail.textContent = '魔法陣を写し取ると、陣の評価が現れます。';
     attributeResult.className = 'result-empty';
     attributeResult.textContent = '呪文を捧げると、相が目を覚まします。';
     attributeDetail.className = 'detail-result result-empty';
@@ -664,27 +660,29 @@
         await analyzeStructure();
         setStatus(modelStatus, '円環の呪文を読み取っています…', 'busy');
         const result = await recognizeSpell(captureCanvas);
-        const text = result.path.text;
-        powerInputs.wordCount = powerCalculation.countUniqueWords(result.path.words);
+        const text = result.path?.text || '';
+        powerInputs.wordCount = powerCalculation.countUniqueWords(result.path?.words || []);
         renderPower();
         spellOutput.textContent = text || '円環から呪文を読み取れませんでした。';
-        if (!text) {
-          spellReady = true;
-          updateResultVisibility();
-          setStatus(modelStatus, '円環から呪文を読み取れませんでした。', 'error');
-          return;
-        }
-        setStatus(modelStatus, '円環の声を拾い上げた。属性を判定しています…', 'busy');
+        setStatus(modelStatus, text ? '円環の声を拾い上げた。属性を判定しています…' : '呪文を読み取れず、相を選んでいます…', 'busy');
         powerInputs.attributeCertainty = await judgeSpell(text);
         renderPower();
         spellReady = true;
         updateResultVisibility();
         setStatus(cameraStatus, '紋の読み取りが完了しました。', 'good');
       } catch (error) {
+        if (!Number.isFinite(powerInputs.wordCount)) powerInputs.wordCount = 0;
+        if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback();
+        if (!Number.isFinite(powerInputs.lineStraightness)) powerInputs.lineStraightness = 0;
+        if (!Number.isFinite(powerInputs.ringCoverage)) powerInputs.ringCoverage = 0;
+        if (!Number.isFinite(powerInputs.sigilCertainty)) powerInputs.sigilCertainty = renderShape(null);
+        if (spellOutput.textContent === SPELL_PLACEHOLDER) spellOutput.textContent = '呪文を読み取れませんでした。';
+        renderPower();
+        structureReady = true;
         spellReady = true;
         updateResultVisibility();
-        setStatus(cameraStatus, `写し絵の解析に失敗しました。${error.message}`, 'error');
-        setStatus(modelStatus, '呪文の読み取りを完了できませんでした。', 'error');
+        setStatus(cameraStatus, '写し絵の一部を読み取れず、得られた情報で威力に反映しました。');
+        setStatus(modelStatus, '読み取り結果から相を選び、結果を表示しました。');
       }
     };
     image.onerror = () => {
