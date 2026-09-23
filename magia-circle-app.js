@@ -11,7 +11,7 @@
   const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
   const ATTRIBUTES = global.AttributeScoringCore.attributes;
-  const DEFAULT_SHAPE_SCORES = Object.freeze({ attack: .25, defense: .25, support: .25, debuff: .25 });
+  const DEFAULT_SHAPE_SCORES = Object.freeze({ debuff: .25, attack: .25, defense: .25, support: .25 });
 
   function requireElement(id) {
     const element = document.getElementById(id);

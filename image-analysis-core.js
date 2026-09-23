@@ -375,7 +375,7 @@
     const image = makeGrayImage(buffer, width, height);
     if (!paths?.inner) {
       return {
-        scores: { attack: .25, defense: .25, support: .25, debuff: .25 },
+        scores: { debuff: .25, attack: .25, defense: .25, support: .25 },
         lineStraightness: 0,
       };
     }
@@ -443,23 +443,10 @@
       debuff: roughness * 1.5 + missingRayRatio * 1.2 + lineDensity * .1,
     };
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
-    let scores = { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
-    // Batch-calibrated feature regions for the five labeled reference glyphs:
-    // smooth closed forms (support), broken spoke forms (debuff), and closed
-    // angular forms split between pointed attacks and broad guards.
-    let calibratedClass = null;
-    if (mean >= .76 && angularity <= .36) calibratedClass = 'support';
-    else if (closedness < .82 && roughness > .045) calibratedClass = 'debuff';
-    else if (closedness >= .98 && cornerCountFactor >= .95 && (lineDensity >= .55 || broadCornerScore >= .65)) calibratedClass = 'attack';
-    else if (closedness < .96 && cornerCountFactor >= .75 && broadCornerScore >= .65 && lineDensity < .45) calibratedClass = 'defense';
-    else if (closedness >= .98 && mean >= .65 && mean < .76 && lineDensity < .23 && cornerCountFactor < .5) calibratedClass = 'defense';
-    if (calibratedClass) {
-      const second = Object.entries(scores).filter(([key]) => key !== calibratedClass).sort((a, b) => b[1] - a[1])[0]?.[0];
-      scores = Object.fromEntries(Object.keys(raw).map(key => [key, key === calibratedClass ? .65 : key === second ? .25 : .05]));
-    }
+    const scores = { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
     return {
       scores,
-      features: { mean, roughness, angularity, lineDensity, missingRayRatio, closedness, solidContour, compactness, cornerCountFactor, broadCornerScore, sharpCornerScore, calibratedClass },
+      features: { mean, roughness, angularity, lineDensity, missingRayRatio, closedness, solidContour, compactness, cornerCountFactor, broadCornerScore, sharpCornerScore },
       // Angular contour changes are a proxy for wobble in the drawn lines.
       lineStraightness: clamp(1 - roughness * 6),
     };
