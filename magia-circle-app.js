@@ -11,6 +11,7 @@
   const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
   const ATTRIBUTES = global.AttributeScoringCore.attributes;
+  const allocateWholePercentages = global.AttributeScoringCore.allocateWholePercentages;
   const DEFAULT_SHAPE_SCORES = Object.freeze({ debuff: .25, attack: .25, defense: .25, support: .25 });
 
   function requireElement(id) {
@@ -251,10 +252,11 @@
     overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     if (!detectedPaths) return;
     overlayContext.save();
-    overlayContext.strokeStyle = '#8be0f3';
     overlayContext.lineWidth = Math.max(2, overlayCanvas.width / 420);
     overlayContext.setLineDash([10, 7]);
-    for (const path of [detectedPaths.outer, detectedPaths.inner].filter(Boolean)) {
+    for (const [path, color] of [[detectedPaths.outer, '#1677ff'], [detectedPaths.inner, '#ff2e87']]) {
+      if (!path) continue;
+      overlayContext.strokeStyle = color;
       overlayContext.beginPath();
         const samples = path.radii?.length || 96;
         for (let index = 0; index < samples; index += 1) {
@@ -282,11 +284,12 @@
     const names = { attack: '攻撃の紋', defense: '防御の紋', support: '回復の紋', debuff: '弱体の紋' };
     const icons = { attack: '⚔️', defense: '🛡️', support: '✚', debuff: '🕸️' };
     const rates = normalizeScores(Object.entries(scores)).sort((a, b) => b[1] - a[1]);
+    const percentages = allocateWholePercentages(rates);
     const [top] = rates;
     shapeResult.className = 'altar-result altar-result--shape';
     shapeResult.innerHTML = `<span class="altar-symbol">${icons[top[0]]}</span><div><div class="altar-kicker">最も共鳴した紋</div><strong class="altar-value">${names[top[0]].replace('の紋', '')}</strong></div>`;
     shapeDetail.className = 'detail-result';
-    shapeDetail.innerHTML = `<div class="shape-title"><b>${icons[top[0]]} ${names[top[0]]}</b></div><div class="bars">${rates.map(([key, rate]) => { const percentage = Math.round(rate * 100); return `<div class="bar-row"><span>${icons[key]} ${names[key]}</span><div class="bar"><span style="width:${percentage}%"></span></div><strong>${percentage}%</strong></div>`; }).join('')}</div>`;
+    shapeDetail.innerHTML = `<div class="shape-title"><b>${icons[top[0]]} ${names[top[0]]}</b></div><div class="bars">${rates.map(([key]) => { const percentage = percentages.get(key); return `<div class="bar-row"><span>${icons[key]} ${names[key]}</span><div class="bar"><span style="width:${percentage}%"></span></div><strong>${percentage}%</strong></div>`; }).join('')}</div>`;
     return top[1];
   }
 

@@ -1,13 +1,17 @@
 import { spawnSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { mkdir, readFile } from 'node:fs/promises';
+import { basename, dirname, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import sharp from 'sharp';
 
-const input = process.argv[2];
+const args = process.argv.slice(2);
+const renderPaths = args.includes('--render-paths');
+const pathsOnly = args.includes('--paths-only');
+const input = args.find(argument => argument !== '--render-paths' && argument !== '--paths-only');
 if (!input) {
-  console.error('Usage: npm run test:image-outputs -- <image-path>');
+  console.error('Usage: npm run test:image-outputs -- [--render-paths|--paths-only] <image-path>');
   process.exit(2);
 }
 
@@ -61,6 +65,40 @@ const paths = {
   circleAccuracy: geometry.circleAccuracy,
 };
 
+let pathOverlay = null;
+if (renderPaths) {
+  const outputDirectory = resolve(tmpdir(), 'magia-path-overlays');
+  await mkdir(outputDirectory, { recursive: true });
+  const polyline = (path, color) => {
+    if (!path) return '';
+    const points = path.radii.map((radius, index) => {
+      const theta = index / path.radii.length * Math.PI * 2;
+      return `${(path.x + Math.cos(theta) * radius).toFixed(2)},${(path.y + Math.sin(theta) * radius).toFixed(2)}`;
+    });
+    return `<polyline points="${points.concat(points[0]).join(' ')}" fill="none" stroke="${color}" stroke-width="${Math.max(2, image.info.width / 420)}" stroke-dasharray="10 7" stroke-linejoin="miter" stroke-linecap="butt"/>`;
+  };
+  const svg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${image.info.width}" height="${image.info.height}">${polyline(paths.outer, '#1677ff')}${polyline(paths.inner, '#ff2e87')}</svg>`);
+  pathOverlay = resolve(outputDirectory, `${basename(imagePath).replace(/\.[^.]+$/, '')}-paths.png`);
+  await sharp(image.data, { raw: { width: image.info.width, height: image.info.height, channels: 4 } })
+    .composite([{ input: svg }])
+    .png()
+    .toFile(pathOverlay);
+}
+
+if (pathsOnly) {
+  console.log(JSON.stringify({
+    input: imagePath,
+    image: { width: image.info.width, height: image.info.height },
+    pathOverlay,
+    circle: {
+      outer: { x: paths.outer?.x, y: paths.outer?.y, radius: paths.outer?.r, coverage: paths.outer?.coverage, circleAccuracy: paths.outer?.circleAccuracy },
+      inner: { x: paths.inner?.x, y: paths.inner?.y, radius: paths.inner?.r, coverage: paths.inner?.coverage, circleAccuracy: paths.inner?.circleAccuracy },
+      circleAccuracy: paths.circleAccuracy,
+    },
+  }, null, 2));
+  process.exit(0);
+}
+
 const ocr = spawnSync(process.execPath, [resolve(here, 'test-spell-ocr.mjs'), '--json', imagePath], {
   encoding: 'utf8',
   maxBuffer: 32 * 1024 * 1024,
@@ -71,7 +109,7 @@ const spell = JSON.parse(ocr.stdout);
 const scoringSource = await readFile(resolve(here, '../attribute-scoring.js'), 'utf8');
 const scoringContext = vm.createContext({});
 vm.runInContext(scoringSource, scoringContext, { filename: 'attribute-scoring.js' });
-const { attributes, normalizeSimilarities } = scoringContext.AttributeScoringCore;
+const { attributes, normalizeSimilarities, allocateWholePercentages } = scoringContext.AttributeScoringCore;
 const keys = Object.keys(attributes);
 const descriptions = keys.flatMap(key => attributes[key].descriptions);
 const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { dtype: 'q8' });
@@ -93,6 +131,7 @@ const shapeWeights = Object.entries(metrics.scores).map(([key, score]) => [key, 
 const shapeTotal = shapeWeights.reduce((sum, [, score]) => sum + score, 0);
 const shapeRates = shapeWeights.map(([key, score]) => [key, score / (shapeTotal || 1)])
   .sort((a, b) => b[1] - a[1]);
+const shapePercentages = allocateWholePercentages(shapeRates);
 const topShape = shapeRates[0];
 const inkCoverage = imageCore.scoreInkCoverage(image.data, image.info.width, image.info.height, paths);
 const textCoverage = imageCore.scorePointsOnRing(paths, spell.points, image.info.width, image.info.height);
@@ -120,6 +159,7 @@ const powerLabels = {
 const output = {
   input: imagePath,
   image: { width: image.info.width, height: image.info.height },
+  ...(pathOverlay ? { pathOverlay } : {}),
   spell: { text: spell.text, words: spell.words, points: spell.points },
   process: {
     structure: '写し絵の読み取りが完了しました。',
@@ -159,9 +199,9 @@ const output = {
       key,
       icon: shapeIcons[key],
       label: shapeNames[key],
-      percentage: Math.round(rate * 100),
+      percentage: shapePercentages.get(key),
     })),
-    percentages: Object.fromEntries(shapeRates.map(([key, rate]) => [key, Math.round(rate * 100)])),
+    percentages: Object.fromEntries(shapeRates.map(([key]) => [key, shapePercentages.get(key)])),
     scores: metrics.scores,
   },
   power: {

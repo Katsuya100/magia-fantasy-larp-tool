@@ -35,35 +35,133 @@
     return edge;
   }
 
-  function traceClosedPath(edge, width, height, cx, cy, radius, searchRatio = .12, samples = 96, radialStepRatio = .035) {
+  function traceClosedPath(edge, width, height, cx, cy, radius, searchRatio = .12, samples = 96, radialStepRatio = .035, distancePenalty = 0, continuityPenalty = 0) {
     const search = Math.max(3, Math.round(radius * searchRatio));
     const step = Math.max(1, Math.round(radius * radialStepRatio));
     const radii = [];
+    const choices = [];
     let edgeTotal = 0;
     for (let index = 0; index < samples; index += 1) {
       const theta = index / samples * Math.PI * 2;
       const cos = Math.cos(theta);
       const sin = Math.sin(theta);
       let bestEdge = 0;
+      let bestScore = -Infinity;
       let bestRadius = 0;
+      const angleChoices = [];
       for (let offset = -search; offset <= search; offset += step) {
         const candidateRadius = radius + offset;
         const x = Math.round(cx + cos * candidateRadius);
         const y = Math.round(cy + sin * candidateRadius);
         if (x < 1 || y < 1 || x >= width - 1 || y >= height - 1) continue;
-        const score = edge[y * width + x];
-        if (score > bestEdge) {
-          bestEdge = score;
+        const edgeScore = edge[y * width + x];
+        if (edgeScore >= 18) angleChoices.push({ radius: candidateRadius, edgeScore, offset });
+        const score = edgeScore - Math.abs(offset) * distancePenalty;
+        if (score > bestScore) {
+          bestScore = score;
+          bestEdge = edgeScore;
           bestRadius = candidateRadius;
         }
       }
       if (bestEdge >= 18) {
         radii.push(bestRadius);
+        choices.push(angleChoices);
         edgeTotal += bestEdge / 255;
       } else {
         radii.push(0);
+        choices.push([]);
       }
     }
+    if (continuityPenalty > 0) {
+      if (samples > 180) {
+        const validRadii = radii.filter(value => value > 0).sort((a, b) => a - b);
+        const medianRadius = validRadii[Math.floor(validRadii.length / 2)] || radius;
+        let startIndex = 0;
+        let startError = Infinity;
+        for (let index = 0; index < samples; index += 1) {
+          if (!choices[index].length) continue;
+          const error = Math.abs(radii[index] - medianRadius);
+          if (error < startError) {
+            startError = error;
+            startIndex = index;
+          }
+        }
+        const startChoice = choices[startIndex].reduce((best, choice) => {
+          const score = choice.edgeScore - Math.abs(choice.offset) * distancePenalty;
+          return !best || score > best.score ? { choice, score } : best;
+        }, null)?.choice;
+        if (startChoice) {
+          const order = Array.from({ length: samples }, (_, stepIndex) => (startIndex + stepIndex) % samples);
+          let scores = [startChoice.edgeScore - Math.abs(startChoice.offset) * distancePenalty];
+          const backPointers = [];
+          const choicesByStep = [[startChoice]];
+          for (let stepIndex = 1; stepIndex < samples; stepIndex += 1) {
+            const index = order[stepIndex];
+            const options = choices[index].length ? choices[index] : [{ radius, edgeScore: 0, offset: 0, missing: true }];
+            const nextScores = new Array(options.length).fill(-Infinity);
+            const previousPointers = new Int32Array(options.length);
+            for (let choiceIndex = 0; choiceIndex < options.length; choiceIndex += 1) {
+              const choice = options[choiceIndex];
+              const localScore = choice.edgeScore - Math.abs(choice.offset) * distancePenalty;
+              for (let previousIndex = 0; previousIndex < scores.length; previousIndex += 1) {
+                const previousChoice = choicesByStep[stepIndex - 1][previousIndex];
+                const score = scores[previousIndex] + localScore
+                  - continuityPenalty * Math.abs(choice.radius - previousChoice.radius);
+                if (score > nextScores[choiceIndex]) {
+                  nextScores[choiceIndex] = score;
+                  previousPointers[choiceIndex] = previousIndex;
+                }
+              }
+            }
+            scores = nextScores;
+            backPointers.push(previousPointers);
+            choicesByStep.push(options);
+          }
+          const lastChoices = choicesByStep[choicesByStep.length - 1];
+          let lastChoiceIndex = 0;
+          let bestCycleScore = -Infinity;
+          for (let choiceIndex = 0; choiceIndex < scores.length; choiceIndex += 1) {
+            const score = scores[choiceIndex]
+              - continuityPenalty * Math.abs(lastChoices[choiceIndex].radius - startChoice.radius);
+            if (score > bestCycleScore) {
+              bestCycleScore = score;
+              lastChoiceIndex = choiceIndex;
+            }
+          }
+          let choiceIndex = lastChoiceIndex;
+          for (let stepIndex = samples - 1; stepIndex > 0; stepIndex -= 1) {
+            const index = order[stepIndex];
+            const choice = choicesByStep[stepIndex][choiceIndex];
+            radii[index] = choice.missing ? 0 : choice.radius;
+            choiceIndex = backPointers[stepIndex - 1][choiceIndex];
+          }
+          radii[startIndex] = startChoice.radius;
+        }
+      } else {
+        for (let pass = 0; pass < 4; pass += 1) {
+          for (let index = 0; index < samples; index += 1) {
+            if (!choices[index].length) continue;
+            const previous = radii[(index - 1 + samples) % samples] || radius;
+            const next = radii[(index + 1) % samples] || radius;
+            let best = null;
+            let bestScore = -Infinity;
+            for (const choice of choices[index]) {
+              const score = choice.edgeScore - Math.abs(choice.offset) * distancePenalty
+                - continuityPenalty * (Math.abs(choice.radius - previous) + Math.abs(choice.radius - next)) / 2;
+              if (score > bestScore) {
+                bestScore = score;
+                best = choice;
+              }
+            }
+            if (best) radii[index] = best.radius;
+          }
+        }
+      }
+    }
+    edgeTotal = radii.reduce((sum, selectedRadius, index) => {
+      const selected = choices[index].find(choice => choice.radius === selectedRadius);
+      return sum + (selected ? selected.edgeScore / 255 : 0);
+    }, 0);
     const valid = radii.filter(value => value > 0);
     const coverage = valid.length / samples;
     const meanRadius = valid.reduce((sum, value) => sum + value, 0) / (valid.length || 1);
@@ -111,11 +209,11 @@
     });
   }
 
-  function centerDarkStroke(gray, width, height, cx, cy, radii, searchRatio = .055) {
+  function centerDarkStroke(gray, width, height, cx, cy, radii, searchRatio = .06) {
     const size = radii.length;
-    const centered = radii.slice();
     const medianRadius = radii.slice().sort((a, b) => a - b)[Math.floor(size / 2)] || 1;
     const search = Math.max(4, Math.round(medianRadius * searchRatio));
+    const centered = radii.slice();
     for (let index = 0; index < size; index += 1) {
       const theta = index / size * Math.PI * 2;
       const expected = radii[index];
@@ -334,13 +432,30 @@
       };
     }
     for (const path of [best.outer, best.inner].filter(Boolean)) {
-      const refined = traceClosedPath(edge, image.width, image.height, path.x, path.y, path.r, .1, 360, .003);
+      const centerSearch = Math.max(1, Math.round(shortSide * .03));
+      let refinedCenter = { x: path.x, y: path.y, score: -Infinity };
+      for (let yStep = -5; yStep <= 5; yStep += 1) {
+        const dy = Math.round(yStep * centerSearch / 5);
+        for (let xStep = -5; xStep <= 5; xStep += 1) {
+          const dx = Math.round(xStep * centerSearch / 5);
+          const x = path.x + dx;
+          const y = path.y + dy;
+          const profile = traceClosedPath(edge, image.width, image.height, x, y, path.r, .1, 96, .003, 1.25, 2);
+          const score = profile.pathScore + profile.circleAccuracy * 1.5 - Math.hypot(dx, dy) * .01;
+          if (score > refinedCenter.score) refinedCenter = { x, y, score };
+        }
+      }
+      path.x = refinedCenter.x;
+      path.y = refinedCenter.y;
+    }
+    for (const path of [best.outer, best.inner].filter(Boolean)) {
+      const refined = traceClosedPath(edge, image.width, image.height, path.x, path.y, path.r, .1, 360, .003, 3, 3);
       const edgeProfile = smoothRadialProfile(refined.radii, 21);
       const centerlineProfile = centerDarkStroke(image.gray, image.width, image.height, path.x, path.y, edgeProfile);
       const smoothed = smoothRadialProfile(centerlineProfile, 29);
       const sortedRadii = smoothed.slice().sort((a, b) => a - b);
       const medianRadius = sortedRadii[Math.floor(sortedRadii.length / 2)] || refined.meanRadius;
-      const radialTolerance = Math.max(3, medianRadius * .035);
+      const radialTolerance = Math.max(3, medianRadius * .12);
       path.radii = smoothed.map(radius => medianRadius + clamp(radius - medianRadius, -radialTolerance, radialTolerance));
       path.r = medianRadius;
       path.coverage = refined.coverage;
@@ -360,6 +475,7 @@
       y: path.y / image.scale,
       r: path.r / image.scale,
       coverage: path.coverage,
+      circleAccuracy: path.circleAccuracy,
       radii: path.radii.map(radius => radius / image.scale),
       analysisBoundary: path.analysisBoundary && ({
         x: path.analysisBoundary.x / image.scale,

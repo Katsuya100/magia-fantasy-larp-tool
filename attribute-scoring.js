@@ -30,5 +30,19 @@
     return shares.map(([key, share], index) => [key, share, wholeTenths[index] / 10]);
   }
 
-  global.AttributeScoringCore = { attributes, normalizeSimilarities };
+  function allocateWholePercentages(entries) {
+    if (!entries.length) return new Map();
+    const weights = entries.map(([, value]) => Math.max(0, Number(value) || 0));
+    const total = weights.reduce((sum, value) => sum + value, 0);
+    const shares = weights.map(value => total > 0 ? value / total : 1 / weights.length);
+    const percentages = shares.map(share => share * 100);
+    const whole = percentages.map(Math.floor);
+    const remaining = 100 - whole.reduce((sum, value) => sum + value, 0);
+    const remainders = percentages.map((value, index) => [index, value - whole[index]])
+      .sort((a, b) => b[1] - a[1] || String(entries[a[0]][0]).localeCompare(String(entries[b[0]][0])));
+    for (let index = 0; index < remaining; index += 1) whole[remainders[index][0]] += 1;
+    return new Map(entries.map(([key], index) => [key, whole[index]]));
+  }
+
+  global.AttributeScoringCore = { attributes, normalizeSimilarities, allocateWholePercentages };
 })(globalThis);
