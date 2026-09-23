@@ -469,5 +469,48 @@
     return analyzeSigilMetricsJs(buffer, width, height, circle).scores;
   }
 
-  global.ImageAnalysisCore = { detectClosedPathsJs, detectCirclesJs: detectClosedPathsJs, scorePointsOnRing, analyzeSigilJs, analyzeSigilMetricsJs };
+  function scoreInkCoverage(buffer, imageWidth, imageHeight, paths, options = {}) {
+    if (!paths?.inner || !paths?.outer) return 0;
+    const polarWidth = options.width || 1200;
+    const polarHeight = options.height || 180;
+    const innerGap = options.innerGap ?? 10;
+    const outerGap = options.outerGap ?? 10;
+    let covered = 0;
+    const pathRadius = (path, sampleIndex) => {
+      const profile = path.radii;
+      if (!profile?.length) return path.r;
+      const lower = Math.floor(sampleIndex) % profile.length;
+      const upper = (lower + 1) % profile.length;
+      const fraction = sampleIndex - Math.floor(sampleIndex);
+      const first = profile[lower] || path.r;
+      const second = profile[upper] || path.r;
+      return first + (second - first) * fraction;
+    };
+
+    for (let x = 0; x < polarWidth; x += 1) {
+      const theta = x / polarWidth * Math.PI * 2;
+      const cos = Math.cos(theta);
+      const sin = Math.sin(theta);
+      const sampleIndex = x / polarWidth * (paths.inner.radii?.length || 96);
+      const inner = pathRadius(paths.inner, sampleIndex) + innerGap;
+      const outer = pathRadius(paths.outer, sampleIndex) - outerGap;
+      let dark = 0;
+      for (let y = 0; y < polarHeight; y += 1) {
+        const t = y / Math.max(1, polarHeight - 1);
+        const radius = inner + t * Math.max(1, outer - inner);
+        const centerX = paths.inner.x + (paths.outer.x - paths.inner.x) * t;
+        const centerY = paths.inner.y + (paths.outer.y - paths.inner.y) * t;
+        const sourceX = Math.round(centerX + cos * radius);
+        const sourceY = Math.round(centerY + sin * radius);
+        if (sourceX < 0 || sourceY < 0 || sourceX >= imageWidth || sourceY >= imageHeight) continue;
+        const offset = (sourceY * imageWidth + sourceX) * 4;
+        const luminance = buffer[offset] * .299 + buffer[offset + 1] * .587 + buffer[offset + 2] * .114;
+        if (luminance < 150) dark += 1;
+      }
+      if (dark >= Math.max(2, polarHeight * .055)) covered += 1;
+    }
+    return covered / polarWidth;
+  }
+
+  global.ImageAnalysisCore = { detectClosedPathsJs, detectCirclesJs: detectClosedPathsJs, scorePointsOnRing, scoreInkCoverage, analyzeSigilJs, analyzeSigilMetricsJs };
 }(typeof globalThis !== 'undefined' ? globalThis : self));

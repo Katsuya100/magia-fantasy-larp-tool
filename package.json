@@ -6,12 +6,15 @@
     "calculate-power": "node tools/calculate-power.mjs",
     "serve": "node tools/serve-dist.mjs",
     "test:image-analysis": "node tools/test-image-analysis.mjs",
+    "test:image-outputs": "node --use-system-ca tools/test-image-outputs.mjs",
+    "test:attribute-scoring": "node tools/test-attribute-scoring.mjs",
     "test:power-calculation": "node tools/test-power-calculation.mjs",
     "test:spell-ocr": "node tools/test-spell-ocr.mjs"
   },
   "devDependencies": {
     "@gutenye/ocr-models": "^1.2.2",
     "@gutenye/ocr-node": "1.3.0",
+    "@huggingface/transformers": "3.8.1",
     "onnxruntime-node": "^1.17.3-rev.1",
     "sharp": "0.34.5"
   }

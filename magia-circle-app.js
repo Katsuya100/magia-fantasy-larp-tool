@@ -10,15 +10,7 @@
 
   const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
-  const ATTRIBUTES = {
-    flame: { label: 'flame', icon: '🔥', descriptions: ['A spell that controls fire and heat.', 'A spell that burns enemies with intense crimson flames.', 'A destructive spell that creates explosions and blazing fire.'] },
-    bolt: { label: 'bolt', icon: '⚡', descriptions: ['A spell that commands lightning and electric energy.', 'A sudden attack that strikes with thunder and flashing light.', 'A fast spell that releases a powerful electrical shock.'] },
-    aqua: { label: 'aqua', icon: '💧', descriptions: ['A spell that controls water and flowing currents.', 'A spell that summons rain, waves, rivers, or the sea.', 'A fluid spell that washes away danger and restores calm.'] },
-    gravity: { label: 'gravity', icon: '⬤', descriptions: ['A spell that controls gravity, weight, and falling force.', 'A heavy spell that pulls enemies down toward the ground.', 'A spell that bends mass, orbit, and the force of attraction.'] },
-    storm: { label: 'storm', icon: '🌪', descriptions: ['A spell that commands wind, clouds, rain, and thunder together.', 'A violent spell that summons a raging storm across the sky.', 'A swirling spell that tears through the air with weather and wind.'] },
-    law: { label: 'law', icon: '⚖', descriptions: ['A spell that creates order, rules, justice, and binding contracts.', 'A precise spell that judges enemies and enforces a command.', 'A protective spell that establishes a system and restores order.'] },
-    chaos: { label: 'chaos', icon: '☄', descriptions: ['A spell that spreads disorder, randomness, and confusion.', 'A wild spell that breaks rules and twists reality unpredictably.', 'A strange destructive spell filled with noise, madness, and entropy.'] },
-  };
+  const ATTRIBUTES = global.AttributeScoringCore.attributes;
   const DEFAULT_SHAPE_SCORES = Object.freeze({ attack: .25, defense: .25, support: .25, debuff: .25 });
 
   function requireElement(id) {
@@ -283,71 +275,6 @@
     overlayContext.restore();
   }
 
-  async function samplePolar(canvas, paths, innerGap = 10, outerGap = 10, width = 1200, height = 180) {
-    const output = document.createElement('canvas');
-    output.width = width;
-    output.height = height;
-    const outputContext = output.getContext('2d');
-    const source = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, canvas.width, canvas.height);
-    const data = outputContext.createImageData(width, height);
-    const pathRadius = (path, sampleIndex) => {
-      const profile = path.radii;
-      if (!profile?.length) return path.r;
-      const lower = Math.floor(sampleIndex) % profile.length;
-      const upper = (lower + 1) % profile.length;
-      const fraction = sampleIndex - Math.floor(sampleIndex);
-      const first = profile[lower] || path.r;
-      const second = profile[upper] || path.r;
-      return first + (second - first) * fraction;
-    };
-    for (let x = 0; x < width; x += 1) {
-      const theta = x / width * Math.PI * 2;
-      const cos = Math.cos(theta);
-      const sin = Math.sin(theta);
-      const sampleIndex = x / width * (paths.inner.radii?.length || 96);
-      const inner = pathRadius(paths.inner, sampleIndex) + innerGap;
-      const outer = pathRadius(paths.outer, sampleIndex) - outerGap;
-      for (let y = 0; y < height; y += 1) {
-        const t = y / Math.max(1, height - 1);
-        const radius = inner + t * Math.max(1, outer - inner);
-        const centerX = paths.inner.x + (paths.outer.x - paths.inner.x) * t;
-        const centerY = paths.inner.y + (paths.outer.y - paths.inner.y) * t;
-        const sourceX = Math.round(centerX + cos * radius);
-        const sourceY = Math.round(centerY + sin * radius);
-        const outputIndex = (y * width + x) * 4;
-        if (sourceX < 0 || sourceY < 0 || sourceX >= canvas.width || sourceY >= canvas.height) {
-          data.data[outputIndex] = data.data[outputIndex + 1] = data.data[outputIndex + 2] = 0;
-          data.data[outputIndex + 3] = 255;
-          continue;
-        }
-        const sourceIndex = (sourceY * canvas.width + sourceX) * 4;
-        data.data[outputIndex] = source.data[sourceIndex];
-        data.data[outputIndex + 1] = source.data[sourceIndex + 1];
-        data.data[outputIndex + 2] = source.data[sourceIndex + 2];
-        data.data[outputIndex + 3] = 255;
-      }
-      if (x % 32 === 31) await yieldToBrowser();
-    }
-    outputContext.putImageData(data, 0, 0);
-    return output;
-  }
-
-  async function ringCoverage(polar) {
-    const data = polar.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, polar.width, polar.height).data;
-    let covered = 0;
-    for (let x = 0; x < polar.width; x += 1) {
-      let dark = 0;
-      for (let y = 0; y < polar.height; y += 1) {
-        const index = (y * polar.width + x) * 4;
-        const luminance = data[index] * .299 + data[index + 1] * .587 + data[index + 2] * .114;
-        if (luminance < 150) dark += 1;
-      }
-      if (dark >= Math.max(2, polar.height * .055)) covered += 1;
-      if (x % 32 === 31) await yieldToBrowser();
-    }
-    return covered / polar.width;
-  }
-
   function renderShape(scores) {
     if (!scores) {
       scores = DEFAULT_SHAPE_SCORES;
@@ -369,8 +296,10 @@
       const result = await analyzeImageInWorker();
       detectedPaths = result.paths;
       drawOverlay();
-      const polar = detectedPaths.inner ? await samplePolar(captureCanvas, detectedPaths) : null;
-      const inkCoverage = polar ? await ringCoverage(polar) : 0;
+      const sourcePixels = captureContext.getImageData(0, 0, captureCanvas.width, captureCanvas.height);
+      const inkCoverage = detectedPaths.inner
+        ? imageAnalysis.scoreInkCoverage(sourcePixels.data, captureCanvas.width, captureCanvas.height, detectedPaths)
+        : 0;
       const textCoverage = imageAnalysis.scorePointsOnRing(detectedPaths, spellPoints, captureCanvas.width, captureCanvas.height);
       const ring = spellPoints.length ? (inkCoverage + textCoverage) / 2 : inkCoverage;
       powerInputs.circleAccuracy = result.paths.circleAccuracy;
@@ -628,12 +557,12 @@
       const values = rows.map(vector => cosine(query, vector)).sort((a, b) => b - a);
       return [key, values.slice(0, 2).reduce((sum, value) => sum + value, 0) / Math.min(2, values.length)];
     }).sort((a, b) => b[1] - a[1]);
-    const rates = normalizeScores(scores);
+    const rates = global.AttributeScoringCore.normalizeSimilarities(scores).sort((a, b) => b[1] - a[1]);
     const [top] = rates;
     attributeResult.className = 'altar-result altar-result--attribute';
     attributeResult.innerHTML = `<span class="altar-symbol">${ATTRIBUTES[top[0]].icon}</span><div><div class="altar-kicker">最も共鳴した相</div><strong class="altar-value">${ATTRIBUTES[top[0]].label}</strong></div>`;
     attributeDetail.className = 'detail-result';
-    attributeDetail.innerHTML = `<div class="shape-title"><b>${ATTRIBUTES[top[0]].label}</b></div><div class="bars">${rates.map(([key, rate]) => { const percentage = Math.round(rate * 100); return `<div class="bar-row attribute-detail-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:${percentage}%"></span></div><strong>${percentage}%</strong></div>`; }).join('')}</div>`;
+    attributeDetail.innerHTML = `<div class="shape-title"><b>${ATTRIBUTES[top[0]].label}</b></div><div class="bars">${rates.map(([key, , percentage]) => `<div class="bar-row attribute-detail-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:${percentage}%"></span></div><strong>${percentage.toFixed(1)}%</strong></div>`).join('')}</div>`;
     setStatus(modelStatus, '呪文の相がひとつ、頁の上に現れた。', 'good');
     return top[1];
     } catch {

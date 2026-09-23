@@ -7,7 +7,8 @@ import sharp from 'sharp';
 
 await import('../spell-ocr.js');
 const core = globalThis.SpellOcrCore;
-const input = process.argv[2];
+const jsonMode = process.argv.includes('--json');
+const input = process.argv.slice(2).find(argument => argument !== '--json');
 if (!input) {
   console.error('Usage: npm run test:spell-ocr -- <image-path>');
   process.exit(2);
@@ -36,7 +37,7 @@ function rgbaData(raw) {
 async function paddleRecognize(raw) {
   const width = Math.max(48, Math.min(960, Math.round(raw.info.width / Math.max(1, raw.info.height) * 48)));
   const resized = await sharp(rgbaData(raw), { raw: { width: raw.info.width, height: raw.info.height, channels: 4 } })
-    .resize(width, 48)
+    .resize(width, 48, { kernel: 'linear' })
     .raw()
     .toBuffer({ resolveWithObject: true });
   const pixels = width * 48;
@@ -79,8 +80,11 @@ const literalPreservation = core.normalize('breath') === 'Breath.' && core.norma
 const assertion = path.text && !inventedWords.length && literalPreservation ? 'PASS_NO_INVENTION' : 'FAIL';
 
 if (assertion === 'PASS_NO_INVENTION') {
-  console.log(path.text);
-  console.log(assertion);
+  if (jsonMode) console.log(JSON.stringify({ text: path.text, words: path.words, points: path.points, rawCandidates, candidates }, null, 2));
+  else {
+    console.log(path.text);
+    console.log(assertion);
+  }
 } else {
   console.error(JSON.stringify({ rawCandidates, sequence: path.words, text: path.text, inventedWords, literalPreservation, assertion }, null, 2));
   console.log(assertion);
