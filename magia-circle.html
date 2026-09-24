@@ -107,9 +107,32 @@
     @media(min-width:900px){.book{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr);gap:18px;align-items:start}.book>.page{margin-top:0}.manual-page,.details-shell{grid-column:1/-1}.circle-page{grid-column:1}.altar-page{grid-column:2}.details-shell{grid-row:3}.detail-pages{grid-template-columns:repeat(2,1fr)}.detail-page:last-child{grid-column:1/-1}}
     @media(max-width:560px){.wrap{padding:16px 12px 50px}.hero{padding:18px 16px 20px}.page{padding:16px}.bar-row{grid-template-columns:90px 1fr 50px;gap:7px;font-size:12px}}
     @media(max-width:380px){.wrap{width:min(100% - 18px,780px)}.hero>.back{margin-bottom:14px}.details-shell>summary{padding:16px}.bar-row{grid-template-columns:minmax(78px,1.1fr) 1fr 43px;gap:6px;font-size:11px}.attribute-detail-row{grid-template-columns:minmax(93px,1.25fr) 1fr 43px}}
+    .busy-card{width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:28px 24px;border:1px solid var(--line);border-radius:24px;color:var(--ink);background:radial-gradient(circle at 50% 0,rgba(41,120,151,.2),transparent 70%),#0f1723;box-shadow:0 28px 90px var(--shadow);text-align:center}
+    .busy-card::backdrop{background:rgba(3,8,15,.82);backdrop-filter:blur(6px)}
+    .busy-sigil{font-size:46px;color:var(--gold);text-shadow:0 0 28px rgba(139,224,243,.4)}
+    .busy-card:focus{outline:none}
+    .busy-title{margin:12px 0;color:var(--gold);font-size:21px;line-height:1.5;text-wrap:balance}
+    .busy-detail,.busy-note,.busy-stage,.busy-percent{font:14px/1.7 ui-sans-serif,system-ui,sans-serif;color:var(--muted)}
+    .busy-detail{min-height:3.4em;overflow-wrap:anywhere}.busy-stage{color:var(--cyan);margin:16px 0 8px}.busy-note{font-size:12px;margin:12px 0 0}
+    .busy-progress{display:block;width:100%;height:14px;border:1px solid var(--line);border-radius:999px;overflow:hidden;appearance:none;background:rgba(139,224,243,.1);accent-color:var(--cyan)}
+    .busy-progress::-webkit-progress-bar{background:rgba(139,224,243,.1)}.busy-progress::-webkit-progress-value{background:linear-gradient(90deg,#397e94,var(--cyan),var(--gold))}.busy-progress::-moz-progress-bar{background:linear-gradient(90deg,#397e94,var(--cyan),var(--gold))}
+    .busy-progress:indeterminate{animation:busy-pulse 1.4s ease-in-out infinite alternate}.busy-percent{display:block;min-height:1.7em;margin-top:6px;color:var(--cyan)}
+    .busy-card button{margin-top:16px}.busy-card [hidden]{display:none}.busy-card.is-error .busy-title{color:var(--bad)}
+    @keyframes busy-pulse{to{opacity:.35}}
+    @media(prefers-reduced-motion:reduce){.busy-progress:indeterminate{animation:none}}
   </style>
 </head>
 <body>
+  <dialog id="busyMask" class="busy-card" aria-labelledby="busyTitle" aria-describedby="busyDetail busyNote" tabindex="-1">
+    <div class="busy-sigil" aria-hidden="true">✦</div>
+    <h2 id="busyTitle" class="busy-title">魔導司書が外典を探している</h2>
+    <p id="busyDetail" class="busy-detail" role="status">頁に触れず、燭台の火が落ち着くのを待て。</p>
+    <p id="busyStage" class="busy-stage">書架の控えを確かめている</p>
+    <progress id="busyProgress" class="busy-progress" max="100" aria-label="外典の読み込み進捗"></progress>
+    <output id="busyPercent" class="busy-percent">頁を探している…</output>
+    <p id="busyNote" class="busy-note">解読中は陣を読み取れない。初めて招く外典は、この端末に控えを残す。</p>
+    <button id="retryModels" type="button" hidden>外典の扉を開き直す</button>
+  </dialog>
   <div class="wrap">
     <header class="hero">
       <a class="back" href="index.html">← 作品選択へ戻る</a>
@@ -157,7 +180,7 @@
             <p id="cameraStatus" class="progress-row" aria-live="polite">紋：写し絵を選ぶと、閉じたパスと紋を読み取ります。</p>
             <p id="modelStatus" class="progress-row" aria-live="polite">呪文：紋を読み取ったあと、相を判定します。</p>
           </div>
-          <span id="preloadStatus" hidden aria-hidden="true"></span>
+          <p id="preloadStatus" class="status" role="status">魔導司書はまだ控えの有無を確かめている。</p>
         </div>
       </section>
 
@@ -213,7 +236,7 @@
       </details>
       <details>
         <summary>処理について</summary>
-        <p>カメラ画像は外部サーバーへ送信しません。カメラ映像、OCR、画像解析、文章Embeddingはこのブラウザ上で実行します。ライブラリやモデルの初回ファイル取得にはネットワーク接続が必要です。PaddleOCRの認識モデルはページ表示時に事前取得し、以後はブラウザのキャッシュを再利用します。筆跡が判定しにくい場合は、誤読を確定せず原文の手入力へ戻します。</p>
+        <p>カメラ画像は外部サーバーへ送信しません。カメラ映像、OCR、画像解析、文章Embeddingはこのブラウザ上で実行します。起動時に文字の検出・認識モデルと辞書、相の判定モデルを用意します。初回はネットワークから取得してこの端末に控えを残し、次回からブラウザに保存した控えを再利用します。ブラウザの保存データを消去した場合は再取得します。控えを保存できない環境では、その旨を表示し、次回も取得します。</p>
       </details>
     </section>
   </div>
@@ -221,6 +244,7 @@
   <script src="assets/js/image-analysis-core.js"></script>
   <script src="assets/js/power-calculation.js"></script>
   <script src="assets/js/attribute-scoring.js"></script>
+  <script src="assets/js/model-cache.js"></script>
   <script src="assets/js/magia-circle-app.js"></script>
 </body>
 </html>

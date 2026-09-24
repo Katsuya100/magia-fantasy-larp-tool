@@ -10,6 +10,7 @@
     "test:image-outputs": "node --use-system-ca tests/test-image-outputs.mjs",
     "compare:image-outputs": "node scripts/compare-image-outputs.mjs",
     "test:attribute-scoring": "node tests/test-attribute-scoring.mjs",
+    "test:model-cache": "node tests/test-model-cache.mjs",
     "test:power-calculation": "node tests/test-power-calculation.mjs",
     "test:spell-ocr": "node tests/test-spell-ocr.mjs"
   },

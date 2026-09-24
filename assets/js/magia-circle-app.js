@@ -78,6 +78,13 @@
   const spellOutput = requireElement('spell');
   const modelStatus = requireElement('modelStatus');
   const preloadStatus = requireElement('preloadStatus');
+  const busyMask = requireElement('busyMask');
+  const busyTitle = requireElement('busyTitle');
+  const busyDetail = requireElement('busyDetail');
+  const busyStage = requireElement('busyStage');
+  const busyProgress = requireElement('busyProgress');
+  const busyPercent = requireElement('busyPercent');
+  const retryModels = requireElement('retryModels');
   const altarSection = requireElement('altarSection');
   const detailsChapter = requireElement('detailsChapter');
   const circleDetailPage = requireElement('circleDetailPage');
@@ -103,6 +110,28 @@
   let embeddingModulePromise = null;
   let extractorPromise = null;
   let extractor = null;
+  let startupPromise = null;
+  let modelsReady = false;
+  let cacheUnavailable = false;
+  const cacheError = error => {
+    cacheUnavailable = true;
+    console.warn('外典の控えを保存・参照できませんでした。', error);
+  };
+  const ocrCache = global.ModelCache.create({
+    name: 'magia-circle-ocr-models-v1',
+    onCacheError: cacheError,
+    onProgress: info => {
+      if (info.status === 'cache') showBusyMask('魔導司書が完成写本の控えを開いている', 'すでに写し終えた頁を、静かに卓上へ広げている。');
+      if (info.status === 'download') showBusyMask('魔導司書が遠い書庫へ向かっている', '星明かりの回廊を渡り、外典の束を一冊ずつ運んでいる。');
+      if (info.status === 'progress') {
+        const amount = `${(info.loaded / 1024 / 1024).toFixed(1)} MB`;
+        showBusyMask('魔導司書が遠い書庫へ向かっている', `星明かりの回廊を渡り、外典の束を一冊ずつ運んでいる。 ${amount}`, info.total ? info.loaded / info.total * 100 : null);
+      }
+      if (info.status === 'done') showBusyMask('魔導司書が頁を読んでいる', '運び終えた頁を、静かに卓上へ広げている。');
+    },
+  });
+  // Keep the Transformers.js cache name so earlier visits remain reusable.
+  const embeddingCache = global.ModelCache.create({ name: 'transformers-cache', onCacheError: cacheError });
   let structureReady = false;
   let spellReady = false;
   let detailsTapCount = 0;
@@ -223,10 +252,16 @@
     return String(value).replace(/[&<>\"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[character]));
   }
 
-  function progressText(value) {
-    if (!Number.isFinite(value)) return '';
-    const percent = value <= 1 ? value * 100 : value;
-    return `${Math.round(Math.max(0, Math.min(100, percent)))}%`;
+  function showBusyMask(title, detail, percent = null) {
+    busyTitle.textContent = title;
+    busyDetail.textContent = detail;
+    if (Number.isFinite(percent)) {
+      busyProgress.value = Math.max(0, Math.min(100, percent));
+      busyPercent.textContent = `${busyProgress.value.toFixed(1)}%`;
+    } else {
+      busyProgress.removeAttribute('value');
+      busyPercent.textContent = '頁を読み解いている…';
+    }
   }
 
   function resetPowerInputs() {
@@ -506,8 +541,8 @@
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = 1;
       ort.env.wasm.proxy = true;
-      const session = await ort.InferenceSession.create(core.config.recognitionModelUrl);
-      const dictionary = [...(await (await fetch(core.config.dictionaryUrl)).text()).split('\n'), ' '];
+      const session = await ort.InferenceSession.create(await (await ocrCache.load(core.config.recognitionModelUrl)).arrayBuffer());
+      const dictionary = [...(await (await ocrCache.load(core.config.dictionaryUrl)).text()).split('\n'), ' '];
       return { ort, session, dictionary };
     })();
     recognizerPromise.catch(() => { recognizerPromise = null; });
@@ -612,8 +647,13 @@
           return new BrowserImageRaw(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height));
         }
       }
-      class BrowserFileUtils { static async read(url) { return (await fetch(url)).text(); } }
-      common.registerBackend({ FileUtils: BrowserFileUtils, ImageRaw: BrowserImageRaw, InferenceSession: ort.InferenceSession, splitIntoLineImages, defaultModels: { detectionPath: core.config.detectionModelUrl, recognitionPath: core.config.recognitionModelUrl, dictionaryPath: core.config.dictionaryUrl } });
+      class BrowserFileUtils { static async read(url) { return (await ocrCache.load(url)).text(); } }
+      const CachedInferenceSession = {
+        async create(url, options) {
+          return ort.InferenceSession.create(await (await ocrCache.load(url)).arrayBuffer(), options);
+        },
+      };
+      common.registerBackend({ FileUtils: BrowserFileUtils, ImageRaw: BrowserImageRaw, InferenceSession: CachedInferenceSession, splitIntoLineImages, defaultModels: { detectionPath: core.config.detectionModelUrl, recognitionPath: core.config.recognitionModelUrl, dictionaryPath: core.config.dictionaryUrl } });
       return Ocr.create({ models: { detectionPath: core.config.detectionModelUrl, recognitionPath: core.config.recognitionModelUrl, dictionaryPath: core.config.dictionaryUrl }, recognitionThreshold: 0 });
     })();
     ocrPromise.catch(() => { ocrPromise = null; });
@@ -654,15 +694,33 @@
     if (extractor) return extractor;
     if (!extractorPromise) {
       extractorPromise = (async () => {
-        if (!embeddingModulePromise) embeddingModulePromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+        if (!embeddingModulePromise) {
+          embeddingModulePromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+          embeddingModulePromise.catch(() => { embeddingModulePromise = null; });
+        }
         const { env, pipeline } = await embeddingModulePromise;
+        env.allowLocalModels = false;
+        env.useCustomCache = true;
+        env.customCache = embeddingCache;
         const wasm = env.backends?.onnx?.wasm;
         if (wasm) {
           wasm.numThreads = 1;
           wasm.proxy = true;
         }
         if (isActiveAnalysisJob(job)) setStatus(modelStatus, '呪文の相を測る準備をしています…', 'busy');
-        extractor = await pipeline('feature-extraction', MODEL_ID, { dtype: 'q8', progress_callback: info => { if (activeAnalysisJob && info?.progress !== undefined) setStatus(modelStatus, `呪文の相を測る準備をしています… ${progressText(info.progress)}`, 'busy'); } });
+        extractor = await pipeline('feature-extraction', MODEL_ID, {
+          device: 'wasm',
+          dtype: 'q8',
+          progress_callback: info => {
+            // Transformers reports download/progress even when reading a cached file.
+            if (info.file?.endsWith('.onnx') && info.status === 'progress') {
+              showBusyMask('魔導司書が頁を読んでいる', '相の外典をひらき、言霊を一つずつ灯している…', info.progress);
+            }
+            if (info.file?.endsWith('.onnx') && info.status === 'done') {
+              showBusyMask('魔導司書が頁を読んでいる', '相の核を整えている。燭台の火が落ち着くのを待て。');
+            }
+          },
+        });
         return extractor;
       })();
       extractorPromise.catch(() => { extractorPromise = null; });
@@ -752,6 +810,7 @@
   }
 
   async function loadFile(file, sourceImage = null) {
+    if (!modelsReady) return;
     if (!file && !sourceImage) return;
     cancelActiveAnalysis('新しい写し絵の解析を始める');
     resetResults();
@@ -846,15 +905,51 @@
     }
   }
 
-  async function preloadOcr() {
-    try {
-      setStatus(preloadStatus, '呪文の判定器を準備しています…', 'busy');
-      await ensureGutenOcr();
-      setStatus(preloadStatus, '呪文の判定器を用意しました。', 'good');
-    } catch (error) {
-      setStatus(preloadStatus, `呪文の判定器を用意できませんでした。${error.message}`, 'error');
-    }
+  async function prepareModels() {
+    if (startupPromise) return startupPromise;
+    startupPromise = (async () => {
+      fileInput.disabled = true;
+      cameraButton.disabled = true;
+      retryModels.hidden = true;
+      busyMask.classList.remove('is-error');
+      busyProgress.hidden = false;
+      if (!busyMask.open) busyMask.showModal();
+      busyMask.focus();
+      showBusyMask('魔導司書が外典を探している', '頁に触れず、燭台の火が落ち着くのを待て。');
+      setStatus(preloadStatus, '魔導司書が外典を整えている。', 'busy');
+      try {
+        busyStage.textContent = '一 / 三 — 環の筆跡を読む外典';
+        await ensureGutenOcr();
+        busyStage.textContent = '二 / 三 — 呪文を読み解く外典';
+        await ensureRecognizer();
+        busyStage.textContent = '三 / 三 — 相を呼び覚ます外典';
+        showBusyMask('魔導司書が頁を読んでいる', '書架の控えを確かめ、相の外典を卓上へ広げている。');
+        await ensureExtractor();
+        modelsReady = true;
+        busyMask.close();
+        fileInput.disabled = false;
+        cameraButton.disabled = false;
+        setStatus(preloadStatus, cacheUnavailable
+          ? '外典は開いたが、この書架には控えを残せなかった。次に頁を開くときは、再び書庫へ向かう。'
+          : '魔導司書が外典を整えた。次に頁を開くときは、書架の控えが応える。', cacheUnavailable ? '' : 'good');
+        loadDefaultImage();
+      } catch (error) {
+        console.error('外典の準備に失敗しました。', error);
+        busyMask.classList.add('is-error');
+        showBusyMask('遠き書庫の扉が開かなかった', '回廊が霧に閉ざされている。通信を確かめ、外典の扉を開き直してほしい。');
+        busyProgress.hidden = true;
+        busyPercent.textContent = '';
+        retryModels.hidden = false;
+        retryModels.focus();
+        setStatus(preloadStatus, '外典の扉が開くまで、頁は静かに閉じている。', 'error');
+      }
+    })();
+    try { await startupPromise; }
+    finally { startupPromise = null; }
   }
+
+  busyMask.addEventListener('cancel', event => event.preventDefault());
+  retryModels.addEventListener('click', prepareModels);
 
   fileInput.addEventListener('click', () => {
     userStartedImageAction = true;
@@ -884,6 +979,7 @@
     }, 1200);
   });
   cameraButton.addEventListener('click', async () => {
+    if (!modelsReady) return;
     userStartedImageAction = true;
     cancelActiveAnalysis('写し絵の撮影を始める');
     if (cameraStream) {
@@ -933,28 +1029,30 @@
     stopCamera();
     analysisWorker?.terminate();
   });
-  preloadOcr();
-  const testImage = diagnostics && new URLSearchParams(global.location.search).get('test-image');
-  const defaultImage = testImage ? new URL(testImage, global.location.href) : new URL('assets/images/sample.png', global.location.href);
-  if (testImage && defaultImage.origin !== global.location.origin) {
-    diagnostics.image = { error: '比較用画像は同一オリジンから読み込んでください。' };
-    publishDiagnostics();
-  } else {
-    fetch(defaultImage).then(response => {
-      if (!response.ok) throw new Error(`画像を読み込めません: ${response.status}`);
-      return response.blob();
-    }).then(blob => {
-      if (userStartedImageAction) return;
-      return loadFile(new File([blob], defaultImage.pathname.split('/').at(-1) || 'sample.png', { type: blob.type || 'image/png' }));
-    })
-      .catch(error => {
+  function loadDefaultImage() {
+    const testImage = diagnostics && new URLSearchParams(global.location.search).get('test-image');
+    const defaultImage = testImage ? new URL(testImage, global.location.href) : new URL('assets/images/sample.png', global.location.href);
+    if (testImage && defaultImage.origin !== global.location.origin) {
+      diagnostics.image = { error: '比較用画像は同一オリジンから読み込んでください。' };
+      publishDiagnostics();
+    } else {
+      fetch(defaultImage).then(response => {
+        if (!response.ok) throw new Error(`画像を読み込めません: ${response.status}`);
+        return response.blob();
+      }).then(blob => {
         if (userStartedImageAction) return;
-        if (diagnostics) {
-          diagnostics.image = { error: error.message };
-          publishDiagnostics();
-        } else {
-          setStatus(cameraStatus, '初期画像 sample.png を読み込めませんでした。画像を選定してください。', 'error');
-        }
-      });
+        return loadFile(new File([blob], defaultImage.pathname.split('/').at(-1) || 'sample.png', { type: blob.type || 'image/png' }));
+      })
+        .catch(error => {
+          if (userStartedImageAction) return;
+          if (diagnostics) {
+            diagnostics.image = { error: error.message };
+            publishDiagnostics();
+          } else {
+            setStatus(cameraStatus, '初期画像 sample.png を読み込めませんでした。画像を選定してください。', 'error');
+          }
+        });
+    }
   }
+  prepareModels();
 }(globalThis));
