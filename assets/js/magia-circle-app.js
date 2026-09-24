@@ -740,9 +740,12 @@
       }
       cameraButton.disabled = true;
       const snapshot = document.createElement('canvas');
-      snapshot.width = cameraVideo.videoWidth;
-      snapshot.height = cameraVideo.videoHeight;
-      snapshot.getContext('2d').drawImage(cameraVideo, 0, 0);
+      const side = Math.min(cameraVideo.videoWidth, cameraVideo.videoHeight);
+      const cropX = (cameraVideo.videoWidth - side) / 2;
+      const cropY = (cameraVideo.videoHeight - side) / 2;
+      snapshot.width = side;
+      snapshot.height = side;
+      snapshot.getContext('2d').drawImage(cameraVideo, cropX, cropY, side, side, 0, 0, side, side);
       snapshot.toBlob(blob => {
         stopCamera();
         if (!blob) {
