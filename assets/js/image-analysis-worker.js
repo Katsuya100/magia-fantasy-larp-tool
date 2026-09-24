@@ -3,14 +3,14 @@ importScripts(new URL('image-analysis-core.js', self.location.href).href);
 const { detectClosedPathsJs, analyzeSigilMetricsJs } = self.ImageAnalysisCore;
 
 self.onmessage = event => {
-  const { width, height, buffer } = event.data;
+  const { jobId, width, height, buffer } = event.data;
   try {
-    self.postMessage({ type: 'progress', stage: '画像処理の眼を軽く整えています…' });
+    self.postMessage({ jobId, type: 'progress', stage: '画像処理の眼を軽く整えています…' });
     const paths = detectClosedPathsJs(buffer, width, height);
-    self.postMessage({ type: 'progress', stage: '閉じた線のパスを読み取っています…' });
+    self.postMessage({ jobId, type: 'progress', stage: '閉じた線のパスを読み取っています…' });
     const metrics = analyzeSigilMetricsJs(buffer, width, height, paths);
-    self.postMessage({ type: 'success', paths, shape: metrics.scores, lineStraightness: metrics.lineStraightness });
+    self.postMessage({ jobId, type: 'success', paths, shape: metrics.scores, lineStraightness: metrics.lineStraightness });
   } catch (error) {
-    self.postMessage({ type: 'error', message: error?.message || String(error) });
+    self.postMessage({ jobId, type: 'error', message: error?.message || String(error) });
   }
 };

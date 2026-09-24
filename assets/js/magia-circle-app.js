@@ -73,6 +73,7 @@
   const captureCanvas = requireElement('captureCanvas');
   const overlayCanvas = requireElement('overlayCanvas');
   const analysisSpinner = requireElement('analysisSpinner');
+  const progressLog = requireElement('progressLog');
   const cameraStatus = requireElement('cameraStatus');
   const spellOutput = requireElement('spell');
   const modelStatus = requireElement('modelStatus');
@@ -93,10 +94,14 @@
   let detectedPaths = null;
   let analysisWorker = null;
   let analysisPending = null;
+  let activeAnalysisJob = null;
+  let nextAnalysisJobId = 0;
+  let userStartedImageAction = false;
   let cameraStream = null;
   let ocrPromise = null;
   let recognizerPromise = null;
   let embeddingModulePromise = null;
+  let extractorPromise = null;
   let extractor = null;
   let structureReady = false;
   let spellReady = false;
@@ -129,6 +134,78 @@
   function setImageBusy(busy) {
     analysisSpinner.hidden = !busy;
     stage.setAttribute('aria-busy', busy ? 'true' : 'false');
+  }
+
+  function makeAnalysisAbortError(message = '解析は中断されました。') {
+    const error = new Error(message);
+    error.name = 'AbortError';
+    return error;
+  }
+
+  function isActiveAnalysisJob(job) {
+    return Boolean(job && activeAnalysisJob === job && !job.signal.aborted);
+  }
+
+  function assertActiveAnalysisJob(job) {
+    if (isActiveAnalysisJob(job)) return;
+    throw job?.signal.reason || makeAnalysisAbortError();
+  }
+
+  function awaitForAnalysisJob(job, operation) {
+    assertActiveAnalysisJob(job);
+    const pending = Promise.resolve(operation);
+    return new Promise((resolve, reject) => {
+      const cleanup = () => job.signal.removeEventListener('abort', abort);
+      const abort = () => {
+        cleanup();
+        reject(job.signal.reason || makeAnalysisAbortError());
+      };
+      job.signal.addEventListener('abort', abort, { once: true });
+      pending.then(
+        value => { cleanup(); resolve(value); },
+        error => { cleanup(); reject(error); },
+      );
+      if (job.signal.aborted) abort();
+    });
+  }
+
+  function appendProcessingRecord(message) {
+    const entry = document.createElement('p');
+    entry.className = 'progress-row';
+    entry.textContent = `記録：${message}`;
+    progressLog.append(entry);
+  }
+
+  function cancelActiveAnalysis(reason) {
+    const job = activeAnalysisJob;
+    if (!job) return;
+
+    job.controller.abort(makeAnalysisAbortError(`${reason}ため、解析を中断しました。`));
+    activeAnalysisJob = null;
+    if (analysisPending?.job === job) {
+      const pending = analysisPending;
+      analysisPending = null;
+      analysisWorker?.terminate();
+      analysisWorker = null;
+      pending.reject(job.signal.reason);
+    }
+
+    setImageBusy(false);
+    setStatus(cameraStatus, '解析を中断しました。');
+    setStatus(modelStatus, '次の写し絵を待っています。');
+    appendProcessingRecord(`${job.fileName}：${reason}ため、途中で中断しました。`);
+  }
+
+  function beginAnalysisJob(file) {
+    const controller = new AbortController();
+    const job = {
+      id: nextAnalysisJobId += 1,
+      controller,
+      signal: controller.signal,
+      fileName: file?.name || '撮影した写し絵',
+    };
+    activeAnalysisJob = job;
+    return job;
   }
 
   function clamp(value, min = 0, max = 1) {
@@ -191,26 +268,38 @@
 
   function ensureAnalysisWorker() {
     if (analysisWorker) return analysisWorker;
-    analysisWorker = new Worker(new URL('assets/js/image-analysis-worker.js', document.baseURI));
-    analysisWorker.addEventListener('message', event => {
+    const worker = new Worker(new URL('assets/js/image-analysis-worker.js', document.baseURI));
+    analysisWorker = worker;
+    worker.addEventListener('message', event => {
+      if (analysisWorker !== worker) return;
       const message = event.data || {};
+      const pending = analysisPending;
+      if (!pending || message.jobId !== pending.job.id) return;
       if (message.type === 'progress') {
+        if (!isActiveAnalysisJob(pending.job)) return;
         setStatus(cameraStatus, message.stage, 'busy');
         setStatus(modelStatus, message.stage, 'busy');
         return;
       }
-      if (!analysisPending) return;
-      const pending = analysisPending;
       analysisPending = null;
+      if (!isActiveAnalysisJob(pending.job)) {
+        pending.reject(pending.job.signal.reason || makeAnalysisAbortError());
+        return;
+      }
       if (message.type === 'success') pending.resolve(message);
       if (message.type === 'error') pending.fallback(new Error(message.message));
     });
-    analysisWorker.addEventListener('error', event => {
+    worker.addEventListener('error', event => {
+      if (analysisWorker !== worker) return;
       if (!analysisPending) return;
       const pending = analysisPending;
       analysisPending = null;
       analysisWorker?.terminate();
       analysisWorker = null;
+      if (!isActiveAnalysisJob(pending.job)) {
+        pending.reject(pending.job.signal.reason || makeAnalysisAbortError());
+        return;
+      }
       const detail = event.error?.message || event.message || 'Worker error';
       pending.fallback(new Error(`画像処理の眼を呼び出せませんでした。${detail}`));
     });
@@ -229,16 +318,20 @@
     return { ...paths, outer: scale(paths.outer), inner: scale(paths.inner) };
   }
 
-  function analyzeImageOnMain(image, scale) {
+  function analyzeImageOnMain(image, scale, job) {
     return new Promise((resolve, reject) => {
       setTimeout(async () => {
         try {
+          assertActiveAnalysisJob(job);
           setStatus(cameraStatus, '画像処理の眼を軽く整えています…', 'busy');
           await yieldToBrowser();
+          assertActiveAnalysisJob(job);
           const paths = imageAnalysis.detectClosedPathsJs(image.data.buffer, image.width, image.height);
           setStatus(cameraStatus, '閉じたパスを読み取っています…', 'busy');
           await yieldToBrowser();
+          assertActiveAnalysisJob(job);
           const metrics = imageAnalysis.analyzeSigilMetricsJs(image.data.buffer, image.width, image.height, paths);
+          assertActiveAnalysisJob(job);
           resolve({ paths: scalePaths(paths, 1 / scale), shape: metrics.scores, lineStraightness: metrics.lineStraightness });
         } catch (error) {
           reject(error);
@@ -247,27 +340,31 @@
     });
   }
 
-  async function analyzeImageInWorker() {
+  async function analyzeImageInWorker(job) {
+    assertActiveAnalysisJob(job);
     const maxSide = core.config.analysisInputSide || Math.max(captureCanvas.width, captureCanvas.height);
     const scale = Math.min(1, maxSide / Math.max(captureCanvas.width, captureCanvas.height));
     let image = captureContext.getImageData(0, 0, captureCanvas.width, captureCanvas.height);
     if (scale < 1) {
       await yieldToBrowser();
+      assertActiveAnalysisJob(job);
       const width = Math.max(1, Math.round(captureCanvas.width * scale));
       const height = Math.max(1, Math.round(captureCanvas.height * scale));
       image = new ImageData(imageAnalysis.resizeRgbaLinear(image.data, image.width, image.height, width, height), width, height);
     }
-    if (global.location?.protocol === 'file:') return analyzeImageOnMain(image, scale);
+    assertActiveAnalysisJob(job);
+    if (global.location?.protocol === 'file:') return analyzeImageOnMain(image, scale, job);
     const worker = ensureAnalysisWorker();
     return new Promise((resolve, reject) => {
       analysisPending = {
+        job,
         resolve: result => resolve({ ...result, paths: scalePaths(result.paths, 1 / scale) }),
         reject,
-        fallback: () => analyzeImageOnMain(image, scale).then(resolve, reject),
+        fallback: () => analyzeImageOnMain(image, scale, job).then(resolve, reject),
       };
       try {
         const transferable = image.data.slice().buffer;
-        worker.postMessage({ width: image.width, height: image.height, buffer: transferable }, [transferable]);
+        worker.postMessage({ jobId: job.id, width: image.width, height: image.height, buffer: transferable }, [transferable]);
       } catch (error) {
         const pending = analysisPending;
         analysisPending = null;
@@ -344,10 +441,11 @@
     return top[1];
   }
 
-  async function analyzeStructure(spellPoints = []) {
+  async function analyzeStructure(spellPoints = [], job) {
     setStatus(cameraStatus, '閉じたパスと紋の輪郭を読み取っています…', 'busy');
     try {
-      const result = await analyzeImageInWorker();
+      const result = await analyzeImageInWorker(job);
+      assertActiveAnalysisJob(job);
       detectedPaths = result.paths;
       drawOverlay();
       const sourcePixels = captureContext.getImageData(0, 0, captureCanvas.width, captureCanvas.height);
@@ -372,6 +470,7 @@
       setStatus(cameraStatus, '閉じたパスと紋の輪郭を読み取った。続けて呪文を読み取ります。', 'good');
       return result;
     } catch (error) {
+      if (!isActiveAnalysisJob(job)) throw job.signal.reason || error;
       detectedPaths = null;
       drawOverlay();
       powerInputs.circleAccuracy = 0;
@@ -387,9 +486,13 @@
     }
   }
 
-  async function preprocessOcrImage(source, mode) {
+  async function preprocessOcrImage(source, mode, job) {
+    assertActiveAnalysisJob(job);
     await yieldToBrowser();
-    return core.preprocessRgba(source, mode);
+    assertActiveAnalysisJob(job);
+    const processed = core.preprocessRgba(source, mode);
+    assertActiveAnalysisJob(job);
+    return processed;
   }
 
   function combineSpellLineImages(first, second, firstAngle, secondAngle) {
@@ -411,8 +514,10 @@
     return recognizerPromise;
   }
 
-  async function recognizeCanvas(canvas, inferPixelSpaces = false) {
-    const { ort, session, dictionary } = await ensureRecognizer();
+  async function recognizeCanvas(canvas, inferPixelSpaces = false, job) {
+    assertActiveAnalysisJob(job);
+    const { ort, session, dictionary } = await awaitForAnalysisJob(job, ensureRecognizer());
+    assertActiveAnalysisJob(job);
     const height = 48;
     const width = Math.max(48, Math.min(960, Math.round(canvas.width / Math.max(1, canvas.height) * height)));
     const resized = imageAnalysis.resizeRgbaSharpLinear(canvas.data, canvas.width, canvas.height, width, height);
@@ -425,20 +530,23 @@
       values[pixels * 2 + index] = resized[offset] / 255;
     }
     await yieldToBrowser();
-    const output = (await session.run({ [session.inputNames[0]]: new ort.Tensor('float32', values, [1, 3, height, width]) }))[session.outputNames[0]];
+    assertActiveAnalysisJob(job);
+    const output = (await awaitForAnalysisJob(job, session.run({ [session.inputNames[0]]: new ort.Tensor('float32', values, [1, 3, height, width]) })))[session.outputNames[0]];
+    assertActiveAnalysisJob(job);
     const decoded = core.decodeGreedyCtcDetailed(output, dictionary);
     return inferPixelSpaces
       ? { text: decoded.text, spacingText: core.insertSpacesAtPixelGaps(canvas, decoded) }
       : decoded.text;
   }
 
-  async function recognizeBrowserLineVariants(line) {
+  async function recognizeBrowserLineVariants(line, job) {
     const isRingLine = String(line.groupId || '').startsWith('ring:');
     return core.runRecognizeVariants({
       source: line.image,
-      preprocess: preprocessOcrImage,
+      preprocess: (source, mode) => preprocessOcrImage(source, mode, job),
       rotate: core.rotateRgba,
-      recognize: image => recognizeCanvas(image, isRingLine),
+      recognize: image => recognizeCanvas(image, isRingLine, job),
+      signal: job.signal,
     });
   }
 
@@ -512,39 +620,54 @@
     return ocrPromise;
   }
 
-  async function recognizeSpell(canvas, originalFile) {
-    const ocr = await ensureGutenOcr();
+  async function recognizeSpell(canvas, originalFile, job) {
+    const ocr = await awaitForAnalysisJob(job, ensureGutenOcr());
+    assertActiveAnalysisJob(job);
     global.__gutenLastLineImages = [];
     const source = originalFile ? URL.createObjectURL(originalFile) : canvas.toDataURL('image/png');
-    try {
-      return await core.run({
+    const recognition = core.run({
         detect: async () => {
+          assertActiveAnalysisJob(job);
           const detected = await ocr.detect(source);
+          assertActiveAnalysisJob(job);
           const lineImages = global.__gutenLastLineImages || detected.lineImages || [];
           const sourcePixels = captureContext.getImageData(0, 0, captureCanvas.width, captureCanvas.height);
           const ringLines = lineImages.length <= 8 ? core.unwrapRingSectors(sourcePixels) : [];
           return { ...detected, lineImages: [...lineImages, ...ringLines] };
         },
-        recognizeVariants: recognizeBrowserLineVariants,
+        recognizeVariants: line => recognizeBrowserLineVariants(line, job),
         combineLines: combineSpellLineImages,
+        signal: job.signal,
       });
+    try {
+      return await awaitForAnalysisJob(job, recognition);
     } finally {
-      if (originalFile) URL.revokeObjectURL(source);
+      if (originalFile) {
+        const revokeSource = () => URL.revokeObjectURL(source);
+        if (job.signal.aborted) recognition.then(revokeSource, revokeSource);
+        else revokeSource();
+      }
     }
   }
 
-  async function ensureExtractor() {
+  async function ensureExtractor(job) {
     if (extractor) return extractor;
-    if (!embeddingModulePromise) embeddingModulePromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
-    const { env, pipeline } = await embeddingModulePromise;
-    const wasm = env.backends?.onnx?.wasm;
-    if (wasm) {
-      wasm.numThreads = 1;
-      wasm.proxy = true;
+    if (!extractorPromise) {
+      extractorPromise = (async () => {
+        if (!embeddingModulePromise) embeddingModulePromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+        const { env, pipeline } = await embeddingModulePromise;
+        const wasm = env.backends?.onnx?.wasm;
+        if (wasm) {
+          wasm.numThreads = 1;
+          wasm.proxy = true;
+        }
+        if (isActiveAnalysisJob(job)) setStatus(modelStatus, '呪文の相を測る準備をしています…', 'busy');
+        extractor = await pipeline('feature-extraction', MODEL_ID, { dtype: 'q8', progress_callback: info => { if (activeAnalysisJob && info?.progress !== undefined) setStatus(modelStatus, `呪文の相を測る準備をしています… ${progressText(info.progress)}`, 'busy'); } });
+        return extractor;
+      })();
+      extractorPromise.catch(() => { extractorPromise = null; });
     }
-    setStatus(modelStatus, '呪文の相を測る準備をしています…', 'busy');
-    extractor = await pipeline('feature-extraction', MODEL_ID, { dtype: 'q8', progress_callback: info => { if (info?.progress !== undefined) setStatus(modelStatus, `呪文の相を測る準備をしています… ${progressText(info.progress)}`, 'busy'); } });
-    return extractor;
+    return extractorPromise;
   }
 
   function cosine(a, b) {
@@ -553,13 +676,16 @@
     return dot / (Math.sqrt(aa) * Math.sqrt(bb) || 1);
   }
 
-  async function judgeSpell(text) {
+  async function judgeSpell(text, job) {
     try {
     const keys = Object.keys(ATTRIBUTES);
     const passages = keys.flatMap(key => ATTRIBUTES[key].descriptions);
-    const model = await ensureExtractor();
+    const model = await awaitForAnalysisJob(job, ensureExtractor(job));
+    assertActiveAnalysisJob(job);
     await yieldToBrowser();
-    const embedded = await model([`query: ${text}`, ...passages.map(description => `passage: ${description}`)], { pooling: 'mean', normalize: true });
+    assertActiveAnalysisJob(job);
+    const embedded = await awaitForAnalysisJob(job, model([`query: ${text}`, ...passages.map(description => `passage: ${description}`)], { pooling: 'mean', normalize: true }));
+    assertActiveAnalysisJob(job);
     const [query, ...vectors] = embedded.tolist();
     const similarities = keys.map((key, keyIndex) => {
       const rows = vectors.slice(keyIndex * ATTRIBUTES[key].descriptions.length, (keyIndex + 1) * ATTRIBUTES[key].descriptions.length);
@@ -577,7 +703,8 @@
     attributeDetail.innerHTML = `<div class="shape-title"><b>${ATTRIBUTES[top[0]].icon} ${ATTRIBUTES[top[0]].label}</b></div><div class="bars">${rates.map(([key, , percentage]) => `<div class="bar-row attribute-detail-row"><span>${ATTRIBUTES[key].icon} ${ATTRIBUTES[key].label}</span><div class="bar"><span style="width:${percentage}%"></span></div><strong>${percentage.toFixed(1)}%</strong></div>`).join('')}</div>`;
     setStatus(modelStatus, '呪文の相がひとつ、頁の上に現れた。', 'good');
     return top[1];
-    } catch {
+    } catch (error) {
+      if (!isActiveAnalysisJob(job)) throw job.signal.reason || error;
       return renderAttributeFallback();
     }
   }
@@ -624,18 +751,23 @@
     stageEmpty.hidden = false;
   }
 
-  async function loadFile(file) {
-    if (!file) return;
+  async function loadFile(file, sourceImage = null) {
+    if (!file && !sourceImage) return;
+    cancelActiveAnalysis('新しい写し絵の解析を始める');
     resetResults();
+    const job = beginAnalysisJob(file);
     setStatus(cameraStatus, '写し絵を読み込んでいます…', 'busy');
     setStatus(modelStatus, '画像から紋の情報を準備しています…', 'busy');
-    const image = new Image();
-    const source = URL.createObjectURL(file);
-    image.onload = async () => {
-      URL.revokeObjectURL(source);
+    const image = sourceImage || new Image();
+    const source = file ? URL.createObjectURL(file) : null;
+    const processImage = async () => {
+      if (source) URL.revokeObjectURL(source);
+      if (!isActiveAnalysisJob(job)) return;
       try {
+        assertActiveAnalysisJob(job);
         canvasFromImage(image);
         await yieldToBrowser();
+        assertActiveAnalysisJob(job);
         if (diagnostics) diagnostics.image = {
           naturalWidth: image.naturalWidth,
           naturalHeight: image.naturalHeight,
@@ -645,10 +777,13 @@
         setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
         let recognition = null;
         try {
-          recognition = await recognizeSpell(captureCanvas, file);
-        } catch {
+          recognition = await awaitForAnalysisJob(job, recognizeSpell(captureCanvas, file, job));
+          assertActiveAnalysisJob(job);
+        } catch (error) {
+          assertActiveAnalysisJob(job);
           setStatus(modelStatus, '呪文を読み取れず、位置情報なしで相を選びます。');
         }
+        assertActiveAnalysisJob(job);
         const path = recognition?.path;
         if (diagnostics) diagnostics.spell = {
           text: path?.text || '',
@@ -662,18 +797,22 @@
         const spellPoints = path?.points || [];
         powerInputs.wordCount = powerCalculation.countUniqueWords(path?.words || []);
         setStatus(cameraStatus, '写し絵を受け取り、閉じたパスと環内の文字位置を調べています…', 'busy');
-        await analyzeStructure(spellPoints);
+        await awaitForAnalysisJob(job, analyzeStructure(spellPoints, job));
+        assertActiveAnalysisJob(job);
         renderPower();
         spellOutput.textContent = text || '環から呪文を読み取れませんでした。';
         setStatus(modelStatus, text ? '環の声を拾い上げた。相を判定しています…' : '呪文を読み取れず、相を選んでいます…', 'busy');
-        powerInputs.attributeCertainty = await judgeSpell(text);
+        powerInputs.attributeCertainty = await awaitForAnalysisJob(job, judgeSpell(text, job));
+        assertActiveAnalysisJob(job);
         renderPower();
         spellReady = true;
         updateResultVisibility();
         setImageBusy(false);
         setStatus(cameraStatus, '紋の読み取りが完了しました。', 'good');
+        activeAnalysisJob = null;
         publishDiagnostics();
       } catch (error) {
+        if (!isActiveAnalysisJob(job)) return;
         if (!Number.isFinite(powerInputs.wordCount)) powerInputs.wordCount = 0;
         if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback();
         if (!Number.isFinite(powerInputs.circleAccuracy)) powerInputs.circleAccuracy = 0;
@@ -688,15 +827,23 @@
         setImageBusy(false);
         setStatus(cameraStatus, '写し絵の一部を読み取れず、得られた情報で威力に反映しました。');
         setStatus(modelStatus, '読み取り結果から相を選び、結果を表示しました。');
+        activeAnalysisJob = null;
         publishDiagnostics();
       }
     };
-    image.onerror = () => {
-      URL.revokeObjectURL(source);
-      setImageBusy(false);
-      setStatus(cameraStatus, '写し絵を読み込めませんでした。別の画像を選んでください。', 'error');
-    };
-    image.src = source;
+    if (sourceImage) {
+      await processImage();
+    } else {
+      image.onload = processImage;
+      image.onerror = () => {
+        if (source) URL.revokeObjectURL(source);
+        if (!isActiveAnalysisJob(job)) return;
+        activeAnalysisJob = null;
+        setImageBusy(false);
+        setStatus(cameraStatus, '写し絵を読み込めませんでした。別の画像を選んでください。', 'error');
+      };
+      image.src = source;
+    }
   }
 
   async function preloadOcr() {
@@ -709,6 +856,10 @@
     }
   }
 
+  fileInput.addEventListener('click', () => {
+    userStartedImageAction = true;
+    cancelActiveAnalysis('写し絵の選定を始める');
+  });
   fileInput.addEventListener('change', event => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -733,6 +884,8 @@
     }, 1200);
   });
   cameraButton.addEventListener('click', async () => {
+    userStartedImageAction = true;
+    cancelActiveAnalysis('写し絵の撮影を始める');
     if (cameraStream) {
       if (!cameraVideo.videoWidth || !cameraVideo.videoHeight) {
         setStatus(cameraStatus, 'カメラ映像の準備ができていません。', 'error');
@@ -746,14 +899,8 @@
       snapshot.width = side;
       snapshot.height = side;
       snapshot.getContext('2d').drawImage(cameraVideo, cropX, cropY, side, side, 0, 0, side, side);
-      snapshot.toBlob(blob => {
-        stopCamera();
-        if (!blob) {
-          setStatus(cameraStatus, '撮影した写し絵を保存できませんでした。', 'error');
-          return;
-        }
-        loadFile(new File([blob], 'magia-circle-capture.jpg', { type: blob.type || 'image/jpeg' }));
-      }, 'image/jpeg', .95);
+      stopCamera();
+      loadFile(null, snapshot);
       return;
     }
 
@@ -796,8 +943,12 @@
     fetch(defaultImage).then(response => {
       if (!response.ok) throw new Error(`画像を読み込めません: ${response.status}`);
       return response.blob();
-    }).then(blob => loadFile(new File([blob], defaultImage.pathname.split('/').at(-1) || 'sample.png', { type: blob.type || 'image/png' })))
+    }).then(blob => {
+      if (userStartedImageAction) return;
+      return loadFile(new File([blob], defaultImage.pathname.split('/').at(-1) || 'sample.png', { type: blob.type || 'image/png' }));
+    })
       .catch(error => {
+        if (userStartedImageAction) return;
         if (diagnostics) {
           diagnostics.image = { error: error.message };
           publishDiagnostics();

@@ -24,6 +24,15 @@
     return clean(value).toLowerCase().split(/\s+/).map(word => word.replace(/[^a-z]/g, '')).filter(Boolean);
   }
 
+  function throwIfAborted(signal) {
+    if (!signal?.aborted) return;
+    const reason = signal.reason;
+    if (reason instanceof Error) throw reason;
+    const error = new Error(reason || '解析は中断されました。');
+    error.name = 'AbortError';
+    throw error;
+  }
+
   function normalize(value) {
     const recognized = words(value);
     if (!recognized.length) return '';
@@ -252,13 +261,17 @@
     return closeAlternate || primary;
   }
 
-  async function runRecognizeVariants({ source, preprocess, rotate, recognize }) {
+  async function runRecognizeVariants({ source, preprocess, rotate, recognize, signal }) {
     const observations = [];
     for (const angle of config.rotationAngles) {
       for (const [variant, mode] of config.preprocessingModes.entries()) {
+        throwIfAborted(signal);
         const prepared = await preprocess(source, mode);
+        throwIfAborted(signal);
         const oriented = await rotate(prepared, angle);
+        throwIfAborted(signal);
         const result = await recognize(oriented);
+        throwIfAborted(signal);
         observations.push(result && typeof result === 'object'
           ? { ...result, angle, variant }
           : { text: result, angle, variant });
@@ -433,17 +446,20 @@
     };
   }
 
-  async function recognizeLineImages({ lineImages, width, height, recognizeVariants, combineLines }) {
+  async function recognizeLineImages({ lineImages, width, height, recognizeVariants, combineLines, signal }) {
     const rawCandidates = [];
     const baseCandidates = [];
     const ringCandidates = [];
     const recognizedLines = [];
     for (const [lineIndex, line] of (lineImages || []).entries()) {
+      throwIfAborted(signal);
       if (!line?.image) continue;
       const geometry = line.geometry || lineGeometry(line.box);
       const groupId = line.groupId ?? lineIndex;
       const votes = new Map();
-      for (const observation of await recognizeVariants(line)) {
+      const observations = await recognizeVariants(line);
+      throwIfAborted(signal);
+      for (const observation of observations) {
         const text = words(observation?.text ?? observation).join(' ');
         if (!text) continue;
         const current = votes.get(text) || { text, votes: 0, observations: [] };
@@ -501,15 +517,19 @@
       }
       pairs.sort((left, right) => left.distance - right.distance);
       for (const { first, second, shortLine } of pairs) {
+        throwIfAborted(signal);
         if (suppressedLines.has(first.lineIndex) || suppressedLines.has(second.lineIndex)) continue;
         const firstLength = String(first.selected.text).replace(/[^a-z]/gi, '').length;
         const secondLength = String(second.selected.text).replace(/[^a-z]/gi, '').length;
 
         for (const quarterTurn of [90, 0, 270]) {
           const joined = await combineLines(first.line, second.line, first === shortLine ? quarterTurn : 0, second === shortLine ? quarterTurn : 0);
+          throwIfAborted(signal);
           if (!joined?.image) continue;
           const optionsByText = new Map();
-          for (const observation of await recognizeVariants(joined)) {
+          const observations = await recognizeVariants(joined);
+          throwIfAborted(signal);
+          for (const observation of observations) {
             const text = words(observation?.text ?? observation).join(' ');
             if (!text) continue;
             const current = optionsByText.get(text) || { text, votes: 0, observations: [] };
@@ -536,6 +556,7 @@
       }
     }
     for (const record of recognizedLines) {
+      throwIfAborted(signal);
       if (!suppressedLines.has(record.lineIndex)) {
         const destination = String(record.groupId).startsWith('ring:') ? ringCandidates : baseCandidates;
         destination.push(...expandWords(record.selected.text, record.geometry, record.groupId, record.selected.votes / 12));
@@ -555,8 +576,10 @@
     return { rawCandidates, candidates: selectedCandidates, path: selectedPath, ringRescues };
   }
 
-  async function run({ detect, recognizeVariants, combineLines }) {
+  async function run({ detect, recognizeVariants, combineLines, signal }) {
+    throwIfAborted(signal);
     const detected = await detect();
+    throwIfAborted(signal);
     const width = detected.resizedImageWidth || detected.width || 1;
     const height = detected.resizedImageHeight || detected.height || 1;
     const recognition = await recognizeLineImages({
@@ -565,7 +588,9 @@
       height,
       recognizeVariants,
       combineLines,
+      signal,
     });
+    throwIfAborted(signal);
     return { ...detected, ...recognition };
   }
 
