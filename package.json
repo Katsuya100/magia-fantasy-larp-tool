@@ -1,0 +1,23 @@
+{
+  "name": "magia-fantasy-larp-tool",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "calculate-power": "node scripts/calculate-power.mjs",
+    "serve": "node scripts/serve-dist.mjs",
+    "test:image-analysis": "node tests/test-image-analysis.mjs",
+    "test:sigil-classification": "node tests/test-sigil-classification.mjs",
+    "test:image-outputs": "node --use-system-ca tests/test-image-outputs.mjs",
+    "compare:image-outputs": "node scripts/compare-image-outputs.mjs",
+    "test:attribute-scoring": "node tests/test-attribute-scoring.mjs",
+    "test:power-calculation": "node tests/test-power-calculation.mjs",
+    "test:spell-ocr": "node tests/test-spell-ocr.mjs"
+  },
+  "devDependencies": {
+    "@gutenye/ocr-models": "^1.2.2",
+    "@gutenye/ocr-node": "1.3.0",
+    "@huggingface/transformers": "3.8.1",
+    "onnxruntime-node": "^1.17.3-rev.1",
+    "sharp": "0.34.5"
+  }
+}

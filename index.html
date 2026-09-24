@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="コトダマギアとマギアサークルを選んで遊べる魔法判定ツール" />
-  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <meta name="description" content="魔法学舎で、言霊と陣術ふたつの教科を学ぶ" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <title>マギア・アーカイブ</title>
   <style>
     :root{--ink:#f8edcf;--muted:#d5c59f;--gold:#f5d879;--gold2:#ba7f2d;--line:rgba(245,216,121,.3);--panel:rgba(28,17,28,.88);--shadow:rgba(0,0,0,.5)}
@@ -13,31 +13,30 @@
     body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.13;background-image:linear-gradient(90deg,transparent 97%,rgba(255,255,255,.55) 100%),linear-gradient(0deg,transparent 97%,rgba(255,255,255,.55) 100%);background-size:72px 72px}
     main{max-width:1080px;margin:0 auto;padding:48px 18px 72px}.eyebrow{margin:0 0 10px;color:var(--gold);font:700 14px/1.4 ui-sans-serif,system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase}.hero{padding:18px 4px 34px}.hero h1{margin:0;font-size:clamp(38px,7vw,76px);line-height:1;letter-spacing:.04em;text-shadow:0 0 24px rgba(245,216,121,.34)}.hero p{max-width:700px;margin:18px 0 0;color:var(--muted);font:17px/1.8 ui-sans-serif,system-ui,sans-serif}
     .choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}@media(max-width:720px){.choices{grid-template-columns:1fr}}
-    .choice{position:relative;display:flex;flex-direction:column;min-height:330px;padding:28px;border:1px solid var(--line);border-radius:26px;text-decoration:none;color:var(--ink);background:linear-gradient(145deg,rgba(67,31,22,.9),var(--panel));box-shadow:0 22px 70px var(--shadow),inset 0 0 60px rgba(245,216,121,.05);overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}.choice:before{content:"";position:absolute;width:220px;height:220px;right:-65px;top:-55px;border:1px solid rgba(245,216,121,.28);border-radius:50%;box-shadow:0 0 0 18px rgba(245,216,121,.05),0 0 0 38px rgba(245,216,121,.04)}.choice:hover,.choice:focus-visible{transform:translateY(-4px);border-color:rgba(245,216,121,.72);box-shadow:0 28px 80px rgba(0,0,0,.6),0 0 34px rgba(245,216,121,.12)}.choice:focus-visible{outline:3px solid rgba(245,216,121,.45);outline-offset:4px}.choice>*{position:relative;z-index:1}.choice .mark{font-size:58px;line-height:1;margin-bottom:22px;filter:drop-shadow(0 0 14px rgba(245,216,121,.35))}.choice h2{margin:0;font-size:32px}.choice p{margin:14px 0 0;color:var(--muted);font:16px/1.7 ui-sans-serif,system-ui,sans-serif}.choice .go{margin-top:auto;padding-top:26px;color:var(--gold);font:700 15px ui-sans-serif,system-ui,sans-serif}.choice.circle{background:linear-gradient(145deg,rgba(22,44,60,.92),rgba(19,18,34,.92))}.choice.circle:before{border-color:rgba(126,217,255,.34);box-shadow:0 0 0 18px rgba(126,217,255,.05),0 0 0 38px rgba(126,217,255,.04)}.footer{margin-top:24px;color:#bba97e;font:13px/1.6 ui-sans-serif,system-ui,sans-serif;text-align:center}.footer a{color:#e9cf87}
+    .choice{position:relative;display:flex;flex-direction:column;min-height:330px;padding:28px;border:1px solid var(--line);border-radius:26px;text-decoration:none;color:var(--ink);background:linear-gradient(145deg,rgba(67,31,22,.9),var(--panel));box-shadow:0 22px 70px var(--shadow),inset 0 0 60px rgba(245,216,121,.05);overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}.choice:before{content:"";position:absolute;width:220px;height:220px;right:-65px;top:-55px;border:1px solid rgba(245,216,121,.28);border-radius:50%;box-shadow:0 0 0 18px rgba(245,216,121,.05),0 0 0 38px rgba(245,216,121,.04)}.choice:hover,.choice:focus-visible{transform:translateY(-4px);border-color:rgba(245,216,121,.72);box-shadow:0 28px 80px rgba(0,0,0,.6),0 0 34px rgba(245,216,121,.12)}.choice:focus-visible{outline:3px solid rgba(245,216,121,.45);outline-offset:4px}.choice>*{position:relative;z-index:1}.choice .mark{font-size:58px;line-height:1;margin-bottom:22px;filter:drop-shadow(0 0 14px rgba(245,216,121,.35))}.choice h2{margin:0;font-size:32px}.choice p{margin:14px 0 0;color:var(--muted);font:16px/1.7 ui-sans-serif,system-ui,sans-serif}.choice .go{margin-top:auto;padding-top:26px;color:var(--gold);font:700 15px ui-sans-serif,system-ui,sans-serif}.choice.circle{background:linear-gradient(145deg,rgba(22,44,60,.92),rgba(19,18,34,.92))}.choice.circle:before{border-color:rgba(126,217,255,.34);box-shadow:0 0 0 18px rgba(126,217,255,.05),0 0 0 38px rgba(126,217,255,.04)}
   </style>
 </head>
 <body>
   <main>
     <section class="hero">
       <p class="eyebrow">MAGIA ARCHIVE</p>
-      <h1>魔法を選ぶ</h1>
-      <p>言葉から魔法を編むか、魔法陣をカメラに映して呪文を判定するか。使いたい魔法を選んでください。</p>
+      <h1>魔法学舎の教科</h1>
+      <p>言霊を編む教えと、陣の理を読み解く教え。魔法学舎で学ぶ教科を選び、その頁を開いてください。</p>
     </section>
-    <nav class="choices" aria-label="魔法ツールを選択">
+    <nav class="choices" aria-label="学ぶ教科を選択">
       <a class="choice" href="kotodama.html">
         <span class="mark" aria-hidden="true">✦</span>
         <h2>コトダマギア</h2>
-        <p>言葉を組み合わせ、意味の近い属性を呼び出して魔法を作る。</p>
-        <span class="go">コトダマギアを開く →</span>
+        <p>言葉を編み、術式を演算し、魔法の相を導く教科。</p>
+        <span class="go">魔導式の教えを学ぶ →</span>
       </a>
       <a class="choice circle" href="magia-circle.html">
         <span class="mark" aria-hidden="true">◎</span>
         <h2>マギアサークル</h2>
-        <p>カメラで魔法陣を読み取り、英語の呪文と紋の性質を判定する。</p>
-        <span class="go">マギアサークルを開く →</span>
+        <p>陣に刻まれた呪文と紋を読み解き、魔法の顕現を成す教科。</p>
+        <span class="go">陣術の教えを学ぶ →</span>
       </a>
     </nav>
-    <p class="footer"><a href="magia-circle.html#attribution">権利表記</a></p>
   </main>
 </body>
 </html>
