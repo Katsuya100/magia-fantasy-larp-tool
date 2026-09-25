@@ -8,6 +8,8 @@
 - `@techstark/opencv-js` — Source: https://github.com/TechStark/opencv-js — Apache License 2.0. Used by the browser OCR pipeline for perspective correction and line extraction.
 - Transformers.js — Source: https://github.com/huggingface/transformers.js — Apache License 2.0
 - `all-MiniLM-L6-v2` — Source: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2 — Apache License 2.0
+- profanity-list — Source: https://github.com/dsojevic/profanity-list — MIT License. The English forbidden-word list is fetched and cached for sharing with Kotodama Gear.
+- dictionary-word-list / SCOWL — Source: https://github.com/nlile/dictionary-word-list — SCOWL Copyright and License Agreement. The common US English word list is fetched and cached for sharing with Kotodama Gear; retain the required copyright and permission notices.
 - `@gutenye/ocr-node` and bundled PP-OCRv4 models — Source: https://github.com/gutenye/ocr — MIT License for the library; verify the model terms before redistribution. Used by the reproducible Node.js batch OCR test.
 - `sharp` — Source: https://github.com/lovell/sharp — Apache License 2.0. Used to rotate detected text-line images during the batch OCR test.
 

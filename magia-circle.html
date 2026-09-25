@@ -232,11 +232,13 @@
           <li><strong>PaddleOCR recognition model</strong><br>Source: <a href="https://github.com/PaddlePaddle/PaddleOCR" target="_blank" rel="noreferrer">PaddlePaddle/PaddleOCR</a><br>Work: <code>ch_PP-OCRv4_rec_infer.onnx</code> / <code>ppocr_keys_v1.txt</code> from <code>@gutenye/ocr-models</code><br>License: Apache License 2.0<br>備考: 整形した環の筆跡をブラウザ内で文字列へ変換するために使用。</li>
           <li><strong>Transformers.js</strong><br>Source: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noreferrer">huggingface/transformers.js</a><br>Work: Transformers.js<br>License: Apache License 2.0<br>備考: 文章Embeddingモデルをブラウザ内で実行するために使用。</li>
           <li><strong>文章Embeddingモデル</strong><br>Source: <a href="https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2" target="_blank" rel="noreferrer">sentence-transformers/all-MiniLM-L6-v2</a><br>Work: <code>all-MiniLM-L6-v2</code> / Transformers.js用ONNX変換版<br>License: Apache License 2.0<br>備考: 英語の呪文と属性説明文の意味比較に使用。</li>
+          <li><strong>禁書目録</strong><br>Source: <a href="https://github.com/dsojevic/profanity-list" target="_blank" rel="noreferrer">dsojevic/profanity-list</a><br>Work: <code>en.txt</code><br>License: MIT License<br>備考: コトダマギアと共有する英語の禁止ワード辞書。起動時に取得して、このブラウザの控えに保存。</li>
+          <li><strong>正典目録</strong><br>Source: <a href="https://github.com/nlile/dictionary-word-list" target="_blank" rel="noreferrer">nlile/dictionary-word-list</a><br>Work: <code>word_list_very_common_en_us_spelling_no_diacritic.txt</code> (SCOWL)<br>License / Permission: SCOWL Copyright and License Agreement<br>備考: コトダマギアと共有する一般英語語彙。著作権表示と許諾表示を残すことを条件に、語彙リスト等の利用・複製・改変・配布が許諾されている。起動時に取得して、このブラウザの控えに保存。</li>
         </ul>
       </details>
       <details>
         <summary>処理について</summary>
-        <p>カメラ画像は外部サーバーへ送信しません。カメラ映像、OCR、画像解析、文章Embeddingはこのブラウザ上で実行します。起動時に文字の検出・認識モデルと辞書、相の判定モデルを用意します。初回はネットワークから取得してこの端末に控えを残し、次回からブラウザに保存した控えを再利用します。ブラウザの保存データを消去した場合は再取得します。控えを保存できない環境では、その旨を表示し、次回も取得します。</p>
+        <p>カメラ画像は外部サーバーへ送信しません。カメラ映像、OCR、画像解析、文章Embeddingはこのブラウザ上で実行します。起動時に文字の検出・認識モデルと辞書、相の判定モデル、コトダマギアと共有する禁書目録・正典目録を用意します。OCR後の英単語は、禁書目録を除いた正典目録の文字n-gram索引で形の近い語を探し、候補中の最も近い綴りへ置き換えます。索引は初回にこのブラウザ内で作成・保存し、次回から再利用します。ブラウザの保存データを消去した場合は再取得・再生成します。控えを保存できない環境では、その旨を表示し、次回も取得します。共有目録の取得に失敗しても画像解析は利用できます。</p>
       </details>
     </section>
   </div>

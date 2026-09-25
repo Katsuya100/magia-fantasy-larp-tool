@@ -126,7 +126,7 @@ if (pathsOnly) {
   process.exit(0);
 }
 
-const ocr = spawnSync(process.execPath, [resolve(here, 'test-spell-ocr.mjs'), '--json', ...(webWasm ? ['--web-wasm'] : []), imagePath], {
+const ocr = spawnSync(process.execPath, [...process.execArgv, resolve(here, 'test-spell-ocr.mjs'), '--json', ...(webWasm ? ['--web-wasm'] : []), imagePath], {
   encoding: 'utf8',
   maxBuffer: 32 * 1024 * 1024,
 });
@@ -187,7 +187,7 @@ const output = {
   input: imagePath,
   image: { width: image.info.width, height: image.info.height, naturalWidth, naturalHeight },
   ...(pathOverlay ? { pathOverlay } : {}),
-  spell: { text: spell.text, words: spell.words, points: spell.points, lines: spell.lines, rawCandidates: spell.rawCandidates, candidates: spell.candidates },
+  spell: { rawText: spell.rawText, text: spell.text, words: spell.words, corrections: spell.corrections, vocabularySize: spell.vocabularySize, forbiddenWordCount: spell.forbiddenWordCount, points: spell.points, lines: spell.lines, rawCandidates: spell.rawCandidates, candidates: spell.candidates },
   process: {
     structure: structureError ? '陣の一部を読み取れず、威力に反映しました。呪文の読み取りを続けます。' : '写し絵の読み取りが完了しました。',
     spell: '読み取り結果から相を選び、結果を表示しました。',

@@ -9,6 +9,7 @@
   if (!powerCalculation) throw new Error('power-calculation.js must load before magia-circle-app.js');
 
   const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
+  const KOTODAMA_NGRAM_INDEX_CACHE_URL = 'https://kotodamagia.local/cache/scowl-en-us-common-ngrams-v2.json';
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
   const ATTRIBUTES = global.AttributeScoringCore.attributes;
   const allocateWholePercentages = global.AttributeScoringCore.allocateWholePercentages;
@@ -42,7 +43,9 @@
     const pathSummary = path => path && ({ x: path.x, y: path.y, radius: path.r, radii: path.radii, coverage: path.coverage, circleAccuracy: path.circleAccuracy });
     const spell = diagnostics.spell && {
       text: diagnostics.spell.text,
+      rawText: diagnostics.spell.rawText,
       words: diagnostics.spell.words,
+      corrections: diagnostics.spell.corrections,
       points: diagnostics.spell.points,
       lines: diagnostics.spell.lines,
       rawCandidates: diagnostics.spell.rawCandidates.map(candidate => ({ line: candidate.line, text: candidate.text, votes: candidate.votes })),
@@ -114,6 +117,7 @@
   let startupPromise = null;
   let modelsReady = false;
   let cacheUnavailable = false;
+  let vocabularyCorrector = null;
   const cacheError = error => {
     cacheUnavailable = true;
     console.warn('外典の控えを保存・参照できませんでした。', error);
@@ -133,6 +137,7 @@
   });
   // Keep the Transformers.js cache name so earlier visits remain reusable.
   const embeddingCache = global.ModelCache.create({ name: 'transformers-cache', onCacheError: cacheError });
+  const kotodamaDictionaryCache = global.ModelCache.create({ name: 'magia-circle-kotodama-dictionaries-v1', onCacheError: cacheError });
   let structureReady = false;
   let spellReady = false;
   let detailsTapCount = 0;
@@ -686,6 +691,7 @@
         },
         recognizeVariants: line => recognizeBrowserLineVariants(line, job),
         combineLines: combineSpellLineImages,
+        vocabularyCorrector,
         signal: job.signal,
       });
     activeOcrRun = recognition.then(() => undefined, () => undefined);
@@ -874,6 +880,8 @@
           lines: (recognition?.lineImages || []).map((line, index) => ({ index, box: line.box, width: line.image?.width, height: line.image?.height })),
           rawCandidates: recognition?.rawCandidates || [],
           candidates: recognition?.candidates || [],
+          rawText: recognition?.rawPathText || path?.text || '',
+          corrections: recognition?.corrections || [],
         };
         const text = path?.text || '';
         const spellPoints = path?.points || [];
@@ -941,21 +949,66 @@
       busyMask.focus();
       showBusyMask('魔導司書が外典を探している', '頁に触れず、燭台の火が落ち着くのを待て。');
       setStatus(preloadStatus, '魔導司書が外典を整えている。', 'busy');
+      let kotodamaDictionariesUnavailable = false;
       try {
-        busyStage.textContent = '一 / 三 — 環の筆跡を読む外典';
+        busyStage.textContent = '一 / 四 — 環の筆跡を読む外典';
         await ensureGutenOcr();
-        busyStage.textContent = '二 / 三 — 呪文を読み解く外典';
+        busyStage.textContent = '二 / 四 — 呪文を読み解く外典';
         await ensureRecognizer();
-        busyStage.textContent = '三 / 三 — 相を呼び覚ます外典';
+        busyStage.textContent = '三 / 四 — 相を呼び覚ます外典';
         showBusyMask('魔導司書が頁を読んでいる', '書架の控えを確かめ、相の外典を卓上へ広げている。');
         await ensureExtractor();
+        busyStage.textContent = '四 / 四 — 禁書目録と正典目録';
+        showBusyMask('魔導司書が目録を集めている', 'コトダマギアと共有する禁書目録と正典目録を、この書架にも控えている。');
+        const dictionaryResults = await Promise.allSettled([
+          kotodamaDictionaryCache.load(core.config.forbiddenWordsUrl),
+          kotodamaDictionaryCache.load(core.config.commonWordsUrl),
+        ]);
+        kotodamaDictionariesUnavailable = dictionaryResults.some(result => result.status === 'rejected');
+        if (dictionaryResults.every(result => result.status === 'fulfilled')) {
+          try {
+            const [forbiddenText, commonText] = await Promise.all(dictionaryResults.map(result => result.value.text()));
+            const signature = core.vocabularySignature(commonText, forbiddenText);
+            const cachedIndexResponse = await kotodamaDictionaryCache.match(KOTODAMA_NGRAM_INDEX_CACHE_URL);
+            let index = null;
+            if (cachedIndexResponse) {
+              try {
+                const cachedIndex = await cachedIndexResponse.json();
+                if (cachedIndex.version === 2 && cachedIndex.signature === signature && Array.isArray(cachedIndex.words)) {
+                  index = cachedIndex;
+                }
+              } catch (error) {
+                console.warn('文字列索引の控えを読み取れませんでした。', error);
+              }
+            }
+            if (!index) {
+              await yieldToBrowser();
+              index = core.createVocabularyNgramIndex(commonText, forbiddenText);
+              await kotodamaDictionaryCache.put(KOTODAMA_NGRAM_INDEX_CACHE_URL, new Response(JSON.stringify(index), {
+                headers: { 'content-type': 'application/json; charset=utf-8' },
+              }));
+            }
+            vocabularyCorrector = core.createVocabularyCorrector(index);
+            if (!vocabularyCorrector.size) throw new Error('一般語彙辞書に使用できる単語がありません。');
+          } catch (error) {
+            vocabularyCorrector = null;
+            kotodamaDictionariesUnavailable = true;
+            console.warn('コトダマギアの目録を補正索引にできませんでした。', error);
+          }
+        }
+        for (const result of dictionaryResults) {
+          if (result.status === 'rejected') console.warn('コトダマギアの目録を控えられませんでした。', result.reason);
+        }
         modelsReady = true;
         busyMask.close();
         fileInput.disabled = false;
         cameraButton.disabled = false;
-        setStatus(preloadStatus, cacheUnavailable
-          ? '外典は開いたが、この書架には控えを残せなかった。次に頁を開くときは、再び書庫へ向かう。'
-          : '魔導司書が外典を整えた。次に頁を開くときは、書架の控えが応える。', cacheUnavailable ? '' : 'good');
+        const preloadIssues = [];
+        if (kotodamaDictionariesUnavailable) preloadIssues.push('コトダマギアの禁書目録または正典目録を取得できなかった');
+        if (cacheUnavailable) preloadIssues.push('この書架に控えを残せなかった');
+        setStatus(preloadStatus, preloadIssues.length
+          ? `外典は開いた。${preloadIssues.join('。')}。画像解析は利用できる。`
+          : '魔導司書が外典を整えた。次に頁を開くときは、書架の控えが応える。', preloadIssues.length ? '' : 'good');
         loadDefaultImage();
       } catch (error) {
         console.error('外典の準備に失敗しました。', error);

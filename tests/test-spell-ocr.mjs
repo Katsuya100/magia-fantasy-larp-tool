@@ -58,6 +58,24 @@ const detection = await Detection.create({ models: activeModels });
 const recognitionSession = await runtime.InferenceSession.create(activeModels.recognitionPath);
 const sourceImage = baseline ? null : await SharedImageRaw.open(input);
 const dictionary = [...(await readFile(models.dictionaryPath, 'utf8')).split(/\r?\n/), ' '];
+const [forbiddenResponse, commonResponse] = await Promise.all([
+  fetch(core.config.forbiddenWordsUrl, { cache: 'no-store' }),
+  fetch(core.config.commonWordsUrl, { cache: 'no-store' }),
+]);
+if (!forbiddenResponse.ok) throw new Error(`Forbidden-word list download failed: HTTP ${forbiddenResponse.status}`);
+if (!commonResponse.ok) throw new Error(`Common vocabulary download failed: HTTP ${commonResponse.status}`);
+const [forbiddenText, commonText] = await Promise.all([forbiddenResponse.text(), commonResponse.text()]);
+const vocabularyIndex = core.createVocabularyNgramIndex(commonText, forbiddenText);
+const vocabularyCorrector = core.createVocabularyCorrector(vocabularyIndex);
+if (!vocabularyCorrector.size) throw new Error('Common vocabulary dictionary is empty.');
+const fixtureIndex = core.createVocabularyNgramIndex('\uFEFFhello\nworld\ncat\nbat\na\ni\niv\nbar\nthunder\nthumber\nblast\nflashest', 'bat\nfoo bar');
+const fixtureCorrector = core.createVocabularyCorrector(fixtureIndex);
+const fixtureWords = fixtureCorrector.correctWords(['hellp', 'world', 'bat', 'bar', 'thumder', 'flast']).words;
+if (fixtureWords[0] !== 'hello' || fixtureWords[1] !== 'world' || !fixtureCorrector.hasWord(fixtureWords[2]) ||
+  fixtureWords[2] === 'bat' || fixtureWords[3] !== 'bar' || fixtureWords[4] !== 'thunder' || fixtureWords[5] !== 'blast' ||
+  fixtureCorrector.hasWord('bat') || fixtureCorrector.hasWord('iv')) {
+  throw new Error(`Vocabulary matcher smoke check failed: ${fixtureWords.join(', ')}`);
+}
 function rgbaData(raw) {
   if (raw.info.channels === 4) return raw.data;
   const channels = raw.info.channels;
@@ -122,10 +140,12 @@ const pipeline = await core.run({
     });
   },
   combineLines: combineLineImages,
+  vocabularyCorrector,
 });
 const { rawCandidates, candidates, path, ringRescues } = pipeline;
 const rawWords = new Set(candidates.map(candidate => candidate.text));
-const outputWords = core.words(path.text);
+const rawText = pipeline.rawPathText || path.text;
+const outputWords = core.words(rawText);
 const resegmentedWords = outputWords.filter(word => !rawWords.has(word));
 const recognizedLetterCounts = new Map();
 for (const letter of rawCandidates.map(candidate => core.words(candidate.text).join('')).join('')) {
@@ -138,27 +158,38 @@ for (const letter of outputWords.join('')) {
   else recognizedLetterCounts.set(letter, remaining - 1);
 }
 const literalPreservation = core.normalize('breath') === 'Breath.' && core.normalize('be') === 'Be.';
-const assertion = path.text && !inventedLetters.length && literalPreservation ? 'PASS_NO_INVENTION' : 'FAIL';
+const rawAssertion = rawText && !inventedLetters.length && literalPreservation ? 'PASS_NO_INVENTION' : 'FAIL';
+const missingVocabularyWords = path.words.filter(word => !vocabularyCorrector.hasWord(word));
+const assertion = path.text && !missingVocabularyWords.length && literalPreservation ? 'PASS_VOCABULARY_MATCH' : 'FAIL';
 
 if (jsonMode) {
   console.log(JSON.stringify({
+    rawText,
     text: path.text,
     words: path.words,
+    corrections: pipeline.corrections,
+    vocabularySize: vocabularyCorrector.size,
+    forbiddenWordCount: vocabularyCorrector.forbiddenSize,
+    missingVocabularyWords,
     points: path.points,
     lines: (pipeline.lineImages || []).map((line, index) => ({ index, box: line.box, width: line.image?.width, height: line.image?.height })),
     rawCandidates,
     candidates,
     assertion,
+    rawAssertion,
     ringRescues,
     resegmentedWords,
     inventedLetters,
     literalPreservation,
   }, null, 2));
-} else if (assertion === 'PASS_NO_INVENTION') {
-    console.log(path.text);
+} else if (assertion === 'PASS_VOCABULARY_MATCH') {
+    console.log(`OCR: ${rawText}`);
+    console.log(`語彙補正: ${path.text}`);
+    console.log(`補正: ${pipeline.corrections.length}語 / ${vocabularyCorrector.size.toLocaleString('en-US')}語から照合`);
+    console.log(rawAssertion);
     console.log(assertion);
 } else {
-  console.error(JSON.stringify({ rawCandidates, candidates, sequence: path.words, text: path.text, inventedWords, literalPreservation, assertion }, null, 2));
+  console.error(JSON.stringify({ rawCandidates, candidates, sequence: path.words, rawText, text: path.text, corrections: pipeline.corrections, missingVocabularyWords, inventedLetters, literalPreservation, rawAssertion, assertion }, null, 2));
   console.log(assertion);
   process.exit(1);
 }

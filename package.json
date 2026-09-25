@@ -12,7 +12,7 @@
     "test:attribute-scoring": "node tests/test-attribute-scoring.mjs",
     "test:model-cache": "node tests/test-model-cache.mjs",
     "test:power-calculation": "node tests/test-power-calculation.mjs",
-    "test:spell-ocr": "node tests/test-spell-ocr.mjs"
+    "test:spell-ocr": "node --use-system-ca tests/test-spell-ocr.mjs"
   },
   "devDependencies": {
     "@gutenye/ocr-models": "^1.2.2",

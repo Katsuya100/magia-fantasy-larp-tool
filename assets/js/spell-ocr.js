@@ -1,7 +1,4 @@
-/* Shared post-processing for browser and batch OCR.
- * It may rank a sequence using language roles, but it never replaces a word
- * with a vocabulary entry. The returned text is always made from OCR output.
- */
+/* Shared OCR post-processing for the browser and image batch tools. */
 (function attachSpellOcrCore(global) {
   'use strict';
 
@@ -11,6 +8,8 @@
     detectionModelUrl: 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_det_infer.onnx',
     recognitionModelUrl: 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_rec_infer.onnx',
     dictionaryUrl: 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ppocr_keys_v1.txt',
+    forbiddenWordsUrl: 'https://raw.githubusercontent.com/dsojevic/profanity-list/main/en.txt',
+    commonWordsUrl: 'https://raw.githubusercontent.com/nlile/dictionary-word-list/master/word_list_very_common_en_us_spelling_no_diacritic.txt',
     onnxRuntimeWebVersion: '1.17.3',
     rotationAngles: Object.freeze([0, 90, 180, 270]),
     preprocessingModes: Object.freeze(['source', 'contrast', 'binary']),
@@ -22,6 +21,204 @@
 
   function words(value) {
     return clean(value).toLowerCase().split(/\s+/).map(word => word.replace(/[^a-z]/g, '')).filter(Boolean);
+  }
+
+  function vocabularySignature(commonText, forbiddenText = '') {
+    const source = `ngram-index-v2\u0000${String(commonText || '')}\u0000${String(forbiddenText || '')}`;
+    let hash = 2166136261;
+    for (let index = 0; index < source.length; index += 1) {
+      hash ^= source.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `v2-${source.length.toString(36)}-${(hash >>> 0).toString(36)}`;
+  }
+
+  function letterNgrams(value, size) {
+    const padded = `^${value}$`;
+    const grams = new Set();
+    for (let index = 0; index + size <= padded.length; index += 1) grams.add(padded.slice(index, index + size));
+    return [...grams];
+  }
+
+  function createVocabularyNgramIndex(commonText, forbiddenText = '') {
+    // Match Kotodama Gear's dictionary parser: ban only complete, plain-English
+    // word entries so a banned phrase does not remove each of its common parts.
+    const forbidden = new Set(String(forbiddenText || '').split(/\r?\n/)
+      .map(line => line.replace(/^\uFEFF/, '').trim().toLowerCase())
+      .filter(word => /^[a-z]+$/.test(word)));
+    const wordsInFile = new Set();
+    for (const line of String(commonText || '').split(/\r?\n/)) {
+      const word = line.replace(/^\uFEFF/, '').trim().toLowerCase();
+      const plainEnglish = /^[a-z]+$/.test(word) &&
+        (word.length > 1 || word === 'a' || word === 'i') &&
+        word.length <= 22 &&
+        !(word.length > 1 && /^[ivxlcdm]+$/.test(word));
+      if (plainEnglish && !forbidden.has(word)) wordsInFile.add(word);
+    }
+    const vocabulary = [...wordsInFile].sort();
+    const bigrams = new Map();
+    const trigrams = new Map();
+    const bigramCounts = [];
+    const trigramCounts = [];
+    vocabulary.forEach((word, wordId) => {
+      const wordBigrams = letterNgrams(word, 2);
+      const wordTrigrams = letterNgrams(word, 3);
+      bigramCounts.push(wordBigrams.length);
+      trigramCounts.push(wordTrigrams.length);
+      for (const gram of wordBigrams) {
+        if (!bigrams.has(gram)) bigrams.set(gram, []);
+        bigrams.get(gram).push(wordId);
+      }
+      for (const gram of wordTrigrams) {
+        if (!trigrams.has(gram)) trigrams.set(gram, []);
+        trigrams.get(gram).push(wordId);
+      }
+    });
+    return {
+      version: 2,
+      signature: vocabularySignature(commonText, forbiddenText),
+      words: vocabulary,
+      bigrams: [...bigrams],
+      trigrams: [...trigrams],
+      bigramCounts,
+      trigramCounts,
+      forbiddenSize: forbidden.size,
+    };
+  }
+
+  function createVocabularyCorrector(index) {
+    const vocabulary = Array.isArray(index?.words) ? index.words : [];
+    const bigrams = new Map(Array.isArray(index?.bigrams) ? index.bigrams : []);
+    const trigrams = new Map(Array.isArray(index?.trigrams) ? index.trigrams : []);
+    const bigramCounts = Array.isArray(index?.bigramCounts) ? index.bigramCounts : [];
+    const trigramCounts = Array.isArray(index?.trigramCounts) ? index.trigramCounts : [];
+    const byLength = new Map();
+    const wordIds = new Map();
+    vocabulary.forEach((word, wordId) => {
+      wordIds.set(word, wordId);
+      if (!byLength.has(word.length)) byLength.set(word.length, []);
+      byLength.get(word.length).push(wordId);
+    });
+    const lengths = [...byLength.keys()].sort((left, right) => left - right);
+    const nearestCache = new Map();
+
+    function positionalSimilarity(left, right) {
+      let matching = 0;
+      for (let index = 0; index < Math.min(left.length, right.length); index += 1) {
+        if (left[index] === right[index]) matching += 1;
+      }
+      return matching;
+    }
+
+    function alphabetDistance(left, right) {
+      let distance = Math.abs(left.length - right.length) * 26;
+      for (let index = 0; index < Math.min(left.length, right.length); index += 1) {
+        distance += Math.abs(left.charCodeAt(index) - right.charCodeAt(index));
+      }
+      return distance;
+    }
+
+    function compareCandidates(left, right) {
+      return right.score - left.score || left.lengthDifference - right.lengthDifference ||
+        (left.alphabetDistance || 0) - (right.alphabetDistance || 0) || right.positional - left.positional || left.wordId - right.wordId;
+    }
+
+    function insertTopCandidate(ranked, candidate, limit = 48) {
+      let low = 0;
+      let high = ranked.length;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (compareCandidates(candidate, ranked[middle]) < 0) high = middle;
+        else low = middle + 1;
+      }
+      if (low >= limit) return;
+      ranked.splice(low, 0, candidate);
+      if (ranked.length > limit) ranked.pop();
+    }
+
+    function nearestWord(source) {
+      if (!source || !vocabulary.length) return { word: source, similarity: 0 };
+      if (wordIds.has(source)) return { word: source, similarity: 1 };
+      if (nearestCache.has(source)) return nearestCache.get(source);
+
+      const size = source.length <= 5 ? 2 : 3;
+      const grams = letterNgrams(source, size);
+      const postings = size === 2 ? bigrams : trigrams;
+      const gramCounts = size === 2 ? bigramCounts : trigramCounts;
+      const overlaps = new Map();
+      for (const gram of grams) {
+        for (const wordId of postings.get(gram) || []) overlaps.set(wordId, (overlaps.get(wordId) || 0) + 1);
+      }
+
+      let shortlist = [];
+      for (const [wordId, overlap] of overlaps) {
+        const word = vocabulary[wordId];
+        const lengthDifference = Math.abs(source.length - word.length);
+        const ngramSimilarity = 2 * overlap / (grams.length + (gramCounts[wordId] || 1));
+        const score = ngramSimilarity * (1 - lengthDifference / Math.max(source.length, word.length, 1));
+        insertTopCandidate(shortlist, {
+          wordId,
+          score,
+          lengthDifference,
+          alphabetDistance: alphabetDistance(source, word),
+          positional: positionalSimilarity(source, word),
+        });
+      }
+
+      if (!shortlist.length) {
+        const fallback = [];
+        for (const length of lengths) {
+          if (Math.abs(length - source.length) > 2) continue;
+          for (const wordId of byLength.get(length)) {
+            fallback.push({ wordId, lengthDifference: Math.abs(length - source.length), positional: positionalSimilarity(source, vocabulary[wordId]) });
+          }
+        }
+        shortlist = fallback.sort((left, right) => left.lengthDifference - right.lengthDifference || right.positional - left.positional).slice(0, 48);
+      }
+
+      if (!shortlist.length && vocabulary.length) {
+        let best = null;
+        for (let wordId = 0; wordId < vocabulary.length; wordId += 1) {
+          const word = vocabulary[wordId];
+          const candidate = {
+            wordId,
+            score: 0,
+            lengthDifference: Math.abs(source.length - word.length),
+            alphabetDistance: alphabetDistance(source, word),
+            positional: positionalSimilarity(source, word),
+          };
+          if (!best || compareCandidates(candidate, best) < 0) best = candidate;
+        }
+        if (best) shortlist = [best];
+      }
+
+      const best = shortlist[0];
+      const result = best
+        ? { word: vocabulary[best.wordId], similarity: best.score || 0 }
+        : { word: source, similarity: 0 };
+      nearestCache.set(source, result);
+      return result;
+    }
+
+    function correctWords(sourceWords) {
+      const corrected = [];
+      const corrections = [];
+      for (const value of sourceWords || []) {
+        const source = String(value || '').toLowerCase().replace(/[^a-z]/g, '');
+        if (!source) continue;
+        const nearest = nearestWord(source);
+        corrected.push(nearest.word);
+        if (source !== nearest.word) corrections.push({ from: source, to: nearest.word, similarity: nearest.similarity });
+      }
+      return { words: corrected, corrections };
+    }
+
+    return Object.freeze({
+      size: vocabulary.length,
+      forbiddenSize: Number(index?.forbiddenSize) || 0,
+      hasWord: value => wordIds.has(String(value || '').toLowerCase().replace(/[^a-z]/g, '')),
+      correctWords,
+    });
   }
 
   function throwIfAborted(signal) {
@@ -576,7 +773,7 @@
     return { rawCandidates, candidates: selectedCandidates, path: selectedPath, ringRescues };
   }
 
-  async function run({ detect, recognizeVariants, combineLines, signal }) {
+  async function run({ detect, recognizeVariants, combineLines, vocabularyCorrector, signal }) {
     throwIfAborted(signal);
     const detected = await detect();
     throwIfAborted(signal);
@@ -591,7 +788,12 @@
       signal,
     });
     throwIfAborted(signal);
-    return { ...detected, ...recognition };
+    const rawPathText = recognition.path?.text || '';
+    const correction = vocabularyCorrector?.correctWords?.(recognition.path?.words || []);
+    const path = correction
+      ? { ...recognition.path, text: normalize(correction.words.join(' ')), words: correction.words }
+      : recognition.path;
+    return { ...detected, ...recognition, path, rawPathText, corrections: correction?.corrections || [] };
   }
 
   global.SpellOcrCore = {
@@ -599,6 +801,9 @@
     clean,
     words,
     normalize,
+    vocabularySignature,
+    createVocabularyNgramIndex,
+    createVocabularyCorrector,
     selectPath,
     recognizeLineImages,
     runRecognizeVariants,
