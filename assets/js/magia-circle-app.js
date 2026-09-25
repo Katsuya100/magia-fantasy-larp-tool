@@ -102,6 +102,7 @@
   let analysisWorker = null;
   let analysisPending = null;
   let activeAnalysisJob = null;
+  let activeOcrRun = Promise.resolve();
   let nextAnalysisJobId = 0;
   let userStartedImageAction = false;
   let cameraStream = null;
@@ -431,10 +432,11 @@
   }
 
   function drawOverlay() {
-    overlayCanvas.width = captureCanvas.width;
-    overlayCanvas.height = captureCanvas.height;
+    const scale = Math.min(1, 1200 / Math.max(captureCanvas.width, captureCanvas.height, 1));
+    overlayCanvas.width = Math.max(1, Math.round(captureCanvas.width * scale));
+    overlayCanvas.height = Math.max(1, Math.round(captureCanvas.height * scale));
     overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-    if (captureCanvas.width && captureCanvas.height) overlayContext.drawImage(captureCanvas, 0, 0);
+    if (captureCanvas.width && captureCanvas.height) overlayContext.drawImage(captureCanvas, 0, 0, overlayCanvas.width, overlayCanvas.height);
     if (!detectedPaths) return;
     overlayContext.save();
     overlayContext.lineWidth = Math.max(2, overlayCanvas.width / 420);
@@ -447,8 +449,8 @@
         for (let index = 0; index < samples; index += 1) {
           const theta = index / samples * Math.PI * 2;
         const radius = path.radii?.[index] || path.r;
-        const x = path.x + Math.cos(theta) * radius;
-        const y = path.y + Math.sin(theta) * radius;
+        const x = (path.x + Math.cos(theta) * radius) * scale;
+        const y = (path.y + Math.sin(theta) * radius) * scale;
         if (index === 0) overlayContext.moveTo(x, y);
         else overlayContext.lineTo(x, y);
       }
@@ -660,11 +662,18 @@
     return ocrPromise;
   }
 
-  async function recognizeSpell(canvas, originalFile, job) {
+  async function recognizeSpell(canvas, originalFile, sourceWasResized, job) {
     const ocr = await awaitForAnalysisJob(job, ensureGutenOcr());
     assertActiveAnalysisJob(job);
     global.__gutenLastLineImages = [];
-    const source = originalFile ? URL.createObjectURL(originalFile) : canvas.toDataURL('image/png');
+    let source;
+    if (originalFile && !sourceWasResized) {
+      source = URL.createObjectURL(originalFile);
+    } else {
+      const imageBlob = await awaitForAnalysisJob(job, new Promise(resolve => canvas.toBlob(resolve, 'image/png')));
+      if (!imageBlob) throw new Error('解析用画像を作成できませんでした。');
+      source = URL.createObjectURL(imageBlob);
+    }
     const recognition = core.run({
         detect: async () => {
           assertActiveAnalysisJob(job);
@@ -679,14 +688,15 @@
         combineLines: combineSpellLineImages,
         signal: job.signal,
       });
+    activeOcrRun = recognition.then(() => undefined, () => undefined);
+    const clearLineImages = () => { global.__gutenLastLineImages = []; };
+    recognition.then(clearLineImages, clearLineImages);
     try {
       return await awaitForAnalysisJob(job, recognition);
     } finally {
-      if (originalFile) {
-        const revokeSource = () => URL.revokeObjectURL(source);
-        if (job.signal.aborted) recognition.then(revokeSource, revokeSource);
-        else revokeSource();
-      }
+      const revokeSource = () => URL.revokeObjectURL(source);
+      if (job.signal.aborted) recognition.then(revokeSource, revokeSource);
+      else revokeSource();
     }
   }
 
@@ -824,6 +834,12 @@
       if (!isActiveAnalysisJob(job)) return;
       try {
         assertActiveAnalysisJob(job);
+        // A canceled ONNX run cannot be interrupted; wait for its underlying work
+        // to settle before replacing the shared canvas or starting another run.
+        await awaitForAnalysisJob(job, activeOcrRun);
+        assertActiveAnalysisJob(job);
+        const sourceWidth = image.naturalWidth || image.width;
+        const sourceHeight = image.naturalHeight || image.height;
         canvasFromImage(image);
         await yieldToBrowser();
         assertActiveAnalysisJob(job);
@@ -833,10 +849,17 @@
           canvasWidth: captureCanvas.width,
           canvasHeight: captureCanvas.height,
         };
+        if (image instanceof HTMLCanvasElement) {
+          image.width = 1;
+          image.height = 1;
+        } else {
+          image.removeAttribute('src');
+        }
         setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
         let recognition = null;
         try {
-          recognition = await awaitForAnalysisJob(job, recognizeSpell(captureCanvas, file, job));
+          const sourceWasResized = captureCanvas.width !== sourceWidth || captureCanvas.height !== sourceHeight;
+          recognition = await awaitForAnalysisJob(job, recognizeSpell(captureCanvas, file, sourceWasResized, job));
           assertActiveAnalysisJob(job);
         } catch (error) {
           assertActiveAnalysisJob(job);
@@ -854,6 +877,7 @@
         };
         const text = path?.text || '';
         const spellPoints = path?.points || [];
+        recognition = null;
         powerInputs.wordCount = powerCalculation.countUniqueWords(path?.words || []);
         setStatus(cameraStatus, '写し絵を受け取り、閉じたパスと環内の文字位置を調べています…', 'busy');
         await awaitForAnalysisJob(job, analyzeStructure(spellPoints, job));

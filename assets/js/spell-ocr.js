@@ -6,7 +6,7 @@
   'use strict';
 
   const config = Object.freeze({
-    maxInputSide: 0,
+    maxInputSide: 2048,
     analysisInputSide: 1400,
     detectionModelUrl: 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_det_infer.onnx',
     recognitionModelUrl: 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_rec_infer.onnx',

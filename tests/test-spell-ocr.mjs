@@ -38,7 +38,13 @@ const { splitIntoLineImages } = await import('@gutenye/ocr-common/splitIntoLineI
 class SharedImageRaw extends ImageRaw {
   static async open(path) {
     const result = await sharp(path).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    return new SharedImageRaw({ data: result.data, width: result.info.width, height: result.info.height });
+    const maxSide = core.config.maxInputSide || Math.max(result.info.width, result.info.height);
+    const scale = Math.min(1, maxSide / Math.max(result.info.width, result.info.height));
+    if (scale === 1) return new SharedImageRaw({ data: result.data, width: result.info.width, height: result.info.height });
+    const width = Math.max(1, Math.round(result.info.width * scale));
+    const height = Math.max(1, Math.round(result.info.height * scale));
+    const data = imageCore.resizeRgbaLinear(result.data, result.info.width, result.info.height, width, height);
+    return new SharedImageRaw({ data: Buffer.from(data), width, height });
   }
   async resize({ width, height }) {
     this.data = imageCore.resizeRgbaSharpContain(this.data, this.width, this.height, width, height);

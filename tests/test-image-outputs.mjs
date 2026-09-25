@@ -18,6 +18,7 @@ if (!input) {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const imagePath = resolve(input);
+await import('../assets/js/spell-ocr.js');
 const originalProcessRelease = Object.getOwnPropertyDescriptor(process, 'release');
 let transformers;
 Object.defineProperty(process, 'release', { ...originalProcessRelease, value: { ...originalProcessRelease.value, name: 'browser' } });
@@ -32,11 +33,24 @@ env.allowRemoteModels = true;
 env.backends.onnx.wasm.numThreads = 1;
 env.backends.onnx.wasm.proxy = true;
 env.backends.onnx.wasm.wasmPaths = pathToFileURL(`${resolve(here, '../node_modules/onnxruntime-web/dist')}/`).href;
-const image = await sharp(imagePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+let sourceImage = await sharp(imagePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 const imageCoreSource = await readFile(resolve(here, '../assets/js/image-analysis-core.js'), 'utf8');
 const imageContext = vm.createContext({});
 vm.runInContext(imageCoreSource, imageContext, { filename: 'image-analysis-core.js' });
 const imageCore = imageContext.ImageAnalysisCore;
+const naturalWidth = sourceImage.info.width;
+const naturalHeight = sourceImage.info.height;
+const inputLimit = globalThis.SpellOcrCore.config.maxInputSide || Math.max(naturalWidth, naturalHeight);
+const inputScale = Math.min(1, inputLimit / Math.max(naturalWidth, naturalHeight));
+const canvasWidth = Math.max(1, Math.round(naturalWidth * inputScale));
+const canvasHeight = Math.max(1, Math.round(naturalHeight * inputScale));
+const image = inputScale < 1
+  ? {
+    data: Buffer.from(imageCore.resizeRgbaLinear(sourceImage.data, naturalWidth, naturalHeight, canvasWidth, canvasHeight)),
+    info: { ...sourceImage.info, width: canvasWidth, height: canvasHeight },
+  }
+  : sourceImage;
+sourceImage = null;
 let rgba = image.data;
 let width = image.info.width;
 let height = image.info.height;
@@ -101,7 +115,7 @@ if (renderPaths) {
 if (pathsOnly) {
   console.log(JSON.stringify({
     input: imagePath,
-    image: { width: image.info.width, height: image.info.height },
+    image: { width: image.info.width, height: image.info.height, naturalWidth, naturalHeight },
     pathOverlay,
     circle: {
       outer: { x: paths.outer?.x, y: paths.outer?.y, radius: paths.outer?.r, coverage: paths.outer?.coverage, circleAccuracy: paths.outer?.circleAccuracy },
@@ -171,7 +185,7 @@ const powerLabels = {
 
 const output = {
   input: imagePath,
-  image: { width: image.info.width, height: image.info.height },
+  image: { width: image.info.width, height: image.info.height, naturalWidth, naturalHeight },
   ...(pathOverlay ? { pathOverlay } : {}),
   spell: { text: spell.text, words: spell.words, points: spell.points, lines: spell.lines, rawCandidates: spell.rawCandidates, candidates: spell.candidates },
   process: {
