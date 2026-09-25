@@ -13,6 +13,37 @@
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
   const ATTRIBUTES = global.AttributeScoringCore.attributes;
   const allocateWholePercentages = global.AttributeScoringCore.allocateWholePercentages;
+
+  function countDictionaryEntries(text) {
+    return String(text || '').split(/\r?\n/).filter(line => /^[a-z]+$/i.test(line.trim())).length;
+  }
+
+  function isValidVocabularyIndex(index) {
+    return index?.version === 2 && typeof index.signature === 'string' &&
+      Array.isArray(index.words) && index.words.length >= 100000 &&
+      Array.isArray(index.bigrams) && index.bigrams.length > 100 &&
+      Array.isArray(index.trigrams) && index.trigrams.length > 100 &&
+      Array.isArray(index.bigramCounts) && index.bigramCounts.length === index.words.length &&
+      Array.isArray(index.trigramCounts) && index.trigramCounts.length === index.words.length;
+  }
+
+  async function validateOcrCacheEntry(url, response) {
+    if (url !== core.config.dictionaryUrl) return true;
+    const entries = (await response.text()).split(/\r?\n/).filter(line => line.trim());
+    return entries.length >= 1000 && entries.every(entry => entry.length <= 4);
+  }
+
+  async function validateKotodamaCacheEntry(url, response) {
+    if (url === core.config.commonWordsUrl) return countDictionaryEntries(await response.text()) >= 100000;
+    if (url === core.config.forbiddenWordsUrl) return countDictionaryEntries(await response.text()) >= 100;
+    if (url === KOTODAMA_NGRAM_INDEX_CACHE_URL) {
+      try {
+        return isValidVocabularyIndex(await response.json());
+      } catch { return false; }
+    }
+    return true;
+  }
+
   const DEFAULT_SHAPE_SCORES = Object.freeze({ debuff: .25, attack: .25, defense: .25, support: .25 });
   const diagnostics = global.location?.search && new URLSearchParams(global.location.search).has('diagnostics')
     ? { image: null, spell: null, circle: null, attribute: null, sigil: null, power: null }
@@ -125,6 +156,7 @@
   const ocrCache = global.ModelCache.create({
     name: 'magia-circle-ocr-models-v1',
     onCacheError: cacheError,
+    validate: validateOcrCacheEntry,
     onProgress: info => {
       if (info.status === 'cache') showBusyMask('魔導司書が完成写本の控えを開いている', 'すでに写し終えた頁を、静かに卓上へ広げている。');
       if (info.status === 'download') showBusyMask('魔導司書が遠い書庫へ向かっている', '星明かりの回廊を渡り、外典の束を一冊ずつ運んでいる。');
@@ -137,7 +169,11 @@
   });
   // Keep the Transformers.js cache name so earlier visits remain reusable.
   const embeddingCache = global.ModelCache.create({ name: 'transformers-cache', onCacheError: cacheError });
-  const kotodamaDictionaryCache = global.ModelCache.create({ name: 'magia-circle-kotodama-dictionaries-v1', onCacheError: cacheError });
+  const kotodamaDictionaryCache = global.ModelCache.create({
+    name: 'magia-circle-kotodama-dictionaries-v1',
+    onCacheError: cacheError,
+    validate: validateKotodamaCacheEntry,
+  });
   let structureReady = false;
   let spellReady = false;
   let detailsTapCount = 0;
@@ -974,22 +1010,29 @@
             if (cachedIndexResponse) {
               try {
                 const cachedIndex = await cachedIndexResponse.json();
-                if (cachedIndex.version === 2 && cachedIndex.signature === signature && Array.isArray(cachedIndex.words)) {
+                if (isValidVocabularyIndex(cachedIndex) && cachedIndex.signature === signature) {
                   index = cachedIndex;
+                } else {
+                  await kotodamaDictionaryCache.delete(KOTODAMA_NGRAM_INDEX_CACHE_URL);
                 }
               } catch (error) {
+                await kotodamaDictionaryCache.delete(KOTODAMA_NGRAM_INDEX_CACHE_URL);
                 console.warn('文字列索引の控えを読み取れませんでした。', error);
               }
             }
             if (!index) {
               await yieldToBrowser();
               index = core.createVocabularyNgramIndex(commonText, forbiddenText);
+              const candidate = core.createVocabularyCorrector(index);
+              if (!isValidVocabularyIndex(index) || candidate.size < 100000) {
+                throw new Error('一般語彙辞書に使用できる単語が不足しています。');
+              }
               await kotodamaDictionaryCache.put(KOTODAMA_NGRAM_INDEX_CACHE_URL, new Response(JSON.stringify(index), {
                 headers: { 'content-type': 'application/json; charset=utf-8' },
               }));
             }
             vocabularyCorrector = core.createVocabularyCorrector(index);
-            if (!vocabularyCorrector.size) throw new Error('一般語彙辞書に使用できる単語がありません。');
+            if (vocabularyCorrector.size < 100000) throw new Error('一般語彙辞書に使用できる単語が不足しています。');
           } catch (error) {
             vocabularyCorrector = null;
             kotodamaDictionariesUnavailable = true;

@@ -16,22 +16,28 @@ function createStorage() {
       const stored = entries.get(name);
       return {
         async match(url) { return stored.get(url)?.clone(); },
+        async delete(url) { return stored.delete(url); },
         async put(url, response) {
           stored.set(url, new Response(await response.arrayBuffer(), { headers: response.headers }));
           writes += 1;
         },
       };
     },
+    seed(name, url, response) {
+      if (!entries.has(name)) entries.set(name, new Map());
+      entries.get(name).set(url, response.clone());
+    },
   };
 }
 
-function createCache({ storage = createStorage(), fetch, progress = [], errors = [] }) {
+function createCache({ storage = createStorage(), fetch, progress = [], errors = [], validate }) {
   const context = vm.createContext({ caches: storage, fetch, Response, Blob });
   vm.runInContext(source, context, { filename: 'model-cache.js' });
   return context.ModelCache.create({
     name: 'test-models-v1',
     onProgress: event => progress.push(event),
     onCacheError: error => errors.push(error),
+    validate,
   });
 }
 
@@ -140,5 +146,40 @@ const unknown = createCache({ progress: unknownProgress, fetch: async () => stre
 assert.equal(await (await unknown.load(modelUrl)).text(), 'no-length');
 assert.deepEqual(unknownProgress.filter(event => event.status === 'progress').map(event => [event.loaded, event.total]), [[2, 0], [9, 0]]);
 assert.equal(unknownProgress.at(-1).status, 'done');
+
+// A previously stored HTTP 200 error page is evicted instead of reused.
+const poisonedStorage = createStorage();
+poisonedStorage.seed('test-models-v1', modelUrl, new Response('error page', {
+  headers: { 'content-type': 'text/plain' },
+}));
+const poisonedProgress = [];
+const repaired = createCache({
+  storage: poisonedStorage,
+  progress: poisonedProgress,
+  validate: async (_url, response) => (await response.text()) === 'valid-dictionary',
+  fetch: async () => new Response('valid-dictionary', { headers: { 'content-type': 'text/plain' } }),
+});
+assert.equal(await (await repaired.load(modelUrl)).text(), 'valid-dictionary');
+assert.deepEqual(poisonedProgress.map(event => event.status), ['invalid-cache', 'download', 'progress', 'done']);
+assert.equal(poisonedStorage.writes, 1);
+
+// A malformed successful response remains retryable and is never cached.
+const malformedStorage = createStorage();
+let malformedAttempts = 0;
+const malformed = createCache({
+  storage: malformedStorage,
+  validate: async (_url, response) => (await response.text()) === 'valid-dictionary',
+  fetch: async () => {
+    malformedAttempts += 1;
+    return malformedAttempts === 1
+      ? new Response('<html>temporary CDN error</html>', { headers: { 'content-type': 'text/html' } })
+      : new Response('valid-dictionary', { headers: { 'content-type': 'text/plain' } });
+  },
+});
+await assert.rejects(malformed.load(modelUrl), /検証/);
+assert.equal(malformedStorage.writes, 0);
+assert.equal(await (await malformed.load(modelUrl)).text(), 'valid-dictionary');
+assert.equal(malformedAttempts, 2);
+assert.equal(malformedStorage.writes, 1);
 
 console.log('PASS_MODEL_CACHE');

@@ -2,7 +2,7 @@
   'use strict';
 
   // Cache complete responses only. Failed/partial transfers remain retryable.
-  function create({ name, onProgress = () => {}, onCacheError = () => {} }) {
+  function create({ name, onProgress = () => {}, onCacheError = () => {}, validate = null }) {
     let cachePromise;
     const pending = new Map();
     async function open() {
@@ -21,23 +21,46 @@
         try { await (await open())?.put(url, response); }
         catch (error) { onCacheError(error); }
       },
+      async delete(url) {
+        try { return await (await open())?.delete(url) ?? false; }
+        catch (error) { onCacheError(error); return false; }
+      },
       async load(url) {
         if (!pending.has(url)) {
           const operation = (async () => {
-            const stored = await cache.match(url);
-            if (stored) {
+            const isValid = async response => {
+              if (!response || !response.ok || response.status !== 200) return false;
+              if (/text\/html/i.test(response.headers.get('content-type') || '')) return false;
+              const body = response.clone().body;
+              if (!body) return false;
+              const reader = body.getReader();
+              try {
+                const first = await reader.read();
+                if (first.done || !first.value?.byteLength) return false;
+              } finally {
+                reader.cancel().catch(() => {});
+                reader.releaseLock();
+              }
+              return validate ? Boolean(await validate(url, response.clone())) : true;
+            };
+            let stored = await cache.match(url);
+            if (stored && await isValid(stored)) {
               onProgress({ status: 'cache', url });
               return stored;
             }
+            if (stored) {
+              await cache.delete(url);
+              onProgress({ status: 'invalid-cache', url });
+            }
             onProgress({ status: 'download', url });
             const response = await global.fetch(url);
-            if (!response.ok) throw new Error(`外典を読み込めません: ${response.status}`);
+            if (!response.ok || response.status !== 200) throw new Error(`外典を読み込めません: ${response.status}`);
             const total = Number(response.headers.get('content-length')) || 0;
             let body;
+            let loaded = 0;
             if (response.body) {
               const reader = response.body.getReader();
               const chunks = [];
-              let loaded = 0;
               try {
                 while (true) {
                   const { done, value } = await reader.read();
@@ -50,8 +73,11 @@
               body = new Blob(chunks);
             } else {
               body = await response.blob();
+              loaded = body.size;
             }
             const complete = new Response(body, { headers: { 'Content-Type': response.headers.get('content-type') || 'application/octet-stream' } });
+            if (!loaded) throw new Error('外典の内容が空でした。');
+            if (!await isValid(complete)) throw new Error('外典の内容を検証できませんでした。');
             await cache.put(url, complete.clone());
             onProgress({ status: 'done', url });
             return complete;
