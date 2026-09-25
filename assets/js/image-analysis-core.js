@@ -41,21 +41,19 @@
         }
       }
     }
-    const output = new Uint8ClampedArray(targetWidth * targetHeight * channels);
+    const output = new Float64Array(targetWidth * targetHeight * channels);
     for (let y = 0; y < targetHeight; y += 1) {
       for (let x = 0; x < targetWidth; x += 1) {
         const outputOffset = (y * targetWidth + x) * channels;
-        for (let channel = 0; channel < channels; channel += 1) {
-          let value = 0;
-          for (const [sourceY, weight] of vertical[y]) {
-            const inputOffset = (sourceY * targetWidth + x) * channels;
-            value += intermediate[inputOffset + channel] * weight;
+        for (const [sourceY, weight] of vertical[y]) {
+          const inputOffset = (sourceY * targetWidth + x) * channels;
+          for (let channel = 0; channel < channels; channel += 1) {
+            output[outputOffset + channel] += intermediate[inputOffset + channel] * weight;
           }
-          output[outputOffset + channel] = value;
         }
       }
     }
-    return output;
+    return Uint8ClampedArray.from(output);
   }
 
   function lanczos3(value) {
@@ -67,7 +65,6 @@
   }
 
   function resizeRgbaSharpContain(buffer, width, height, targetWidth, targetHeight) {
-    if (width === targetWidth && height === targetHeight) return new Uint8ClampedArray(buffer);
     const scale = Math.min(targetWidth / width, targetHeight / height);
     const contentWidth = Math.max(1, Math.round(width * scale));
     const contentHeight = Math.max(1, Math.round(height * scale));
@@ -100,25 +97,29 @@
         }
       }
     }
+    const content = new Float64Array(contentWidth * contentHeight * 4);
+    for (let y = 0; y < contentHeight; y += 1) {
+      for (let x = 0; x < contentWidth; x += 1) {
+        for (let channel = 0; channel < 4; channel += 1) {
+          let value = 0;
+          for (const [sourceY, weight] of vertical[y]) value += intermediate[(sourceY * contentWidth + x) * 4 + channel] * weight;
+          content[(y * contentWidth + x) * 4 + channel] = value;
+        }
+      }
+    }
     const output = new Uint8ClampedArray(targetWidth * targetHeight * 4);
     for (let index = 3; index < output.length; index += 4) output[index] = 255;
     const left = Math.floor((targetWidth - contentWidth) / 2);
     const top = Math.floor((targetHeight - contentHeight) / 2);
     for (let y = 0; y < contentHeight; y += 1) {
-      for (let x = 0; x < contentWidth; x += 1) {
-        const outputOffset = ((top + y) * targetWidth + left + x) * 4;
-        for (let channel = 0; channel < 4; channel += 1) {
-          let value = 0;
-          for (const [sourceY, weight] of vertical[y]) value += intermediate[(sourceY * contentWidth + x) * 4 + channel] * weight;
-          output[outputOffset + channel] = value;
-        }
-      }
+      const sourceStart = y * contentWidth * 4;
+      const targetStart = ((top + y) * targetWidth + left) * 4;
+      output.set(Uint8ClampedArray.from(content.subarray(sourceStart, sourceStart + contentWidth * 4)), targetStart);
     }
     return output;
   }
 
   function resizeRgbaSharpLinear(buffer, width, height, targetWidth, targetHeight) {
-    if (width === targetWidth && height === targetHeight) return new Uint8ClampedArray(buffer);
     const scale = Math.max(targetWidth / width, targetHeight / height);
     const resizedWidth = Math.max(1, Math.round(width * scale));
     const resizedHeight = Math.max(1, Math.round(height * scale));
@@ -154,7 +155,7 @@
         }
       }
     }
-    const output = new Uint8ClampedArray(targetWidth * targetHeight * 4);
+    const output = new Float64Array(targetWidth * targetHeight * 4);
     for (let y = 0; y < targetHeight; y += 1) {
       for (let x = 0; x < targetWidth; x += 1) {
         for (let channel = 0; channel < 4; channel += 1) {
@@ -164,7 +165,7 @@
         }
       }
     }
-    return output;
+    return Uint8ClampedArray.from(output);
   }
 
   function makeGrayImage(buffer, width, height, maxSide = 620) {

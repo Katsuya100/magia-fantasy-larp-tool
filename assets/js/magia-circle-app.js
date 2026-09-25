@@ -109,9 +109,7 @@
   let nextAnalysisJobId = 0;
   let userStartedImageAction = false;
   let cameraStream = null;
-  let textDetectorPromise = null;
-  let releaseOcrCvResources = null;
-  let ocrCvResourcesTracked = false;
+  let ocrPromise = null;
   let recognizerPromise = null;
   let embeddingModulePromise = null;
   let extractorPromise = null;
@@ -213,31 +211,12 @@
     progressLog.append(entry);
   }
 
-  function releaseAnalysisSource(job) {
-    if (job.sourceUrl) {
-      URL.revokeObjectURL(job.sourceUrl);
-      job.sourceUrl = null;
-    }
-    const image = job.sourceImage;
-    if (!image) return;
-    image.onload = null;
-    image.onerror = null;
-    if (image instanceof HTMLCanvasElement) {
-      image.width = 1;
-      image.height = 1;
-    } else {
-      image.removeAttribute('src');
-    }
-    job.sourceImage = null;
-  }
-
   function cancelActiveAnalysis(reason) {
     const job = activeAnalysisJob;
     if (!job) return;
 
     job.controller.abort(makeAnalysisAbortError(`${reason}ため、解析を中断しました。`));
     activeAnalysisJob = null;
-    releaseAnalysisSource(job);
     if (analysisPending?.job === job) {
       const pending = analysisPending;
       analysisPending = null;
@@ -259,8 +238,6 @@
       controller,
       signal: controller.signal,
       fileName: file?.name || '撮影した写し絵',
-      sourceUrl: null,
-      sourceImage: null,
     };
     activeAnalysisJob = job;
     return job;
@@ -368,12 +345,6 @@
       pending.fallback(new Error(`画像処理の眼を呼び出せませんでした。${detail}`));
     });
     return analysisWorker;
-  }
-
-  function disposeTensors(tensors) {
-    for (const tensor of new Set(Object.values(tensors || {}))) {
-      try { tensor?.dispose?.(); } catch (error) { console.warn('解析用テンソルを解放できませんでした。', error); }
-    }
   }
 
   function scalePaths(paths, factor) {
@@ -591,33 +562,23 @@
     assertActiveAnalysisJob(job);
     const height = 48;
     const width = Math.max(48, Math.min(960, Math.round(canvas.width / Math.max(1, canvas.height) * height)));
-    let resized = imageAnalysis.resizeRgbaSharpLinear(canvas.data, canvas.width, canvas.height, width, height);
+    const resized = imageAnalysis.resizeRgbaSharpLinear(canvas.data, canvas.width, canvas.height, width, height);
     const pixels = width * height;
-    let values = new Float32Array(pixels * 3);
+    const values = new Float32Array(pixels * 3);
     for (let index = 0; index < pixels; index += 1) {
       const offset = index * 4;
       values[index] = resized[offset + 2] / 255;
       values[pixels + index] = resized[offset + 1] / 255;
       values[pixels * 2 + index] = resized[offset] / 255;
     }
-    resized = null;
     await yieldToBrowser();
     assertActiveAnalysisJob(job);
-    const input = new ort.Tensor('float32', values, [1, 3, height, width]);
-    values = null;
-    let outputs;
-    try {
-      outputs = await session.run({ [session.inputNames[0]]: input });
-      assertActiveAnalysisJob(job);
-      const output = outputs[session.outputNames[0]];
-      const decoded = core.decodeGreedyCtcDetailed(output, dictionary);
-      return inferPixelSpaces
-        ? { text: decoded.text, spacingText: core.insertSpacesAtPixelGaps(canvas, decoded) }
-        : decoded.text;
-    } finally {
-      disposeTensors({ input });
-      disposeTensors(outputs);
-    }
+    const output = (await awaitForAnalysisJob(job, session.run({ [session.inputNames[0]]: new ort.Tensor('float32', values, [1, 3, height, width]) })))[session.outputNames[0]];
+    assertActiveAnalysisJob(job);
+    const decoded = core.decodeGreedyCtcDetailed(output, dictionary);
+    return inferPixelSpaces
+      ? { text: decoded.text, spacingText: core.insertSpacesAtPixelGaps(canvas, decoded) }
+      : decoded.text;
   }
 
   async function recognizeBrowserLineVariants(line, job) {
@@ -631,55 +592,15 @@
     });
   }
 
-  async function ensureTextDetector() {
-    if (textDetectorPromise) return textDetectorPromise;
-    textDetectorPromise = (async () => {
+  async function ensureGutenOcr() {
+    if (ocrPromise) return ocrPromise;
+    ocrPromise = (async () => {
       const cvModule = await import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm');
       const cv = cvModule.default ?? cvModule;
       if (!cv.Mat) await new Promise(resolve => {
         const previous = cv.onRuntimeInitialized;
         cv.onRuntimeInitialized = () => { previous?.(); resolve(); };
       });
-      if (!ocrCvResourcesTracked) {
-        const cvResources = new Set();
-        const trackCvResource = resource => {
-          if (!resource || typeof resource.delete !== 'function' || cvResources.has(resource)) return resource;
-          const dispose = resource.delete;
-          try {
-            resource.delete = function (...args) {
-              cvResources.delete(resource);
-              return dispose.apply(this, args);
-            };
-            cvResources.add(resource);
-          } catch {}
-          return resource;
-        };
-        const trackConstructor = name => {
-          const Constructor = cv[name];
-          if (typeof Constructor !== 'function') return;
-          cv[name] = new Proxy(Constructor, {
-            construct(target, args) { return trackCvResource(Reflect.construct(target, args, target)); },
-          });
-        };
-        for (const name of ['Mat', 'MatVector', 'Point', 'Size', 'Scalar']) trackConstructor(name);
-        const matVectorGet = cv.MatVector?.prototype?.get;
-        if (matVectorGet) {
-          cv.MatVector.prototype.get = function (...args) { return trackCvResource(matVectorGet.apply(this, args)); };
-        }
-        for (const name of ['matFromArray', 'getPerspectiveTransform', 'getRotationMatrix2D', 'minAreaRect']) {
-          const factory = cv[name];
-          if (typeof factory === 'function') {
-            cv[name] = function (...args) { return trackCvResource(factory.apply(cv, args)); };
-          }
-        }
-        releaseOcrCvResources = () => {
-          for (const resource of [...cvResources].reverse()) {
-            try { resource.delete(); } catch { cvResources.delete(resource); }
-          }
-          cvResources.clear();
-        };
-        ocrCvResourcesTracked = true;
-      }
       cv.matFromImageData = imageData => {
         const data = imageData instanceof ImageData ? imageData : new ImageData(Uint8ClampedArray.from(imageData.data), imageData.width, imageData.height);
         const mat = new cv.Mat(data.height, data.width, cv.CV_8UC4);
@@ -706,104 +627,64 @@
         .replace('from"/npm/js-clipper@1.0.1/+esm"', 'from"https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm"')
         .replace('let v;', 'let v=BrowserLineImage;');
       const splitUrl = URL.createObjectURL(new Blob([patchedSource], { type: 'text/javascript' }));
-      let splitModule;
-      try { splitModule = await import(splitUrl); }
-      finally { URL.revokeObjectURL(splitUrl); }
-      const { splitIntoLineImages } = splitModule;
+      const { splitIntoLineImages: baseSplitIntoLineImages } = await import(splitUrl);
+      URL.revokeObjectURL(splitUrl);
+      const splitIntoLineImages = async (...args) => {
+        const lineImages = await baseSplitIntoLineImages(...args);
+        global.__gutenLastLineImages = lineImages;
+        return lineImages;
+      };
       const ort = await import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`);
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = 1;
       ort.env.wasm.proxy = true;
+      const { default: Ocr } = await import('https://cdn.jsdelivr.net/npm/@gutenye/ocr-browser@1.4.9/+esm');
+      const common = await import('https://cdn.jsdelivr.net/npm/@gutenye/ocr-common@1.4.9/+esm');
       class BrowserImageRaw {
-        constructor({ data, width, height }) { this.data = data instanceof Uint8ClampedArray ? data : Uint8ClampedArray.from(data); this.width = width; this.height = height; }
+        constructor({ data, width, height }) { this.data = Uint8ClampedArray.from(data); this.width = width; this.height = height; }
         async resize({ width, height }) {
           return new BrowserImageRaw({ data: imageAnalysis.resizeRgbaSharpContain(this.data, this.width, this.height, width, height), width, height });
         }
         async write() {}
         async drawBox() { return this; }
         static async open(url) {
-          if (url instanceof HTMLCanvasElement) {
-            return new BrowserImageRaw(url.getContext('2d').getImageData(0, 0, url.width, url.height));
-          }
-          const image = new Image();
-          let canvas;
-          try {
-            image.src = url;
-            await image.decode();
-            canvas = document.createElement('canvas'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
-            canvas.getContext('2d').drawImage(image, 0, 0);
-            return new BrowserImageRaw(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height));
-          } finally {
-            if (canvas) { canvas.width = 1; canvas.height = 1; }
-            image.removeAttribute('src');
-          }
+          const image = new Image(); image.src = url; await image.decode();
+          const canvas = document.createElement('canvas'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+          canvas.getContext('2d').drawImage(image, 0, 0);
+          return new BrowserImageRaw(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height));
         }
       }
-      // Only text boxes are needed here; the app handles line recognition with its shared session.
-      const detectionSession = await ort.InferenceSession.create(await (await ocrCache.load(core.config.detectionModelUrl)).arrayBuffer());
-      return {
-        async detect(source) {
-          let image;
-          let inputImage;
-          let outputImage;
-          let input;
-          let outputs;
-          try {
-            image = await BrowserImageRaw.open(source);
-            const width = Math.max(32, Math.ceil(image.width / 32) * 32);
-            const height = Math.max(32, Math.ceil(image.height / 32) * 32);
-            inputImage = width === image.width && height === image.height
-              ? image
-              : await image.resize({ width, height });
-            const pixels = inputImage.width * inputImage.height;
-            const values = new Float32Array(pixels * 3);
-            for (let index = 0; index < pixels; index += 1) {
-              const offset = index * 4;
-              values[index] = inputImage.data[offset + 2] / 255;
-              values[pixels + index] = inputImage.data[offset + 1] / 255;
-              values[pixels * 2 + index] = inputImage.data[offset] / 255;
-            }
-            input = new ort.Tensor('float32', values, [1, 3, inputImage.height, inputImage.width]);
-            outputs = await detectionSession.run({ [detectionSession.inputNames[0]]: input });
-            const modelOutput = outputs[detectionSession.outputNames[0]];
-            const outputHeight = modelOutput.dims[2];
-            const outputWidth = modelOutput.dims[3];
-            const data = new Uint8ClampedArray(outputWidth * outputHeight * 4);
-            for (let index = 0; index < modelOutput.data.length; index += 1) {
-              const value = modelOutput.data[index] > 0.03 ? 255 : 0;
-              const offset = index * 4;
-              data[offset] = value;
-              data[offset + 1] = value;
-              data[offset + 2] = value;
-              data[offset + 3] = 255;
-            }
-            outputImage = new BrowserImageRaw({ data, width: outputWidth, height: outputHeight });
-            const lineImages = await splitIntoLineImages(outputImage, inputImage);
-            return { lineImages, resizedImageWidth: inputImage.width, resizedImageHeight: inputImage.height };
-          } finally {
-            disposeTensors(outputs);
-            disposeTensors({ input });
-            if (image) image.data = new Uint8ClampedArray(0);
-            if (inputImage) inputImage.data = new Uint8ClampedArray(0);
-            if (outputImage) outputImage.data = new Uint8ClampedArray(0);
-            releaseOcrCvResources?.();
-          }
+      class BrowserFileUtils { static async read(url) { return (await ocrCache.load(url)).text(); } }
+      const CachedInferenceSession = {
+        async create(url, options) {
+          return ort.InferenceSession.create(await (await ocrCache.load(url)).arrayBuffer(), options);
         },
       };
+      common.registerBackend({ FileUtils: BrowserFileUtils, ImageRaw: BrowserImageRaw, InferenceSession: CachedInferenceSession, splitIntoLineImages, defaultModels: { detectionPath: core.config.detectionModelUrl, recognitionPath: core.config.recognitionModelUrl, dictionaryPath: core.config.dictionaryUrl } });
+      return Ocr.create({ models: { detectionPath: core.config.detectionModelUrl, recognitionPath: core.config.recognitionModelUrl, dictionaryPath: core.config.dictionaryUrl }, recognitionThreshold: 0 });
     })();
-    textDetectorPromise.catch(() => { textDetectorPromise = null; });
-    return textDetectorPromise;
+    ocrPromise.catch(() => { ocrPromise = null; });
+    return ocrPromise;
   }
 
-  async function recognizeSpell(canvas, job) {
-    const detector = await awaitForAnalysisJob(job, ensureTextDetector());
+  async function recognizeSpell(canvas, originalFile, sourceWasResized, job) {
+    const ocr = await awaitForAnalysisJob(job, ensureGutenOcr());
     assertActiveAnalysisJob(job);
+    global.__gutenLastLineImages = [];
+    let source;
+    if (originalFile && !sourceWasResized) {
+      source = URL.createObjectURL(originalFile);
+    } else {
+      const imageBlob = await awaitForAnalysisJob(job, new Promise(resolve => canvas.toBlob(resolve, 'image/png')));
+      if (!imageBlob) throw new Error('解析用画像を作成できませんでした。');
+      source = URL.createObjectURL(imageBlob);
+    }
     const recognition = core.run({
         detect: async () => {
           assertActiveAnalysisJob(job);
-          const detected = await detector.detect(canvas);
+          const detected = await ocr.detect(source);
           assertActiveAnalysisJob(job);
-          const lineImages = detected.lineImages || [];
+          const lineImages = global.__gutenLastLineImages || detected.lineImages || [];
           const sourcePixels = captureContext.getImageData(0, 0, captureCanvas.width, captureCanvas.height);
           const ringLines = lineImages.length <= 8 ? core.unwrapRingSectors(sourcePixels) : [];
           return { ...detected, lineImages: [...lineImages, ...ringLines] };
@@ -814,7 +695,15 @@
         signal: job.signal,
       });
     activeOcrRun = recognition.then(() => undefined, () => undefined);
-    return await awaitForAnalysisJob(job, recognition);
+    const clearLineImages = () => { global.__gutenLastLineImages = []; };
+    recognition.then(clearLineImages, clearLineImages);
+    try {
+      return await awaitForAnalysisJob(job, recognition);
+    } finally {
+      const revokeSource = () => URL.revokeObjectURL(source);
+      if (job.signal.aborted) recognition.then(revokeSource, revokeSource);
+      else revokeSource();
+    }
   }
 
   async function ensureExtractor(job) {
@@ -869,26 +758,15 @@
     assertActiveAnalysisJob(job);
     await yieldToBrowser();
     assertActiveAnalysisJob(job);
-    const embedded = await model([`query: ${text}`, ...passages.map(description => `passage: ${description}`)], { pooling: 'mean', normalize: true });
-    let similarities;
-    try {
-      assertActiveAnalysisJob(job);
-      const vectorSize = embedded.dims.at(-1);
-      const data = embedded.data;
-      const query = data.subarray(0, vectorSize);
-      let vectorIndex = 1;
-      similarities = keys.map(key => {
-        const values = ATTRIBUTES[key].descriptions.map(() => {
-          const start = vectorIndex * vectorSize;
-          vectorIndex += 1;
-          return cosine(query, data.subarray(start, start + vectorSize));
-        }).sort((a, b) => b - a);
-        const similarity = values.slice(0, 2).reduce((sum, value) => sum + value, 0) / Math.min(2, values.length);
-        return [key, similarity];
-      });
-    } finally {
-      disposeTensors({ embedded });
-    }
+    const embedded = await awaitForAnalysisJob(job, model([`query: ${text}`, ...passages.map(description => `passage: ${description}`)], { pooling: 'mean', normalize: true }));
+    assertActiveAnalysisJob(job);
+    const [query, ...vectors] = embedded.tolist();
+    const similarities = keys.map((key, keyIndex) => {
+      const rows = vectors.slice(keyIndex * ATTRIBUTES[key].descriptions.length, (keyIndex + 1) * ATTRIBUTES[key].descriptions.length);
+      const values = rows.map(vector => cosine(query, vector)).sort((a, b) => b - a);
+      const similarity = values.slice(0, 2).reduce((sum, value) => sum + value, 0) / Math.min(2, values.length);
+      return [key, similarity];
+    });
     const scores = similarities.slice().sort((a, b) => b[1] - a[1]);
     const rates = global.AttributeScoringCore.normalizeSimilarities(scores).sort((a, b) => b[1] - a[1]);
     const [top] = rates;
@@ -942,10 +820,6 @@
     captureCanvas.classList.add('hidden');
     cameraVideo.classList.add('hidden');
     overlayContext.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-    captureCanvas.width = 1;
-    captureCanvas.height = 1;
-    overlayCanvas.width = 1;
-    overlayCanvas.height = 1;
     setImageBusy(false);
     stage.classList.remove('captured');
     stageEmpty.hidden = false;
@@ -961,15 +835,8 @@
     setStatus(modelStatus, '画像から紋の情報を準備しています…', 'busy');
     const image = sourceImage || new Image();
     const source = file ? URL.createObjectURL(file) : null;
-    job.sourceImage = image;
-    job.sourceUrl = source;
     const processImage = async () => {
-      image.onload = null;
-      image.onerror = null;
-      if (job.sourceUrl) {
-        URL.revokeObjectURL(job.sourceUrl);
-        job.sourceUrl = null;
-      }
+      if (source) URL.revokeObjectURL(source);
       if (!isActiveAnalysisJob(job)) return;
       try {
         assertActiveAnalysisJob(job);
@@ -977,6 +844,8 @@
         // to settle before replacing the shared canvas or starting another run.
         await awaitForAnalysisJob(job, activeOcrRun);
         assertActiveAnalysisJob(job);
+        const sourceWidth = image.naturalWidth || image.width;
+        const sourceHeight = image.naturalHeight || image.height;
         canvasFromImage(image);
         await yieldToBrowser();
         assertActiveAnalysisJob(job);
@@ -992,11 +861,11 @@
         } else {
           image.removeAttribute('src');
         }
-        job.sourceImage = null;
         setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
         let recognition = null;
         try {
-          recognition = await awaitForAnalysisJob(job, recognizeSpell(captureCanvas, job));
+          const sourceWasResized = captureCanvas.width !== sourceWidth || captureCanvas.height !== sourceHeight;
+          recognition = await awaitForAnalysisJob(job, recognizeSpell(captureCanvas, file, sourceWasResized, job));
           assertActiveAnalysisJob(job);
         } catch (error) {
           assertActiveAnalysisJob(job);
@@ -1034,7 +903,6 @@
         activeAnalysisJob = null;
         publishDiagnostics();
       } catch (error) {
-        releaseAnalysisSource(job);
         if (!isActiveAnalysisJob(job)) return;
         if (!Number.isFinite(powerInputs.wordCount)) powerInputs.wordCount = 0;
         if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback();
@@ -1059,7 +927,7 @@
     } else {
       image.onload = processImage;
       image.onerror = () => {
-        releaseAnalysisSource(job);
+        if (source) URL.revokeObjectURL(source);
         if (!isActiveAnalysisJob(job)) return;
         activeAnalysisJob = null;
         setImageBusy(false);
@@ -1084,7 +952,7 @@
       let kotodamaDictionariesUnavailable = false;
       try {
         busyStage.textContent = '一 / 四 — 環の筆跡を読む外典';
-        await ensureTextDetector();
+        await ensureGutenOcr();
         busyStage.textContent = '二 / 四 — 呪文を読み解く外典';
         await ensureRecognizer();
         busyStage.textContent = '三 / 四 — 相を呼び覚ます外典';
