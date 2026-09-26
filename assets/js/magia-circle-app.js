@@ -1193,7 +1193,7 @@
         releaseAnalysisSource(job);
         if (!isActiveAnalysisJob(job)) return;
         if (!Number.isFinite(powerInputs.wordCount)) powerInputs.wordCount = 0;
-        if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback();
+        if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback(error);
         if (!Number.isFinite(powerInputs.circleAccuracy)) powerInputs.circleAccuracy = 0;
         if (!Number.isFinite(powerInputs.lineStraightness)) powerInputs.lineStraightness = 0;
         if (!Number.isFinite(powerInputs.ringCoverage)) powerInputs.ringCoverage = 0;
