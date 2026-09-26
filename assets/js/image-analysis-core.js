@@ -5,6 +5,38 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  // Keep a horizontal row only through its last vertical use instead of retaining a Float64 plane.
+  function resizeFromRows(sourceHeight, horizontal, vertical, output, outputWidth, outputX, outputY, createHorizontalRow) {
+    const lastUse = new Uint32Array(sourceHeight);
+    for (let targetY = 0; targetY < vertical.length; targetY += 1) {
+      for (const [sourceY] of vertical[targetY]) lastUse[sourceY] = targetY;
+    }
+
+    const rowLength = horizontal.length * 4;
+    const rowCache = new Map();
+    const verticalRow = new Float64Array(rowLength);
+    for (let targetY = 0; targetY < vertical.length; targetY += 1) {
+      verticalRow.fill(0);
+      for (const [sourceY, weight] of vertical[targetY]) {
+        let horizontalRow = rowCache.get(sourceY);
+        if (!horizontalRow) {
+          horizontalRow = new Float64Array(rowLength);
+          createHorizontalRow(sourceY, horizontalRow);
+          if (lastUse[sourceY] > targetY) rowCache.set(sourceY, horizontalRow);
+        }
+        for (let index = 0; index < rowLength; index += 1) {
+          verticalRow[index] += horizontalRow[index] * weight;
+        }
+        if (lastUse[sourceY] === targetY) rowCache.delete(sourceY);
+      }
+
+      const outputOffset = ((outputY + targetY) * outputWidth + outputX) * 4;
+      for (let index = 0; index < rowLength; index += 1) {
+        output[outputOffset + index] = verticalRow[index];
+      }
+    }
+  }
+
   // Shared by the browser and image batch so resizing uses the same triangle filter.
   function resizeRgbaLinear(buffer, width, height, targetWidth, targetHeight) {
     if (width === targetWidth && height === targetHeight) return new Uint8ClampedArray(buffer);
@@ -29,32 +61,18 @@
     };
     const horizontal = contributions(width, targetWidth);
     const vertical = contributions(height, targetHeight);
-    const intermediate = new Float64Array(targetWidth * height * channels);
-    for (let y = 0; y < height; y += 1) {
+    const output = new Uint8ClampedArray(targetWidth * targetHeight * channels);
+    resizeFromRows(height, horizontal, vertical, output, targetWidth, 0, 0, (y, row) => {
       for (let x = 0; x < targetWidth; x += 1) {
-        const outputOffset = (y * targetWidth + x) * channels;
+        const outputOffset = x * channels;
         for (const [sourceX, weight] of horizontal[x]) {
           const inputOffset = (y * width + sourceX) * channels;
           for (let channel = 0; channel < channels; channel += 1) {
-            intermediate[outputOffset + channel] += buffer[inputOffset + channel] * weight;
+            row[outputOffset + channel] += buffer[inputOffset + channel] * weight;
           }
         }
       }
-    }
-    const output = new Uint8ClampedArray(targetWidth * targetHeight * channels);
-    for (let y = 0; y < targetHeight; y += 1) {
-      for (let x = 0; x < targetWidth; x += 1) {
-        const outputOffset = (y * targetWidth + x) * channels;
-        for (let channel = 0; channel < channels; channel += 1) {
-          let value = 0;
-          for (const [sourceY, weight] of vertical[y]) {
-            const inputOffset = (sourceY * targetWidth + x) * channels;
-            value += intermediate[inputOffset + channel] * weight;
-          }
-          output[outputOffset + channel] = value;
-        }
-      }
-    }
+    });
     return output;
   }
 
@@ -90,30 +108,19 @@
     });
     const horizontal = contributions(width, contentWidth);
     const vertical = contributions(height, contentHeight);
-    const intermediate = new Float64Array(contentWidth * height * 4);
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < contentWidth; x += 1) {
-        for (let channel = 0; channel < 4; channel += 1) {
-          let value = 0;
-          for (const [sourceX, weight] of horizontal[x]) value += buffer[(y * width + sourceX) * 4 + channel] * weight;
-          intermediate[(y * contentWidth + x) * 4 + channel] = value;
-        }
-      }
-    }
     const output = new Uint8ClampedArray(targetWidth * targetHeight * 4);
     for (let index = 3; index < output.length; index += 4) output[index] = 255;
     const left = Math.floor((targetWidth - contentWidth) / 2);
     const top = Math.floor((targetHeight - contentHeight) / 2);
-    for (let y = 0; y < contentHeight; y += 1) {
+    resizeFromRows(height, horizontal, vertical, output, targetWidth, left, top, (y, row) => {
       for (let x = 0; x < contentWidth; x += 1) {
-        const outputOffset = ((top + y) * targetWidth + left + x) * 4;
         for (let channel = 0; channel < 4; channel += 1) {
           let value = 0;
-          for (const [sourceY, weight] of vertical[y]) value += intermediate[(sourceY * contentWidth + x) * 4 + channel] * weight;
-          output[outputOffset + channel] = value;
+          for (const [sourceX, weight] of horizontal[x]) value += buffer[(y * width + sourceX) * 4 + channel] * weight;
+          row[x * 4 + channel] = value;
         }
       }
-    }
+    });
     return output;
   }
 
@@ -144,26 +151,16 @@
     };
     const horizontal = contributions(width, resizedWidth, targetWidth, cropLeft);
     const vertical = contributions(height, resizedHeight, targetHeight, cropTop);
-    const intermediate = new Float64Array(targetWidth * height * 4);
-    for (let y = 0; y < height; y += 1) {
+    const output = new Uint8ClampedArray(targetWidth * targetHeight * 4);
+    resizeFromRows(height, horizontal, vertical, output, targetWidth, 0, 0, (y, row) => {
       for (let x = 0; x < targetWidth; x += 1) {
         for (let channel = 0; channel < 4; channel += 1) {
           let value = 0;
           for (const [sourceX, weight] of horizontal[x]) value += buffer[(y * width + sourceX) * 4 + channel] * weight;
-          intermediate[(y * targetWidth + x) * 4 + channel] = value;
+          row[x * 4 + channel] = value;
         }
       }
-    }
-    const output = new Uint8ClampedArray(targetWidth * targetHeight * 4);
-    for (let y = 0; y < targetHeight; y += 1) {
-      for (let x = 0; x < targetWidth; x += 1) {
-        for (let channel = 0; channel < 4; channel += 1) {
-          let value = 0;
-          for (const [sourceY, weight] of vertical[y]) value += intermediate[(sourceY * targetWidth + x) * 4 + channel] * weight;
-          output[(y * targetWidth + x) * 4 + channel] = value;
-        }
-      }
-    }
+    });
     return output;
   }
 

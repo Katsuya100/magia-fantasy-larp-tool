@@ -30,8 +30,8 @@ function createStorage() {
   };
 }
 
-function createCache({ storage = createStorage(), fetch, progress = [], errors = [], validate }) {
-  const context = vm.createContext({ caches: storage, fetch, Response, Blob });
+function createCache({ storage = createStorage(), fetch, progress = [], errors = [], validate, BlobType = Blob }) {
+  const context = vm.createContext({ caches: storage, fetch, Response, Blob: BlobType, ReadableStream });
   vm.runInContext(source, context, { filename: 'model-cache.js' });
   return context.ModelCache.create({
     name: 'test-models-v1',
@@ -59,14 +59,19 @@ function streamedResponse(parts, { withLength = true, failAfterChunks = false } 
 // A complete transfer reports real byte progress and persists a reusable copy.
 const storage = createStorage();
 const progress = [];
+let blobCreates = 0;
+class ObservedBlob extends Blob {
+  constructor(...parts) { super(...parts); blobCreates += 1; }
+}
 let downloads = 0;
 const cache = createCache({ storage, progress, fetch: async () => {
   downloads += 1;
   return streamedResponse(['model', '-bytes']);
-} });
+}, BlobType: ObservedBlob });
 assert.equal(await (await cache.load(modelUrl)).text(), 'model-bytes');
 assert.equal(downloads, 1);
 assert.equal(storage.writes, 1);
+assert.equal(blobCreates, 0, 'streamed model downloads must not be reassembled into a Blob');
 assert.deepEqual(progress.map(event => event.status), ['download', 'progress', 'progress', 'done']);
 assert.deepEqual(progress.filter(event => event.status === 'progress').map(event => [event.loaded, event.total]), [[5, 11], [11, 11]]);
 assert.ok(progress.every(event => event.url === modelUrl));

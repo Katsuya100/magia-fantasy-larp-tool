@@ -9,6 +9,11 @@
   let textDetectorPromise = null;
   let releaseOcrCvResources = null;
   let ocrCvResourcesTracked = false;
+  const ocrSessionOptions = Object.freeze({
+    executionMode: 'sequential',
+    enableCpuMemArena: false,
+    enableMemPattern: false,
+  });
   const ocrCache = global.ModelCache.create({
     name: 'magia-circle-ocr-models-v1',
     onProgress: info => {
@@ -54,7 +59,10 @@
       ort.env.wasm.proxy = false;
       let session;
       try {
-        session = await ort.InferenceSession.create(await (await ocrCache.load(core.config.recognitionModelUrl)).arrayBuffer());
+        session = await ort.InferenceSession.create(
+          await (await ocrCache.load(core.config.recognitionModelUrl)).arrayBuffer(),
+          { ...ocrSessionOptions },
+        );
         const dictionary = [...(await (await ocrCache.load(core.config.dictionaryUrl)).text()).split('\n'), ' '];
         return { ort, session, dictionary };
       } catch (error) {
@@ -87,6 +95,11 @@
     textDetectorPromise = null;
     recognizerPromise = null;
     if (releaseError) throw releaseError;
+  }
+
+  async function releaseTextDetector(detector) {
+    textDetectorPromise = null;
+    await detector?.release();
   }
 
   async function recognizeCanvas(canvas, inferPixelSpaces) {
@@ -267,10 +280,19 @@
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = 1;
       ort.env.wasm.proxy = false;
-      const detectionSession = await ort.InferenceSession.create(await (await ocrCache.load(core.config.detectionModelUrl)).arrayBuffer());
+      let detectionSession = await ort.InferenceSession.create(
+        await (await ocrCache.load(core.config.detectionModelUrl)).arrayBuffer(),
+        { ...ocrSessionOptions },
+      );
       return {
-        async release() { await detectionSession.release(); },
+        async release() {
+          if (!detectionSession) return;
+          const session = detectionSession;
+          detectionSession = null;
+          await session.release();
+        },
         async detect(source) {
+          if (!detectionSession) throw new Error('OCR検出モデルはすでに解放されています。');
           let image;
           let inputImage;
           let outputImage;
@@ -360,6 +382,10 @@
   async function recognize({ buffer, width, height }) {
     let sourcePixels = { data: new Uint8ClampedArray(buffer), width, height };
     let detector;
+    const releaseSourcePixels = () => {
+      if (sourcePixels) sourcePixels.data = new Uint8ClampedArray(0);
+      sourcePixels = null;
+    };
     try {
       detector = await ensureTextDetector();
       notify('画像の文字と環を読み取っています…');
@@ -368,8 +394,15 @@
           const detected = await detector.detect(sourcePixels);
           const lineImages = detected.lineImages || [];
           const additionalLineImages = lineImages.length <= 8
-            ? function* () { yield* core.iterateRingSectors(sourcePixels); }
+            ? function* () {
+                try { yield* core.iterateRingSectors(sourcePixels); }
+                finally { releaseSourcePixels(); }
+              }
             : null;
+          if (!additionalLineImages) releaseSourcePixels();
+          // Detection is complete; do not keep its ONNX session beside the recognizer session.
+          await releaseTextDetector(detector);
+          detector = null;
           return { ...detected, lineImages, additionalLineImages };
         },
         recognizeVariants: recognizeBrowserLineVariants,
@@ -378,10 +411,9 @@
         releaseLinePixelsAfterRecognition: true,
       });
     } finally {
-      try { if (detector) await releaseOcrModels(detector); }
+      try { await releaseOcrModels(detector); }
       finally {
-        if (sourcePixels) sourcePixels.data = new Uint8ClampedArray(0);
-        sourcePixels = null;
+        releaseSourcePixels();
       }
     }
   }

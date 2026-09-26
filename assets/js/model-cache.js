@@ -18,8 +18,12 @@
         catch (error) { onCacheError(error); return undefined; }
       },
       async put(url, response) {
-        try { await (await open())?.put(url, response); }
-        catch (error) { onCacheError(error); }
+        try {
+          const store = await open();
+          if (!store) return false;
+          await store.put(url, response);
+          return true;
+        } catch (error) { onCacheError(error); return false; }
       },
       async delete(url) {
         try { return await (await open())?.delete(url) ?? false; }
@@ -56,30 +60,59 @@
             const response = await global.fetch(url);
             if (!response.ok || response.status !== 200) throw new Error(`外典を読み込めません: ${response.status}`);
             const total = Number(response.headers.get('content-length')) || 0;
-            let body;
             let loaded = 0;
+            let streamError = null;
+            let complete;
             if (response.body) {
               const reader = response.body.getReader();
-              const chunks = [];
-              try {
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  chunks.push(value);
-                  loaded += value.byteLength;
-                  onProgress({ status: 'progress', url, loaded, total });
-                }
-              } finally { reader.releaseLock(); }
-              body = new Blob(chunks);
+              const body = new global.ReadableStream({
+                async pull(controller) {
+                  try {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                      reader.releaseLock();
+                      onProgress({ status: 'done', url });
+                      controller.close();
+                      return;
+                    }
+                    loaded += value.byteLength;
+                    onProgress({ status: 'progress', url, loaded, total });
+                    controller.enqueue(value);
+                  } catch (error) {
+                    streamError ||= error;
+                    try { reader.releaseLock(); } catch {}
+                    controller.error(error);
+                  }
+                },
+                cancel(reason) { return reader.cancel(reason); },
+              });
+              complete = new global.Response(body, {
+                status: response.status,
+                statusText: response.statusText,
+                headers: response.headers,
+              });
             } else {
-              body = await response.blob();
+              const body = await response.blob();
               loaded = body.size;
+              if (loaded) onProgress({ status: 'progress', url, loaded, total });
+              complete = new global.Response(body, { headers: response.headers });
             }
-            const complete = new Response(body, { headers: { 'Content-Type': response.headers.get('content-type') || 'application/octet-stream' } });
-            if (!loaded) throw new Error('外典の内容が空でした。');
             if (!await isValid(complete)) throw new Error('外典の内容を検証できませんでした。');
-            await cache.put(url, complete.clone());
-            onProgress({ status: 'done', url });
+            if (await cache.put(url, complete) && complete.bodyUsed) {
+              const stored = await cache.match(url);
+              if (stored) return stored;
+            }
+            if (streamError) throw streamError;
+            if (complete.bodyUsed) {
+              // CacheStorage may consume a body before rejecting a write (for example, on quota errors).
+              // Re-fetch only in that failure path so the caller still receives a readable response.
+              onProgress({ status: 'download', url });
+              const retry = await global.fetch(url);
+              if (!retry.ok || retry.status !== 200 || !await isValid(retry)) {
+                throw new Error(`外典を再読込できません: ${retry.status}`);
+              }
+              return retry;
+            }
             return complete;
           })();
           pending.set(url, operation);

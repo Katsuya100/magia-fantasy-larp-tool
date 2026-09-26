@@ -202,8 +202,6 @@
   let userStartedImageAction = false;
   let cameraStream = null;
   let embeddingModulePromise = null;
-  let extractorPromise = null;
-  let extractor = null;
   let startupPromise = null;
   let modelsReady = false;
   let cacheUnavailable = false;
@@ -708,51 +706,112 @@
     return await applyVocabularyCorrection(recognized, job);
   }
 
-  async function ensureExtractor(job) {
-    if (extractor) return extractor;
-    if (!extractorPromise) {
-      extractorPromise = (async () => {
-        if (!embeddingModulePromise) {
-          embeddingModulePromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
-          embeddingModulePromise.catch(() => { embeddingModulePromise = null; });
-        }
-        const { env, pipeline } = await embeddingModulePromise;
-        env.allowLocalModels = false;
-        env.useCustomCache = true;
-        env.customCache = embeddingCache;
-        const wasm = env.backends?.onnx?.wasm;
-        if (wasm) {
-          wasm.numThreads = 1;
-          wasm.proxy = true;
-        }
-        if (isActiveAnalysisJob(job)) setStatus(modelStatus, '呪文の相を測る準備をしています…', 'busy');
-        extractor = await pipeline('feature-extraction', MODEL_ID, {
-          device: 'wasm',
-          dtype: 'q8',
-          progress_callback: info => {
-            if (!isActiveAnalysisJob(job)) return;
-            // Transformers reports download/progress even when reading a cached file.
-            if (info.file?.endsWith('.onnx') && info.status === 'progress') {
-              showBusyMask('魔導司書が頁を読んでいる', '相の外典をひらき、言霊を一つずつ灯している…', info.progress);
-            }
-            if (info.file?.endsWith('.onnx') && info.status === 'done') {
-              showBusyMask('魔導司書が頁を読んでいる', '相の核を整えている。燭台の火が落ち着くのを待て。');
-            }
-          },
-        });
-        return extractor;
-      })();
-      extractorPromise.catch(() => { extractorPromise = null; });
+  async function embedAttributesOnMain(text, job) {
+    if (!embeddingModulePromise) {
+      embeddingModulePromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+      embeddingModulePromise.catch(() => { embeddingModulePromise = null; });
     }
-    return extractorPromise;
+    const { env, pipeline } = await embeddingModulePromise;
+    env.allowLocalModels = false;
+    env.useCustomCache = true;
+    env.customCache = embeddingCache;
+    const wasm = env.backends?.onnx?.wasm;
+    if (wasm) {
+      wasm.numThreads = 1;
+      wasm.proxy = true;
+    }
+
+    let model = null;
+    let embedding = null;
+    try {
+      model = await pipeline('feature-extraction', MODEL_ID, {
+        device: 'wasm',
+        dtype: 'q8',
+        progress_callback: info => {
+          if (!isActiveAnalysisJob(job)) return;
+          if (info.file?.endsWith('.onnx') && info.status === 'progress') {
+            showBusyMask('魔導司書が頁を読んでいる', '相の外典をひらき、言霊を一つずつ灯している…', info.progress);
+          }
+          if (info.file?.endsWith('.onnx') && info.status === 'done') {
+            showBusyMask('魔導司書が頁を読んでいる', '相の核を整えている。燭台の火が落ち着くのを待て。');
+          }
+        },
+      });
+      assertActiveAnalysisJob(job);
+      await yieldToBrowser();
+      assertActiveAnalysisJob(job);
+      embedding = await model(imagePipeline.attributeInputTexts(text), { pooling: 'mean', normalize: true });
+      return { dims: Array.from(embedding.dims), data: new Float32Array(embedding.data) };
+    } finally {
+      try { embedding?.dispose?.(); }
+      finally { await model?.dispose?.(); }
+    }
   }
 
-  async function releaseExtractor(model) {
-    if (extractor === model) {
-      extractor = null;
-      extractorPromise = null;
-    }
-    await model.dispose();
+  function embedAttributesInWorker(text, job) {
+    assertActiveAnalysisJob(job);
+    const worker = new Worker(new URL('assets/js/attribute-embedding-worker.js', document.baseURI), { type: 'module' });
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const cleanup = () => {
+        job.signal.removeEventListener('abort', onAbort);
+        worker.removeEventListener('message', onMessage);
+        worker.removeEventListener('error', onError);
+        worker.removeEventListener('messageerror', onMessageError);
+        worker.terminate();
+      };
+      const finish = (handler, value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        handler(value);
+      };
+      const onAbort = () => finish(reject, job.signal.reason || makeAnalysisAbortError());
+      const onError = event => finish(reject, new Error(event.error?.message || event.message || '相のEmbedding Workerでエラーが発生しました。'));
+      const onMessageError = () => finish(reject, new Error('相のEmbedding Workerから結果を受け取れませんでした。'));
+      const onMessage = event => {
+        const message = event.data || {};
+        if (message.jobId !== job.id) return;
+        if (message.type === 'cache-error') {
+          cacheError(new Error(message.message || 'モデルキャッシュを利用できませんでした。'));
+        } else if (message.type === 'progress') {
+          if (message.stage === 'download') {
+            showBusyMask('魔導司書が頁を読んでいる', '相の外典をひらき、言霊を一つずつ灯している…', message.progress);
+          } else if (message.stage === 'ready') {
+            showBusyMask('魔導司書が頁を読んでいる', '相の核を整えている。燭台の火が落ち着くのを待て。');
+          }
+        } else if (message.type === 'success') {
+          const embedding = message.embedding;
+          if (!Array.isArray(embedding?.dims) || !(embedding.data instanceof Float32Array)) {
+            finish(reject, new TypeError('Embedding Worker returned an invalid tensor.'));
+            return;
+          }
+          finish(resolve, embedding);
+        } else if (message.type === 'error') {
+          finish(reject, new Error(message.message || '相のEmbeddingに失敗しました。'));
+        }
+      };
+
+      worker.addEventListener('message', onMessage);
+      worker.addEventListener('error', onError);
+      worker.addEventListener('messageerror', onMessageError);
+      job.signal.addEventListener('abort', onAbort, { once: true });
+      try {
+        assertActiveAnalysisJob(job);
+        worker.postMessage({ type: 'embed', jobId: job.id, texts: imagePipeline.attributeInputTexts(text) });
+      } catch (error) {
+        finish(reject, error);
+      }
+    });
+  }
+
+  async function embedAttributes(text, job) {
+    setStatus(modelStatus, '呪文の相を測る準備をしています…', 'busy');
+    await yieldToBrowser();
+    assertActiveAnalysisJob(job);
+    // Module workers cannot load local file URLs consistently in browser file mode.
+    if (global.location?.protocol === 'file:') return embedAttributesOnMain(text, job);
+    return embedAttributesInWorker(text, job);
   }
 
   function renderAttributeFallback(error = null) {
@@ -851,7 +910,6 @@
           }
           job.sourceImage = null;
         }
-        let attributeModel = null;
         const pipelineTask = imagePipeline.run({
             recognizeSpell: async () => {
               setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
@@ -870,16 +928,7 @@
             analyzeStructure: analysis => analyzeImageInWorker(job, analysis),
             getMasterImage: () => captureContext.getImageData(0, 0, captureCanvas.width, captureCanvas.height),
             embedAttributes: async text => {
-              setStatus(modelStatus, '呪文の相を測る準備をしています…', 'busy');
-              attributeModel = await ensureExtractor(job);
-              assertActiveAnalysisJob(job);
-              await yieldToBrowser();
-              assertActiveAnalysisJob(job);
-              return attributeModel(imagePipeline.attributeInputTexts(text), { pooling: 'mean', normalize: true });
-            },
-            releaseAttributeModel: async () => {
-              if (attributeModel) await releaseExtractor(attributeModel);
-              attributeModel = null;
+              return embedAttributes(text, job);
             },
             signal: job.signal,
           });
