@@ -1180,6 +1180,7 @@
           setStatus(modelStatus, '呪文を読み取れませんでした。認識結果なしで相を判定しました。');
         }
         renderPower(result.power);
+        structureReady = true;
         spellReady = true;
         updateResultVisibility();
         setImageBusy(false);
