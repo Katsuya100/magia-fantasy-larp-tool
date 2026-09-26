@@ -6,6 +6,7 @@
     "calculate-power": "node scripts/calculate-power.mjs",
     "serve": "node scripts/serve-dist.mjs",
     "test:image-analysis": "node tests/test-image-analysis.mjs",
+    "test:image-pipeline": "node tests/test-image-pipeline.mjs",
     "test:sigil-classification": "node tests/test-sigil-classification.mjs",
     "test:image-outputs": "node --use-system-ca tests/test-image-outputs.mjs",
     "compare:image-outputs": "node scripts/compare-image-outputs.mjs",

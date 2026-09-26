@@ -274,7 +274,7 @@
   }
 
   // Polar-unwarp the annulus into overlapping, tangent-aligned strips for the existing line recognizer.
-  function unwrapRingSectors(image, options = {}) {
+  function* iterateRingSectors(image, options = {}) {
     const { data, width, height } = image || {};
     if (!data || !width || !height) return [];
     const centerX = Number(options.centerX ?? width / 2);
@@ -284,7 +284,6 @@
     const outerRadius = side * (options.outerRadiusRatio ?? 0.5);
     const sectorCount = options.sectorCount ?? 4;
     const overlap = options.overlap ?? Math.PI / 8;
-    const output = [];
     for (let sector = 0; sector < sectorCount; sector += 1) {
       const start = -Math.PI / 2 + sector * Math.PI * 2 / sectorCount - overlap;
       const end = -Math.PI / 2 + (sector + 1) * Math.PI * 2 / sectorCount + overlap;
@@ -311,14 +310,17 @@
       const axisY = Math.sin(tangent) * lineLength / 2;
       const normalX = Math.cos(middle) * bandHeight / 2;
       const normalY = Math.sin(middle) * bandHeight / 2;
-      output.push({
+      yield {
         image: { data: pixels, width: arcLength, height: bandHeight },
         box: [[cx - axisX - normalX, cy - axisY - normalY], [cx + axisX - normalX, cy + axisY - normalY], [cx + axisX + normalX, cy + axisY + normalY], [cx - axisX + normalX, cy - axisY + normalY]],
         geometry: { x: cx, y: cy, angle: tangent, length: lineLength },
         groupId: `ring:${sector}`,
-      });
+      };
     }
-    return output;
+  }
+
+  function unwrapRingSectors(image, options = {}) {
+    return [...iterateRingSectors(image, options)];
   }
 
   function expandWords(text, geometry, groupId, confidence) {
@@ -463,15 +465,26 @@
     for (const angle of config.rotationAngles) {
       for (const [variant, mode] of config.preprocessingModes.entries()) {
         throwIfAborted(signal);
-        const prepared = await preprocess(source, mode);
-        throwIfAborted(signal);
-        const oriented = await rotate(prepared, angle);
-        throwIfAborted(signal);
-        const result = await recognize(oriented);
-        throwIfAborted(signal);
-        observations.push(result && typeof result === 'object'
-          ? { ...result, angle, variant }
-          : { text: result, angle, variant });
+        let prepared;
+        let oriented;
+        try {
+          prepared = await preprocess(source, mode);
+          throwIfAborted(signal);
+          oriented = await rotate(prepared, angle);
+          throwIfAborted(signal);
+          if (oriented?.data !== prepared?.data && prepared?.data !== source?.data) {
+            prepared.data = new Uint8ClampedArray(0);
+            prepared = null;
+          }
+          const result = await recognize(oriented);
+          throwIfAborted(signal);
+          observations.push(result && typeof result === 'object'
+            ? { ...result, angle, variant }
+            : { text: result, angle, variant });
+        } finally {
+          if (prepared?.data && prepared.data !== source?.data) prepared.data = new Uint8ClampedArray(0);
+          if (oriented?.data && oriented.data !== source?.data) oriented.data = new Uint8ClampedArray(0);
+        }
       }
     }
     return observations;
@@ -489,10 +502,9 @@
     let previous = -1;
     for (let step = 0; step < steps; step += 1) {
       const start = step * classes;
-      const row = output.data.slice(start, start + classes);
       let best = 0;
-      for (let index = 1; index < row.length; index += 1) {
-        if (row[index] > row[best]) best = index;
+      for (let index = 1; index < classes; index += 1) {
+        if (output.data[start + index] > output.data[start + best]) best = index;
       }
       if (best && best !== previous) {
         const character = dictionary[best - 1] || '';
@@ -643,18 +655,72 @@
     };
   }
 
-  async function recognizeLineImages({ lineImages, width, height, recognizeVariants, combineLines, signal }) {
+  function releaseLinePixels(line) {
+    if (line?.image && line.image.data) line.image.data = new Uint8ClampedArray(0);
+  }
+
+  function findPotentialCombinedLines(lineImages, width, height) {
+    const potential = new Set();
+    const center = { x: width / 2, y: height / 2 };
+    const minSide = Math.min(width, height);
+    const entries = (lineImages || []).map((line, index) => ({
+      line,
+      index,
+      geometry: line?.geometry || lineGeometry(line?.box),
+    })).filter(({ line }) => line?.image && !String(line.groupId ?? '').startsWith('ring:'));
+
+    for (const shortLine of entries) {
+      for (const longLine of entries) {
+        if (shortLine === longLine || shortLine.geometry.length > longLine.geometry.length * 0.6) continue;
+        const shortRadius = Math.hypot(shortLine.geometry.x - center.x, shortLine.geometry.y - center.y);
+        const longRadius = Math.hypot(longLine.geometry.x - center.x, longLine.geometry.y - center.y);
+        if (Math.abs(shortRadius - longRadius) > minSide * 0.06) continue;
+        const shortAngle = Math.atan2(shortLine.geometry.y - center.y, shortLine.geometry.x - center.x);
+        const longAngle = Math.atan2(longLine.geometry.y - center.y, longLine.geometry.x - center.x);
+        const angularGap = Math.abs(shortAngle - longAngle);
+        if (Math.min(angularGap, Math.PI * 2 - angularGap) > 0.35) continue;
+        if (Math.hypot(shortLine.geometry.x - longLine.geometry.x, shortLine.geometry.y - longLine.geometry.y) > minSide * 0.15) continue;
+        potential.add(shortLine.index);
+        potential.add(longLine.index);
+      }
+    }
+    return potential;
+  }
+
+  async function recognizeLineImages({ lineImages, additionalLineImages, width, height, recognizeVariants, combineLines, releaseLinePixelsAfterRecognition = false, signal }) {
+    const lineSummaries = [];
+    const retainedLines = new Set();
+    const recognizedLines = [];
+    const potentialCombinedLines = releaseLinePixelsAfterRecognition
+      ? findPotentialCombinedLines(lineImages, width, height)
+      : new Set();
+    try {
     const rawCandidates = [];
     const baseCandidates = [];
     const ringCandidates = [];
-    const recognizedLines = [];
-    for (const [lineIndex, line] of (lineImages || []).entries()) {
+    let lineIndex = 0;
+    const allLines = function* () {
+      for (const line of lineImages || []) yield [lineIndex++, line];
+      const additional = typeof additionalLineImages === 'function' ? additionalLineImages() : additionalLineImages;
+      for (const line of additional || []) yield [lineIndex++, line];
+    };
+    for (const [currentLineIndex, line] of allLines()) {
+      const lineIndex = currentLineIndex;
       throwIfAborted(signal);
       if (!line?.image) continue;
       const geometry = line.geometry || lineGeometry(line.box);
       const groupId = line.groupId ?? lineIndex;
+      const isRingLine = String(groupId).startsWith('ring:');
+      lineSummaries.push({ box: line.box, geometry, groupId, image: { width: line.image.width, height: line.image.height } });
+      const mayBeCombined = releaseLinePixelsAfterRecognition && !isRingLine && potentialCombinedLines.has(lineIndex);
+      if (mayBeCombined) retainedLines.add(line);
       const votes = new Map();
-      const observations = await recognizeVariants(line);
+      let observations;
+      try {
+        observations = await recognizeVariants(line);
+      } finally {
+        if (releaseLinePixelsAfterRecognition && !mayBeCombined) releaseLinePixels(line);
+      }
       throwIfAborted(signal);
       for (const observation of observations) {
         const text = words(observation?.text ?? observation).join(' ');
@@ -724,7 +790,12 @@
           throwIfAborted(signal);
           if (!joined?.image) continue;
           const optionsByText = new Map();
-          const observations = await recognizeVariants(joined);
+          let observations;
+          try {
+            observations = await recognizeVariants(joined);
+          } finally {
+            releaseLinePixels(joined);
+          }
           throwIfAborted(signal);
           for (const observation of observations) {
             const text = words(observation?.text ?? observation).join(' ');
@@ -770,21 +841,29 @@
     const selectedPath = ringRescues
       ? { ...ringPath, text: normalize(stitchedRingText), words: words(stitchedRingText) }
       : basePath;
-    return { rawCandidates, candidates: selectedCandidates, path: selectedPath, ringRescues };
+    return { rawCandidates, candidates: selectedCandidates, path: selectedPath, ringRescues, lineImages: lineSummaries };
+    } finally {
+      if (releaseLinePixelsAfterRecognition) {
+        for (const line of retainedLines) releaseLinePixels(line);
+      }
+    }
   }
 
-  async function run({ detect, recognizeVariants, combineLines, vocabularyCorrector, signal }) {
+  async function run({ detect, recognizeVariants, combineLines, vocabularyCorrector, releaseLinePixelsAfterRecognition = false, signal }) {
     throwIfAborted(signal);
     const detected = await detect();
     throwIfAborted(signal);
     const width = detected.resizedImageWidth || detected.width || 1;
     const height = detected.resizedImageHeight || detected.height || 1;
+    const { lineImages, additionalLineImages, ...detectionResult } = detected;
     const recognition = await recognizeLineImages({
-      lineImages: detected.lineImages,
+      lineImages,
+      additionalLineImages,
       width,
       height,
       recognizeVariants,
       combineLines,
+      releaseLinePixelsAfterRecognition,
       signal,
     });
     throwIfAborted(signal);
@@ -793,7 +872,7 @@
     const path = correction
       ? { ...recognition.path, text: normalize(correction.words.join(' ')), words: correction.words }
       : recognition.path;
-    return { ...detected, ...recognition, path, rawPathText, corrections: correction?.corrections || [] };
+    return { ...detectionResult, ...recognition, path, rawPathText, corrections: correction?.corrections || [] };
   }
 
   global.SpellOcrCore = {
@@ -813,6 +892,7 @@
     preprocessRgba,
     rotateRgba,
     combineRgbaLines,
+    iterateRingSectors,
     unwrapRingSectors,
     run,
   };

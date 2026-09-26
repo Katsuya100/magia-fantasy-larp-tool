@@ -7,8 +7,12 @@ import sharp from 'sharp';
 
 await import('../assets/js/spell-ocr.js');
 await import('../assets/js/image-analysis-core.js');
+await import('../assets/js/power-calculation.js');
+await import('../assets/js/attribute-scoring.js');
+await import('../assets/js/magia-image-pipeline.js');
 const core = globalThis.SpellOcrCore;
 const imageCore = globalThis.ImageAnalysisCore;
+const imagePipeline = globalThis.MagiaImagePipeline;
 const jsonMode = process.argv.includes('--json');
 const webWasm = process.argv.includes('--web-wasm');
 const baseline = process.argv.includes('--baseline');
@@ -38,13 +42,10 @@ const { splitIntoLineImages } = await import('@gutenye/ocr-common/splitIntoLineI
 class SharedImageRaw extends ImageRaw {
   static async open(path) {
     const result = await sharp(path).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    const maxSide = core.config.maxInputSide || Math.max(result.info.width, result.info.height);
-    const scale = Math.min(1, maxSide / Math.max(result.info.width, result.info.height));
-    if (scale === 1) return new SharedImageRaw({ data: result.data, width: result.info.width, height: result.info.height });
-    const width = Math.max(1, Math.round(result.info.width * scale));
-    const height = Math.max(1, Math.round(result.info.height * scale));
-    const data = imageCore.resizeRgbaLinear(result.data, result.info.width, result.info.height, width, height);
-    return new SharedImageRaw({ data: Buffer.from(data), width, height });
+    const dimensions = imagePipeline.fitInputDimensions(result.info.width, result.info.height);
+    if (dimensions.scale === 1) return new SharedImageRaw({ data: result.data, width: dimensions.width, height: dimensions.height });
+    const data = imageCore.resizeRgbaLinear(result.data, result.info.width, result.info.height, dimensions.width, dimensions.height);
+    return new SharedImageRaw({ data: Buffer.from(data), width: dimensions.width, height: dimensions.height });
   }
   async resize({ width, height }) {
     this.data = imageCore.resizeRgbaSharpContain(this.data, this.width, this.height, width, height);
@@ -125,8 +126,10 @@ const pipeline = await core.run({
   detect: async () => {
     const detected = await detection.run(input);
     const lineImages = detected.lineImages || [];
-    const ringLines = baseline || lineImages.length > 8 ? [] : core.unwrapRingSectors(sourceImage);
-    return { ...detected, lineImages: [...lineImages, ...ringLines] };
+    const additionalLineImages = baseline || lineImages.length > 8
+      ? null
+      : () => core.iterateRingSectors(sourceImage);
+    return { ...detected, lineImages, additionalLineImages };
   },
   recognizeVariants: async line => {
     const source = { data: line.image.data, width: line.image.width, height: line.image.height };
@@ -141,6 +144,7 @@ const pipeline = await core.run({
   },
   combineLines: combineLineImages,
   vocabularyCorrector,
+  releaseLinePixelsAfterRecognition: true,
 });
 const { rawCandidates, candidates, path, ringRescues } = pipeline;
 const rawWords = new Set(candidates.map(candidate => candidate.text));
