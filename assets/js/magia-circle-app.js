@@ -45,6 +45,72 @@
     return true;
   }
 
+  async function loadVocabularyIndex() {
+    const dictionaryResults = await Promise.allSettled([
+      kotodamaDictionaryCache.load(core.config.forbiddenWordsUrl),
+      kotodamaDictionaryCache.load(core.config.commonWordsUrl),
+    ]);
+    for (const result of dictionaryResults) {
+      if (result.status === 'rejected') console.warn('コトダマギアの目録を控えられませんでした。', result.reason);
+    }
+    if (dictionaryResults.some(result => result.status === 'rejected')) return null;
+
+    try {
+      const [forbiddenText, commonText] = await Promise.all(dictionaryResults.map(result => result.value.text()));
+      const signature = core.vocabularySignature(commonText, forbiddenText);
+      const cachedIndexResponse = await kotodamaDictionaryCache.match(KOTODAMA_NGRAM_INDEX_CACHE_URL);
+      let index = null;
+      if (cachedIndexResponse) {
+        try {
+          const cachedIndex = await cachedIndexResponse.json();
+          if (isValidVocabularyIndex(cachedIndex) && cachedIndex.signature === signature) {
+            index = cachedIndex;
+          } else {
+            await kotodamaDictionaryCache.delete(KOTODAMA_NGRAM_INDEX_CACHE_URL);
+          }
+        } catch (error) {
+          await kotodamaDictionaryCache.delete(KOTODAMA_NGRAM_INDEX_CACHE_URL);
+          console.warn('文字列索引の控えを読み取れませんでした。', error);
+        }
+      }
+      if (!index) {
+        await yieldToBrowser();
+        index = core.createVocabularyNgramIndex(commonText, forbiddenText);
+        if (!isValidVocabularyIndex(index)) throw new Error('一般語彙辞書に使用できる単語が不足しています。');
+        await kotodamaDictionaryCache.put(KOTODAMA_NGRAM_INDEX_CACHE_URL, new Response(JSON.stringify(index), {
+          headers: { 'content-type': 'application/json; charset=utf-8' },
+        }));
+      }
+      return index;
+    } catch (error) {
+      console.warn('コトダマギアの目録を補正索引にできませんでした。', error);
+      return null;
+    }
+  }
+
+  async function validateVocabularyIndex() {
+    let index = await loadVocabularyIndex();
+    const available = Boolean(index && index.words.length >= 100000);
+    index = null;
+    return available;
+  }
+
+  async function applyVocabularyCorrection(recognition, job) {
+    if (!recognition?.path?.words?.length) return core.applyVocabularyCorrection(recognition, null);
+    assertActiveAnalysisJob(job);
+    let index = await loadVocabularyIndex();
+    try {
+      if (!index || index.words.length < 100000) return core.applyVocabularyCorrection(recognition, null);
+      const corrector = core.createVocabularyCorrector(index);
+      index = null;
+      assertActiveAnalysisJob(job);
+      if (corrector.size < 100000) return core.applyVocabularyCorrection(recognition, null);
+      return core.applyVocabularyCorrection(recognition, corrector);
+    } finally {
+      index = null;
+    }
+  }
+
   const diagnostics = global.location?.search && new URLSearchParams(global.location.search).has('diagnostics')
     ? { image: null, spell: null, circle: null, attribute: null, sigil: null, power: null }
     : null;
@@ -151,7 +217,6 @@
   let startupPromise = null;
   let modelsReady = false;
   let cacheUnavailable = false;
-  let vocabularyCorrector = null;
   const cacheError = error => {
     cacheUnavailable = true;
     console.warn('外典の控えを保存・参照できませんでした。', error);
@@ -925,10 +990,11 @@
   async function recognizeSpell(canvas, job) {
     const recognition = (async () => {
       let detector;
+      let recognized;
       try {
         detector = await ensureTextDetector();
         assertActiveAnalysisJob(job);
-        return await core.run({
+        recognized = await core.run({
           detect: async () => {
             assertActiveAnalysisJob(job);
             const detected = await detector.detect(canvas);
@@ -944,13 +1010,15 @@
           },
           recognizeVariants: line => recognizeBrowserLineVariants(line, job),
           combineLines: combineSpellLineImages,
-          vocabularyCorrector,
+          vocabularyCorrector: null,
           releaseLinePixelsAfterRecognition: true,
           signal: job.signal,
         });
       } finally {
         await releaseOcrModels(detector);
       }
+      assertActiveAnalysisJob(job);
+      return await applyVocabularyCorrection(recognized, job);
     })();
     activeOcrRun = recognition.then(() => undefined, () => undefined);
     return await awaitForAnalysisJob(job, recognition);
@@ -1245,52 +1313,7 @@
         await ensureRecognizer();
         busyStage.textContent = '三 / 三 — 禁書目録と正典目録';
         showBusyMask('魔導司書が目録を集めている', 'コトダマギアと共有する禁書目録と正典目録を、この書架にも控えている。');
-        const dictionaryResults = await Promise.allSettled([
-          kotodamaDictionaryCache.load(core.config.forbiddenWordsUrl),
-          kotodamaDictionaryCache.load(core.config.commonWordsUrl),
-        ]);
-        kotodamaDictionariesUnavailable = dictionaryResults.some(result => result.status === 'rejected');
-        if (dictionaryResults.every(result => result.status === 'fulfilled')) {
-          try {
-            const [forbiddenText, commonText] = await Promise.all(dictionaryResults.map(result => result.value.text()));
-            const signature = core.vocabularySignature(commonText, forbiddenText);
-            const cachedIndexResponse = await kotodamaDictionaryCache.match(KOTODAMA_NGRAM_INDEX_CACHE_URL);
-            let index = null;
-            if (cachedIndexResponse) {
-              try {
-                const cachedIndex = await cachedIndexResponse.json();
-                if (isValidVocabularyIndex(cachedIndex) && cachedIndex.signature === signature) {
-                  index = cachedIndex;
-                } else {
-                  await kotodamaDictionaryCache.delete(KOTODAMA_NGRAM_INDEX_CACHE_URL);
-                }
-              } catch (error) {
-                await kotodamaDictionaryCache.delete(KOTODAMA_NGRAM_INDEX_CACHE_URL);
-                console.warn('文字列索引の控えを読み取れませんでした。', error);
-              }
-            }
-            if (!index) {
-              await yieldToBrowser();
-              index = core.createVocabularyNgramIndex(commonText, forbiddenText);
-              const candidate = core.createVocabularyCorrector(index);
-              if (!isValidVocabularyIndex(index) || candidate.size < 100000) {
-                throw new Error('一般語彙辞書に使用できる単語が不足しています。');
-              }
-              await kotodamaDictionaryCache.put(KOTODAMA_NGRAM_INDEX_CACHE_URL, new Response(JSON.stringify(index), {
-                headers: { 'content-type': 'application/json; charset=utf-8' },
-              }));
-            }
-            vocabularyCorrector = core.createVocabularyCorrector(index);
-            if (vocabularyCorrector.size < 100000) throw new Error('一般語彙辞書に使用できる単語が不足しています。');
-          } catch (error) {
-            vocabularyCorrector = null;
-            kotodamaDictionariesUnavailable = true;
-            console.warn('コトダマギアの目録を補正索引にできませんでした。', error);
-          }
-        }
-        for (const result of dictionaryResults) {
-          if (result.status === 'rejected') console.warn('コトダマギアの目録を控えられませんでした。', result.reason);
-        }
+        kotodamaDictionariesUnavailable = !(await validateVocabularyIndex());
         modelsReady = true;
         busyMask.close();
         fileInput.disabled = false;

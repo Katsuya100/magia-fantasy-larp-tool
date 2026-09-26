@@ -849,6 +849,20 @@
     }
   }
 
+  function applyVocabularyCorrection(recognition, vocabularyCorrector) {
+    const rawPathText = recognition?.rawPathText ?? recognition?.path?.text ?? '';
+    const correction = vocabularyCorrector?.correctWords?.(recognition?.path?.words || []);
+    const path = correction
+      ? { ...recognition.path, text: normalize(correction.words.join(' ')), words: correction.words }
+      : recognition?.path;
+    return {
+      ...recognition,
+      path,
+      rawPathText,
+      corrections: correction?.corrections || recognition?.corrections || [],
+    };
+  }
+
   async function run({ detect, recognizeVariants, combineLines, vocabularyCorrector, releaseLinePixelsAfterRecognition = false, signal }) {
     throwIfAborted(signal);
     const detected = await detect();
@@ -867,12 +881,7 @@
       signal,
     });
     throwIfAborted(signal);
-    const rawPathText = recognition.path?.text || '';
-    const correction = vocabularyCorrector?.correctWords?.(recognition.path?.words || []);
-    const path = correction
-      ? { ...recognition.path, text: normalize(correction.words.join(' ')), words: correction.words }
-      : recognition.path;
-    return { ...detectionResult, ...recognition, path, rawPathText, corrections: correction?.corrections || [] };
+    return applyVocabularyCorrection({ ...detectionResult, ...recognition }, vocabularyCorrector);
   }
 
   global.SpellOcrCore = {
@@ -883,6 +892,7 @@
     vocabularySignature,
     createVocabularyNgramIndex,
     createVocabularyCorrector,
+    applyVocabularyCorrection,
     selectPath,
     recognizeLineImages,
     runRecognizeVariants,

@@ -9,6 +9,14 @@ for (const name of ['spell-ocr.js', 'image-analysis-core.js', 'attribute-scoring
 }
 
 const { MagiaImagePipeline } = context;
+const corrected = context.SpellOcrCore.applyVocabularyCorrection({
+  path: { text: 'fier', words: ['fier'], points: [] },
+}, {
+  correctWords: words => ({ words: words.map(word => word === 'fier' ? 'fire' : word), corrections: [{ from: 'fier', to: 'fire', similarity: 0.8 }] }),
+});
+assert.equal(corrected.rawPathText, 'fier', 'vocabulary correction must preserve the raw OCR text');
+assert.equal(corrected.path.text, 'Fire.', 'vocabulary correction must preserve the recognized-word correction');
+assert.deepEqual(corrected.corrections, [{ from: 'fier', to: 'fire', similarity: 0.8 }], 'vocabulary correction metadata must be retained');
 
 function pipelineOptions(recognizeSpell, retries = []) {
   return {
