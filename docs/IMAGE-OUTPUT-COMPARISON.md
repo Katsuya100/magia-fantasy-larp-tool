@@ -1,7 +1,7 @@
 # Browser and batch image comparison
 
 1. Start the local page with `npm run serve` and open `http://127.0.0.1:8765/magia-circle.html?diagnostics`.
-2. Select an image in the browser UI. After analysis completes, use **診断JSONを保存** to save the browser measurements, OCR lines/candidates, attribute rates, sigil scores, and power breakdown.
+2. Select an image in the browser UI, then press **陣を読み解く**. After analysis completes, use **診断JSONを保存** to save the browser measurements, OCR lines/candidates, attribute rates, sigil scores, and power breakdown.
 3. Save the batch result with `npm run test:image-outputs -- <image-path> > batch.json`. The default batch OCR uses the Node native runtime that defines the reference behavior.
 4. Compare both files with `npm run compare:image-outputs -- <browser.json> <batch.json>`.
 

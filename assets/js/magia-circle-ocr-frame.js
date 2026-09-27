@@ -413,7 +413,8 @@
     } finally {
       try { await releaseOcrModels(detector); }
       finally {
-        releaseSourcePixels();
+        try { releaseOcrCvResources?.(); }
+        finally { releaseSourcePixels(); }
       }
     }
   }

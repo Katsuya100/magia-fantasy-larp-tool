@@ -199,24 +199,33 @@
     let masterImage;
     try {
       throwIfAborted(signal);
-      let spell = null;
+      let spell;
       let recognitionError = null;
-      for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        spell = await recognizeSpell(0);
+      } catch (error) {
+        throwIfAborted(signal);
+        recognitionError = error;
+        await onRecognitionRetry?.({ attempt: 1, error, empty: false });
+        // Give the browser a task boundary after the failed OCR pass releases its
+        // sessions and temporary buffers, before starting the one retry.
+        await new Promise(resolve => {
+          if (typeof setTimeout === 'function') setTimeout(resolve, 0);
+          else resolve();
+        });
+        throwIfAborted(signal);
         try {
-          spell = await recognizeSpell(attempt);
-          if (!isEmptySpell(spell)) break;
-          if (attempt === 1) break;
-        } catch (error) {
+          spell = await recognizeSpell(1);
+        } catch (retryError) {
           throwIfAborted(signal);
-          recognitionError = error;
-          if (attempt === 1) break;
-          await onRecognitionRetry?.({ attempt: attempt + 1, error, empty: false });
-          continue;
+          recognitionError = retryError;
+          spell = emptySpell(retryError);
         }
-        if (attempt === 0) await onRecognitionRetry?.({ attempt: attempt + 1, error: null, empty: true });
       }
       if (!spell || isEmptySpell(spell)) {
-        spell = emptySpell(recognitionError || spell?.error || new Error('OCR returned no spell text after retry.'));
+        spell = emptySpell(spell?.error
+          ? new Error(spell.error)
+          : recognitionError || new Error('OCR returned no spell text.'));
       }
       throwIfAborted(signal);
 

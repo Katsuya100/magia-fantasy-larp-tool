@@ -163,6 +163,7 @@
   const stageEmpty = requireElement('stageEmpty');
   const fileInput = requireElement('fileInput');
   const cameraButton = requireElement('cameraButton');
+  const analyzeButton = requireElement('analyzeButton');
   const cameraVideo = requireElement('cameraVideo');
   const captureCanvas = requireElement('captureCanvas');
   const overlayCanvas = requireElement('overlayCanvas');
@@ -199,6 +200,9 @@
   let activeOcrRun = Promise.resolve();
   let activeAttributeRun = Promise.resolve();
   let nextAnalysisJobId = 0;
+  let pendingImageSelection = null;
+  let selectedImageName = '';
+  let hasSelectedImage = false;
   let userStartedImageAction = false;
   let cameraStream = null;
   let embeddingModulePromise = null;
@@ -307,6 +311,19 @@
     job.sourceImage = null;
   }
 
+  function discardPendingImageSelection() {
+    if (!pendingImageSelection) return;
+    const selection = pendingImageSelection;
+    selection.cancel?.();
+    if (pendingImageSelection === selection) pendingImageSelection = null;
+    analyzeButton.disabled = !hasSelectedImage;
+    setImageBusy(false);
+    setStatus(cameraStatus, hasSelectedImage ? '写し絵を表示しました。' : 'サンプルの読み込みを中断しました。');
+    setStatus(modelStatus, hasSelectedImage
+      ? '「陣を読み解く」を押すと、文字と紋を読み取ります。'
+      : '画像を選ぶか、カメラで撮影してください。');
+  }
+
   function cancelActiveAnalysis(reason) {
     const job = activeAnalysisJob;
     if (!job) return;
@@ -322,6 +339,7 @@
     }
 
     setImageBusy(false);
+    analyzeButton.disabled = !hasSelectedImage;
     setStatus(cameraStatus, '解析を中断しました。');
     setStatus(modelStatus, '次の写し絵を待っています。');
     appendProcessingRecord(`${job.fileName}：${reason}ため、途中で中断しました。`);
@@ -538,11 +556,11 @@
     });
   }
 
-  function showCaptureCanvas() {
+  function showCaptureCanvas(busy = false) {
     stage.classList.add('captured');
     stageEmpty.hidden = true;
     captureCanvas.classList.remove('hidden');
-    setImageBusy(true);
+    setImageBusy(busy);
   }
 
   function canvasFromImage(image) {
@@ -560,7 +578,7 @@
     cameraVideo.srcObject = null;
     cameraVideo.classList.add('hidden');
     cameraButton.textContent = '写し絵を撮影';
-    cameraButton.disabled = false;
+    cameraButton.disabled = !modelsReady || Boolean(startupPromise);
   }
 
   function drawOverlay() {
@@ -621,87 +639,148 @@
     return attribute.certainty;
   }
 
-  async function recognizeSpell(canvas, job) {
-    const recognition = new Promise((resolve, reject) => {
-      let frame = null;
-      let settled = false;
-      const removeFrame = () => {
-        global.removeEventListener('message', onMessage);
-        global.removeEventListener('messageerror', onMessageError);
-        job.signal.removeEventListener('abort', onAbort);
-        if (frame) {
-          frame.removeEventListener('load', onFrameLoad);
-          frame.removeEventListener('error', onFrameError);
-          frame.remove();
-          frame = null;
-        }
-      };
-      const finish = (handler, value) => {
-        if (settled) return;
-        settled = true;
-        removeFrame();
-        handler(value);
-      };
-      const onAbort = () => finish(reject, job.signal.reason || makeAnalysisAbortError());
-      const onFrameError = () => finish(reject, new Error('OCR処理用の一時領域を起動できませんでした。'));
-      const onMessageError = event => {
-        if (event.source !== frame?.contentWindow) return;
-        finish(reject, new Error('OCR処理用の一時領域から結果を受け取れませんでした。'));
-      };
-      const onFrameLoad = () => {
-        if (!isActiveAnalysisJob(job)) {
-          onAbort();
-          return;
-        }
-        setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
-        let pixels;
+  function removeOcrFrameSession(job, session) {
+    if (!session || session.disposed) return;
+    session.disposed = true;
+    global.removeEventListener('message', session.onMessage);
+    global.removeEventListener('messageerror', session.onMessageError);
+    job.signal.removeEventListener('abort', session.onAbort);
+    if (session.frame) {
+      session.frame.removeEventListener('load', session.onFrameLoad);
+      session.frame.removeEventListener('error', session.onFrameError);
+      session.frame.remove();
+      session.frame = null;
+    }
+    if (job.ocrFrameSession === session) job.ocrFrameSession = null;
+  }
+
+  function failOcrFrameSession(job, session, error) {
+    const pending = session.pending;
+    session.pending = null;
+    removeOcrFrameSession(job, session);
+    pending?.reject(error);
+  }
+
+  function createOcrFrameSession(job) {
+    let resolveReady;
+    let rejectReady;
+    const session = {
+      frame: document.createElement('iframe'),
+      pending: null,
+      disposed: false,
+      readySettled: false,
+      ready: new Promise((resolve, reject) => {
+        resolveReady = resolve;
+        rejectReady = reject;
+      }),
+    };
+    session.resolveReady = () => {
+      if (session.readySettled) return;
+      session.readySettled = true;
+      resolveReady();
+    };
+    session.rejectReady = error => {
+      if (session.readySettled) return;
+      session.readySettled = true;
+      rejectReady(error);
+    };
+    session.onAbort = () => {
+      const error = job.signal.reason || makeAnalysisAbortError();
+      session.rejectReady(error);
+      failOcrFrameSession(job, session, error);
+    };
+    session.onFrameError = () => {
+      const error = new Error('OCR処理用の一時領域を起動できませんでした。');
+      session.rejectReady(error);
+      failOcrFrameSession(job, session, error);
+    };
+    session.onMessageError = event => {
+      if (event.source !== session.frame?.contentWindow) return;
+      const error = new Error('OCR処理用の一時領域から結果を受け取れませんでした。');
+      session.rejectReady(error);
+      failOcrFrameSession(job, session, error);
+    };
+    session.onFrameLoad = () => {
+      if (!isActiveAnalysisJob(job)) {
+        session.onAbort();
+        return;
+      }
+      session.resolveReady();
+    };
+    session.onMessage = event => {
+      if (!session.frame || event.source !== session.frame.contentWindow) return;
+      if (global.location.origin !== 'null' && event.origin !== global.location.origin) return;
+      const message = event.data || {};
+      if (message.jobId !== job.id) return;
+      if (message.type === 'progress') {
+        setStatus(modelStatus, message.message || '環の呪文を読み取っています…', 'busy');
+      } else if (message.type === 'success') {
+        const pending = session.pending;
+        session.pending = null;
+        removeOcrFrameSession(job, session);
+        pending?.resolve(message.result);
+      } else if (message.type === 'error') {
+        const pending = session.pending;
+        session.pending = null;
+        // The OCR frame releases its ONNX sessions before posting an error. Keep
+        // this frame for one retry so WebKit can reuse its loaded runtime.
+        if (pending?.attempt !== 0) removeOcrFrameSession(job, session);
+        pending?.reject(new Error(message.message || 'OCRに失敗しました。'));
+      }
+    };
+
+    session.frame.hidden = true;
+    session.frame.setAttribute('aria-hidden', 'true');
+    session.frame.title = '一時的なOCR処理';
+    session.frame.addEventListener('load', session.onFrameLoad, { once: true });
+    session.frame.addEventListener('error', session.onFrameError, { once: true });
+    global.addEventListener('message', session.onMessage);
+    global.addEventListener('messageerror', session.onMessageError);
+    job.signal.addEventListener('abort', session.onAbort, { once: true });
+    session.frame.src = new URL('assets/js/magia-circle-ocr-frame.html', document.baseURI).href;
+    document.body.append(session.frame);
+    return session;
+  }
+
+  function requestSpellRecognition(canvas, job, attempt) {
+    const session = job.ocrFrameSession || (job.ocrFrameSession = createOcrFrameSession(job));
+    if (session.pending) return Promise.reject(new Error('OCR処理がすでに実行中です。'));
+    return new Promise((resolve, reject) => {
+      const pending = { attempt, resolve, reject };
+      session.pending = pending;
+      void (async () => {
         try {
-          pixels = captureContext.getImageData(0, 0, canvas.width, canvas.height);
+          await session.ready;
+          if (session.disposed || session.pending !== pending) return;
+          assertActiveAnalysisJob(job);
+          setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
+          const pixels = captureContext.getImageData(0, 0, canvas.width, canvas.height);
           const buffer = pixels.data.buffer;
-          frame.contentWindow.postMessage({
+          session.frame.contentWindow.postMessage({
             type: 'recognize',
             jobId: job.id,
             width: canvas.width,
             height: canvas.height,
             buffer,
           }, global.location.origin === 'null' ? '*' : global.location.origin, [buffer]);
-          pixels = null;
         } catch (error) {
-          finish(reject, error);
+          if (session.pending === pending) {
+            session.pending = null;
+            removeOcrFrameSession(job, session);
+            reject(error);
+          }
         }
-      };
-      const onMessage = event => {
-        if (!frame || event.source !== frame.contentWindow) return;
-        if (global.location.origin !== 'null' && event.origin !== global.location.origin) return;
-        const message = event.data || {};
-        if (message.jobId !== job.id) return;
-        if (message.type === 'progress') {
-          setStatus(modelStatus, message.message || '環の呪文を読み取っています…', 'busy');
-        } else if (message.type === 'success') {
-          finish(resolve, message.result);
-        } else if (message.type === 'error') {
-          finish(reject, new Error(message.message || 'OCRに失敗しました。'));
-        }
-      };
-
-      if (!isActiveAnalysisJob(job)) {
-        reject(job.signal.reason || makeAnalysisAbortError());
-        return;
-      }
-      frame = document.createElement('iframe');
-      frame.hidden = true;
-      frame.setAttribute('aria-hidden', 'true');
-      frame.title = '一時的なOCR処理';
-      frame.addEventListener('load', onFrameLoad, { once: true });
-      frame.addEventListener('error', onFrameError, { once: true });
-      global.addEventListener('message', onMessage);
-      global.addEventListener('messageerror', onMessageError, { once: true });
-      job.signal.addEventListener('abort', onAbort, { once: true });
-      frame.src = new URL('assets/js/magia-circle-ocr-frame.html', document.baseURI).href;
-      document.body.append(frame);
+      })();
     });
+  }
+
+  async function recognizeSpell(canvas, job, attempt = 0) {
+    const recognition = requestSpellRecognition(canvas, job, attempt);
     activeOcrRun = recognition.then(() => undefined, () => undefined);
     const recognized = await awaitForAnalysisJob(job, recognition);
+    assertActiveAnalysisJob(job);
+    // Let the browser process the removed OCR iframe before parsing the large vocabulary index.
+    await yieldToBrowser();
     assertActiveAnalysisJob(job);
     return await applyVocabularyCorrection(recognized, job);
   }
@@ -826,7 +905,7 @@
     return 0;
   }
 
-  function resetResults({ preserveCaptureCanvas = false } = {}) {
+  function resetResults({ preserveCaptureCanvas = false, preserveSelection = false } = {}) {
     stopCamera();
     detectedPaths = null;
     resetPowerInputs();
@@ -835,9 +914,9 @@
     updateResultVisibility();
     detailsChapter.open = false;
     cameraStatus.className = 'progress-row';
-    cameraStatus.textContent = '紋：写し絵を選ぶと、閉じたパスと紋を読み取ります。';
+    cameraStatus.textContent = '紋：写し絵を選び、「陣を読み解く」を押すと輪郭と紋を読み取ります。';
     modelStatus.className = 'progress-row';
-    modelStatus.textContent = '呪文：紋を読み取ったあと、相を判定します。';
+    modelStatus.textContent = '呪文：「陣を読み解く」を押すと、呪文を読み取って相を判定します。';
     spellOutput.textContent = SPELL_PLACEHOLDER;
     attributeResult.className = 'result-empty';
     attributeResult.textContent = '呪文を捧げると、相が目を覚まします。';
@@ -855,6 +934,11 @@
       captureCanvas.width = 1;
       captureCanvas.height = 1;
     }
+    if (!preserveSelection) {
+      hasSelectedImage = false;
+      selectedImageName = '';
+      analyzeButton.disabled = true;
+    }
     overlayCanvas.width = 1;
     overlayCanvas.height = 1;
     setImageBusy(false);
@@ -862,167 +946,242 @@
     stageEmpty.hidden = false;
   }
 
-  async function loadFile(file, sourceImage = null, options = {}) {
-    const { captureReady = false, sourceWidth, sourceHeight } = options;
-    if (!modelsReady) return;
-    if (!file && !sourceImage && !captureReady) return;
-    cancelActiveAnalysis('新しい写し絵の解析を始める');
-    const job = beginAnalysisJob(file);
-    setStatus(cameraStatus, '写し絵を読み込んでいます…', 'busy');
-    setStatus(modelStatus, '画像から紋の情報を準備しています…', 'busy');
-    const image = sourceImage || (captureReady ? null : new Image());
-    const source = file ? URL.createObjectURL(file) : null;
-    job.sourceImage = image;
-    job.sourceUrl = source;
-    const processImage = async () => {
-      if (image) {
-        image.onload = null;
-        image.onerror = null;
-      }
-      if (job.sourceUrl) {
-        URL.revokeObjectURL(job.sourceUrl);
-        job.sourceUrl = null;
-      }
-      if (!isActiveAnalysisJob(job)) return;
-      try {
-        assertActiveAnalysisJob(job);
-        // A canceled ONNX run cannot be interrupted; wait for its underlying work
-        // to settle before replacing the shared canvas or starting another run.
-        await awaitForAnalysisJob(job, Promise.all([activeOcrRun, activeAttributeRun]));
-        assertActiveAnalysisJob(job);
-        resetResults({ preserveCaptureCanvas: captureReady });
-        if (captureReady) showCaptureCanvas();
-        else canvasFromImage(image);
-        await yieldToBrowser();
-        assertActiveAnalysisJob(job);
-        if (diagnostics) diagnostics.image = {
-          naturalWidth: sourceWidth || image?.naturalWidth || image?.width || captureCanvas.width,
-          naturalHeight: sourceHeight || image?.naturalHeight || image?.height || captureCanvas.height,
-          canvasWidth: captureCanvas.width,
-          canvasHeight: captureCanvas.height,
-        };
-        if (image) {
-          if (image instanceof HTMLCanvasElement) {
-            image.width = 1;
-            image.height = 1;
-          } else {
-            image.removeAttribute('src');
-          }
-          job.sourceImage = null;
-        }
-        const pipelineTask = imagePipeline.run({
-            recognizeSpell: async () => {
-              setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
-              return recognizeSpell(captureCanvas, job);
-            },
-            onRecognitionRetry: ({ attempt, error, empty }) => {
-              if (error) console.warn('呪文のOCRに失敗したため、同じ画像で読み直します。', error);
-              const reason = error ? '解析エラー' : empty ? '呪文が空' : '認識結果なし';
-              appendProcessingRecord(`${job.fileName}：${reason}のため、解像度を変えずにOCRを再試行します（${attempt + 1}/2）。`);
-              setStatus(modelStatus, '呪文を読み取れなかったため、同じ画像をもう一度読みます…', 'busy');
-            },
-            getStructureInput: async () => {
-              setStatus(cameraStatus, '写し絵を受け取り、閉じたパスと環内の文字位置を調べています…', 'busy');
-              return { analysis: await createAnalysisImage() };
-            },
-            analyzeStructure: analysis => analyzeImageInWorker(job, analysis),
-            getMasterImage: () => captureContext.getImageData(0, 0, captureCanvas.width, captureCanvas.height),
-            embedAttributes: async text => {
-              return embedAttributes(text, job);
-            },
-            signal: job.signal,
-          });
-        activeAttributeRun = pipelineTask.then(
-          () => undefined,
-          error => {
-            if (isActiveAnalysisJob(job)) console.warn('画像解析後の相判定またはリソース解放に失敗しました。', error);
-            return undefined;
-          },
-        );
-        const result = await awaitForAnalysisJob(job, pipelineTask);
-        assertActiveAnalysisJob(job);
-        const recognition = result.spell;
-        const path = recognition?.path;
-        if (diagnostics) diagnostics.spell = {
-          text: path?.text || '',
-          words: path?.words || [],
-          points: path?.points || [],
-          lines: (recognition?.lineImages || []).map((line, index) => ({ index, box: line.box, width: line.image?.width, height: line.image?.height })),
-          rawCandidates: recognition?.rawCandidates || [],
-          candidates: recognition?.candidates || [],
-          rawText: recognition?.rawPathText || path?.text || '',
-          corrections: recognition?.corrections || [],
-          error: recognition?.error || null,
-        };
-        const text = path?.text || '';
-        detectedPaths = result.structure.paths;
-        drawOverlay();
-        powerInputs.wordCount = result.wordCount;
-        powerInputs.circleAccuracy = result.power.normalized.circleAccuracy;
-        powerInputs.lineStraightness = result.power.normalized.lineStraightness;
-        powerInputs.ringCoverage = result.power.normalized.ringCoverage;
-        powerInputs.attributeCertainty = result.attribute.certainty;
-        powerInputs.sigilCertainty = result.sigil.certainty;
-        renderShape(result.sigil);
-        const structure = result.structure;
-        if (diagnostics) diagnostics.circle = {
-          paths: structure.paths,
-          lineStraightness: structure.lineStraightness,
-          ringCoverage: structure.ringCoverage,
-          sigilScores: structure.sigil.scores,
-          ...(structure.error ? { error: structure.error } : {}),
-        };
-        renderAttribute(result.attribute);
-        spellOutput.textContent = text || '環から呪文を読み取れませんでした。';
-        if (recognition?.error) {
-          console.error('OCRを2回試しましたが読み取れませんでした。', recognition.error);
-          setStatus(modelStatus, '呪文を読み取れませんでした。認識結果なしで相を判定しました。', 'error');
-        } else if (!text) {
-          setStatus(modelStatus, '呪文を読み取れませんでした。認識結果なしで相を判定しました。');
-        }
-        renderPower(result.power);
-        structureReady = true;
-        spellReady = true;
-        updateResultVisibility();
-        setImageBusy(false);
-        setStatus(cameraStatus, structure.error
-          ? '陣の一部を読み取れませんでした。得られた情報で威力を計算しました。'
-          : '紋の読み取りが完了しました。', structure.error ? '' : 'good');
-        activeAnalysisJob = null;
-        publishDiagnostics();
-      } catch (error) {
-        releaseAnalysisSource(job);
-        if (!isActiveAnalysisJob(job)) return;
-        if (!Number.isFinite(powerInputs.wordCount)) powerInputs.wordCount = 0;
-        if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback(error);
-        if (!Number.isFinite(powerInputs.circleAccuracy)) powerInputs.circleAccuracy = 0;
-        if (!Number.isFinite(powerInputs.lineStraightness)) powerInputs.lineStraightness = 0;
-        if (!Number.isFinite(powerInputs.ringCoverage)) powerInputs.ringCoverage = 0;
-        if (!Number.isFinite(powerInputs.sigilCertainty)) powerInputs.sigilCertainty = renderShape(null);
-        if (spellOutput.textContent === SPELL_PLACEHOLDER) spellOutput.textContent = '呪文を読み取れませんでした。';
-        renderPower();
-        structureReady = true;
-        spellReady = true;
-        updateResultVisibility();
-        setImageBusy(false);
-        setStatus(cameraStatus, '写し絵の一部を読み取れず、得られた情報で威力に反映しました。');
-        setStatus(modelStatus, '読み取り結果から相を選び、結果を表示しました。');
-        activeAnalysisJob = null;
-        publishDiagnostics();
-      }
+  function selectImage(file, sourceImage = null, options = {}) {
+    const { captureReady = false, sourceWidth, sourceHeight, fileName, autoAnalyze = false } = options;
+    if (!modelsReady || (!file && !sourceImage && !captureReady)) return Promise.resolve(false);
+    cancelActiveAnalysis('新しい写し絵を選ぶ');
+    pendingImageSelection?.cancel?.();
+    analyzeButton.disabled = true;
+    const selection = {
+      sourceImage: sourceImage || (captureReady ? null : new Image()),
+      sourceUrl: file ? URL.createObjectURL(file) : null,
     };
-    if (sourceImage || captureReady) {
-      await processImage();
-    } else {
-      image.onload = processImage;
-      image.onerror = () => {
-        releaseAnalysisSource(job);
-        if (!isActiveAnalysisJob(job)) return;
-        activeAnalysisJob = null;
-        setImageBusy(false);
-        setStatus(cameraStatus, '写し絵を読み込めませんでした。別の画像を選んでください。', 'error');
+    pendingImageSelection = selection;
+    const image = selection.sourceImage;
+    const selectedName = fileName || file?.name || (captureReady ? '撮影した写し絵' : 'サンプル画像');
+    setStatus(cameraStatus, '写し絵を読み込んでいます…', 'busy');
+    setStatus(modelStatus, '画像を表示してから読み取りを始めます。', 'busy');
+
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = value => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
       };
-      image.src = source;
+      selection.cancel = () => {
+        if (image) {
+          image.onload = null;
+          image.onerror = null;
+        }
+        releaseAnalysisSource(selection);
+        if (pendingImageSelection === selection) pendingImageSelection = null;
+        finish(false);
+      };
+      const fail = error => {
+        if (image) {
+          image.onload = null;
+          image.onerror = null;
+        }
+        releaseAnalysisSource(selection);
+        if (pendingImageSelection !== selection) {
+          finish(false);
+          return;
+        }
+        pendingImageSelection = null;
+        analyzeButton.disabled = !hasSelectedImage;
+        setImageBusy(false);
+        setStatus(cameraStatus, `写し絵を読み込めませんでした。${error?.message || ''}`.trim(), 'error');
+        setStatus(modelStatus, '別の画像を選ぶか、もう一度お試しください。');
+        if (diagnostics) {
+          diagnostics.image = { error: error?.message || '画像を読み込めませんでした。' };
+          publishDiagnostics();
+        }
+        finish(false);
+      };
+      const commit = async () => {
+        if (image) {
+          image.onload = null;
+          image.onerror = null;
+        }
+        if (selection.sourceUrl) {
+          URL.revokeObjectURL(selection.sourceUrl);
+          selection.sourceUrl = null;
+        }
+        if (pendingImageSelection !== selection) {
+          releaseAnalysisSource(selection);
+          finish(false);
+          return;
+        }
+        try {
+          resetResults({ preserveCaptureCanvas: captureReady });
+          if (captureReady) showCaptureCanvas();
+          else canvasFromImage(image);
+          await yieldToBrowser();
+          if (pendingImageSelection !== selection) {
+            releaseAnalysisSource(selection);
+            finish(false);
+            return;
+          }
+          if (diagnostics) diagnostics.image = {
+            naturalWidth: sourceWidth || image?.naturalWidth || image?.width || captureCanvas.width,
+            naturalHeight: sourceHeight || image?.naturalHeight || image?.height || captureCanvas.height,
+            canvasWidth: captureCanvas.width,
+            canvasHeight: captureCanvas.height,
+          };
+          releaseAnalysisSource(selection);
+          pendingImageSelection = null;
+          hasSelectedImage = true;
+          selectedImageName = selectedName;
+          analyzeButton.disabled = false;
+          setImageBusy(false);
+          setStatus(cameraStatus, '写し絵を表示しました。');
+          setStatus(modelStatus, '「陣を読み解く」を押すと、文字と紋を読み取ります。');
+          finish(true);
+          if (autoAnalyze) void analyzeSelectedImage();
+        } catch (error) {
+          fail(error);
+        }
+      };
+
+      const beginLoad = async () => {
+        try {
+          // Let any canceled OCR finish before decoding another full-size image.
+          await Promise.all([activeOcrRun, activeAttributeRun]);
+          await yieldToBrowser();
+          if (pendingImageSelection !== selection) {
+            releaseAnalysisSource(selection);
+            finish(false);
+            return;
+          }
+          if (captureReady || sourceImage) {
+            await commit();
+            return;
+          }
+          image.onload = () => { void commit(); };
+          image.onerror = () => fail(new Error('別の画像を選んでください。'));
+          image.src = selection.sourceUrl;
+        } catch (error) {
+          fail(error);
+        }
+      };
+      void beginLoad();
+    });
+  }
+
+  async function analyzeSelectedImage() {
+    if (!modelsReady || !hasSelectedImage || pendingImageSelection || activeAnalysisJob) return;
+    const previousRuns = Promise.all([activeOcrRun, activeAttributeRun]);
+    const job = beginAnalysisJob({ name: selectedImageName });
+    resetResults({ preserveCaptureCanvas: true, preserveSelection: true });
+    showCaptureCanvas(true);
+    analyzeButton.disabled = true;
+    setStatus(cameraStatus, '写し絵の輪郭と紋を読み取っています…', 'busy');
+    setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
+    try {
+      // A previous canceled ONNX run cannot be interrupted; wait before reusing the canvas.
+      await awaitForAnalysisJob(job, previousRuns);
+      await yieldToBrowser();
+      assertActiveAnalysisJob(job);
+      const pipelineTask = imagePipeline.run({
+        recognizeSpell: async attempt => {
+          setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
+          return recognizeSpell(captureCanvas, job, attempt);
+        },
+        onRecognitionRetry: async ({ error }) => {
+          console.warn('OCR処理に失敗したため、一度だけ自動再試行します。', error);
+          appendProcessingRecord(`${job.fileName}：OCR処理エラーのため、同じ画像で一度だけ自動再試行します。`);
+          setStatus(modelStatus, 'OCR処理に失敗しました。終了処理を待ってから再試行しています…', 'busy');
+          await activeOcrRun;
+        },
+        getStructureInput: async () => {
+          setStatus(cameraStatus, '写し絵を受け取り、閉じたパスと環内の文字位置を調べています…', 'busy');
+          return { analysis: await createAnalysisImage() };
+        },
+        analyzeStructure: analysis => analyzeImageInWorker(job, analysis),
+        getMasterImage: () => captureContext.getImageData(0, 0, captureCanvas.width, captureCanvas.height),
+        embedAttributes: async text => embedAttributes(text, job),
+        signal: job.signal,
+      });
+      activeAttributeRun = pipelineTask.then(
+        () => undefined,
+        error => {
+          if (isActiveAnalysisJob(job)) console.warn('画像解析後の相判定またはリソース解放に失敗しました。', error);
+          return undefined;
+        },
+      );
+      const result = await awaitForAnalysisJob(job, pipelineTask);
+      assertActiveAnalysisJob(job);
+      const recognition = result.spell;
+      const path = recognition?.path;
+      if (diagnostics) diagnostics.spell = {
+        text: path?.text || '',
+        words: path?.words || [],
+        points: path?.points || [],
+        lines: (recognition?.lineImages || []).map((line, index) => ({ index, box: line.box, width: line.image?.width, height: line.image?.height })),
+        rawCandidates: recognition?.rawCandidates || [],
+        candidates: recognition?.candidates || [],
+        rawText: recognition?.rawPathText || path?.text || '',
+        corrections: recognition?.corrections || [],
+        error: recognition?.error || null,
+      };
+      const text = path?.text || '';
+      detectedPaths = result.structure.paths;
+      drawOverlay();
+      powerInputs.wordCount = result.wordCount;
+      powerInputs.circleAccuracy = result.power.normalized.circleAccuracy;
+      powerInputs.lineStraightness = result.power.normalized.lineStraightness;
+      powerInputs.ringCoverage = result.power.normalized.ringCoverage;
+      powerInputs.attributeCertainty = result.attribute.certainty;
+      powerInputs.sigilCertainty = result.sigil.certainty;
+      renderShape(result.sigil);
+      const structure = result.structure;
+      if (diagnostics) diagnostics.circle = {
+        paths: structure.paths,
+        lineStraightness: structure.lineStraightness,
+        ringCoverage: structure.ringCoverage,
+        sigilScores: structure.sigil.scores,
+        ...(structure.error ? { error: structure.error } : {}),
+      };
+      renderAttribute(result.attribute);
+      spellOutput.textContent = text || '環から呪文を読み取れませんでした。';
+      if (recognition?.error) {
+        console.error('OCRで呪文を読み取れませんでした。', recognition.error);
+        setStatus(modelStatus, '呪文を読み取れませんでした。認識結果なしで相を判定しました。', 'error');
+      } else if (!text) {
+        setStatus(modelStatus, '呪文を読み取れませんでした。認識結果なしで相を判定しました。');
+      }
+      renderPower(result.power);
+      structureReady = true;
+      spellReady = true;
+      updateResultVisibility();
+      setImageBusy(false);
+      setStatus(cameraStatus, structure.error
+        ? '陣の一部を読み取れませんでした。得られた情報で威力を計算しました。'
+        : '紋の読み取りが完了しました。', structure.error ? '' : 'good');
+      activeAnalysisJob = null;
+      analyzeButton.disabled = !hasSelectedImage;
+      publishDiagnostics();
+    } catch (error) {
+      releaseAnalysisSource(job);
+      if (!isActiveAnalysisJob(job)) return;
+      if (!Number.isFinite(powerInputs.wordCount)) powerInputs.wordCount = 0;
+      if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback(error);
+      if (!Number.isFinite(powerInputs.circleAccuracy)) powerInputs.circleAccuracy = 0;
+      if (!Number.isFinite(powerInputs.lineStraightness)) powerInputs.lineStraightness = 0;
+      if (!Number.isFinite(powerInputs.ringCoverage)) powerInputs.ringCoverage = 0;
+      if (!Number.isFinite(powerInputs.sigilCertainty)) powerInputs.sigilCertainty = renderShape(null);
+      if (spellOutput.textContent === SPELL_PLACEHOLDER) spellOutput.textContent = '呪文を読み取れませんでした。';
+      renderPower();
+      structureReady = true;
+      spellReady = true;
+      updateResultVisibility();
+      setImageBusy(false);
+      setStatus(cameraStatus, '写し絵の一部を読み取れず、得られた情報で威力に反映しました。');
+      setStatus(modelStatus, '読み取り結果から相を選び、結果を表示しました。');
+      activeAnalysisJob = null;
+      analyzeButton.disabled = !hasSelectedImage;
+      publishDiagnostics();
     }
   }
 
@@ -1031,6 +1190,7 @@
     startupPromise = (async () => {
       fileInput.disabled = true;
       cameraButton.disabled = true;
+      analyzeButton.disabled = true;
       retryModels.hidden = true;
       busyMask.classList.remove('is-error');
       busyProgress.hidden = false;
@@ -1045,15 +1205,15 @@
         kotodamaDictionariesUnavailable = !(await validateVocabularyIndex());
         modelsReady = true;
         busyMask.close();
-        fileInput.disabled = false;
-        cameraButton.disabled = false;
         const preloadIssues = [];
         if (kotodamaDictionariesUnavailable) preloadIssues.push('コトダマギアの禁書目録または正典目録を取得できなかった');
         if (cacheUnavailable) preloadIssues.push('この書架に控えを残せなかった');
         setStatus(preloadStatus, preloadIssues.length
           ? `外典は開いた。${preloadIssues.join('。')}。画像解析は利用できる。`
           : '魔導司書が外典を整えた。次に頁を開くときは、書架の控えが応える。', preloadIssues.length ? '' : 'good');
-        loadDefaultImage();
+        await loadInitialImage();
+        fileInput.disabled = false;
+        cameraButton.disabled = false;
       } catch (error) {
         console.error('外典の準備に失敗しました。', error);
         busyMask.classList.add('is-error');
@@ -1073,14 +1233,17 @@
   retryModels.addEventListener('click', prepareModels);
 
   fileInput.addEventListener('click', () => {
-    userStartedImageAction = true;
     cancelActiveAnalysis('写し絵の選定を始める');
   });
   fileInput.addEventListener('change', event => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    loadFile(file);
+    if (file) {
+      userStartedImageAction = true;
+      void selectImage(file);
+    }
   });
+  analyzeButton.addEventListener('click', analyzeSelectedImage);
   detailsChapter.querySelector('summary').addEventListener('click', () => {
     if (!circleDetailPage.hidden && !spellDetailPage.hidden) return;
 
@@ -1103,6 +1266,7 @@
     if (!modelsReady) return;
     userStartedImageAction = true;
     cancelActiveAnalysis('写し絵の撮影を始める');
+    discardPendingImageSelection();
     if (cameraStream) {
       if (!cameraVideo.videoWidth || !cameraVideo.videoHeight) {
         setStatus(cameraStatus, 'カメラ映像の準備ができていません。', 'error');
@@ -1122,7 +1286,7 @@
       captureCanvas.height = captureSide;
       captureContext.drawImage(cameraVideo, cropX, cropY, side, side, 0, 0, captureSide, captureSide);
       stopCamera();
-      loadFile(null, null, { captureReady: true, sourceWidth, sourceHeight });
+      await selectImage(null, null, { captureReady: true, sourceWidth, sourceHeight });
       return;
     }
 
@@ -1155,19 +1319,20 @@
     stopCamera();
     terminateAnalysisWorker();
   });
-  function loadDefaultImage() {
+  function loadInitialImage() {
     const testImage = diagnostics && new URLSearchParams(global.location.search).get('test-image');
-    const defaultImage = testImage ? new URL(testImage, global.location.href) : new URL('assets/images/sample.png', global.location.href);
-    if (testImage && defaultImage.origin !== global.location.origin) {
+    const imageUrl = new URL(testImage || 'assets/images/sample.png', global.location.href);
+    if (testImage && imageUrl.origin !== global.location.origin) {
       diagnostics.image = { error: '比較用画像は同一オリジンから読み込んでください。' };
       publishDiagnostics();
     } else {
-      fetch(defaultImage).then(response => {
+      return fetch(imageUrl).then(response => {
         if (!response.ok) throw new Error(`画像を読み込めません: ${response.status}`);
         return response.blob();
       }).then(blob => {
         if (userStartedImageAction) return;
-        return loadFile(new File([blob], defaultImage.pathname.split('/').at(-1) || 'sample.png', { type: blob.type || 'image/png' }));
+        const name = imageUrl.pathname.split('/').at(-1) || (testImage ? 'test-image.png' : 'sample.png');
+        return selectImage(new File([blob], name, { type: blob.type || 'image/png' }), null, { autoAnalyze: Boolean(testImage) });
       })
         .catch(error => {
           if (userStartedImageAction) return;
@@ -1175,7 +1340,7 @@
             diagnostics.image = { error: error.message };
             publishDiagnostics();
           } else {
-            setStatus(cameraStatus, '初期画像 sample.png を読み込めませんでした。画像を選定してください。', 'error');
+            setStatus(cameraStatus, 'サンプルを表示できませんでした。画像を選ぶか、カメラで撮影してください。', 'error');
           }
         });
     }

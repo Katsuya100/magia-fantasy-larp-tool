@@ -18,7 +18,7 @@ assert.equal(corrected.rawPathText, 'fier', 'vocabulary correction must preserve
 assert.equal(corrected.path.text, 'Fire.', 'vocabulary correction must preserve the recognized-word correction');
 assert.deepEqual(corrected.corrections, [{ from: 'fier', to: 'fire', similarity: 0.8 }], 'vocabulary correction metadata must be retained');
 
-function pipelineOptions(recognizeSpell, retries = []) {
+function pipelineOptions(recognizeSpell) {
   return {
     recognizeSpell,
     getStructureInput: async () => ({ analysis: { scale: 1 } }),
@@ -26,21 +26,18 @@ function pipelineOptions(recognizeSpell, retries = []) {
     getMasterImage: async () => ({ data: new Uint8Array(4), width: 1, height: 1 }),
     embedAttributes: async () => { throw new Error('Skip model loading in this pipeline test.'); },
     releaseAttributeModel: async () => {},
-    onRecognitionRetry: details => retries.push(details),
   };
 }
 
 let attempts = 0;
-const recovered = await MagiaImagePipeline.run(pipelineOptions(async () => {
+const empty = await MagiaImagePipeline.run(pipelineOptions(async () => {
   attempts += 1;
-  return attempts === 1
-    ? { path: { text: '', words: [], points: [] } }
-    : { path: { text: 'fire', words: ['fire'], points: [] } };
+  return { path: { text: '', words: [], points: [] } };
 }));
-assert.equal(attempts, 2, 'an empty OCR result must be retried once');
-assert.equal(recovered.spell.path.text, 'fire', 'the retry result must be used');
-assert.equal(recovered.wordCount, 1, 'the recovered word must contribute to the final count');
-assert.equal(recovered.spell.error, undefined, 'a successful retry must not keep the first empty-result error');
+assert.equal(attempts, 1, 'an empty OCR result must not rerun the same image and models');
+assert.equal(empty.spell.path.text, '', 'an empty OCR result must remain empty');
+assert.equal(empty.wordCount, 0, 'an empty OCR result must contribute no words');
+assert.match(empty.spell.error, /no spell text/, 'an empty OCR result must explain that recognition found no text');
 
 const perspectiveError = vm.runInContext("new TypeError('getPerspectiveTransform hasOwnProperty')", context);
 attempts = 0;
@@ -50,10 +47,7 @@ const failed = await MagiaImagePipeline.run(pipelineOptions(async () => {
   return { path: { text: '', words: [], points: [] } };
 }));
 assert.equal(attempts, 2, 'an OCR exception must be retried once');
-assert.match(failed.spell.error, /getPerspectiveTransform/, 'a second empty result must preserve the first OCR error');
-assert.equal(failed.wordCount, 0, 'a failed OCR retry must not invent words');
+assert.match(failed.spell.error, /getPerspectiveTransform/, 'the OCR exception must be preserved');
+assert.equal(failed.wordCount, 0, 'an OCR exception must not invent words');
 
-const emptyTwice = await MagiaImagePipeline.run(pipelineOptions(async () => ({ path: { text: '', words: [], points: [] } })));
-assert.match(emptyTwice.spell.error, /no spell text after retry/, 'two empty results must be reported as a failed recognition');
-
-console.log('PASS_IMAGE_PIPELINE_RETRY');
+console.log('PASS_IMAGE_PIPELINE_EMPTY_RESULT_AND_ERROR_RETRY');

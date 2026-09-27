@@ -130,9 +130,6 @@ const result = await imagePipeline.run({
     transformerPipelinePromise = null;
     if (model?.dispose) await model.dispose();
   },
-  onRecognitionRetry: ({ error }) => {
-    if (error) console.warn('OCR first pass failed; retrying with the same image dimensions.', error);
-  },
 });
 const paths = result.structure.paths;
 if (renderPaths) pathOverlay = await writePathOverlay(master, paths);
@@ -176,7 +173,7 @@ const output = {
   },
   process: {
     structure: structureError ? '陣の一部を読み取れず、威力に反映しました。呪文の読み取りを続けます。' : '写し絵の読み取りが完了しました。',
-    spell: result.spell.error ? 'OCRに2回失敗しました。解像度を変えず、読めた情報から結果を計算しました。' : '読み取り結果から相を選び、結果を表示しました。',
+    spell: result.spell.error ? 'OCRで呪文を読み取れませんでした。読めた情報から結果を計算しました。' : '読み取り結果から相を選び、結果を表示しました。',
   },
   circle: {
     ...(structureError ? { error: structureError } : {}),

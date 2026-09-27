@@ -172,13 +172,13 @@
       <section class="page circle-page" aria-labelledby="circleChapterTitle">
         <h2 id="circleChapterTitle" class="rune-title">陣の章</h2>
         <p class="small page-lead">描いた陣を写し、円の輪郭・環の呪文・紋を読み取る。</p>
-        <div id="stage" class="stage"><div id="stageEmpty" class="empty">閉じた図形と、環に呪文を記した魔法陣を写してください。輪郭が見つからなくても、頁は結果を示します。</div><video id="cameraVideo" class="hidden" autoplay playsinline muted></video><canvas id="captureCanvas" class="hidden"></canvas><div id="analysisSpinner" class="stage-spinner" role="status" aria-label="解析中" hidden></div></div>
-        <div class="controls"><button id="cameraButton" class="camera-button" type="button">写し絵を撮影</button><label class="file-label secondary">写し絵を選定<input id="fileInput" type="file" accept="image/*"></label></div>
+        <div id="stage" class="stage"><div id="stageEmpty" class="empty">サンプルの陣を表示します。画像を選ぶか、カメラで撮影して差し替えられます。</div><video id="cameraVideo" class="hidden" autoplay playsinline muted></video><canvas id="captureCanvas" class="hidden"></canvas><div id="analysisSpinner" class="stage-spinner" role="status" aria-label="解析中" hidden></div></div>
+        <div class="controls"><button id="analyzeButton" class="camera-button" type="button" disabled>陣を読み解く</button><button id="cameraButton" class="camera-button" type="button">写し絵を撮影</button><label class="file-label secondary">写し絵を選定<input id="fileInput" type="file" accept="image/*"></label></div>
         <div class="process-card">
           <div class="process-title">処理の記録</div>
           <div id="progressLog" class="progress-log" role="log" aria-live="polite">
-            <p id="cameraStatus" class="progress-row" aria-live="polite">紋：写し絵を選ぶと、閉じたパスと紋を読み取ります。</p>
-            <p id="modelStatus" class="progress-row" aria-live="polite">呪文：紋を読み取ったあと、相を判定します。</p>
+            <p id="cameraStatus" class="progress-row" aria-live="polite">紋：写し絵を選び、「陣を読み解く」を押すと輪郭と紋を読み取ります。</p>
+            <p id="modelStatus" class="progress-row" aria-live="polite">呪文：「陣を読み解く」を押すと、呪文を読み取って相を判定します。</p>
           </div>
           <p id="preloadStatus" class="status" role="status">魔導司書はまだ控えの有無を確かめている。</p>
         </div>
