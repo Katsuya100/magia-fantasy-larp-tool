@@ -13,10 +13,33 @@
   const KOTODAMA_NGRAM_INDEX_CACHE_URL = 'https://kotodamagia.local/cache/scowl-en-us-common-ngrams-v2.json';
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
   const ATTRIBUTES = global.AttributeScoringCore.attributes;
+  const diagnosticsEnabled = Boolean(global.location?.search && new URLSearchParams(global.location.search).has('diagnostics'));
   let stageStorageWarningShown = false;
+  const diagnosticStageState = {
+    currentStage: 'page-loaded',
+    previousInterruptedStage: 'none',
+    runId: 'none',
+    memory: null,
+    error: null,
+  };
+  const OCR_MEMORY_FIELDS = [
+    'ocrInputWidth', 'ocrInputHeight',
+    'detectionTensorWidth', 'detectionTensorHeight',
+    'detectionMaskWidth', 'detectionMaskHeight',
+    'inputFloat32EstimatedBytes', 'maskEstimatedBytes',
+  ];
+
+  function compactOcrMemory(memory) {
+    const compact = {};
+    for (const field of OCR_MEMORY_FIELDS) {
+      const value = memory?.[field];
+      if (Number.isSafeInteger(value) && value >= 0) compact[field] = value;
+    }
+    return Object.keys(compact).length ? compact : null;
+  }
 
   function warnStageStorageUnavailable(error) {
-    if (stageStorageWarningShown) return;
+    if (!diagnosticsEnabled || stageStorageWarningShown) return;
     stageStorageWarningShown = true;
     console.warn('[Magia] Analysis stage diagnostics are unavailable.', error);
   }
@@ -25,9 +48,14 @@
     const storage = global.localStorage;
     if (!storage) throw new Error('localStorage is unavailable in this browser context.');
     const previousStage = storage.getItem('magiaAnalysisStage');
-    if (previousStage && previousStage !== 'analysis-complete') {
-      console.warn('[Magia] Previous analysis may have terminated unexpectedly at stage:', previousStage);
-    }
+    diagnosticStageState.currentStage = previousStage || 'page-loaded';
+    diagnosticStageState.previousInterruptedStage = previousStage && previousStage !== 'analysis-complete' ? previousStage : 'none';
+    diagnosticStageState.runId = storage.getItem('magiaAnalysisRunId') || 'none';
+    const savedMemory = storage.getItem('magiaAnalysisMemory');
+    if (savedMemory && savedMemory.length <= 512) {
+      try { diagnosticStageState.memory = compactOcrMemory(JSON.parse(savedMemory)); }
+      catch { storage.removeItem('magiaAnalysisMemory'); }
+    } else if (savedMemory) storage.removeItem('magiaAnalysisMemory');
   } catch (error) {
     warnStageStorageUnavailable(error);
   }
@@ -36,16 +64,29 @@
     return global.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
 
-  function recordAnalysisStage(job, stage) {
-    if (!job) return;
+  function recordAnalysisStage(job, stage, memory = null) {
+    if (!job || typeof stage !== 'string') return;
+    const compactMemory = diagnosticsEnabled ? compactOcrMemory(memory) : null;
+    diagnosticStageState.currentStage = stage;
+    if (stage === 'analysis-start') {
+      diagnosticStageState.runId = job.runId;
+      diagnosticStageState.memory = null;
+      diagnosticStageState.error = null;
+    }
+    if (compactMemory) diagnosticStageState.memory = compactMemory;
     try {
       const storage = global.localStorage;
       if (!storage) throw new Error('localStorage is unavailable in this browser context.');
-      if (stage === 'analysis-start') storage.setItem('magiaAnalysisRunId', job.runId);
+      if (stage === 'analysis-start') {
+        storage.setItem('magiaAnalysisRunId', job.runId);
+        storage.removeItem('magiaAnalysisMemory');
+      }
       storage.setItem('magiaAnalysisStage', stage);
+      if (compactMemory) storage.setItem('magiaAnalysisMemory', JSON.stringify(compactMemory));
     } catch (error) {
       warnStageStorageUnavailable(error);
     }
+    publishRuntimeDiagnostics();
   }
 
   function countDictionaryEntries(text) {
@@ -138,7 +179,7 @@
     }
   }
 
-  const diagnostics = global.location?.search && new URLSearchParams(global.location.search).has('diagnostics')
+  const diagnostics = diagnosticsEnabled
     ? { image: null, spell: null, circle: null, attribute: null, sigil: null, power: null }
     : null;
 
@@ -184,6 +225,44 @@
       sigilScores: diagnostics.circle.sigilScores,
     };
     output.textContent = JSON.stringify({ image: diagnostics.image, spell, circle, attribute: diagnostics.attribute, sigil: diagnostics.sigil, power: diagnostics.power });
+  }
+
+  function publishRuntimeDiagnostics() {
+    if (!diagnosticsEnabled) return;
+    let panel = document.getElementById('analysisRuntimeDiagnostics');
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = 'analysisRuntimeDiagnostics';
+      panel.setAttribute('aria-label', '画像解析stageとメモリ見積もり');
+      panel.style.cssText = 'margin:1rem 0;padding:1rem;border:1px solid #79909a;border-radius:8px;background:#111b25;color:#e5edf0';
+      const heading = document.createElement('strong');
+      heading.textContent = 'OCR runtime diagnostics';
+      const output = document.createElement('pre');
+      output.id = 'analysisRuntimeDiagnosticsText';
+      output.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;margin:.5rem 0 0;font:12px/1.6 ui-monospace,monospace';
+      panel.append(heading, output);
+      document.body.append(panel);
+    }
+    const output = document.getElementById('analysisRuntimeDiagnosticsText');
+    const memory = diagnosticStageState.memory || {};
+    const memoryMib = bytes => Number.isFinite(bytes) ? `${(bytes / 1024 / 1024).toFixed(1)} MiB` : 'pending';
+    output.textContent = [
+      `Current stage: ${diagnosticStageState.currentStage}`,
+      `Previous interrupted stage: ${diagnosticStageState.previousInterruptedStage}`,
+      `Run ID: ${diagnosticStageState.runId}`,
+      `OCR input: ${memory.ocrInputWidth ?? 'pending'}x${memory.ocrInputHeight ?? 'pending'}`,
+      `Detection tensor: ${memory.detectionTensorWidth ?? 'pending'}x${memory.detectionTensorHeight ?? 'pending'}`,
+      `Detection mask: ${memory.detectionMaskWidth ?? 'pending'}x${memory.detectionMaskHeight ?? 'pending'}`,
+      `Input Float32 estimated: ${memoryMib(memory.inputFloat32EstimatedBytes)}`,
+      `Mask estimated: ${memoryMib(memory.maskEstimatedBytes)}`,
+      ...(diagnosticStageState.error ? [`Last OCR error: ${diagnosticStageState.error}`] : []),
+    ].join('\n');
+  }
+
+  function recordDiagnosticError(error) {
+    if (!diagnosticsEnabled) return;
+    diagnosticStageState.error = String(error?.message || error || 'Unknown OCR error').slice(0, 240);
+    publishRuntimeDiagnostics();
   }
 
   function requireElement(id) {
@@ -719,13 +798,21 @@
           finish(reject, job.signal.reason || makeAnalysisAbortError());
         }
       };
-      const onError = event => finish(reject, new Error(event.error?.message || event.message || 'OCR Workerでエラーが発生しました。'));
-      const onMessageError = () => finish(reject, new Error('OCR Workerから結果を受け取れませんでした。'));
+      const onError = event => {
+        const error = new Error(event.error?.message || event.message || 'OCR Workerでエラーが発生しました。');
+        recordDiagnosticError(error);
+        finish(reject, error);
+      };
+      const onMessageError = () => {
+        const error = new Error('OCR Workerから結果を受け取れませんでした。');
+        recordDiagnosticError(error);
+        finish(reject, error);
+      };
       const onMessage = event => {
         const message = event.data || {};
         if (message.jobId !== job.id) return;
         if (message.type === 'stage') {
-          recordAnalysisStage(job, message.stage);
+          recordAnalysisStage(job, message.stage, message.memory || null);
         } else if (message.type === 'progress') {
           setStatus(modelStatus, message.message || '環の呪文を読み取っています…', 'busy');
         } else if (message.type === 'success') {
@@ -733,6 +820,7 @@
         } else if (message.type === 'error') {
           const error = new Error(message.message || 'OCRに失敗しました。');
           error.name = message.name || 'Error';
+          recordDiagnosticError(error);
           finish(reject, job.signal.aborted ? job.signal.reason || error : error);
         }
       };
@@ -751,7 +839,14 @@
         worker.addEventListener('messageerror', onMessageError);
         job.signal.addEventListener('abort', onAbort, { once: true });
         buffer = pixels.data.buffer;
-        worker.postMessage({ type: 'analyze', jobId: job.id, width: canvas.width, height: canvas.height, buffer }, [buffer]);
+        worker.postMessage({
+          type: 'analyze',
+          jobId: job.id,
+          width: canvas.width,
+          height: canvas.height,
+          buffer,
+          diagnostics: diagnosticsEnabled,
+        }, [buffer]);
         buffer = null;
         pixels = null;
       } catch (error) {
@@ -1317,5 +1412,6 @@
         });
     }
   }
+  publishRuntimeDiagnostics();
   prepareModels();
 }(globalThis));

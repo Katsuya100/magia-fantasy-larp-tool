@@ -124,6 +124,149 @@
     return output;
   }
 
+  function resizeRgbaSharpContainInto(buffer, width, height, targetWidth, targetHeight, output) {
+    if (!output || output.length !== targetWidth * targetHeight * 4) throw new RangeError('The RGBA output buffer has the wrong length.');
+    output.fill(0);
+    for (let index = 3; index < output.length; index += 4) output[index] = 255;
+    const scale = Math.min(targetWidth / width, targetHeight / height);
+    const contentWidth = Math.max(1, Math.round(width * scale));
+    const contentHeight = Math.max(1, Math.round(height * scale));
+    const left = Math.floor((targetWidth - contentWidth) / 2);
+    const top = Math.floor((targetHeight - contentHeight) / 2);
+    const contributions = (sourceSize, targetSize) => Array.from({ length: targetSize }, (_, targetIndex) => {
+      const ratio = sourceSize / targetSize;
+      const filterScale = Math.max(1, ratio);
+      const center = (targetIndex + .5) * ratio - .5;
+      const support = 3 * filterScale;
+      const samples = new Map();
+      let total = 0;
+      for (let sourceIndex = Math.ceil(center - support); sourceIndex <= Math.floor(center + support); sourceIndex += 1) {
+        const weight = lanczos3((sourceIndex - center) / filterScale);
+        if (weight === 0) continue;
+        const extendedIndex = Math.max(0, Math.min(sourceSize - 1, sourceIndex));
+        samples.set(extendedIndex, (samples.get(extendedIndex) || 0) + weight);
+        total += weight;
+      }
+      return [...samples].map(([sourceIndex, weight]) => [sourceIndex, weight / total]);
+    });
+    const horizontal = contributions(width, contentWidth);
+    const vertical = contributions(height, contentHeight);
+    const lastUse = new Uint32Array(height);
+    for (let targetY = 0; targetY < contentHeight; targetY += 1) {
+      for (const [sourceY] of vertical[targetY]) lastUse[sourceY] = targetY;
+    }
+    const rowLength = contentWidth * 4;
+    const rowCache = new Map();
+    const verticalRow = new Float64Array(rowLength);
+    const toClampedByte = value => {
+      if (!(value > 0)) return 0;
+      if (value >= 255) return 255;
+      const lower = Math.floor(value);
+      const fraction = value - lower;
+      return fraction > .5 || (fraction === .5 && lower % 2 === 1) ? lower + 1 : lower;
+    };
+    for (let targetY = 0; targetY < contentHeight; targetY += 1) {
+      verticalRow.fill(0);
+      for (const [sourceY, weight] of vertical[targetY]) {
+        let horizontalRow = rowCache.get(sourceY);
+        if (!horizontalRow) {
+          horizontalRow = new Float64Array(rowLength);
+          for (let x = 0; x < contentWidth; x += 1) {
+            const targetOffset = x * 4;
+            for (const [sourceX, horizontalWeight] of horizontal[x]) {
+              const sourceOffset = (sourceY * width + sourceX) * 4;
+              for (let channel = 0; channel < 4; channel += 1) {
+                horizontalRow[targetOffset + channel] += buffer[sourceOffset + channel] * horizontalWeight;
+              }
+            }
+          }
+          if (lastUse[sourceY] > targetY) rowCache.set(sourceY, horizontalRow);
+        }
+        for (let index = 0; index < rowLength; index += 1) verticalRow[index] += horizontalRow[index] * weight;
+        if (lastUse[sourceY] === targetY) rowCache.delete(sourceY);
+      }
+      const outputOffset = ((top + targetY) * targetWidth + left) * 4;
+      for (let index = 0; index < rowLength; index += 1) output[outputOffset + index] = toClampedByte(verticalRow[index]);
+    }
+    return output;
+  }
+
+  // Match resizeRgbaSharpContain's byte-rounded RGB values while writing the
+  // detector's planar BGR Float32 tensor directly, without an aligned RGBA copy.
+  function resizeRgbaSharpContainToPlanarFloat32(buffer, width, height, targetWidth, targetHeight) {
+    const pixels = targetWidth * targetHeight;
+    const output = new Float32Array(pixels * 3);
+    const scale = Math.min(targetWidth / width, targetHeight / height);
+    const contentWidth = Math.max(1, Math.round(width * scale));
+    const contentHeight = Math.max(1, Math.round(height * scale));
+    const left = Math.floor((targetWidth - contentWidth) / 2);
+    const top = Math.floor((targetHeight - contentHeight) / 2);
+    const contributions = (sourceSize, targetSize) => Array.from({ length: targetSize }, (_, targetIndex) => {
+      const ratio = sourceSize / targetSize;
+      const filterScale = Math.max(1, ratio);
+      const center = (targetIndex + .5) * ratio - .5;
+      const support = 3 * filterScale;
+      const samples = new Map();
+      let total = 0;
+      for (let sourceIndex = Math.ceil(center - support); sourceIndex <= Math.floor(center + support); sourceIndex += 1) {
+        const weight = lanczos3((sourceIndex - center) / filterScale);
+        if (weight === 0) continue;
+        const extendedIndex = Math.max(0, Math.min(sourceSize - 1, sourceIndex));
+        samples.set(extendedIndex, (samples.get(extendedIndex) || 0) + weight);
+        total += weight;
+      }
+      return [...samples].map(([sourceIndex, weight]) => [sourceIndex, weight / total]);
+    });
+    const horizontal = contributions(width, contentWidth);
+    const vertical = contributions(height, contentHeight);
+    const rowLength = contentWidth * 3;
+    const lastUse = new Uint32Array(height);
+    for (let targetY = 0; targetY < contentHeight; targetY += 1) {
+      for (const [sourceY] of vertical[targetY]) lastUse[sourceY] = targetY;
+    }
+    const rowCache = new Map();
+    const verticalRow = new Float64Array(rowLength);
+    const toClampedByte = value => {
+      if (!(value > 0)) return 0;
+      if (value >= 255) return 255;
+      const lower = Math.floor(value);
+      const fraction = value - lower;
+      return fraction > .5 || (fraction === .5 && lower % 2 === 1) ? lower + 1 : lower;
+    };
+
+    for (let targetY = 0; targetY < contentHeight; targetY += 1) {
+      verticalRow.fill(0);
+      for (const [sourceY, weight] of vertical[targetY]) {
+        let horizontalRow = rowCache.get(sourceY);
+        if (!horizontalRow) {
+          horizontalRow = new Float64Array(rowLength);
+          for (let x = 0; x < contentWidth; x += 1) {
+            const targetOffset = x * 3;
+            for (const [sourceX, horizontalWeight] of horizontal[x]) {
+              const sourceOffset = (sourceY * width + sourceX) * 4;
+              horizontalRow[targetOffset] += buffer[sourceOffset] * horizontalWeight;
+              horizontalRow[targetOffset + 1] += buffer[sourceOffset + 1] * horizontalWeight;
+              horizontalRow[targetOffset + 2] += buffer[sourceOffset + 2] * horizontalWeight;
+            }
+          }
+          if (lastUse[sourceY] > targetY) rowCache.set(sourceY, horizontalRow);
+        }
+        for (let index = 0; index < rowLength; index += 1) verticalRow[index] += horizontalRow[index] * weight;
+        if (lastUse[sourceY] === targetY) rowCache.delete(sourceY);
+      }
+
+      const outputOffset = (top + targetY) * targetWidth + left;
+      for (let x = 0; x < contentWidth; x += 1) {
+        const sourceOffset = x * 3;
+        const targetOffset = outputOffset + x;
+        output[targetOffset] = toClampedByte(verticalRow[sourceOffset + 2]) / 255;
+        output[pixels + targetOffset] = toClampedByte(verticalRow[sourceOffset + 1]) / 255;
+        output[pixels * 2 + targetOffset] = toClampedByte(verticalRow[sourceOffset]) / 255;
+      }
+    }
+    return output;
+  }
+
   function resizeRgbaSharpLinear(buffer, width, height, targetWidth, targetHeight) {
     if (width === targetWidth && height === targetHeight) return new Uint8ClampedArray(buffer);
     const scale = Math.max(targetWidth / width, targetHeight / height);
@@ -840,5 +983,5 @@
     return covered / polarWidth;
   }
 
-  global.ImageAnalysisCore = { resizeRgbaLinear, resizeRgbaSharpContain, resizeRgbaSharpLinear, detectClosedPathsJs, detectCirclesJs: detectClosedPathsJs, scorePointsOnRing, scoreInkCoverage, analyzeSigilJs, analyzeSigilMetricsJs };
+  global.ImageAnalysisCore = { resizeRgbaLinear, resizeRgbaSharpContain, resizeRgbaSharpContainInto, resizeRgbaSharpContainToPlanarFloat32, resizeRgbaSharpLinear, detectClosedPathsJs, detectCirclesJs: detectClosedPathsJs, scorePointsOnRing, scoreInkCoverage, analyzeSigilJs, analyzeSigilMetricsJs };
 }(typeof globalThis !== 'undefined' ? globalThis : self));

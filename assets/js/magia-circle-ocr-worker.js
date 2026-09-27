@@ -1,4 +1,4 @@
-importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
+importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-line-split.js');
 
 (function startMagiaCircleOcrWorker(global) {
   'use strict';
@@ -11,6 +11,8 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
   let textDetectorPromise = null;
   let releaseOcrCvResources = null;
   let ocrCvResourcesTracked = false;
+  let activeDetectionLineResources = null;
+  let diagnosticsMode = false;
   const ocrSessionOptions = Object.freeze({
     executionMode: 'sequential',
     enableCpuMemArena: false,
@@ -34,9 +36,14 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
     global.postMessage({ type: 'progress', jobId: activeJobId, message });
   }
 
-  function reportStage(stage) {
+  function reportStage(stage, memory = null) {
     if (activeJobId === null) return;
-    global.postMessage({ type: 'stage', jobId: activeJobId, stage });
+    global.postMessage({
+      type: 'stage',
+      jobId: activeJobId,
+      stage,
+      ...(diagnosticsMode && memory ? { memory } : {}),
+    });
   }
 
   function throwIfAborted(signal) {
@@ -61,7 +68,12 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
   }
 
   function combineSpellLineImages(first, second, firstAngle, secondAngle) {
-    return core.combineRgbaLines(first.image, second.image, firstAngle, secondAngle, imageAnalysis.resizeRgbaSharpLinear);
+    try {
+      return core.combineRgbaLines(first.image, second.image, firstAngle, secondAngle, imageAnalysis.resizeRgbaSharpLinear);
+    } finally {
+      first.image?.release?.();
+      second.image?.release?.();
+    }
   }
 
   async function ensureRecognizer() {
@@ -269,127 +281,128 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
         };
         ocrCvResourcesTracked = true;
       }
-      cv.matFromImageData = imageData => {
-        const data = imageData instanceof global.ImageData
-          ? imageData
-          : new global.ImageData(imageData.data, imageData.width, imageData.height);
-        const mat = new cv.Mat(data.height, data.width, cv.CV_8UC4);
-        mat.data.set(data.data);
-        return mat;
-      };
-      const splitSource = await (await fetch('https://cdn.jsdelivr.net/npm/@gutenye/ocr-common@1.4.9/splitIntoLineImages/+esm')).text();
-      const support = String.raw`class BrowserLineImage {
-  constructor({data,width,height}) { this.data=data instanceof Uint8ClampedArray?data:new Uint8ClampedArray(data); this.width=width; this.height=height; }
-  async resize(size,heightValue) {
-    const requestedWidth=Number(typeof size==='object'?size?.width:size);
-    const requestedHeight=Number(typeof size==='object'?size?.height:heightValue);
-    const width=Math.max(1,Math.round(Number.isFinite(requestedWidth)?requestedWidth:this.width));
-    const height=Math.max(1,Math.round(Number.isFinite(requestedHeight)?requestedHeight:this.height));
-    let source=null, target=null, sourceContext=null, targetContext=null;
-    try {
-      source=new OffscreenCanvas(this.width,this.height);
-      sourceContext=source.getContext('2d',{willReadFrequently:true});
-      if (!sourceContext) throw new Error('OCR Worker could not create its source canvas context.');
-      sourceContext.putImageData(new ImageData(this.data,this.width,this.height),0,0);
-      target=new OffscreenCanvas(width,height);
-      targetContext=target.getContext('2d',{willReadFrequently:true});
-      if (!targetContext) throw new Error('OCR Worker could not create its resized canvas context.');
-      targetContext.drawImage(source,0,0,width,height);
-      return new BrowserLineImage(targetContext.getImageData(0,0,width,height));
-    } finally {
-      if (source) { source.width=1; source.height=1; }
-      if (target) { target.width=1; target.height=1; }
-      sourceContext=null;
-      targetContext=null;
-      source=null;
-      target=null;
-    }
-  }
-}`;
-      const patchedSource = support + splitSource
-        .replace('from"/npm/@techstark/opencv-js@4.9.0-release.3/+esm"', 'from"https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm"')
-        .replace('from"/npm/js-clipper@1.0.1/+esm"', 'from"https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm"')
-        .replace('let v;', 'let v=BrowserLineImage;');
-      const splitUrl = URL.createObjectURL(new Blob([patchedSource], { type: 'text/javascript' }));
-      let splitModule;
-      try { splitModule = await import(splitUrl); }
-      finally { URL.revokeObjectURL(splitUrl); }
-      const { splitIntoLineImages } = splitModule;
+      const clipperModule = await import('https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm');
+      const clipper = clipperModule.default ?? clipperModule;
       const ort = await import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`);
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = 1;
       ort.env.wasm.proxy = false;
-      let detectionSession = await ort.InferenceSession.create(
-        await (await ocrCache.load(core.config.detectionModelUrl)).arrayBuffer(),
-        { ...ocrSessionOptions },
-      );
+      let detectionSession = null;
+      let detectionModel = null;
+      try {
+        detectionModel = await (await ocrCache.load(core.config.detectionModelUrl)).arrayBuffer();
+        reportStage('ocr-detection-session-create');
+        detectionSession = await ort.InferenceSession.create(
+          detectionModel,
+          { ...ocrSessionOptions },
+        );
+        detectionModel = null;
+      } catch (error) {
+        if (detectionSession) {
+          try { await detectionSession.release(); }
+          finally { detectionSession = null; }
+        }
+        throw error;
+      } finally {
+        detectionModel = null;
+      }
+      reportStage('ocr-detection-session-ready');
       reportStage('ocr-runtime-ready');
+      const releaseDetectionSession = async () => {
+        if (!detectionSession) return;
+        const session = detectionSession;
+        detectionSession = null;
+        await session.release();
+      };
       return {
-        async release() {
-          if (!detectionSession) return;
-          const session = detectionSession;
-          detectionSession = null;
-          await session.release();
-        },
+        async release() { await releaseDetectionSession(); },
         async detect(source, signal) {
           if (!detectionSession) throw new Error('OCR検出モデルはすでに解放されています。');
-          let image;
-          let inputImage;
-          let outputImage;
-          let input;
-          let outputs;
+          let image = null;
+          let inputValues = null;
+          let inputTensor = null;
+          let outputs = null;
+          let modelOutput = null;
+          let mask = null;
+          let lineResources = null;
+          let sessionForRun = detectionSession;
+          let memory = null;
+          let completed = false;
           try {
             throwIfAborted(signal);
             image = await BrowserImageRaw.open(source);
             const width = Math.max(32, Math.ceil(image.width / 32) * 32);
             const height = Math.max(32, Math.ceil(image.height / 32) * 32);
-            inputImage = width === image.width && height === image.height
-              ? image
-              : await image.resize({ width, height });
-            if (image !== inputImage) {
-              image.data = new Uint8ClampedArray(0);
-              image = null;
-            }
-            const pixels = inputImage.width * inputImage.height;
-            let values = new Float32Array(pixels * 3);
-            for (let index = 0; index < pixels; index += 1) {
-              const offset = index * 4;
-              values[index] = inputImage.data[offset + 2] / 255;
-              values[pixels + index] = inputImage.data[offset + 1] / 255;
-              values[pixels * 2 + index] = inputImage.data[offset] / 255;
-            }
-            try {
-              input = new ort.Tensor('float32', values, [1, 3, inputImage.height, inputImage.width]);
-              values = null;
-              outputs = await detectionSession.run({ [detectionSession.inputNames[0]]: input });
-            } finally {
-              values = null;
-            }
-            disposeTensors({ input });
-            input = null;
+            memory = {
+              ocrInputWidth: image.width,
+              ocrInputHeight: image.height,
+              detectionTensorWidth: width,
+              detectionTensorHeight: height,
+              inputFloat32EstimatedBytes: width * height * 3 * Float32Array.BYTES_PER_ELEMENT,
+            };
+
+            reportStage('ocr-detection-input-start', memory);
+            inputValues = imageAnalysis.resizeRgbaSharpContainToPlanarFloat32(image.data, image.width, image.height, width, height);
+            inputTensor = new ort.Tensor('float32', inputValues, [1, 3, height, width]);
+            inputValues = null;
+            reportStage('ocr-detection-input-ready', memory);
             throwIfAborted(signal);
-            const modelOutput = outputs[detectionSession.outputNames[0]];
+            reportStage('ocr-detection-run-start', memory);
+            outputs = await sessionForRun.run({ [sessionForRun.inputNames[0]]: inputTensor });
+            reportStage('ocr-detection-run-done', memory);
+            throwIfAborted(signal);
+
+            modelOutput = outputs[sessionForRun.outputNames[0]];
             const outputHeight = modelOutput.dims[2];
             const outputWidth = modelOutput.dims[3];
-            const data = new Uint8ClampedArray(outputWidth * outputHeight * 4);
+            memory.detectionMaskWidth = outputWidth;
+            memory.detectionMaskHeight = outputHeight;
+            memory.maskEstimatedBytes = outputWidth * outputHeight * Uint8Array.BYTES_PER_ELEMENT;
+            reportStage('ocr-detection-mask-start', memory);
+            mask = new Uint8Array(outputWidth * outputHeight);
             for (let index = 0; index < modelOutput.data.length; index += 1) {
-              const value = modelOutput.data[index] > 0.03 ? 255 : 0;
-              const offset = index * 4;
-              data[offset] = data[offset + 1] = data[offset + 2] = value;
-              data[offset + 3] = 255;
+              mask[index] = modelOutput.data[index] > 0.03 ? 255 : 0;
             }
-            outputImage = new BrowserImageRaw({ data, width: outputWidth, height: outputHeight });
+            reportStage('ocr-detection-mask-ready', memory);
+
             disposeTensors(outputs);
             outputs = null;
-            const lineImages = await splitIntoLineImages(outputImage, inputImage);
-            return { lineImages, resizedImageWidth: inputImage.width, resizedImageHeight: inputImage.height };
+            modelOutput = null;
+            reportStage('ocr-detection-output-disposed', memory);
+            disposeTensors({ input: inputTensor });
+            inputTensor = null;
+            inputValues = null;
+            await releaseDetectionSession();
+            sessionForRun = null;
+            reportStage('ocr-detection-session-release', memory);
+
+            reportStage('ocr-detection-opencv-start', memory);
+            lineResources = global.MagiaOcrLineSplitter.create(cv, clipper, mask, outputWidth, outputHeight, image, width, height, () => { mask = null; });
+            activeDetectionLineResources = lineResources;
+            mask = null;
+            reportStage('ocr-detection-opencv-done', memory);
+            completed = true;
+            return { lineImages: lineResources.lines, resizedImageWidth: width, resizedImageHeight: height };
           } finally {
-            disposeTensors(outputs);
-            disposeTensors({ input });
-            if (image) image.data = new Uint8ClampedArray(0);
-            if (inputImage) inputImage.data = new Uint8ClampedArray(0);
-            if (outputImage) outputImage.data = new Uint8ClampedArray(0);
-            releaseOcrCvResources?.();
+            try {
+              disposeTensors(outputs);
+              outputs = null;
+              modelOutput = null;
+              disposeTensors({ input: inputTensor });
+              inputTensor = null;
+              inputValues = null;
+              mask = null;
+              if (detectionSession) {
+                await releaseDetectionSession();
+                sessionForRun = null;
+                reportStage('ocr-detection-session-release', memory);
+              }
+              if (lineResources && lineResources !== activeDetectionLineResources) lineResources.release();
+              image = null;
+            } finally {
+              reportStage('ocr-detection-cleanup', memory);
+              if (completed) reportStage('ocr-detection-done', memory);
+            }
           }
         },
       };
@@ -403,9 +416,6 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
       this.data = data instanceof Uint8ClampedArray ? data : new Uint8ClampedArray(data);
       this.width = width;
       this.height = height;
-    }
-    async resize({ width, height }) {
-      return new BrowserImageRaw({ data: imageAnalysis.resizeRgbaSharpContain(this.data, this.width, this.height, width, height), width, height });
     }
     async write() {}
     async drawBox() { return this; }
@@ -443,7 +453,6 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
           // Detection is complete; do not keep its ONNX session beside the recognizer session.
           await releaseTextDetector(detector);
           detector = null;
-          reportStage('ocr-detection-done');
           reportStage('ocr-recognition-start');
           return { ...detected, lineImages, additionalLineImages };
         },
@@ -459,10 +468,14 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
       reportStage('ocr-cleanup-start');
       try { await releaseOcrModels(detector); }
       finally {
-        try { releaseOcrCvResources?.(); }
+        try { activeDetectionLineResources?.release(); }
         finally {
-          releaseOcrCvResources = null;
-          releaseSourcePixels();
+          activeDetectionLineResources = null;
+          try { releaseOcrCvResources?.(); }
+          finally {
+            releaseOcrCvResources = null;
+            releaseSourcePixels();
+          }
         }
       }
     }
@@ -478,6 +491,7 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
     }
     if (message.type !== 'analyze' || !Number.isInteger(message.jobId) || activeJobId !== null) return;
     activeJobId = message.jobId;
+    diagnosticsMode = Boolean(message.diagnostics);
     activeAbortController = new AbortController();
     void (async () => {
       try {
@@ -489,6 +503,7 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
         message.buffer = null;
         activeAbortController = null;
         activeJobId = null;
+        diagnosticsMode = false;
       }
     })();
   });

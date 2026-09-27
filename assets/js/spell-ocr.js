@@ -656,6 +656,10 @@
   }
 
   function releaseLinePixels(line) {
+    if (line?.image?.release) {
+      line.image.release();
+      return;
+    }
     if (line?.image && line.image.data) line.image.data = new Uint8ClampedArray(0);
   }
 
@@ -690,10 +694,10 @@
   async function recognizeLineImages({ lineImages, additionalLineImages, width, height, recognizeVariants, combineLines, releaseLinePixelsAfterRecognition = false, signal }) {
     const lineSummaries = [];
     const retainedLines = new Set();
-    const recognizedLines = [];
     const potentialCombinedLines = releaseLinePixelsAfterRecognition
       ? findPotentialCombinedLines(lineImages, width, height)
       : new Set();
+    const recognizedLines = [];
     try {
     const rawCandidates = [];
     const baseCandidates = [];
@@ -719,7 +723,7 @@
       try {
         observations = await recognizeVariants(line);
       } finally {
-        if (releaseLinePixelsAfterRecognition && !mayBeCombined) releaseLinePixels(line);
+        if (releaseLinePixelsAfterRecognition && (line.image?.release || !mayBeCombined)) releaseLinePixels(line);
       }
       throwIfAborted(signal);
       for (const observation of observations) {
@@ -845,6 +849,7 @@
     } finally {
       if (releaseLinePixelsAfterRecognition) {
         for (const line of retainedLines) releaseLinePixels(line);
+        for (const line of lineImages || []) if (line?.image?.release) releaseLinePixels(line);
       }
     }
   }
