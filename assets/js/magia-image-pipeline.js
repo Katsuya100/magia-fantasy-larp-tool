@@ -193,7 +193,20 @@
     return !String(spell?.path?.text || '').trim() && !(spell?.path?.words?.length);
   }
 
-  async function run({ recognizeSpell, getStructureInput, getMasterImage, analyzeStructure: analyzeStructureAdapter, embedAttributes, releaseAttributeModel, onRecognitionRetry, signal }) {
+  function isMemoryRelatedError(error) {
+    const text = [error?.message, error?.cause?.message, error].filter(Boolean).join(' ').toLowerCase();
+    if (error?.name === 'RangeError' && /(alloc|buffer|typed array|array length|memory|size)/i.test(text)) return true;
+    return [
+      'out of memory', 'out-of-memory', '\\boom\\b', 'allocation failed', 'failed to allocate',
+      'cannot allocate', 'can\'t allocate', 'could not allocate', 'memory allocation', 'memory access out of bounds',
+      'webassembly.memory', 'webassembly memory', 'wasm memory', 'wasm out of memory',
+      'cannot enlarge memory', 'cannot enlarge memory arrays', 'failed to grow memory', 'memory growth', 'memory limit', 'memory.*exhaust', 'array buffer allocation failed',
+      'invalid typed array length', 'invalid array length', 'maximum array buffer', 'bad alloc',
+      'not enough memory', 'enomem', 'opencv.*alloc', 'alloc.*opencv', 'onnx.*alloc', 'alloc.*onnx',
+    ].some(pattern => new RegExp(pattern).test(text));
+  }
+
+  async function run({ recognizeSpell, correctSpell, getStructureInput, getMasterImage, analyzeStructure: analyzeStructureAdapter, embedAttributes, releaseAttributeModel, onRecognitionRetry, signal }) {
     let embedding;
     let structureInput;
     let masterImage;
@@ -206,20 +219,23 @@
       } catch (error) {
         throwIfAborted(signal);
         recognitionError = error;
-        await onRecognitionRetry?.({ attempt: 1, error, empty: false });
-        // Give the browser a task boundary after the failed OCR pass releases its
-        // sessions and temporary buffers, before starting the one retry.
-        await new Promise(resolve => {
-          if (typeof setTimeout === 'function') setTimeout(resolve, 0);
-          else resolve();
-        });
-        throwIfAborted(signal);
-        try {
-          spell = await recognizeSpell(1);
-        } catch (retryError) {
+        if (!isMemoryRelatedError(error)) {
+          await onRecognitionRetry?.({ attempt: 1, error, empty: false });
+          // The first disposable OCR worker has been stopped before this single retry.
+          await new Promise(resolve => {
+            if (typeof setTimeout === 'function') setTimeout(resolve, 0);
+            else resolve();
+          });
           throwIfAborted(signal);
-          recognitionError = retryError;
-          spell = emptySpell(retryError);
+          try {
+            spell = await recognizeSpell(1);
+          } catch (retryError) {
+            throwIfAborted(signal);
+            recognitionError = retryError;
+            spell = emptySpell(retryError);
+          }
+        } else {
+          spell = emptySpell(error);
         }
       }
       if (!spell || isEmptySpell(spell)) {
@@ -249,15 +265,21 @@
       }
       throwIfAborted(signal);
       const structure = restoreStructureScale(rawStructure, structureInput.analysis.scale);
+      structureInput.analysis = null;
 
       masterImage = structureInput.master || await getMasterImage();
       throwIfAborted(signal);
-      const path = spell?.path || {};
-      const spellPoints = path.points || [];
-      const spellWords = path.words || [];
+      const spellPoints = spell?.path?.points || [];
       const structureResult = scoreStructure(structure, spellPoints, masterImage);
       masterImage = null;
       structureInput = null;
+
+      if (correctSpell) {
+        spell = await correctSpell(spell);
+        throwIfAborted(signal);
+      }
+      const path = spell?.path || {};
+      const spellWords = path.words || [];
 
       let attribute;
       try {
@@ -299,6 +321,7 @@
     attributeInputTexts,
     scoreAttributeEmbedding,
     fallbackAttribute,
+    isMemoryRelatedError,
     scoreSigil,
     scoreStructure,
     calculatePower,

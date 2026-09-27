@@ -1,10 +1,12 @@
-(function startMagiaCircleOcrFrame(global) {
+importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js');
+
+(function startMagiaCircleOcrWorker(global) {
   'use strict';
 
   const core = global.SpellOcrCore;
   const imageAnalysis = global.ImageAnalysisCore;
-  const activeParent = global.parent;
   let activeJobId = null;
+  let activeAbortController = null;
   let recognizerPromise = null;
   let textDetectorPromise = null;
   let releaseOcrCvResources = null;
@@ -29,7 +31,19 @@
 
   function notify(message) {
     if (activeJobId === null) return;
-    activeParent.postMessage({ type: 'progress', jobId: activeJobId, message }, global.location.origin === 'null' ? '*' : global.location.origin);
+    global.postMessage({ type: 'progress', jobId: activeJobId, message });
+  }
+
+  function reportStage(stage) {
+    if (activeJobId === null) return;
+    global.postMessage({ type: 'stage', jobId: activeJobId, stage });
+  }
+
+  function throwIfAborted(signal) {
+    if (!signal?.aborted) return;
+    const error = new Error(signal.reason?.message || 'OCR was cancelled.');
+    error.name = 'AbortError';
+    throw error;
   }
 
   function validateOcrCacheEntry(url, response) {
@@ -69,6 +83,7 @@
         if (session) {
           try { await session.release(); }
           catch (releaseError) { console.warn('OCR認識モデルの初期化失敗後にSessionを解放できませんでした。', releaseError); }
+          session = null;
         }
         throw error;
       }
@@ -85,13 +100,20 @@
     }
     const resources = [...new Set([detector, recognizer?.session].filter(Boolean))];
     let releaseError = null;
-    for (const resource of resources) {
+    for (let index = 0; index < resources.length; index += 1) {
+      const resource = resources[index];
       try { await resource.release(); }
       catch (error) {
         releaseError ||= error;
         console.warn('OCRモデルのONNX Sessionを解放できませんでした。', error);
+      } finally {
+        if (resource === detector) detector = null;
+        if (recognizer?.session === resource) recognizer.session = null;
+        resources[index] = null;
       }
     }
+    resources.length = 0;
+    recognizer = null;
     textDetectorPromise = null;
     recognizerPromise = null;
     if (releaseError) throw releaseError;
@@ -102,25 +124,30 @@
     await detector?.release();
   }
 
-  async function recognizeCanvas(canvas, inferPixelSpaces) {
+  async function recognizeCanvas(canvas, inferPixelSpaces, signal) {
     const { ort, session, dictionary } = await ensureRecognizer();
+    throwIfAborted(signal);
     const height = 48;
     const width = Math.max(48, Math.min(960, Math.round(canvas.width / Math.max(1, canvas.height) * height)));
-    let resized = imageAnalysis.resizeRgbaSharpLinear(canvas.data, canvas.width, canvas.height, width, height);
-    const pixels = width * height;
-    let values = new Float32Array(pixels * 3);
-    for (let index = 0; index < pixels; index += 1) {
-      const offset = index * 4;
-      values[index] = resized[offset + 2] / 255;
-      values[pixels + index] = resized[offset + 1] / 255;
-      values[pixels * 2 + index] = resized[offset] / 255;
-    }
-    resized = null;
-    const input = new ort.Tensor('float32', values, [1, 3, height, width]);
-    values = null;
+    let resized = null;
+    let values = null;
+    let input;
     let outputs;
     try {
+      resized = imageAnalysis.resizeRgbaSharpLinear(canvas.data, canvas.width, canvas.height, width, height);
+      const pixels = width * height;
+      values = new Float32Array(pixels * 3);
+      for (let index = 0; index < pixels; index += 1) {
+        const offset = index * 4;
+        values[index] = resized[offset + 2] / 255;
+        values[pixels + index] = resized[offset + 1] / 255;
+        values[pixels * 2 + index] = resized[offset] / 255;
+      }
+      input = new ort.Tensor('float32', values, [1, 3, height, width]);
+      values = null;
+      resized = null;
       outputs = await session.run({ [session.inputNames[0]]: input });
+      throwIfAborted(signal);
       const output = outputs[session.outputNames[0]];
       const decoded = core.decodeGreedyCtcDetailed(output, dictionary);
       return inferPixelSpaces
@@ -129,6 +156,8 @@
     } finally {
       disposeTensors({ input });
       disposeTensors(outputs);
+      values = null;
+      resized = null;
     }
   }
 
@@ -138,7 +167,8 @@
       source: line.image,
       preprocess: (source, mode) => core.preprocessRgba(source, mode),
       rotate: core.rotateRgba,
-      recognize: image => recognizeCanvas(image, isRingLine),
+      recognize: image => recognizeCanvas(image, isRingLine, activeAbortController?.signal),
+      signal: activeAbortController?.signal,
     });
   }
 
@@ -240,30 +270,39 @@
         ocrCvResourcesTracked = true;
       }
       cv.matFromImageData = imageData => {
-        const data = imageData instanceof ImageData
+        const data = imageData instanceof global.ImageData
           ? imageData
-          : new ImageData(Uint8ClampedArray.from(imageData.data), imageData.width, imageData.height);
+          : new global.ImageData(imageData.data, imageData.width, imageData.height);
         const mat = new cv.Mat(data.height, data.width, cv.CV_8UC4);
         mat.data.set(data.data);
         return mat;
       };
       const splitSource = await (await fetch('https://cdn.jsdelivr.net/npm/@gutenye/ocr-common@1.4.9/splitIntoLineImages/+esm')).text();
       const support = String.raw`class BrowserLineImage {
-  constructor({data,width,height}) { this.data=Uint8ClampedArray.from(data); this.width=width; this.height=height; }
+  constructor({data,width,height}) { this.data=data instanceof Uint8ClampedArray?data:new Uint8ClampedArray(data); this.width=width; this.height=height; }
   async resize(size,heightValue) {
     const requestedWidth=Number(typeof size==='object'?size?.width:size);
     const requestedHeight=Number(typeof size==='object'?size?.height:heightValue);
     const width=Math.max(1,Math.round(Number.isFinite(requestedWidth)?requestedWidth:this.width));
     const height=Math.max(1,Math.round(Number.isFinite(requestedHeight)?requestedHeight:this.height));
-    const source=document.createElement('canvas'); source.width=this.width; source.height=this.height;
-    source.getContext('2d').putImageData(new ImageData(this.data,this.width,this.height),0,0);
-    const target=document.createElement('canvas'); target.width=width; target.height=height;
+    let source=null, target=null, sourceContext=null, targetContext=null;
     try {
-      target.getContext('2d').drawImage(source,0,0,width,height);
-      return new BrowserLineImage(target.getContext('2d').getImageData(0,0,width,height));
+      source=new OffscreenCanvas(this.width,this.height);
+      sourceContext=source.getContext('2d',{willReadFrequently:true});
+      if (!sourceContext) throw new Error('OCR Worker could not create its source canvas context.');
+      sourceContext.putImageData(new ImageData(this.data,this.width,this.height),0,0);
+      target=new OffscreenCanvas(width,height);
+      targetContext=target.getContext('2d',{willReadFrequently:true});
+      if (!targetContext) throw new Error('OCR Worker could not create its resized canvas context.');
+      targetContext.drawImage(source,0,0,width,height);
+      return new BrowserLineImage(targetContext.getImageData(0,0,width,height));
     } finally {
-      source.width=1; source.height=1;
-      target.width=1; target.height=1;
+      if (source) { source.width=1; source.height=1; }
+      if (target) { target.width=1; target.height=1; }
+      sourceContext=null;
+      targetContext=null;
+      source=null;
+      target=null;
     }
   }
 }`;
@@ -284,6 +323,7 @@
         await (await ocrCache.load(core.config.detectionModelUrl)).arrayBuffer(),
         { ...ocrSessionOptions },
       );
+      reportStage('ocr-runtime-ready');
       return {
         async release() {
           if (!detectionSession) return;
@@ -291,7 +331,7 @@
           detectionSession = null;
           await session.release();
         },
-        async detect(source) {
+        async detect(source, signal) {
           if (!detectionSession) throw new Error('OCR検出モデルはすでに解放されています。');
           let image;
           let inputImage;
@@ -299,12 +339,17 @@
           let input;
           let outputs;
           try {
+            throwIfAborted(signal);
             image = await BrowserImageRaw.open(source);
             const width = Math.max(32, Math.ceil(image.width / 32) * 32);
             const height = Math.max(32, Math.ceil(image.height / 32) * 32);
             inputImage = width === image.width && height === image.height
               ? image
               : await image.resize({ width, height });
+            if (image !== inputImage) {
+              image.data = new Uint8ClampedArray(0);
+              image = null;
+            }
             const pixels = inputImage.width * inputImage.height;
             let values = new Float32Array(pixels * 3);
             for (let index = 0; index < pixels; index += 1) {
@@ -313,11 +358,16 @@
               values[pixels + index] = inputImage.data[offset + 1] / 255;
               values[pixels * 2 + index] = inputImage.data[offset] / 255;
             }
-            input = new ort.Tensor('float32', values, [1, 3, inputImage.height, inputImage.width]);
-            values = null;
-            outputs = await detectionSession.run({ [detectionSession.inputNames[0]]: input });
+            try {
+              input = new ort.Tensor('float32', values, [1, 3, inputImage.height, inputImage.width]);
+              values = null;
+              outputs = await detectionSession.run({ [detectionSession.inputNames[0]]: input });
+            } finally {
+              values = null;
+            }
             disposeTensors({ input });
             input = null;
+            throwIfAborted(signal);
             const modelOutput = outputs[detectionSession.outputNames[0]];
             const outputHeight = modelOutput.dims[2];
             const outputWidth = modelOutput.dims[3];
@@ -361,25 +411,11 @@
     async drawBox() { return this; }
     static async open(source) {
       if (source?.data && source.width && source.height) return new BrowserImageRaw(source);
-      if (source instanceof HTMLCanvasElement) {
-        return new BrowserImageRaw(source.getContext('2d').getImageData(0, 0, source.width, source.height));
-      }
-      const image = new Image();
-      let canvas;
-      try {
-        image.src = source;
-        await image.decode();
-        canvas = document.createElement('canvas'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
-        canvas.getContext('2d').drawImage(image, 0, 0);
-        return new BrowserImageRaw(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height));
-      } finally {
-        if (canvas) { canvas.width = 1; canvas.height = 1; }
-        image.removeAttribute('src');
-      }
+      throw new TypeError('OCR Worker requires a transferred RGBA buffer.');
     }
   }
 
-  async function recognize({ buffer, width, height }) {
+  async function recognize({ buffer, width, height, signal }) {
     let sourcePixels = { data: new Uint8ClampedArray(buffer), width, height };
     let detector;
     const releaseSourcePixels = () => {
@@ -387,11 +423,15 @@
       sourcePixels = null;
     };
     try {
+      throwIfAborted(signal);
+      reportStage('ocr-runtime-loading');
       detector = await ensureTextDetector();
+      throwIfAborted(signal);
       notify('画像の文字と環を読み取っています…');
-      return await core.run({
+      const result = await core.run({
         detect: async () => {
-          const detected = await detector.detect(sourcePixels);
+          reportStage('ocr-detection-start');
+          const detected = await detector.detect(sourcePixels, signal);
           const lineImages = detected.lineImages || [];
           const additionalLineImages = lineImages.length <= 8
             ? function* () {
@@ -403,34 +443,53 @@
           // Detection is complete; do not keep its ONNX session beside the recognizer session.
           await releaseTextDetector(detector);
           detector = null;
+          reportStage('ocr-detection-done');
+          reportStage('ocr-recognition-start');
           return { ...detected, lineImages, additionalLineImages };
         },
         recognizeVariants: recognizeBrowserLineVariants,
         combineLines: combineSpellLineImages,
         vocabularyCorrector: null,
         releaseLinePixelsAfterRecognition: true,
+        signal,
       });
+      reportStage('ocr-recognition-done');
+      return result;
     } finally {
+      reportStage('ocr-cleanup-start');
       try { await releaseOcrModels(detector); }
       finally {
         try { releaseOcrCvResources?.(); }
-        finally { releaseSourcePixels(); }
+        finally {
+          releaseOcrCvResources = null;
+          releaseSourcePixels();
+        }
       }
     }
   }
 
-  global.addEventListener('message', async event => {
-    if (event.source !== activeParent || event.origin !== global.location.origin) return;
+  global.addEventListener('message', event => {
     const message = event.data || {};
-    if (message.type !== 'recognize' || !Number.isInteger(message.jobId)) return;
-    activeJobId = message.jobId;
-    try {
-      const result = await recognize(message);
-      activeParent.postMessage({ type: 'success', jobId: activeJobId, result }, global.location.origin === 'null' ? '*' : global.location.origin);
-    } catch (error) {
-      activeParent.postMessage({ type: 'error', jobId: activeJobId, message: error?.message || String(error) }, global.location.origin === 'null' ? '*' : global.location.origin);
-    } finally {
-      activeJobId = null;
+    if (message.type === 'abort' && message.jobId === activeJobId) {
+      const error = new Error('OCR was cancelled.');
+      error.name = 'AbortError';
+      activeAbortController?.abort(error);
+      return;
     }
+    if (message.type !== 'analyze' || !Number.isInteger(message.jobId) || activeJobId !== null) return;
+    activeJobId = message.jobId;
+    activeAbortController = new AbortController();
+    void (async () => {
+      try {
+        const result = await recognize({ ...message, signal: activeAbortController.signal });
+        global.postMessage({ type: 'success', jobId: activeJobId, result });
+      } catch (error) {
+        global.postMessage({ type: 'error', jobId: activeJobId, name: error?.name || 'Error', message: error?.message || String(error) });
+      } finally {
+        message.buffer = null;
+        activeAbortController = null;
+        activeJobId = null;
+      }
+    })();
   });
 })(globalThis);

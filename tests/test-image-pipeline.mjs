@@ -18,6 +18,18 @@ assert.equal(corrected.rawPathText, 'fier', 'vocabulary correction must preserve
 assert.equal(corrected.path.text, 'Fire.', 'vocabulary correction must preserve the recognized-word correction');
 assert.deepEqual(corrected.corrections, [{ from: 'fier', to: 'fire', similarity: 0.8 }], 'vocabulary correction metadata must be retained');
 
+let embeddedText = null;
+const correctedRun = await MagiaImagePipeline.run({
+  ...pipelineOptions(async () => ({ path: { text: 'fier', words: ['fier'], points: [] } })),
+  correctSpell: recognition => context.SpellOcrCore.applyVocabularyCorrection(recognition, {
+    correctWords: words => ({ words: words.map(word => word === 'fier' ? 'fire' : word), corrections: [] }),
+  }),
+  embedAttributes: async text => { embeddedText = text; throw new Error('Skip model loading in this pipeline test.'); },
+});
+assert.equal(correctedRun.spell.path.text, 'Fire.', 'delayed vocabulary correction must update the OCR result');
+assert.equal(embeddedText, 'Fire.', 'Embedding must receive the corrected spell text');
+assert.equal(correctedRun.wordCount, 1, 'power must count corrected OCR words');
+
 function pipelineOptions(recognizeSpell) {
   return {
     recognizeSpell,
@@ -49,5 +61,17 @@ const failed = await MagiaImagePipeline.run(pipelineOptions(async () => {
 assert.equal(attempts, 2, 'an OCR exception must be retried once');
 assert.match(failed.spell.error, /getPerspectiveTransform/, 'the OCR exception must be preserved');
 assert.equal(failed.wordCount, 0, 'an OCR exception must not invent words');
+
+const allocationError = vm.runInContext("new RangeError('Invalid typed array length: allocation failed')", context);
+assert.equal(MagiaImagePipeline.isMemoryRelatedError(allocationError), true, 'large typed-array allocation failures must be recognized as memory-related');
+const wasmAllocationError = vm.runInContext("new WebAssembly.RuntimeError('WebAssembly.Memory could not allocate memory')", context);
+assert.equal(MagiaImagePipeline.isMemoryRelatedError(wasmAllocationError), true, 'WebAssembly memory allocation failures must be recognized as memory-related');
+attempts = 0;
+const memoryFailure = await MagiaImagePipeline.run(pipelineOptions(async () => {
+  attempts += 1;
+  throw allocationError;
+}));
+assert.equal(attempts, 1, 'a memory-related OCR exception must not be retried');
+assert.match(memoryFailure.spell.error, /allocation failed/, 'a memory-related OCR exception must be preserved');
 
 console.log('PASS_IMAGE_PIPELINE_EMPTY_RESULT_AND_ERROR_RETRY');

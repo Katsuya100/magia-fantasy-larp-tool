@@ -10,10 +10,43 @@
   const imagePipeline = global.MagiaImagePipeline;
   if (!imagePipeline) throw new Error('magia-image-pipeline.js must load before magia-circle-app.js');
 
-  const MODEL_ID = imagePipeline.ATTRIBUTE_MODEL_ID;
   const KOTODAMA_NGRAM_INDEX_CACHE_URL = 'https://kotodamagia.local/cache/scowl-en-us-common-ngrams-v2.json';
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
   const ATTRIBUTES = global.AttributeScoringCore.attributes;
+  let stageStorageWarningShown = false;
+
+  function warnStageStorageUnavailable(error) {
+    if (stageStorageWarningShown) return;
+    stageStorageWarningShown = true;
+    console.warn('[Magia] Analysis stage diagnostics are unavailable.', error);
+  }
+
+  try {
+    const storage = global.localStorage;
+    if (!storage) throw new Error('localStorage is unavailable in this browser context.');
+    const previousStage = storage.getItem('magiaAnalysisStage');
+    if (previousStage && previousStage !== 'analysis-complete') {
+      console.warn('[Magia] Previous analysis may have terminated unexpectedly at stage:', previousStage);
+    }
+  } catch (error) {
+    warnStageStorageUnavailable(error);
+  }
+
+  function createAnalysisRunId() {
+    return global.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function recordAnalysisStage(job, stage) {
+    if (!job) return;
+    try {
+      const storage = global.localStorage;
+      if (!storage) throw new Error('localStorage is unavailable in this browser context.');
+      if (stage === 'analysis-start') storage.setItem('magiaAnalysisRunId', job.runId);
+      storage.setItem('magiaAnalysisStage', stage);
+    } catch (error) {
+      warnStageStorageUnavailable(error);
+    }
+  }
 
   function countDictionaryEntries(text) {
     return String(text || '').split(/\r?\n/).filter(line => /^[a-z]+$/i.test(line.trim())).length;
@@ -205,7 +238,6 @@
   let hasSelectedImage = false;
   let userStartedImageAction = false;
   let cameraStream = null;
-  let embeddingModulePromise = null;
   let startupPromise = null;
   let modelsReady = false;
   let cacheUnavailable = false;
@@ -213,8 +245,6 @@
     cacheUnavailable = true;
     console.warn('外典の控えを保存・参照できませんでした。', error);
   };
-  // Keep the Transformers.js cache name so earlier visits remain reusable.
-  const embeddingCache = global.ModelCache.create({ name: 'transformers-cache', onCacheError: cacheError });
   const kotodamaDictionaryCache = global.ModelCache.create({
     name: 'magia-circle-kotodama-dictionaries-v1',
     onCacheError: cacheError,
@@ -349,11 +379,14 @@
     const controller = new AbortController();
     const job = {
       id: nextAnalysisJobId += 1,
+      runId: createAnalysisRunId(),
       controller,
       signal: controller.signal,
       fileName: file?.name || '撮影した写し絵',
       sourceUrl: null,
       sourceImage: null,
+      ocrWorker: null,
+      embeddingWorker: null,
     };
     activeAnalysisJob = job;
     return job;
@@ -639,205 +672,34 @@
     return attribute.certainty;
   }
 
-  function removeOcrFrameSession(job, session) {
-    if (!session || session.disposed) return;
-    session.disposed = true;
-    global.removeEventListener('message', session.onMessage);
-    global.removeEventListener('messageerror', session.onMessageError);
-    job.signal.removeEventListener('abort', session.onAbort);
-    if (session.frame) {
-      session.frame.removeEventListener('load', session.onFrameLoad);
-      session.frame.removeEventListener('error', session.onFrameError);
-      session.frame.remove();
-      session.frame = null;
-    }
-    if (job.ocrFrameSession === session) job.ocrFrameSession = null;
+  function terminateOcrWorker(job, worker = job?.ocrWorker) {
+    if (!worker) return;
+    if (job.ocrWorker === worker) job.ocrWorker = null;
+    recordAnalysisStage(job, 'ocr-cleanup-start');
+    worker.terminate();
+    recordAnalysisStage(job, 'ocr-worker-terminated');
   }
 
-  function failOcrFrameSession(job, session, error) {
-    const pending = session.pending;
-    session.pending = null;
-    removeOcrFrameSession(job, session);
-    pending?.reject(error);
-  }
-
-  function createOcrFrameSession(job) {
-    let resolveReady;
-    let rejectReady;
-    const session = {
-      frame: document.createElement('iframe'),
-      pending: null,
-      disposed: false,
-      readySettled: false,
-      ready: new Promise((resolve, reject) => {
-        resolveReady = resolve;
-        rejectReady = reject;
-      }),
-    };
-    session.resolveReady = () => {
-      if (session.readySettled) return;
-      session.readySettled = true;
-      resolveReady();
-    };
-    session.rejectReady = error => {
-      if (session.readySettled) return;
-      session.readySettled = true;
-      rejectReady(error);
-    };
-    session.onAbort = () => {
-      const error = job.signal.reason || makeAnalysisAbortError();
-      session.rejectReady(error);
-      failOcrFrameSession(job, session, error);
-    };
-    session.onFrameError = () => {
-      const error = new Error('OCR処理用の一時領域を起動できませんでした。');
-      session.rejectReady(error);
-      failOcrFrameSession(job, session, error);
-    };
-    session.onMessageError = event => {
-      if (event.source !== session.frame?.contentWindow) return;
-      const error = new Error('OCR処理用の一時領域から結果を受け取れませんでした。');
-      session.rejectReady(error);
-      failOcrFrameSession(job, session, error);
-    };
-    session.onFrameLoad = () => {
-      if (!isActiveAnalysisJob(job)) {
-        session.onAbort();
-        return;
-      }
-      session.resolveReady();
-    };
-    session.onMessage = event => {
-      if (!session.frame || event.source !== session.frame.contentWindow) return;
-      if (global.location.origin !== 'null' && event.origin !== global.location.origin) return;
-      const message = event.data || {};
-      if (message.jobId !== job.id) return;
-      if (message.type === 'progress') {
-        setStatus(modelStatus, message.message || '環の呪文を読み取っています…', 'busy');
-      } else if (message.type === 'success') {
-        const pending = session.pending;
-        session.pending = null;
-        removeOcrFrameSession(job, session);
-        pending?.resolve(message.result);
-      } else if (message.type === 'error') {
-        const pending = session.pending;
-        session.pending = null;
-        // The OCR frame releases its ONNX sessions before posting an error. Keep
-        // this frame for one retry so WebKit can reuse its loaded runtime.
-        if (pending?.attempt !== 0) removeOcrFrameSession(job, session);
-        pending?.reject(new Error(message.message || 'OCRに失敗しました。'));
-      }
-    };
-
-    session.frame.hidden = true;
-    session.frame.setAttribute('aria-hidden', 'true');
-    session.frame.title = '一時的なOCR処理';
-    session.frame.addEventListener('load', session.onFrameLoad, { once: true });
-    session.frame.addEventListener('error', session.onFrameError, { once: true });
-    global.addEventListener('message', session.onMessage);
-    global.addEventListener('messageerror', session.onMessageError);
-    job.signal.addEventListener('abort', session.onAbort, { once: true });
-    session.frame.src = new URL('assets/js/magia-circle-ocr-frame.html', document.baseURI).href;
-    document.body.append(session.frame);
-    return session;
-  }
-
-  function requestSpellRecognition(canvas, job, attempt) {
-    const session = job.ocrFrameSession || (job.ocrFrameSession = createOcrFrameSession(job));
-    if (session.pending) return Promise.reject(new Error('OCR処理がすでに実行中です。'));
+  function requestSpellRecognition(canvas, job) {
     return new Promise((resolve, reject) => {
-      const pending = { attempt, resolve, reject };
-      session.pending = pending;
-      void (async () => {
-        try {
-          await session.ready;
-          if (session.disposed || session.pending !== pending) return;
-          assertActiveAnalysisJob(job);
-          setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
-          const pixels = captureContext.getImageData(0, 0, canvas.width, canvas.height);
-          const buffer = pixels.data.buffer;
-          session.frame.contentWindow.postMessage({
-            type: 'recognize',
-            jobId: job.id,
-            width: canvas.width,
-            height: canvas.height,
-            buffer,
-          }, global.location.origin === 'null' ? '*' : global.location.origin, [buffer]);
-        } catch (error) {
-          if (session.pending === pending) {
-            session.pending = null;
-            removeOcrFrameSession(job, session);
-            reject(error);
-          }
-        }
-      })();
-    });
-  }
-
-  async function recognizeSpell(canvas, job, attempt = 0) {
-    const recognition = requestSpellRecognition(canvas, job, attempt);
-    activeOcrRun = recognition.then(() => undefined, () => undefined);
-    const recognized = await awaitForAnalysisJob(job, recognition);
-    assertActiveAnalysisJob(job);
-    // Let the browser process the removed OCR iframe before parsing the large vocabulary index.
-    await yieldToBrowser();
-    assertActiveAnalysisJob(job);
-    return await applyVocabularyCorrection(recognized, job);
-  }
-
-  async function embedAttributesOnMain(text, job) {
-    if (!embeddingModulePromise) {
-      embeddingModulePromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
-      embeddingModulePromise.catch(() => { embeddingModulePromise = null; });
-    }
-    const { env, pipeline } = await embeddingModulePromise;
-    env.allowLocalModels = false;
-    env.useCustomCache = true;
-    env.customCache = embeddingCache;
-    const wasm = env.backends?.onnx?.wasm;
-    if (wasm) {
-      wasm.numThreads = 1;
-      wasm.proxy = true;
-    }
-
-    let model = null;
-    let embedding = null;
-    try {
-      model = await pipeline('feature-extraction', MODEL_ID, {
-        device: 'wasm',
-        dtype: 'q8',
-        progress_callback: info => {
-          if (!isActiveAnalysisJob(job)) return;
-          if (info.file?.endsWith('.onnx') && info.status === 'progress') {
-            showBusyMask('魔導司書が頁を読んでいる', '相の外典をひらき、言霊を一つずつ灯している…', info.progress);
-          }
-          if (info.file?.endsWith('.onnx') && info.status === 'done') {
-            showBusyMask('魔導司書が頁を読んでいる', '相の核を整えている。燭台の火が落ち着くのを待て。');
-          }
-        },
-      });
-      assertActiveAnalysisJob(job);
-      await yieldToBrowser();
-      assertActiveAnalysisJob(job);
-      embedding = await model(imagePipeline.attributeInputTexts(text), { pooling: 'mean', normalize: true });
-      return { dims: Array.from(embedding.dims), data: new Float32Array(embedding.data) };
-    } finally {
-      try { embedding?.dispose?.(); }
-      finally { await model?.dispose?.(); }
-    }
-  }
-
-  function embedAttributesInWorker(text, job) {
-    assertActiveAnalysisJob(job);
-    const worker = new Worker(new URL('assets/js/attribute-embedding-worker.js', document.baseURI), { type: 'module' });
-    return new Promise((resolve, reject) => {
+      let worker = null;
+      let pixels = null;
+      let buffer = null;
+      let abortTimeout = null;
       let settled = false;
       const cleanup = () => {
         job.signal.removeEventListener('abort', onAbort);
-        worker.removeEventListener('message', onMessage);
-        worker.removeEventListener('error', onError);
-        worker.removeEventListener('messageerror', onMessageError);
-        worker.terminate();
+        clearTimeout(abortTimeout);
+        abortTimeout = null;
+        if (worker) {
+          worker.removeEventListener('message', onMessage);
+          worker.removeEventListener('error', onError);
+          worker.removeEventListener('messageerror', onMessageError);
+          terminateOcrWorker(job, worker);
+          worker = null;
+        }
+        pixels = null;
+        buffer = null;
       };
       const finish = (handler, value) => {
         if (settled) return;
@@ -845,13 +707,114 @@
         cleanup();
         handler(value);
       };
-      const onAbort = () => finish(reject, job.signal.reason || makeAnalysisAbortError());
+      const onAbort = () => {
+        if (!worker) {
+          finish(reject, job.signal.reason || makeAnalysisAbortError());
+          return;
+        }
+        try {
+          worker.postMessage({ type: 'abort', jobId: job.id });
+          abortTimeout = setTimeout(() => finish(reject, job.signal.reason || makeAnalysisAbortError()), 5000);
+        } catch {
+          finish(reject, job.signal.reason || makeAnalysisAbortError());
+        }
+      };
+      const onError = event => finish(reject, new Error(event.error?.message || event.message || 'OCR Workerでエラーが発生しました。'));
+      const onMessageError = () => finish(reject, new Error('OCR Workerから結果を受け取れませんでした。'));
+      const onMessage = event => {
+        const message = event.data || {};
+        if (message.jobId !== job.id) return;
+        if (message.type === 'stage') {
+          recordAnalysisStage(job, message.stage);
+        } else if (message.type === 'progress') {
+          setStatus(modelStatus, message.message || '環の呪文を読み取っています…', 'busy');
+        } else if (message.type === 'success') {
+          finish(job.signal.aborted ? reject : resolve, job.signal.aborted ? job.signal.reason || makeAnalysisAbortError() : message.result);
+        } else if (message.type === 'error') {
+          const error = new Error(message.message || 'OCRに失敗しました。');
+          error.name = message.name || 'Error';
+          finish(reject, job.signal.aborted ? job.signal.reason || error : error);
+        }
+      };
+
+      try {
+        assertActiveAnalysisJob(job);
+        recordAnalysisStage(job, 'image-decode-start');
+        pixels = captureContext.getImageData(0, 0, canvas.width, canvas.height);
+        recordAnalysisStage(job, 'image-decode-done');
+        assertActiveAnalysisJob(job);
+        recordAnalysisStage(job, 'ocr-worker-create');
+        worker = new Worker(new URL('assets/js/magia-circle-ocr-worker.js', document.baseURI));
+        job.ocrWorker = worker;
+        worker.addEventListener('message', onMessage);
+        worker.addEventListener('error', onError);
+        worker.addEventListener('messageerror', onMessageError);
+        job.signal.addEventListener('abort', onAbort, { once: true });
+        buffer = pixels.data.buffer;
+        worker.postMessage({ type: 'analyze', jobId: job.id, width: canvas.width, height: canvas.height, buffer }, [buffer]);
+        buffer = null;
+        pixels = null;
+      } catch (error) {
+        finish(reject, error);
+      }
+    });
+  }
+
+  async function recognizeSpell(canvas, job) {
+    const recognition = requestSpellRecognition(canvas, job);
+    const releasedRecognition = recognition.finally(async () => {
+      recordAnalysisStage(job, 'post-ocr-wait');
+      await new Promise(resolve => setTimeout(resolve, 150));
+    });
+    activeOcrRun = releasedRecognition.then(() => undefined, () => undefined);
+    const recognized = await awaitForAnalysisJob(job, releasedRecognition);
+    assertActiveAnalysisJob(job);
+    return recognized;
+  }
+
+  function embedAttributesInWorker(text, job) {
+    assertActiveAnalysisJob(job);
+    recordAnalysisStage(job, 'embedding-worker-create');
+    let worker = new Worker(new URL('assets/js/attribute-embedding-worker.js', document.baseURI), { type: 'module' });
+    job.embeddingWorker = worker;
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let abortTimeout = null;
+      const cleanup = () => {
+        job.signal.removeEventListener('abort', onAbort);
+        clearTimeout(abortTimeout);
+        abortTimeout = null;
+        const currentWorker = worker;
+        currentWorker.removeEventListener('message', onMessage);
+        currentWorker.removeEventListener('error', onError);
+        currentWorker.removeEventListener('messageerror', onMessageError);
+        currentWorker.terminate();
+        if (job.embeddingWorker === currentWorker) job.embeddingWorker = null;
+        worker = null;
+        recordAnalysisStage(job, 'embedding-cleanup');
+      };
+      const finish = (handler, value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        handler(value);
+      };
+      const onAbort = () => {
+        try {
+          worker.postMessage({ type: 'abort', jobId: job.id });
+          abortTimeout = setTimeout(() => finish(reject, job.signal.reason || makeAnalysisAbortError()), 5000);
+        } catch {
+          finish(reject, job.signal.reason || makeAnalysisAbortError());
+        }
+      };
       const onError = event => finish(reject, new Error(event.error?.message || event.message || '相のEmbedding Workerでエラーが発生しました。'));
       const onMessageError = () => finish(reject, new Error('相のEmbedding Workerから結果を受け取れませんでした。'));
       const onMessage = event => {
         const message = event.data || {};
         if (message.jobId !== job.id) return;
-        if (message.type === 'cache-error') {
+        if (message.type === 'stage') {
+          recordAnalysisStage(job, message.stage);
+        } else if (message.type === 'cache-error') {
           cacheError(new Error(message.message || 'モデルキャッシュを利用できませんでした。'));
         } else if (message.type === 'progress') {
           if (message.stage === 'download') {
@@ -867,7 +830,9 @@
           }
           finish(resolve, embedding);
         } else if (message.type === 'error') {
-          finish(reject, new Error(message.message || '相のEmbeddingに失敗しました。'));
+          const error = new Error(message.message || '相のEmbeddingに失敗しました。');
+          error.name = message.name || 'Error';
+          finish(reject, job.signal.aborted ? job.signal.reason || error : error);
         }
       };
 
@@ -888,8 +853,6 @@
     setStatus(modelStatus, '呪文の相を測る準備をしています…', 'busy');
     await yieldToBrowser();
     assertActiveAnalysisJob(job);
-    // Module workers cannot load local file URLs consistently in browser file mode.
-    if (global.location?.protocol === 'file:') return embedAttributesOnMain(text, job);
     return embedAttributesInWorker(text, job);
   }
 
@@ -1073,6 +1036,7 @@
     if (!modelsReady || !hasSelectedImage || pendingImageSelection || activeAnalysisJob) return;
     const previousRuns = Promise.all([activeOcrRun, activeAttributeRun]);
     const job = beginAnalysisJob({ name: selectedImageName });
+    recordAnalysisStage(job, 'analysis-start');
     resetResults({ preserveCaptureCanvas: true, preserveSelection: true });
     showCaptureCanvas(true);
     analyzeButton.disabled = true;
@@ -1088,6 +1052,7 @@
           setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
           return recognizeSpell(captureCanvas, job, attempt);
         },
+        correctSpell: recognition => applyVocabularyCorrection(recognition, job),
         onRecognitionRetry: async ({ error }) => {
           console.warn('OCR処理に失敗したため、一度だけ自動再試行します。', error);
           appendProcessingRecord(`${job.fileName}：OCR処理エラーのため、同じ画像で一度だけ自動再試行します。`);
@@ -1095,10 +1060,15 @@
           await activeOcrRun;
         },
         getStructureInput: async () => {
+          recordAnalysisStage(job, 'structure-analysis-start');
           setStatus(cameraStatus, '写し絵を受け取り、閉じたパスと環内の文字位置を調べています…', 'busy');
           return { analysis: await createAnalysisImage() };
         },
-        analyzeStructure: analysis => analyzeImageInWorker(job, analysis),
+        analyzeStructure: async analysis => {
+          const result = await analyzeImageInWorker(job, analysis);
+          recordAnalysisStage(job, 'structure-analysis-done');
+          return result;
+        },
         getMasterImage: () => captureContext.getImageData(0, 0, captureCanvas.width, captureCanvas.height),
         embedAttributes: async text => embedAttributes(text, job),
         signal: job.signal,
@@ -1159,11 +1129,13 @@
       setStatus(cameraStatus, structure.error
         ? '陣の一部を読み取れませんでした。得られた情報で威力を計算しました。'
         : '紋の読み取りが完了しました。', structure.error ? '' : 'good');
+      recordAnalysisStage(job, 'analysis-complete');
       activeAnalysisJob = null;
       analyzeButton.disabled = !hasSelectedImage;
       publishDiagnostics();
     } catch (error) {
       releaseAnalysisSource(job);
+      recordAnalysisStage(job, 'analysis-error');
       if (!isActiveAnalysisJob(job)) return;
       if (!Number.isFinite(powerInputs.wordCount)) powerInputs.wordCount = 0;
       if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback(error);
