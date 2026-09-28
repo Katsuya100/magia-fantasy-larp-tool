@@ -1,4 +1,4 @@
-importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-line-split.js');
+importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-line-split.js');
 
 (function startMagiaCircleOcrWorker(global) {
   'use strict';
@@ -14,6 +14,9 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
   let activeDetectionLineResources = null;
   let diagnosticsMode = false;
   const runtimeDefaults = core.config.onnxRuntimeDefaults;
+  const diagnosticReporter = global.MagiaAnalysisDiagnostics.createReporter('ocr', message => {
+    if (activeJobId !== null) global.postMessage({ ...message, jobId: activeJobId });
+  });
   const ocrSessionOptions = Object.freeze({
     executionMode: runtimeDefaults.executionMode,
     enableCpuMemArena: runtimeDefaults.enableCpuMemArena,
@@ -37,14 +40,18 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
     global.postMessage({ type: 'progress', jobId: activeJobId, message });
   }
 
-  function reportStage(stage, memory = null) {
+  function reportStage(stage, details = {}) {
     if (activeJobId === null) return;
-    global.postMessage({
-      type: 'stage',
-      jobId: activeJobId,
-      stage,
-      ...(diagnosticsMode && memory ? { memory } : {}),
+    diagnosticReporter.stage(stage, {
+      onnxRuntimeVersion: core.config.onnxRuntimeWebVersion,
+      graphOptimizationLevel: runtimeDefaults.graphOptimizationLevel,
+      numThreads: runtimeDefaults.numThreads,
+      ...details,
     });
+  }
+
+  function reportRuntimeState(name, value) {
+    reportStage(`ocr-runtime-state-${name}`, { runtimeState: { [name]: Boolean(value) } });
   }
 
   function throwIfAborted(signal) {
@@ -70,27 +77,56 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
 
   function combineSpellLineImages(first, second, firstAngle, secondAngle) {
     try {
-      return core.combineRgbaLines(first.image, second.image, firstAngle, secondAngle, imageAnalysis.resizeRgbaSharpLinear);
+      return core.combineRgbaLines(first.image, second.image, firstAngle, secondAngle, imageAnalysis.resizeRgbaSharpLinear, diagnosticReporter);
     } finally {
       first.image?.release?.();
       second.image?.release?.();
     }
   }
 
-  async function ensureRecognizer() {
+  async function ensureRecognizer(lineInfo = {}) {
     if (recognizerPromise) return recognizerPromise;
+    reportStage('ocr-recognition-runtime-ensure-start', lineInfo);
     recognizerPromise = (async () => {
+      reportStage('ocr-recognition-ort-import-start', lineInfo);
       const ort = await import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`);
+      reportStage('ocr-recognition-ort-import-done', { ...lineInfo, version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = runtimeDefaults.numThreads;
       ort.env.wasm.proxy = false;
       let session;
+      let modelBytes = null;
+      let modelTracked = false;
       try {
-        session = await ort.InferenceSession.create(
-          await (await ocrCache.load(core.config.recognitionModelUrl)).arrayBuffer(),
-          { ...ocrSessionOptions },
-        );
-        const dictionary = [...(await (await ocrCache.load(core.config.dictionaryUrl)).text()).split('\n'), ' '];
+        reportStage('ocr-recognition-model-fetch-start', { ...lineInfo, url: core.config.recognitionModelUrl });
+        const modelResponse = await ocrCache.load(core.config.recognitionModelUrl);
+        reportStage('ocr-recognition-model-fetch-done', { ...lineInfo, contentLength: Number(modelResponse.headers?.get('content-length')) || null });
+        const estimatedModelBytes = Number(modelResponse.headers?.get('content-length')) || 0;
+        diagnosticReporter.allocationStart('ocr-recognition-model-buffer-start', 'recognition-model-buffer', estimatedModelBytes, {
+          type: 'ArrayBuffer', name: 'Recognition model bytes', countedInKnownLive: true,
+        });
+        modelBytes = await modelResponse.arrayBuffer();
+        diagnosticReporter.allocationDone('ocr-recognition-model-buffer-done', 'recognition-model-buffer', modelBytes.byteLength, {
+          type: 'ArrayBuffer', name: 'Recognition model bytes', width: null, height: null,
+        });
+        modelTracked = true;
+        reportStage('ocr-recognition-session-create-start', { ...lineInfo, modelBytes: modelBytes.byteLength, sessionOptions: ocrSessionOptions });
+        reportStage('ocr-recognition-wasm-runtime-init-start', { ...lineInfo, numThreads: runtimeDefaults.numThreads });
+        session = await ort.InferenceSession.create(modelBytes, { ...ocrSessionOptions });
+        reportStage('ocr-recognition-session-create-done', { ...lineInfo, modelBytes: modelBytes.byteLength, runtimeState: { recognizerLoaded: true } });
+        reportStage('ocr-recognition-wasm-runtime-init-done', { ...lineInfo, version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
+        diagnosticReporter.releaseStart('ocr-recognition-model-buffer-release-start', 'recognition-model-buffer', { type: 'ArrayBuffer' });
+        modelBytes = null;
+        diagnosticReporter.releaseDone('ocr-recognition-model-buffer-release-done', 'recognition-model-buffer');
+        modelTracked = false;
+        reportStage('ocr-recognition-dictionary-fetch-start', lineInfo);
+        const dictionaryResponse = await ocrCache.load(core.config.dictionaryUrl);
+        reportStage('ocr-recognition-dictionary-fetch-done', lineInfo);
+        reportStage('ocr-recognition-dictionary-text-start', lineInfo);
+        const dictionaryText = await dictionaryResponse.text();
+        reportStage('ocr-recognition-dictionary-text-done', { ...lineInfo, textLength: dictionaryText.length });
+        const dictionary = [...dictionaryText.split('\n'), ' '];
+        reportStage('ocr-recognition-runtime-ensure-done', lineInfo);
         return { ort, session, dictionary };
       } catch (error) {
         if (session) {
@@ -98,6 +134,7 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
           catch (releaseError) { console.warn('OCR認識モデルの初期化失敗後にSessionを解放できませんでした。', releaseError); }
           session = null;
         }
+        if (modelTracked) diagnosticReporter.releaseDone('ocr-recognition-model-buffer-release-done', 'recognition-model-buffer', { reason: 'session-create-failed' });
         throw error;
       }
     })();
@@ -115,7 +152,12 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
     let releaseError = null;
     for (let index = 0; index < resources.length; index += 1) {
       const resource = resources[index];
-      try { await resource.release(); }
+      const isRecognizer = resource === recognizer?.session;
+      if (isRecognizer) reportStage('ocr-recognition-session-release-start');
+      try {
+        await resource.release();
+        if (isRecognizer) reportStage('ocr-recognition-session-release-done', { runtimeState: { recognizerLoaded: false } });
+      }
       catch (error) {
         releaseError ||= error;
         console.warn('OCRモデルのONNX Sessionを解放できませんでした。', error);
@@ -137,50 +179,95 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
     await detector?.release();
   }
 
-  async function recognizeCanvas(canvas, inferPixelSpaces, signal) {
-    const { ort, session, dictionary } = await ensureRecognizer();
+  async function recognizeCanvas(canvas, inferPixelSpaces, signal, lineInfo = {}) {
+    const { lineIndex = null, lineCount = null, angle = null, variant = null } = lineInfo;
+    const context = { lineIndex, lineCount, angle, variant };
+    diagnosticReporter.updateContext(context);
+    const { ort, session, dictionary } = await ensureRecognizer(context);
     throwIfAborted(signal);
     const height = 48;
     const width = Math.max(48, Math.min(960, Math.round(canvas.width / Math.max(1, canvas.height) * height)));
+    const resizedBytes = canvas.width === width && canvas.height === height ? canvas.width * canvas.height * 4 : width * height * 4;
+    const inputBytes = width * height * 3 * Float32Array.BYTES_PER_ELEMENT;
+    const resizedId = `recognition-resized-${lineIndex}-${variant}-${angle}`;
+    const inputId = `recognition-input-${lineIndex}-${variant}-${angle}`;
     let resized = null;
     let values = null;
     let input;
     let outputs;
     try {
+      reportStage('ocr-recognition-resize-start', { ...context, sourceWidth: canvas.width, sourceHeight: canvas.height, width, height, estimatedBytes: resizedBytes });
+      diagnosticReporter.allocationStart('ocr-recognition-resize-buffer-alloc-start', resizedId, resizedBytes, {
+        name: 'Recognition resized RGBA', width, height, type: 'Uint8ClampedArray',
+      });
       resized = imageAnalysis.resizeRgbaSharpLinear(canvas.data, canvas.width, canvas.height, width, height);
+      diagnosticReporter.allocationDone('ocr-recognition-resize-buffer-alloc-done', resizedId, resized.byteLength, {
+        name: 'Recognition resized RGBA', width, height, type: 'Uint8ClampedArray',
+      });
+      reportStage('ocr-recognition-resize-done', { ...context, width, height });
       const pixels = width * height;
+      diagnosticReporter.allocationStart('ocr-recognition-input-buffer-alloc-start', inputId, inputBytes, {
+        name: 'Recognition Float32 RGB input', width, height, type: 'Float32Array', tensorShape: [1, 3, height, width],
+      });
       values = new Float32Array(pixels * 3);
+      diagnosticReporter.allocationDone('ocr-recognition-input-buffer-alloc-done', inputId, values.byteLength, {
+        name: 'Recognition Float32 RGB input', width, height, type: 'Float32Array', tensorShape: [1, 3, height, width],
+      });
+      reportStage('ocr-recognition-input-fill-start', { ...context, width, height, estimatedBytes: inputBytes });
       for (let index = 0; index < pixels; index += 1) {
         const offset = index * 4;
         values[index] = resized[offset + 2] / 255;
         values[pixels + index] = resized[offset + 1] / 255;
         values[pixels * 2 + index] = resized[offset] / 255;
       }
+      reportStage('ocr-recognition-input-fill-done', { ...context, width, height, estimatedBytes: inputBytes });
+      diagnosticReporter.releaseStart('ocr-recognition-resize-buffer-release-start', resizedId, { ...context });
+      resized = null;
+      diagnosticReporter.releaseDone('ocr-recognition-resize-buffer-release-done', resizedId, { ...context });
+      reportStage('ocr-recognition-tensor-create-start', { ...context, tensorShape: [1, 3, height, width], inputEstimatedBytes: inputBytes });
       input = new ort.Tensor('float32', values, [1, 3, height, width]);
+      reportStage('ocr-recognition-tensor-create-done', { ...context, tensorShape: [1, 3, height, width], inputEstimatedBytes: inputBytes });
       values = null;
       resized = null;
+      reportStage('ocr-recognition-run-start', {
+        ...context, tensorShape: [1, 3, height, width], inputEstimatedBytes: inputBytes,
+        knownLiveBytes: diagnosticReporter.knownLiveBytes,
+      });
       outputs = await session.run({ [session.inputNames[0]]: input });
+      reportStage('ocr-recognition-run-done', { ...context, tensorShape: [1, 3, height, width] });
       throwIfAborted(signal);
+      reportStage('ocr-recognition-output-decode-start', { ...context });
       const output = outputs[session.outputNames[0]];
       const decoded = core.decodeGreedyCtcDetailed(output, dictionary);
-      return inferPixelSpaces
+      const recognized = inferPixelSpaces
         ? { text: decoded.text, spacingText: core.insertSpacesAtPixelGaps(canvas, decoded) }
         : decoded.text;
+      reportStage('ocr-recognition-output-decode-done', { ...context, outputShape: output?.dims ? [...output.dims] : null });
+      return recognized;
     } finally {
-      disposeTensors({ input });
+      reportStage('ocr-recognition-output-dispose-start', { ...context });
       disposeTensors(outputs);
+      reportStage('ocr-recognition-output-dispose-done', { ...context });
+      reportStage('ocr-recognition-input-dispose-start', { ...context, inputEstimatedBytes: inputBytes });
+      disposeTensors({ input });
+      diagnosticReporter.releaseStart('ocr-recognition-input-buffer-release-start', inputId, { ...context });
+      diagnosticReporter.releaseDone('ocr-recognition-input-buffer-release-done', inputId, { ...context });
+      reportStage('ocr-recognition-input-dispose-done', { ...context });
       values = null;
-      resized = null;
     }
   }
 
-  async function recognizeBrowserLineVariants(line) {
+  async function recognizeBrowserLineVariants(line, lineIndex, lineCount) {
     const isRingLine = String(line.groupId || '').startsWith('ring:');
     return core.runRecognizeVariants({
       source: line.image,
-      preprocess: (source, mode) => core.preprocessRgba(source, mode),
-      rotate: core.rotateRgba,
-      recognize: image => recognizeCanvas(image, isRingLine, activeAbortController?.signal),
+      preprocess: (source, mode, context) => core.preprocessRgba(source, mode, context.diagnostics, context.allocationId),
+      rotate: (source, angle, context) => core.rotateRgba(source, angle, context.diagnostics, context.allocationId),
+      recognize: (image, context) => recognizeCanvas(image, isRingLine, activeAbortController?.signal, context),
+      reportStage,
+      diagnostics: diagnosticReporter,
+      lineIndex,
+      lineCount,
       signal: activeAbortController?.signal,
     });
   }
@@ -188,13 +275,17 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
   async function ensureTextDetector() {
     if (textDetectorPromise) return textDetectorPromise;
     textDetectorPromise = (async () => {
+      reportStage('ocr-opencv-import-start');
       const cvModule = await import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm');
+      reportStage('ocr-opencv-import-done');
       const importedCv = cvModule.default ?? cvModule;
+      reportStage('ocr-opencv-runtime-init-start');
       const cv = importedCv instanceof Promise ? await importedCv : importedCv;
       if (!cv.Mat) await new Promise(resolve => {
         const previous = cv.onRuntimeInitialized;
         cv.onRuntimeInitialized = () => { previous?.(); resolve(); };
       });
+      reportStage('ocr-opencv-runtime-init-done', { runtimeState: { opencvLoaded: true } });
       if (!ocrCvResourcesTracked) {
         const cvResources = new Set();
         const trackCvResource = resource => {
@@ -282,27 +373,52 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
         };
         ocrCvResourcesTracked = true;
       }
+      reportStage('ocr-clipper-import-start');
       const clipperModule = await import('https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm');
+      reportStage('ocr-clipper-import-done');
       const clipper = clipperModule.default ?? clipperModule;
+      reportStage('ocr-detection-ort-import-start');
       const ort = await import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`);
+      reportStage('ocr-detection-ort-import-done', { version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = runtimeDefaults.numThreads;
       ort.env.wasm.proxy = false;
       let detectionSession = null;
       let detectionModel = null;
+      let detectionModelTracked = false;
       try {
-        detectionModel = await (await ocrCache.load(core.config.detectionModelUrl)).arrayBuffer();
-        reportStage('ocr-detection-session-create');
+        reportStage('ocr-detection-model-fetch-start', { url: core.config.detectionModelUrl });
+        const detectionResponse = await ocrCache.load(core.config.detectionModelUrl);
+        reportStage('ocr-detection-model-fetch-done', { contentLength: Number(detectionResponse.headers?.get('content-length')) || null });
+        const estimatedModelBytes = Number(detectionResponse.headers?.get('content-length')) || 0;
+        reportStage('ocr-detection-model-arraybuffer-start', { estimatedBytes: estimatedModelBytes, allocationId: 'detection-model-buffer' });
+        diagnosticReporter.allocationStart('ocr-detection-model-buffer-alloc-start', 'detection-model-buffer', estimatedModelBytes, {
+          name: 'Detection model ArrayBuffer', type: 'ArrayBuffer',
+        });
+        detectionModel = await detectionResponse.arrayBuffer();
+        reportStage('ocr-detection-model-arraybuffer-done', { modelBytes: detectionModel.byteLength });
+        diagnosticReporter.allocationDone('ocr-detection-model-arraybuffer-ready', 'detection-model-buffer', detectionModel.byteLength, {
+          name: 'Detection model ArrayBuffer', type: 'ArrayBuffer',
+        });
+        detectionModelTracked = true;
+        reportStage('ocr-detection-session-create-start', { modelBytes: detectionModel.byteLength, sessionOptions: ocrSessionOptions });
+        reportStage('ocr-detection-wasm-runtime-init-start', { numThreads: runtimeDefaults.numThreads });
         detectionSession = await ort.InferenceSession.create(
           detectionModel,
           { ...ocrSessionOptions },
         );
+        reportStage('ocr-detection-session-create-done', { modelBytes: detectionModel.byteLength, runtimeState: { ortDetectionLoaded: true } });
+        reportStage('ocr-detection-wasm-runtime-init-done', { version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
+        diagnosticReporter.releaseStart('ocr-detection-model-buffer-release-start', 'detection-model-buffer', { type: 'ArrayBuffer' });
         detectionModel = null;
+        diagnosticReporter.releaseDone('ocr-detection-model-buffer-release-done', 'detection-model-buffer');
+        detectionModelTracked = false;
       } catch (error) {
         if (detectionSession) {
           try { await detectionSession.release(); }
           finally { detectionSession = null; }
         }
+        if (detectionModelTracked) diagnosticReporter.releaseDone('ocr-detection-model-buffer-release-done', 'detection-model-buffer', { reason: 'session-create-failed' });
         throw error;
       } finally {
         detectionModel = null;
@@ -313,7 +429,9 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
         if (!detectionSession) return;
         const session = detectionSession;
         detectionSession = null;
+        reportStage('ocr-detection-session-release-start');
         await session.release();
+        reportStage('ocr-detection-session-release-done', { runtimeState: { ortDetectionLoaded: false } });
       };
       return {
         async release() { await releaseDetectionSession(); },
@@ -329,56 +447,92 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
           let sessionForRun = detectionSession;
           let memory = null;
           let completed = false;
+          let inputAllocationTracked = false;
+          let maskAllocationTracked = false;
           try {
             throwIfAborted(signal);
             image = await BrowserImageRaw.open(source);
             const width = Math.max(32, Math.ceil(image.width / 32) * 32);
             const height = Math.max(32, Math.ceil(image.height / 32) * 32);
+            diagnosticReporter.updateContext({ sourceWidth: image.width, sourceHeight: image.height, detectionTensorWidth: width, detectionTensorHeight: height });
             memory = {
               ocrInputWidth: image.width,
               ocrInputHeight: image.height,
+              sourceWidth: image.width,
+              sourceHeight: image.height,
               detectionTensorWidth: width,
               detectionTensorHeight: height,
               inputFloat32EstimatedBytes: width * height * 3 * Float32Array.BYTES_PER_ELEMENT,
             };
 
             reportStage('ocr-detection-input-start', memory);
-            inputValues = imageAnalysis.resizeRgbaSharpContainToPlanarFloat32(image.data, image.width, image.height, width, height);
+            inputValues = imageAnalysis.resizeRgbaSharpContainToPlanarFloat32(image.data, image.width, image.height, width, height, diagnosticReporter);
+            inputAllocationTracked = true;
+            reportStage('ocr-detection-tensor-create-start', { ...memory, tensorShape: [1, 3, height, width] });
             inputTensor = new ort.Tensor('float32', inputValues, [1, 3, height, width]);
+            reportStage('ocr-detection-tensor-create-done', { ...memory, tensorShape: [1, 3, height, width] });
             inputValues = null;
             reportStage('ocr-detection-input-ready', memory);
             throwIfAborted(signal);
-            reportStage('ocr-detection-run-start', memory);
+            reportStage('ocr-detection-run-start', {
+              ...memory, tensorShape: [1, 3, height, width], inputEstimatedBytes: memory.inputFloat32EstimatedBytes,
+              knownLiveBytes: diagnosticReporter.knownLiveBytes,
+            });
             outputs = await sessionForRun.run({ [sessionForRun.inputNames[0]]: inputTensor });
-            reportStage('ocr-detection-run-done', memory);
+            reportStage('ocr-detection-run-done', { ...memory, tensorShape: [1, 3, height, width] });
             throwIfAborted(signal);
 
+            reportStage('ocr-detection-output-read-start', { ...memory, outputCount: Object.keys(outputs || {}).length });
             modelOutput = outputs[sessionForRun.outputNames[0]];
             const outputHeight = modelOutput.dims[2];
             const outputWidth = modelOutput.dims[3];
+            reportStage('ocr-detection-output-read-done', { ...memory, outputShape: [...modelOutput.dims], outputElementCount: modelOutput.data?.length || 0 });
             memory.detectionMaskWidth = outputWidth;
             memory.detectionMaskHeight = outputHeight;
             memory.maskEstimatedBytes = outputWidth * outputHeight * Uint8Array.BYTES_PER_ELEMENT;
             reportStage('ocr-detection-mask-start', memory);
+            diagnosticReporter.allocationStart('ocr-detection-mask-buffer-alloc-start', 'detection-mask-uint8', memory.maskEstimatedBytes, {
+              name: 'Detection Uint8 mask', width: outputWidth, height: outputHeight, type: 'Uint8Array',
+            });
             mask = new Uint8Array(outputWidth * outputHeight);
+            maskAllocationTracked = true;
+            diagnosticReporter.allocationDone('ocr-detection-mask-buffer-alloc-done', 'detection-mask-uint8', mask.byteLength, {
+              name: 'Detection Uint8 mask', width: outputWidth, height: outputHeight, type: 'Uint8Array',
+            });
+            reportStage('ocr-detection-mask-fill-start', { ...memory, estimatedBytes: mask.byteLength });
             for (let index = 0; index < modelOutput.data.length; index += 1) {
               mask[index] = modelOutput.data[index] > 0.03 ? 255 : 0;
             }
+            reportStage('ocr-detection-mask-fill-done', { ...memory, estimatedBytes: mask.byteLength });
             reportStage('ocr-detection-mask-ready', memory);
 
+            reportStage('ocr-detection-output-dispose-start', { ...memory, outputCount: Object.keys(outputs || {}).length });
             disposeTensors(outputs);
             outputs = null;
             modelOutput = null;
-            reportStage('ocr-detection-output-disposed', memory);
+            reportStage('ocr-detection-output-dispose-done', memory);
+            reportStage('ocr-detection-input-dispose-start', { ...memory, inputEstimatedBytes: memory.inputFloat32EstimatedBytes });
             disposeTensors({ input: inputTensor });
             inputTensor = null;
             inputValues = null;
+            diagnosticReporter.releaseStart('ocr-detection-input-buffer-release-start', 'detection-input-float32', { width, height, type: 'Float32Array' });
+            diagnosticReporter.releaseDone('ocr-detection-input-dispose-done', 'detection-input-float32');
+            inputAllocationTracked = false;
             await releaseDetectionSession();
             sessionForRun = null;
             reportStage('ocr-detection-session-release', memory);
 
             reportStage('ocr-detection-opencv-start', memory);
-            lineResources = global.MagiaOcrLineSplitter.create(cv, clipper, mask, outputWidth, outputHeight, image, width, height, () => { mask = null; });
+            lineResources = global.MagiaOcrLineSplitter.create(
+              cv, clipper, mask, outputWidth, outputHeight, image, width, height,
+              () => {
+                diagnosticReporter.releaseStart('ocr-detection-mask-release-start', 'detection-mask-uint8', { width: outputWidth, height: outputHeight });
+                mask = null;
+                diagnosticReporter.releaseDone('ocr-detection-mask-release-done', 'detection-mask-uint8');
+                maskAllocationTracked = false;
+              },
+              diagnosticReporter,
+            );
             activeDetectionLineResources = lineResources;
             mask = null;
             reportStage('ocr-detection-opencv-done', memory);
@@ -386,12 +540,24 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
             return { lineImages: lineResources.lines, resizedImageWidth: width, resizedImageHeight: height };
           } finally {
             try {
+              if (outputs) reportStage('ocr-detection-output-dispose-start', { ...memory, cleanup: true });
               disposeTensors(outputs);
               outputs = null;
               modelOutput = null;
+              if (inputTensor) reportStage('ocr-detection-input-dispose-start', { ...memory, cleanup: true });
               disposeTensors({ input: inputTensor });
               inputTensor = null;
               inputValues = null;
+              if (inputAllocationTracked) {
+                diagnosticReporter.releaseStart('ocr-detection-input-dispose-start', 'detection-input-float32', { cleanup: true });
+                diagnosticReporter.releaseDone('ocr-detection-input-dispose-done', 'detection-input-float32', { cleanup: true });
+                inputAllocationTracked = false;
+              }
+              if (maskAllocationTracked) {
+                diagnosticReporter.releaseStart('ocr-detection-mask-release-start', 'detection-mask-uint8', { cleanup: true });
+                diagnosticReporter.releaseDone('ocr-detection-mask-release-done', 'detection-mask-uint8', { cleanup: true });
+                maskAllocationTracked = false;
+              }
               mask = null;
               if (detectionSession) {
                 await releaseDetectionSession();
@@ -446,10 +612,11 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
           const lineImages = detected.lineImages || [];
           const additionalLineImages = lineImages.length <= 8
             ? function* () {
-                try { yield* core.iterateRingSectors(sourcePixels); }
+                try { yield* core.iterateRingSectors(sourcePixels, { diagnostics: diagnosticReporter, lineOffset: lineImages.length }); }
                 finally { releaseSourcePixels(); }
               }
             : null;
+          if (additionalLineImages) additionalLineImages.lineCount = 4;
           if (!additionalLineImages) releaseSourcePixels();
           // Detection is complete; do not keep its ONNX session beside the recognizer session.
           await releaseTextDetector(detector);
@@ -461,6 +628,7 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
         combineLines: combineSpellLineImages,
         vocabularyCorrector: null,
         releaseLinePixelsAfterRecognition: true,
+        reportStage,
         signal,
       });
       reportStage('ocr-recognition-done');
@@ -472,7 +640,10 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
         try { activeDetectionLineResources?.release(); }
         finally {
           activeDetectionLineResources = null;
-          try { releaseOcrCvResources?.(); }
+            try {
+              releaseOcrCvResources?.();
+              reportStage('ocr-opencv-runtime-released', { runtimeState: { opencvLoaded: false } });
+            }
           finally {
             releaseOcrCvResources = null;
             releaseSourcePixels();
@@ -493,9 +664,21 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
     if (message.type !== 'analyze' || !Number.isInteger(message.jobId) || activeJobId !== null) return;
     activeJobId = message.jobId;
     diagnosticsMode = Boolean(message.diagnostics);
+    diagnosticReporter.begin(message.runId, {
+      sourceWidth: message.width,
+      sourceHeight: message.height,
+      onnxRuntimeVersion: core.config.onnxRuntimeWebVersion,
+      graphOptimizationLevel: runtimeDefaults.graphOptimizationLevel,
+      numThreads: runtimeDefaults.numThreads,
+    });
     activeAbortController = new AbortController();
     void (async () => {
       try {
+        reportStage('ocr-worker-processing-start', {
+          sourceWidth: message.width, sourceHeight: message.height,
+          estimatedBytes: Number(message.width) * Number(message.height) * 4,
+          allocationId: 'main:ocr-source-rgba', type: 'transferred Uint8ClampedArray',
+        });
         const result = await recognize({ ...message, signal: activeAbortController.signal });
         global.postMessage({ type: 'success', jobId: activeJobId, result });
       } catch (error) {

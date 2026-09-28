@@ -139,12 +139,17 @@
     };
   }
 
-  function scoreStructure(structure, spellPoints, masterImage) {
+  function scoreStructure(structure, spellPoints, masterImage, reportStage = null) {
     const paths = structure?.paths || null;
     const hasPaths = Boolean(paths);
+    reportStage?.('structure-score-image-read-start', {
+      width: masterImage?.width || 0, height: masterImage?.height || 0,
+      estimatedBytes: masterImage?.data?.byteLength || 0,
+    });
     const inkCoverage = paths?.inner
       ? imageCore.scoreInkCoverage(masterImage.data, masterImage.width, masterImage.height, paths)
       : 0;
+    reportStage?.('structure-score-image-read-done', { inkCoverage });
     const textCoverage = paths
       ? imageCore.scorePointsOnRing(paths, spellPoints, masterImage.width, masterImage.height)
       : 0;
@@ -206,7 +211,7 @@
     ].some(pattern => new RegExp(pattern).test(text));
   }
 
-  async function run({ recognizeSpell, correctSpell, getStructureInput, getMasterImage, analyzeStructure: analyzeStructureAdapter, embedAttributes, releaseAttributeModel, onRecognitionRetry, signal }) {
+  async function run({ recognizeSpell, correctSpell, getStructureInput, getMasterImage, releaseMasterImage, analyzeStructure: analyzeStructureAdapter, embedAttributes, releaseEmbedding, releaseAttributeModel, onRecognitionRetry, reportStage = null, signal }) {
     let embedding;
     let structureInput;
     let masterImage;
@@ -245,7 +250,13 @@
       }
       throwIfAborted(signal);
 
+      reportStage?.('structure-input-build-start');
       structureInput = await getStructureInput();
+      reportStage?.('structure-input-build-done', {
+        width: structureInput?.analysis?.image?.width || structureInput?.analysis?.width || null,
+        height: structureInput?.analysis?.image?.height || structureInput?.analysis?.height || null,
+        scale: structureInput?.analysis?.scale || null,
+      });
       throwIfAborted(signal);
       let rawStructure;
       try {
@@ -264,14 +275,27 @@
         };
       }
       throwIfAborted(signal);
+      reportStage?.('structure-scale-restore-start', { scale: structureInput.analysis.scale });
       const structure = restoreStructureScale(rawStructure, structureInput.analysis.scale);
+      reportStage?.('structure-scale-restore-done', { scale: structureInput.analysis.scale });
+      reportStage?.('structure-input-buffer-release-done', { allocationId: 'structure-input-rgba', allocationAction: 'release' });
       structureInput.analysis = null;
 
+      reportStage?.('post-structure-start');
+      reportStage?.('master-image-request-start');
       masterImage = structureInput.master || await getMasterImage();
+      reportStage?.('master-image-ready', { width: masterImage?.width || null, height: masterImage?.height || null, estimatedBytes: masterImage?.data?.byteLength || 0 });
       throwIfAborted(signal);
       const spellPoints = spell?.path?.points || [];
-      const structureResult = scoreStructure(structure, spellPoints, masterImage);
+      reportStage?.('structure-score-start');
+      reportStage?.('structure-score-run-start', { width: masterImage?.width || 0, height: masterImage?.height || 0 });
+      const structureResult = scoreStructure(structure, spellPoints, masterImage, reportStage);
+      reportStage?.('structure-score-run-done');
+      reportStage?.('structure-score-cleanup');
       masterImage = null;
+      await releaseMasterImage?.();
+      reportStage?.('master-image-release-done', { allocationId: 'master-image-rgba', allocationAction: 'release' });
+      reportStage?.('structure-score-done');
       structureInput = null;
 
       if (correctSpell) {
@@ -286,6 +310,10 @@
         embedding = await embedAttributes(path.text || '');
         throwIfAborted(signal);
         attribute = scoreAttributeEmbedding(embedding);
+        embedding?.dispose?.();
+        embedding = null;
+        await releaseEmbedding?.();
+        reportStage?.('embedding-output-buffer-release-done', { allocationId: 'embedding-output-float32', allocationAction: 'release' });
       } catch (error) {
         throwIfAborted(signal);
         attribute = fallbackAttribute(error);
@@ -300,8 +328,20 @@
         power,
       };
     } finally {
-      try { embedding?.dispose?.(); }
+      try {
+        embedding?.dispose?.();
+        if (embedding) {
+          embedding = null;
+          await releaseEmbedding?.();
+          reportStage?.('embedding-output-buffer-release-done', { allocationId: 'embedding-output-float32', allocationAction: 'release', cleanup: true });
+        }
+      }
       finally {
+        if (masterImage) {
+          masterImage = null;
+          await releaseMasterImage?.();
+          reportStage?.('master-image-release-done', { allocationId: 'master-image-rgba', allocationAction: 'release', cleanup: true });
+        }
         masterImage = null;
         structureInput = null;
         await releaseAttributeModel?.();

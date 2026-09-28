@@ -193,9 +193,18 @@
 
   // Match resizeRgbaSharpContain's byte-rounded RGB values while writing the
   // detector's planar BGR Float32 tensor directly, without an aligned RGBA copy.
-  function resizeRgbaSharpContainToPlanarFloat32(buffer, width, height, targetWidth, targetHeight) {
+  function resizeRgbaSharpContainToPlanarFloat32(buffer, width, height, targetWidth, targetHeight, diagnostics = null) {
     const pixels = targetWidth * targetHeight;
+    const allocationBytes = pixels * 3 * Float32Array.BYTES_PER_ELEMENT;
+    diagnostics?.allocationStart?.('ocr-detection-input-buffer-alloc-start', 'detection-input-float32', allocationBytes, {
+      name: 'Detection Float32 RGB input', width: targetWidth, height: targetHeight,
+      type: 'Float32Array', tensorShape: [1, 3, targetHeight, targetWidth],
+    });
     const output = new Float32Array(pixels * 3);
+    diagnostics?.allocationDone?.('ocr-detection-input-buffer-alloc-done', 'detection-input-float32', output.byteLength, {
+      name: 'Detection Float32 RGB input', width: targetWidth, height: targetHeight,
+      type: 'Float32Array', tensorShape: [1, 3, targetHeight, targetWidth],
+    });
     const scale = Math.min(targetWidth / width, targetHeight / height);
     const contentWidth = Math.max(1, Math.round(width * scale));
     const contentHeight = Math.max(1, Math.round(height * scale));
@@ -221,6 +230,10 @@
     const vertical = contributions(height, contentHeight);
     const rowLength = contentWidth * 3;
     const lastUse = new Uint32Array(height);
+    diagnostics?.stage?.('ocr-detection-input-fill-start', {
+      width: targetWidth, height: targetHeight, estimatedBytes: output.byteLength,
+      allocationId: 'detection-input-float32',
+    });
     for (let targetY = 0; targetY < contentHeight; targetY += 1) {
       for (const [sourceY] of vertical[targetY]) lastUse[sourceY] = targetY;
     }
@@ -264,6 +277,10 @@
         output[pixels * 2 + targetOffset] = toClampedByte(verticalRow[sourceOffset]) / 255;
       }
     }
+    diagnostics?.stage?.('ocr-detection-input-fill-done', {
+      width: targetWidth, height: targetHeight, estimatedBytes: output.byteLength,
+      allocationId: 'detection-input-float32',
+    });
     return output;
   }
 

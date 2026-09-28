@@ -299,7 +299,20 @@
       const radius = (innerRadius + outerRadius) / 2;
       const arcLength = Math.max(48, Math.round(radius * (end - start)));
       const bandHeight = Math.max(48, Math.round(outerRadius - innerRadius));
+      const allocationId = `ring-sector-${sector}`;
+      const lineIndex = Number(options.lineOffset || 0) + sector;
+      const estimatedBytes = arcLength * bandHeight * 4;
+      const diagnostics = options.diagnostics;
+      const lineDetails = { lineIndex, lineCount: Number(options.lineOffset || 0) + sectorCount, width: arcLength, height: bandHeight };
+      diagnostics?.stage?.('ocr-line-materialize-start', lineDetails);
+      diagnostics?.allocationStart?.('ocr-ring-sector-buffer-alloc-start', allocationId, estimatedBytes, {
+        name: 'OCR ring sector RGBA', type: 'Uint8ClampedArray', ...lineDetails,
+      });
       const pixels = new Uint8ClampedArray(arcLength * bandHeight * 4);
+      diagnostics?.allocationDone?.('ocr-line-crop-buffer-ready', allocationId, pixels.byteLength, {
+        name: 'OCR ring sector RGBA', type: 'Uint8ClampedArray', ...lineDetails,
+      });
+      diagnostics?.stage?.('ocr-ring-sector-fill-start', { ...lineDetails, estimatedBytes });
       for (let y = 0; y < bandHeight; y += 1) {
         const r = outerRadius - (y + 0.5) / bandHeight * (outerRadius - innerRadius);
         for (let x = 0; x < arcLength; x += 1) {
@@ -310,6 +323,8 @@
           pixels.set(data.subarray ? data.subarray(source, source + 4) : Array.from(data).slice(source, source + 4), (y * arcLength + x) * 4);
         }
       }
+      diagnostics?.stage?.('ocr-ring-sector-fill-done', { ...lineDetails, estimatedBytes });
+      diagnostics?.stage?.('ocr-line-materialize-done', lineDetails);
       const lineLength = radius * (end - start);
       const tangent = middle + Math.PI / 2;
       const cx = centerX + Math.cos(middle) * radius;
@@ -318,8 +333,20 @@
       const axisY = Math.sin(tangent) * lineLength / 2;
       const normalX = Math.cos(middle) * bandHeight / 2;
       const normalY = Math.sin(middle) * bandHeight / 2;
+      let released = false;
       yield {
-        image: { data: pixels, width: arcLength, height: bandHeight },
+        image: {
+          data: pixels, width: arcLength, height: bandHeight,
+          release() {
+            if (released) return;
+            diagnostics?.stage?.('ocr-line-release-start', lineDetails);
+            diagnostics?.releaseStart?.('ocr-ring-sector-buffer-release-start', allocationId, lineDetails);
+            this.data = new Uint8ClampedArray(0);
+            diagnostics?.releaseDone?.('ocr-ring-sector-buffer-release-done', allocationId, lineDetails);
+            diagnostics?.stage?.('ocr-line-release-done', lineDetails);
+            released = true;
+          },
+        },
         box: [[cx - axisX - normalX, cy - axisY - normalY], [cx + axisX - normalX, cy + axisY - normalY], [cx + axisX + normalX, cy + axisY + normalY], [cx - axisX + normalX, cy - axisY + normalY]],
         geometry: { x: cx, y: cy, angle: tangent, length: lineLength },
         groupId: `ring:${sector}`,
@@ -468,30 +495,60 @@
     return closeAlternate || primary;
   }
 
-  async function runRecognizeVariants({ source, preprocess, rotate, recognize, signal }) {
+  async function runRecognizeVariants({ source, preprocess, rotate, recognize, reportStage = null, diagnostics = null, lineIndex = null, lineCount = null, signal }) {
     const observations = [];
     for (const angle of config.rotationAngles) {
       for (const [variant, mode] of config.preprocessingModes.entries()) {
         throwIfAborted(signal);
+        const context = { lineIndex, lineCount, angle, variant, mode };
+        const preprocessAllocationId = `recognition-preprocess-${lineIndex}-${variant}`;
+        const rotateAllocationId = `recognition-rotated-${lineIndex}-${variant}-${angle}`;
         let prepared;
         let oriented;
+        let preprocessReleased = false;
+        let rotateReleased = false;
         try {
-          prepared = await preprocess(source, mode);
+          reportStage?.('ocr-recognition-preprocess-start', context);
+          prepared = await preprocess(source, mode, { ...context, diagnostics, reportStage, allocationId: preprocessAllocationId });
+          reportStage?.('ocr-recognition-preprocess-done', { ...context, width: prepared?.width, height: prepared?.height });
           throwIfAborted(signal);
-          oriented = await rotate(prepared, angle);
+          reportStage?.('ocr-recognition-rotate-start', { ...context, width: prepared?.width, height: prepared?.height });
+          oriented = await rotate(prepared, angle, { ...context, diagnostics, reportStage, allocationId: rotateAllocationId });
+          reportStage?.('ocr-recognition-rotate-done', { ...context, width: oriented?.width, height: oriented?.height });
           throwIfAborted(signal);
           if (oriented?.data !== prepared?.data && prepared?.data !== source?.data) {
+            diagnostics?.releaseStart?.('ocr-recognition-preprocess-buffer-release-start', preprocessAllocationId, context);
             prepared.data = new Uint8ClampedArray(0);
+            diagnostics?.releaseDone?.('ocr-recognition-preprocess-buffer-release-done', preprocessAllocationId, context);
+            preprocessReleased = true;
             prepared = null;
           }
-          const result = await recognize(oriented);
+          const result = await recognize(oriented, context);
           throwIfAborted(signal);
           observations.push(result && typeof result === 'object'
             ? { ...result, angle, variant }
             : { text: result, angle, variant });
         } finally {
-          if (prepared?.data && prepared.data !== source?.data) prepared.data = new Uint8ClampedArray(0);
-          if (oriented?.data && oriented.data !== source?.data) oriented.data = new Uint8ClampedArray(0);
+          if (prepared?.data && prepared.data !== source?.data) {
+            diagnostics?.releaseStart?.('ocr-recognition-preprocess-buffer-release-start', preprocessAllocationId, context);
+            prepared.data = new Uint8ClampedArray(0);
+            diagnostics?.releaseDone?.('ocr-recognition-preprocess-buffer-release-done', preprocessAllocationId, context);
+            preprocessReleased = true;
+          } else if (!preprocessReleased) {
+            diagnostics?.releaseStart?.('ocr-recognition-preprocess-buffer-release-start', preprocessAllocationId, context);
+            diagnostics?.releaseDone?.('ocr-recognition-preprocess-buffer-release-done', preprocessAllocationId, context);
+            preprocessReleased = true;
+          }
+          if (oriented?.data && oriented.data !== source?.data) {
+            diagnostics?.releaseStart?.('ocr-recognition-rotated-buffer-release-start', rotateAllocationId, context);
+            oriented.data = new Uint8ClampedArray(0);
+            diagnostics?.releaseDone?.('ocr-recognition-rotated-buffer-release-done', rotateAllocationId, context);
+            rotateReleased = true;
+          } else if (!rotateReleased) {
+            diagnostics?.releaseStart?.('ocr-recognition-rotated-buffer-release-start', rotateAllocationId, context);
+            diagnostics?.releaseDone?.('ocr-recognition-rotated-buffer-release-done', rotateAllocationId, context);
+            rotateReleased = true;
+          }
         }
       }
     }
@@ -567,9 +624,23 @@
     return clean(text);
   }
 
-  function preprocessRgba(image, mode) {
+  function preprocessRgba(image, mode, diagnostics = null, allocationId = 'recognition-preprocess') {
+    const width = image.width;
+    const height = image.height;
+    const estimatedBytes = width * height * 4;
+    const context = { width, height, mode, type: 'Uint8ClampedArray' };
+    diagnostics?.allocationStart?.('ocr-recognition-preprocess-buffer-alloc-start', allocationId, estimatedBytes, {
+      name: 'Recognition preprocessed line RGBA', ...context,
+    });
     const data = Uint8ClampedArray.from(image.data);
-    if (mode === 'source') return { data, width: image.width, height: image.height };
+    diagnostics?.allocationDone?.('ocr-recognition-preprocess-buffer-alloc-done', allocationId, data.byteLength, {
+      name: 'Recognition preprocessed line RGBA', ...context,
+    });
+    diagnostics?.stage?.('ocr-recognition-preprocess-fill-start', { ...context, allocationId });
+    if (mode === 'source') {
+      diagnostics?.stage?.('ocr-recognition-preprocess-fill-done', { ...context, allocationId });
+      return { data, width, height };
+    }
     for (let index = 0; index < data.length; index += 4) {
       const luminance = grayscaleByte(data[index], data[index + 1], data[index + 2]);
       const value = mode === 'binary'
@@ -578,15 +649,33 @@
       data[index] = data[index + 1] = data[index + 2] = value;
       data[index + 3] = 255;
     }
-    return { data, width: image.width, height: image.height };
+    diagnostics?.stage?.('ocr-recognition-preprocess-fill-done', { ...context, allocationId });
+    return { data, width, height };
   }
 
-  function rotateRgba(image, angle) {
+  function rotateRgba(image, angle, diagnostics = null, allocationId = 'recognition-rotated') {
     const quarter = ((Math.round(angle / 90) % 4) + 4) % 4;
-    if (!quarter) return { data: Uint8ClampedArray.from(image.data), width: image.width, height: image.height };
     const width = quarter % 2 ? image.height : image.width;
     const height = quarter % 2 ? image.width : image.height;
+    const estimatedBytes = width * height * 4;
+    const context = { width, height, angle, quarter, type: 'Uint8ClampedArray' };
+    diagnostics?.allocationStart?.('ocr-recognition-rotated-buffer-alloc-start', allocationId, estimatedBytes, {
+      name: 'Recognition rotated line RGBA', ...context,
+    });
+    if (!quarter) {
+      diagnostics?.stage?.('ocr-recognition-rotate-fill-start', { ...context, allocationId });
+      const data = Uint8ClampedArray.from(image.data);
+      diagnostics?.allocationDone?.('ocr-recognition-rotated-buffer-alloc-done', allocationId, data.byteLength, {
+        name: 'Recognition rotated line RGBA', ...context,
+      });
+      diagnostics?.stage?.('ocr-recognition-rotate-fill-done', { ...context, allocationId });
+      return { data, width, height };
+    }
     const data = new Uint8ClampedArray(width * height * 4);
+    diagnostics?.allocationDone?.('ocr-recognition-rotated-buffer-alloc-done', allocationId, data.byteLength, {
+      name: 'Recognition rotated line RGBA', ...context,
+    });
+    diagnostics?.stage?.('ocr-recognition-rotate-fill-start', { ...context, allocationId });
     for (let y = 0; y < image.height; y += 1) {
       for (let x = 0; x < image.width; x += 1) {
         let targetX; let targetY;
@@ -598,27 +687,82 @@
         data.set(image.data.subarray ? image.data.subarray(source, source + 4) : Array.from(image.data).slice(source, source + 4), target);
       }
     }
+    diagnostics?.stage?.('ocr-recognition-rotate-fill-done', { ...context, allocationId });
     return { data, width, height };
   }
 
-  function combineRgbaLines(first, second, firstAngle, secondAngle, resize) {
+  function combineRgbaLines(first, second, firstAngle, secondAngle, resize, diagnostics = null) {
     const targetHeight = 240;
     const gap = 15;
-    const prepare = (image, angle) => {
-      const rotated = rotateRgba(image, angle);
+    const firstLineIndex = Number.isInteger(first?.diagnosticLineIndex) ? first.diagnosticLineIndex : null;
+    const secondLineIndex = Number.isInteger(second?.diagnosticLineIndex) ? second.diagnosticLineIndex : null;
+    const lineCount = Number.isInteger(first?.diagnosticLineCount) ? first.diagnosticLineCount : Number.isInteger(second?.diagnosticLineCount) ? second.diagnosticLineCount : null;
+    const stageDetails = { lineIndex: firstLineIndex, lineCount, firstLineIndex, secondLineIndex, firstAngle, secondAngle };
+    const baseId = `recognition-combined-${firstLineIndex}-${secondLineIndex}-${firstAngle}-${secondAngle}`;
+    diagnostics?.stage?.('ocr-line-materialize-start', stageDetails);
+    diagnostics?.stage?.('ocr-line-combine-start', stageDetails);
+    const prepare = (image, angle, side) => {
+      const lineIndex = side === 'first' ? firstLineIndex : secondLineIndex;
+      diagnostics?.updateContext?.({ ...stageDetails, lineIndex });
+      const rotatedId = `${baseId}-rotated-${side}`;
+      const rotated = rotateRgba(image, angle, diagnostics, rotatedId);
       const width = Math.max(1, Math.round(rotated.width * targetHeight / rotated.height));
-      return { data: resize(rotated.data, rotated.width, rotated.height, width, targetHeight), width };
+      const resizeId = `${baseId}-resized-${side}`;
+      const resizeBytes = width * targetHeight * 4;
+      diagnostics?.allocationStart?.('ocr-recognition-combine-resize-buffer-alloc-start', resizeId, resizeBytes, {
+        name: 'Combined OCR line resized RGBA', width, height: targetHeight, type: 'Uint8ClampedArray',
+        lineIndex, lineCount, ...stageDetails,
+      });
+      const data = resize(rotated.data, rotated.width, rotated.height, width, targetHeight);
+      diagnostics?.allocationDone?.('ocr-recognition-combine-resize-buffer-alloc-done', resizeId, data.byteLength, {
+        name: 'Combined OCR line resized RGBA', width, height: targetHeight, type: 'Uint8ClampedArray',
+        lineIndex, lineCount, ...stageDetails,
+      });
+      return { data, width, rotated, rotatedId, resizeId, lineIndex };
     };
-    const left = prepare(first, firstAngle);
-    const right = prepare(second, secondAngle);
+    const left = prepare(first, firstAngle, 'first');
+    const right = prepare(second, secondAngle, 'second');
     const width = left.width + gap + right.width;
-    const data = new Uint8ClampedArray(width * targetHeight * 4);
+    const combinedBytes = width * targetHeight * 4;
+    const combinedId = `${baseId}-output`;
+    diagnostics?.allocationStart?.('ocr-recognition-combine-buffer-alloc-start', combinedId, combinedBytes, {
+      name: 'Combined OCR line RGBA', width, height: targetHeight, type: 'Uint8ClampedArray', ...stageDetails,
+    });
+    const data = new Uint8ClampedArray(combinedBytes);
+    diagnostics?.allocationDone?.('ocr-recognition-combine-buffer-alloc-done', combinedId, data.byteLength, {
+      name: 'Combined OCR line RGBA', width, height: targetHeight, type: 'Uint8ClampedArray', ...stageDetails,
+    });
+    diagnostics?.stage?.('ocr-recognition-combine-fill-start', { ...stageDetails, width, height: targetHeight, estimatedBytes: data.byteLength });
     data.fill(255);
     for (let y = 0; y < targetHeight; y += 1) {
       data.set(left.data.subarray(y * left.width * 4, (y + 1) * left.width * 4), y * width * 4);
       data.set(right.data.subarray(y * right.width * 4, (y + 1) * right.width * 4), (y * width + left.width + gap) * 4);
     }
-    return { image: { data, width, height: targetHeight } };
+    diagnostics?.stage?.('ocr-recognition-combine-fill-done', { ...stageDetails, width, height: targetHeight, estimatedBytes: data.byteLength });
+    for (const prepared of [left, right]) {
+      diagnostics?.releaseStart?.('ocr-recognition-combine-resize-buffer-release-start', prepared.resizeId, { lineIndex: prepared.lineIndex, lineCount, ...stageDetails });
+      prepared.data = null;
+      diagnostics?.releaseDone?.('ocr-recognition-combine-resize-buffer-release-done', prepared.resizeId, { lineIndex: prepared.lineIndex, lineCount, ...stageDetails });
+      diagnostics?.releaseStart?.('ocr-recognition-rotated-buffer-release-start', prepared.rotatedId, { lineIndex: prepared.lineIndex, lineCount, ...stageDetails });
+      prepared.rotated.data = new Uint8ClampedArray(0);
+      diagnostics?.releaseDone?.('ocr-recognition-rotated-buffer-release-done', prepared.rotatedId, { lineIndex: prepared.lineIndex, lineCount, ...stageDetails });
+    }
+    diagnostics?.stage?.('ocr-line-combine-done', { ...stageDetails, width, height: targetHeight, estimatedBytes: data.byteLength });
+    diagnostics?.stage?.('ocr-line-materialize-done', stageDetails);
+    const image = { data, width, height: targetHeight };
+    if (diagnostics) {
+      let released = false;
+      image.release = () => {
+        if (released) return;
+        diagnostics.stage('ocr-line-release-start', { ...stageDetails, estimatedBytes: image.data?.byteLength || combinedBytes });
+        diagnostics.releaseStart('ocr-recognition-combine-buffer-release-start', combinedId, stageDetails);
+        image.data = new Uint8ClampedArray(0);
+        diagnostics.releaseDone('ocr-recognition-combine-buffer-release-done', combinedId, stageDetails);
+        diagnostics.stage('ocr-line-release-done', stageDetails);
+        released = true;
+      };
+    }
+    return { image };
   }
 
   function selectPath(candidates, width, height) {
@@ -699,13 +843,14 @@
     return potential;
   }
 
-  async function recognizeLineImages({ lineImages, additionalLineImages, width, height, recognizeVariants, combineLines, releaseLinePixelsAfterRecognition = false, signal }) {
+  async function recognizeLineImages({ lineImages, additionalLineImages, width, height, recognizeVariants, combineLines, releaseLinePixelsAfterRecognition = false, reportStage = null, signal }) {
     const lineSummaries = [];
     const retainedLines = new Set();
     const potentialCombinedLines = releaseLinePixelsAfterRecognition
       ? findPotentialCombinedLines(lineImages, width, height)
       : new Set();
     const recognizedLines = [];
+    const knownLineCount = (lineImages || []).length + (Array.isArray(additionalLineImages) ? additionalLineImages.length : Number(additionalLineImages?.lineCount) || 0);
     try {
     const rawCandidates = [];
     const baseCandidates = [];
@@ -729,9 +874,17 @@
       const votes = new Map();
       let observations;
       try {
-        observations = await recognizeVariants(line);
+        reportStage?.('ocr-recognition-line-start', { lineIndex, lineCount: knownLineCount, groupId: String(groupId).slice(0, 80) });
+        observations = await recognizeVariants(line, lineIndex, knownLineCount);
       } finally {
-        if (releaseLinePixelsAfterRecognition && (line.image?.release || !mayBeCombined)) releaseLinePixels(line);
+        if (releaseLinePixelsAfterRecognition && (line.image?.release || !mayBeCombined)) {
+          if (line.image?.release) releaseLinePixels(line);
+          else {
+            reportStage?.('ocr-line-release-start', { lineIndex, lineCount: knownLineCount });
+            releaseLinePixels(line);
+            reportStage?.('ocr-line-release-done', { lineIndex, lineCount: knownLineCount });
+          }
+        }
       }
       throwIfAborted(signal);
       for (const observation of observations) {
@@ -761,7 +914,11 @@
         const preferredSpacing = [...spacedVotes].sort((left, right) => right[1] - left[1] || words(right[0]).length - words(left[0]).length)[0]?.[0];
         if (preferredSpacing) selected.text = preferredSpacing;
       }
-      if (selected) recognizedLines.push({ line, lineIndex, geometry, groupId, selected });
+      if (selected) {
+        line.diagnosticLineIndex = lineIndex;
+        line.diagnosticLineCount = knownLineCount;
+        recognizedLines.push({ line, lineIndex, geometry, groupId, selected });
+      }
     }
 
     const suppressedLines = new Set();
@@ -804,7 +961,7 @@
           const optionsByText = new Map();
           let observations;
           try {
-            observations = await recognizeVariants(joined);
+            observations = await recognizeVariants(joined, first.lineIndex, knownLineCount);
           } finally {
             releaseLinePixels(joined);
           }
@@ -876,7 +1033,7 @@
     };
   }
 
-  async function run({ detect, recognizeVariants, combineLines, vocabularyCorrector, releaseLinePixelsAfterRecognition = false, signal }) {
+  async function run({ detect, recognizeVariants, combineLines, vocabularyCorrector, releaseLinePixelsAfterRecognition = false, reportStage = null, signal }) {
     throwIfAborted(signal);
     const detected = await detect();
     throwIfAborted(signal);
@@ -891,6 +1048,7 @@
       recognizeVariants,
       combineLines,
       releaseLinePixelsAfterRecognition,
+      reportStage,
       signal,
     });
     throwIfAborted(signal);

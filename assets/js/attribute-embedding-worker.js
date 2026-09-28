@@ -1,4 +1,5 @@
 import './model-cache.js';
+import './analysis-diagnostics.js';
 
 const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
 const cache = globalThis.ModelCache.create({
@@ -7,6 +8,7 @@ const cache = globalThis.ModelCache.create({
 });
 let activeJobId = null;
 let activeAbortController = null;
+const diagnosticReporter = globalThis.MagiaAnalysisDiagnostics.createReporter('embedding', message => send(message));
 
 function makeAbortError() {
   const error = new Error('Embedding was cancelled.');
@@ -28,6 +30,7 @@ self.addEventListener('message', event => {
   if (message.type !== 'embed' || !Number.isInteger(message.jobId) || activeJobId !== null) return;
   activeJobId = message.jobId;
   activeAbortController = new AbortController();
+  diagnosticReporter.begin(message.runId, {});
 
   let extractor = null;
   let embedding = null;
@@ -36,9 +39,11 @@ self.addEventListener('message', event => {
   void (async () => {
     const signal = activeAbortController.signal;
     try {
+      diagnosticReporter.stage('embedding-runtime-import-start');
       send({ type: 'stage', stage: 'embedding-runtime-loading' });
       send({ type: 'progress', stage: '呪文の相を測る準備をしています…' });
       const { env, pipeline } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+      diagnosticReporter.stage('embedding-runtime-import-done');
       if (signal.aborted) throw signal.reason || makeAbortError();
       env.allowLocalModels = false;
       env.useCustomCache = true;
@@ -50,6 +55,8 @@ self.addEventListener('message', event => {
         wasm.proxy = false;
       }
 
+      diagnosticReporter.stage('embedding-model-load-start', { modelId: MODEL_ID });
+      diagnosticReporter.stage('embedding-pipeline-create-start', { modelId: MODEL_ID, device: 'wasm', dtype: 'q8' });
       extractor = await pipeline('feature-extraction', MODEL_ID, {
         device: 'wasm',
         dtype: 'q8',
@@ -62,19 +69,27 @@ self.addEventListener('message', event => {
           }
         },
       });
+      diagnosticReporter.stage('embedding-pipeline-create-done', { modelId: MODEL_ID, runtimeState: { embeddingPipelineLoaded: true } });
+      diagnosticReporter.stage('embedding-model-load-done', { modelId: MODEL_ID, runtimeState: { embeddingPipelineLoaded: true } });
       if (signal.aborted) throw signal.reason || makeAbortError();
       send({ type: 'stage', stage: 'embedding-runtime-ready' });
-      send({ type: 'stage', stage: 'embedding-run-start' });
+      diagnosticReporter.stage('embedding-input-tensor-start', { inputCount: message.texts?.length || 0, api: 'Transformers.js pipeline input; tensor construction is internal' });
+      diagnosticReporter.stage('embedding-input-tensor-done', { inputCount: message.texts?.length || 0, api: 'Transformers.js pipeline input; tensor construction is internal' });
+      diagnosticReporter.stage('embedding-run-start', { inputCount: message.texts?.length || 0 });
       embedding = await extractor(message.texts, { pooling: 'mean', normalize: true });
+      diagnosticReporter.stage('embedding-run-done', { outputShape: Array.from(embedding.dims), outputElements: embedding.data?.length || 0 });
       if (signal.aborted) throw signal.reason || makeAbortError();
       result = {
         dims: Array.from(embedding.dims),
         data: new Float32Array(embedding.data),
       };
-      send({ type: 'stage', stage: 'embedding-run-done' });
+      diagnosticReporter.allocationDone('embedding-output-buffer-ready', 'embedding-output-float32', result.data.byteLength, {
+        name: 'Embedding output Float32', type: 'Float32Array', width: result.data.length,
+      });
     } catch (caught) {
       error = caught;
     } finally {
+      diagnosticReporter.stage('embedding-dispose-start');
       try { embedding?.dispose?.(); }
       catch (disposeError) { error ||= disposeError; }
       finally { embedding = null; }
@@ -82,13 +97,20 @@ self.addEventListener('message', event => {
       extractor = null;
       try { await activeExtractor?.dispose?.(); }
       catch (disposeError) { error ||= disposeError; }
+      diagnosticReporter.stage('embedding-dispose-done', { runtimeState: { embeddingPipelineLoaded: false } });
       send({ type: 'stage', stage: 'embedding-cleanup' });
     }
 
     if (error) {
       send({ type: 'error', name: error?.name || 'Error', message: error?.message || String(error) });
     } else {
+      const outputBytes = result?.data?.byteLength || 0;
+      diagnosticReporter.stage('embedding-result-transfer-start', { outputBytes });
       send({ type: 'success', embedding: result }, [result.data.buffer]);
+      diagnosticReporter.releaseStart('embedding-output-buffer-release-start', 'embedding-output-float32');
+      result.data = null;
+      diagnosticReporter.releaseDone('embedding-output-buffer-release-done', 'embedding-output-float32');
+      diagnosticReporter.stage('embedding-result-transfer-done', { outputBytes });
     }
     activeAbortController = null;
     activeJobId = null;
