@@ -13,10 +13,11 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
   let ocrCvResourcesTracked = false;
   let activeDetectionLineResources = null;
   let diagnosticsMode = false;
+  const runtimeDefaults = core.config.onnxRuntimeDefaults;
   const ocrSessionOptions = Object.freeze({
-    executionMode: 'sequential',
-    enableCpuMemArena: false,
-    enableMemPattern: false,
+    executionMode: runtimeDefaults.executionMode,
+    enableCpuMemArena: runtimeDefaults.enableCpuMemArena,
+    enableMemPattern: runtimeDefaults.enableMemPattern,
   });
   const ocrCache = global.ModelCache.create({
     name: 'magia-circle-ocr-models-v1',
@@ -81,7 +82,7 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
     recognizerPromise = (async () => {
       const ort = await import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`);
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
-      ort.env.wasm.numThreads = 1;
+      ort.env.wasm.numThreads = runtimeDefaults.numThreads;
       ort.env.wasm.proxy = false;
       let session;
       try {
@@ -285,7 +286,7 @@ importScripts('spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-l
       const clipper = clipperModule.default ?? clipperModule;
       const ort = await import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`);
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
-      ort.env.wasm.numThreads = 1;
+      ort.env.wasm.numThreads = runtimeDefaults.numThreads;
       ort.env.wasm.proxy = false;
       let detectionSession = null;
       let detectionModel = null;

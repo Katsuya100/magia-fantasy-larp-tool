@@ -16,25 +16,43 @@ const imagePipeline = globalThis.MagiaImagePipeline;
 const jsonMode = process.argv.includes('--json');
 const webWasm = process.argv.includes('--web-wasm');
 const baseline = process.argv.includes('--baseline');
-const input = process.argv.slice(2).find(argument => !['--json', '--web-wasm', '--native-ocr', '--baseline'].includes(argument));
+const graphOptimizationLevelIndex = process.argv.indexOf('--graph-optimization-level');
+const graphOptimizationLevel = graphOptimizationLevelIndex >= 0 ? process.argv[graphOptimizationLevelIndex + 1] : null;
+const webOrtModuleIndex = process.argv.indexOf('--web-ort-module');
+const webOrtModuleSpecifier = webOrtModuleIndex >= 0 ? process.argv[webOrtModuleIndex + 1] : null;
+const supportedGraphOptimizationLevels = new Set(['disabled', 'basic', 'extended', 'all']);
+if (graphOptimizationLevel && !supportedGraphOptimizationLevels.has(graphOptimizationLevel)) {
+  throw new Error(`Unsupported graph optimization level: ${graphOptimizationLevel}`);
+}
+const input = process.argv.slice(2).find(argument => ![
+  '--json', '--web-wasm', '--native-ocr', '--baseline', '--graph-optimization-level', graphOptimizationLevel,
+  '--web-ort-module', webOrtModuleSpecifier,
+].includes(argument));
 if (!input) {
-  console.error('Usage: npm run test:spell-ocr -- [--web-wasm|--native-ocr] [--baseline] <image-path>');
+  console.error('Usage: npm run test:spell-ocr -- [--web-wasm|--native-ocr] [--web-ort-module <module-specifier>] [--graph-optimization-level disabled|basic|extended|all] [--baseline] <image-path>');
   process.exit(2);
 }
 
 let runtime = nodeOrt;
 let activeModels = models;
 if (webWasm) {
-  runtime = await import('onnxruntime-web');
+  const runtimeModule = webOrtModuleSpecifier || 'onnxruntime-web';
+  runtime = await import(runtimeModule);
   runtime.env.wasm.numThreads = 1;
   runtime.env.wasm.proxy = true;
-  runtime.env.wasm.wasmPaths = new URL('../node_modules/onnxruntime-web/dist/', import.meta.url).href;
+  runtime.env.wasm.wasmPaths = new URL('./', import.meta.resolve(runtimeModule)).href;
   activeModels = {
     ...models,
     detectionPath: new Uint8Array(await readFile(models.detectionPath)),
     recognitionPath: new Uint8Array(await readFile(models.recognitionPath)),
   };
 }
+const ocrSessionOptions = webWasm ? {
+  executionMode: 'sequential',
+  enableCpuMemArena: false,
+  enableMemPattern: false,
+  ...(graphOptimizationLevel ? { graphOptimizationLevel } : {}),
+} : {};
 const { registerBackend } = await import('@gutenye/ocr-common');
 const { FileUtils } = await import('../node_modules/@gutenye/ocr-node/build/FileUtils.js');
 const { ImageRaw } = await import('../node_modules/@gutenye/ocr-node/build/ImageRaw.js');
@@ -55,9 +73,35 @@ class SharedImageRaw extends ImageRaw {
   }
 }
 registerBackend({ FileUtils, ImageRaw: SharedImageRaw, InferenceSession: runtime.InferenceSession, splitIntoLineImages, defaultModels: activeModels });
-const detection = await Detection.create({ models: activeModels });
-const recognitionSession = await runtime.InferenceSession.create(activeModels.recognitionPath);
+const detectionSessionStarted = performance.now();
+const detectionSession = await runtime.InferenceSession.create(activeModels.detectionPath, ocrSessionOptions);
+const detectionSessionCreateMs = performance.now() - detectionSessionStarted;
+let detectionSessionRunMs = null;
+const measuredDetectionSession = new Proxy(detectionSession, {
+  get(target, property) {
+    if (property === 'run') {
+      return async (...runArgs) => {
+        const started = performance.now();
+        try { return await target.run(...runArgs); }
+        finally { detectionSessionRunMs = performance.now() - started; }
+      };
+    }
+    const value = Reflect.get(target, property, target);
+    return typeof value === 'function' ? value.bind(target) : value;
+  },
+});
+const detection = new Detection({ model: measuredDetectionSession, options: {} });
+const recognitionSession = await runtime.InferenceSession.create(activeModels.recognitionPath, ocrSessionOptions);
 const sourceImage = baseline ? null : await SharedImageRaw.open(input);
+const sourceMetadata = sourceImage ? null : await sharp(input).metadata();
+const sourceDimensions = imagePipeline.fitInputDimensions(sourceImage?.width ?? sourceMetadata.width, sourceImage?.height ?? sourceMetadata.height);
+const detectionTensorShape = [
+  1,
+  3,
+  Math.max(32, Math.ceil(sourceDimensions.height / 32) * 32),
+  Math.max(32, Math.ceil(sourceDimensions.width / 32) * 32),
+];
+let detectionMs = null;
 const dictionary = [...(await readFile(models.dictionaryPath, 'utf8')).split(/\r?\n/), ' '];
 const [forbiddenResponse, commonResponse] = await Promise.all([
   fetch(core.config.forbiddenWordsUrl, { cache: 'no-store' }),
@@ -124,7 +168,10 @@ async function combineLineImages(first, second, firstAngle, secondAngle) {
 
 const pipeline = await core.run({
   detect: async () => {
-    const detected = await detection.run(input);
+    const started = performance.now();
+    let detected;
+    try { detected = await detection.run(input); }
+    finally { detectionMs = performance.now() - started; }
     const lineImages = detected.lineImages || [];
     const additionalLineImages = baseline || lineImages.length > 8
       ? null
@@ -185,6 +232,21 @@ if (jsonMode) {
     resegmentedWords,
     inventedLetters,
     literalPreservation,
+    ...(webWasm ? {
+      onnxRuntime: {
+        version: runtime.env.versions?.web || core.config.onnxRuntimeWebVersion,
+        executionProvider: 'wasm',
+        graphOptimizationLevel: graphOptimizationLevel || 'all',
+        executionMode: ocrSessionOptions.executionMode,
+        numThreads: runtime.env.wasm.numThreads,
+        enableCpuMemArena: ocrSessionOptions.enableCpuMemArena,
+        enableMemPattern: ocrSessionOptions.enableMemPattern,
+        detectionTensorShape,
+        detectionSessionCreateMs,
+        detectionSessionRunMs,
+        detectionMs,
+      },
+    } : {}),
   }, null, 2));
 } else if (assertion === 'PASS_VOCABULARY_MATCH') {
     console.log(`OCR: ${rawText}`);
@@ -197,3 +259,5 @@ if (jsonMode) {
   console.log(assertion);
   process.exit(1);
 }
+
+await Promise.all([detectionSession.release(), recognitionSession.release()]);

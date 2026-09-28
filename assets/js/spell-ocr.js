@@ -10,7 +10,15 @@
     dictionaryUrl: 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ppocr_keys_v1.txt',
     forbiddenWordsUrl: 'https://raw.githubusercontent.com/dsojevic/profanity-list/main/en.txt',
     commonWordsUrl: 'https://raw.githubusercontent.com/nlile/dictionary-word-list/master/word_list_very_common_en_us_spelling_no_diacritic.txt',
-    onnxRuntimeWebVersion: '1.17.3',
+    onnxRuntimeWebVersion: '1.30.0',
+    onnxRuntimeDefaults: Object.freeze({
+      executionProvider: 'wasm',
+      graphOptimizationLevel: 'all',
+      executionMode: 'sequential',
+      numThreads: 1,
+      enableCpuMemArena: false,
+      enableMemPattern: false,
+    }),
     rotationAngles: Object.freeze([0, 90, 180, 270]),
     preprocessingModes: Object.freeze(['source', 'contrast', 'binary']),
   });

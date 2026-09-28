@@ -1,0 +1,339 @@
+{
+  "image": "D:\\Users\\Katsuya\\projects\\magia-fantasy-larp-tool\\assets\\images\\sample.png",
+  "imageLoadMs": 32.31909999999999,
+  "inputImageShape": [
+    1254,
+    1254,
+    4
+  ],
+  "detectionTensorShape": [
+    1,
+    3,
+    1280,
+    1280
+  ],
+  "detectionTensorBytes": 19660800,
+  "detectionTensorMiB": 18.75,
+  "model": "D:\\Users\\Katsuya\\projects\\magia-fantasy-larp-tool\\node_modules\\@gutenye\\ocr-models\\ch_PP-OCRv4_det_infer.onnx",
+  "onnxRuntime": {
+    "version": "1.30.0",
+    "executionProvider": "wasm",
+    "graphOptimizationLevel": "disabled",
+    "executionMode": "sequential",
+    "numThreads": 1,
+    "enableCpuMemArena": false,
+    "enableMemPattern": false
+  },
+  "results": [
+    {
+      "mode": "recreate",
+      "iterationCount": 10,
+      "successCount": 10,
+      "failureCount": 0,
+      "averageSessionCreateMs": 62.50177000000006,
+      "averageInputPreparationMs": 360.56161999999983,
+      "averageRunMs": 1050.99394,
+      "minRunMs": 1037.1074000000008,
+      "maxRunMs": 1121.6228,
+      "averageCleanupMs": 1.180190000000198,
+      "sessionReleaseMs": 0,
+      "records": [
+        {
+          "iteration": 1,
+          "sessionCreateMs": 254.26839999999999,
+          "inputPreparationMs": 411.0348,
+          "runMs": 1121.6228,
+          "cleanupMs": 2.1760999999999058,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 2,
+          "sessionCreateMs": 45.594299999999976,
+          "inputPreparationMs": 348.7275000000002,
+          "runMs": 1044.2935000000002,
+          "cleanupMs": 1.1597999999999047,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 3,
+          "sessionCreateMs": 42.24420000000009,
+          "inputPreparationMs": 366.3280999999997,
+          "runMs": 1043.2026999999998,
+          "cleanupMs": 1.0670000000000073,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 4,
+          "sessionCreateMs": 40.47220000000016,
+          "inputPreparationMs": 331.3870999999999,
+          "runMs": 1040.3557,
+          "cleanupMs": 1.1625000000003638,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 5,
+          "sessionCreateMs": 40.71939999999995,
+          "inputPreparationMs": 320.1975000000002,
+          "runMs": 1039.9033,
+          "cleanupMs": 1.053000000000793,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 6,
+          "sessionCreateMs": 41.03660000000036,
+          "inputPreparationMs": 348.03250000000025,
+          "runMs": 1051.5765000000001,
+          "cleanupMs": 1.0074000000004162,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 7,
+          "sessionCreateMs": 42.13349999999991,
+          "inputPreparationMs": 331.5020999999997,
+          "runMs": 1042.719000000001,
+          "cleanupMs": 1.0347000000001572,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 8,
+          "sessionCreateMs": 39.9395999999997,
+          "inputPreparationMs": 338.5784999999996,
+          "runMs": 1050.784599999999,
+          "cleanupMs": 1.0443000000013853,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 9,
+          "sessionCreateMs": 39.15760000000046,
+          "inputPreparationMs": 518.8482000000004,
+          "runMs": 1038.3739000000005,
+          "cleanupMs": 1.0214999999989232,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 10,
+          "sessionCreateMs": 39.45190000000002,
+          "inputPreparationMs": 290.97989999999845,
+          "runMs": 1037.1074000000008,
+          "cleanupMs": 1.0756000000001222,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "reuse",
+      "iterationCount": 10,
+      "successCount": 10,
+      "failureCount": 0,
+      "averageSessionCreateMs": 3.9431600000001708,
+      "averageInputPreparationMs": 291.39027000000004,
+      "averageRunMs": 1050.6129699999997,
+      "minRunMs": 1038.8616000000002,
+      "maxRunMs": 1106.6274999999987,
+      "averageCleanupMs": 0.009939999999733117,
+      "sessionReleaseMs": 1.0377000000007683,
+      "records": [
+        {
+          "iteration": 1,
+          "sessionCreateMs": 39.43160000000171,
+          "inputPreparationMs": 305.4220000000005,
+          "runMs": 1042.5407000000014,
+          "cleanupMs": 0.03260000000045693,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 2,
+          "sessionCreateMs": 0,
+          "inputPreparationMs": 293.16909999999916,
+          "runMs": 1039.403699999999,
+          "cleanupMs": 0.004199999999400461,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 3,
+          "sessionCreateMs": 0,
+          "inputPreparationMs": 307.6100000000006,
+          "runMs": 1040.2837,
+          "cleanupMs": 0.004799999998795101,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 4,
+          "sessionCreateMs": 0,
+          "inputPreparationMs": 279.70730000000185,
+          "runMs": 1045.0063999999984,
+          "cleanupMs": 0.004799999998795101,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 5,
+          "sessionCreateMs": 0,
+          "inputPreparationMs": 289.70790000000125,
+          "runMs": 1038.8616000000002,
+          "cleanupMs": 0.004499999999097781,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 6,
+          "sessionCreateMs": 0,
+          "inputPreparationMs": 278.8357999999971,
+          "runMs": 1057.8081999999995,
+          "cleanupMs": 0.004499999999097781,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 7,
+          "sessionCreateMs": 0,
+          "inputPreparationMs": 291.54449999999997,
+          "runMs": 1039.9779000000017,
+          "cleanupMs": 0.005199999999604188,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 8,
+          "sessionCreateMs": 0,
+          "inputPreparationMs": 298.8650999999991,
+          "runMs": 1043.870500000001,
+          "cleanupMs": 0.02930000000196742,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 9,
+          "sessionCreateMs": 0,
+          "inputPreparationMs": 292.1087000000007,
+          "runMs": 1051.749499999998,
+          "cleanupMs": 0.004600000000209548,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        },
+        {
+          "iteration": 10,
+          "sessionCreateMs": 0,
+          "inputPreparationMs": 276.9323000000004,
+          "runMs": 1106.6274999999987,
+          "cleanupMs": 0.004899999999906868,
+          "success": true,
+          "outputShape": [
+            1,
+            1,
+            1280,
+            1280
+          ]
+        }
+      ]
+    }
+  ]
+}

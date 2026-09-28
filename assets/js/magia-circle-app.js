@@ -22,6 +22,12 @@
     memory: null,
     error: null,
   };
+  const onnxRuntimeDiagnostics = {
+    version: core.config.onnxRuntimeWebVersion,
+    ...core.config.onnxRuntimeDefaults,
+    graphOptimizationLevelSource: 'ORT default',
+    detectionTensorShape: null,
+  };
   const OCR_MEMORY_FIELDS = [
     'ocrInputWidth', 'ocrInputHeight',
     'detectionTensorWidth', 'detectionTensorHeight',
@@ -53,7 +59,14 @@
     diagnosticStageState.runId = storage.getItem('magiaAnalysisRunId') || 'none';
     const savedMemory = storage.getItem('magiaAnalysisMemory');
     if (savedMemory && savedMemory.length <= 512) {
-      try { diagnosticStageState.memory = compactOcrMemory(JSON.parse(savedMemory)); }
+      try {
+        diagnosticStageState.memory = compactOcrMemory(JSON.parse(savedMemory));
+        if (diagnosticStageState.memory?.detectionTensorWidth && diagnosticStageState.memory?.detectionTensorHeight) {
+          onnxRuntimeDiagnostics.detectionTensorShape = [
+            1, 3, diagnosticStageState.memory.detectionTensorHeight, diagnosticStageState.memory.detectionTensorWidth,
+          ];
+        }
+      }
       catch { storage.removeItem('magiaAnalysisMemory'); }
     } else if (savedMemory) storage.removeItem('magiaAnalysisMemory');
   } catch (error) {
@@ -72,8 +85,14 @@
       diagnosticStageState.runId = job.runId;
       diagnosticStageState.memory = null;
       diagnosticStageState.error = null;
+      onnxRuntimeDiagnostics.detectionTensorShape = null;
     }
-    if (compactMemory) diagnosticStageState.memory = compactMemory;
+    if (compactMemory) {
+      diagnosticStageState.memory = compactMemory;
+      if (compactMemory.detectionTensorWidth && compactMemory.detectionTensorHeight) {
+        onnxRuntimeDiagnostics.detectionTensorShape = [1, 3, compactMemory.detectionTensorHeight, compactMemory.detectionTensorWidth];
+      }
+    }
     try {
       const storage = global.localStorage;
       if (!storage) throw new Error('localStorage is unavailable in this browser context.');
@@ -224,7 +243,15 @@
       ringCoverage: diagnostics.circle.ringCoverage,
       sigilScores: diagnostics.circle.sigilScores,
     };
-    output.textContent = JSON.stringify({ image: diagnostics.image, spell, circle, attribute: diagnostics.attribute, sigil: diagnostics.sigil, power: diagnostics.power });
+    output.textContent = JSON.stringify({
+      image: diagnostics.image,
+      spell,
+      circle,
+      attribute: diagnostics.attribute,
+      sigil: diagnostics.sigil,
+      power: diagnostics.power,
+      onnxRuntime: onnxRuntimeDiagnostics,
+    });
   }
 
   function publishRuntimeDiagnostics() {
@@ -255,6 +282,14 @@
       `Detection mask: ${memory.detectionMaskWidth ?? 'pending'}x${memory.detectionMaskHeight ?? 'pending'}`,
       `Input Float32 estimated: ${memoryMib(memory.inputFloat32EstimatedBytes)}`,
       `Mask estimated: ${memoryMib(memory.maskEstimatedBytes)}`,
+      `ONNX Runtime version: ${onnxRuntimeDiagnostics.version}`,
+      `Execution provider: ${onnxRuntimeDiagnostics.executionProvider}`,
+      `Graph optimization level: ${onnxRuntimeDiagnostics.graphOptimizationLevel} (${onnxRuntimeDiagnostics.graphOptimizationLevelSource})`,
+      `Execution mode: ${onnxRuntimeDiagnostics.executionMode}`,
+      `numThreads: ${onnxRuntimeDiagnostics.numThreads}`,
+      `enableCpuMemArena: ${onnxRuntimeDiagnostics.enableCpuMemArena}`,
+      `enableMemPattern: ${onnxRuntimeDiagnostics.enableMemPattern}`,
+      `Detection tensor shape: ${onnxRuntimeDiagnostics.detectionTensorShape?.join('x') ?? 'pending'}`,
       ...(diagnosticStageState.error ? [`Last OCR error: ${diagnosticStageState.error}`] : []),
     ].join('\n');
   }

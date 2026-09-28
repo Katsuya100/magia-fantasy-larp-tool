@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { basename, dirname, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -9,13 +10,21 @@ const args = process.argv.slice(2);
 const renderPaths = args.includes('--render-paths');
 const pathsOnly = args.includes('--paths-only');
 const webWasm = args.includes('--web-wasm');
-const input = args.find(argument => !['--render-paths', '--paths-only', '--web-wasm', '--native-ocr'].includes(argument));
+const graphOptimizationLevelIndex = args.indexOf('--graph-optimization-level');
+const graphOptimizationLevel = graphOptimizationLevelIndex >= 0 ? args[graphOptimizationLevelIndex + 1] : null;
+const webOrtModuleIndex = args.indexOf('--web-ort-module');
+const webOrtModuleSpecifier = webOrtModuleIndex >= 0 ? args[webOrtModuleIndex + 1] : null;
+const input = args.find(argument => ![
+  '--render-paths', '--paths-only', '--web-wasm', '--native-ocr', '--graph-optimization-level', graphOptimizationLevel,
+  '--web-ort-module', webOrtModuleSpecifier,
+].includes(argument));
 if (!input) {
-  console.error('Usage: npm run test:image-outputs -- [--render-paths|--paths-only|--web-wasm|--native-ocr] <image-path>');
+  console.error('Usage: npm run test:image-outputs -- [--render-paths|--paths-only|--web-wasm|--native-ocr] [--web-ort-module <module-specifier>] [--graph-optimization-level disabled|basic|extended|all] <image-path>');
   process.exit(2);
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
+const transformersRequire = createRequire(resolve(here, '../node_modules/@huggingface/transformers/package.json'));
 const imagePath = resolve(input);
 await import('../assets/js/spell-ocr.js');
 await import('../assets/js/image-analysis-core.js');
@@ -96,7 +105,7 @@ async function loadAttributeModel() {
     env.allowRemoteModels = true;
     env.backends.onnx.wasm.numThreads = 1;
     env.backends.onnx.wasm.proxy = true;
-    env.backends.onnx.wasm.wasmPaths = pathToFileURL(`${resolve(here, '../node_modules/onnxruntime-web/dist')}/`).href;
+    env.backends.onnx.wasm.wasmPaths = pathToFileURL(`${dirname(transformersRequire.resolve('onnxruntime-web'))}/`).href;
     transformerPipelinePromise = pipeline('feature-extraction', imagePipeline.ATTRIBUTE_MODEL_ID, { dtype: 'q8' });
   }
   attributeModel = await transformerPipelinePromise;
@@ -105,7 +114,15 @@ async function loadAttributeModel() {
 
 const result = await imagePipeline.run({
   recognizeSpell: async () => {
-    const ocr = spawnSync(process.execPath, [...process.execArgv, resolve(here, 'test-spell-ocr.mjs'), '--json', ...(webWasm ? ['--web-wasm'] : []), imagePath], {
+    const ocr = spawnSync(process.execPath, [
+      ...process.execArgv,
+      resolve(here, 'test-spell-ocr.mjs'),
+      '--json',
+      ...(webWasm ? ['--web-wasm'] : []),
+      ...(webOrtModuleSpecifier ? ['--web-ort-module', webOrtModuleSpecifier] : []),
+      ...(graphOptimizationLevel ? ['--graph-optimization-level', graphOptimizationLevel] : []),
+      imagePath,
+    ], {
       encoding: 'utf8',
       maxBuffer: 32 * 1024 * 1024,
     });
@@ -228,6 +245,7 @@ const output = {
       resonancePercent: Math.round(power.normalized[key] * 100),
     }])),
   },
+  ...(ocrOutput.onnxRuntime ? { onnxRuntime: ocrOutput.onnxRuntime } : {}),
 };
 
 const totals = [
