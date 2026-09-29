@@ -170,6 +170,15 @@
       ocrSourceWidth: null,
       ocrSourceHeight: null,
     };
+    const run = activeDiagnosticRun;
+    run.reporter = global.MagiaAnalysisDiagnostics.createReporter('main');
+    run.reporter.begin(runId, {
+      sourceWidth: run.sourceWidth,
+      sourceHeight: run.sourceHeight,
+      onnxRuntimeVersion: core.config.onnxRuntimeWebVersion,
+      graphOptimizationLevel: onnxRuntimeDiagnostics.graphOptimizationLevel,
+      numThreads: onnxRuntimeDiagnostics.numThreads,
+    });
     diagnosticStageState.runId = runId;
     diagnosticStageState.trace = activeDiagnosticRun.trace;
     diagnosticStageState.currentStage = 'image-file-received';
@@ -235,8 +244,10 @@
     const criticalPatterns = [
       /-run-(?:start|done)/,
       /-session-(?:create|release)-(?:start|done)/,
+      /-(?:tensor-create|tensor-dispose)-(?:start|done)/,
       /-ort-import-(?:start|done)/,
       /-runtime-(?:import|init)-(?:start|done)/,
+      /-phase-(?:start|done)/,
       /(?:opencv|clipper)-import-(?:start|done)/,
       /-model-fetch-(?:start|done)/,
       /-model-(?:arraybuffer|buffer)-(?:start|done)/,
@@ -246,6 +257,7 @@
       /-result-received/,
       /ocr-detection-output-read-(?:start|done)/,
       /find-contours-(?:start|done)/,
+      /contours-process-(?:start|done)/,
       /contours-process-(?:25|50|75|done)/,
       /line-materialize-(?:start|done)/,
       /line-crop-buffer-ready/,
@@ -273,6 +285,9 @@
       /structure-worker-run-(?:start|done)/,
       /structure-score-image-read-(?:start|done)/,
       /ocr-detection-(?:output|input)-dispose-(?:start|done)/,
+      /ocr-detection-cleanup-done/,
+      /ocr-recognition-(?:preprocess|rotate)-(?:start|done)/,
+      /ocr-recognition-(?:output-decode|output-dispose|input-dispose)-(?:start|done)/,
     ];
     return criticalPatterns.some(pattern => pattern.test(stage));
   }
@@ -353,16 +368,13 @@
       runtimeStates: { ...diagnosticStageState.runtimeStates },
       sourceMatCreateCount: diagnosticStageState.sourceMatCreateCount || 0,
     };
-    const event = {
-      seq: ++run.seq,
-      runId: run.runId,
-      stage,
-      elapsedMs: Math.max(0, Number((global.performance?.now?.() ?? Date.now()) - run.startedAt).toFixed(1)),
-      timestamp: Date.now(),
-      details: eventDetails,
-    };
-    run.trace.push(event);
-    if (run.trace.length > DIAGNOSTIC_TRACE_LIMIT) run.trace.splice(0, run.trace.length - DIAGNOSTIC_TRACE_LIMIT);
+    const event = run.reporter.stage(stage, eventDetails);
+    run.seq = event.seq;
+    run.trace = run.reporter.trace;
+    diagnosticStageState.currentKnownLiveBytes = run.reporter.knownLiveBytes;
+    diagnosticStageState.peakKnownLiveBytes = run.reporter.peakKnownLiveBytes;
+    diagnosticStageState.activeWorkers = run.reporter.activeWorkers;
+    Object.assign(diagnosticStageState.runtimeStates, run.reporter.runtimeState);
     diagnosticStageState.trace = run.trace;
     diagnosticStageState.localStorageWrites = run.localStorageWrites;
 
@@ -769,6 +781,7 @@
     const traceOutput = document.getElementById('analysisRuntimeDiagnosticsTrace');
     if (traceOutput) traceOutput.textContent = JSON.stringify(visibleTrace, null, 2);
     output.textContent = [
+      `Previous interrupted run: ${showingPreviousRun ? 'yes' : 'no'}`,
       `Current stage: ${showingPreviousRun ? previousRun.lastStage || last?.stage : diagnosticStageState.currentStage}`,
       `Previous interrupted stage: ${showingPreviousRun ? previousRun.lastStage || last?.stage : diagnosticStageState.previousInterruptedStage}`,
       `Run ID: ${showingPreviousRun ? previousRun.runId : diagnosticStageState.runId}`,
@@ -1417,7 +1430,10 @@
     recordAnalysisStage(job, 'ocr-worker-terminate-start', { workerType: 'ocr' });
     if (job.ocrWorker === worker) job.ocrWorker = null;
     worker.terminate();
-    recordAnalysisStage(job, 'ocr-worker-terminate-done', { workerType: 'ocr', workerAction: 'stop' });
+    recordAnalysisStage(job, 'ocr-worker-terminate-done', {
+      workerType: 'ocr', workerAction: 'stop',
+      runtimeState: { ortDetectionLoaded: false, opencvLoaded: false, clipperLoaded: false, recognizerLoaded: false },
+    });
     recordAnalysisStage(job, 'ocr-worker-reference-release', { workerType: 'ocr' });
     if (job.ocrSourceAllocationId && diagnosticAllocations.has(`main:${job.ocrSourceAllocationId}`)) {
       recordAllocation(job, 'ocr-source-rgba-release-done', job.ocrSourceAllocationId, job.ocrSourceEstimatedBytes || 0, {}, 'release');

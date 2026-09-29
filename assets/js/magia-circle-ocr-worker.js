@@ -275,108 +275,112 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
   async function ensureTextDetector() {
     if (textDetectorPromise) return textDetectorPromise;
     textDetectorPromise = (async () => {
-      reportStage('ocr-opencv-import-start');
-      const cvModule = await import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm');
-      reportStage('ocr-opencv-import-done');
-      const importedCv = cvModule.default ?? cvModule;
-      reportStage('ocr-opencv-runtime-init-start');
-      const cv = importedCv instanceof Promise ? await importedCv : importedCv;
-      if (!cv.Mat) await new Promise(resolve => {
-        const previous = cv.onRuntimeInitialized;
-        cv.onRuntimeInitialized = () => { previous?.(); resolve(); };
-      });
-      reportStage('ocr-opencv-runtime-init-done', { runtimeState: { opencvLoaded: true } });
-      if (!ocrCvResourcesTracked) {
-        const cvResources = new Set();
-        const trackCvResource = resource => {
-          if (!resource || typeof resource.delete !== 'function' || cvResources.has(resource)) return resource;
-          const dispose = resource.delete;
-          try {
-            resource.delete = function (...args) {
-              cvResources.delete(resource);
-              return dispose.apply(this, args);
-            };
-            cvResources.add(resource);
-          } catch {}
-          return resource;
-        };
-        const trackConstructor = name => {
-          const Constructor = cv[name];
-          if (typeof Constructor !== 'function') return;
-          cv[name] = new Proxy(Constructor, {
-            construct(target, args) { return trackCvResource(Reflect.construct(target, args, target)); },
-          });
-        };
-        for (const name of ['Mat', 'MatVector', 'Point', 'Size', 'Scalar']) trackConstructor(name);
-        const matVectorGet = cv.MatVector?.prototype?.get;
-        if (matVectorGet) cv.MatVector.prototype.get = function (...args) { return trackCvResource(matVectorGet.apply(this, args)); };
-        for (const name of ['matFromArray', 'getRotationMatrix2D', 'minAreaRect']) {
-          const factory = cv[name];
-          if (typeof factory === 'function') cv[name] = function (...args) { return trackCvResource(factory.apply(cv, args)); };
-        }
-        const getPerspectiveTransform = cv.getPerspectiveTransform;
-        if (typeof getPerspectiveTransform === 'function') {
-          let warnedAboutPerspectiveBinding = false;
-          cv.getPerspectiveTransform = function (source, destination, ...options) {
-            try { return trackCvResource(getPerspectiveTransform.call(cv, source, destination, ...options)); }
-            catch (error) {
-              if (!(error instanceof TypeError) || !/hasOwnProperty/.test(error.message || '')) throw error;
-              if (!warnedAboutPerspectiveBinding) {
-                console.warn('OpenCV getPerspectiveTransform overload is unavailable; using an equivalent four-point transform solver.');
-                warnedAboutPerspectiveBinding = true;
-              }
-              const sourcePoints = Array.from(source.data32F || []);
-              const destinationPoints = Array.from(destination.data32F || []);
-              if (sourcePoints.length < 8 || destinationPoints.length < 8) throw error;
-              const equations = [];
-              const values = [];
-              for (let index = 0; index < 4; index += 1) {
-                const x = sourcePoints[index * 2];
-                const y = sourcePoints[index * 2 + 1];
-                const u = destinationPoints[index * 2];
-                const v = destinationPoints[index * 2 + 1];
-                if (![x, y, u, v].every(Number.isFinite)) throw error;
-                equations.push([x, y, 1, 0, 0, 0, -u * x, -u * y]);
-                values.push(u);
-                equations.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
-                values.push(v);
-              }
-              const augmented = equations.map((row, index) => [...row, values[index]]);
-              for (let column = 0; column < 8; column += 1) {
-                let pivot = column;
-                for (let row = column + 1; row < 8; row += 1) {
-                  if (Math.abs(augmented[row][column]) > Math.abs(augmented[pivot][column])) pivot = row;
-                }
-                if (Math.abs(augmented[pivot][column]) < 1e-12) throw error;
-                [augmented[column], augmented[pivot]] = [augmented[pivot], augmented[column]];
-                const divisor = augmented[column][column];
-                for (let cell = column; cell <= 8; cell += 1) augmented[column][cell] /= divisor;
-                for (let row = 0; row < 8; row += 1) {
-                  if (row === column) continue;
-                  const factor = augmented[row][column];
-                  for (let cell = column; cell <= 8; cell += 1) augmented[row][cell] -= factor * augmented[column][cell];
-                }
-              }
-              const coefficients = augmented.map(row => row[8]);
-              if (!coefficients.every(Number.isFinite)) throw error;
-              const transform = new cv.Mat(3, 3, cv.CV_64F);
-              transform.data64F.set([...coefficients, 1]);
-              return transform;
-            }
+      let cv = null;
+      let clipper = null;
+      async function ensureOcrImageRuntimes() {
+        reportStage('ocr-opencv-import-start', { opencvLoaded: false });
+        const cvModule = await import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm');
+        reportStage('ocr-opencv-import-done');
+        const importedCv = cvModule.default ?? cvModule;
+        reportStage('ocr-opencv-runtime-init-start');
+        cv = importedCv instanceof Promise ? await importedCv : importedCv;
+        if (!cv.Mat) await new Promise(resolve => {
+          const previous = cv.onRuntimeInitialized;
+          cv.onRuntimeInitialized = () => { previous?.(); resolve(); };
+        });
+        reportStage('ocr-opencv-runtime-init-done', { runtimeState: { opencvLoaded: true } });
+        if (!ocrCvResourcesTracked) {
+          const cvResources = new Set();
+          const trackCvResource = resource => {
+            if (!resource || typeof resource.delete !== 'function' || cvResources.has(resource)) return resource;
+            const dispose = resource.delete;
+            try {
+              resource.delete = function (...args) {
+                cvResources.delete(resource);
+                return dispose.apply(this, args);
+              };
+              cvResources.add(resource);
+            } catch {}
+            return resource;
           };
-        }
-        releaseOcrCvResources = () => {
-          for (const resource of [...cvResources].reverse()) {
-            try { resource.delete(); } catch { cvResources.delete(resource); }
+          const trackConstructor = name => {
+            const Constructor = cv[name];
+            if (typeof Constructor !== 'function') return;
+            cv[name] = new Proxy(Constructor, {
+              construct(target, args) { return trackCvResource(Reflect.construct(target, args, target)); },
+            });
+          };
+          for (const name of ['Mat', 'MatVector', 'Point', 'Size', 'Scalar']) trackConstructor(name);
+          const matVectorGet = cv.MatVector?.prototype?.get;
+          if (matVectorGet) cv.MatVector.prototype.get = function (...args) { return trackCvResource(matVectorGet.apply(this, args)); };
+          for (const name of ['matFromArray', 'getRotationMatrix2D', 'minAreaRect']) {
+            const factory = cv[name];
+            if (typeof factory === 'function') cv[name] = function (...args) { return trackCvResource(factory.apply(cv, args)); };
           }
-          cvResources.clear();
-        };
-        ocrCvResourcesTracked = true;
+          const getPerspectiveTransform = cv.getPerspectiveTransform;
+          if (typeof getPerspectiveTransform === 'function') {
+            let warnedAboutPerspectiveBinding = false;
+            cv.getPerspectiveTransform = function (source, destination, ...options) {
+              try { return trackCvResource(getPerspectiveTransform.call(cv, source, destination, ...options)); }
+              catch (error) {
+                if (!(error instanceof TypeError) || !/hasOwnProperty/.test(error.message || '')) throw error;
+                if (!warnedAboutPerspectiveBinding) {
+                  console.warn('OpenCV getPerspectiveTransform overload is unavailable; using an equivalent four-point transform solver.');
+                  warnedAboutPerspectiveBinding = true;
+                }
+                const sourcePoints = Array.from(source.data32F || []);
+                const destinationPoints = Array.from(destination.data32F || []);
+                if (sourcePoints.length < 8 || destinationPoints.length < 8) throw error;
+                const equations = [];
+                const values = [];
+                for (let index = 0; index < 4; index += 1) {
+                  const x = sourcePoints[index * 2];
+                  const y = sourcePoints[index * 2 + 1];
+                  const u = destinationPoints[index * 2];
+                  const v = destinationPoints[index * 2 + 1];
+                  if (![x, y, u, v].every(Number.isFinite)) throw error;
+                  equations.push([x, y, 1, 0, 0, 0, -u * x, -u * y]);
+                  values.push(u);
+                  equations.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
+                  values.push(v);
+                }
+                const augmented = equations.map((row, index) => [...row, values[index]]);
+                for (let column = 0; column < 8; column += 1) {
+                  let pivot = column;
+                  for (let row = column + 1; row < 8; row += 1) {
+                    if (Math.abs(augmented[row][column]) > Math.abs(augmented[pivot][column])) pivot = row;
+                  }
+                  if (Math.abs(augmented[pivot][column]) < 1e-12) throw error;
+                  [augmented[column], augmented[pivot]] = [augmented[pivot], augmented[column]];
+                  const divisor = augmented[column][column];
+                  for (let cell = column; cell <= 8; cell += 1) augmented[column][cell] /= divisor;
+                  for (let row = 0; row < 8; row += 1) {
+                    if (row === column) continue;
+                    const factor = augmented[row][column];
+                    for (let cell = column; cell <= 8; cell += 1) augmented[row][cell] -= factor * augmented[column][cell];
+                  }
+                }
+                const coefficients = augmented.map(row => row[8]);
+                if (!coefficients.every(Number.isFinite)) throw error;
+                const transform = new cv.Mat(3, 3, cv.CV_64F);
+                transform.data64F.set([...coefficients, 1]);
+                return transform;
+              }
+            };
+          }
+          releaseOcrCvResources = () => {
+            for (const resource of [...cvResources].reverse()) {
+              try { resource.delete(); } catch { cvResources.delete(resource); }
+            }
+            cvResources.clear();
+          };
+          ocrCvResourcesTracked = true;
+        }
+        reportStage('ocr-clipper-import-start', { opencvLoaded: true, clipperLoaded: false });
+        const clipperModule = await import('https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm');
+        reportStage('ocr-clipper-import-done', { runtimeState: { clipperLoaded: true } });
+        clipper = clipperModule.default ?? clipperModule;
       }
-      reportStage('ocr-clipper-import-start');
-      const clipperModule = await import('https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm');
-      reportStage('ocr-clipper-import-done');
-      const clipper = clipperModule.default ?? clipperModule;
       reportStage('ocr-detection-ort-import-start');
       const ort = await import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`);
       reportStage('ocr-detection-ort-import-done', { version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
@@ -477,7 +481,9 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
             reportStage('ocr-detection-run-start', {
               ...memory, tensorShape: [1, 3, height, width], inputEstimatedBytes: memory.inputFloat32EstimatedBytes,
               knownLiveBytes: diagnosticReporter.knownLiveBytes,
+              opencvLoaded: Boolean(cv),
             });
+            if (cv) throw new Error('OpenCV must remain unloaded during Detection inference.');
             outputs = await sessionForRun.run({ [sessionForRun.inputNames[0]]: inputTensor });
             reportStage('ocr-detection-run-done', { ...memory, tensorShape: [1, 3, height, width] });
             throwIfAborted(signal);
@@ -522,6 +528,13 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
             sessionForRun = null;
             reportStage('ocr-detection-session-release', memory);
 
+            reportStage('ocr-detection-cleanup-done', {
+              ...memory,
+              opencvLoaded: Boolean(cv),
+              remainingTrackedBytes: diagnosticReporter.knownLiveBytes,
+            });
+            reportStage('ocr-opencv-phase-start', { ...memory, opencvLoaded: false });
+            await ensureOcrImageRuntimes();
             reportStage('ocr-detection-opencv-start', memory);
             lineResources = global.MagiaOcrLineSplitter.create(
               cv, clipper, mask, outputWidth, outputHeight, image, width, height,
@@ -535,6 +548,7 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
             );
             activeDetectionLineResources = lineResources;
             mask = null;
+            reportStage('ocr-opencv-phase-done', { ...memory, runtimeState: { opencvLoaded: true, clipperLoaded: true } });
             reportStage('ocr-detection-opencv-done', memory);
             completed = true;
             return { lineImages: lineResources.lines, resizedImageWidth: width, resizedImageHeight: height };
@@ -593,13 +607,26 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
   }
 
   async function recognize({ buffer, width, height, signal }) {
-    let sourcePixels = { data: new Uint8ClampedArray(buffer), width, height };
+    let sourcePixels = null;
+    const sourceBytes = Number(buffer?.byteLength ?? buffer?.length) || 0;
+    let sourcePixelsTracked = false;
     let detector;
     const releaseSourcePixels = () => {
       if (sourcePixels) sourcePixels.data = new Uint8ClampedArray(0);
       sourcePixels = null;
     };
     try {
+      diagnosticReporter.allocationStart('ocr-worker-source-rgba-alloc-start', 'ocr-worker-source-rgba', sourceBytes, {
+        name: 'OCR Worker source RGBA view', width, height, type: 'Uint8ClampedArray',
+        countedInKnownLive: false, bufferSource: 'transferred ArrayBuffer already tracked on Main Thread',
+      });
+      const sourceData = new Uint8ClampedArray(buffer);
+      sourcePixels = { data: sourceData, width, height };
+      diagnosticReporter.allocationDone('ocr-worker-source-rgba-alloc-done', 'ocr-worker-source-rgba', sourceData.byteLength, {
+        name: 'OCR Worker source RGBA view', width, height, type: 'Uint8ClampedArray',
+        countedInKnownLive: false, bufferSource: 'transferred ArrayBuffer already tracked on Main Thread',
+      });
+      sourcePixelsTracked = true;
       throwIfAborted(signal);
       reportStage('ocr-runtime-loading');
       detector = await ensureTextDetector();
@@ -640,13 +667,18 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
         try { activeDetectionLineResources?.release(); }
         finally {
           activeDetectionLineResources = null;
-            try {
-              releaseOcrCvResources?.();
-              reportStage('ocr-opencv-runtime-released', { runtimeState: { opencvLoaded: false } });
+          try {
+            releaseOcrCvResources?.();
+              reportStage('ocr-opencv-runtime-released', { opencvResourcesReleased: true });
             }
           finally {
             releaseOcrCvResources = null;
             releaseSourcePixels();
+            if (sourcePixelsTracked) {
+              diagnosticReporter.releaseStart('ocr-worker-source-rgba-release-start', 'ocr-worker-source-rgba', { width, height });
+              diagnosticReporter.releaseDone('ocr-worker-source-rgba-release-done', 'ocr-worker-source-rgba');
+              sourcePixelsTracked = false;
+            }
           }
         }
       }

@@ -81,8 +81,13 @@ self.addEventListener('message', event => {
       if (signal.aborted) throw signal.reason || makeAbortError();
       result = {
         dims: Array.from(embedding.dims),
-        data: new Float32Array(embedding.data),
+        data: null,
       };
+      const outputBytes = embedding.data?.byteLength || embedding.data?.length * Float32Array.BYTES_PER_ELEMENT || 0;
+      diagnosticReporter.allocationStart('embedding-output-buffer-alloc-start', 'embedding-output-float32', outputBytes, {
+        name: 'Embedding output Float32', type: 'Float32Array', width: embedding.data?.length || 0,
+      });
+      result.data = new Float32Array(embedding.data);
       diagnosticReporter.allocationDone('embedding-output-buffer-ready', 'embedding-output-float32', result.data.byteLength, {
         name: 'Embedding output Float32', type: 'Float32Array', width: result.data.length,
       });
@@ -106,10 +111,12 @@ self.addEventListener('message', event => {
     } else {
       const outputBytes = result?.data?.byteLength || 0;
       diagnosticReporter.stage('embedding-result-transfer-start', { outputBytes });
-      send({ type: 'success', embedding: result }, [result.data.buffer]);
       diagnosticReporter.releaseStart('embedding-output-buffer-release-start', 'embedding-output-float32');
+      const transferredEmbedding = result;
       result.data = null;
-      diagnosticReporter.releaseDone('embedding-output-buffer-release-done', 'embedding-output-float32');
+      result = null;
+      diagnosticReporter.releaseDone('embedding-output-buffer-release-done', 'embedding-output-float32', { ownershipTransferred: true });
+      send({ type: 'success', embedding: transferredEmbedding }, [transferredEmbedding.data.buffer]);
       diagnosticReporter.stage('embedding-result-transfer-done', { outputBytes });
     }
     activeAbortController = null;
