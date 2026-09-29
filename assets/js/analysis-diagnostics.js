@@ -54,6 +54,7 @@
         if (previous) knownLiveBytes = Math.max(0, knownLiveBytes - previous.estimatedBytes);
         const estimatedBytes = Math.max(0, Number(details.estimatedBytes) || 0);
         allocations.set(id, {
+          scope: String(details.scope || scope),
           name: String(details.name || details.allocationId),
           estimatedBytes,
           ...(Number.isFinite(details.width) ? { width: details.width } : {}),
@@ -142,6 +143,20 @@
       });
     }
 
+    function clearAllocationsByScope(targetScope) {
+      const prefix = `${String(targetScope || '')}:`;
+      let releasedTrackedBytes = 0;
+      let allocationCount = 0;
+      for (const [id, allocation] of allocations) {
+        if (!id.startsWith(prefix)) continue;
+        releasedTrackedBytes += allocation.estimatedBytes;
+        allocationCount += 1;
+        allocations.delete(id);
+      }
+      knownLiveBytes = Math.max(0, knownLiveBytes - releasedTrackedBytes);
+      return { releasedTrackedBytes, allocationCount, remainingKnownLiveBytes: knownLiveBytes };
+    }
+
     return Object.freeze({
       begin,
       stage,
@@ -150,6 +165,7 @@
       allocationDone,
       releaseStart,
       releaseDone,
+      clearAllocationsByScope,
       get runId() { return runId; },
       get trace() { return trace.slice(); },
       get knownLiveBytes() { return knownLiveBytes; },
@@ -188,6 +204,15 @@
   function isCriticalStage(stage, details = {}) {
     if (typeof stage !== 'string') return false;
     if (stage === 'image-file-received' || stage.startsWith('analysis-') || stage.endsWith('-error')) return true;
+    if ([
+      'diagnostic-scope-clear',
+      'structure-worker-ready',
+      'structure-input-transfer-start',
+      'structure-input-transfer-done',
+      'structure-worker-message-received',
+      'structure-worker-run-start',
+      'structure-worker-run-done',
+    ].includes(stage)) return true;
     if (details.workerAction || (stage === 'ocr-worker-result-received' && details.resultType === 'error')) return true;
     const estimatedBytes = Number(details.estimatedBytes ?? details.inputEstimatedBytes);
     const largeBufferStart = Number.isFinite(estimatedBytes) && estimatedBytes >= 1024 * 1024 &&

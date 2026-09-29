@@ -207,35 +207,33 @@
     try {
       throwIfAborted(signal);
       let spell;
-      let recognitionError = null;
       try {
         spell = await recognizeSpell(0);
       } catch (error) {
         throwIfAborted(signal);
-        recognitionError = error;
-        if (ocrErrorPolicy.isRetryableOcrError(error)) {
-          await onRecognitionRetry?.({ attempt: 1, error, empty: false, resource: error.resource || null });
-          // The first disposable OCR worker has been stopped before this single retry.
-          await new Promise(resolve => {
-            if (typeof setTimeout === 'function') setTimeout(resolve, 0);
-            else resolve();
-          });
+        if (!ocrErrorPolicy.isRetryableOcrError(error)) {
+          reportStage?.('ocr-execution-error', { error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) } });
+          throw error;
+        }
+        await onRecognitionRetry?.({ attempt: 1, error, empty: false, resource: error.resource || null });
+        // The first disposable OCR worker has been stopped before this single retry.
+        await new Promise(resolve => {
+          if (typeof setTimeout === 'function') setTimeout(resolve, 0);
+          else resolve();
+        });
+        throwIfAborted(signal);
+        try {
+          spell = await recognizeSpell(1);
+        } catch (retryError) {
           throwIfAborted(signal);
-          try {
-            spell = await recognizeSpell(1);
-          } catch (retryError) {
-            throwIfAborted(signal);
-            recognitionError = retryError;
-            spell = emptySpell(retryError);
-          }
-        } else {
-          spell = emptySpell(error);
+          reportStage?.('ocr-execution-error', { attempt: 1, error: { name: String(retryError?.name || 'Error'), message: String(retryError?.message || retryError).slice(0, 240) } });
+          throw retryError;
         }
       }
       if (!spell || isEmptySpell(spell)) {
         spell = emptySpell(spell?.error
           ? new Error(spell.error)
-          : recognitionError || new Error('OCR returned no spell text.'));
+          : new Error('OCR returned no spell text.'));
       }
       throwIfAborted(signal);
 

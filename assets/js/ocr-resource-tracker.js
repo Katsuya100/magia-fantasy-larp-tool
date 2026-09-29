@@ -5,7 +5,11 @@
     const resources = new Set();
 
     function track(resource) {
-      try { if (resource && typeof resource.delete === 'function') resources.add(resource); }
+      try {
+        if (!resource) return resource;
+        if (typeof resource.delete === 'function') resources.add(resource);
+        else throw new TypeError('OpenCV resource has no delete method.');
+      }
       catch (error) {
         try { reportCleanupError(error, { resourceType: 'opencv-resource-track' }); }
         catch (reportError) { console.warn('OpenCV tracking diagnostic could not be recorded.', reportError); }
@@ -15,6 +19,7 @@
 
     function deleteResource(resource, details = {}) {
       if (!resource) return false;
+      if (!resources.has(resource)) return false;
       resources.delete(resource);
       try {
         const deleteMethod = resource.delete;

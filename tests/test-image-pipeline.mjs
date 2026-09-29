@@ -50,26 +50,42 @@ assert.equal(attempts, 1, 'an empty OCR result must not rerun the same image and
 assert.equal(empty.spell.path.text, '', 'an empty OCR result must remain empty');
 assert.equal(empty.wordCount, 0, 'an empty OCR result must contribute no words');
 assert.match(empty.spell.error, /no spell text/, 'an empty OCR result must explain that recognition found no text');
+let structureInputCalls = 0;
+await MagiaImagePipeline.run({
+  ...pipelineOptions(async () => ({ path: { text: '', words: [], points: [] } })),
+  getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
+});
+assert.equal(structureInputCalls, 1, 'A successful empty OCR result should preserve the existing Structure flow.');
 
 const perspectiveError = vm.runInContext("new TypeError('getPerspectiveTransform hasOwnProperty')", context);
 attempts = 0;
-const failed = await MagiaImagePipeline.run(pipelineOptions(async () => {
-  attempts += 1;
-  throw perspectiveError;
-}));
+structureInputCalls = 0;
+const ocrErrorStages = [];
+await assert.rejects(MagiaImagePipeline.run({
+  ...pipelineOptions(async () => {
+    attempts += 1;
+    throw perspectiveError;
+  }),
+  getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
+  reportStage: stage => ocrErrorStages.push(stage),
+}), error => error === perspectiveError);
 assert.equal(attempts, 1, 'a programming TypeError must not retry the same OCR run');
-assert.match(failed.spell.error, /getPerspectiveTransform/, 'the OCR exception must be preserved');
-assert.equal(failed.wordCount, 0, 'an OCR exception must not invent words');
+assert.equal(structureInputCalls, 0, 'An OCR execution error must abort before Structure input creation.');
+assert.ok(ocrErrorStages.includes('ocr-execution-error'), 'A thrown OCR exception should be explicitly diagnosed before the app ends the run.');
 
 const disposeError = vm.runInContext("new ReferenceError(\"Can't find variable: dispose\")", context);
 assert.equal(MagiaImagePipeline.isRetryableOcrError(disposeError), false, 'ReferenceError must never be retryable');
 attempts = 0;
-const disposeFailure = await MagiaImagePipeline.run(pipelineOptions(async () => {
-  attempts += 1;
-  throw disposeError;
-}));
+structureInputCalls = 0;
+await assert.rejects(MagiaImagePipeline.run({
+  ...pipelineOptions(async () => {
+    attempts += 1;
+    throw disposeError;
+  }),
+  getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
+}), error => error === disposeError);
 assert.equal(attempts, 1, 'a dispose ReferenceError must not trigger another OCR worker');
-assert.match(disposeFailure.spell.error, /dispose/);
+assert.equal(structureInputCalls, 0, 'A dispose ReferenceError must abort before Structure analysis.');
 
 const allocationError = vm.runInContext("new RangeError('Invalid typed array length: allocation failed')", context);
 assert.equal(MagiaImagePipeline.isRetryableOcrError(allocationError), false, 'RangeError allocation failures must not retry');
@@ -81,12 +97,16 @@ for (const message of ['out of memory', 'memory access out of bounds', 'OpenCV a
   assert.equal(MagiaImagePipeline.isRetryableOcrError(allocationLikeError), false, `${message} must not retry.`);
 }
 attempts = 0;
-const memoryFailure = await MagiaImagePipeline.run(pipelineOptions(async () => {
-  attempts += 1;
-  throw allocationError;
-}));
+structureInputCalls = 0;
+await assert.rejects(MagiaImagePipeline.run({
+  ...pipelineOptions(async () => {
+    attempts += 1;
+    throw allocationError;
+  }),
+  getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
+}), error => error === allocationError);
 assert.equal(attempts, 1, 'a memory-related OCR exception must not be retried');
-assert.match(memoryFailure.spell.error, /allocation failed/, 'a memory-related OCR exception must be preserved');
+assert.equal(structureInputCalls, 0, 'A memory allocation failure must abort before Structure analysis.');
 
 const typeError = vm.runInContext("new TypeError('Failed to fetch')", context);
 const abortError = vm.runInContext("Object.assign(new Error('cancelled'), { name: 'AbortError' })", context);
@@ -123,11 +143,24 @@ assert.equal(retryCallbacks, 1, 'one retry should be reported once');
 assert.equal(retried.spell.path.text, 'fire');
 
 attempts = 0;
-const retriedFailure = await MagiaImagePipeline.run(pipelineOptions(async () => {
-  attempts += 1;
-  throw retryableError;
-}));
+structureInputCalls = 0;
+await assert.rejects(MagiaImagePipeline.run({
+  ...pipelineOptions(async () => {
+    attempts += 1;
+    throw retryableError;
+  }),
+  getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
+}), error => error === retryableError);
 assert.equal(attempts, 2, 'a retryable failure on the second attempt must not trigger a third OCR run');
-assert.match(retriedFailure.spell.error, /detection model/);
+assert.equal(structureInputCalls, 0, 'A second OCR exception must reject before Structure analysis.');
+
+attempts = 0;
+structureInputCalls = 0;
+await assert.rejects(MagiaImagePipeline.run({
+  ...pipelineOptions(async () => { attempts += 1; throw unknownError; }),
+  getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
+}), error => error === unknownError);
+assert.equal(attempts, 1, 'Unknown OCR errors must not retry.');
+assert.equal(structureInputCalls, 0, 'Unknown OCR errors must stop before Structure analysis.');
 
 console.log('PASS_IMAGE_PIPELINE_EMPTY_RESULT_AND_ERROR_RETRY');

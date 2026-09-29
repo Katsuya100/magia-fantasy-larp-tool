@@ -385,6 +385,32 @@
     });
   }
 
+  function clearDiagnosticAllocationsByScope(job, scope) {
+    const run = job?.diagnosticRun || job;
+    if (!run?.reporter) return { releasedTrackedBytes: 0, allocationCount: 0, remainingKnownLiveBytes: diagnosticStageState.currentKnownLiveBytes };
+    const prefix = `${String(scope || '')}:`;
+    let releasedFromMirror = 0;
+    let mirroredCount = 0;
+    for (const [id, allocation] of diagnosticAllocations) {
+      if (!id.startsWith(prefix)) continue;
+      releasedFromMirror += allocation.estimatedBytes;
+      mirroredCount += 1;
+      diagnosticAllocations.delete(id);
+    }
+    const cleared = run.reporter.clearAllocationsByScope(scope);
+    diagnosticStageState.currentKnownLiveBytes = run.reporter.knownLiveBytes;
+    diagnosticStageState.peakKnownLiveBytes = run.reporter.peakKnownLiveBytes;
+    const result = {
+      scope,
+      releasedTrackedBytes: cleared.releasedTrackedBytes || releasedFromMirror,
+      allocationCount: cleared.allocationCount || mirroredCount,
+      remainingKnownLiveBytes: run.reporter.knownLiveBytes,
+      currentKnownLiveBytes: run.reporter.knownLiveBytes,
+    };
+    recordAnalysisStage(job, 'diagnostic-scope-clear', result);
+    return result;
+  }
+
   function recordCanvasEstimate(job, canvas, name) {
     const width = Math.max(0, Number(canvas?.width) || 0);
     const height = Math.max(0, Number(canvas?.height) || 0);
@@ -958,6 +984,7 @@
     if (analysisPending?.job === job) {
       const pending = analysisPending;
       analysisPending = null;
+      pending.discardInput?.();
       terminateAnalysisWorker(pending.worker, job);
       if (pending.structureAllocationId && diagnosticAllocations.has(`main:${pending.structureAllocationId}`)) {
         recordAllocation(job, 'structure-input-buffer-release-done', pending.structureAllocationId, pending.structureEstimatedBytes || 0, {}, 'release');
@@ -1063,6 +1090,7 @@
       job.structureWorkerActive = false;
       recordAnalysisStage(job, 'structure-worker-terminate-done', { workerType: 'structure', workerAction: 'stop' });
       recordAnalysisStage(job, 'structure-worker-reference-release', { workerType: 'structure' });
+      clearDiagnosticAllocationsByScope(job, 'structure');
     }
     if (job && pending?.structureAllocationId && diagnosticAllocations.has(`main:${pending.structureAllocationId}`)) {
       recordAllocation(job, 'structure-input-buffer-release-done', pending.structureAllocationId, pending.structureEstimatedBytes || 0, {}, 'release');
@@ -1080,6 +1108,8 @@
     recordAnalysisStage(pending.job, 'structure-worker-error', {
       error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) },
     });
+    pending.rejectReady?.(error);
+    pending.discardInput?.();
     terminateAnalysisWorker(worker, pending.job);
     analysisPending = null;
     if (!isActiveAnalysisJob(pending.job)) {
@@ -1099,9 +1129,10 @@
       if (analysisWorker !== worker) return;
       const message = event.data || {};
       const pending = analysisPending;
-      if (!pending || pending.worker !== worker || message.jobId !== pending.job.id) return;
       if (message.type === 'diagnostic-stage') {
+        if (!pending || pending.worker !== worker || (message.jobId != null && message.jobId !== pending.job.id)) return;
         recordAnalysisStage(pending.job, message.stage, message.details || {});
+        if (message.stage === 'structure-worker-ready') pending.resolveReady?.();
         if (message.stage === 'structure-worker-run-done' && pending.structureAllocationId) {
           recordAllocation(pending.job, 'structure-input-buffer-release-done', pending.structureAllocationId, pending.structureEstimatedBytes || 0, {
             sourceWidth: pending.inputWidth, sourceHeight: pending.inputHeight, scope: 'main',
@@ -1110,6 +1141,7 @@
         }
         return;
       }
+      if (!pending || pending.worker !== worker || message.jobId !== pending.job.id) return;
       if (message.type === 'progress') {
         if (!isActiveAnalysisJob(pending.job)) return;
         setStatus(cameraStatus, message.stage, 'busy');
@@ -1241,40 +1273,71 @@
         reject,
         fallback,
         worker: null,
+        ready: null,
+        resolveReady: null,
+        rejectReady: null,
+        discardInput: () => {
+          if (analysisImage) analysisImage.image = null;
+          analysisImage = null;
+        },
       };
       try {
+        pending.ready = new Promise((resolveReady, rejectReady) => {
+          pending.resolveReady = resolveReady;
+          pending.rejectReady = rejectReady;
+        });
         worker = ensureAnalysisWorker(job);
         pending.worker = worker;
         pending.inputWidth = analysisImage.image.width;
         pending.inputHeight = analysisImage.image.height;
         analysisPending = pending;
-        assertActiveAnalysisJob(job);
-        const transferable = analysisImage.image.data.buffer;
         pending.structureAllocationId = 'structure-input-rgba';
         pending.structureEstimatedBytes = analysisImage.image.data.byteLength;
-        recordAnalysisStage(job, 'structure-input-transfer-start', {
-          width: pending.inputWidth, height: pending.inputHeight,
-          estimatedBytes: pending.structureEstimatedBytes, allocationId: pending.structureAllocationId,
-        });
-        worker.postMessage({
-          jobId: job.id, runId: job.runId,
-          width: pending.inputWidth, height: pending.inputHeight,
-          buffer: transferable,
-        }, [transferable]);
-        recordAnalysisStage(job, 'structure-input-transfer-done', {
-          width: pending.inputWidth, height: pending.inputHeight,
-          estimatedBytes: pending.structureEstimatedBytes, allocationId: pending.structureAllocationId,
-        });
-        analysisImage = null;
+        const transferAfterReady = async () => {
+          try {
+            await awaitForAnalysisJob(job, pending.ready);
+            if (analysisPending !== pending) return;
+            assertActiveAnalysisJob(job);
+            const transferable = analysisImage.image.data.buffer;
+            recordAnalysisStage(job, 'structure-input-transfer-start', {
+              width: pending.inputWidth, height: pending.inputHeight,
+              estimatedBytes: pending.structureEstimatedBytes, allocationId: pending.structureAllocationId,
+            });
+            worker.postMessage({
+              jobId: job.id, runId: job.runId,
+              width: pending.inputWidth, height: pending.inputHeight,
+              buffer: transferable,
+            }, [transferable]);
+            recordAnalysisStage(job, 'structure-input-transfer-done', {
+              width: pending.inputWidth, height: pending.inputHeight,
+              estimatedBytes: pending.structureEstimatedBytes, allocationId: pending.structureAllocationId,
+            });
+            pending.discardInput();
+          } catch (error) {
+            if (analysisPending !== pending) return;
+            const untransferredBytes = analysisImage?.image?.data?.byteLength || 0;
+            pending.discardInput();
+            analysisPending = null;
+            terminateAnalysisWorker(worker, job);
+            if (pending.structureAllocationId && diagnosticAllocations.has(`main:${pending.structureAllocationId}`)) {
+              recordAllocation(job, 'structure-input-transfer-failed-release', pending.structureAllocationId, pending.structureEstimatedBytes || 0, {}, 'release');
+            } else if (untransferredBytes && diagnosticAllocations.has('main:structure-input-rgba')) {
+              recordAllocation(job, 'structure-input-buffer-release-done', 'structure-input-rgba', untransferredBytes, { reason: 'worker-create-failed' }, 'release');
+            }
+            fallback(error);
+          }
+        };
+        transferAfterReady();
       } catch (error) {
+        const untransferredBytes = analysisImage?.image?.data?.byteLength || 0;
+        pending.discardInput();
         analysisPending = null;
         terminateAnalysisWorker(worker, job);
         if (pending.structureAllocationId && diagnosticAllocations.has(`main:${pending.structureAllocationId}`)) {
           recordAllocation(job, 'structure-input-transfer-failed-release', pending.structureAllocationId, pending.structureEstimatedBytes || 0, {}, 'release');
-        } else if (analysisImage && diagnosticAllocations.has('main:structure-input-rgba')) {
-          recordAllocation(job, 'structure-input-buffer-release-done', 'structure-input-rgba', analysisImage.image?.data?.byteLength || 0, { reason: 'worker-create-failed' }, 'release');
+        } else if (untransferredBytes && diagnosticAllocations.has('main:structure-input-rgba')) {
+          recordAllocation(job, 'structure-input-buffer-release-done', 'structure-input-rgba', untransferredBytes, { reason: 'worker-create-failed' }, 'release');
         }
-        analysisImage = null;
         fallback(error);
       }
     });
@@ -1400,6 +1463,7 @@
       runtimeState: { ortDetectionLoaded: false, opencvLoaded: false, clipperLoaded: false, recognizerLoaded: false },
     });
     recordAnalysisStage(job, 'ocr-worker-reference-release', { workerType: 'ocr' });
+    clearDiagnosticAllocationsByScope(job, 'ocr');
     if (job.ocrSourceAllocationId && diagnosticAllocations.has(`main:${job.ocrSourceAllocationId}`)) {
       recordAllocation(job, 'ocr-source-rgba-release-done', job.ocrSourceAllocationId, job.ocrSourceEstimatedBytes || 0, {}, 'release');
       job.ocrSourceAllocationId = null;
@@ -1576,6 +1640,7 @@
         currentWorker.removeEventListener('messageerror', onMessageError);
         currentWorker.terminate();
         recordAnalysisStage(job, 'embedding-worker-terminate-done', { workerType: 'embedding', workerAction: 'stop' });
+        clearDiagnosticAllocationsByScope(job, 'embedding');
         recordAnalysisStage(job, 'embedding-worker-reference-release', { workerType: 'embedding' });
         if (job.embeddingWorker === currentWorker) job.embeddingWorker = null;
         worker = null;
@@ -2017,11 +2082,24 @@
         if (!job.diagnosticRun.aborted) recordAnalysisStage(job, 'analysis-aborted-user-action', { reason: String(error?.message || '解析が中断されました。').slice(0, 120) });
         return;
       }
+      const ocrExecutionError = diagnosticStageState.currentStage === 'ocr-execution-error';
       if (job.diagnosticRun.trace.at(-1)?.stage !== 'analysis-error') recordAnalysisStage(job, 'analysis-error', {
         error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) },
         failedStage: diagnosticStageState.currentStage,
       });
       if (!isActiveAnalysisJob(job)) return;
+      if (ocrExecutionError) {
+        structureReady = false;
+        spellReady = false;
+        updateResultVisibility();
+        setImageBusy(false);
+        setStatus(cameraStatus, '画像解析を完了できませんでした。', 'error');
+        setStatus(modelStatus, '呪文の読み取り中にエラーが発生しました。', 'error');
+        activeAnalysisJob = null;
+        analyzeButton.disabled = !hasSelectedImage;
+        publishDiagnostics();
+        return;
+      }
       if (!Number.isFinite(powerInputs.wordCount)) powerInputs.wordCount = 0;
       if (!Number.isFinite(powerInputs.attributeCertainty)) powerInputs.attributeCertainty = renderAttributeFallback(error);
       if (!Number.isFinite(powerInputs.circleAccuracy)) powerInputs.circleAccuracy = 0;

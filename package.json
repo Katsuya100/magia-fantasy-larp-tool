@@ -9,6 +9,7 @@
     "test:detection-tensor-input": "node tests/test-detection-tensor-input.mjs",
     "test:detection-stress": "node --use-system-ca tests/test-detection-stress.mjs",
     "test:analysis-diagnostics": "node tests/test-analysis-diagnostics.mjs",
+    "test:structure-worker-handshake": "node tests/test-structure-worker-handshake.mjs",
     "test:ocr-resource-tracker": "node tests/test-ocr-resource-tracker.mjs",
     "test:image-pipeline": "node tests/test-image-pipeline.mjs",
     "test:sigil-classification": "node tests/test-sigil-classification.mjs",

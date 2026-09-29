@@ -1,3 +1,5 @@
+self.postMessage({ type: 'diagnostic-stage', stage: 'structure-worker-script-start', details: { scope: 'structure' } });
+self.postMessage({ type: 'diagnostic-stage', stage: 'structure-runtime-import-start', details: { scope: 'structure' } });
 importScripts(
   new URL('analysis-diagnostics.js', self.location.href).href,
   new URL('spell-ocr.js', self.location.href).href,
@@ -11,11 +13,14 @@ const diagnosticReporter = self.MagiaAnalysisDiagnostics.createReporter('structu
   self.postMessage({ jobId: self.activeDiagnosticJobId, ...message });
 });
 
+diagnosticReporter.stage('structure-runtime-import-done');
+
 self.onmessage = event => {
   const { jobId, runId, width, height, buffer } = event.data;
   self.activeDiagnosticJobId = jobId;
   diagnosticReporter.begin(runId, { sourceWidth: width, sourceHeight: height });
   try {
+    diagnosticReporter.stage('structure-worker-message-received', { width, height, estimatedBytes: buffer?.byteLength || width * height * 4 });
     diagnosticReporter.stage('structure-worker-run-start', { width, height, estimatedBytes: buffer?.byteLength || width * height * 4 });
     self.postMessage({ jobId, type: 'progress', stage: '画像処理の眼を軽く整えています…' });
     const structure = self.MagiaImagePipeline.analyzeStructure(buffer, width, height);
@@ -26,3 +31,5 @@ self.onmessage = event => {
     self.postMessage({ jobId, type: 'error', message: error?.message || String(error) });
   }
 };
+
+diagnosticReporter.stage('structure-worker-ready', { ready: true });

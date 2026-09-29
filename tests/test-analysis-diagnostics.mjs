@@ -37,6 +37,17 @@ assert.equal(reporter.trace.length, 0);
 reporter.stage('new-run');
 assert.equal(reporter.trace[0].seq, 1);
 
+reporter.begin('scope-run');
+reporter.allocationDone('ocr-source-mat-alloc-done', 'opencv-source-mat-0', 6_553_600, { scope: 'ocr', type: 'cv.Mat/CV_8UC4' });
+reporter.allocationDone('ocr-line-perspective-done', 'opencv-line-perspective-0', 6_800, { scope: 'ocr', type: 'cv.Mat/CV_8UC4' });
+const scopePeak = reporter.peakKnownLiveBytes;
+assert.equal(reporter.knownLiveBytes, 6_560_400);
+const clearedScope = reporter.clearAllocationsByScope('ocr');
+assert.deepEqual(clearedScope, { releasedTrackedBytes: 6_560_400, allocationCount: 2, remainingKnownLiveBytes: 0 });
+assert.equal(reporter.knownLiveBytes, 0, 'Clearing a terminated worker scope should remove its logical live allocations.');
+assert.equal(reporter.peakKnownLiveBytes, scopePeak, 'Scope clearing must preserve the run peak.');
+assert.equal(reporter.activeAllocations.length, 0);
+
 for (const stage of [
   'ocr-worker-create-start',
   'ocr-detection-model-fetch-start',
@@ -49,6 +60,12 @@ for (const stage of [
   'vocabulary-json-parse-start',
   'embedding-model-load-start',
   'ocr-worker-retry-start',
+  'structure-worker-ready',
+  'structure-input-transfer-start',
+  'structure-input-transfer-done',
+  'structure-worker-message-received',
+  'structure-worker-run-start',
+  'structure-worker-run-done',
 ]) {
   const details = stage === 'ocr-detection-model-arraybuffer-start' || stage === 'recognition-session-run-start'
     ? { estimatedBytes: 2 * 1024 * 1024 }
@@ -57,6 +74,9 @@ for (const stage of [
 }
 assert.equal(diagnostics.isCriticalStage('ocr-recognition-run-start'), false, 'Small recognition line runs should batch instead of producing one synchronous write each.');
 assert.equal(diagnostics.isCriticalStage('ocr-line-release-start'), false, 'Small release milestones may be batched.');
+for (const stage of ['structure-worker-script-start', 'structure-runtime-import-start', 'structure-runtime-import-done', 'structure-result-received']) {
+  assert.equal(diagnostics.isCriticalStage(stage), false, `${stage} should remain in memory and join the next synchronous snapshot.`);
+}
 
 const batchedFlushes = [];
 const batcher = diagnostics.createStageBatcher(() => batchedFlushes.push('flush'), { batchSize: 16, delayMs: -1 });
@@ -77,7 +97,10 @@ const importantStages = new Map([
   [135, 'vocabulary-json-parse-start'], [150, 'opencv-import-start'],
   [165, 'recognition-session-run-start'], [180, 'embedding-model-load-start'],
   [195, 'ocr-source-mat-alloc-start'], [210, 'ocr-recognition-input-buffer-alloc-start'],
-  [225, 'ocr-worker-retry-start'], [240, 'structure-worker-run-start'], [273, 'analysis-complete'],
+  [225, 'ocr-worker-retry-start'], [240, 'structure-worker-ready'], [241, 'structure-input-transfer-start'],
+  [242, 'structure-input-transfer-done'], [243, 'structure-worker-message-received'],
+  [244, 'structure-worker-run-start'], [245, 'structure-worker-run-done'],
+  [246, 'structure-result-received'], [273, 'analysis-complete'],
 ]);
 for (let index = 0; index < 274; index += 1) {
   const stage = importantStages.get(index) || (index % 2 === 0 ? 'ocr-recognition-run-start' : 'ocr-line-release-done');
@@ -142,6 +165,9 @@ assert.match(appSource, /message\.type === 'diagnostic-stage'.*?recordAnalysisSt
 assert.match(appSource, /setItem\('magiaAnalysisTrace'/, 'Main Thread events should persist their bounded trace to localStorage.');
 assert.match(appSource, /createStageBatcher/, 'Main Thread trace snapshots should use the storage batcher.');
 assert.match(appSource, /run\.trace = run\.reporter\.trace/, 'Every diagnostic event should remain in the bounded in-memory trace.');
+assert.match(appSource, /clearDiagnosticAllocationsByScope\(job, 'ocr'\)/, 'OCR worker termination should clear logical allocations owned by that Worker.');
+assert.match(appSource, /clearDiagnosticAllocationsByScope\(job, 'structure'\)/, 'Structure Worker termination should clear its logical allocations.');
+assert.match(appSource, /clearDiagnosticAllocationsByScope\(job, 'embedding'\)/, 'Embedding Worker termination should clear its logical allocations.');
 assert.match(appSource, /if \(!diagnosticsEnabled\) return;/, 'Diagnostic UI must remain hidden outside diagnostic mode.');
 
 console.log(`Analysis diagnostic Reporter and lazy OpenCV checks passed (${estimatedStorageWrites} modeled writes for a representative 274-stage batch).`);
