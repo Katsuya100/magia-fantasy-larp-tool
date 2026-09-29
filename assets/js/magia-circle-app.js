@@ -153,6 +153,7 @@
   }
 
   function beginDiagnosticRun(runId, details = {}) {
+    activeDiagnosticRun?.persistBatcher?.flush();
     const now = global.performance?.now?.() ?? Date.now();
     activeDiagnosticRun = {
       runId,
@@ -165,6 +166,8 @@
       aborted: false,
       error: null,
       localStorageWrites: 0,
+      previousTraceCleared: false,
+      runIdStored: false,
       sourceWidth: Number.isFinite(details.sourceWidth) ? details.sourceWidth : null,
       sourceHeight: Number.isFinite(details.sourceHeight) ? details.sourceHeight : null,
       ocrSourceWidth: null,
@@ -179,6 +182,7 @@
       graphOptimizationLevel: onnxRuntimeDiagnostics.graphOptimizationLevel,
       numThreads: onnxRuntimeDiagnostics.numThreads,
     });
+    run.persistBatcher = global.MagiaAnalysisDiagnostics.createStageBatcher(() => persistDiagnosticTrace(run));
     diagnosticStageState.runId = runId;
     diagnosticStageState.trace = activeDiagnosticRun.trace;
     diagnosticStageState.currentStage = 'image-file-received';
@@ -236,60 +240,51 @@
     if (details?.canvas) diagnosticStageState.canvas = { ...details.canvas };
   }
 
-  function shouldPersistDiagnosticStage(stage, details = {}) {
-    if (stage === 'image-file-received' || stage.startsWith('analysis-') || stage.endsWith('-error')) return true;
-    if (details.workerAction) return true;
-    const estimatedBytes = Number(details.estimatedBytes ?? details.inputEstimatedBytes);
-    if (!stage.startsWith('ocr-line-source-mat-') && Number.isFinite(estimatedBytes) && estimatedBytes >= 1024 * 1024 && /(?:alloc|arraybuffer|image-data|transfer|mat|buffer-release|fill|copy|render|perspective)/i.test(stage)) return true;
-    const criticalPatterns = [
-      /-run-(?:start|done)/,
-      /-session-(?:create|release)-(?:start|done)/,
-      /-(?:tensor-create|tensor-dispose)-(?:start|done)/,
-      /-ort-import-(?:start|done)/,
-      /-runtime-(?:import|init)-(?:start|done)/,
-      /-phase-(?:start|done)/,
-      /(?:opencv|clipper)-import-(?:start|done)/,
-      /-model-fetch-(?:start|done)/,
-      /-model-(?:arraybuffer|buffer)-(?:start|done)/,
-      /-worker-(?:create|processing|terminate)-(?:start|done)/,
-      /-message-transfer-(?:start|done)/,
-      /-input-transfer-(?:start|done)/,
-      /-result-received/,
-      /ocr-detection-output-read-(?:start|done)/,
-      /find-contours-(?:start|done)/,
-      /contours-process-(?:start|done)/,
-      /contours-process-(?:25|50|75|done)/,
-      /line-materialize-(?:start|done)/,
-      /line-crop-buffer-ready/,
-      /line-release-(?:start|done)/,
-      /source-align-(?:check|render-start|render-done)/,
-      /^ocr-source-mat-(?:alloc-start|alloc-done|copy-start|copy-done)$/,
-      /structure-input-canvas-resize-(?:start|done)/,
-      /get-image-data-(?:start|done)/,
-      /master-image-(?:request-start|get-image-data-start|get-image-data-done|ready|release-(?:start|done))/,
-      /structure-analysis-(?:start|done)/,
-      /structure-scale-restore-(?:start|done)/,
-      /structure-score-(?:start|done)/,
-      /vocabulary-(?:start|done|cache-(?:open|match)-(?:start|done)|response-text-start|response-text-done|json-parse-start|json-parse-done|json-parse-error|index-create-(?:start|done)|json-stringify-(?:start|done)|corrector-create-start|corrector-create-done|correction-run-start|correction-run-done)/,
-      /embedding-(?:model-load|pipeline-create|run|result-transfer)-(?:start|done)/,
-      /post-ocr-wait-(?:start|done)/,
-      /image-decode-(?:start|done)/,
-      /capture-canvas-(?:resize|draw)-(?:start|done)/,
-      /ocr-detection-(?:input-fill|mask-fill)-(?:start|done)/,
-      /ocr-mask-mat-alloc-(?:start|done)/,
-      /ocr-mask-mat-copy-(?:start|done)/,
-      /ocr-(?:contours|hierarchy)-mat-alloc-(?:start|done)/,
-      /ocr-source-mat-copy-(?:start|done)/,
-      /ocr-line-(?:perspective|rotate)-(?:start|done)/,
-      /structure-input-resize-draw-(?:start|done)/,
-      /structure-worker-run-(?:start|done)/,
-      /structure-score-image-read-(?:start|done)/,
-      /ocr-detection-(?:output|input)-dispose-(?:start|done)/,
-      /ocr-detection-cleanup-done/,
-      /ocr-recognition-(?:preprocess|rotate)-(?:start|done)/,
-      /ocr-recognition-(?:output-decode|output-dispose|input-dispose)-(?:start|done)/,
-    ];
-    return criticalPatterns.some(pattern => pattern.test(stage));
+  function persistDiagnosticTrace(run) {
+    if (!run?.runId || !run.reporter) return;
+    try {
+      const storage = global.localStorage;
+      if (!storage) throw new Error('localStorage is unavailable in this browser context.');
+      const stage = run.trace.at(-1)?.stage || diagnosticStageState.currentStage;
+      if (stage === 'analysis-start' && !run.previousTraceCleared) {
+        if (storage.getItem('magiaAnalysisPreviousTrace') !== null) {
+          storage.removeItem('magiaAnalysisPreviousTrace');
+          run.localStorageWrites += 1;
+        }
+        run.previousTraceCleared = true;
+      }
+      if (stage === 'image-file-received' && !run.runIdStored) {
+        storage.setItem('magiaAnalysisRunId', run.runId);
+        run.localStorageWrites += 1;
+        run.runIdStored = true;
+      }
+      if (stage === 'analysis-start' || stage === 'analysis-complete' || stage === 'analysis-error' || stage.startsWith('analysis-aborted-')) {
+        storage.setItem('magiaAnalysisStage', stage);
+        run.localStorageWrites += 1;
+      }
+      const nextWriteCount = run.localStorageWrites + 1;
+      const snapshot = {
+        runId: run.runId,
+        startedTimestamp: run.startedTimestamp,
+        analysisStarted: run.analysisStarted,
+        completed: run.completed,
+        aborted: run.aborted,
+        lastStage: stage,
+        currentKnownLiveBytes: diagnosticStageState.currentKnownLiveBytes,
+        peakKnownLiveBytes: diagnosticStageState.peakKnownLiveBytes,
+        activeWorkers: { ...diagnosticStageState.activeWorkers },
+        runtimeStates: { ...diagnosticStageState.runtimeStates },
+        sourceMatCreateCount: diagnosticStageState.sourceMatCreateCount || 0,
+        environment: currentEnvironment(),
+        localStorageWrites: nextWriteCount,
+        trace: run.trace,
+      };
+      storage.setItem('magiaAnalysisTrace', JSON.stringify(snapshot));
+      run.localStorageWrites = nextWriteCount;
+      diagnosticStageState.localStorageWrites = run.localStorageWrites;
+    } catch (error) {
+      warnStageStorageUnavailable(error);
+    }
   }
 
   function recordAnalysisStage(job, stage, details = {}) {
@@ -378,45 +373,7 @@
     diagnosticStageState.trace = run.trace;
     diagnosticStageState.localStorageWrites = run.localStorageWrites;
 
-    if (shouldPersistDiagnosticStage(stage, details)) {
-      try {
-        const storage = global.localStorage;
-        if (!storage) throw new Error('localStorage is unavailable in this browser context.');
-        if (stage === 'analysis-start' || stage === 'analysis-complete') {
-          if (storage.getItem('magiaAnalysisPreviousTrace') !== null) {
-            storage.removeItem('magiaAnalysisPreviousTrace');
-            run.localStorageWrites += 1;
-          }
-        }
-        if (stage === 'image-file-received' || stage === 'analysis-start') {
-          storage.setItem('magiaAnalysisRunId', run.runId);
-          run.localStorageWrites += 1;
-        }
-        storage.setItem('magiaAnalysisStage', stage);
-        run.localStorageWrites += 1;
-        const snapshot = {
-          runId: run.runId,
-          startedTimestamp: run.startedTimestamp,
-          analysisStarted: run.analysisStarted,
-          completed: run.completed,
-          aborted: run.aborted,
-          lastStage: stage,
-          currentKnownLiveBytes: diagnosticStageState.currentKnownLiveBytes,
-          peakKnownLiveBytes: diagnosticStageState.peakKnownLiveBytes,
-          activeWorkers: { ...diagnosticStageState.activeWorkers },
-          runtimeStates: { ...diagnosticStageState.runtimeStates },
-          sourceMatCreateCount: diagnosticStageState.sourceMatCreateCount || 0,
-          environment: currentEnvironment(),
-          localStorageWrites: run.localStorageWrites + 1,
-          trace: run.trace,
-        };
-        storage.setItem('magiaAnalysisTrace', JSON.stringify(snapshot));
-        run.localStorageWrites += 1;
-        diagnosticStageState.localStorageWrites = run.localStorageWrites;
-      } catch (error) {
-        warnStageStorageUnavailable(error);
-      }
-    }
+    run.persistBatcher?.add(global.MagiaAnalysisDiagnostics.isCriticalStage(stage, details));
     publishRuntimeDiagnostics();
   }
 
@@ -1430,7 +1387,14 @@
     if (!worker) return;
     recordAnalysisStage(job, 'ocr-worker-terminate-start', { workerType: 'ocr' });
     if (job.ocrWorker === worker) job.ocrWorker = null;
-    worker.terminate();
+    try { worker.terminate(); }
+    catch (error) {
+      recordAnalysisStage(job, 'ocr-worker-cleanup-error', {
+        workerType: 'ocr',
+        cleanupError: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) },
+      });
+      console.warn('OCR Worker termination failed.', error);
+    }
     recordAnalysisStage(job, 'ocr-worker-terminate-done', {
       workerType: 'ocr', workerAction: 'stop',
       runtimeState: { ortDetectionLoaded: false, opencvLoaded: false, clipperLoaded: false, recognizerLoaded: false },
@@ -1450,14 +1414,17 @@
       let buffer = null;
       let abortTimeout = null;
       let settled = false;
+      let workerProcessingStarted = false;
       const cleanup = () => {
-        job.signal.removeEventListener('abort', onAbort);
+        try { job.signal.removeEventListener('abort', onAbort); }
+        catch (error) { recordAnalysisStage(job, 'ocr-worker-cleanup-error', { cleanupPhase: 'remove-abort-listener', message: String(error?.message || error).slice(0, 240) }); }
         clearTimeout(abortTimeout);
         abortTimeout = null;
         if (worker) {
-          worker.removeEventListener('message', onMessage);
-          worker.removeEventListener('error', onError);
-          worker.removeEventListener('messageerror', onMessageError);
+          for (const [type, listener] of [['message', onMessage], ['error', onError], ['messageerror', onMessageError]]) {
+            try { worker.removeEventListener(type, listener); }
+            catch (error) { recordAnalysisStage(job, 'ocr-worker-cleanup-error', { cleanupPhase: 'remove-worker-listener', eventType: type, message: String(error?.message || error).slice(0, 240) }); }
+          }
           terminateOcrWorker(job, worker);
           worker = null;
         }
@@ -1487,7 +1454,10 @@
         }
       };
       const onError = event => {
-        const error = new Error(event.error?.message || event.message || 'OCR Workerでエラーが発生しました。');
+        const cause = event.error || new Error(event.message || 'OCR Workerでエラーが発生しました。');
+        const error = workerProcessingStarted
+          ? (cause instanceof Error ? cause : new Error(String(cause)))
+          : imagePipeline.wrapRetryableOcrLoadFailure(cause, 'OCR Worker initialization');
         recordDiagnosticError(error, job);
         finish(reject, error);
       };
@@ -1500,6 +1470,7 @@
         const message = event.data || {};
         if (message.jobId !== job.id) return;
         if (message.type === 'diagnostic-stage' || message.type === 'stage') {
+          if (message.stage === 'ocr-worker-processing-start') workerProcessingStarted = true;
           recordAnalysisStage(job, message.stage, message.details || message.memory || {});
         } else if (message.type === 'progress') {
           setStatus(modelStatus, message.message || '環の呪文を読み取っています…', 'busy');
@@ -1509,7 +1480,10 @@
         } else if (message.type === 'error') {
           const error = new Error(message.message || 'OCRに失敗しました。');
           error.name = message.name || 'Error';
-          recordAnalysisStage(job, 'ocr-worker-result-received', { resultType: 'error', error: { name: error.name, message: String(error.message).slice(0, 240) } });
+          if (message.code) error.code = String(message.code);
+          if (message.retryable === true) error.retryable = true;
+          if (message.resource) error.resource = String(message.resource);
+          recordAnalysisStage(job, 'ocr-worker-result-received', { resultType: 'error', error: { name: error.name, code: error.code || null, retryable: error.retryable === true, message: String(error.message).slice(0, 240) } });
           recordDiagnosticError(error, job);
           finish(reject, job.signal.aborted ? job.signal.reason || error : error);
         }
@@ -1528,7 +1502,8 @@
         recordAnalysisStage(job, 'ocr-transfer-buffer-ready', { width, height, estimatedBytes: pixels.data.byteLength, allocationId: 'ocr-source-rgba' });
         assertActiveAnalysisJob(job);
         recordAnalysisStage(job, 'ocr-worker-create-start', { workerType: 'ocr' });
-        worker = new Worker(new URL('assets/js/magia-circle-ocr-worker.js', document.baseURI));
+        try { worker = new Worker(new URL('assets/js/magia-circle-ocr-worker.js', document.baseURI)); }
+        catch (error) { throw imagePipeline.wrapRetryableOcrLoadFailure(error, 'OCR Worker initialization'); }
         job.ocrWorker = worker;
         job.ocrSourceAllocationId = 'ocr-source-rgba';
         job.ocrSourceEstimatedBytes = pixels.data.byteLength;
@@ -1928,9 +1903,15 @@
           return recognizeSpell(captureCanvas, job, attempt);
         },
         correctSpell: recognition => applyVocabularyCorrection(recognition, job),
-        onRecognitionRetry: async ({ error }) => {
-          console.warn('OCR処理に失敗したため、一度だけ自動再試行します。', error);
-          appendProcessingRecord(`${job.fileName}：OCR処理エラーのため、同じ画像で一度だけ自動再試行します。`);
+        onRecognitionRetry: async ({ error, resource }) => {
+          recordAnalysisStage(job, 'ocr-worker-retry-start', {
+            attempt: 1,
+            retryable: true,
+            resource: resource || error.resource || null,
+            error: { name: error.name, code: error.code, message: String(error.message).slice(0, 240) },
+          });
+          console.warn('一時的なOCRリソース読み込み失敗のため、一度だけ自動再試行します。', error);
+          appendProcessingRecord(`${job.fileName}：一時的なOCRリソース取得エラーのため、終了処理を待って一度だけ再試行します。`);
           setStatus(modelStatus, 'OCR処理に失敗しました。終了処理を待ってから再試行しています…', 'busy');
           await activeOcrRun;
         },

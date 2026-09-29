@@ -160,5 +160,49 @@
     });
   }
 
-  global.MagiaAnalysisDiagnostics = Object.freeze({ createReporter, rgbaBytes, floatRgbBytes, TRACE_LIMIT });
+  function createStageBatcher(flush, { batchSize = 16, delayMs = 250 } = {}) {
+    let pending = 0;
+    let timer = null;
+
+    function flushNow() {
+      if (!pending) return false;
+      if (timer !== null) global.clearTimeout(timer);
+      timer = null;
+      pending = 0;
+      flush();
+      return true;
+    }
+
+    function add(immediate = false) {
+      pending += 1;
+      if (immediate || pending >= Math.max(1, batchSize)) {
+        flushNow();
+        return;
+      }
+      if (timer === null && Number.isFinite(delayMs) && delayMs >= 0) timer = global.setTimeout(flushNow, delayMs);
+    }
+
+    return Object.freeze({ add, flush: flushNow, get pending() { return pending; } });
+  }
+
+  function isCriticalStage(stage, details = {}) {
+    if (typeof stage !== 'string') return false;
+    if (stage === 'image-file-received' || stage.startsWith('analysis-') || stage.endsWith('-error')) return true;
+    if (details.workerAction || (stage === 'ocr-worker-result-received' && details.resultType === 'error')) return true;
+    const estimatedBytes = Number(details.estimatedBytes ?? details.inputEstimatedBytes);
+    const largeBufferStart = Number.isFinite(estimatedBytes) && estimatedBytes >= 1024 * 1024 &&
+      /(?:alloc|arraybuffer|image-data|transfer|mat|buffer|fill|copy|render|perspective)-start$/i.test(stage);
+    if (largeBufferStart) return true;
+    if (/-run-start$/.test(stage) && Number.isFinite(estimatedBytes) && estimatedBytes >= 1024 * 1024) return true;
+    if (/(?:detection|session)-run-start$/.test(stage)) return true;
+    return [
+      /-session-create-start$/,
+      /(?:get-image-data|image-data(?:-[a-z]+)?|json-parse)-start$/,
+      /-worker-create-start$/,
+      /(?:model-(?:fetch|load)|ort-import|opencv-import|clipper-import|runtime-init|worker-processing)-start$/,
+      /^ocr-worker-retry-start$/,
+    ].some(pattern => pattern.test(stage));
+  }
+
+  global.MagiaAnalysisDiagnostics = Object.freeze({ createReporter, createStageBatcher, isCriticalStage, rgbaBytes, floatRgbBytes, TRACE_LIMIT });
 })(globalThis);

@@ -5,9 +5,11 @@
   const imageCore = global.ImageAnalysisCore;
   const attributeCore = global.AttributeScoringCore;
   const powerCore = global.PowerCalculationCore;
+  const ocrErrorPolicy = global.MagiaOcrErrorPolicy;
   if (!spellCore || !imageCore || !attributeCore || !powerCore) {
     throw new Error('MagiaImagePipeline requires the spell, image, attribute, and power cores.');
   }
+  if (!ocrErrorPolicy) throw new Error('MagiaImagePipeline requires ocr-error-policy.js.');
 
   const ATTRIBUTE_MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
   const DEFAULT_SIGIL_SCORES = Object.freeze({ debuff: .25, attack: .25, defense: .25, support: .25 });
@@ -198,19 +200,6 @@
     return !String(spell?.path?.text || '').trim() && !(spell?.path?.words?.length);
   }
 
-  function isMemoryRelatedError(error) {
-    const text = [error?.message, error?.cause?.message, error].filter(Boolean).join(' ').toLowerCase();
-    if (error?.name === 'RangeError' && /(alloc|buffer|typed array|array length|memory|size)/i.test(text)) return true;
-    return [
-      'out of memory', 'out-of-memory', '\\boom\\b', 'allocation failed', 'failed to allocate',
-      'cannot allocate', 'can\'t allocate', 'could not allocate', 'memory allocation', 'memory access out of bounds',
-      'webassembly.memory', 'webassembly memory', 'wasm memory', 'wasm out of memory',
-      'cannot enlarge memory', 'cannot enlarge memory arrays', 'failed to grow memory', 'memory growth', 'memory limit', 'memory.*exhaust', 'array buffer allocation failed',
-      'invalid typed array length', 'invalid array length', 'maximum array buffer', 'bad alloc',
-      'not enough memory', 'enomem', 'opencv.*alloc', 'alloc.*opencv', 'onnx.*alloc', 'alloc.*onnx',
-    ].some(pattern => new RegExp(pattern).test(text));
-  }
-
   async function run({ recognizeSpell, correctSpell, getStructureInput, getMasterImage, releaseMasterImage, analyzeStructure: analyzeStructureAdapter, embedAttributes, releaseEmbedding, releaseAttributeModel, onRecognitionRetry, reportStage = null, signal }) {
     let embedding;
     let structureInput;
@@ -224,8 +213,8 @@
       } catch (error) {
         throwIfAborted(signal);
         recognitionError = error;
-        if (!isMemoryRelatedError(error)) {
-          await onRecognitionRetry?.({ attempt: 1, error, empty: false });
+        if (ocrErrorPolicy.isRetryableOcrError(error)) {
+          await onRecognitionRetry?.({ attempt: 1, error, empty: false, resource: error.resource || null });
           // The first disposable OCR worker has been stopped before this single retry.
           await new Promise(resolve => {
             if (typeof setTimeout === 'function') setTimeout(resolve, 0);
@@ -361,7 +350,8 @@
     attributeInputTexts,
     scoreAttributeEmbedding,
     fallbackAttribute,
-    isMemoryRelatedError,
+    isRetryableOcrError: ocrErrorPolicy.isRetryableOcrError,
+    wrapRetryableOcrLoadFailure: ocrErrorPolicy.wrapRetryableLoadFailure,
     scoreSigil,
     scoreStructure,
     calculatePower,

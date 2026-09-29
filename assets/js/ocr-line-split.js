@@ -1,7 +1,7 @@
 (function registerMagiaOcrLineSplitter(global) {
   'use strict';
 
-  function create(cv, clipper, mask, maskWidth, maskHeight, sourceImage, sourceWidth, sourceHeight, onMaskCopied = null, diagnostics = null) {
+  function create(cv, clipper, mask, maskWidth, maskHeight, sourceImage, sourceWidth, sourceHeight, onMaskCopied = null, diagnostics = null, trackCvResource = null, deleteCvResource = null, perspectiveTransform = null) {
     let maskMat = null;
     let sourcePixels = null;
     let contours = null;
@@ -18,8 +18,19 @@
       countedInKnownLiveBytes: false,
       ...details,
     });
+    const track = resource => trackCvResource ? trackCvResource(resource) : resource;
     const dispose = resource => {
-      try { resource?.delete?.(); } catch (error) { console.warn('OpenCVの一時領域を解放できませんでした。', error); }
+      if (!resource) return;
+      try {
+        if (deleteCvResource) deleteCvResource(resource, { resourceType: 'opencv-line-resource' });
+        else resource.delete?.();
+      } catch (error) {
+        report('ocr-cleanup-error', {
+          resourceType: 'opencv-line-resource',
+          cleanupError: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) },
+        });
+        console.warn('OpenCVの一時領域を解放できませんでした。', error);
+      }
     };
     const releaseTracked = (resource, allocationId, estimatedBytes, metadata = {}) => {
       if (!resource) return;
@@ -33,7 +44,7 @@
       diagnostics?.allocationStart?.('ocr-mask-mat-alloc-start', 'opencv-mask-mat', maskBytes, {
         name: 'OpenCV mask Mat payload', width: maskWidth, height: maskHeight, type: 'cv.Mat/CV_8UC1',
       });
-      maskMat = new cv.Mat(maskHeight, maskWidth, cv.CV_8UC1);
+      maskMat = track(new cv.Mat(maskHeight, maskWidth, cv.CV_8UC1));
       diagnostics?.allocationDone?.('ocr-mask-mat-alloc-done', 'opencv-mask-mat', maskBytes, {
         name: 'OpenCV mask Mat payload', width: maskWidth, height: maskHeight, type: 'cv.Mat/CV_8UC1',
       });
@@ -43,10 +54,10 @@
       mask = null;
       onMaskCopied?.();
       report('ocr-contours-mat-alloc-start', { allocationId: 'opencv-contours-mat-vector', type: 'cv.MatVector' });
-      contours = new cv.MatVector();
+      contours = track(new cv.MatVector());
       report('ocr-contours-mat-alloc-done', { allocationId: 'opencv-contours-mat-vector', type: 'cv.MatVector' });
       report('ocr-hierarchy-mat-alloc-start', { allocationId: 'opencv-hierarchy-mat', type: 'cv.Mat' });
-      hierarchy = new cv.Mat();
+      hierarchy = track(new cv.Mat());
       report('ocr-hierarchy-mat-alloc-done', { allocationId: 'opencv-hierarchy-mat', type: 'cv.Mat' });
       report('ocr-find-contours-start', { estimatedBytes: maskBytes, width: maskWidth, height: maskHeight });
       cv.findContours(maskMat, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
@@ -69,12 +80,12 @@
         let contour = null;
         let boxMap = null;
         try {
-          contour = contours.get(index);
-          const { points, sside } = getMiniBoxes(cv, contour);
+          contour = track(contours.get(index));
+          const { points, sside } = getMiniBoxes(cv, contour, track, dispose);
           if (sside < 3) continue;
           const clipBox = unclip(clipper, points);
-          boxMap = cv.matFromArray(clipBox.length / 2, 1, cv.CV_32SC2, clipBox);
-          const result = getMiniBoxes(cv, boxMap);
+          boxMap = track(cv.matFromArray(clipBox.length / 2, 1, cv.CV_32SC2, clipBox));
+          const result = getMiniBoxes(cv, boxMap, track, dispose);
           const box = result.points;
           if (result.sside < 5) continue;
           const rx = sourceWidth / maskWidth;
@@ -94,7 +105,7 @@
           lines.push({
             box,
             image: createLazyCrop(
-              () => cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, box, diagnostics, lines.length, () => lines.length),
+              () => cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, box, diagnostics, lines.length, () => lines.length, track, perspectiveTransform),
               box,
               diagnostics,
               lines.length,
@@ -156,7 +167,16 @@
       return {
         lines,
         release() {
-          for (const line of lines) line.image.release();
+          for (const line of lines) {
+            try { line.image.release(); }
+            catch (error) {
+              report('ocr-cleanup-error', {
+                resourceType: 'line-image-release',
+                cleanupError: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) },
+              });
+              console.warn('OCR line image cleanup failed.', error);
+            }
+          }
           if (alignmentTracked) {
             diagnostics?.releaseStart?.('ocr-source-align-buffer-release-start', 'source-aligned-rgba', { width: sourceWidth, height: sourceHeight });
             diagnostics?.releaseDone?.('ocr-source-align-buffer-release-done', 'source-aligned-rgba');
@@ -220,12 +240,13 @@
     };
   }
 
-  function cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, points, diagnostics = null, lineIndex = null, getLineCount = () => null) {
+  function cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, points, diagnostics = null, lineIndex = null, getLineCount = () => null, trackCvResource = null, perspectiveTransform = null) {
     if (!sourcePixels) throw new Error('OCR crop source pixels have already been released.');
     let sourceMat = null;
     const sourceMatId = `opencv-source-mat-${lineIndex}`;
     const sourceMatBytes = sourceWidth * sourceHeight * 4;
     let sourceMatTracked = false;
+    const track = trackCvResource || (resource => resource);
     try {
       diagnostics?.allocationStart?.('ocr-source-mat-alloc-start', sourceMatId, sourceMatBytes, {
         name: 'OpenCV source Mat payload', width: sourceWidth, height: sourceHeight,
@@ -235,7 +256,7 @@
         allocationId: sourceMatId, estimatedBytes: sourceMatBytes, width: sourceWidth, height: sourceHeight,
         type: 'cv.Mat/CV_8UC4', lineIndex, lineCount: getLineCount(),
       });
-      sourceMat = new cv.Mat(sourceHeight, sourceWidth, cv.CV_8UC4);
+      sourceMat = track(new cv.Mat(sourceHeight, sourceWidth, cv.CV_8UC4));
       diagnostics?.allocationDone?.('ocr-source-mat-alloc-done', sourceMatId, sourceMatBytes, {
         name: 'OpenCV source Mat payload', width: sourceWidth, height: sourceHeight,
         type: 'cv.Mat/CV_8UC4', lineIndex, lineCount: getLineCount(),
@@ -252,16 +273,16 @@
       diagnostics?.stage?.('ocr-source-mat-copy-done', { estimatedBytes: sourceMatBytes, width: sourceWidth, height: sourceHeight, lineIndex, lineCount: getLineCount() });
       const width = int(Math.max(linalgNorm(points[0], points[1]), linalgNorm(points[2], points[3])));
       const height = int(Math.max(linalgNorm(points[0], points[3]), linalgNorm(points[1], points[2])));
-      return cropToRgba(cv, sourceMat, points, width, height, height / width >= 1.5, diagnostics, lineIndex, getLineCount);
+      return cropToRgba(cv, sourceMat, points, width, height, height / width >= 1.5, diagnostics, lineIndex, getLineCount, track, perspectiveTransform);
     } finally {
       diagnostics?.stage?.('ocr-line-source-mat-release-start', { allocationId: sourceMatId, estimatedBytes: sourceMatBytes, lineIndex, lineCount: getLineCount() });
-      try { sourceMat?.delete?.(); } catch {}
+      dispose(sourceMat);
       if (sourceMatTracked) diagnostics?.releaseDone?.('ocr-source-mat-release-done', sourceMatId, { estimatedBytes: sourceMatBytes, lineIndex, lineCount: getLineCount() });
       diagnostics?.stage?.('ocr-line-source-mat-release-done', { allocationId: sourceMatId, estimatedBytes: sourceMatBytes, lineIndex, lineCount: getLineCount() });
     }
   }
 
-  function cropToRgba(cv, source, points, width, height, rotate, diagnostics = null, lineIndex = null, getLineCount = () => null) {
+  function cropToRgba(cv, source, points, width, height, rotate, diagnostics = null, lineIndex = null, getLineCount = () => null, trackCvResource = null, perspectiveTransform = null) {
     let sourceTriangle = null;
     let destinationTriangle = null;
     let transform = null;
@@ -278,14 +299,17 @@
     let rotatedId = null;
     let rotatedBytes = 0;
     let rotatedTracked = false;
+    const track = trackCvResource || (resource => resource);
     try {
       const standardPoints = [[0, 0], [width, 0], [width, height], [0, height]];
-      sourceTriangle = cv.matFromArray(4, 1, cv.CV_32FC2, flatten(points));
-      destinationTriangle = cv.matFromArray(4, 1, cv.CV_32FC2, flatten(standardPoints));
-      transform = cv.getPerspectiveTransform(sourceTriangle, destinationTriangle);
-      destination = new cv.Mat();
-      destinationSize = new cv.Size(width, height);
-      border = new cv.Scalar();
+      sourceTriangle = track(cv.matFromArray(4, 1, cv.CV_32FC2, flatten(points)));
+      destinationTriangle = track(cv.matFromArray(4, 1, cv.CV_32FC2, flatten(standardPoints)));
+      transform = track(perspectiveTransform
+        ? perspectiveTransform(sourceTriangle, destinationTriangle)
+        : cv.getPerspectiveTransform(sourceTriangle, destinationTriangle));
+      destination = track(new cv.Mat());
+      destinationSize = track(new cv.Size(width, height));
+      border = track(new cv.Scalar());
       perspectiveId = `opencv-line-perspective-${lineIndex}`;
       perspectiveBytes = width * height * 4;
       diagnostics?.allocationStart?.('ocr-line-perspective-start', perspectiveId, perspectiveBytes, {
@@ -297,13 +321,13 @@
         type: 'cv.Mat/CV_8UC4', lineIndex, lineCount: getLineCount(),
       });
       perspectiveTracked = true;
-      sourceTriangle?.delete?.();
+      dispose(sourceTriangle);
       sourceTriangle = null;
-      destinationTriangle?.delete?.();
+      dispose(destinationTriangle);
       destinationTriangle = null;
-      transform?.delete?.();
+      dispose(transform);
       transform = null;
-      destinationSize?.delete?.();
+      dispose(destinationSize);
       destinationSize = null;
       if (!rotate) {
         const allocationId = `line-crop-${lineIndex}`;
@@ -323,10 +347,10 @@
         return pixels;
       }
 
-      rotated = new cv.Mat();
-      rotatedSize = new cv.Size(destination.rows, destination.cols);
-      rotationCenter = new cv.Point(destination.cols / 2, destination.cols / 2);
-      rotationTransform = cv.getRotationMatrix2D(rotationCenter, 90, 1);
+      rotated = track(new cv.Mat());
+      rotatedSize = track(new cv.Size(destination.rows, destination.cols));
+      rotationCenter = track(new cv.Point(destination.cols / 2, destination.cols / 2));
+      rotationTransform = track(cv.getRotationMatrix2D(rotationCenter, 90, 1));
       rotatedId = `opencv-line-rotated-${lineIndex}`;
       rotatedBytes = destination.rows * destination.cols * 4;
       diagnostics?.allocationStart?.('ocr-line-rotate-start', rotatedId, rotatedBytes, {
@@ -343,7 +367,7 @@
       });
       rotatedTracked = true;
       diagnostics?.releaseStart?.('ocr-line-perspective-release-start', perspectiveId, { estimatedBytes: perspectiveBytes, lineIndex, lineCount: getLineCount() });
-      destination?.delete?.();
+      dispose(destination);
       destination = null;
       diagnostics?.releaseDone?.('ocr-line-perspective-release-done', perspectiveId, { estimatedBytes: perspectiveBytes, lineIndex, lineCount: getLineCount() });
       perspectiveTracked = false;
@@ -370,13 +394,17 @@
       if (rotatedTracked) dispose(rotated);
       if (rotatedTracked) diagnostics?.releaseDone?.('ocr-line-rotate-release-done', rotatedId, { estimatedBytes: rotatedBytes, cleanup: true, lineIndex, lineCount: getLineCount() });
       for (const resource of [sourceTriangle, destinationTriangle, transform, destination, destinationSize, border, rotated, rotationCenter, rotationTransform, rotatedSize]) {
-        try { resource?.delete?.(); } catch {}
+        dispose(resource);
       }
     }
   }
 
-  function getMiniBoxes(cv, contour) {
-    const boundingBox = cv.minAreaRect(contour);
+  function getMiniBoxes(cv, contour, trackCvResource = null, disposeCvResource = null) {
+    const boundingBox = trackCvResource ? trackCvResource(cv.minAreaRect(contour)) : cv.minAreaRect(contour);
+    const dispose = disposeCvResource || (resource => {
+      try { resource?.delete?.(); }
+      catch (error) { console.warn('OpenCVの一時領域を解放できませんでした。', error); }
+    });
     try {
       const points = Array.from(boxPoints(boundingBox.center, boundingBox.size, boundingBox.angle)).sort((a, b) => a[0] - b[0]);
       let index1 = 0, index2 = 1, index3 = 2, index4 = 3;
@@ -389,7 +417,7 @@
         sside: Math.min(boundingBox.size.height, boundingBox.size.width),
       };
     } finally {
-      try { boundingBox?.delete?.(); } catch {}
+      dispose(boundingBox);
     }
   }
 

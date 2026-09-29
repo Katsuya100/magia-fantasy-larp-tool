@@ -29,6 +29,7 @@ await import('../assets/js/spell-ocr.js');
 await import('../assets/js/image-analysis-core.js');
 await import('../assets/js/power-calculation.js');
 await import('../assets/js/attribute-scoring.js');
+await import('../assets/js/ocr-error-policy.js');
 await import('../assets/js/magia-image-pipeline.js');
 const core = globalThis.SpellOcrCore;
 const imageCore = globalThis.ImageAnalysisCore;

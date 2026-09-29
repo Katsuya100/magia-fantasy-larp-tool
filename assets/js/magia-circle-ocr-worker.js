@@ -1,4 +1,4 @@
-importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-line-split.js');
+importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tracker.js', 'spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-line-split.js');
 
 (function startMagiaCircleOcrWorker(global) {
   'use strict';
@@ -9,8 +9,8 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
   let activeAbortController = null;
   let recognizerPromise = null;
   let textDetectorPromise = null;
+  let ocrCvResourceTracker = null;
   let releaseOcrCvResources = null;
-  let ocrCvResourcesTracked = false;
   let activeDetectionLineResources = null;
   let diagnosticsMode = false;
   const runtimeDefaults = core.config.onnxRuntimeDefaults;
@@ -54,6 +54,27 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
     reportStage(`ocr-runtime-state-${name}`, { runtimeState: { [name]: Boolean(value) } });
   }
 
+  function reportCleanupError(resourceType, error, details = {}) {
+    const cleanupError = {
+      name: String(error?.name || 'Error'),
+      message: String(error?.message || error).slice(0, 240),
+    };
+    try { reportStage('ocr-cleanup-error', { ...details, resourceType, cleanupError }); }
+    catch (reportError) { console.warn('OCR cleanup failure could not be recorded in diagnostics.', reportError); }
+    console.warn(`OCR ${resourceType} cleanup failed.`, error);
+  }
+
+  async function loadOcrResource(resource, loader) {
+    try { return await loader(); }
+    catch (error) {
+      const wrapped = global.MagiaOcrErrorPolicy.wrapRetryableLoadFailure(error, resource);
+      if (wrapped !== error) reportStage('ocr-resource-load-retryable-error', {
+        resource, error: { name: wrapped.name, code: wrapped.code, message: wrapped.message.slice(0, 240) },
+      });
+      throw wrapped;
+    }
+  }
+
   function throwIfAborted(signal) {
     if (!signal?.aborted) return;
     const error = new Error(signal.reason?.message || 'OCR was cancelled.');
@@ -69,18 +90,24 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
     });
   }
 
-  function disposeTensors(tensors) {
+  function disposeTensors(tensors, details = {}) {
     for (const tensor of new Set(Object.values(tensors || {}))) {
-      try { tensor?.dispose?.(); } catch (error) { console.warn('OCR Tensorを解放できませんでした。', error); }
+      try { tensor?.dispose?.(); }
+      catch (error) { reportCleanupError('tensor-dispose', error, details); }
     }
+  }
+
+  function releaseLineImage(image, details = {}) {
+    try { image?.release?.(); }
+    catch (error) { reportCleanupError('line-image-release', error, details); }
   }
 
   function combineSpellLineImages(first, second, firstAngle, secondAngle) {
     try {
       return core.combineRgbaLines(first.image, second.image, firstAngle, secondAngle, imageAnalysis.resizeRgbaSharpLinear, diagnosticReporter);
     } finally {
-      first.image?.release?.();
-      second.image?.release?.();
+      releaseLineImage(first.image, { lineIndex: first.index });
+      releaseLineImage(second.image, { lineIndex: second.index });
     }
   }
 
@@ -89,7 +116,7 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
     reportStage('ocr-recognition-runtime-ensure-start', lineInfo);
     recognizerPromise = (async () => {
       reportStage('ocr-recognition-ort-import-start', lineInfo);
-      const ort = await import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`);
+      const ort = await loadOcrResource('recognition ONNX Runtime module', () => import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`));
       reportStage('ocr-recognition-ort-import-done', { ...lineInfo, version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = runtimeDefaults.numThreads;
@@ -99,13 +126,13 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
       let modelTracked = false;
       try {
         reportStage('ocr-recognition-model-fetch-start', { ...lineInfo, url: core.config.recognitionModelUrl });
-        const modelResponse = await ocrCache.load(core.config.recognitionModelUrl);
+        const modelResponse = await loadOcrResource('recognition model', () => ocrCache.load(core.config.recognitionModelUrl));
         reportStage('ocr-recognition-model-fetch-done', { ...lineInfo, contentLength: Number(modelResponse.headers?.get('content-length')) || null });
         const estimatedModelBytes = Number(modelResponse.headers?.get('content-length')) || 0;
         diagnosticReporter.allocationStart('ocr-recognition-model-buffer-start', 'recognition-model-buffer', estimatedModelBytes, {
           type: 'ArrayBuffer', name: 'Recognition model bytes', countedInKnownLive: true,
         });
-        modelBytes = await modelResponse.arrayBuffer();
+        modelBytes = await loadOcrResource('recognition model response body', () => modelResponse.arrayBuffer());
         diagnosticReporter.allocationDone('ocr-recognition-model-buffer-done', 'recognition-model-buffer', modelBytes.byteLength, {
           type: 'ArrayBuffer', name: 'Recognition model bytes', width: null, height: null,
         });
@@ -120,10 +147,10 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
         diagnosticReporter.releaseDone('ocr-recognition-model-buffer-release-done', 'recognition-model-buffer');
         modelTracked = false;
         reportStage('ocr-recognition-dictionary-fetch-start', lineInfo);
-        const dictionaryResponse = await ocrCache.load(core.config.dictionaryUrl);
+        const dictionaryResponse = await loadOcrResource('recognition dictionary', () => ocrCache.load(core.config.dictionaryUrl));
         reportStage('ocr-recognition-dictionary-fetch-done', lineInfo);
         reportStage('ocr-recognition-dictionary-text-start', lineInfo);
-        const dictionaryText = await dictionaryResponse.text();
+        const dictionaryText = await loadOcrResource('recognition dictionary response body', () => dictionaryResponse.text());
         reportStage('ocr-recognition-dictionary-text-done', { ...lineInfo, textLength: dictionaryText.length });
         const dictionary = [...dictionaryText.split('\n'), ' '];
         reportStage('ocr-recognition-runtime-ensure-done', lineInfo);
@@ -131,7 +158,7 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
       } catch (error) {
         if (session) {
           try { await session.release(); }
-          catch (releaseError) { console.warn('OCR認識モデルの初期化失敗後にSessionを解放できませんでした。', releaseError); }
+          catch (releaseError) { reportCleanupError('recognition-session-release', releaseError, { reason: 'initialization-failed' }); }
           session = null;
         }
         if (modelTracked) diagnosticReporter.releaseDone('ocr-recognition-model-buffer-release-done', 'recognition-model-buffer', { reason: 'session-create-failed' });
@@ -149,7 +176,6 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
       catch (error) { console.warn('OCR認識モデルの準備に失敗しました。', error); }
     }
     const resources = [...new Set([detector, recognizer?.session].filter(Boolean))];
-    let releaseError = null;
     for (let index = 0; index < resources.length; index += 1) {
       const resource = resources[index];
       const isRecognizer = resource === recognizer?.session;
@@ -159,8 +185,7 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
         if (isRecognizer) reportStage('ocr-recognition-session-release-done', { runtimeState: { recognizerLoaded: false } });
       }
       catch (error) {
-        releaseError ||= error;
-        console.warn('OCRモデルのONNX Sessionを解放できませんでした。', error);
+        reportCleanupError(isRecognizer ? 'recognition-session-release' : 'detection-session-release', error);
       } finally {
         if (resource === detector) detector = null;
         if (recognizer?.session === resource) recognizer.session = null;
@@ -171,12 +196,12 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
     recognizer = null;
     textDetectorPromise = null;
     recognizerPromise = null;
-    if (releaseError) throw releaseError;
   }
 
   async function releaseTextDetector(detector) {
     textDetectorPromise = null;
-    await detector?.release();
+    try { await detector?.release(); }
+    catch (error) { reportCleanupError('detection-session-release', error, { phase: 'after-detection' }); }
   }
 
   async function recognizeCanvas(canvas, inferPixelSpaces, signal, lineInfo = {}) {
@@ -277,9 +302,10 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
     textDetectorPromise = (async () => {
       let cv = null;
       let clipper = null;
+      let perspectiveTransform = null;
       async function ensureOcrImageRuntimes() {
         reportStage('ocr-opencv-import-start', { opencvLoaded: false });
-        const cvModule = await import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm');
+        const cvModule = await loadOcrResource('OpenCV module', () => import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm'));
         reportStage('ocr-opencv-import-done');
         const importedCv = cvModule.default ?? cvModule;
         reportStage('ocr-opencv-runtime-init-start');
@@ -289,39 +315,14 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
           cv.onRuntimeInitialized = () => { previous?.(); resolve(); };
         });
         reportStage('ocr-opencv-runtime-init-done', { runtimeState: { opencvLoaded: true } });
-        if (!ocrCvResourcesTracked) {
-          const cvResources = new Set();
-          const trackCvResource = resource => {
-            if (!resource || typeof resource.delete !== 'function' || cvResources.has(resource)) return resource;
-            const dispose = resource.delete;
-            try {
-              resource.delete = function (...args) {
-                cvResources.delete(resource);
-                return dispose.apply(this, args);
-              };
-              cvResources.add(resource);
-            } catch {}
-            return resource;
-          };
-          const trackConstructor = name => {
-            const Constructor = cv[name];
-            if (typeof Constructor !== 'function') return;
-            cv[name] = new Proxy(Constructor, {
-              construct(target, args) { return trackCvResource(Reflect.construct(target, args, target)); },
-            });
-          };
-          for (const name of ['Mat', 'MatVector', 'Point', 'Size', 'Scalar']) trackConstructor(name);
-          const matVectorGet = cv.MatVector?.prototype?.get;
-          if (matVectorGet) cv.MatVector.prototype.get = function (...args) { return trackCvResource(matVectorGet.apply(this, args)); };
-          for (const name of ['matFromArray', 'getRotationMatrix2D', 'minAreaRect']) {
-            const factory = cv[name];
-            if (typeof factory === 'function') cv[name] = function (...args) { return trackCvResource(factory.apply(cv, args)); };
-          }
-          const getPerspectiveTransform = cv.getPerspectiveTransform;
-          if (typeof getPerspectiveTransform === 'function') {
+        if (!ocrCvResourceTracker) {
+          ocrCvResourceTracker = global.MagiaOcrResourceTracker.create((error, details) => reportCleanupError('opencv-resource-delete', error, details));
+          perspectiveTransform = cv.getPerspectiveTransform;
+          if (typeof perspectiveTransform === 'function') {
+            const nativePerspectiveTransform = perspectiveTransform;
             let warnedAboutPerspectiveBinding = false;
-            cv.getPerspectiveTransform = function (source, destination, ...options) {
-              try { return trackCvResource(getPerspectiveTransform.call(cv, source, destination, ...options)); }
+            perspectiveTransform = function (source, destination, ...options) {
+              try { return nativePerspectiveTransform.call(cv, source, destination, ...options); }
               catch (error) {
                 if (!(error instanceof TypeError) || !/hasOwnProperty/.test(error.message || '')) throw error;
                 if (!warnedAboutPerspectiveBinding) {
@@ -368,21 +369,15 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
               }
             };
           }
-          releaseOcrCvResources = () => {
-            for (const resource of [...cvResources].reverse()) {
-              try { resource.delete(); } catch { cvResources.delete(resource); }
-            }
-            cvResources.clear();
-          };
-          ocrCvResourcesTracked = true;
+          releaseOcrCvResources = () => ocrCvResourceTracker?.releaseAll({ phase: 'worker-finally' }) ?? true;
         }
         reportStage('ocr-clipper-import-start', { opencvLoaded: true, clipperLoaded: false });
-        const clipperModule = await import('https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm');
+        const clipperModule = await loadOcrResource('Clipper module', () => import('https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm'));
         reportStage('ocr-clipper-import-done', { runtimeState: { clipperLoaded: true } });
         clipper = clipperModule.default ?? clipperModule;
       }
       reportStage('ocr-detection-ort-import-start');
-      const ort = await import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`);
+      const ort = await loadOcrResource('detection ONNX Runtime module', () => import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`));
       reportStage('ocr-detection-ort-import-done', { version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = runtimeDefaults.numThreads;
@@ -392,14 +387,14 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
       let detectionModelTracked = false;
       try {
         reportStage('ocr-detection-model-fetch-start', { url: core.config.detectionModelUrl });
-        const detectionResponse = await ocrCache.load(core.config.detectionModelUrl);
+        const detectionResponse = await loadOcrResource('detection model', () => ocrCache.load(core.config.detectionModelUrl));
         reportStage('ocr-detection-model-fetch-done', { contentLength: Number(detectionResponse.headers?.get('content-length')) || null });
         const estimatedModelBytes = Number(detectionResponse.headers?.get('content-length')) || 0;
         reportStage('ocr-detection-model-arraybuffer-start', { estimatedBytes: estimatedModelBytes, allocationId: 'detection-model-buffer' });
         diagnosticReporter.allocationStart('ocr-detection-model-buffer-alloc-start', 'detection-model-buffer', estimatedModelBytes, {
           name: 'Detection model ArrayBuffer', type: 'ArrayBuffer',
         });
-        detectionModel = await detectionResponse.arrayBuffer();
+        detectionModel = await loadOcrResource('detection model response body', () => detectionResponse.arrayBuffer());
         reportStage('ocr-detection-model-arraybuffer-done', { modelBytes: detectionModel.byteLength });
         diagnosticReporter.allocationDone('ocr-detection-model-arraybuffer-ready', 'detection-model-buffer', detectionModel.byteLength, {
           name: 'Detection model ArrayBuffer', type: 'ArrayBuffer',
@@ -420,6 +415,7 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
       } catch (error) {
         if (detectionSession) {
           try { await detectionSession.release(); }
+          catch (releaseError) { reportCleanupError('detection-session-release', releaseError, { reason: 'session-create-failed' }); }
           finally { detectionSession = null; }
         }
         if (detectionModelTracked) diagnosticReporter.releaseDone('ocr-detection-model-buffer-release-done', 'detection-model-buffer', { reason: 'session-create-failed' });
@@ -434,8 +430,12 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
         const session = detectionSession;
         detectionSession = null;
         reportStage('ocr-detection-session-release-start');
-        await session.release();
-        reportStage('ocr-detection-session-release-done', { runtimeState: { ortDetectionLoaded: false } });
+        try {
+          await session.release();
+          reportStage('ocr-detection-session-release-done', { runtimeState: { ortDetectionLoaded: false } });
+        } catch (error) {
+          reportCleanupError('detection-session-release', error);
+        }
       };
       return {
         async release() { await releaseDetectionSession(); },
@@ -545,6 +545,9 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
                 maskAllocationTracked = false;
               },
               diagnosticReporter,
+              resource => ocrCvResourceTracker?.track(resource) ?? resource,
+              (resource, details) => ocrCvResourceTracker?.delete(resource, details),
+              perspectiveTransform,
             );
             activeDetectionLineResources = lineResources;
             mask = null;
@@ -612,7 +615,7 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
     let sourcePixelsTracked = false;
     let detector;
     const releaseSourcePixels = () => {
-      if (sourcePixels) sourcePixels.data = new Uint8ClampedArray(0);
+      if (sourcePixels) sourcePixels.data = null;
       sourcePixels = null;
     };
     try {
@@ -664,13 +667,17 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
       reportStage('ocr-cleanup-start');
       try { await releaseOcrModels(detector); }
       finally {
-        try { activeDetectionLineResources?.release(); }
+        try {
+          try { activeDetectionLineResources?.release(); }
+          catch (error) { reportCleanupError('line-resource-release', error); }
+        }
         finally {
           activeDetectionLineResources = null;
           try {
-            releaseOcrCvResources?.();
-              reportStage('ocr-opencv-runtime-released', { opencvResourcesReleased: true });
-            }
+            const opencvResourcesReleased = releaseOcrCvResources?.() ?? true;
+            reportStage('ocr-opencv-runtime-released', { opencvResourcesReleased });
+          }
+          catch (error) { reportCleanupError('opencv-resource-release', error); }
           finally {
             releaseOcrCvResources = null;
             releaseSourcePixels();
@@ -714,7 +721,15 @@ importScripts('analysis-diagnostics.js', 'spell-ocr.js', 'image-analysis-core.js
         const result = await recognize({ ...message, signal: activeAbortController.signal });
         global.postMessage({ type: 'success', jobId: activeJobId, result });
       } catch (error) {
-        global.postMessage({ type: 'error', jobId: activeJobId, name: error?.name || 'Error', message: error?.message || String(error) });
+        global.postMessage({
+          type: 'error',
+          jobId: activeJobId,
+          name: error?.name || 'Error',
+          message: error?.message || String(error),
+          ...(error?.code ? { code: error.code } : {}),
+          retryable: global.MagiaOcrErrorPolicy.isRetryableOcrError(error),
+          ...(error?.resource ? { resource: error.resource } : {}),
+        });
       } finally {
         message.buffer = null;
         activeAbortController = null;
