@@ -37,7 +37,7 @@ if (!input) {
 let runtime = nodeOrt;
 let activeModels = models;
 if (webWasm) {
-  const runtimeModule = webOrtModuleSpecifier || 'onnxruntime-web';
+  const runtimeModule = webOrtModuleSpecifier || '../node_modules/onnxruntime-web/dist/ort.wasm.min.mjs';
   runtime = await import(runtimeModule);
   runtime.env.wasm.numThreads = 1;
   runtime.env.wasm.proxy = true;

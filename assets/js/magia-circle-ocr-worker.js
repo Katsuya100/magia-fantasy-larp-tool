@@ -24,6 +24,9 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
     },
   );
   const runtimeDefaults = core.config.onnxRuntimeDefaults;
+  // OCR uses only WASM. The +esm browser bundle also loads the larger JSEP
+  // runtime, increasing memory during each short-lived Worker initialization.
+  const ocrRuntimeUrl = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/ort.wasm.min.mjs`;
   const diagnosticReporter = global.MagiaAnalysisDiagnostics.createReporter('ocr', message => {
     if (activeJobId !== null) global.postMessage({ ...message, jobId: activeJobId });
   });
@@ -121,7 +124,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
     reportStage('ocr-recognition-runtime-ensure-start', lineInfo);
     recognizerPromise = (async () => {
       reportStage('ocr-recognition-ort-import-start', lineInfo);
-      const ort = await loadOcrResource('recognition ONNX Runtime module', () => import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`));
+      const ort = await loadOcrResource('recognition ONNX Runtime module', () => import(ocrRuntimeUrl));
       reportStage('ocr-recognition-ort-import-done', { ...lineInfo, version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = runtimeDefaults.numThreads;
@@ -143,7 +146,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
         });
         modelTracked = true;
         reportStage('ocr-recognition-session-create-start', { ...lineInfo, modelBytes: modelBytes.byteLength, sessionOptions: ocrSessionOptions });
-        reportStage('ocr-recognition-wasm-runtime-init-start', { ...lineInfo, numThreads: runtimeDefaults.numThreads });
+        reportStage('ocr-recognition-wasm-runtime-init-start', { ...lineInfo, numThreads: runtimeDefaults.numThreads, runtimeUrl: ocrRuntimeUrl });
         session = await ort.InferenceSession.create(modelBytes, { ...ocrSessionOptions });
         reportStage('ocr-recognition-session-create-done', { ...lineInfo, modelBytes: modelBytes.byteLength, runtimeState: { recognizerLoaded: true } });
         reportStage('ocr-recognition-wasm-runtime-init-done', { ...lineInfo, version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
@@ -377,7 +380,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
     if (textDetectorPromise) return textDetectorPromise;
     textDetectorPromise = (async () => {
       reportStage('ocr-detection-ort-import-start');
-      const ort = await loadOcrResource('detection ONNX Runtime module', () => import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`));
+      const ort = await loadOcrResource('detection ONNX Runtime module', () => import(ocrRuntimeUrl));
       reportStage('ocr-detection-ort-import-done', { version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
       ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
       ort.env.wasm.numThreads = runtimeDefaults.numThreads;
@@ -401,7 +404,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
         });
         detectionModelTracked = true;
         reportStage('ocr-detection-session-create-start', { modelBytes: detectionModel.byteLength, sessionOptions: ocrSessionOptions });
-        reportStage('ocr-detection-wasm-runtime-init-start', { numThreads: runtimeDefaults.numThreads });
+        reportStage('ocr-detection-wasm-runtime-init-start', { numThreads: runtimeDefaults.numThreads, runtimeUrl: ocrRuntimeUrl });
         detectionSession = await ort.InferenceSession.create(
           detectionModel,
           { ...ocrSessionOptions },

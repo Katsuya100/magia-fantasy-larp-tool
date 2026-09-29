@@ -27,7 +27,17 @@ if (!isMainThread) {
   globalThis.__importRuntime = async url => {
     if (url.includes('onnxruntime-web@')) {
       parentPort.postMessage({ type: 'harness-runtime', runtime: 'onnxruntime-web' });
-      const runtime = await import('onnxruntime-web');
+      const packageInfo = JSON.parse(await readFile(resolve(root, 'node_modules/onnxruntime-web/package.json'), 'utf8'));
+      const runtimePath = new URL(url).pathname;
+      const runtimePrefix = `/npm/onnxruntime-web@${packageInfo.version}/`;
+      assert.ok(runtimePath.startsWith(runtimePrefix), 'Production and harness ONNX Runtime versions must match.');
+      const entry = runtimePath.slice(runtimePrefix.length);
+      // jsDelivr +esm uses the browser bundle (JSEP), whereas a bare Node import
+      // resolves ort.node.min.mjs and silently exercises a different WASM build.
+      const localEntry = entry === '+esm' ? 'ort.bundle.min.mjs'
+        : entry === 'dist/ort.wasm.min.mjs' ? 'ort.wasm.min.mjs' : null;
+      assert.ok(localEntry, `Unsupported production ONNX Runtime entry: ${entry}`);
+      const runtime = await import(pathToFileURL(resolve(root, 'node_modules/onnxruntime-web/dist', localEntry)));
       const localWasm = pathToFileURL(`${resolve(root, 'node_modules/onnxruntime-web/dist')}/`).href;
       Object.defineProperty(runtime.env.wasm, 'wasmPaths', { configurable: true, get: () => localWasm, set() {} });
       return runtime;

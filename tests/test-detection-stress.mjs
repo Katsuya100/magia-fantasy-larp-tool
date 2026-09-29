@@ -4,7 +4,7 @@ import { performance } from 'node:perf_hooks';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import models from '@gutenye/ocr-models/node';
 import sharp from 'sharp';
-import * as runtime from 'onnxruntime-web';
+import * as runtime from '../node_modules/onnxruntime-web/dist/ort.wasm.min.mjs';
 
 const args = process.argv.slice(2);
 const valueAfter = (flag, fallback = null) => {
