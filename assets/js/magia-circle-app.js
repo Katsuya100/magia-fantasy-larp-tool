@@ -692,6 +692,7 @@
       'embedding-model-load-start': 'Embeddingモデルロード中に終了した可能性',
       'embedding-pipeline-create-start': 'Transformers pipeline生成・モデル接続中に終了した可能性',
       'embedding-run-start': 'Embedding inference中に終了した可能性',
+      'image-selection-commit-error': '画像のcanvas反映または選択確定処理で例外が発生した可能性',
     };
     return causes[stage] || (stage?.startsWith('ocr-') ? 'OCR処理中に終了した可能性'
       : stage?.startsWith('embedding-') ? 'Embedding処理中に終了した可能性'
@@ -1796,8 +1797,8 @@
         if (pendingImageSelection === selection) pendingImageSelection = null;
         finish(false);
       };
-      const fail = error => {
-        recordAnalysisStage(diagnosticRun, 'image-decode-error', { error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) } });
+      const fail = (error, stageName = 'image-decode-error') => {
+        recordAnalysisStage(diagnosticRun, stageName, { error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) } });
         if (image) {
           image.onload = null;
           image.onerror = null;
@@ -1860,7 +1861,13 @@
           recordAnalysisStage(diagnosticRun, 'image-selection-ready', {
             sourceWidth: sourceWidth || image?.naturalWidth || image?.width || captureCanvas.width,
             sourceHeight: sourceHeight || image?.naturalHeight || image?.height || captureCanvas.height,
-            canvas: { name: 'captureCanvas', width: captureCanvas.width, height: captureCanvas.height, estimatedRgbaBackingBytes: imageAnalysis.rgbaBytes(captureCanvas.width, captureCanvas.height), countedInKnownLiveBytes: false },
+            canvas: {
+              name: 'captureCanvas',
+              width: captureCanvas.width,
+              height: captureCanvas.height,
+              estimatedRgbaBackingBytes: global.MagiaAnalysisDiagnostics.rgbaBytes(captureCanvas.width, captureCanvas.height),
+              countedInKnownLiveBytes: false,
+            },
           });
           analyzeButton.disabled = false;
           setImageBusy(false);
@@ -1869,7 +1876,7 @@
           finish(true);
           if (autoAnalyze) void analyzeSelectedImage();
         } catch (error) {
-          fail(error);
+          fail(error, 'image-selection-commit-error');
         }
       };
 
@@ -1892,7 +1899,7 @@
           image.onerror = () => fail(new Error('別の画像を選んでください。'));
           image.src = selection.sourceUrl;
         } catch (error) {
-          fail(error);
+          fail(error, 'image-selection-error');
         }
       };
       void beginLoad();

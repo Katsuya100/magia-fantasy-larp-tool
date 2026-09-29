@@ -61,6 +61,8 @@ assert.equal(mainEvents.at(-1).details.runtimeStates.ocrWorkerActive, false);
 
 const workerSource = await readFile(new URL('../assets/js/magia-circle-ocr-worker.js', import.meta.url), 'utf8');
 const appSource = await readFile(new URL('../assets/js/magia-circle-app.js', import.meta.url), 'utf8');
+assert.doesNotMatch(appSource, /imageAnalysis\.rgbaBytes/, 'Canvas byte estimates must use the diagnostics helper API, not ImageAnalysisCore.');
+assert.match(appSource, /MagiaAnalysisDiagnostics\.rgbaBytes\(captureCanvas\.width, captureCanvas\.height\)/, 'Image selection should complete using the exported byte estimator.');
 const detectorStart = workerSource.indexOf('async function ensureTextDetector()');
 const detectionStart = workerSource.indexOf('async detect(source, signal)', detectorStart);
 const browserImageRawStart = workerSource.indexOf('class BrowserImageRaw', detectionStart);
