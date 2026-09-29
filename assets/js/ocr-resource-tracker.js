@@ -5,15 +5,8 @@
     const resources = new Set();
 
     function track(resource) {
-      try {
-        if (!resource) return resource;
-        if (typeof resource.delete === 'function') resources.add(resource);
-        else throw new TypeError('OpenCV resource has no delete method.');
-      }
-      catch (error) {
-        try { reportCleanupError(error, { resourceType: 'opencv-resource-track' }); }
-        catch (reportError) { console.warn('OpenCV tracking diagnostic could not be recorded.', reportError); }
-      }
+      if (!resource || typeof resource.delete !== 'function') return resource;
+      resources.add(resource);
       return resource;
     }
 
@@ -59,5 +52,47 @@
     });
   }
 
-  global.MagiaOcrResourceTracker = Object.freeze({ create });
+  function createCleanupErrorAggregator(reportFirst = () => {}, reportSummary = () => {}) {
+    const errors = new Map();
+
+    function record(resourceType, error, details = {}) {
+      const normalized = {
+        name: String(error?.name || 'Error'),
+        message: String(error?.message || error).slice(0, 240),
+      };
+      const type = String(resourceType || 'cleanup');
+      const key = `${type}\u0000${normalized.name}\u0000${normalized.message}`;
+      const current = errors.get(key);
+      if (current) {
+        current.count += 1;
+        return current.count;
+      }
+      const entry = { resourceType: type, count: 1, firstError: normalized, details: { ...details } };
+      errors.set(key, entry);
+      reportFirst(normalized, { ...details, resourceType: type });
+      return entry.count;
+    }
+
+    function flush() {
+      let summaryCount = 0;
+      for (const entry of errors.values()) {
+        if (entry.count <= 1) continue;
+        reportSummary({
+          stage: 'ocr-cleanup-error-summary',
+          ...entry.details,
+          errorType: entry.resourceType,
+          resourceType: entry.resourceType,
+          count: entry.count,
+          firstError: entry.firstError,
+        });
+        summaryCount += 1;
+      }
+      errors.clear();
+      return summaryCount;
+    }
+
+    return Object.freeze({ record, flush, get size() { return errors.size; } });
+  }
+
+  global.MagiaOcrResourceTracker = Object.freeze({ create, createCleanupErrorAggregator });
 })(globalThis);

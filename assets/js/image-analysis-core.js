@@ -124,71 +124,252 @@
     return output;
   }
 
-  function resizeRgbaSharpContainInto(buffer, width, height, targetWidth, targetHeight, output) {
+  function resizeRgbaSharpContainInto(buffer, width, height, targetWidth, targetHeight, output, diagnostics = null) {
     if (!output || output.length !== targetWidth * targetHeight * 4) throw new RangeError('The RGBA output buffer has the wrong length.');
-    output.fill(0);
-    for (let index = 3; index < output.length; index += 4) output[index] = 255;
-    const scale = Math.min(targetWidth / width, targetHeight / height);
-    const contentWidth = Math.max(1, Math.round(width * scale));
-    const contentHeight = Math.max(1, Math.round(height * scale));
-    const left = Math.floor((targetWidth - contentWidth) / 2);
-    const top = Math.floor((targetHeight - contentHeight) / 2);
-    const contributions = (sourceSize, targetSize) => Array.from({ length: targetSize }, (_, targetIndex) => {
-      const ratio = sourceSize / targetSize;
-      const filterScale = Math.max(1, ratio);
-      const center = (targetIndex + .5) * ratio - .5;
-      const support = 3 * filterScale;
-      const samples = new Map();
-      let total = 0;
-      for (let sourceIndex = Math.ceil(center - support); sourceIndex <= Math.floor(center + support); sourceIndex += 1) {
-        const weight = lanczos3((sourceIndex - center) / filterScale);
-        if (weight === 0) continue;
-        const extendedIndex = Math.max(0, Math.min(sourceSize - 1, sourceIndex));
-        samples.set(extendedIndex, (samples.get(extendedIndex) || 0) + weight);
-        total += weight;
-      }
-      return [...samples].map(([sourceIndex, weight]) => [sourceIndex, weight / total]);
+    const now = () => global.performance?.now?.() ?? Date.now();
+    const report = (stage, details = {}) => diagnostics?.stage?.(stage, {
+      sourceWidth: width, sourceHeight: height, alignedWidth: targetWidth, alignedHeight: targetHeight,
+      countedInKnownLiveBytes: false, ...details,
     });
-    const horizontal = contributions(width, contentWidth);
-    const vertical = contributions(height, contentHeight);
-    const lastUse = new Uint32Array(height);
-    for (let targetY = 0; targetY < contentHeight; targetY += 1) {
-      for (const [sourceY] of vertical[targetY]) lastUse[sourceY] = targetY;
-    }
-    const rowLength = contentWidth * 4;
-    const rowCache = new Map();
-    const verticalRow = new Float64Array(rowLength);
-    const toClampedByte = value => {
-      if (!(value > 0)) return 0;
-      if (value >= 255) return 255;
-      const lower = Math.floor(value);
-      const fraction = value - lower;
-      return fraction > .5 || (fraction === .5 && lower % 2 === 1) ? lower + 1 : lower;
+    const allocationStart = (stage, id, bytes, metadata = {}) => diagnostics?.allocationStart?.(stage, id, bytes, metadata);
+    const allocationDone = (stage, id, bytes, metadata = {}) => diagnostics?.allocationDone?.(stage, id, bytes, metadata);
+    const release = (stage, id, metadata = {}) => {
+      diagnostics?.releaseStart?.(`${stage}-start`, id, metadata);
+      diagnostics?.releaseDone?.(`${stage}-done`, id, metadata);
     };
-    for (let targetY = 0; targetY < contentHeight; targetY += 1) {
-      verticalRow.fill(0);
-      for (const [sourceY, weight] of vertical[targetY]) {
-        let horizontalRow = rowCache.get(sourceY);
-        if (!horizontalRow) {
-          horizontalRow = new Float64Array(rowLength);
-          for (let x = 0; x < contentWidth; x += 1) {
-            const targetOffset = x * 4;
-            for (const [sourceX, horizontalWeight] of horizontal[x]) {
-              const sourceOffset = (sourceY * width + sourceX) * 4;
-              for (let channel = 0; channel < 4; channel += 1) {
-                horizontalRow[targetOffset + channel] += buffer[sourceOffset + channel] * horizontalWeight;
+    const rowCacheId = 'source-align-row-cache';
+    const verticalRowId = 'source-align-vertical-row';
+    const lastUseId = 'source-align-last-use';
+    const horizontalWeightsId = 'source-align-horizontal-weights';
+    const verticalWeightsId = 'source-align-vertical-weights';
+    const horizontalRowBytes = Math.max(0, Math.trunc(targetWidth * 4)) * Float64Array.BYTES_PER_ELEMENT;
+    const largeHorizontalRows = new Map();
+    let horizontal = null;
+    let vertical = null;
+    let lastUse = null;
+    let rowCache = null;
+    let verticalRow = null;
+    let horizontalEntries = 0;
+    let verticalEntries = 0;
+    let rowBuffersCreated = 0;
+    let rowBuffersBytesAllocated = 0;
+    let peakCachedRows = 0;
+    let peakCachedBytes = 0;
+    let horizontalResampleMs = 0;
+    let rowCacheOperationMs = 0;
+    let verticalResampleMs = 0;
+    let outputWriteMs = 0;
+    let completedRows = 0;
+    let kernelPrepared = false;
+    let renderStartedAt = null;
+
+    report('ocr-source-align-kernel-prepare-start', { width: targetWidth, height: targetHeight });
+    try {
+      output.fill(0);
+      for (let index = 3; index < output.length; index += 4) output[index] = 255;
+      const scale = Math.min(targetWidth / width, targetHeight / height);
+      const contentWidth = Math.max(1, Math.round(width * scale));
+      const contentHeight = Math.max(1, Math.round(height * scale));
+      const left = Math.floor((targetWidth - contentWidth) / 2);
+      const top = Math.floor((targetHeight - contentHeight) / 2);
+      const contributions = (sourceSize, targetSize) => Array.from({ length: targetSize }, (_, targetIndex) => {
+        const ratio = sourceSize / targetSize;
+        const filterScale = Math.max(1, ratio);
+        const center = (targetIndex + .5) * ratio - .5;
+        const support = 3 * filterScale;
+        const samples = new Map();
+        let total = 0;
+        for (let sourceIndex = Math.ceil(center - support); sourceIndex <= Math.floor(center + support); sourceIndex += 1) {
+          const weight = lanczos3((sourceIndex - center) / filterScale);
+          if (weight === 0) continue;
+          const extendedIndex = Math.max(0, Math.min(sourceSize - 1, sourceIndex));
+          samples.set(extendedIndex, (samples.get(extendedIndex) || 0) + weight);
+          total += weight;
+        }
+        return [...samples].map(([sourceIndex, weight]) => [sourceIndex, weight / total]);
+      });
+      const entryCount = table => table.reduce((sum, row) => sum + row.length, 0);
+
+      allocationStart('ocr-source-align-horizontal-weights-alloc-start', horizontalWeightsId, undefined, {
+        type: 'JavaScript Array/Map contribution table', countedInKnownLive: false,
+        rows: contentWidth, columns: width, elementCount: contentWidth,
+      });
+      horizontal = contributions(width, contentWidth);
+      horizontalEntries = entryCount(horizontal);
+      allocationDone('ocr-source-align-horizontal-weights-alloc-done', horizontalWeightsId, undefined, {
+        type: 'JavaScript Array/Map contribution table', countedInKnownLive: false,
+        rows: contentWidth, columns: width, elementCount: contentWidth, entryCount: horizontalEntries,
+      });
+
+      allocationStart('ocr-source-align-vertical-weights-alloc-start', verticalWeightsId, undefined, {
+        type: 'JavaScript Array/Map contribution table', countedInKnownLive: false,
+        rows: contentHeight, columns: height, elementCount: contentHeight,
+      });
+      vertical = contributions(height, contentHeight);
+      verticalEntries = entryCount(vertical);
+      allocationDone('ocr-source-align-vertical-weights-alloc-done', verticalWeightsId, undefined, {
+        type: 'JavaScript Array/Map contribution table', countedInKnownLive: false,
+        rows: contentHeight, columns: height, elementCount: contentHeight, entryCount: verticalEntries,
+      });
+
+      const lastUseBytes = height * Uint32Array.BYTES_PER_ELEMENT;
+      allocationStart('ocr-source-align-last-use-alloc-start', lastUseId, lastUseBytes, {
+        type: 'Uint32Array', countedInKnownLive: false, elementCount: height, rows: height, columns: 1,
+      });
+      lastUse = new Uint32Array(height);
+      for (let targetY = 0; targetY < contentHeight; targetY += 1) {
+        for (const [sourceY] of vertical[targetY]) lastUse[sourceY] = targetY;
+      }
+      allocationDone('ocr-source-align-last-use-alloc-done', lastUseId, lastUse.byteLength, {
+        type: 'Uint32Array', countedInKnownLive: false, elementCount: height, rows: height, columns: 1,
+      });
+
+      const rowLength = contentWidth * 4;
+      allocationStart('ocr-source-align-row-cache-alloc-start', rowCacheId, undefined, {
+        type: 'Map<sourceRow, Float64Array>', countedInKnownLive: false, rows: 0, columns: rowLength,
+      });
+      rowCache = new Map();
+      allocationDone('ocr-source-align-row-cache-alloc-done', rowCacheId, undefined, {
+        type: 'Map<sourceRow, Float64Array>', countedInKnownLive: false, rows: 0, columns: rowLength, entryCount: 0,
+      });
+      const verticalRowBytes = rowLength * Float64Array.BYTES_PER_ELEMENT;
+      allocationStart('ocr-source-align-vertical-row-alloc-start', verticalRowId, verticalRowBytes, {
+        type: 'Float64Array', countedInKnownLive: false, elementCount: rowLength, rows: 1, columns: rowLength,
+      });
+      verticalRow = new Float64Array(rowLength);
+      allocationDone('ocr-source-align-vertical-row-alloc-done', verticalRowId, verticalRow.byteLength, {
+        type: 'Float64Array', countedInKnownLive: false, elementCount: rowLength, rows: 1, columns: rowLength,
+      });
+      const toClampedByte = value => {
+        if (!(value > 0)) return 0;
+        if (value >= 255) return 255;
+        const lower = Math.floor(value);
+        const fraction = value - lower;
+        return fraction > .5 || (fraction === .5 && lower % 2 === 1) ? lower + 1 : lower;
+      };
+      kernelPrepared = true;
+      report('ocr-source-align-kernel-prepare-done', {
+        contentWidth, contentHeight, left, top,
+        horizontalRows: horizontal.length, horizontalColumns: width, horizontalEntryCount: horizontalEntries,
+        verticalRows: vertical.length, verticalColumns: height, verticalEntryCount: verticalEntries,
+        lastUseElementCount: lastUse.length, rowLength, verticalRowBytes,
+      });
+
+      renderStartedAt = now();
+      report('ocr-source-align-horizontal-start', { contentWidth, sourceRows: height, horizontalEntryCount: horizontalEntries });
+      report('ocr-source-align-row-cache-start', { contentHeight, rowLength, rowBytes: horizontalRowBytes });
+      report('ocr-source-align-vertical-start', { contentHeight, sourceRows: height, verticalEntryCount: verticalEntries });
+      report('ocr-source-align-output-finalize-start', { contentWidth, contentHeight, outputBytes: output.byteLength });
+
+      for (let targetY = 0; targetY < contentHeight; targetY += 1) {
+        verticalRow.fill(0);
+        for (const [sourceY, weight] of vertical[targetY]) {
+          const cacheReadStartedAt = now();
+          let horizontalRow = rowCache.get(sourceY);
+          rowCacheOperationMs += now() - cacheReadStartedAt;
+          if (!horizontalRow) {
+            horizontalRow = new Float64Array(rowLength);
+            rowBuffersCreated += 1;
+            rowBuffersBytesAllocated += horizontalRow.byteLength;
+            if (horizontalRow.byteLength >= 1024 * 1024) {
+              const allocationId = `source-align-horizontal-row-${sourceY}`;
+              allocationStart('ocr-source-align-horizontal-row-alloc-start', allocationId, horizontalRow.byteLength, {
+                type: 'Float64Array', width: rowLength, height: 1, elementCount: rowLength, sourceRow: sourceY,
+              });
+              allocationDone('ocr-source-align-horizontal-row-alloc-done', allocationId, horizontalRow.byteLength, {
+                type: 'Float64Array', width: rowLength, height: 1, elementCount: rowLength, sourceRow: sourceY,
+              });
+              largeHorizontalRows.set(sourceY, allocationId);
+            }
+            const horizontalStartedAt = now();
+            for (let x = 0; x < contentWidth; x += 1) {
+              const targetOffset = x * 4;
+              for (const [sourceX, horizontalWeight] of horizontal[x]) {
+                const sourceOffset = (sourceY * width + sourceX) * 4;
+                for (let channel = 0; channel < 4; channel += 1) {
+                  horizontalRow[targetOffset + channel] += buffer[sourceOffset + channel] * horizontalWeight;
+                }
               }
             }
+            horizontalResampleMs += now() - horizontalStartedAt;
+            if (lastUse[sourceY] > targetY) {
+              const cacheWriteStartedAt = now();
+              rowCache.set(sourceY, horizontalRow);
+              rowCacheOperationMs += now() - cacheWriteStartedAt;
+              peakCachedRows = Math.max(peakCachedRows, rowCache.size);
+              peakCachedBytes = Math.max(peakCachedBytes, rowCache.size * horizontalRow.byteLength);
+            }
           }
-          if (lastUse[sourceY] > targetY) rowCache.set(sourceY, horizontalRow);
+          const verticalStartedAt = now();
+          for (let index = 0; index < rowLength; index += 1) verticalRow[index] += horizontalRow[index] * weight;
+          verticalResampleMs += now() - verticalStartedAt;
+          if (lastUse[sourceY] === targetY) {
+            const cacheDeleteStartedAt = now();
+            rowCache.delete(sourceY);
+            rowCacheOperationMs += now() - cacheDeleteStartedAt;
+            const allocationId = largeHorizontalRows.get(sourceY);
+            if (allocationId) {
+              release('ocr-source-align-horizontal-row-release', allocationId, { sourceRow: sourceY, byteLength: horizontalRow.byteLength });
+              largeHorizontalRows.delete(sourceY);
+            }
+          }
         }
-        for (let index = 0; index < rowLength; index += 1) verticalRow[index] += horizontalRow[index] * weight;
-        if (lastUse[sourceY] === targetY) rowCache.delete(sourceY);
+        const outputOffset = ((top + targetY) * targetWidth + left) * 4;
+        const outputStartedAt = now();
+        for (let index = 0; index < rowLength; index += 1) output[outputOffset + index] = toClampedByte(verticalRow[index]);
+        outputWriteMs += now() - outputStartedAt;
+        completedRows += 1;
+        if (completedRows % 64 === 0 || completedRows === contentHeight) {
+          report('ocr-source-align-render-progress', {
+            rowsCompleted: completedRows, rowsTotal: contentHeight,
+            horizontalResampleMs: Number(horizontalResampleMs.toFixed(1)),
+            rowCacheOperationMs: Number(rowCacheOperationMs.toFixed(1)),
+            verticalResampleMs: Number(verticalResampleMs.toFixed(1)),
+            outputWriteMs: Number(outputWriteMs.toFixed(1)),
+            rowBuffersCreated, rowBuffersBytesAllocated, peakCachedRows, peakCachedBytes,
+          });
+        }
       }
-      const outputOffset = ((top + targetY) * targetWidth + left) * 4;
-      for (let index = 0; index < rowLength; index += 1) output[outputOffset + index] = toClampedByte(verticalRow[index]);
+      const subStageDetails = {
+        operationElapsedMs: Number((now() - renderStartedAt).toFixed(1)),
+        horizontalResampleMs: Number(horizontalResampleMs.toFixed(1)),
+        rowCacheOperationMs: Number(rowCacheOperationMs.toFixed(1)),
+        verticalResampleMs: Number(verticalResampleMs.toFixed(1)),
+        outputWriteMs: Number(outputWriteMs.toFixed(1)),
+        rowsCompleted: completedRows, rowsTotal: contentHeight,
+        rowBuffersCreated, rowBuffersBytesAllocated, peakCachedRows, peakCachedBytes,
+      };
+      report('ocr-source-align-horizontal-done', { ...subStageDetails, horizontalEntryCount: horizontalEntries });
+      report('ocr-source-align-row-cache-done', { ...subStageDetails, entryCount: rowCache.size, peakEntryCount: peakCachedRows });
+      report('ocr-source-align-vertical-done', { ...subStageDetails, verticalEntryCount: verticalEntries });
+      report('ocr-source-align-output-finalize-done', {
+        ...subStageDetails, outputBytes: output.byteLength, outputRowsWritten: completedRows,
+      });
+      return output;
+    } finally {
+      for (const [sourceRow, allocationId] of largeHorizontalRows) {
+        release('ocr-source-align-horizontal-row-release', allocationId, { sourceRow, cleanup: true, byteLength: horizontalRowBytes });
+      }
+      if (rowCache) {
+        const entryCount = rowCache.size;
+        rowCache.clear();
+        release('ocr-source-align-row-cache-release', rowCacheId, { entryCount, peakEntryCount: peakCachedRows });
+      }
+      if (verticalRow) release('ocr-source-align-vertical-row-release', verticalRowId, { elementCount: verticalRow.length, estimatedBytes: verticalRow.byteLength });
+      if (lastUse) release('ocr-source-align-last-use-release', lastUseId, { elementCount: lastUse.length, estimatedBytes: lastUse.byteLength });
+      if (horizontal) release('ocr-source-align-horizontal-weights-release', horizontalWeightsId, {
+        rows: horizontal.length, columns: width, elementCount: horizontal.length, entryCount: horizontalEntries,
+      });
+      if (vertical) release('ocr-source-align-vertical-weights-release', verticalWeightsId, {
+        rows: vertical.length, columns: height, elementCount: vertical.length, entryCount: verticalEntries,
+      });
+      if (!kernelPrepared) report('ocr-source-align-kernel-prepare-done', { failed: true, completedRows });
+      horizontal = null;
+      vertical = null;
+      lastUse = null;
+      rowCache = null;
+      verticalRow = null;
     }
-    return output;
   }
 
   // Match resizeRgbaSharpContain's byte-rounded RGB values while writing the

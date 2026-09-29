@@ -13,6 +13,18 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
   let releaseOcrCvResources = null;
   let activeDetectionLineResources = null;
   let diagnosticsMode = false;
+  const cleanupErrorAggregator = global.MagiaOcrResourceTracker.createCleanupErrorAggregator(
+    (cleanupError, details) => {
+      try { reportStage('ocr-cleanup-error', { ...details, cleanupError }); }
+      catch (reportError) { console.warn('OCR cleanup failure could not be recorded in diagnostics.', reportError); }
+    },
+    summary => {
+      try {
+        const { stage, ...details } = summary;
+        reportStage(stage, details);
+      } catch (reportError) { console.warn('OCR cleanup summary could not be recorded in diagnostics.', reportError); }
+    },
+  );
   const runtimeDefaults = core.config.onnxRuntimeDefaults;
   const diagnosticReporter = global.MagiaAnalysisDiagnostics.createReporter('ocr', message => {
     if (activeJobId !== null) global.postMessage({ ...message, jobId: activeJobId });
@@ -55,13 +67,8 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
   }
 
   function reportCleanupError(resourceType, error, details = {}) {
-    const cleanupError = {
-      name: String(error?.name || 'Error'),
-      message: String(error?.message || error).slice(0, 240),
-    };
-    try { reportStage('ocr-cleanup-error', { ...details, resourceType, cleanupError }); }
-    catch (reportError) { console.warn('OCR cleanup failure could not be recorded in diagnostics.', reportError); }
-    console.warn(`OCR ${resourceType} cleanup failed.`, error);
+    const firstOccurrence = cleanupErrorAggregator.record(resourceType, error, details) === 1;
+    if (firstOccurrence) console.warn(`OCR ${resourceType} cleanup failed.`, error);
   }
 
   async function loadOcrResource(resource, loader) {
@@ -448,6 +455,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
           let modelOutput = null;
           let mask = null;
           let lineResources = null;
+          let sourceAlignment = null;
           let sessionForRun = detectionSession;
           let memory = null;
           let completed = false;
@@ -482,6 +490,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
               ...memory, tensorShape: [1, 3, height, width], inputEstimatedBytes: memory.inputFloat32EstimatedBytes,
               knownLiveBytes: diagnosticReporter.knownLiveBytes,
               opencvLoaded: Boolean(cv),
+              clipperLoaded: Boolean(clipper),
             });
             if (cv) throw new Error('OpenCV must remain unloaded during Detection inference.');
             outputs = await sessionForRun.run({ [sessionForRun.inputNames[0]]: inputTensor });
@@ -533,6 +542,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
               opencvLoaded: Boolean(cv),
               remainingTrackedBytes: diagnosticReporter.knownLiveBytes,
             });
+            sourceAlignment = global.MagiaOcrLineSplitter.alignSource(image, width, height, diagnosticReporter);
             reportStage('ocr-opencv-phase-start', { ...memory, opencvLoaded: false });
             await ensureOcrImageRuntimes();
             reportStage('ocr-detection-opencv-start', memory);
@@ -548,7 +558,10 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
               resource => ocrCvResourceTracker?.track(resource) ?? resource,
               (resource, details) => ocrCvResourceTracker?.delete(resource, details),
               perspectiveTransform,
+              sourceAlignment,
+              reportCleanupError,
             );
+            sourceAlignment = null;
             activeDetectionLineResources = lineResources;
             mask = null;
             reportStage('ocr-opencv-phase-done', { ...memory, runtimeState: { opencvLoaded: true, clipperLoaded: true } });
@@ -576,6 +589,8 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
                 maskAllocationTracked = false;
               }
               mask = null;
+              sourceAlignment?.release?.();
+              sourceAlignment = null;
               if (detectionSession) {
                 await releaseDetectionSession();
                 sessionForRun = null;
@@ -688,6 +703,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
             }
           }
         }
+        cleanupErrorAggregator.flush();
       }
     }
   }

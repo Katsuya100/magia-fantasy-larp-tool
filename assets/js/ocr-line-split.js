@@ -1,13 +1,76 @@
 (function registerMagiaOcrLineSplitter(global) {
   'use strict';
 
-  function create(cv, clipper, mask, maskWidth, maskHeight, sourceImage, sourceWidth, sourceHeight, onMaskCopied = null, diagnostics = null, trackCvResource = null, deleteCvResource = null, perspectiveTransform = null) {
+  function alignSource(sourceImage, targetWidth, targetHeight, diagnostics = null) {
+    const required = sourceImage.width !== targetWidth || sourceImage.height !== targetHeight;
+    const estimatedBytes = targetWidth * targetHeight * 4;
+    diagnostics?.stage?.('ocr-source-align-check', {
+      required,
+      sourceWidth: sourceImage.width,
+      sourceHeight: sourceImage.height,
+      alignedWidth: targetWidth,
+      alignedHeight: targetHeight,
+      estimatedBytes: required ? estimatedBytes : 0,
+      countedInKnownLiveBytes: false,
+    });
+    if (!required) return { data: sourceImage.data, width: targetWidth, height: targetHeight, release() { return false; } };
+
+    const allocationId = 'source-aligned-rgba';
+    diagnostics?.allocationStart?.('ocr-source-align-buffer-alloc-start', allocationId, estimatedBytes, {
+      name: 'OCR aligned source RGBA', width: targetWidth, height: targetHeight, type: 'Uint8ClampedArray',
+    });
+    let data = new Uint8ClampedArray(targetWidth * targetHeight * 4);
+    diagnostics?.allocationDone?.('ocr-source-align-buffer-alloc-done', allocationId, data.byteLength, {
+      name: 'OCR aligned source RGBA', width: targetWidth, height: targetHeight, type: 'Uint8ClampedArray',
+    });
+    let released = false;
+    try {
+      diagnostics?.stage?.('ocr-source-align-render-start', {
+        sourceWidth: sourceImage.width, sourceHeight: sourceImage.height,
+        alignedWidth: targetWidth, alignedHeight: targetHeight, estimatedBytes,
+      });
+      global.ImageAnalysisCore.resizeRgbaSharpContainInto(
+        sourceImage.data,
+        sourceImage.width,
+        sourceImage.height,
+        targetWidth,
+        targetHeight,
+        data,
+        diagnostics,
+      );
+      diagnostics?.stage?.('ocr-source-align-render-done', {
+        sourceWidth: sourceImage.width, sourceHeight: sourceImage.height,
+        alignedWidth: targetWidth, alignedHeight: targetHeight, estimatedBytes,
+      });
+    } catch (error) {
+      diagnostics?.releaseStart?.('ocr-source-align-buffer-release-start', allocationId, { cleanup: true, width: targetWidth, height: targetHeight });
+      data = null;
+      released = true;
+      diagnostics?.releaseDone?.('ocr-source-align-buffer-release-done', allocationId, { cleanup: true });
+      throw error;
+    }
+    return {
+      get data() { return data; },
+      width: targetWidth,
+      height: targetHeight,
+      release() {
+        if (released) return false;
+        diagnostics?.releaseStart?.('ocr-source-align-buffer-release-start', allocationId, { width: targetWidth, height: targetHeight });
+        data = null;
+        released = true;
+        diagnostics?.releaseDone?.('ocr-source-align-buffer-release-done', allocationId);
+        return true;
+      },
+    };
+  }
+
+  function create(cv, clipper, mask, maskWidth, maskHeight, sourceImage, sourceWidth, sourceHeight, onMaskCopied = null, diagnostics = null, trackCvResource = null, deleteCvResource = null, perspectiveTransform = null, sourceAlignment = null, reportCleanupError = null) {
     let maskMat = null;
     let sourcePixels = null;
+    let ownedSourceAlignment = null;
     let contours = null;
     let hierarchy = null;
     let succeeded = false;
-    let alignmentTracked = false;
     const reportedMilestones = new Set();
     const lines = [];
     const report = (stage, details = {}) => diagnostics?.stage?.(stage, {
@@ -19,7 +82,7 @@
       ...details,
     });
     const track = resource => trackCvResource ? trackCvResource(resource) : resource;
-    const releaseCvResource = createCvResourceReleaser(deleteCvResource, diagnostics, 'opencv-line-resource');
+    const releaseCvResource = createCvResourceReleaser(deleteCvResource, diagnostics, 'opencv-line-resource', reportCleanupError);
     const releaseTracked = (resource, allocationId, estimatedBytes, metadata = {}) => {
       if (!resource) return;
       diagnostics?.releaseStart?.('ocr-mask-mat-release-start', allocationId, { estimatedBytes, ...metadata });
@@ -28,6 +91,8 @@
     };
 
     try {
+      ownedSourceAlignment = sourceAlignment || alignSource(sourceImage, sourceWidth, sourceHeight, diagnostics);
+      sourcePixels = ownedSourceAlignment.data;
       const maskBytes = maskWidth * maskHeight;
       diagnostics?.allocationStart?.('ocr-mask-mat-alloc-start', 'opencv-mask-mat', maskBytes, {
         name: 'OpenCV mask Mat payload', width: maskWidth, height: maskHeight, type: 'cv.Mat/CV_8UC1',
@@ -69,11 +134,11 @@
         let boxMap = null;
         try {
           contour = track(contours.get(index));
-          const { points, sside } = getMiniBoxes(cv, contour, track, releaseCvResource);
+          const { points, sside } = getMiniBoxes(cv, contour);
           if (sside < 3) continue;
           const clipBox = unclip(clipper, points);
           boxMap = track(cv.matFromArray(clipBox.length / 2, 1, cv.CV_32SC2, clipBox));
-          const result = getMiniBoxes(cv, boxMap, track, releaseCvResource);
+          const result = getMiniBoxes(cv, boxMap);
           const box = result.points;
           if (result.sside < 5) continue;
           const rx = sourceWidth / maskWidth;
@@ -93,7 +158,7 @@
           lines.push({
             box,
             image: createLazyCrop(
-              () => cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, box, diagnostics, lines.length, () => lines.length, track, releaseCvResource, perspectiveTransform),
+              () => cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, box, diagnostics, lines.length, () => lines.length, track, releaseCvResource, perspectiveTransform, reportCleanupError),
               box,
               diagnostics,
               lines.length,
@@ -113,44 +178,6 @@
       releaseCvResource(hierarchy);
       hierarchy = null;
 
-      const alignmentRequired = sourceImage.width !== sourceWidth || sourceImage.height !== sourceHeight;
-      const alignedBytes = sourceWidth * sourceHeight * 4;
-      report('ocr-source-align-check', {
-        required: alignmentRequired,
-        sourceWidth: sourceImage.width,
-        sourceHeight: sourceImage.height,
-        alignedWidth: sourceWidth,
-        alignedHeight: sourceHeight,
-        estimatedBytes: alignmentRequired ? alignedBytes : 0,
-      });
-      if (!alignmentRequired) {
-        sourcePixels = sourceImage.data;
-      } else {
-        diagnostics?.allocationStart?.('ocr-source-align-buffer-alloc-start', 'source-aligned-rgba', alignedBytes, {
-          name: 'OCR aligned source RGBA', width: sourceWidth, height: sourceHeight, type: 'Uint8ClampedArray',
-        });
-        sourcePixels = new Uint8ClampedArray(sourceWidth * sourceHeight * 4);
-        diagnostics?.allocationDone?.('ocr-source-align-buffer-alloc-done', 'source-aligned-rgba', sourcePixels.byteLength, {
-          name: 'OCR aligned source RGBA', width: sourceWidth, height: sourceHeight, type: 'Uint8ClampedArray',
-        });
-        alignmentTracked = true;
-        report('ocr-source-align-render-start', {
-          sourceWidth: sourceImage.width, sourceHeight: sourceImage.height,
-          alignedWidth: sourceWidth, alignedHeight: sourceHeight, estimatedBytes: alignedBytes,
-        });
-        global.ImageAnalysisCore.resizeRgbaSharpContainInto(
-          sourceImage.data,
-          sourceImage.width,
-          sourceImage.height,
-          sourceWidth,
-          sourceHeight,
-          sourcePixels,
-        );
-        report('ocr-source-align-render-done', {
-          sourceWidth: sourceImage.width, sourceHeight: sourceImage.height,
-          alignedWidth: sourceWidth, alignedHeight: sourceHeight, estimatedBytes: alignedBytes,
-        });
-      }
       succeeded = true;
       return {
         lines,
@@ -158,31 +185,27 @@
           for (const line of lines) {
             try { line.image.release(); }
             catch (error) {
-              report('ocr-cleanup-error', {
+              if (reportCleanupError) reportCleanupError('line-image-release', error);
+              else report('ocr-cleanup-error', {
                 resourceType: 'line-image-release',
                 cleanupError: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) },
               });
-              console.warn('OCR line image cleanup failed.', error);
             }
           }
-          if (alignmentTracked) {
-            diagnostics?.releaseStart?.('ocr-source-align-buffer-release-start', 'source-aligned-rgba', { width: sourceWidth, height: sourceHeight });
-            diagnostics?.releaseDone?.('ocr-source-align-buffer-release-done', 'source-aligned-rgba');
-            alignmentTracked = false;
-          }
           sourcePixels = null;
+          ownedSourceAlignment?.release?.();
+          ownedSourceAlignment = null;
         },
       };
     } finally {
       releaseTracked(maskMat, 'opencv-mask-mat', maskWidth * maskHeight, { cleanup: true, width: maskWidth, height: maskHeight, type: 'cv.Mat/CV_8UC1' });
       releaseCvResource(contours);
       releaseCvResource(hierarchy);
-      if (!succeeded && alignmentTracked) {
-        diagnostics?.releaseStart?.('ocr-source-align-buffer-release-start', 'source-aligned-rgba', { cleanup: true, width: sourceWidth, height: sourceHeight });
-        diagnostics?.releaseDone?.('ocr-source-align-buffer-release-done', 'source-aligned-rgba', { cleanup: true });
-        alignmentTracked = false;
+      if (!succeeded) {
+        sourcePixels = null;
+        ownedSourceAlignment?.release?.();
+        ownedSourceAlignment = null;
       }
-      if (!succeeded) sourcePixels = null;
     }
   }
 
@@ -228,14 +251,14 @@
     };
   }
 
-  function cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, points, diagnostics = null, lineIndex = null, getLineCount = () => null, trackCvResource = null, releaseResource = null, perspectiveTransform = null) {
+  function cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, points, diagnostics = null, lineIndex = null, getLineCount = () => null, trackCvResource = null, releaseResource = null, perspectiveTransform = null, reportCleanupError = null) {
     if (!sourcePixels) throw new Error('OCR crop source pixels have already been released.');
     let sourceMat = null;
     const sourceMatId = `opencv-source-mat-${lineIndex}`;
     const sourceMatBytes = sourceWidth * sourceHeight * 4;
     let sourceMatTracked = false;
     const track = trackCvResource || (resource => resource);
-    const releaseCvResource = releaseResource || createCvResourceReleaser(null, diagnostics, 'opencv-line-resource');
+    const releaseCvResource = releaseResource || createCvResourceReleaser(null, diagnostics, 'opencv-line-resource', reportCleanupError);
     try {
       diagnostics?.allocationStart?.('ocr-source-mat-alloc-start', sourceMatId, sourceMatBytes, {
         name: 'OpenCV source Mat payload', width: sourceWidth, height: sourceHeight,
@@ -262,7 +285,7 @@
       diagnostics?.stage?.('ocr-source-mat-copy-done', { estimatedBytes: sourceMatBytes, width: sourceWidth, height: sourceHeight, lineIndex, lineCount: getLineCount() });
       const width = int(Math.max(linalgNorm(points[0], points[1]), linalgNorm(points[2], points[3])));
       const height = int(Math.max(linalgNorm(points[0], points[3]), linalgNorm(points[1], points[2])));
-      return cropToRgba(cv, sourceMat, points, width, height, height / width >= 1.5, diagnostics, lineIndex, getLineCount, track, releaseCvResource, perspectiveTransform);
+      return cropToRgba(cv, sourceMat, points, width, height, height / width >= 1.5, diagnostics, lineIndex, getLineCount, track, releaseCvResource, perspectiveTransform, reportCleanupError);
     } finally {
       diagnostics?.stage?.('ocr-line-source-mat-release-start', { allocationId: sourceMatId, estimatedBytes: sourceMatBytes, lineIndex, lineCount: getLineCount() });
       releaseCvResource(sourceMat);
@@ -271,7 +294,7 @@
     }
   }
 
-  function cropToRgba(cv, source, points, width, height, rotate, diagnostics = null, lineIndex = null, getLineCount = () => null, trackCvResource = null, releaseResource = null, perspectiveTransform = null) {
+  function cropToRgba(cv, source, points, width, height, rotate, diagnostics = null, lineIndex = null, getLineCount = () => null, trackCvResource = null, releaseResource = null, perspectiveTransform = null, reportCleanupError = null) {
     let sourceTriangle = null;
     let destinationTriangle = null;
     let transform = null;
@@ -289,7 +312,7 @@
     let rotatedBytes = 0;
     let rotatedTracked = false;
     const track = trackCvResource || (resource => resource);
-    const releaseCvResource = releaseResource || createCvResourceReleaser(null, diagnostics, 'opencv-line-resource');
+    const releaseCvResource = releaseResource || createCvResourceReleaser(null, diagnostics, 'opencv-line-resource', reportCleanupError);
     try {
       const standardPoints = [[0, 0], [width, 0], [width, height], [0, height]];
       sourceTriangle = track(cv.matFromArray(4, 1, cv.CV_32FC2, flatten(points)));
@@ -389,28 +412,27 @@
     }
   }
 
-  function getMiniBoxes(cv, contour, trackCvResource = null, disposeCvResource = null) {
-    const boundingBox = trackCvResource ? trackCvResource(cv.minAreaRect(contour)) : cv.minAreaRect(contour);
-    const releaseCvResource = disposeCvResource || createCvResourceReleaser(null, null, 'opencv-line-resource');
-    try {
-      const points = Array.from(boxPoints(boundingBox.center, boundingBox.size, boundingBox.angle)).sort((a, b) => a[0] - b[0]);
-      let index1 = 0, index2 = 1, index3 = 2, index4 = 3;
-      if (points[1][1] > points[0][1]) { index1 = 0; index4 = 1; }
-      else { index1 = 1; index4 = 0; }
-      if (points[3][1] > points[2][1]) { index2 = 2; index3 = 3; }
-      else { index2 = 3; index3 = 2; }
-      return {
-        points: [points[index1], points[index2], points[index3], points[index4]],
-        sside: Math.min(boundingBox.size.height, boundingBox.size.width),
-      };
-    } finally {
-      releaseCvResource(boundingBox);
-    }
+  function getMiniBoxes(cv, contour) {
+    // OpenCV.js returns a plain RotatedRect value object here, not an embind-owned resource.
+    const boundingBox = cv.minAreaRect(contour);
+    const points = Array.from(boxPoints(boundingBox.center, boundingBox.size, boundingBox.angle)).sort((a, b) => a[0] - b[0]);
+    let index1 = 0, index2 = 1, index3 = 2, index4 = 3;
+    if (points[1][1] > points[0][1]) { index1 = 0; index4 = 1; }
+    else { index1 = 1; index4 = 0; }
+    if (points[3][1] > points[2][1]) { index2 = 2; index3 = 3; }
+    else { index2 = 3; index3 = 2; }
+    return {
+      points: [points[index1], points[index2], points[index3], points[index4]],
+      sside: Math.min(boundingBox.size.height, boundingBox.size.width),
+    };
   }
 
-  function createCvResourceReleaser(deleteCvResource, diagnostics, resourceType) {
+  function createCvResourceReleaser(deleteCvResource, diagnostics, resourceType, reportCleanupError = null) {
+    const releasedResources = new WeakSet();
     return resource => {
       if (!resource) return false;
+      if ((typeof resource !== 'object' && typeof resource !== 'function') || releasedResources.has(resource)) return false;
+      releasedResources.add(resource);
       try {
         if (deleteCvResource) return deleteCvResource(resource, { resourceType }) !== false;
         const deleteMethod = resource.delete;
@@ -418,16 +440,19 @@
         deleteMethod.call(resource);
         return true;
       } catch (error) {
-        try {
-          diagnostics?.stage?.('ocr-cleanup-error', {
-            resourceType,
-            cleanupError: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) },
-          });
-        } catch (diagnosticError) {
-          console.warn('OpenCV cleanup diagnostic could not be recorded.', diagnosticError);
+        if (reportCleanupError) reportCleanupError(resourceType, error);
+        else {
+          try {
+            diagnostics?.stage?.('ocr-cleanup-error', {
+              resourceType,
+              cleanupError: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) },
+            });
+          } catch (diagnosticError) {
+            console.warn('OpenCV cleanup diagnostic could not be recorded.', diagnosticError);
+          }
+          try { console.warn('OpenCVの一時領域を解放できませんでした。', error); }
+          catch { /* Cleanup reporting must not mask OCR work. */ }
         }
-        try { console.warn('OpenCVの一時領域を解放できませんでした。', error); }
-        catch { /* Cleanup reporting must not mask OCR work. */ }
         return false;
       }
     };
@@ -502,5 +527,5 @@
   function int(value) { return value > 0 ? Math.floor(value) : Math.ceil(value); }
   function clip(value, min, max) { return Math.max(min, Math.min(value, max)); }
 
-  global.MagiaOcrLineSplitter = { create };
+  global.MagiaOcrLineSplitter = { alignSource, create };
 })(globalThis);

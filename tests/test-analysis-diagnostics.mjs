@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import '../assets/js/analysis-diagnostics.js';
+import '../assets/js/ocr-resource-tracker.js';
 
 const diagnostics = globalThis.MagiaAnalysisDiagnostics;
 assert.ok(diagnostics, 'The diagnostics helper should expose its API on globalThis.');
@@ -52,6 +53,8 @@ for (const stage of [
   'ocr-worker-create-start',
   'ocr-detection-model-fetch-start',
   'ocr-detection-model-arraybuffer-start',
+  'ocr-source-align-buffer-alloc-start',
+  'ocr-source-align-render-start',
   'ocr-detection-session-create-start',
   'ocr-detection-run-start',
   'recognition-session-run-start',
@@ -70,8 +73,11 @@ for (const stage of [
   const details = stage === 'ocr-detection-model-arraybuffer-start' || stage === 'recognition-session-run-start'
     ? { estimatedBytes: 2 * 1024 * 1024 }
     : {};
+  if (stage === 'ocr-source-align-buffer-alloc-start' || stage === 'ocr-source-align-render-start') details.estimatedBytes = 6_553_600;
   assert.equal(diagnostics.isCriticalStage(stage, details), true, `${stage} should synchronously persist before risky work.`);
 }
+assert.equal(diagnostics.isCriticalStage('ocr-cleanup-error'), true, 'The first cleanup error should remain immediately persisted.');
+assert.equal(diagnostics.isCriticalStage('ocr-cleanup-error-summary'), false, 'Cleanup summaries should join a batch rather than forcing storage writes.');
 assert.equal(diagnostics.isCriticalStage('ocr-recognition-run-start'), false, 'Small recognition line runs should batch instead of producing one synchronous write each.');
 assert.equal(diagnostics.isCriticalStage('ocr-line-release-start'), false, 'Small release milestones may be batched.');
 for (const stage of ['structure-worker-script-start', 'structure-runtime-import-start', 'structure-runtime-import-done', 'structure-result-received']) {
@@ -108,9 +114,37 @@ for (let index = 0; index < 274; index += 1) {
     stage === 'recognition-session-run-start' ? { inputEstimatedBytes: 2 * 1024 * 1024 } : {};
   sampleBatcher.add(diagnostics.isCriticalStage(stage, details));
 }
+for (const stage of [
+  'ocr-source-align-check', 'ocr-source-align-buffer-alloc-start', 'ocr-source-align-buffer-alloc-done',
+  'ocr-source-align-render-start', 'ocr-source-align-kernel-prepare-start', 'ocr-source-align-kernel-prepare-done',
+  'ocr-source-align-horizontal-start', 'ocr-source-align-row-cache-start', 'ocr-source-align-vertical-start',
+  'ocr-source-align-output-finalize-start', 'ocr-source-align-render-progress',
+  'ocr-source-align-horizontal-done', 'ocr-source-align-row-cache-done',
+  'ocr-source-align-vertical-done', 'ocr-source-align-output-finalize-done', 'ocr-source-align-render-done',
+]) {
+  const details = stage.endsWith('-alloc-start') || stage.endsWith('-render-start') ? { estimatedBytes: 6_553_600 } : {};
+  sampleBatcher.add(diagnostics.isCriticalStage(stage, details));
+}
 sampleBatcher.flush();
 const estimatedStorageWrites = sampleFlushes.length + 3; // RunId once and analysis stage start/complete.
 assert.ok(estimatedStorageWrites < 100, `A representative 274-stage trace should use fewer than 100 storage writes, observed ${estimatedStorageWrites}.`);
+
+const cleanupStageNames = [];
+const cleanupAggregator = globalThis.MagiaOcrResourceTracker.createCleanupErrorAggregator(
+  (_error, details) => cleanupStageNames.push({ stage: 'ocr-cleanup-error', details }),
+  summary => cleanupStageNames.push({ stage: summary.stage, details: summary }),
+);
+for (let index = 0; index < 25; index += 1) {
+  cleanupAggregator.record('opencv-resource-delete', new TypeError('OpenCV resource has no delete method.'), { contourIndex: index });
+}
+cleanupAggregator.flush();
+const cleanupFlushes = [];
+const cleanupBatcher = diagnostics.createStageBatcher(() => cleanupFlushes.push('write'), { batchSize: 16, delayMs: -1 });
+for (const event of cleanupStageNames) cleanupBatcher.add(diagnostics.isCriticalStage(event.stage, event.details));
+cleanupBatcher.flush();
+const cleanupStorageWrites = cleanupFlushes.length + 3;
+assert.equal(cleanupStageNames.length, 2, 'Twenty-five same-kind errors should persist once immediately and once as one summary.');
+assert.ok(cleanupStorageWrites < 100, `Aggregated cleanup diagnostics should remain below 100 writes, observed ${cleanupStorageWrites}.`);
 
 const mainEvents = [];
 const mainThreadReporter = diagnostics.createReporter('main', event => mainEvents.push(event));
@@ -152,6 +186,8 @@ const orderedStages = [
   "reportStage('ocr-detection-run-done'",
   'await releaseDetectionSession();',
   "reportStage('ocr-detection-cleanup-done'",
+  'sourceAlignment = global.MagiaOcrLineSplitter.alignSource(image, width, height, diagnosticReporter);',
+  "reportStage('ocr-opencv-phase-start'",
   'await ensureOcrImageRuntimes();',
 ];
 let previousIndex = -1;
@@ -160,6 +196,10 @@ for (const token of orderedStages) {
   assert.ok(nextIndex > previousIndex, `Expected lazy Detection/OpenCV order at ${token}.`);
   previousIndex = nextIndex;
 }
+assert.match(detectBody, /reportStage\('ocr-detection-run-start',[\s\S]*?opencvLoaded: Boolean\(cv\),\s*clipperLoaded: Boolean\(clipper\)/,
+  'Detection should report OpenCV and Clipper as unloaded at inference start.');
+assert.match(detectBody, /await ensureOcrImageRuntimes\(\);\s*reportStage\('ocr-detection-opencv-start'/,
+  'OpenCV import/init and Clipper import must remain after Detection and source alignment.');
 assert.match(appSource, /createReporter\('main'/, 'Each Main Thread diagnostic run should own a Reporter.');
 assert.match(appSource, /message\.type === 'diagnostic-stage'.*?recordAnalysisStage\(/s, 'Worker diagnostic messages should enter the Main Thread Reporter.');
 assert.match(appSource, /setItem\('magiaAnalysisTrace'/, 'Main Thread events should persist their bounded trace to localStorage.');
@@ -170,4 +210,4 @@ assert.match(appSource, /clearDiagnosticAllocationsByScope\(job, 'structure'\)/,
 assert.match(appSource, /clearDiagnosticAllocationsByScope\(job, 'embedding'\)/, 'Embedding Worker termination should clear its logical allocations.');
 assert.match(appSource, /if \(!diagnosticsEnabled\) return;/, 'Diagnostic UI must remain hidden outside diagnostic mode.');
 
-console.log(`Analysis diagnostic Reporter and lazy OpenCV checks passed (${estimatedStorageWrites} modeled writes for a representative 274-stage batch).`);
+console.log(`Analysis diagnostics passed (${estimatedStorageWrites} modeled writes for a representative 274-stage batch plus source alignment).`);
