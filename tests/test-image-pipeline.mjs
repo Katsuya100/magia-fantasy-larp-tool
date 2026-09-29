@@ -70,7 +70,7 @@ await assert.rejects(MagiaImagePipeline.run({
   reportStage: stage => ocrErrorStages.push(stage),
 }), error => error === perspectiveError);
 assert.equal(attempts, 1, 'a programming TypeError must not retry the same OCR run');
-assert.equal(structureInputCalls, 0, 'An OCR execution error must abort before Structure input creation.');
+assert.equal(structureInputCalls, 1, 'An OCR execution error must reject after the independent raw Structure phase.');
 assert.ok(ocrErrorStages.includes('ocr-execution-error'), 'A thrown OCR exception should be explicitly diagnosed before the app ends the run.');
 
 const disposeError = vm.runInContext("new ReferenceError(\"Can't find variable: dispose\")", context);
@@ -85,7 +85,7 @@ await assert.rejects(MagiaImagePipeline.run({
   getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
 }), error => error === disposeError);
 assert.equal(attempts, 1, 'a dispose ReferenceError must not trigger another OCR worker');
-assert.equal(structureInputCalls, 0, 'A dispose ReferenceError must abort before Structure analysis.');
+assert.equal(structureInputCalls, 1, 'A dispose ReferenceError must reject after the independent raw Structure phase.');
 
 const allocationError = vm.runInContext("new RangeError('Invalid typed array length: allocation failed')", context);
 assert.equal(MagiaImagePipeline.isRetryableOcrError(allocationError), false, 'RangeError allocation failures must not retry');
@@ -106,7 +106,7 @@ await assert.rejects(MagiaImagePipeline.run({
   getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
 }), error => error === allocationError);
 assert.equal(attempts, 1, 'a memory-related OCR exception must not be retried');
-assert.equal(structureInputCalls, 0, 'A memory allocation failure must abort before Structure analysis.');
+assert.equal(structureInputCalls, 1, 'A memory allocation failure must reject after the independent raw Structure phase.');
 
 const typeError = vm.runInContext("new TypeError('Failed to fetch')", context);
 const abortError = vm.runInContext("Object.assign(new Error('cancelled'), { name: 'AbortError' })", context);
@@ -152,7 +152,7 @@ await assert.rejects(MagiaImagePipeline.run({
   getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
 }), error => error === retryableError);
 assert.equal(attempts, 2, 'a retryable failure on the second attempt must not trigger a third OCR run');
-assert.equal(structureInputCalls, 0, 'A second OCR exception must reject before Structure analysis.');
+assert.equal(structureInputCalls, 1, 'A second OCR exception must reject after the independent raw Structure phase.');
 
 attempts = 0;
 structureInputCalls = 0;
@@ -161,6 +161,23 @@ await assert.rejects(MagiaImagePipeline.run({
   getStructureInput: async () => { structureInputCalls += 1; return { analysis: { scale: 1 } }; },
 }), error => error === unknownError);
 assert.equal(attempts, 1, 'Unknown OCR errors must not retry.');
-assert.equal(structureInputCalls, 0, 'Unknown OCR errors must stop before Structure analysis.');
+assert.equal(structureInputCalls, 1, 'Unknown OCR errors must reject after the independent raw Structure phase.');
 
 console.log('PASS_IMAGE_PIPELINE_EMPTY_RESULT_AND_ERROR_RETRY');
+
+const phases = [];
+let analysisInput = { analysis: { scale: 1 } };
+await MagiaImagePipeline.run({
+  ...pipelineOptions(async () => {
+    assert.equal(analysisInput.analysis, null, 'Structure input must be released before OCR starts.');
+    phases.push('ocr');
+    return { path: { text: 'fire', words: ['fire'], points: [] } };
+  }),
+  getStructureInput: async () => { phases.push('structure-input'); return analysisInput; },
+  analyzeStructure: async () => { phases.push('structure'); return { paths: null }; },
+  getMasterImage: async () => { phases.push('score-image'); return { data: new Uint8Array(4), width: 1, height: 1 }; },
+  releaseMasterImage: async () => { phases.push('score-image-released'); },
+  embedAttributes: async () => { phases.push('embedding'); throw new Error('Skip model loading'); },
+});
+assert.deepEqual(phases, ['structure-input', 'structure', 'ocr', 'score-image', 'score-image-released', 'embedding']);
+console.log('PASS_STRUCTURE_BEFORE_OCR_AND_IMAGE_RELEASE_BEFORE_EMBEDDING');

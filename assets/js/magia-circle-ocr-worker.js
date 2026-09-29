@@ -11,8 +11,6 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
   let textDetectorPromise = null;
   let ocrCvResourceTracker = null;
   let releaseOcrCvResources = null;
-  let activeDetectionLineResources = null;
-  let diagnosticsMode = false;
   const cleanupErrorAggregator = global.MagiaOcrResourceTracker.createCleanupErrorAggregator(
     (cleanupError, details) => {
       try { reportStage('ocr-cleanup-error', { ...details, cleanupError }); }
@@ -205,12 +203,6 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
     recognizerPromise = null;
   }
 
-  async function releaseTextDetector(detector) {
-    textDetectorPromise = null;
-    try { await detector?.release(); }
-    catch (error) { reportCleanupError('detection-session-release', error, { phase: 'after-detection' }); }
-  }
-
   async function recognizeCanvas(canvas, inferPixelSpaces, signal, lineInfo = {}) {
     const { lineIndex = null, lineCount = null, angle = null, variant = null } = lineInfo;
     const context = { lineIndex, lineCount, angle, variant };
@@ -304,85 +296,86 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
     });
   }
 
+  let cv = null;
+  let clipper = null;
+  let perspectiveTransform = null;
+  async function ensureOcrImageRuntimes() {
+    reportStage('ocr-opencv-import-start', { opencvLoaded: false });
+    const cvModule = await loadOcrResource('OpenCV module', () => import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm'));
+    reportStage('ocr-opencv-import-done');
+    const importedCv = cvModule.default ?? cvModule;
+    reportStage('ocr-opencv-runtime-init-start');
+    cv = importedCv instanceof Promise ? await importedCv : importedCv;
+    if (!cv.Mat) await new Promise(resolve => {
+      const previous = cv.onRuntimeInitialized;
+      cv.onRuntimeInitialized = () => { previous?.(); resolve(); };
+    });
+    reportStage('ocr-opencv-runtime-init-done', { runtimeState: { opencvLoaded: true } });
+    if (!ocrCvResourceTracker) {
+      ocrCvResourceTracker = global.MagiaOcrResourceTracker.create((error, details) => reportCleanupError('opencv-resource-delete', error, details));
+      perspectiveTransform = cv.getPerspectiveTransform;
+      if (typeof perspectiveTransform === 'function') {
+        const nativePerspectiveTransform = perspectiveTransform;
+        let warnedAboutPerspectiveBinding = false;
+        perspectiveTransform = function (source, destination, ...options) {
+          try { return nativePerspectiveTransform.call(cv, source, destination, ...options); }
+          catch (error) {
+            if (!(error instanceof TypeError) || !/hasOwnProperty/.test(error.message || '')) throw error;
+            if (!warnedAboutPerspectiveBinding) {
+              console.warn('OpenCV getPerspectiveTransform overload is unavailable; using an equivalent four-point transform solver.');
+              warnedAboutPerspectiveBinding = true;
+            }
+            const sourcePoints = Array.from(source.data32F || []);
+            const destinationPoints = Array.from(destination.data32F || []);
+            if (sourcePoints.length < 8 || destinationPoints.length < 8) throw error;
+            const equations = [];
+            const values = [];
+            for (let index = 0; index < 4; index += 1) {
+              const x = sourcePoints[index * 2];
+              const y = sourcePoints[index * 2 + 1];
+              const u = destinationPoints[index * 2];
+              const v = destinationPoints[index * 2 + 1];
+              if (![x, y, u, v].every(Number.isFinite)) throw error;
+              equations.push([x, y, 1, 0, 0, 0, -u * x, -u * y]);
+              values.push(u);
+              equations.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
+              values.push(v);
+            }
+            const augmented = equations.map((row, index) => [...row, values[index]]);
+            for (let column = 0; column < 8; column += 1) {
+              let pivot = column;
+              for (let row = column + 1; row < 8; row += 1) {
+                if (Math.abs(augmented[row][column]) > Math.abs(augmented[pivot][column])) pivot = row;
+              }
+              if (Math.abs(augmented[pivot][column]) < 1e-12) throw error;
+              [augmented[column], augmented[pivot]] = [augmented[pivot], augmented[column]];
+              const divisor = augmented[column][column];
+              for (let cell = column; cell <= 8; cell += 1) augmented[column][cell] /= divisor;
+              for (let row = 0; row < 8; row += 1) {
+                if (row === column) continue;
+                const factor = augmented[row][column];
+                for (let cell = column; cell <= 8; cell += 1) augmented[row][cell] -= factor * augmented[column][cell];
+              }
+            }
+            const coefficients = augmented.map(row => row[8]);
+            if (!coefficients.every(Number.isFinite)) throw error;
+            const transform = new cv.Mat(3, 3, cv.CV_64F);
+            transform.data64F.set([...coefficients, 1]);
+            return transform;
+          }
+        };
+      }
+      releaseOcrCvResources = () => ocrCvResourceTracker?.releaseAll({ phase: 'worker-finally' }) ?? true;
+    }
+    reportStage('ocr-clipper-import-start', { opencvLoaded: true, clipperLoaded: false });
+    const clipperModule = await loadOcrResource('Clipper module', () => import('https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm'));
+    reportStage('ocr-clipper-import-done', { runtimeState: { clipperLoaded: true } });
+    clipper = clipperModule.default ?? clipperModule;
+  }
+
   async function ensureTextDetector() {
     if (textDetectorPromise) return textDetectorPromise;
     textDetectorPromise = (async () => {
-      let cv = null;
-      let clipper = null;
-      let perspectiveTransform = null;
-      async function ensureOcrImageRuntimes() {
-        reportStage('ocr-opencv-import-start', { opencvLoaded: false });
-        const cvModule = await loadOcrResource('OpenCV module', () => import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm'));
-        reportStage('ocr-opencv-import-done');
-        const importedCv = cvModule.default ?? cvModule;
-        reportStage('ocr-opencv-runtime-init-start');
-        cv = importedCv instanceof Promise ? await importedCv : importedCv;
-        if (!cv.Mat) await new Promise(resolve => {
-          const previous = cv.onRuntimeInitialized;
-          cv.onRuntimeInitialized = () => { previous?.(); resolve(); };
-        });
-        reportStage('ocr-opencv-runtime-init-done', { runtimeState: { opencvLoaded: true } });
-        if (!ocrCvResourceTracker) {
-          ocrCvResourceTracker = global.MagiaOcrResourceTracker.create((error, details) => reportCleanupError('opencv-resource-delete', error, details));
-          perspectiveTransform = cv.getPerspectiveTransform;
-          if (typeof perspectiveTransform === 'function') {
-            const nativePerspectiveTransform = perspectiveTransform;
-            let warnedAboutPerspectiveBinding = false;
-            perspectiveTransform = function (source, destination, ...options) {
-              try { return nativePerspectiveTransform.call(cv, source, destination, ...options); }
-              catch (error) {
-                if (!(error instanceof TypeError) || !/hasOwnProperty/.test(error.message || '')) throw error;
-                if (!warnedAboutPerspectiveBinding) {
-                  console.warn('OpenCV getPerspectiveTransform overload is unavailable; using an equivalent four-point transform solver.');
-                  warnedAboutPerspectiveBinding = true;
-                }
-                const sourcePoints = Array.from(source.data32F || []);
-                const destinationPoints = Array.from(destination.data32F || []);
-                if (sourcePoints.length < 8 || destinationPoints.length < 8) throw error;
-                const equations = [];
-                const values = [];
-                for (let index = 0; index < 4; index += 1) {
-                  const x = sourcePoints[index * 2];
-                  const y = sourcePoints[index * 2 + 1];
-                  const u = destinationPoints[index * 2];
-                  const v = destinationPoints[index * 2 + 1];
-                  if (![x, y, u, v].every(Number.isFinite)) throw error;
-                  equations.push([x, y, 1, 0, 0, 0, -u * x, -u * y]);
-                  values.push(u);
-                  equations.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
-                  values.push(v);
-                }
-                const augmented = equations.map((row, index) => [...row, values[index]]);
-                for (let column = 0; column < 8; column += 1) {
-                  let pivot = column;
-                  for (let row = column + 1; row < 8; row += 1) {
-                    if (Math.abs(augmented[row][column]) > Math.abs(augmented[pivot][column])) pivot = row;
-                  }
-                  if (Math.abs(augmented[pivot][column]) < 1e-12) throw error;
-                  [augmented[column], augmented[pivot]] = [augmented[pivot], augmented[column]];
-                  const divisor = augmented[column][column];
-                  for (let cell = column; cell <= 8; cell += 1) augmented[column][cell] /= divisor;
-                  for (let row = 0; row < 8; row += 1) {
-                    if (row === column) continue;
-                    const factor = augmented[row][column];
-                    for (let cell = column; cell <= 8; cell += 1) augmented[row][cell] -= factor * augmented[column][cell];
-                  }
-                }
-                const coefficients = augmented.map(row => row[8]);
-                if (!coefficients.every(Number.isFinite)) throw error;
-                const transform = new cv.Mat(3, 3, cv.CV_64F);
-                transform.data64F.set([...coefficients, 1]);
-                return transform;
-              }
-            };
-          }
-          releaseOcrCvResources = () => ocrCvResourceTracker?.releaseAll({ phase: 'worker-finally' }) ?? true;
-        }
-        reportStage('ocr-clipper-import-start', { opencvLoaded: true, clipperLoaded: false });
-        const clipperModule = await loadOcrResource('Clipper module', () => import('https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm'));
-        reportStage('ocr-clipper-import-done', { runtimeState: { clipperLoaded: true } });
-        clipper = clipperModule.default ?? clipperModule;
-      }
       reportStage('ocr-detection-ort-import-start');
       const ort = await loadOcrResource('detection ONNX Runtime module', () => import(`https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/+esm`));
       reportStage('ocr-detection-ort-import-done', { version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
@@ -454,8 +447,6 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
           let outputs = null;
           let modelOutput = null;
           let mask = null;
-          let lineResources = null;
-          let sourceAlignment = null;
           let sessionForRun = detectionSession;
           let memory = null;
           let completed = false;
@@ -542,32 +533,18 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
               opencvLoaded: Boolean(cv),
               remainingTrackedBytes: diagnosticReporter.knownLiveBytes,
             });
-            sourceAlignment = global.MagiaOcrLineSplitter.alignSource(image, width, height, diagnosticReporter);
-            reportStage('ocr-opencv-phase-start', { ...memory, opencvLoaded: false });
-            await ensureOcrImageRuntimes();
-            reportStage('ocr-detection-opencv-start', memory);
-            lineResources = global.MagiaOcrLineSplitter.create(
-              cv, clipper, mask, outputWidth, outputHeight, image, width, height,
-              () => {
-                diagnosticReporter.releaseStart('ocr-detection-mask-release-start', 'detection-mask-uint8', { width: outputWidth, height: outputHeight });
-                mask = null;
-                diagnosticReporter.releaseDone('ocr-detection-mask-release-done', 'detection-mask-uint8');
-                maskAllocationTracked = false;
-              },
-              diagnosticReporter,
-              resource => ocrCvResourceTracker?.track(resource) ?? resource,
-              (resource, details) => ocrCvResourceTracker?.delete(resource, details),
-              perspectiveTransform,
-              sourceAlignment,
-              reportCleanupError,
-            );
-            sourceAlignment = null;
-            activeDetectionLineResources = lineResources;
+            // Only source + the compact mask leave this runtime. Main terminates it
+            // before OpenCV or source alignment can allocate any memory.
+            const detected = {
+              buffer: image.data.buffer, width: image.width, height: image.height,
+              mask, maskWidth: outputWidth, maskHeight: outputHeight,
+              detectionWidth: width, detectionHeight: height,
+            };
+            diagnosticReporter.releaseDone('ocr-detection-mask-release-done', 'detection-mask-uint8', { ownershipTransferred: true });
+            maskAllocationTracked = false;
             mask = null;
-            reportStage('ocr-opencv-phase-done', { ...memory, runtimeState: { opencvLoaded: true, clipperLoaded: true } });
-            reportStage('ocr-detection-opencv-done', memory);
             completed = true;
-            return { lineImages: lineResources.lines, resizedImageWidth: width, resizedImageHeight: height };
+            return detected;
           } finally {
             try {
               if (outputs) reportStage('ocr-detection-output-dispose-start', { ...memory, cleanup: true });
@@ -589,14 +566,11 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
                 maskAllocationTracked = false;
               }
               mask = null;
-              sourceAlignment?.release?.();
-              sourceAlignment = null;
               if (detectionSession) {
                 await releaseDetectionSession();
                 sessionForRun = null;
                 reportStage('ocr-detection-session-release', memory);
               }
-              if (lineResources && lineResources !== activeDetectionLineResources) lineResources.release();
               image = null;
             } finally {
               reportStage('ocr-detection-cleanup', memory);
@@ -624,51 +598,61 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
     }
   }
 
-  async function recognize({ buffer, width, height, signal }) {
-    let sourcePixels = null;
-    const sourceBytes = Number(buffer?.byteLength ?? buffer?.length) || 0;
-    let sourcePixelsTracked = false;
-    let detector;
-    const releaseSourcePixels = () => {
-      if (sourcePixels) sourcePixels.data = null;
-      sourcePixels = null;
-    };
+  async function prepareLines(message, signal) {
+    let source = { data: new Uint8ClampedArray(message.buffer), width: message.width, height: message.height };
+    let alignment = null;
+    let resources = null;
     try {
-      diagnosticReporter.allocationStart('ocr-worker-source-rgba-alloc-start', 'ocr-worker-source-rgba', sourceBytes, {
-        name: 'OCR Worker source RGBA view', width, height, type: 'Uint8ClampedArray',
-        countedInKnownLive: false, bufferSource: 'transferred ArrayBuffer already tracked on Main Thread',
-      });
-      const sourceData = new Uint8ClampedArray(buffer);
-      sourcePixels = { data: sourceData, width, height };
-      diagnosticReporter.allocationDone('ocr-worker-source-rgba-alloc-done', 'ocr-worker-source-rgba', sourceData.byteLength, {
-        name: 'OCR Worker source RGBA view', width, height, type: 'Uint8ClampedArray',
-        countedInKnownLive: false, bufferSource: 'transferred ArrayBuffer already tracked on Main Thread',
-      });
-      sourcePixelsTracked = true;
+      alignment = global.MagiaOcrLineSplitter.alignSource(source, message.detectionWidth, message.detectionHeight, diagnosticReporter);
+      await ensureOcrImageRuntimes();
       throwIfAborted(signal);
-      reportStage('ocr-runtime-loading');
-      detector = await ensureTextDetector();
-      throwIfAborted(signal);
-      notify('画像の文字と環を読み取っています…');
+      resources = global.MagiaOcrLineSplitter.create(
+        cv, clipper, message.mask, message.maskWidth, message.maskHeight,
+        source, message.detectionWidth, message.detectionHeight,
+        () => { message.mask = null; }, diagnosticReporter,
+        resource => ocrCvResourceTracker.track(resource),
+        (resource, details) => ocrCvResourceTracker.delete(resource, details),
+        perspectiveTransform, alignment, reportCleanupError,
+      );
+      alignment = null;
+      const lineImages = resources.materialize();
+      resources.release();
+      resources = null;
+      // Ring fallback uses exactly the original source and sampling, before it is
+      // discarded. Only the small line images survive into Recognition.
+      const additionalLineImages = lineImages.length <= 8
+        ? [...core.iterateRingSectors(source, { diagnostics: diagnosticReporter, lineOffset: lineImages.length })]
+          .map(line => ({ ...line, image: { data: line.image.data, width: line.image.width, height: line.image.height } }))
+        : [];
+      return { lineImages, additionalLineImages, resizedImageWidth: message.detectionWidth, resizedImageHeight: message.detectionHeight };
+    } finally {
+      resources?.release();
+      alignment?.release();
+      releaseOcrCvResources?.();
+      releaseOcrCvResources = null;
+      source = null;
+      message.buffer = null;
+      message.mask = null;
+    }
+  }
+
+  async function runPhase(message, signal) {
+    reportStage('ocr-phase-start', { workerPhase: message.phase });
+    let detector = null;
+    try {
+      if (message.phase === 'detection') {
+        detector = await ensureTextDetector();
+        throwIfAborted(signal);
+        return await detector.detect({ data: new Uint8ClampedArray(message.buffer), width: message.width, height: message.height }, signal);
+      }
+      if (message.phase === 'geometry') return await prepareLines(message, signal);
+      if (message.phase !== 'recognition') throw new TypeError('Unknown OCR worker phase.');
+      reportStage('ocr-recognition-start');
       const result = await core.run({
-        detect: async () => {
-          reportStage('ocr-detection-start');
-          const detected = await detector.detect(sourcePixels, signal);
-          const lineImages = detected.lineImages || [];
-          const additionalLineImages = lineImages.length <= 8
-            ? function* () {
-                try { yield* core.iterateRingSectors(sourcePixels, { diagnostics: diagnosticReporter, lineOffset: lineImages.length }); }
-                finally { releaseSourcePixels(); }
-              }
-            : null;
-          if (additionalLineImages) additionalLineImages.lineCount = 4;
-          if (!additionalLineImages) releaseSourcePixels();
-          // Detection is complete; do not keep its ONNX session beside the recognizer session.
-          await releaseTextDetector(detector);
-          detector = null;
-          reportStage('ocr-recognition-start');
-          return { ...detected, lineImages, additionalLineImages };
-        },
+        detect: async () => ({
+          lineImages: message.lineImages, additionalLineImages: message.additionalLineImages,
+          resizedImageWidth: message.resizedImageWidth, resizedImageHeight: message.resizedImageHeight,
+        }),
         recognizeVariants: recognizeBrowserLineVariants,
         combineLines: combineSpellLineImages,
         vocabularyCorrector: null,
@@ -679,32 +663,9 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
       reportStage('ocr-recognition-done');
       return result;
     } finally {
-      reportStage('ocr-cleanup-start');
-      try { await releaseOcrModels(detector); }
-      finally {
-        try {
-          try { activeDetectionLineResources?.release(); }
-          catch (error) { reportCleanupError('line-resource-release', error); }
-        }
-        finally {
-          activeDetectionLineResources = null;
-          try {
-            const opencvResourcesReleased = releaseOcrCvResources?.() ?? true;
-            reportStage('ocr-opencv-runtime-released', { opencvResourcesReleased });
-          }
-          catch (error) { reportCleanupError('opencv-resource-release', error); }
-          finally {
-            releaseOcrCvResources = null;
-            releaseSourcePixels();
-            if (sourcePixelsTracked) {
-              diagnosticReporter.releaseStart('ocr-worker-source-rgba-release-start', 'ocr-worker-source-rgba', { width, height });
-              diagnosticReporter.releaseDone('ocr-worker-source-rgba-release-done', 'ocr-worker-source-rgba');
-              sourcePixelsTracked = false;
-            }
-          }
-        }
-        cleanupErrorAggregator.flush();
-      }
+      await releaseOcrModels(detector);
+      cleanupErrorAggregator.flush();
+      reportStage('ocr-phase-done', { workerPhase: message.phase });
     }
   }
 
@@ -718,7 +679,6 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
     }
     if (message.type !== 'analyze' || !Number.isInteger(message.jobId) || activeJobId !== null) return;
     activeJobId = message.jobId;
-    diagnosticsMode = Boolean(message.diagnostics);
     diagnosticReporter.begin(message.runId, {
       sourceWidth: message.width,
       sourceHeight: message.height,
@@ -732,10 +692,15 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
         reportStage('ocr-worker-processing-start', {
           sourceWidth: message.width, sourceHeight: message.height,
           estimatedBytes: Number(message.width) * Number(message.height) * 4,
-          allocationId: 'main:ocr-source-rgba', type: 'transferred Uint8ClampedArray',
+          workerPhase: message.phase, type: 'transferred ArrayBuffer',
         });
-        const result = await recognize({ ...message, signal: activeAbortController.signal });
-        global.postMessage({ type: 'success', jobId: activeJobId, result });
+        const result = await runPhase(message, activeAbortController.signal);
+        const transfers = message.phase === 'detection'
+          ? [result.buffer, result.mask.buffer]
+          : message.phase === 'geometry'
+            ? [...result.lineImages, ...result.additionalLineImages].map(line => line.image.data.buffer)
+            : [];
+        global.postMessage({ type: 'success', jobId: activeJobId, result }, [...new Set(transfers)]);
       } catch (error) {
         global.postMessage({
           type: 'error',
@@ -750,7 +715,6 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
         message.buffer = null;
         activeAbortController = null;
         activeJobId = null;
-        diagnosticsMode = false;
       }
     })();
   });

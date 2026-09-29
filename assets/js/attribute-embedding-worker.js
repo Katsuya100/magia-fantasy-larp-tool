@@ -113,7 +113,6 @@ self.addEventListener('message', event => {
       diagnosticReporter.stage('embedding-result-transfer-start', { outputBytes });
       diagnosticReporter.releaseStart('embedding-output-buffer-release-start', 'embedding-output-float32');
       const transferredEmbedding = result;
-      result.data = null;
       result = null;
       diagnosticReporter.releaseDone('embedding-output-buffer-release-done', 'embedding-output-float32', { ownershipTransferred: true });
       send({ type: 'success', embedding: transferredEmbedding }, [transferredEmbedding.data.buffer]);

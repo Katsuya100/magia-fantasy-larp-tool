@@ -6,6 +6,7 @@ importScripts(
   new URL('image-analysis-core.js', self.location.href).href,
   new URL('attribute-scoring.js', self.location.href).href,
   new URL('power-calculation.js', self.location.href).href,
+  new URL('ocr-error-policy.js', self.location.href).href,
   new URL('magia-image-pipeline.js', self.location.href).href,
 );
 

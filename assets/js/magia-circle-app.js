@@ -167,6 +167,7 @@
       error: null,
       localStorageWrites: 0,
       previousTraceCleared: false,
+      recognitionAllocationPeaks: new Map(),
       runIdStored: false,
       sourceWidth: Number.isFinite(details.sourceWidth) ? details.sourceWidth : null,
       sourceHeight: Number.isFinite(details.sourceHeight) ? details.sourceHeight : null,
@@ -373,7 +374,7 @@
     diagnosticStageState.trace = run.trace;
     diagnosticStageState.localStorageWrites = run.localStorageWrites;
 
-    run.persistBatcher?.add(global.MagiaAnalysisDiagnostics.isCriticalStage(stage, details));
+    run.persistBatcher?.add(global.MagiaAnalysisDiagnostics.isCriticalStage(stage, details, run.recognitionAllocationPeaks));
     publishRuntimeDiagnostics();
   }
 
@@ -573,7 +574,7 @@
       output.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;max-height:50vh;overflow:auto;padding:1rem;background:#fff;color:#111';
       const download = document.createElement('button');
       download.type = 'button';
-      download.textContent = '診断JSONを保存';
+      download.textContent = '解析結果JSONを保存';
       download.addEventListener('click', () => {
         const blob = new Blob([JSON.stringify({
           image: diagnostics.image,
@@ -632,6 +633,7 @@
     const peakKnownLiveBytes = !showingPreviousRun && activeDiagnosticRun ? diagnosticStageState.peakKnownLiveBytes : run?.peakKnownLiveBytes ?? diagnosticStageState.peakKnownLiveBytes;
     return {
       runId: run?.runId || diagnosticStageState.runId,
+      startedTimestamp: run?.startedTimestamp ?? null,
       completed: Boolean(run?.completed),
       aborted: Boolean(run?.aborted),
       interrupted: Boolean(run?.interrupted),
@@ -646,6 +648,22 @@
       trace: (run?.trace || diagnosticStageState.trace).slice(-DIAGNOSTIC_TRACE_LIMIT),
       ...(run?.error ? { error: run.error } : {}),
     };
+  }
+
+  function downloadDiagnosticJson() {
+    const report = createDiagnosticExport();
+    const timestamp = new Date(report.startedTimestamp || Date.now()).toISOString().replace(/[:.]/g, '-');
+    const shortRunId = String(report.runId || 'none').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 8) || 'none';
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `magia-diagnostics-${timestamp}-${shortRunId}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    // Release after the browser has dispatched the download navigation.
+    global.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   function diagnosticCauseForStage(stage) {
@@ -693,6 +711,11 @@
       panel.style.cssText = 'margin:1rem 0;padding:1rem;border:1px solid #79909a;border-radius:8px;background:#111b25;color:#e5edf0';
       const heading = document.createElement('strong');
       heading.textContent = 'OCR runtime diagnostics';
+      const downloadButton = document.createElement('button');
+      downloadButton.type = 'button';
+      downloadButton.id = 'analysisDiagnosticsDownload';
+      downloadButton.textContent = '診断JSONを保存';
+      downloadButton.addEventListener('click', downloadDiagnosticJson);
       const output = document.createElement('pre');
       output.id = 'analysisRuntimeDiagnosticsText';
       output.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;margin:.5rem 0 0;font:12px/1.6 ui-monospace,monospace';
@@ -713,7 +736,7 @@
       traceOutput.id = 'analysisRuntimeDiagnosticsTrace';
       traceOutput.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;max-height:40vh;overflow:auto;font:11px/1.45 ui-monospace,monospace';
       traceDetails.append(traceSummary, traceOutput);
-      panel.append(heading, output, lastEvent, recentDetails, traceDetails);
+      panel.append(heading, downloadButton, output, lastEvent, recentDetails, traceDetails);
       document.body.append(panel);
     }
     const output = document.getElementById('analysisRuntimeDiagnosticsText');
@@ -774,7 +797,7 @@
       `Active workers: ${JSON.stringify(!showingPreviousRun && activeDiagnosticRun ? diagnosticStageState.activeWorkers : previousRun?.activeWorkers || diagnosticStageState.activeWorkers)}`,
       `Runtime states: ${JSON.stringify(!showingPreviousRun && activeDiagnosticRun ? diagnosticStageState.runtimeStates : previousRun?.runtimeStates || diagnosticStageState.runtimeStates)}`,
       `OpenCV source Mat create count: ${diagnosticStageState.sourceMatCreateCount || previousRun?.sourceMatCreateCount || 0}`,
-      `LocalStorage diagnostic writes: ${diagnosticStageState.localStorageWrites}`,
+      `LocalStorage diagnostic writes: ${showingPreviousRun ? previousRun.localStorageWrites ?? 0 : diagnosticStageState.localStorageWrites}`,
       `Analysis canvas estimated RGBA backing: ${displayCanvas ? `${displayCanvas.width}x${displayCanvas.height} (${memoryMib(displayCanvas.estimatedRgbaBackingBytes)})` : 'pending'}`,
       `OCR input: ${displayMemory.ocrInputWidth ?? previousOcrSourceWidth ?? lastDetails.ocrSourceWidth ?? 'pending'}x${displayMemory.ocrInputHeight ?? previousOcrSourceHeight ?? lastDetails.ocrSourceHeight ?? 'pending'}`,
       `Detection tensor: ${displayMemory.detectionTensorWidth ?? 'pending'}x${displayMemory.detectionTensorHeight ?? 'pending'}`,
@@ -1471,11 +1494,10 @@
     recordAnalysisStage(job, 'ocr-worker-terminated');
   }
 
-  function requestSpellRecognition(canvas, job) {
+  function requestSpellRecognition(canvas, job, phase = 'detection', input = null) {
     return new Promise((resolve, reject) => {
       let worker = null;
       let pixels = null;
-      let buffer = null;
       let abortTimeout = null;
       let settled = false;
       let workerProcessingStarted = false;
@@ -1497,7 +1519,6 @@
           job.ocrSourceAllocationId = null;
         }
         pixels = null;
-        buffer = null;
       };
       const finish = (handler, value) => {
         if (settled) return;
@@ -1558,42 +1579,51 @@
         const width = canvas.width;
         const height = canvas.height;
         const estimatedBytes = width * height * 4;
-        recordAnalysisStage(job, 'ocr-image-data-read-start', { width, height, estimatedBytes, allocationId: 'ocr-source-rgba' });
-        pixels = captureContext.getImageData(0, 0, canvas.width, canvas.height);
-        recordAllocation(job, 'ocr-image-data-read-done', 'ocr-source-rgba', pixels.data.byteLength, {
-          width, height, sourceWidth: width, sourceHeight: height, type: 'Uint8ClampedArray',
+        if (phase === 'detection') {
+          recordAnalysisStage(job, 'ocr-image-data-read-start', { width, height, estimatedBytes, allocationId: 'ocr-source-rgba' });
+          pixels = captureContext.getImageData(0, 0, canvas.width, canvas.height);
+          recordAllocation(job, 'ocr-image-data-read-done', 'ocr-source-rgba', pixels.data.byteLength, {
+            width, height, sourceWidth: width, sourceHeight: height, type: 'Uint8ClampedArray',
+          });
+          recordAnalysisStage(job, 'ocr-transfer-buffer-ready', { width, height, estimatedBytes: pixels.data.byteLength, allocationId: 'ocr-source-rgba' });
+          input = { width, height, buffer: pixels.data.buffer };
+        }
+        const transfers = phase === 'recognition'
+          ? [...input.lineImages, ...input.additionalLineImages].map(line => line.image.data.buffer)
+          : [input.buffer, ...(input.mask ? [input.mask.buffer] : [])];
+        const inputBytes = transfers.reduce((total, item) => total + item.byteLength, 0);
+        const inputAllocationId = phase === 'detection' ? 'ocr-source-rgba' : 'ocr-phase-input';
+        if (phase !== 'detection') recordAllocation(job, 'ocr-phase-input-ready', inputAllocationId, inputBytes, {
+          workerPhase: phase, ownershipTransferred: true,
         });
-        recordAnalysisStage(job, 'ocr-transfer-buffer-ready', { width, height, estimatedBytes: pixels.data.byteLength, allocationId: 'ocr-source-rgba' });
+        job.ocrSourceAllocationId = inputAllocationId;
+        job.ocrSourceEstimatedBytes = inputBytes;
         assertActiveAnalysisJob(job);
-        recordAnalysisStage(job, 'ocr-worker-create-start', { workerType: 'ocr' });
+        recordAnalysisStage(job, 'ocr-worker-create-start', { workerType: 'ocr', workerPhase: phase });
         try { worker = new Worker(new URL('assets/js/magia-circle-ocr-worker.js', document.baseURI)); }
         catch (error) { throw imagePipeline.wrapRetryableOcrLoadFailure(error, 'OCR Worker initialization'); }
         job.ocrWorker = worker;
-        job.ocrSourceAllocationId = 'ocr-source-rgba';
-        job.ocrSourceEstimatedBytes = pixels.data.byteLength;
-        recordAnalysisStage(job, 'ocr-worker-create-done', { workerType: 'ocr', workerAction: 'start' });
+        recordAnalysisStage(job, 'ocr-worker-create-done', { workerType: 'ocr', workerAction: 'start', workerPhase: phase });
         worker.addEventListener('message', onMessage);
         worker.addEventListener('error', onError);
         worker.addEventListener('messageerror', onMessageError);
         job.signal.addEventListener('abort', onAbort, { once: true });
-        buffer = pixels.data.buffer;
         recordAnalysisStage(job, 'ocr-worker-message-transfer-start', {
-          width, height, estimatedBytes: pixels.data.byteLength, allocationId: 'ocr-source-rgba',
+          width, height, estimatedBytes: inputBytes, workerPhase: phase,
         });
         worker.postMessage({
           type: 'analyze',
           jobId: job.id,
           runId: job.runId,
-          width: canvas.width,
-          height: canvas.height,
-          buffer,
+          ...input,
+          phase,
           diagnostics: diagnosticsEnabled,
-        }, [buffer]);
+        }, [...new Set(transfers)]);
         recordAnalysisStage(job, 'ocr-worker-message-transfer-done', {
-          width, height, estimatedBytes: job.ocrSourceEstimatedBytes, allocationId: 'ocr-source-rgba',
+          width, height, estimatedBytes: job.ocrSourceEstimatedBytes, allocationId: inputAllocationId, workerPhase: phase,
         });
-        buffer = null;
         pixels = null;
+        input = null;
       } catch (error) {
         finish(reject, error);
       }
@@ -1601,14 +1631,17 @@
   }
 
   async function recognizeSpell(canvas, job) {
-    const recognition = requestSpellRecognition(canvas, job);
-    const releasedRecognition = recognition.finally(async () => {
-      recordAnalysisStage(job, 'post-ocr-wait-start', { waitMs: 150 });
-      await new Promise(resolve => setTimeout(resolve, 150));
-      recordAnalysisStage(job, 'post-ocr-wait-done', { waitMs: 150 });
-    });
-    activeOcrRun = releasedRecognition.then(() => undefined, () => undefined);
-    const recognized = await awaitForAnalysisJob(job, releasedRecognition);
+    const recognition = (async () => {
+      let input = null;
+      for (const phase of ['detection', 'geometry', 'recognition']) {
+        assertActiveAnalysisJob(job);
+        // requestSpellRecognition terminates the previous runtime before resolving.
+        input = await requestSpellRecognition(canvas, job, phase, input);
+      }
+      return input;
+    })();
+    activeOcrRun = recognition.then(() => undefined, () => undefined);
+    const recognized = await awaitForAnalysisJob(job, recognition);
     assertActiveAnalysisJob(job);
     return recognized;
   }

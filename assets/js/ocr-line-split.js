@@ -68,6 +68,7 @@
     let maskMat = null;
     let sourcePixels = null;
     let ownedSourceAlignment = null;
+    let sharedSourceMat = null;
     let contours = null;
     let hierarchy = null;
     let succeeded = false;
@@ -155,13 +156,14 @@
           const rectWidth = int(linalgNorm(box1[0], box1[1]));
           const rectHeight = int(linalgNorm(box1[0], box1[3]));
           if (rectWidth <= 3 || rectHeight <= 3) continue;
+          const lineIndex = lines.length;
           lines.push({
             box,
             image: createLazyCrop(
-              () => cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, box, diagnostics, lines.length, () => lines.length, track, releaseCvResource, perspectiveTransform, reportCleanupError),
+              () => cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, box, diagnostics, lineIndex, () => lines.length, track, releaseCvResource, perspectiveTransform, reportCleanupError, sharedSourceMat),
               box,
               diagnostics,
-              lines.length,
+              lineIndex,
               () => lines.length,
             ),
           });
@@ -181,6 +183,21 @@
       succeeded = true;
       return {
         lines,
+        materialize() {
+          try {
+            if (!lines.length) return [];
+            return withSourceMat(cv, sourcePixels, sourceWidth, sourceHeight, diagnostics, null, () => lines.length, track, releaseCvResource, sourceMat => {
+              sharedSourceMat = sourceMat;
+              sourcePixels = null;
+              ownedSourceAlignment?.release?.();
+              ownedSourceAlignment = null;
+              return lines.map(({ box, image }) => ({ box, image: { data: image.data, width: image.width, height: image.height } }));
+            });
+          } finally {
+            sharedSourceMat = null;
+            this.release();
+          }
+        },
         release() {
           for (const line of lines) {
             try { line.image.release(); }
@@ -251,14 +268,24 @@
     };
   }
 
-  function cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, points, diagnostics = null, lineIndex = null, getLineCount = () => null, trackCvResource = null, releaseResource = null, perspectiveTransform = null, reportCleanupError = null) {
-    if (!sourcePixels) throw new Error('OCR crop source pixels have already been released.');
-    let sourceMat = null;
-    const sourceMatId = `opencv-source-mat-${lineIndex}`;
-    const sourceMatBytes = sourceWidth * sourceHeight * 4;
-    let sourceMatTracked = false;
+  function cropFromPixels(cv, sourcePixels, sourceWidth, sourceHeight, points, diagnostics = null, lineIndex = null, getLineCount = () => null, trackCvResource = null, releaseResource = null, perspectiveTransform = null, reportCleanupError = null, sharedSourceMat = null) {
     const track = trackCvResource || (resource => resource);
     const releaseCvResource = releaseResource || createCvResourceReleaser(null, diagnostics, 'opencv-line-resource', reportCleanupError);
+    const crop = sourceMat => {
+      const width = int(Math.max(linalgNorm(points[0], points[1]), linalgNorm(points[2], points[3])));
+      const height = int(Math.max(linalgNorm(points[0], points[3]), linalgNorm(points[1], points[2])));
+      return cropToRgba(cv, sourceMat, points, width, height, height / width >= 1.5, diagnostics, lineIndex, getLineCount, track, releaseCvResource, perspectiveTransform, reportCleanupError);
+    };
+    if (sharedSourceMat) return crop(sharedSourceMat);
+    return withSourceMat(cv, sourcePixels, sourceWidth, sourceHeight, diagnostics, lineIndex, getLineCount, track, releaseCvResource, crop);
+  }
+
+  function withSourceMat(cv, sourcePixels, sourceWidth, sourceHeight, diagnostics, lineIndex, getLineCount, track, releaseCvResource, callback) {
+    if (!sourcePixels) throw new Error('OCR crop source pixels have already been released.');
+    let sourceMat = null;
+    const sourceMatId = `opencv-source-mat-${lineIndex ?? 'shared'}`;
+    const sourceMatBytes = sourceWidth * sourceHeight * 4;
+    let sourceMatTracked = false;
     try {
       diagnostics?.allocationStart?.('ocr-source-mat-alloc-start', sourceMatId, sourceMatBytes, {
         name: 'OpenCV source Mat payload', width: sourceWidth, height: sourceHeight,
@@ -281,11 +308,10 @@
       diagnostics?.stage?.('ocr-source-mat-copy-start', { estimatedBytes: sourceMatBytes, width: sourceWidth, height: sourceHeight, lineIndex, lineCount: getLineCount() });
       diagnostics?.stage?.('ocr-line-source-mat-copy-start', { estimatedBytes: sourceMatBytes, lineIndex, lineCount: getLineCount() });
       sourceMat.data.set(sourcePixels);
+      sourcePixels = null;
       diagnostics?.stage?.('ocr-line-source-mat-copy-done', { estimatedBytes: sourceMatBytes, lineIndex, lineCount: getLineCount() });
       diagnostics?.stage?.('ocr-source-mat-copy-done', { estimatedBytes: sourceMatBytes, width: sourceWidth, height: sourceHeight, lineIndex, lineCount: getLineCount() });
-      const width = int(Math.max(linalgNorm(points[0], points[1]), linalgNorm(points[2], points[3])));
-      const height = int(Math.max(linalgNorm(points[0], points[3]), linalgNorm(points[1], points[2])));
-      return cropToRgba(cv, sourceMat, points, width, height, height / width >= 1.5, diagnostics, lineIndex, getLineCount, track, releaseCvResource, perspectiveTransform, reportCleanupError);
+      return callback(sourceMat);
     } finally {
       diagnostics?.stage?.('ocr-line-source-mat-release-start', { allocationId: sourceMatId, estimatedBytes: sourceMatBytes, lineIndex, lineCount: getLineCount() });
       releaseCvResource(sourceMat);

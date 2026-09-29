@@ -259,7 +259,7 @@ assert.match(lineSplitterSource, /const boundingBox = cv\.minAreaRect\(contour\)
 assert.match(lineSplitterSource, /contour = track\(contours\.get\(index\)\)/, 'MatVector.get(i) contour Mat must have tracker ownership.');
 assert.match(lineSplitterSource, /releaseCvResource\(contour\)/, 'Each tracked MatVector contour must release through its tracker.');
 assert.doesNotMatch(lineSplitterSource, /\bdispose\s*\(/, 'Line crop cleanup must not call a free dispose identifier.');
-assert.match(workerSource, /MagiaOcrLineSplitter\.alignSource\(image, width, height, diagnosticReporter\);\s*reportStage\('ocr-opencv-phase-start'/,
+assert.match(workerSource, /MagiaOcrLineSplitter\.alignSource\(source, message\.detectionWidth, message\.detectionHeight, diagnosticReporter\);\s*await ensureOcrImageRuntimes\(\)/,
   'Source alignment must finish before the OpenCV loading phase starts.');
 
 console.log('PASS_OCR_RESOURCE_TRACKER_25_CONTOURS_ALIGNMENT_BYTES_AND_PERSPECTIVE_CLEANUP');

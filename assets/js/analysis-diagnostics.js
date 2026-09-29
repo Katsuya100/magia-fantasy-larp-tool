@@ -176,7 +176,10 @@
     });
   }
 
-  function createStageBatcher(flush, { batchSize = 16, delayMs = 250 } = {}) {
+  // Keep detailed stages in memory until a meaningful boundary. Event-count or
+  // timer-driven snapshots otherwise turn long Recognition runs into hundreds
+  // of synchronous localStorage writes.
+  function createStageBatcher(flush, { batchSize = Infinity, delayMs = -1 } = {}) {
     let pending = 0;
     let timer = null;
 
@@ -201,7 +204,7 @@
     return Object.freeze({ add, flush: flushNow, get pending() { return pending; } });
   }
 
-  function isCriticalStage(stage, details = {}) {
+  function isCriticalStage(stage, details = {}, recognitionAllocationPeaks = null) {
     if (typeof stage !== 'string') return false;
     if (stage === 'image-file-received' || stage.startsWith('analysis-') || stage.endsWith('-error')) return true;
     if ([
@@ -214,15 +217,24 @@
       'structure-worker-run-done',
     ].includes(stage)) return true;
     if (details.workerAction || (stage === 'ocr-worker-result-received' && details.resultType === 'error')) return true;
+    if (/^ocr-(?:detection|opencv-phase|recognition)-(?:start|done)$/.test(stage)) return true;
     const estimatedBytes = Number(details.estimatedBytes ?? details.inputEstimatedBytes);
     const largeBufferStart = Number.isFinite(estimatedBytes) && estimatedBytes >= 1024 * 1024 &&
-      /(?:alloc|arraybuffer|image-data|transfer|mat|buffer|fill|copy|render|perspective)-start$/i.test(stage);
-    if (largeBufferStart) return true;
+      /(?:alloc|arraybuffer|image-data(?:-[a-z]+)?|transfer|mat|buffer|fill|copy|render|perspective)-start$/i.test(stage);
+    if (largeBufferStart) {
+      // Repeated line variants reuse the same allocation sizes. Persist the first
+      // and any larger allocation; keep all other variants in the memory trace.
+      if (recognitionAllocationPeaks && stage.startsWith('ocr-recognition-')) {
+        if (estimatedBytes <= (recognitionAllocationPeaks.get(stage) || 0)) return false;
+        recognitionAllocationPeaks.set(stage, estimatedBytes);
+      }
+      return true;
+    }
     if (/-run-start$/.test(stage) && Number.isFinite(estimatedBytes) && estimatedBytes >= 1024 * 1024) return true;
-    if (/(?:detection|session)-run-start$/.test(stage)) return true;
+    if (/detection-run-start$/.test(stage)) return true;
     return [
       /-session-create-start$/,
-      /(?:get-image-data|image-data(?:-[a-z]+)?|json-parse)-start$/,
+      /-json-parse-start$/,
       /-worker-create-start$/,
       /(?:model-(?:fetch|load)|ort-import|opencv-import|clipper-import|runtime-init|worker-processing)-start$/,
       /^ocr-worker-retry-start$/,

@@ -206,37 +206,7 @@
     let masterImage;
     try {
       throwIfAborted(signal);
-      let spell;
-      try {
-        spell = await recognizeSpell(0);
-      } catch (error) {
-        throwIfAborted(signal);
-        if (!ocrErrorPolicy.isRetryableOcrError(error)) {
-          reportStage?.('ocr-execution-error', { error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) } });
-          throw error;
-        }
-        await onRecognitionRetry?.({ attempt: 1, error, empty: false, resource: error.resource || null });
-        // The first disposable OCR worker has been stopped before this single retry.
-        await new Promise(resolve => {
-          if (typeof setTimeout === 'function') setTimeout(resolve, 0);
-          else resolve();
-        });
-        throwIfAborted(signal);
-        try {
-          spell = await recognizeSpell(1);
-        } catch (retryError) {
-          throwIfAborted(signal);
-          reportStage?.('ocr-execution-error', { attempt: 1, error: { name: String(retryError?.name || 'Error'), message: String(retryError?.message || retryError).slice(0, 240) } });
-          throw retryError;
-        }
-      }
-      if (!spell || isEmptySpell(spell)) {
-        spell = emptySpell(spell?.error
-          ? new Error(spell.error)
-          : new Error('OCR returned no spell text.'));
-      }
-      throwIfAborted(signal);
-
+      // Raw geometry is independent of OCR. Finish and terminate its worker first.
       reportStage?.('structure-input-build-start');
       structureInput = await getStructureInput();
       reportStage?.('structure-input-build-done', {
@@ -267,6 +237,37 @@
       reportStage?.('structure-scale-restore-done', { scale: structureInput.analysis.scale });
       reportStage?.('structure-input-buffer-release-done', { allocationId: 'structure-input-rgba', allocationAction: 'release' });
       structureInput.analysis = null;
+
+      let spell;
+      try {
+        spell = await recognizeSpell(0);
+      } catch (error) {
+        throwIfAborted(signal);
+        if (!ocrErrorPolicy.isRetryableOcrError(error)) {
+          reportStage?.('ocr-execution-error', { error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) } });
+          throw error;
+        }
+        await onRecognitionRetry?.({ attempt: 1, error, empty: false, resource: error.resource || null });
+        // The first disposable OCR worker has been stopped before this single retry.
+        await new Promise(resolve => {
+          if (typeof setTimeout === 'function') setTimeout(resolve, 0);
+          else resolve();
+        });
+        throwIfAborted(signal);
+        try {
+          spell = await recognizeSpell(1);
+        } catch (retryError) {
+          throwIfAborted(signal);
+          reportStage?.('ocr-execution-error', { attempt: 1, error: { name: String(retryError?.name || 'Error'), message: String(retryError?.message || retryError).slice(0, 240) } });
+          throw retryError;
+        }
+      }
+      if (!spell || isEmptySpell(spell)) {
+        spell = emptySpell(spell?.error
+          ? new Error(spell.error)
+          : new Error('OCR returned no spell text.'));
+      }
+      throwIfAborted(signal);
 
       reportStage?.('post-structure-start');
       reportStage?.('master-image-request-start');
