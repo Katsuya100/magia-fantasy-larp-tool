@@ -40,6 +40,9 @@
       overflow:hidden;
     }
     header:after{content:"✦ ✧ ✦"; position:absolute; right:28px; top:24px; font-size:42px; color:rgba(245,216,121,.28); letter-spacing:12px;}
+    .back{display:inline-block; color:var(--gold2); font:700 14px ui-sans-serif,system-ui,sans-serif; text-decoration:none; cursor:pointer;}
+    .back:hover{text-decoration:underline}
+    header>.back{margin-bottom:18px}
     h1{margin:0; font-size:clamp(32px,5vw,64px); letter-spacing:.03em; line-height:1; text-shadow:0 0 20px rgba(245,216,121,.34)}
     .subtitle{margin:12px 0 0; max-width:880px; color:#e9d6aa; line-height:1.7; font-family:ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;}
     .book{display:grid; grid-template-columns: 1.08fr .92fr; gap:18px; align-items:start;}
@@ -203,8 +206,8 @@
     .busy-bar{height:14px; border-radius:999px; overflow:hidden; border:1px solid rgba(245,216,121,.25); background:rgba(255,250,226,.12);}
     .busy-bar span{display:block; height:100%; width:0%; background:linear-gradient(90deg,#6a4031,#d09b3c,#f4d77d); transition:width .25s ease;}
     .busy-note{margin-top:10px; color:#cdb88b; font-size:12px;}
+    .busy-card>.back{margin-top:18px}
   .archive-page{grid-column:1/-1}.archive-page .rulebox{margin-bottom:14px}.archive-page button{min-width:260px}
-    body.load-failed header,
     body.load-failed .page:not(.archive-page),
     body.load-failed .footer{display:none !important;}
 
@@ -224,11 +227,12 @@
       <div id="busyDetail" class="busy-detail">頁に触れず、燭台の火が落ち着くのを待て。</div>
       <div class="busy-bar"><span id="busyBar"></span></div>
       <div class="busy-note">解読中は魔導式を起動できない。</div>
+      <a class="back" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div class="wrap">
     <header>
-      <a href="index.html" style="display:inline-block;margin-bottom:18px;color:#f5d879;font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;font-weight:700;text-decoration:none">← 作品選択へ戻る</a>
+      <a class="back" href="index.html">← 作品選択へ戻る</a>
       <h1>コトダマギア</h1>
       <p class="subtitle">言霊は歯車、意味は魔力。頁に刻んだ言霊を足し、不要な意味を引き剥がせ。魔導式がひとつの輪郭を結んだとき、いずれかの相が勝手に目を覚ます。だが意味が遠すぎれば、頁は沈黙する。重ね書きした同じ言霊は魔力にならない。書は、言い換えの才だけを食らう。</p>
     </header>
