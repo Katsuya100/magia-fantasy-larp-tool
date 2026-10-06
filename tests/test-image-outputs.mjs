@@ -5,6 +5,7 @@ import { basename, dirname, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import sharp from 'sharp';
+import { createModelFileCache } from './model-file-cache.mjs';
 
 const args = process.argv.slice(2);
 const renderPaths = args.includes('--render-paths');
@@ -103,6 +104,8 @@ async function loadAttributeModel() {
       Object.defineProperty(process, 'release', originalProcessRelease);
     }
     const { env, pipeline } = transformers;
+    env.useCustomCache = true;
+    env.customCache = await createModelFileCache(resolve(here, '../test-results/model-cache')).open('transformers-cache');
     env.allowLocalModels = false;
     env.allowRemoteModels = true;
     env.backends.onnx.wasm.numThreads = 1;

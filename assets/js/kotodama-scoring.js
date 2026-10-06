@@ -4,25 +4,28 @@ export function add(a,b,sign=1){ const out=a.slice(); for(let i=0;i<out.length;i
 export function cosine(a,b){ let s=0,na=0,nb=0; for(let i=0;i<a.length;i++){s+=a[i]*b[i]; na+=a[i]*a[i]; nb+=b[i]*b[i];} return s/(Math.sqrt(na)*Math.sqrt(nb)||1); }
 export function pctFromCos(c){ return Math.max(0, Math.min(1, (c+1)/2)); }
 
-export function createKotodamaScoring({ vectors, candidateWords = [], forbiddenWords = new Set() }) {
-const dim = vectors.dim;
+export function createKotodamaScoring({ inputVectors, candidateVectors, candidateWords = [], forbiddenWords = new Set() }) {
+const dim = candidateVectors.dim;
 const allowed = new Set(candidateWords);
 const PUBLIC_ATTRS = () => Object.keys(ATTRS).filter(a => !ATTRS[a].hidden);
-const isCandidateWord = word => allowed.has(word);
-const isForbiddenWord = word => forbiddenWords.has(word);
-function avgVec(words){ let v=null,c=0; for(const w of words){ const vv=vectors.get(w); if(vv){ v = v ? add(v,vv,1) : vv.slice(); c++; } } return v ? v.map(x=>x/c) : null; }
-function attrVec(name){ return vectors.get(name) || avgVec(ATTRS[name].words); }
+const normalizeWord = word => String(word || '').trim().toLowerCase();
+// Membership in GloVe and permission to emit a candidate are independent layers.
+const isInputWord = word => inputVectors.has(normalizeWord(word));
+const isForbiddenWord = word => forbiddenWords.has(normalizeWord(word));
+const isCandidateWord = word => allowed.has(normalizeWord(word)) && !isForbiddenWord(word);
+function avgVec(words){ let v=null,c=0; for(const w of words){ const vv=candidateVectors.get(w); if(vv){ v = v ? add(v,vv,1) : vv.slice(); c++; } } return v ? v.map(x=>x/c) : null; }
+function attrVec(name){ return candidateVectors.get(name) || avgVec(ATTRS[name].words); }
 function ensureAttributeFallbacks(){
   // If target words are missing, create attribute anchor from known related words.
   for(const a of Object.keys(ATTRS)){
-    if(!vectors.get(a)){
+    if(!candidateVectors.get(a)){
       const v = avgVec(ATTRS[a].words);
-      if(v) vectors.set(a, v);
+      if(v) candidateVectors.set(a, v);
     }
   }
 }
 
-function parseSpell(s){
+function parseSpellTerms(s){
   const raw = s.trim().toLowerCase();
   if(!raw) throw new Error('魔導式が空です。');
   if(/[^a-z0-9_+\-\s]/.test(raw)) throw new Error('この頁は英字の言霊と + と - 以外の印を読めない。');
@@ -30,21 +33,24 @@ function parseSpell(s){
   if(!used.length) throw new Error('言霊の種が見つからない。');
   const sealed = [...new Set(used.map(u=>u.word).filter(isForbiddenWord))];
   if(sealed.length) throw new Error(`封じられた言霊が混じっている: ${sealed.join(', ')}`);
-  return {vec: vecFromTerms(used), used, raw};
+  return {used, raw};
+}
+function parseSpell(s){
+  const {used,raw}=parseSpellTerms(s);
+  return {vec:vecFromTerms(used),used,raw};
 }
 function wordsFromMagicFormula(s){
   return (s.toLowerCase().match(/[a-z0-9_]+/g) || []);
 }
 
 function nearestWords(vec, exclude=new Set(), n=8){
-  // 統合目録がある場合は、検出許可された言霊だけを走査する。
-  // 目録なしでも動くよう、最後の保険として全外典走査に戻す。
+  // 候補用目録だけを走査する。自由入力用の全GloVe語彙へは広げない。
   const top=[];
-  const source = candidateWords || vectors.words || [];
+  const source = candidateWords;
   for(const w of source){
     if(exclude.has(w)) continue;
     if(!isCandidateWord(w)) continue;
-    const v = vectors.get(w);
+    const v = candidateVectors.get(w);
     if(!v) continue;
     const c = cosine(vec,v);
     if(top.length < n){
@@ -86,13 +92,15 @@ function parseTermsOnly(s){
 function vecFromTerms(terms){
   let vec = new Array(dim).fill(0);
   const missing=[];
+  const unopened=[];
   for(const t of terms){
     if(isForbiddenWord(t.word)) throw new Error(`封じられた言霊が混じっている: ${t.word}`);
-    const v = vectors.get(t.word);
-    if(!v){ missing.push(t.word); continue; }
+    const v = inputVectors.get(t.word);
+    if(!v){ (isInputWord(t.word) ? unopened : missing).push(t.word); continue; }
     vec = add(vec, v, t.sign);
   }
   if(missing.length) throw new Error(`外典に名のない言霊: ${[...new Set(missing)].join(', ')}`);
+  if(unopened.length) throw new Error(`外典にある言霊の頁がまだ開かれていない: ${[...new Set(unopened)].join(', ')}`);
   const mag = Math.sqrt(vec.reduce((sum,x)=>sum+x*x,0));
   if(mag===0) throw new Error('足した意味と削った意味が互いを喰い、虚無だけが残った。');
   return vec;
@@ -118,7 +126,7 @@ function bestFragmentForAttr(attrName, currentVec, exclude=new Set()){
     if(mag < 1e-9) return null;
     const one = nearestWords(residual, exclude, 1)[0];
     if(!one) return null;
-    const wv = vectors.get(one[0]);
+    const wv = candidateVectors.get(one[0]);
     if(!wv) return null;
     const trial = add(current, norm(wv), sign);
     return {word: one[0], sign, score: cosine(trial, av)};
@@ -127,5 +135,5 @@ function bestFragmentForAttr(attrName, currentVec, exclude=new Set()){
   const yin = candidate(-1);
   return (!yin || (yang && yang.score >= yin.score)) ? yang : yin;
 }
-return { avgVec, attrVec, ensureAttributeFallbacks, parseSpell, wordsFromMagicFormula, nearestWords, attrScores, spellToText, parseTermsOnly, vecFromTerms, closestPublicAttr, bestFragmentForAttr };
+return { isInputWord, isForbiddenWord, isCandidateWord, parseSpellTerms, avgVec, attrVec, ensureAttributeFallbacks, parseSpell, wordsFromMagicFormula, nearestWords, attrScores, spellToText, parseTermsOnly, vecFromTerms, closestPublicAttr, bestFragmentForAttr };
 }

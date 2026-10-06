@@ -3,7 +3,8 @@ import { VectorStore } from "./kotodama-vector-store.js";
 import { createKotodamaScoring, norm, add, cosine, pctFromCos } from "./kotodama-scoring.js";
 import { createKotodamaRenderer } from "./kotodama-rendering.js";
 import { loadKotodamaData, clearKotodamaCaches, clearLegacyKotodamaCaches } from "./kotodama-data.js";
-let vectors = new VectorStore();
+let candidateVectors = new VectorStore();
+let inputVectors = candidateVectors;
 let dim = 0;
 let loadedName = 'GloVe外典 未読';
 let logs = [];
@@ -20,7 +21,7 @@ const PUBLIC_ATTRS = () => Object.keys(ATTRS).filter(a => !ATTRS[a].hidden);
 const KNOWN_ATTRS = new Set(PUBLIC_ATTRS());
 const $ = id => document.getElementById(id);
 
-let scoring = createKotodamaScoring({vectors});
+let scoring = createKotodamaScoring({inputVectors,candidateVectors});
 const attrVec = name => scoring.attrVec(name);
 const nearestWords = (...args) => scoring.nearestWords(...args);
 const parseSpell = text => scoring.parseSpell(text);
@@ -31,7 +32,7 @@ const parseTermsOnly = text => scoring.parseTermsOnly(text);
 const vecFromTerms = terms => scoring.vecFromTerms(terms);
 const closestPublicAttr = vec => scoring.closestPublicAttr(vec);
 const bestFragmentForAttr = (...args) => scoring.bestFragmentForAttr(...args);
-const { renderAttrResults, renderNearResults, renderInverseResults, renderLog, renderTabs, updateLore } = createKotodamaRenderer({ $, getVectors:()=>vectors, getScoring:()=>scoring, getLogs:()=>logs, knownAttrs:KNOWN_ATTRS });
+const { renderAttrResults, renderNearResults, renderInverseResults, renderLog, renderTabs, updateLore } = createKotodamaRenderer({ $, getCandidateVectors:()=>candidateVectors, getScoring:()=>scoring, getLogs:()=>logs, knownAttrs:KNOWN_ATTRS });
 const CANDIDATE_FREQ_LIMIT = 5000;
 const RANDOM_INK_FREQ_LIMIT = 3000;
 const pretty = n => Math.round(n).toLocaleString("ja-JP");
@@ -56,11 +57,14 @@ function hideBusyMask(){
   const mask = $('busyMask');
   if(mask) mask.classList.remove('show');
 }
-function updateStatus(){ $('loadStatus').textContent = `${loadedName}: ${vectors.size.toLocaleString('ja-JP')}語 / ${dim}次元`; }
+function updateStatus(){ $('loadStatus').textContent = `${loadedName}: 入力 ${inputVectors.size.toLocaleString('ja-JP')}語 / 候補 ${candidateWords.length.toLocaleString('ja-JP')}語 / ${dim}次元`; }
 function setBusy(loading=false, casting=false){
   isLoading = loading;
   isCasting = casting;
   const disabled = loading || casting;
+  // Keep the input snapshot stable while an uncached word's page is being fetched.
+  $('spell').readOnly = disabled;
+  $('clearSpell').disabled = disabled;
   $('cast').disabled = disabled;
   $('randomSpell').disabled = disabled;
   $('dailyQuest').disabled = disabled;
@@ -119,14 +123,15 @@ async function loadRemoteGlove(options={}){
     if(options.purgeCache) await clearKotodamaCaches().catch(error => console.warn('Kotodama cache cleanup:', error));
     else await clearLegacyKotodamaCaches().catch(error => console.warn('Legacy Kotodama cache cleanup:', error));
     // Release the previous dictionary before allocating the next one on mobile.
-    vectors = new VectorStore(); dim = 0; candidateWords = null; candidateWordSet = new Set(); vocabCache = null;
-    scoring = createKotodamaScoring({vectors});
+    candidateVectors = new VectorStore(); dim = 0; candidateWords = null; candidateWordSet = new Set(); vocabCache = null;
+    inputVectors = candidateVectors;
+    scoring = createKotodamaScoring({inputVectors,candidateVectors});
     const data = await loadKotodamaData({refresh:!!options.purgeCache});
-    vectors = data.vectors; dim = vectors.dim;
+    candidateVectors = data.candidateVectors; inputVectors = data.inputVectors; dim = inputVectors.dim;
     forbiddenWords = data.forbiddenWords; candidateWords = data.candidateWords;
     candidateWordSet = new Set(candidateWords);
     frequencyRanks = data.frequencyRanks;
-    scoring = createKotodamaScoring({vectors, candidateWords, forbiddenWords});
+    scoring = createKotodamaScoring({inputVectors,candidateVectors,candidateWords,forbiddenWords});
     scoring.ensureAttributeFallbacks();
     loadedName = 'GloVe外典の軽き写本';
     resetEphemeralState(); renderTabs(); updateStatus();
@@ -172,7 +177,13 @@ async function cast(){
   $('err').textContent='';
   await nextFrame();
   try{
-    const {vec, used, raw}=parseSpell($('spell').value);
+    const spell = $('spell').value;
+    const terms = scoring.parseSpellTerms(spell).used;
+    if(terms.some(term => scoring.isInputWord(term.word) && !inputVectors.get(term.word))){
+      showBusyMask('魔導司書が言霊の頁を探している', 'まだ控えにない言霊を、外典の書架から取り出している。', null);
+    }
+    await inputVectors.prepareWords(terms.map(term => term.word));
+    const {vec, used, raw}=parseSpell(spell);
     const scores=attrScores(vec, used);
     if(!scores.length || !scores[0]) throw new Error('相の核が鍛えられない。関連言霊を宿した外典を開いてほしい。');
     const manifest = chooseManifest(scores);
@@ -228,7 +239,7 @@ async function cast(){
     renderInverseResults(vec, target, true);
     addLog({target, raw, rawMana, affinity, power, basePower, top:target, direct, forbidden});
   }catch(e){ showWarning($('err'), e.message); }
-  finally{ setBusy(false, false); }
+  finally{ hideBusyMask(); setBusy(false, false); }
 }
 function addLog(x){
   logs.unshift(x); logs=logs.slice(0,20); renderLog();
@@ -237,7 +248,7 @@ function vocabularyPool(){
   if(vocabCache) return vocabCache;
   const banned = new Set(Object.keys(ATTRS));
   const out=[];
-  const source = candidateWords || Array.from(vectors.keys());
+  const source = candidateWords || [];
   const randomRankLimit = frequencyRanks && frequencyRanks.size ? RANDOM_INK_FREQ_LIMIT : CANDIDATE_FREQ_LIMIT;
   for(const w of source){
     if(banned.has(w)) continue;
@@ -266,7 +277,7 @@ function guidedScribe(){
     let guard=0;
     while(guard++ < 200){
       const w = pick(vocab);
-      if(w && !used.has(w) && vectors.has(w) && isCandidateWord(w)){ seed=w; break; }
+      if(w && !used.has(w) && candidateVectors.has(w) && isCandidateWord(w)){ seed=w; break; }
     }
     if(!seed) throw new Error('最初の一滴になる言霊を拾えなかった。');
     terms.push({sign:+1, word:seed});
@@ -327,7 +338,7 @@ function randomSpell(seedAttr=null){
   while(terms.length < count && guard < 200){
     guard++;
     const word = pick(vocab);
-    if(!word || used.has(word) || !vectors.has(word) || !isCandidateWord(word)) continue;
+    if(!word || used.has(word) || !candidateVectors.has(word) || !isCandidateWord(word)) continue;
     used.add(word);
     const sign = terms.length === 0 ? +1 : (Math.random() < 0.5 ? +1 : -1);
     terms.push({sign, word});
@@ -342,9 +353,24 @@ function randomSpell(seedAttr=null){
 
 $('loadRemoteGlove').addEventListener('click', ()=>loadRemoteGlove({auto:false, purgeCache:true}));
 $('cast').addEventListener('click', cast);
-$('randomSpell').addEventListener('click', ()=>{randomSpell(); cast();});
-$('dailyQuest').addEventListener('click', ()=>{ try{ guidedScribe(); cast(); }catch(e){ showWarning($('err'), e.message); } });
-$('clearSpell').addEventListener('click', ()=>{ $('spell').value=''; $('err').textContent=''; $('spell').focus(); });
+$('randomSpell').addEventListener('click', ()=>{if(isLoading || isCasting) return; randomSpell(); cast();});
+async function scribeAndCast(){
+  if(isLoading || isCasting) return;
+  setBusy(false,true);
+  try {
+    const terms=parseTermsOnly($('spell').value);
+    if(terms.length){
+      scoring.parseSpellTerms(spellToText(terms));
+      if(terms.some(term => scoring.isInputWord(term.word) && !inputVectors.get(term.word))) showBusyMask('魔導司書が言霊の頁を探している','写本の導きに、あなたの言霊も織り込んでいる。',null);
+      await inputVectors.prepareWords(terms.map(term=>term.word));
+    }
+    guidedScribe();
+  } catch(error){ showWarning($('err'),error.message); return; }
+  finally { hideBusyMask(); setBusy(false,false); }
+  await cast();
+}
+$('dailyQuest').addEventListener('click', scribeAndCast);
+$('clearSpell').addEventListener('click', ()=>{ if(isLoading || isCasting) return; $('spell').value=''; $('err').textContent=''; $('spell').focus(); });
 $('clearLog').addEventListener('click', ()=>{logs=[]; renderLog();});
 setLoadFailedMode(true, '外典の扉が開くまで、頁は静かに閉じている。');
 setTimeout(()=>loadRemoteGlove({auto:true}), 150);

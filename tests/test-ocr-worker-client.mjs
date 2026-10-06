@@ -110,7 +110,7 @@ export function createClientHarness(options = {}) {
     ...options.globals,
   });
   vm.runInContext(`${diagnosticSource}\n${diagnosticViewSource}`, context);
-  vm.runInContext(`${appSource.slice(0, appSource.indexOf('  function countDictionaryEntries(')).replace('onChange: () => publishRuntimeDiagnostics()', 'onChange: () => {}')}
+  vm.runInContext(`${appSource.slice(0, appSource.indexOf('  async function loadVocabularyIndex(')).replace('onChange: () => publishRuntimeDiagnostics()', 'onChange: () => {}')}
     let activeAnalysisJob = null;
     let activeOcrRun = null;
     const captureContext = { getImageData: () => ({ data: new Uint8ClampedArray(global.pixels.data), width: global.pixels.width, height: global.pixels.height }) };

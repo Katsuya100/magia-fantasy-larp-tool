@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+import { createHash } from 'node:crypto';
 
 const source = await readFile(new URL('../assets/js/model-cache.js', import.meta.url), 'utf8');
+const hashSource = await readFile(new URL('../assets/js/streaming-sha256.js', import.meta.url), 'utf8');
 const modelUrl = 'https://models.example.test/recognition.onnx';
 const encoder = new TextEncoder();
 
@@ -30,14 +32,15 @@ function createStorage() {
   };
 }
 
-function createCache({ storage = createStorage(), fetch, progress = [], errors = [], validate, BlobType = Blob }) {
+function createCache({ storage = createStorage(), fetch, progress = [], errors = [], validate, integrity, BlobType = Blob }) {
   const context = vm.createContext({ caches: storage, fetch, Response, Blob: BlobType, ReadableStream });
   vm.runInContext(source, context, { filename: 'model-cache.js' });
+  vm.runInContext(hashSource, context, { filename: 'streaming-sha256.js' });
   return context.ModelCache.create({
     name: 'test-models-v1',
     onProgress: event => progress.push(event),
     onCacheError: error => errors.push(error),
-    validate,
+    validate: integrity ? context.ModelCache.createIntegrityValidator(integrity) : validate,
   });
 }
 
@@ -187,4 +190,82 @@ assert.equal(await (await malformed.load(modelUrl)).text(), 'valid-dictionary');
 assert.equal(malformedAttempts, 2);
 assert.equal(malformedStorage.writes, 1);
 
+// Standard SHA-256 padding boundaries, many stream chunk widths, and a model-sized input.
+const hashContext = vm.createContext({});
+vm.runInContext(hashSource, hashContext);
+for (const length of [0,1,55,56,63,64,65,127,128,1000,10822323]) {
+  const bytes = new Uint8Array(length);
+  for (let i = 0; i < length; i += 1) bytes[i] = (i * 19 + 7) & 255;
+  const expected = createHash('sha256').update(bytes).digest('hex');
+  for (const width of length > 1000 ? [65536] : [1,17,64,113]) {
+    const hash = hashContext.StreamingSha256.create();
+    for (let i = 0; i < length; i += width) hash.update(bytes.subarray(i, i + width));
+    assert.equal(hash.digestHex(), expected, `SHA-256 length=${length} chunk=${width}`);
+    assert.throws(() => hash.update(bytes), /finalized/);
+  }
+}
+
+const validBody = 'trusted-model-bytes';
+const integrity = { [modelUrl]: { bytes: encoder.encode(validBody).length, sha256: createHash('sha256').update(validBody).digest('hex') } };
+for (const invalidBody of ['truncated', 'trusted-model-byteX', `${validBody}-extra`]) {
+  const storage = createStorage();
+  storage.seed('test-models-v1', modelUrl, new Response(invalidBody));
+  const progress = [];
+  let downloads = 0;
+  const repaired = createCache({ storage, progress, integrity, fetch: async () => {
+    downloads += 1;
+    return streamedResponse(['trusted-', 'model-', 'bytes'], { withLength: false });
+  } });
+  assert.equal(await (await repaired.load(modelUrl)).text(), validBody);
+  assert.equal(downloads, 1, 'corrupt cache is repaired by one fresh transfer');
+  assert.equal(storage.writes, 1);
+  assert.ok(progress.some(event => event.status === 'invalid-cache'));
+  const restored = createCache({ storage, integrity, fetch: async () => assert.fail('verified cache must work offline') });
+  assert.equal(await (await restored.load(modelUrl)).text(), validBody);
+}
+for (const body of ['truncated', 'trusted-model-byteX', `${validBody}-extra`]) {
+  const storage = createStorage(), progress = [];
+  const rejected = createCache({ storage, progress, integrity, fetch: async () => new Response(body) });
+  await assert.rejects(rejected.load(modelUrl), /検証/);
+  assert.equal(storage.writes, 0);
+  assert.ok(!progress.some(event => event.status === 'done'), 'integrity failure must not report completion');
+}
+// Header bytes describe a compressed transfer; validation counts decoded body bytes.
+const compressedLength = createCache({ integrity, fetch: async () => new Response(validBody, { headers: { 'content-length': '3' } }) });
+assert.equal(await (await compressedLength.load(modelUrl)).text(), validBody);
+for (const error of [new RangeError('out of memory'), Object.assign(new Error('cancelled'), { name: 'AbortError' })]) {
+  const storage = createStorage();
+  storage.seed('test-models-v1', modelUrl, new Response(validBody));
+  const failing = createCache({ storage, validate: async () => { throw error; }, fetch: async () => assert.fail('memory/abort must not trigger fresh download') });
+  await assert.rejects(failing.load(modelUrl), thrown => thrown === error);
+}
+// Execute the production Worker: untrusted ONNX bytes never reach session creation
+// and integrity failures remain non-retryable in the existing OCR error policy.
+const workerSource = await readFile(new URL('../assets/js/magia-circle-ocr-worker.js', import.meta.url), 'utf8');
+const workerDependencies = new Map();
+for (const name of [...workerSource.match(/^importScripts\(([^;]+)\);/)[1].matchAll(/'([^']+)'/g)].map(match => match[1])) {
+  workerDependencies.set(name, await readFile(new URL(`../assets/js/${name}`, import.meta.url), 'utf8'));
+}
+let workerHandler, finishWorker;
+const workerFinished = new Promise(resolve => { finishWorker = resolve; });
+const workerMessages = [], workerStorage = createStorage();
+const workerContext = vm.createContext({
+  caches: workerStorage, Response, ReadableStream, AbortController, console,
+  fetch: async () => new Response('corrupted-model'),
+  __importRuntime: async () => ({ env: { wasm: {} }, InferenceSession: { create() { assert.fail('unverified model must never reach ONNX'); } } }),
+  addEventListener(type, handler) { if (type === 'message') workerHandler = handler; },
+  postMessage(message) {
+    workerMessages.push(message);
+    if (message.type === 'error' || message.type === 'success') finishWorker(message);
+  },
+});
+workerContext.importScripts = (...names) => names.forEach(name => vm.runInContext(workerDependencies.get(name), workerContext, { filename: name }));
+vm.runInContext(workerSource.replace(/\bimport\(/g, '__importRuntime('), workerContext, { filename: 'magia-circle-ocr-worker.js' });
+workerHandler({ data: { type: 'analyze', jobId: 1, runId: 'integrity-failure', phase: 'detection', width: 1, height: 1, buffer: new ArrayBuffer(4) } });
+const workerResult = await workerFinished;
+assert.equal(workerResult.type, 'error');
+assert.match(workerResult.message, /検証/);
+assert.equal(workerResult.retryable, false);
+assert.equal(workerStorage.writes, 0);
+assert.ok(!workerMessages.some(message => message.stage === 'ocr-detection-model-fetch-done' || message.stage === 'ocr-detection-session-create-start'));
 console.log('PASS_MODEL_CACHE');

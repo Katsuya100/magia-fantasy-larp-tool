@@ -1,10 +1,10 @@
 import { ATTRS } from "./kotodama-attributes.js";
 import { norm, add, cosine, pctFromCos } from "./kotodama-scoring.js";
 export function escapeHtml(value){return String(value).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
-export function createKotodamaRenderer({ $, getVectors, getScoring, getLogs, knownAttrs }) {
+export function createKotodamaRenderer({ $, getCandidateVectors, getScoring, getLogs, knownAttrs }) {
 const PUBLIC_ATTRS = () => Object.keys(ATTRS).filter(a => !ATTRS[a].hidden);
 const KNOWN_ATTRS = knownAttrs;
-const vectors = { get: word => getVectors().get(word) };
+const candidateVectors = { get: word => getCandidateVectors().get(word) };
 const attrVec = name => getScoring().attrVec(name);
 const nearestWords = (...args) => getScoring().nearestWords(...args);
 const wordsFromMagicFormula = text => getScoring().wordsFromMagicFormula(text);
@@ -34,7 +34,7 @@ function renderAttrResults(scores, active=null, success=false, vec=null){
       if(mag < 1e-9) return null;
       const one = nearestWords(residual, exclude, 1)[0];
       if(!one) return null;
-      const wv = vectors.get(one[0]);
+      const wv = candidateVectors.get(one[0]);
       if(!wv) return null;
       const trial = add(current, norm(wv), sign);
       return {word: one[0], sign, score: cosine(trial, av)};

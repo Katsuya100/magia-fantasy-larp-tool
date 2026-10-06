@@ -1,77 +1,91 @@
-# コトダマギアの軽量辞書
+# コトダマギア：自由入力と候補の分離、配布・計測
 
-## 生成と責務
+## 旧仕様と復元
 
-ブラウザは `kotodama-vectors.f32`、`kotodama-vectors.words.json`、`kotodama-lexicon.json` と2件のmetadataだけを取得します。GloVe ZIP、元の50次元テキスト、人名・地名等の大きな原本は開発時に処理します。
+旧commit `89e80a197281c7a08f79ae1a03dcf5dd209c52e6` の `parseSpell → vecFromTerms` は、GloVeにある語を使い、禁止語だけを内容上の理由で拒否していました。人名・地名・canonical・frequencyは入力判定へ入りません。これらは近似解・偶然の墨・欠片等の候補出力だけを絞る規則でした。
 
-- `kotodama.html` / `assets/css/kotodama.css`: HTMLと元のスタイル。
-- `kotodama-app.js`: 初期化、イベント、busy/failure状態、顕現と写本・偶然の墨の制御。
-- `kotodama-attributes.js`: 元の相の名前・属性語・world lore。
-- `kotodama-vector-store.js`: Float32格納。読み込んだバッファを再利用。
-- `kotodama-data.js`: 同一サイトからの取得、hash・サイズ・形式の検証、cacheと旧cacheの移行。
-- `kotodama-scoring.js`: 元のベクトル演算、属性判定、近傍・反転・術式の計算。
-- `kotodama-rendering.js`: 相・近傍・履歴・書架の表示。外部語と履歴はescape、例外と入力語の表示はDOM/textContent。
+前回の40,146語pruneは、そのベクトルstoreだけで入力可否を決めたため、この役割分離を失わせていました。今回、候補計算用の軽量資材を全て保持したまま、自由入力用の補助を復元しています。
 
-app以外はappをimportせず、循環依存を作りません。生成スクリプトはブラウザへimportしません。
+| レイヤー | 語数と役割 |
+| --- | --- |
+| 入力GloVe | 元の先頭400,000語。人名・地名・frequencyでpruneしない |
+| 旧構文で一語として直接表せる入力 | 327,245語。従来の `[a-z0-9_]+` / `+` / `-` 構文は変更しない |
+| GloVeにある禁止語 | 195語（禁止リスト全体は463語）。上記一語表記から拒否すると327,050語を直接使用可能 |
+| 常駐ベクトル | 前回の40,146語・50次元。入力の一部と属性・候補計算を高速に扱う |
+| 補助入力ベクトル | 残り359,854語を64区画へ分割、計71,970,800 bytes |
+| 候補出力 | 従前の全gateを通った2,516語。入力storeの存在だけで候補可にしない |
 
-## 再現方法
+`isInputWord` はGloVeへの存在確認、`isForbiddenWord` は禁止語確認、`isCandidateWord` は前計算候補への存在確認です。実際の入力許可は、従前の文法に従うこと、GloVeにあること、禁止語でないことの組合せです。禁止語でもGloVe自体の搭載membershipはtrueで、`parseSpell` が明示拒否します。
 
-Node.js 24で次を実行します。
+## 候補gateとallowlist
+
+`looksLikePlainEnglishWord`、canonical、frequency上限5,000、禁止語、人名・地名除外、元のNAME/PLACE allowlistを維持します。ランダム語のfrequency上限3,000、候補の並び、ランキング演算も維持しています。政治・国家・身分・ファンタジー語等を整理・縮小していません。
+
+allowlistはその人名/地名gateの免除であり、全gateの強制免除ではありません。固定辞書では `turkey / orange / reading / mobile / nice` はPLACE allowlistにありますが、NAME allowlistにはなく、人名gateで候補外です。いずれも入力可能です。`river / storm / king / queen / empire / state` は候補にも残ります。これを偽って候補可とせず、旧定義全件fixture、他のgateを通る合成fixtureでの例外復活、実辞書の分類fixtureを検証します。
+
+## 配布案の比較
+
+| 案 | 通信・メモリ・複雑さ | 判断 |
+| --- | --- | --- |
+| A: 全Float32+index | 単純・全取得後offline可能だが、初回数値80MBと索引を取得し、数値全体が常駐する | 通常起動には採用しない |
+| B: 分割補助 | 既存8.03MB数値と全入力indexを先に読み、必要区画だけ通常fetch/Cache API。区画を順次扱い、使用語50次元だけ保持 | **採用**。64個の標準Float32LE、JSON index、metadataという形式 |
+| C: Range | vector1語だけ取得できるが、Pages/CDNのRange・partial cache・offline等を追加管理する | ブラウザには採用しない |
+
+入力indexは3,743,494 bytesで、全補助語からbucketとrowへ整数Mapを作ります。359,854個の `[bucket,row]` 配列を作らず、一つの整数locationにしています。入力時は必要bucketだけ順次取得し、各vector200 bytesをコピーします。bucket全体をsubarrayの参照で保持せず、現在の術式に必要な語だけ保持します。入力語が多い場合、その術式の使用語分のメモリは必要です。
+
+普通の初期術式は追加区画を取りません。rare語は約1.1MBの区画を追加します。使用済み区画はCacheへ保存し、別の術式を挟んだ後やofflineでも再利用できます。未取得の既知語をofflineで使ったときは、語が存在しないと偽らず通信／写本不足を表示します。キャッシュの削除・保存が制限されたときでも、onlineなら進められます。
+
+全区画は自動で一括取得しません。Service WorkerによるHTML/JSを含むサイト全体のoffline配信もありません。全40万語をofflineで使うには、それぞれの必要区画の控えが必要です。
+
+## 数値比較
+
+2026-10-06、MBは10^6 bytes。未圧縮ファイルpayloadです。HTTP overhead・圧縮配信・browser storage管理領域は含みません。
+
+| 項目 | 前回40,146語版 | 自由入力復元後 |
+| --- | ---: | ---: |
+| 初回payload | 8,551,008 | 12,307,658 |
+| warm起動で更新確認するmetadata payload | 5,734 | 18,890 |
+| Cache body payload（初回） | 8,550,354 | 12,305,087 |
+| 常駐数値配列 | 8,029,200 | 8,029,200 |
+| 補助区画1個 | なし | 1,103,000～1,150,000 |
+| 全補助を取得した総payload | 該当なし | 84,278,458 |
+| 全補助のCache body概算 | 該当なし | 84,275,887 |
+| 本来の全数値データ | 8,029,200 | 計80,000,000（全量常駐しない） |
+
+`quasar` と `anemometer` の2語を初めて用意した例では追加2,249,600 bytes、Cache合計14,554,687 bytes、保持する追加vectorは400 bytesでした。warm再利用では追加payload0です。旧862,182,753-byte ZIPはブラウザへ取得させません。
+
+### Node参考値
+
+`npm run benchmark:kotodama` は別processのNode 24.21.0/Windowsで前回候補用loaderと新入力用loaderを測ります。ローカルファイルfetch、Cache payload counter、GC snapshotと10ms memory samplingです。
+
+| 一回の記録 | 前回版cold | 復元後cold | 前回版warm | 復元後warm |
+| --- | ---: | ---: | ---: | ---: |
+| 初期化ms | 125.40 | 295.96 | 61.16 | 225.86 |
+| 完了後heapUsed bytes | 11,399,200 | 35,673,528 | 11,473,048 | 35,785,840 |
+| 完了後process RSS bytes | 87,240,704 | 135,254,016 | 95,768,576 | 170,573,824 |
+
+入力索引のMap/文字列等の分、heapは増加します。常駐数値80MBには戻していません。Node RSSはruntime・一時buffer・GC・以前のroundのheap確保等を含み、定常dictionaryメモリそのものではありません。network時間、実browser Cache Storage overhead、スマートフォン実測ではありません。観測peakは瞬間的な最大値を逃す可能性があります。全snapshotは `test-results/input-restoration/kotodama-comparison.json` に記録します。
+
+## 再現と形式
 
 ```sh
 npm run build:kotodama-vectors -- --download
 npm run build:kotodama-lexicon -- --download
+npm run build:kotodama-input-vectors
 npm test
 ```
 
-固定した公式Hugging FaceのGloVe ZIPから50次元entryだけをHTTP Range（69,182,505 bytes）で取得・Nodeのzlibで展開します。サーバーが正しい206/Content-Rangeを返さない場合やhashが異なる場合は停止し、ZIP全体取得へfallbackしません。ローカル原本は `.tmp/kotodama-build/` へ保存します。
+固定公式HF ZIPから開発用Nodeだけが50d entryをHTTP Rangeで取得し、source SHAを検証します。ブラウザのRange依存はありません。171MB原本・ZIPは `.tmp/` に置き、Gitへ追加しません。生成物はf32、JSON、metadataです。既存の軽量40146/lexicon2516のファイルbytesは変更しません。
 
-再取得せず生成する場合は `--download` を省略します。`--source-dir <directory>`、`--source <glove.6B.50d.txt>`、`--output-dir <directory>`、`--input-rank-limit <rank>` も指定できます。lexicon側は `--source-dir` / `--words` / `--output-dir` を指定できます。語の選択条件を変更した場合は両方の生成物と基準テストを合わせて更新してください。
+入力metadataにはsource revision/SHA、dim、全語・補助語・構文readable語数、全区画とindexのbyte数/SHA、共通常駐words SHA、生成方法を記録します。Float32LE値は元テキストの全20,000,000要素と一致します。全66ファイルの再生成がbyte-for-byte一致することを確認しました。LF/binary属性でGitの改行変換を防ぎます。
 
-生成日時のような変動する値を生成物に入れず、固定source revision、input SHA-256、生成方法、選択条件とoutput SHA-256をmetadataへ残します。同じ入力・設定からは同じバイト列になります。`.gitattributes` にJSONのLFとf32のbinary属性を指定し、Windowsの改行変換でhashが変わることを防いでいます。
+## テストと境界
 
-## 収録範囲と形式
+- 旧14術式goldenを維持、新8術式は元HTML git blobを検証してから元GloVe値・元cast/cosine/attrScores/manifestで独立生成。
+- `anemometer / quasar / astrolabe / chiaroscuro / syzygy` のcandidate不可・input可と実計算。
+- 禁止語は明示拒否、人名 `usain / john` と地名 `london` は入力可・候補不可。
+- 元NAME/PLACE allowlist全件、合成fixtureの例外復活、実固定辞書の分類。
+- 初回に補助f32を取らない、必要bucketだけ取得、warm/offline再利用、未cache語の通信不足、手動refresh後のcache利用、200-byte rowだけ保持、失敗時に前術式を保つ。
+- SHA/サイズ、50dim、非有限値、重複、source改変、byte再現、全配布f32の検証。
 
-- GloVe元順の先頭50,000語のうちSCOWL系辞書と交わる語。
-- それに加え、元のfrequency parserが採る4,324語を全て保持（先頭50,000語の外も保持）。
-- 全相の真名と関連属性語85語を必須として保持。
-- 合計40,146語、50次元、Float32LE。
-
-数値は元のGloVeをFloat32へ変換した値と全2,007,300要素で一致します。旧VectorStoreもFloat32で格納していたため、保持語の意味ベクトルや計算精度は変わりません。標準のFloat32列と別JSONの語順・次元情報という単純な形式を用い、独自圧縮・複雑なheader/parserを導入しません。
-
-HFの50d原本には400,000語に加えて最後に `<unk>` があり、実際には400,001行です。旧ブラウザの40万語上限でもこの最後のentryは使わず、軽量辞書にも含めません。
-
-近傍候補は元のplain-English、SCOWL、頻度、禁止語、人名・地名ゲートとordinary-word allowlistを保持して開発時に生成します。現在の固定sourceで候補は2,516語です。全原本400,001語から同じゲートで選んだ候補と、軽量辞書から選んだ候補の順序まで一致することを確認しています。
-
-地名は旧コードのfallbackにも使われていた固定GeoNames JSON写本とNatural Earthから生成します。日々変わるGeoNames ZIPへのブラウザ取得は廃止しました。旧ライブ辞書や以前のcacheとは収録時点が異なり得るため、全ての過去の候補表示との同一性までは主張しません。ゲート・計算式を変更せず、今回の固定入力に対して候補を欠落させないことを確認しています。
-
-元の40万語全てを入力できる保証はありません。軽量化のため、入力可能語彙を上記範囲に限定します。近傍候補・属性核と一般的な意味遊びの語彙を優先した選択です。
-
-## 転送・cache・メモリ
-
-2026-10-06の生成物。MBは10^6 bytesです。
-
-| 項目 | 旧方式 | 新方式 |
-| --- | ---: | ---: |
-| GloVeに関係する初回payload | ZIP 862,182,753 bytes（他の辞書は別途） | 辞書・lexicon・2 manifest 8,551,008 bytes |
-| ベクトル本体 | 生テキスト171,350,515 bytesをZIPから展開 | Float32LE 8,029,200 bytes |
-| 語の索引 | テキストから実行時生成 | words JSON 413,114 bytes |
-| 候補索引・由来 | 大きな各原辞書をブラウザで取得・加工 | lexicon JSON 102,960 bytes、manifest 5,734 bytes |
-| 保存payload概算 | ZIP+TXTだけで1,033,533,268 bytes、さらに語彙cache | 約8.55MBとCache API管理領域。完成manifestはchecksum付きの控えで保存 |
-| VectorStoreの数値配列 | 80,204,800 bytes（上限40万語+予約分） | 8,029,200 bytes、取得バッファを再利用 |
-| モバイルの総メモリpeak/起動時間 | 未実測 | 未実測 |
-
-ZIPと新しい辞書一式の比較で853,631,745 bytes削減、約99.01%減です。数値配列だけなら約89.99%減ですが、語のMap/Set、fetch/crypto/cacheの一時バッファ、JS engine、Canvas、ブラウザ自身のメモリは別に必要です。転送値は未圧縮ファイルpayloadで、HTML/JS/CSS、HTTP overhead、圧縮配信の効果は含みません。
-
-`npm run benchmark:kotodama` は、共有loaderをローカルファイルのfetch adapterで計測します。今回のWindows/Node 24.21.0では133.86ms、10msサンプルで観測したprocess RSS最大107,212,800 bytesでした。測定前RSS48,435,200 bytes、完了時97,558,528 bytes、完了時ArrayBuffer8,691,833 bytesです。これはNode/一時fetchバッファ/GCを含む値で、端末のネットワーク時間・ブラウザ起動時間・モバイルのpeakではありません。瞬間的peakを取り逃す可能性もあります。ログは `test-results/review/kotodama-loader.json` に出力します。
-
-## 検証
-
-- generator: 同じ入力・設定のbyte一致、必須属性、重複、50次元、不正行/非有限値、source hash不一致。
-- 公式sourceを再取得して別directoryへ生成し、words/f32/metadataの全byte一致を確認。
-- 保持した全Float32要素の元テキストとの一致、元の全近傍候補の保持を確認。
-- loader: hash/size/schema、破損cacheを1回再取得、cache拒否、quota、手動refresh、旧cache移行、完成済み辞書のoffline fallback、memory/WASM errorの非retry。
-- source commit `89e80a1` の元HTMLから作った14術式の基準値と、相・生のcosine・近傍・反転・顕現魔力・失敗表示の一致。
-- 390px幅のブラウザで表示と初期術式の235/86.6%を確認。
-
-軽量化の変更はマギアサークルの共有 `power-calculation.js`、`attribute-scoring.js`、画像計算式、OCR精度定数へ入れていません。マギアサークルの大きなOCR補正索引も既存の仕様を維持しており、そのモバイルmemory負担の削減は今後の別課題です。
+マギアサークルの共有威力・相の計算式、画像処理定数、OCR精度定数、Workerの処理順は変更しません。入力復元は候補gate変更と分けています。実機項目は [MOBILE-TEST-CHECKLIST.md](MOBILE-TEST-CHECKLIST.md)、OCR索引は [OCR-VOCABULARY-INDEX.md](OCR-VOCABULARY-INDEX.md) を参照してください。

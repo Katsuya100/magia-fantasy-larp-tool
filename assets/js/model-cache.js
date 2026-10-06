@@ -1,6 +1,34 @@
 (function exposeModelCache(global) {
   'use strict';
 
+  // Validate decoded response bytes (Content-Length may describe HTTP compression).
+  function createIntegrityValidator(expectedAssets) {
+    return async (url, response) => {
+      const expected = expectedAssets[url];
+      if (!expected || !Number.isSafeInteger(expected.bytes) || !/^[a-f0-9]{64}$/.test(expected.sha256)) {
+        throw new Error('外典の検証情報がありません。');
+      }
+      const hash = global.StreamingSha256.create();
+      const reader = response.body?.getReader();
+      if (!reader) return false;
+      let bytes = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          bytes += value.byteLength;
+          if (bytes > expected.bytes) return false;
+          hash.update(value);
+        }
+        return bytes === expected.bytes && hash.digestHex() === expected.sha256;
+      } finally {
+        // Do not await cancellation of a tee branch: its sibling is used by the cache.
+        reader.cancel().catch(() => {});
+        reader.releaseLock();
+      }
+    };
+  }
+
   // Cache complete responses only. Failed/partial transfers remain retryable.
   function create({ name, onProgress = () => {}, onCacheError = () => {}, validate = null }) {
     let cachePromise;
@@ -35,17 +63,22 @@
             const isValid = async response => {
               if (!response || !response.ok || response.status !== 200) return false;
               if (/text\/html/i.test(response.headers.get('content-type') || '')) return false;
+              if (validate) return Boolean(await validate(url, response.clone()));
               const body = response.clone().body;
               if (!body) return false;
               const reader = body.getReader();
               try {
-                const first = await reader.read();
-                if (first.done || !first.value?.byteLength) return false;
+                let bytes = 0;
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  bytes += value.byteLength;
+                }
+                return bytes > 0;
               } finally {
                 reader.cancel().catch(() => {});
                 reader.releaseLock();
               }
-              return validate ? Boolean(await validate(url, response.clone())) : true;
             };
             let stored = await cache.match(url);
             if (stored && await isValid(stored)) {
@@ -71,7 +104,6 @@
                     const { done, value } = await reader.read();
                     if (done) {
                       reader.releaseLock();
-                      onProgress({ status: 'done', url });
                       controller.close();
                       return;
                     }
@@ -98,6 +130,7 @@
               complete = new global.Response(body, { headers: response.headers });
             }
             if (!await isValid(complete)) throw new Error('外典の内容を検証できませんでした。');
+            onProgress({ status: 'done', url });
             if (await cache.put(url, complete) && complete.bodyUsed) {
               const stored = await cache.match(url);
               if (stored) return stored;
@@ -124,5 +157,5 @@
     return cache;
   }
 
-  global.ModelCache = Object.freeze({ create });
+  global.ModelCache = Object.freeze({ create, createIntegrityValidator });
 }(globalThis));

@@ -6,11 +6,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
+import { createModelFileCache } from './model-file-cache.mjs';
 
 // Execute the production classic Worker scripts, adapting browser I/O only.
 // Each phase runs in a real, terminated isolate with the installed WASM models.
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 if (!isMainThread) {
+  globalThis.caches = createModelFileCache(resolve(root, 'test-results/model-cache'));
   const models = (await import('@gutenye/ocr-models/node')).default;
   const nativeFetch = globalThis.fetch;
   globalThis.self = globalThis;

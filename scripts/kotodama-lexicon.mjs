@@ -9,7 +9,7 @@ export function looksLikePlainEnglishWord(w){
   if(word.length > 1 && /^[ivxlcdm]+$/.test(word)) return false;
   return true;
 }
-const NAME_WORD_ALLOWLIST = new Set([
+export const NAME_WORD_ALLOWLIST = new Set([
   // 人名としても使われるが、ゲーム上は普通語として残したいもの。
   // ベクトル演算の定番になる一般語は、人名目録に含まれていても候補から落とさない。
   'may','will','bill','mark','rose','grace','hope','faith','joy','sky','storm','cliff','stone','river','brook','amber','crystal','jade','ruby','pearl','sage','ash','ember','dawn','summer','autumn','winter','spring','flame','aqua','bolt','gravity','law','chaos',
@@ -17,7 +17,7 @@ const NAME_WORD_ALLOWLIST = new Set([
   'emperor','empress','duke','duchess','count','countess','god','goddess','angel','demon','devil','witch','wizard','mage','warrior','soldier','hunter','thief','judge','human','person','child','adult','sun','moon','star','shadow','light','darkness','ice','snow',
   'empire','kingdom','republic','monarchy','dynasty','state','nation','country','realm','domain','territory','province','colony','federation','confederation','commonwealth','union','principality','duchy','emirate','caliphate','sultanate','khanate','government','regime','authority','sovereignty','crown','throne','court','council','senate','parliament','congress','cabinet','ministry','bureaucracy','administration','rule','reign','dominion','monarch','ruler','sovereign','governor','minister','chancellor','senator','consul','delegate','ambassador','mayor','citizen','subject','public','noble','aristocrat','peasant','servant','vassal','clergy','charter','decree','edict','mandate','constitution','code','statute','ordinance','covenant','pact','alliance','conquest','invasion','rebellion','revolution','border','frontier','capital','fortress','castle','palace','embassy','tribute'
 ]);
-const PLACE_WORD_ALLOWLIST = new Set([
+export const PLACE_WORD_ALLOWLIST = new Set([
   // 地名としても使われるが、意味遊びに残したい普通語。
   'china','turkey','orange','reading','mobile','nice','water','fire','storm','ash','stone','river','brook','spring','autumn','winter','summer','dawn','ember','sage','jade','ruby','pearl','crystal','law','chaos',
   'king','queen','prince','princess','man','woman','boy','girl','father','mother','son','daughter','brother','sister','husband','wife','uncle','aunt','cousin','lord','lady','knight','hero',

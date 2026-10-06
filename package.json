@@ -33,7 +33,11 @@
     "test:kotodama-vectors": "node tests/test-kotodama-vectors.mjs",
     "test:e2e": "node --use-system-ca scripts/run-image-e2e.mjs",
     "verify:external-assets": "node --use-system-ca scripts/verify-external-assets.mjs",
-    "benchmark:kotodama": "node --expose-gc scripts/benchmark-kotodama-data.mjs"
+    "benchmark:kotodama": "node --expose-gc scripts/benchmark-kotodama-data.mjs",
+    "build:kotodama-input-vectors": "node --use-system-ca scripts/build-kotodama-input-vectors.mjs",
+    "build:ocr-vocabulary-index": "node scripts/build-ocr-vocabulary-index.mjs",
+    "test:kotodama-input-vectors": "node tests/test-kotodama-input-vectors.mjs",
+    "test:ocr-vocabulary-index": "node tests/test-ocr-vocabulary-index.mjs"
   },
   "devDependencies": {
     "@gutenye/ocr-models": "1.2.2",

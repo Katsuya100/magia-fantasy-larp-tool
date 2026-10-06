@@ -1,0 +1,34 @@
+{
+  "formatVersion": 1,
+  "compression": "gzip",
+  "method": "scripts/build-ocr-vocabulary-index.mjs; unchanged ngram-index-v2; delta-varint postings; deterministic gzip level 9",
+  "vocabularySignature": "v2-43ck0-1c3vyw6",
+  "wordCount": 486609,
+  "forbiddenWordCount": 463,
+  "bigramCount": 719,
+  "trigramCount": 12022,
+  "decodedBytes": 17882262,
+  "decodedSha256": "b9fdc65f6c7666549611db03d3a8b6a44b62b18cb952a7675e67519140405f12",
+  "legacyJsonBytes": 72959127,
+  "file": {
+    "file": "ocr-vocabulary-index.2b25ea8cce3f046a.bin",
+    "bytes": 6691687,
+    "sha256": "2b25ea8cce3f046af024240acc53e800044d655adb5e603b5bba58db81a10a33"
+  },
+  "sources": {
+    "canonical": {
+      "file": "canonical.txt",
+      "url": "https://raw.githubusercontent.com/nlile/dictionary-word-list/842089dfe25f96fc872f3dc260419b02abc9c5a2/word_list_very_common_en_us_spelling_no_diacritic.txt",
+      "sha256": "25e627fbdfc293fea2104ca3739ab56d3e9ede7f0d6901fb7756abdd341fc44e",
+      "commit": "842089dfe25f96fc872f3dc260419b02abc9c5a2",
+      "bytes": 6866299
+    },
+    "forbidden": {
+      "file": "profanity.txt",
+      "url": "https://raw.githubusercontent.com/dsojevic/profanity-list/c27924319aa9bd6f917e3782b4f4b6604a50b652/en.txt",
+      "sha256": "2eebcd97d34e45972b86f5631bc6d970aaed580cd9def3ce1ae4ee58e031a2c6",
+      "commit": "c27924319aa9bd6f917e3782b4f4b6604a50b652",
+      "bytes": 8389
+    }
+  }
+}

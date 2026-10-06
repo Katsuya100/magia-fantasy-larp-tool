@@ -31,6 +31,12 @@ for (const asset of manifest.assets) {
   }
 }
 assert.equal(new Set(manifest.assets.map(asset => asset.id)).size, manifest.assets.length);
+const ocrAssets = manifest.assets.filter(asset => ['ocr-detection', 'ocr-recognition', 'ocr-dictionary'].includes(asset.id));
+assert.equal(Object.keys(dependencies.ocrAssetIntegrity).length, 3);
+for (const asset of ocrAssets) {
+  assert.deepEqual(dependencies.ocrAssetIntegrity[asset.url], { bytes: asset.bytes, sha256: asset.sha256 });
+  assert.ok(Object.isFrozen(dependencies.ocrAssetIntegrity[asset.url]));
+}
 const licenses = JSON.parse(await readFile(new URL('../assets/licenses/sources.json', import.meta.url), 'utf8'));
 for (const license of licenses.licenses) {
   const text = (await readFile(new URL(`../assets/licenses/${license.file}`, import.meta.url), 'utf8')).replace(/\r\n/g, '\n');

@@ -3,11 +3,11 @@ import { fileURLToPath } from 'node:url';
 
 // Explicitly separated from the model-downloading image/Worker E2E suite.
 const tests = [
-  'power-calculation', 'attribute-scoring', 'image-pipeline', 'model-cache',
+  'power-calculation', 'attribute-scoring', 'image-pipeline', 'model-cache', 'model-file-cache',
   'detection-tensor-input', 'sigil-classification', 'analysis-diagnostics',
   'structure-worker-handshake', 'ocr-line-materialization', 'ocr-worker-client',
   'ocr-resource-tracker', 'magia-circle-results', 'runtime-dependencies', 'kotodama-vectors',
-  'kotodama-data', 'kotodama-scoring', 'kotodama-lexicon', 'kotodama-app',
+  'kotodama-input-vectors', 'kotodama-data', 'kotodama-scoring', 'kotodama-lexicon', 'kotodama-app', 'ocr-vocabulary-index',
 ];
 const root = fileURLToPath(new URL('../', import.meta.url));
 for(const test of tests){

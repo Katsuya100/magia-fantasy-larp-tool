@@ -100,8 +100,8 @@
     const vocabulary = Array.isArray(index?.words) ? index.words : [];
     const bigrams = new Map(Array.isArray(index?.bigrams) ? index.bigrams : []);
     const trigrams = new Map(Array.isArray(index?.trigrams) ? index.trigrams : []);
-    const bigramCounts = Array.isArray(index?.bigramCounts) ? index.bigramCounts : [];
-    const trigramCounts = Array.isArray(index?.trigramCounts) ? index.trigramCounts : [];
+    const bigramCounts = Array.isArray(index?.bigramCounts) || ArrayBuffer.isView(index?.bigramCounts) ? index.bigramCounts : [];
+    const trigramCounts = Array.isArray(index?.trigramCounts) || ArrayBuffer.isView(index?.trigramCounts) ? index.trigramCounts : [];
     const byLength = new Map();
     const wordIds = new Map();
     vocabulary.forEach((word, wordId) => {

@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import sharp from 'sharp';
 import { createClientHarness } from './test-ocr-worker-client.mjs';
+import { loadOcrVocabularyIndex } from '../scripts/load-ocr-vocabulary-index.mjs';
 for (const name of ['runtime-dependencies', 'spell-ocr', 'image-analysis-core', 'power-calculation', 'attribute-scoring', 'ocr-error-policy', 'magia-image-pipeline']) await import(`../assets/js/${name}.js`);
 const app = await readFile(new URL('../assets/js/magia-circle-app.js', import.meta.url), 'utf8');
 const section = (start, end) => app.slice(app.indexOf(start), app.indexOf(end, app.indexOf(start)));
@@ -66,16 +67,12 @@ class BrowserWorker {
     });
   }
 }
-const cache = new Map();
-const dictionaryCache = {
-  async load(url) {
-    if (!cache.has(url)) { const response = await fetch(url); assert.ok(response.ok); cache.set(url, await response.text()); }
-    return new Response(cache.get(url));
-  },
-  async match(url) { return cache.has(url) ? new Response(cache.get(url)) : undefined; },
-  async put(url, response) { cache.set(url, await response.text()); },
-  async delete(url) { return cache.delete(url); },
-};
+const vocabularyIndexLoader = { async load({ onStage = () => {} } = {}) {
+  onStage('vocabulary-index-decode-start');
+  const index = await loadOcrVocabularyIndex();
+  onStage('vocabulary-index-decode-done', { wordCount: index.words.length });
+  return index;
+} };
 const pipelineCall = section('      const pipelineTask = imagePipeline.run({', '      activeAttributeRun = pipelineTask.then(');
 for (let iteration = 1; iteration <= iterations; iteration += 1) {
   const lifecycleStart = lifecycle.length;
@@ -83,7 +80,7 @@ for (let iteration = 1; iteration <= iterations; iteration += 1) {
   const harness = createClientHarness({
     Worker: BrowserWorker, pixels, core: SpellOcrCore, imageAnalysis: ImageAnalysisCore,
     imagePipeline: MagiaImagePipeline, powerCalculation: PowerCalculationCore,
-    globals: { Float32Array, Response, dictionaryCache, setTimeout, clearTimeout,
+    globals: { Float32Array, Response, vocabularyIndexLoader, setTimeout, clearTimeout,
       document: { baseURI: 'https://example.test/', createElement(type) {
         assert.equal(type, 'canvas');
         const canvas = { width: 1, height: 1 };
@@ -96,7 +93,7 @@ for (let iteration = 1; iteration <= iterations; iteration += 1) {
       let analysisPending = null;
       const captureCanvas = { width: global.pixels.width, height: global.pixels.height };
       const cameraStatus = {};
-      const kotodamaDictionaryCache = global.dictionaryCache;
+      const vocabularyIndexLoader = global.vocabularyIndexLoader;
       function yieldToBrowser() { return Promise.resolve(); }
       function cacheError() {}
       function showBusyMask() {}
@@ -104,7 +101,7 @@ for (let iteration = 1; iteration <= iterations; iteration += 1) {
       function showCaptureCanvas() {}
       captureContext.clearRect = () => {};
       captureContext.drawImage = () => {};
-      ${section('  function countDictionaryEntries(', '  function recordDiagnosticError(')}
+      ${section('  async function loadVocabularyIndex(', '  function recordDiagnosticError(')}
       ${section('  function terminateAnalysisWorker(', '  function showCaptureCanvas(')}
       ${section('  function canvasFromImage(', '  function stopCamera(')}
       ${section('  function embedAttributesInWorker(', '  function resetResults(')}

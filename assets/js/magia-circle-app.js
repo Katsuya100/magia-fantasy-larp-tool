@@ -10,7 +10,6 @@
   const imagePipeline = global.MagiaImagePipeline;
   if (!imagePipeline) throw new Error('magia-image-pipeline.js must load before magia-circle-app.js');
 
-  const KOTODAMA_NGRAM_INDEX_CACHE_URL = 'https://kotodamagia.local/cache/scowl-en-us-common-ngrams-v2.json';
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
   const ATTRIBUTES = global.AttributeScoringCore.attributes;
   const diagnosticsEnabled = Boolean(global.location?.search && new URLSearchParams(global.location.search).has('diagnostics'));
@@ -26,105 +25,13 @@
   const { diagnostics, publishDiagnostics, publishRuntimeDiagnostics } = global.MagiaCircleDiagnosticView.create(diagnosticSession);
   let selectedImageDiagnosticRun = null;
 
-  function countDictionaryEntries(text) {
-    return String(text || '').split(/\r?\n/).filter(line => /^[a-z]+$/i.test(line.trim())).length;
-  }
-
-  function isValidVocabularyIndex(index) {
-    return index?.version === 2 && typeof index.signature === 'string' &&
-      Array.isArray(index.words) && index.words.length >= 100000 &&
-      Array.isArray(index.bigrams) && index.bigrams.length > 100 &&
-      Array.isArray(index.trigrams) && index.trigrams.length > 100 &&
-      Array.isArray(index.bigramCounts) && index.bigramCounts.length === index.words.length &&
-      Array.isArray(index.trigramCounts) && index.trigramCounts.length === index.words.length;
-  }
-
-  async function validateKotodamaCacheEntry(url, response) {
-    if (url === core.config.commonWordsUrl) return countDictionaryEntries(await response.text()) >= 100000;
-    if (url === core.config.forbiddenWordsUrl) return countDictionaryEntries(await response.text()) >= 100;
-    if (url === KOTODAMA_NGRAM_INDEX_CACHE_URL) {
-      try {
-        return isValidVocabularyIndex(await response.json());
-      } catch { return false; }
-    }
-    return true;
-  }
-
   async function loadVocabularyIndex(job = null) {
     const stage = (name, details = {}) => { if (job) recordAnalysisStage(job, name, details); };
-    stage('vocabulary-start');
-    stage('vocabulary-cache-open-start');
-    const dictionaryResults = await Promise.allSettled([
-      kotodamaDictionaryCache.load(core.config.forbiddenWordsUrl),
-      kotodamaDictionaryCache.load(core.config.commonWordsUrl),
-    ]);
-    stage('vocabulary-cache-open-done', { fulfilledCount: dictionaryResults.filter(result => result.status === 'fulfilled').length });
-    for (const result of dictionaryResults) {
-      if (result.status === 'rejected') console.warn('コトダマギアの目録を控えられませんでした。', result.reason);
-    }
-    if (dictionaryResults.some(result => result.status === 'rejected')) {
-      stage('vocabulary-cache-open-error', {
-        errors: dictionaryResults.filter(result => result.status === 'rejected').map(result => ({
-          name: String(result.reason?.name || 'Error'), message: String(result.reason?.message || result.reason).slice(0, 180),
-        })),
-      });
-      return null;
-    }
-
     try {
-      stage('vocabulary-response-text-start', { responseCount: dictionaryResults.length });
-      const [forbiddenText, commonText] = await Promise.all(dictionaryResults.map(result => result.value.text()));
-      stage('vocabulary-response-text-done', {
-        forbiddenTextLength: forbiddenText.length, commonTextLength: commonText.length,
-        estimatedJsonBytes: (forbiddenText.length + commonText.length) * 2,
-      });
-      const signature = core.vocabularySignature(commonText, forbiddenText);
-      stage('vocabulary-cache-match-start', { cacheKey: KOTODAMA_NGRAM_INDEX_CACHE_URL });
-      const cachedIndexResponse = await kotodamaDictionaryCache.match(KOTODAMA_NGRAM_INDEX_CACHE_URL);
-      stage('vocabulary-cache-match-done', { hit: Boolean(cachedIndexResponse) });
-      let index = null;
-      if (cachedIndexResponse) {
-        let jsonParseStarted = false;
-        try {
-          stage('vocabulary-response-text-start', { source: 'cached-index' });
-          const indexText = await cachedIndexResponse.text();
-          stage('vocabulary-response-text-done', { source: 'cached-index', textLength: indexText.length, estimatedJsonBytes: indexText.length * 2 });
-          stage('vocabulary-json-parse-start', { textLength: indexText.length, estimatedJsonBytes: indexText.length * 2 });
-          jsonParseStarted = true;
-          const cachedIndex = JSON.parse(indexText);
-          jsonParseStarted = false;
-          stage('vocabulary-json-parse-done', { wordCount: cachedIndex?.words?.length || 0 });
-          if (isValidVocabularyIndex(cachedIndex) && cachedIndex.signature === signature) {
-            index = cachedIndex;
-          } else {
-            await kotodamaDictionaryCache.delete(KOTODAMA_NGRAM_INDEX_CACHE_URL);
-          }
-        } catch (error) {
-          if (jsonParseStarted) stage('vocabulary-json-parse-error', {
-            error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) },
-          });
-          await kotodamaDictionaryCache.delete(KOTODAMA_NGRAM_INDEX_CACHE_URL);
-          console.warn('文字列索引の控えを読み取れませんでした。', error);
-        }
-      }
-      if (!index) {
-        await yieldToBrowser();
-        stage('vocabulary-index-create-start', { commonTextLength: commonText.length, forbiddenTextLength: forbiddenText.length });
-        index = core.createVocabularyNgramIndex(commonText, forbiddenText);
-        stage('vocabulary-index-create-done', { wordCount: index?.words?.length || 0 });
-        if (!isValidVocabularyIndex(index)) throw new Error('一般語彙辞書に使用できる単語が不足しています。');
-        stage('vocabulary-json-stringify-start', { wordCount: index.words.length });
-        const serializedIndex = JSON.stringify(index);
-        stage('vocabulary-json-stringify-done', { textLength: serializedIndex.length, estimatedJsonBytes: serializedIndex.length * 2 });
-        await kotodamaDictionaryCache.put(KOTODAMA_NGRAM_INDEX_CACHE_URL, new Response(serializedIndex, {
-          headers: { 'content-type': 'application/json; charset=utf-8' },
-        }));
-      }
-      stage('vocabulary-done', { wordCount: index?.words?.length || 0 });
-      return index;
+      return await vocabularyIndexLoader.load({ onStage: stage });
     } catch (error) {
       stage('vocabulary-error', { error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) } });
-      console.warn('コトダマギアの目録を補正索引にできませんでした。', error);
+      console.warn('コトダマギアの補正索引を読み取れませんでした。', error);
       return null;
     }
   }
@@ -227,10 +134,11 @@
     console.warn('外典の控えを保存・参照できませんでした。', error);
   };
   const kotodamaDictionaryCache = global.ModelCache.create({
-    name: 'magia-circle-kotodama-dictionaries-v1',
+    name: 'magia-circle-ocr-vocabulary-v1',
     onCacheError: cacheError,
-    validate: validateKotodamaCacheEntry,
+    validate: (url, response) => vocabularyIndexLoader.validate(url, response),
   });
+  const vocabularyIndexLoader = global.OcrVocabularyIndex.create({ cache: kotodamaDictionaryCache, baseUrl: document.baseURI });
   let structureReady = false;
   let spellReady = false;
   let detailsTapCount = 0;

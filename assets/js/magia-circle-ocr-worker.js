@@ -1,4 +1,4 @@
-importScripts('runtime-dependencies.js', 'analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tracker.js', 'spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-line-split.js');
+importScripts('runtime-dependencies.js', 'analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tracker.js', 'spell-ocr.js', 'image-analysis-core.js', 'streaming-sha256.js', 'model-cache.js', 'ocr-line-split.js');
 
 (function startMagiaCircleOcrWorker(global) {
   'use strict';
@@ -46,7 +46,7 @@ importScripts('runtime-dependencies.js', 'analysis-diagnostics.js', 'ocr-error-p
         notify(`OCRモデルを取得しています… ${amount}`);
       } else if (info.status === 'done') notify('OCRモデルを準備しています…');
     },
-    validate: validateOcrCacheEntry,
+    validate: global.ModelCache.createIntegrityValidator(dependencies.ocrAssetIntegrity),
   });
 
   function notify(message) {
@@ -89,14 +89,6 @@ importScripts('runtime-dependencies.js', 'analysis-diagnostics.js', 'ocr-error-p
     const error = new Error(signal.reason?.message || 'OCR was cancelled.');
     error.name = 'AbortError';
     throw error;
-  }
-
-  function validateOcrCacheEntry(url, response) {
-    if (url !== core.config.dictionaryUrl) return true;
-    return response.text().then(text => {
-      const entries = text.split(/\r?\n/).filter(line => line.trim());
-      return entries.length >= 1000 && entries.every(entry => entry.length <= 4);
-    });
   }
 
   function disposeTensors(tensors, details = {}) {

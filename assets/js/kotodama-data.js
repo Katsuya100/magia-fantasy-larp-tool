@@ -1,4 +1,5 @@
 import { VectorStore } from './kotodama-vector-store.js';
+import { InputVectorStore } from './kotodama-input-vectors.js';
 
 export const KOTODAMA_CACHE_NAME = 'kotodamagia-pruned-data-v1';
 const DATA_URL = new URL('../data/', import.meta.url);
@@ -44,6 +45,7 @@ async function verifiedBytes(entry, { baseUrl, fetchFn, cache, onCacheError, ref
     if(response){
       try { return await verify(response); }
       catch(error){
+        if(isFatalReadError(error)) throw error;
         onCacheError(error);
         try { await cache.delete(url); } catch(storageError){ onCacheError(storageError); }
       }
@@ -95,7 +97,7 @@ async function saveManifest(file,metadata,{baseUrl,cache,onCacheError}){
   catch(error){ onCacheError(error); }
 }
 
-export async function loadKotodamaData({
+export async function loadKotodamaCandidates({
   baseUrl = DATA_URL, fetchFn = globalThis.fetch.bind(globalThis), storage = globalThis.caches,
   refresh = false,
   onCacheError = error => console.warn('Kotodama cache unavailable:', error),
@@ -118,11 +120,11 @@ export async function loadKotodamaData({
   const words = JSON.parse(decoder.decode(wordBytes));
   if(words.length !== meta.wordCount) throw new Error('外典の語数が目録と異なる。');
   const lexicon = JSON.parse(decoder.decode(lexiconBytes));
-  const vectors = VectorStore.fromPacked(words, vectorBytes, meta.dimension);
+  const candidateVectors = VectorStore.fromPacked(words, vectorBytes, meta.dimension);
   if(lexicon.formatVersion !== 1 || !Array.isArray(lexicon.candidates) ||
     !Array.isArray(lexicon.forbidden) || !Array.isArray(lexicon.frequencyRanks) ||
     lexicon.vectorWordsSha256 !== meta.files.words.sha256 ||
-    lexicon.candidates.some(word => !vectors.has(word)) ||
+    lexicon.candidates.some(word => !candidateVectors.has(word)) ||
     new Set(lexicon.candidates).size !== lexicon.candidates.length){
     throw new Error('言霊目録と外典の写本が噛み合わない。');
   }
@@ -130,8 +132,42 @@ export async function loadKotodamaData({
     saveManifest('kotodama-vectors.meta.json',meta,options),
     saveManifest('kotodama-lexicon.meta.json',lexiconMeta,options),
   ]);
-  return { vectors, candidateWords:lexicon.candidates, forbiddenWords:new Set(lexicon.forbidden),
+  return { candidateVectors, candidateLexicon:lexicon, candidateWords:lexicon.candidates, forbiddenWords:new Set(lexicon.forbidden),
     frequencyRanks:new Map(lexicon.frequencyRanks), metadata:meta };
+}
+
+function isFatalReadError(error){
+  return ['RangeError','RuntimeError','AbortError'].includes(error?.name) || /out of memory|allocation failed|memory access/i.test(error?.message || '');
+}
+
+// The small common store serves candidates; input membership comes from full GloVe.
+// Supplemental vectors are fetched only when a spell needs them, one bucket at a time.
+export async function loadKotodamaData(options={}){
+  const {baseUrl=DATA_URL,fetchFn=globalThis.fetch.bind(globalThis),storage=globalThis.caches,
+    refresh=false,onCacheError=error=>console.warn('Kotodama cache unavailable:',error)}=options;
+  const cache=await openCache(storage,onCacheError);
+  const readOptions={baseUrl,fetchFn,cache,onCacheError,refresh};
+  const [candidateData,inputMetadata]=await Promise.all([
+    loadKotodamaCandidates(options),fetchJson('kotodama-input.meta.json',readOptions),
+  ]);
+  if(inputMetadata.candidateWordsSha256!==candidateData.metadata.files.words.sha256 ||
+    inputMetadata.source?.sha256!==candidateData.metadata.source?.sha256){
+    throw new Error('入力用外典と候補用の写本が噛み合わない。');
+  }
+  const indexBytes=await verifiedBytes(inputMetadata.files.index,readOptions);
+  const index=JSON.parse(new TextDecoder().decode(indexBytes));
+  // A boot-time manual refresh must not disable cached lazy chunks for the entire session.
+  const chunkReadOptions={...readOptions,refresh:false};
+  const inputVectors=new InputVectorStore({candidateVectors:candidateData.candidateVectors,index,
+    metadata:inputMetadata,loadChunk:async entry=>{
+      try { return await verifiedBytes(entry,chunkReadOptions); }
+      catch(error){
+        if(isFatalReadError(error)) throw error;
+        throw new Error('その言霊の頁を端末で確かめられなかった。通信のある場所で外典の扉を開いてほしい: '+error.message,{cause:error});
+      }
+    }});
+  await saveManifest('kotodama-input.meta.json',inputMetadata,readOptions);
+  return {...candidateData,inputVectors,inputMetadata};
 }
 
 export async function clearLegacyKotodamaCaches({storage=globalThis.caches, database=globalThis.indexedDB} = {}){

@@ -19,7 +19,7 @@ assert.equal(cosine([0,0],[0,0]),0);
 assert.deepEqual(norm([0,0]),[0,0]);
 assert.equal(pctFromCos(-2),0);
 assert.equal(pctFromCos(2),1);
-const forbidden=[...data.forbiddenWords].find(word=>data.vectors.has(word));
+const forbidden=[...data.forbiddenWords].find(word=>data.candidateVectors.has(word));
 assert.ok(forbidden);
 assert.throws(()=>scoring.parseSpell(forbidden),/封じられた/);
 console.log('PASS_KOTODAMA_SCORING_ORIGINAL_BASELINE_14_SPELLS_AND_NEIGHBOURS');

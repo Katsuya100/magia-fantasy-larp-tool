@@ -227,7 +227,7 @@
       <details>
         <summary>使用ライブラリとモデル</summary>
         <ul>
-          <li><strong>Guten OCR browser pipeline</strong><br>Source: <a href="https://github.com/gutenye/ocr" target="_blank" rel="noreferrer">gutenye/ocr</a><br>Work: <code>@gutenye/ocr-browser</code> / <code>@gutenye/ocr-common</code><br>License: MIT License<br>備考: PP-OCRv4の検出・認識をブラウザ内で実行し、環の文字区画を抽出するために使用。</li>
+          <li><strong>gutenye/ocr由来のOCRアルゴリズム・共有実装</strong><br>Source: <a href="https://github.com/gutenye/ocr" target="_blank" rel="noreferrer">gutenye/ocr</a><br>Work: <code>gutenye/ocr</code> のOCRアルゴリズムをもとにした本リポジトリの共有実装<br>License: ライブラリ実装の由来はMIT License（モデル・辞書の条件は別途第三者通知を参照）<br>備考: ブラウザは本リポジトリのWorker・共有コードを実行し、<code>@gutenye/ocr-browser</code> を別途CDN importしていません。実行時に取得するライブラリと、実装の由来を区別します。</li>
           <li><strong>OpenCV.js for OCR</strong><br>Source: <a href="https://github.com/TechStark/opencv-js" target="_blank" rel="noreferrer">TechStark/opencv-js</a><br>Work: <code>@techstark/opencv-js</code><br>License: Apache License 2.0<br>備考: OCRの遠近補正と文字行画像の切り出しに使用。</li>
           <li><strong>PaddleOCR recognition model</strong><br>Source: <a href="https://github.com/PaddlePaddle/PaddleOCR" target="_blank" rel="noreferrer">PaddlePaddle/PaddleOCR</a><br>Work: <code>ch_PP-OCRv4_rec_infer.onnx</code> / <code>ppocr_keys_v1.txt</code> from <code>@gutenye/ocr-models</code><br>License: 上流PaddleOCRはApache License 2.0（配布ONNX変換版の条件は第三者通知で要確認）<br>備考: 整形した環の筆跡をブラウザ内で文字列へ変換するために使用。</li>
           <li><strong>Transformers.js</strong><br>Source: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noreferrer">huggingface/transformers.js</a><br>Work: Transformers.js<br>License: Apache License 2.0<br>備考: 文章Embeddingモデルをブラウザ内で実行するために使用。</li>
@@ -244,12 +244,14 @@
   </div>
   <script src="assets/js/runtime-dependencies.js"></script>
   <script src="assets/js/spell-ocr.js"></script>
+  <script src="assets/js/ocr-vocabulary-index.js"></script>
   <script src="assets/js/analysis-diagnostics.js"></script>
   <script src="assets/js/ocr-error-policy.js"></script>
   <script src="assets/js/ocr-resource-tracker.js"></script>
   <script src="assets/js/image-analysis-core.js"></script>
   <script src="assets/js/power-calculation.js"></script>
   <script src="assets/js/attribute-scoring.js"></script>
+  <script src="assets/js/streaming-sha256.js"></script>
   <script src="assets/js/model-cache.js"></script>
   <script src="assets/js/magia-image-pipeline.js"></script>
   <script src="assets/js/magia-circle-diagnostics.js"></script>

@@ -1,0 +1,418 @@
+{
+  "formatVersion": 1,
+  "encoding": "float32-le",
+  "dimension": 50,
+  "totalWordCount": 400000,
+  "supplementalWordCount": 359854,
+  "readableWordCount": 327245,
+  "bucketCount": 64,
+  "candidateWordsSha256": "7e60f095d83f0b433e20964d85f20c620f41bd059ea2e4fc765e45f3ed2bd5e7",
+  "files": {
+    "index": {
+      "file": "kotodama-input.index.json",
+      "bytes": 3743494,
+      "sha256": "145f2a1a492f5721574d2bcada31aaaf962d9d0836f1604c7d1792ac0c3aa4dc"
+    }
+  },
+  "buckets": [
+    {
+      "file": "kotodama-input-00.f32",
+      "bytes": 1105800,
+      "sha256": "a366c65abb44ea87cdd5800139d0dfc43c3b960e117bed9f2d8838384481355a",
+      "wordCount": 5529
+    },
+    {
+      "file": "kotodama-input-01.f32",
+      "bytes": 1120800,
+      "sha256": "ac4018962e00115874962257bdbd8e157fba6eccd4c7c32b528deb30246762e9",
+      "wordCount": 5604
+    },
+    {
+      "file": "kotodama-input-02.f32",
+      "bytes": 1134400,
+      "sha256": "fdad5e13832b5bccd6bfa16d41640362ae2172a92db2d7af65b47a550bb4d16b",
+      "wordCount": 5672
+    },
+    {
+      "file": "kotodama-input-03.f32",
+      "bytes": 1137600,
+      "sha256": "ce50394e8485fdaa65d5f5ecb8c093f7321f7d1278b433251a23e91e99713d87",
+      "wordCount": 5688
+    },
+    {
+      "file": "kotodama-input-04.f32",
+      "bytes": 1119400,
+      "sha256": "cd0a914ea538a5997e08d3d919d7d52ecb8a8f68eeeb21268aaf2b50907b75d5",
+      "wordCount": 5597
+    },
+    {
+      "file": "kotodama-input-05.f32",
+      "bytes": 1104600,
+      "sha256": "399d385143ebeae5e6bfb67e76b938288aeef6dd526c314966bbdeaf8deba695",
+      "wordCount": 5523
+    },
+    {
+      "file": "kotodama-input-06.f32",
+      "bytes": 1122600,
+      "sha256": "c351f37c69b379c86fcbef0e5201aa814636a8725c861a21e6da7d81ff44e2e2",
+      "wordCount": 5613
+    },
+    {
+      "file": "kotodama-input-07.f32",
+      "bytes": 1103000,
+      "sha256": "df3923f0ca578cb9a863eadc1843e5eadea39abd96d0103e5f0d9500984feee0",
+      "wordCount": 5515
+    },
+    {
+      "file": "kotodama-input-08.f32",
+      "bytes": 1115400,
+      "sha256": "4f5ed06b10a244ccc11c2b44ffeca89d5d0870739b38553ef29cbe7286df614e",
+      "wordCount": 5577
+    },
+    {
+      "file": "kotodama-input-09.f32",
+      "bytes": 1129000,
+      "sha256": "caf495eff4c26ce70b15df8329f04dce8fc45452ab9ea508603cbc88035dbc5b",
+      "wordCount": 5645
+    },
+    {
+      "file": "kotodama-input-10.f32",
+      "bytes": 1110800,
+      "sha256": "57e494ae629e6c08b7217ba752c43513f426bf5a443b6418839f8d8be6a176c5",
+      "wordCount": 5554
+    },
+    {
+      "file": "kotodama-input-11.f32",
+      "bytes": 1121800,
+      "sha256": "723a96d92e96599a28d7ef0f5687b15578aaafeea9aab88a9e064a7afbf9ec83",
+      "wordCount": 5609
+    },
+    {
+      "file": "kotodama-input-12.f32",
+      "bytes": 1123800,
+      "sha256": "aec269d53ce8d9aea975df7e212066e9e77ad7093e90af1dfcc67fc233f17d42",
+      "wordCount": 5619
+    },
+    {
+      "file": "kotodama-input-13.f32",
+      "bytes": 1122400,
+      "sha256": "176adedd29265a8ba4d99d90ae658fa49d940641e9eff8092d6d4966ea866104",
+      "wordCount": 5612
+    },
+    {
+      "file": "kotodama-input-14.f32",
+      "bytes": 1136400,
+      "sha256": "dd9d5c456468fa3a1281af3e0ce385fb2ab9b81d66760e8eb2e3910cadb34543",
+      "wordCount": 5682
+    },
+    {
+      "file": "kotodama-input-15.f32",
+      "bytes": 1128800,
+      "sha256": "e032810b557e6eb58c5524d3d148db78006ea7eafcf926c8b15f82a0d46c0caa",
+      "wordCount": 5644
+    },
+    {
+      "file": "kotodama-input-16.f32",
+      "bytes": 1115600,
+      "sha256": "689c51bc8e74aa838afb47dc1ba1e6869e9d04aca3aae6bcf8bfdfba9103f4ab",
+      "wordCount": 5578
+    },
+    {
+      "file": "kotodama-input-17.f32",
+      "bytes": 1129000,
+      "sha256": "2b1b067412fe30dcb607229700dba0044b0c6f77053b830b34e99e88db3abbc6",
+      "wordCount": 5645
+    },
+    {
+      "file": "kotodama-input-18.f32",
+      "bytes": 1143800,
+      "sha256": "2ded02b3cf4ad7ab1ab03d9026ede7236a167d4777f8322087ae8d6b2f0d8d9e",
+      "wordCount": 5719
+    },
+    {
+      "file": "kotodama-input-19.f32",
+      "bytes": 1113400,
+      "sha256": "583d495a0728fa9da1c941b92103c5885dbc12020cc98c2fb1e50b13ee299da6",
+      "wordCount": 5567
+    },
+    {
+      "file": "kotodama-input-20.f32",
+      "bytes": 1133600,
+      "sha256": "169da9247b493417d3df2f8c44143cbbd51288d19b72f5cf5b8294eac97a9515",
+      "wordCount": 5668
+    },
+    {
+      "file": "kotodama-input-21.f32",
+      "bytes": 1128600,
+      "sha256": "1ab9a84aa627acce57642db9d93d35badf32ec6826248cf07def84220d1d42e8",
+      "wordCount": 5643
+    },
+    {
+      "file": "kotodama-input-22.f32",
+      "bytes": 1113000,
+      "sha256": "faee32578b9ca4309830eedc3f420c3da34c6072e2c2f3dbe78b9c5f1a589b95",
+      "wordCount": 5565
+    },
+    {
+      "file": "kotodama-input-23.f32",
+      "bytes": 1137000,
+      "sha256": "f75f349527c38eae3c589c062d7ec22709c8bf0184fde673e323bf522347b351",
+      "wordCount": 5685
+    },
+    {
+      "file": "kotodama-input-24.f32",
+      "bytes": 1117800,
+      "sha256": "8c1ddfdff0fa6591b093221fa20db1e2af337b2333b3f2f7ccba45e18e4541e6",
+      "wordCount": 5589
+    },
+    {
+      "file": "kotodama-input-25.f32",
+      "bytes": 1145600,
+      "sha256": "923a2f8a1209adb82cd698bfb0178444843301facfa076cec3bd6414f08e30d1",
+      "wordCount": 5728
+    },
+    {
+      "file": "kotodama-input-26.f32",
+      "bytes": 1144600,
+      "sha256": "f2080b423789fb53d6113937f72c87a40752078d0df41ed5697365de4161e788",
+      "wordCount": 5723
+    },
+    {
+      "file": "kotodama-input-27.f32",
+      "bytes": 1117600,
+      "sha256": "b30e615ab414dc2a9a12285b2c395f936d064af712c6238af65833f330e204b2",
+      "wordCount": 5588
+    },
+    {
+      "file": "kotodama-input-28.f32",
+      "bytes": 1141400,
+      "sha256": "b5ee37bac95741346899f9a949eb14f76b2122623f60aa9078f9814a75ecf71e",
+      "wordCount": 5707
+    },
+    {
+      "file": "kotodama-input-29.f32",
+      "bytes": 1112200,
+      "sha256": "ecab60b39a82fe68bb6028907d48cfaf23daf7802fba821307a725ad0a9e842b",
+      "wordCount": 5561
+    },
+    {
+      "file": "kotodama-input-30.f32",
+      "bytes": 1134000,
+      "sha256": "8d7f47891f6a884d128b768f149028d08c1d2e208f00eb27c473019ea8255a05",
+      "wordCount": 5670
+    },
+    {
+      "file": "kotodama-input-31.f32",
+      "bytes": 1129800,
+      "sha256": "4aee9264466ccfd9022ac30c327f98f52f1a3a43374bb9cc5e88ead0783966f0",
+      "wordCount": 5649
+    },
+    {
+      "file": "kotodama-input-32.f32",
+      "bytes": 1109800,
+      "sha256": "705cea61f23a09b3c407096eff217682fee8b7d5ae82642c6d91e236937f2846",
+      "wordCount": 5549
+    },
+    {
+      "file": "kotodama-input-33.f32",
+      "bytes": 1125200,
+      "sha256": "e39dd3c30c397b4d40f8a1d7d029518f55123653c0f65d2cfc1f15f0ea8213f8",
+      "wordCount": 5626
+    },
+    {
+      "file": "kotodama-input-34.f32",
+      "bytes": 1105800,
+      "sha256": "63416c83552fc401ae114ecad9b224e1f87d60767e44e4762e51c9667db5be4e",
+      "wordCount": 5529
+    },
+    {
+      "file": "kotodama-input-35.f32",
+      "bytes": 1134400,
+      "sha256": "80c9ef6daa0281738c62793579911e025f842b45d98a1bc17fac62030ddd014e",
+      "wordCount": 5672
+    },
+    {
+      "file": "kotodama-input-36.f32",
+      "bytes": 1114400,
+      "sha256": "d70d83f50abe403375ce91a0b6dcf71d8bb3b6ccf1b3ce0b5eaf268e68f11cb5",
+      "wordCount": 5572
+    },
+    {
+      "file": "kotodama-input-37.f32",
+      "bytes": 1150000,
+      "sha256": "d3c061ec0dbe3571dda2d90a3f81594a505e751f70aca938fea22be16e9e4cad",
+      "wordCount": 5750
+    },
+    {
+      "file": "kotodama-input-38.f32",
+      "bytes": 1133200,
+      "sha256": "c9e71c15bd1aa4a2db8d3647764962b968506ef17bd2fe3aebd739d54f8e27bd",
+      "wordCount": 5666
+    },
+    {
+      "file": "kotodama-input-39.f32",
+      "bytes": 1121200,
+      "sha256": "0b945f6d94074ccfa58e38eb407132531d5b042d650c6b9d896b45fc44f51338",
+      "wordCount": 5606
+    },
+    {
+      "file": "kotodama-input-40.f32",
+      "bytes": 1116200,
+      "sha256": "a07e66f0abca3df985db538487c278b99d751d6f58d3db053534b01f24f72b91",
+      "wordCount": 5581
+    },
+    {
+      "file": "kotodama-input-41.f32",
+      "bytes": 1110200,
+      "sha256": "53645d657331826bf9cd48acb56473c31d429dad307cd4e4f1ae09da164d9ed4",
+      "wordCount": 5551
+    },
+    {
+      "file": "kotodama-input-42.f32",
+      "bytes": 1124400,
+      "sha256": "256cc03ca3b8ea45bd4e07be29490afb4e889506d8a822b35a925261921d6eed",
+      "wordCount": 5622
+    },
+    {
+      "file": "kotodama-input-43.f32",
+      "bytes": 1115000,
+      "sha256": "ed694b3f91dce0f8a4d083d175aadb41b2e630539d23d041c464f2a88b4fcaaf",
+      "wordCount": 5575
+    },
+    {
+      "file": "kotodama-input-44.f32",
+      "bytes": 1141400,
+      "sha256": "330e055879da473c17c247e1b9efe5fdd013bf42706b501b8174982ac950ba60",
+      "wordCount": 5707
+    },
+    {
+      "file": "kotodama-input-45.f32",
+      "bytes": 1129000,
+      "sha256": "38b9d1ba7e17feb141e73a3b7cd80d2ad9cc4596c39c136ad7d3e38a06d94b47",
+      "wordCount": 5645
+    },
+    {
+      "file": "kotodama-input-46.f32",
+      "bytes": 1135800,
+      "sha256": "dda2eed6bbe47704e0482194cb79e70af08731155d589aca3eebb12b04d2f5e2",
+      "wordCount": 5679
+    },
+    {
+      "file": "kotodama-input-47.f32",
+      "bytes": 1125000,
+      "sha256": "c914a314b6ccafbf5d2abe9026be2ba68c3a49bd490e5c074d28c2801f703e97",
+      "wordCount": 5625
+    },
+    {
+      "file": "kotodama-input-48.f32",
+      "bytes": 1121600,
+      "sha256": "f0f49d7912031c70903dcbed60bdf5ba4ae8da8f4d2485bd11a1ae4fb2c37b7c",
+      "wordCount": 5608
+    },
+    {
+      "file": "kotodama-input-49.f32",
+      "bytes": 1120800,
+      "sha256": "3e1be948c9f36c2cab811b73474da19a31d0b5b4c512db848a2486b676a5627e",
+      "wordCount": 5604
+    },
+    {
+      "file": "kotodama-input-50.f32",
+      "bytes": 1130000,
+      "sha256": "6d54a1cce76ef4a1dfa53c9c0e8234df2b36b7e5da29d3d8b218cc45e0d05be2",
+      "wordCount": 5650
+    },
+    {
+      "file": "kotodama-input-51.f32",
+      "bytes": 1104200,
+      "sha256": "4934be8b4008085191ea8e5021ad393e73045b639272df23e33ee89affc0468b",
+      "wordCount": 5521
+    },
+    {
+      "file": "kotodama-input-52.f32",
+      "bytes": 1131000,
+      "sha256": "3391b9d75438a94e21c1e8e5e693900ec55c341928b7d265dac43b419fb478b8",
+      "wordCount": 5655
+    },
+    {
+      "file": "kotodama-input-53.f32",
+      "bytes": 1128200,
+      "sha256": "b9a6be18a830daa5553a4307a4eb18be3fe8591d948dc257184386e08c3df7a0",
+      "wordCount": 5641
+    },
+    {
+      "file": "kotodama-input-54.f32",
+      "bytes": 1112400,
+      "sha256": "c1b66e4443dedadf82f01316e9b2e56349d0bd2c100022cd654d75ec6c1e3dd9",
+      "wordCount": 5562
+    },
+    {
+      "file": "kotodama-input-55.f32",
+      "bytes": 1140600,
+      "sha256": "973a925d29ca34cdb1327b26f37645a6b4c393846ffef1e7d9e5f198530fbcd5",
+      "wordCount": 5703
+    },
+    {
+      "file": "kotodama-input-56.f32",
+      "bytes": 1135000,
+      "sha256": "efce4cf32e3590b8a0c2c9100718b146c8eff0c477fe39957e6b0eea4c5dfa0f",
+      "wordCount": 5675
+    },
+    {
+      "file": "kotodama-input-57.f32",
+      "bytes": 1126000,
+      "sha256": "db99b49ce32f0edbf61b60dd0b8bad5a8c5c1afca784393bd63c678310de28af",
+      "wordCount": 5630
+    },
+    {
+      "file": "kotodama-input-58.f32",
+      "bytes": 1123800,
+      "sha256": "6afa1610f408570487fa61ebb8e250cd8b0e15a5cffb5d2486e00eafd223b756",
+      "wordCount": 5619
+    },
+    {
+      "file": "kotodama-input-59.f32",
+      "bytes": 1121800,
+      "sha256": "ac8a415059ebf56bab61e035827cb91e8a22d664a1f31e0ace94fc10e5d072ae",
+      "wordCount": 5609
+    },
+    {
+      "file": "kotodama-input-60.f32",
+      "bytes": 1127200,
+      "sha256": "bd3a749733881c4659994bb27b45aaf89400c08378366f898f7ec5002cac3e05",
+      "wordCount": 5636
+    },
+    {
+      "file": "kotodama-input-61.f32",
+      "bytes": 1125400,
+      "sha256": "477ef09a4146db79ab8572906c5d30db9e7527561c0a0651508eb3dd1abdc6e2",
+      "wordCount": 5627
+    },
+    {
+      "file": "kotodama-input-62.f32",
+      "bytes": 1112800,
+      "sha256": "5c1d2f61531c2349b304f8874af36891744a72f42b60bd346548c8f4734f5bb8",
+      "wordCount": 5564
+    },
+    {
+      "file": "kotodama-input-63.f32",
+      "bytes": 1125400,
+      "sha256": "144088cababa829557f8e29b83d4b54809507b354b9cefcd2bc67b73d2aaf1fb",
+      "wordCount": 5627
+    }
+  ],
+  "source": {
+    "url": "https://huggingface.co/stanfordnlp/glove/resolve/1db2080b2d94def6e5b0386a523102f9d8849e9d/glove.6B.zip",
+    "revision": "1db2080b2d94def6e5b0386a523102f9d8849e9d",
+    "archiveSha256": "6471382cdd837544bf3ac72497a38715e845897d265b2b424b4761832009c837",
+    "archiveBytes": 862182753,
+    "file": "glove.6B.50d.txt",
+    "bytes": 171350515,
+    "sha256": "c99ba128d1efdaa3496b7542ba599ecdd1dd6679114d3b5ce19f0ec208b4aa5b",
+    "compressedOffset": 792999879,
+    "compressedBytes": 69182505,
+    "license": "PDDL-1.0",
+    "attribution": "Jeffrey Pennington, Richard Socher, Christopher D. Manning. GloVe: Global Vectors for Word Representation (2014).",
+    "wordCount": 400001
+  },
+  "method": "First 400000 original GloVe rows; no candidate gates; retain original Float32 values; reuse candidate vector rows; FNV-1a UTF-16 hash buckets in original source order"
+}

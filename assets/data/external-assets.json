@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "reviewedOn": "2026-10-06",
-  "notes": "URLs and model options are shared in assets/js/runtime-dependencies.js. SHA-256 covers unmodified upstream response bytes. Browser caches use pinned URLs; the optional Node verification script streams hashes without retaining whole models. Kotodama generated inputs and outputs have separate *.meta.json provenance.",
+  "notes": "URLs and model options are shared in assets/js/runtime-dependencies.js. SHA-256 covers unmodified upstream response bytes. The browser validates decoded bytes and streaming SHA-256 for directly cached OCR detection/recognition ONNX models and the OCR dictionary before saving or using them. Transformers.js keeps its own cache and pinned embedding revision. The optional Node verification script streams hashes without retaining whole models. Kotodama generated inputs and outputs have separate *.meta.json provenance.",
   "libraries": [
     { "package": "@huggingface/transformers", "version": "3.8.1", "configUrl": "transformersUrl", "license": "Apache-2.0", "scope": "embedding Worker" },
     { "package": "onnxruntime-web", "version": "1.30.0", "configUrl": "onnxRuntimeUrl", "license": "MIT", "scope": "OCR Worker" },

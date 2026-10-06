@@ -15,13 +15,13 @@
 
 `fflate` はブラウザから除去しました。GloVe取得・解凍は開発用Nodeスクリプトの標準 `node:zlib` で行い、ブラウザにZIPを送信しません。Node画像バッチの `sharp` はApache-2.0です。0.35.4へ統一し、依存するlibvips等の表示はnpm配布物のLICENSE/third-party noticesにも従います。
 
-固定URL・モデルオプションは [runtime-dependencies.js](assets/js/runtime-dependencies.js)、モデルと辞書のversion/bytes/SHA-256は [external-assets.json](assets/data/external-assets.json) に記録します。これは改変検知用の台帳であり、外部CDNが常時利用可能であることを保証するものではありません。
+固定URL・モデルオプションは [runtime-dependencies.js](assets/js/runtime-dependencies.js)、モデルと辞書のversion/bytes/SHA-256は [external-assets.json](assets/data/external-assets.json) に記録します。OCR直接管理資材3件はruntimeでもdecoded bytes/SHA-256を使用・保存前に検証します。Embeddingはrevision固定を維持し、内部cacheへ侵入しません。台帳の記載とruntime検証範囲を区別し、外部CDNの常時利用可能性を保証するものではありません。
 
 ## 学習済みモデル
 
 | モデル | 取得元・加工 | ライセンスと確認状況 |
 | --- | --- | --- |
-| Stanford GloVe 6B、50次元 | [公式配布案内](https://nlp.stanford.edu/projects/glove/)、公式Hugging Faceミラーの固定revision `1db2080b2d94def6e5b0386a523102f9d8849e9d`。40,146語を抽出し、元のFloat32値を変更せずFloat32LEへ変換 | **学習済みベクトルはPDDL 1.0**。GloVeコードのApache-2.0とは別。出典: Jeffrey Pennington, Richard Socher, Christopher D. Manning, *GloVe: Global Vectors for Word Representation* (2014)。入力・出力のhash、選択法、次元数、語数は `kotodama-vectors.meta.json` に記録 |
+| Stanford GloVe 6B、50次元 | [公式配布案内](https://nlp.stanford.edu/projects/glove/)、公式Hugging Faceミラーの固定revision `1db2080b2d94def6e5b0386a523102f9d8849e9d`。40,146語の共通常駐辞書と359,854語の分割入力補助（計400,000語）へ、元のFloat32値を変更せずFloat32LE変換 | **学習済みベクトルはPDDL 1.0**。GloVeコードのApache-2.0とは別。出典: Jeffrey Pennington, Richard Socher, Christopher D. Manning, *GloVe: Global Vectors for Word Representation* (2014)。入力・出力のhash、選択法、次元数、語数は `kotodama-vectors.meta.json` / `kotodama-input.meta.json` に記録 |
 | all-MiniLM-L6-v2 | [Sentence Transformers](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) / [Xenova ONNX変換版](https://huggingface.co/Xenova/all-MiniLM-L6-v2)、revision `751bff37182d3f1213fa05d7196b954e230abad9`、q8、WASM | モデルカードはApache-2.0。コードのライセンスとモデルのライセンスは別々に参照 |
 | PP-OCRv4 detection / recognition、ppocr_keys_v1 | [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)を元にした `@gutenye/ocr-models` 1.2.2 のONNXモデル・辞書 | PaddleOCR上流はApache-2.0。gutenyeの現行READMEはモデル・辞書もApache-2.0と記載する一方、1.2.2のnpm metadataはMIT。**当該バージョンのONNX変換元・weight対応と再配布条件は要確認**。npm packageのMITだけをweightのライセンスとして断定しない |
 
@@ -29,7 +29,7 @@
 
 ## 辞書と地理データ
 
-コトダマギアは開発時に候補ゲートを前計算し、生成済み `kotodama-lexicon.json` を配布します。マギアサークルはOCR補正のためSCOWL系辞書と禁止語辞書を固定SHAから取得します。
+コトダマギアは開発時に候補ゲートを前計算し、生成済み `kotodama-lexicon.json` を配布します。マギアサークルのOCR補正索引もNodeで事前生成し、語の並び・n-gram・補正順位を変えず圧縮資材へ変換します。原本ではなく同一サイトの生成物を読み、hash検証してCacheへ保存します。source commit/SHAと変更内容は `ocr-vocabulary-index.meta.json` に記録します。
 
 | データ | 出典・ライセンス | 変更・追加確認事項 |
 | --- | --- | --- |

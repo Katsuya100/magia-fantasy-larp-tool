@@ -4,6 +4,7 @@ import models from '@gutenye/ocr-models/node';
 import '@gutenye/ocr-node';
 import { Detection } from '../node_modules/@gutenye/ocr-common/build/models/Detection.js';
 import sharp from 'sharp';
+import { loadOcrVocabularyIndex } from '../scripts/load-ocr-vocabulary-index.mjs';
 
 await import('../assets/js/runtime-dependencies.js');
 await import('../assets/js/spell-ocr.js');
@@ -105,14 +106,7 @@ const detectionTensorShape = [
 ];
 let detectionMs = null;
 const dictionary = [...(await readFile(models.dictionaryPath, 'utf8')).split(/\r?\n/), ' '];
-const [forbiddenResponse, commonResponse] = await Promise.all([
-  fetch(core.config.forbiddenWordsUrl, { cache: 'no-store' }),
-  fetch(core.config.commonWordsUrl, { cache: 'no-store' }),
-]);
-if (!forbiddenResponse.ok) throw new Error(`Forbidden-word list download failed: HTTP ${forbiddenResponse.status}`);
-if (!commonResponse.ok) throw new Error(`Common vocabulary download failed: HTTP ${commonResponse.status}`);
-const [forbiddenText, commonText] = await Promise.all([forbiddenResponse.text(), commonResponse.text()]);
-const vocabularyIndex = core.createVocabularyNgramIndex(commonText, forbiddenText);
+const vocabularyIndex = await loadOcrVocabularyIndex();
 const vocabularyCorrector = core.createVocabularyCorrector(vocabularyIndex);
 if (!vocabularyCorrector.size) throw new Error('Common vocabulary dictionary is empty.');
 const fixtureIndex = core.createVocabularyNgramIndex('\uFEFFhello\nworld\ncat\nbat\na\ni\niv\nbar\nthunder\nthumber\nblast\nflashest', 'bat\nfoo bar');
