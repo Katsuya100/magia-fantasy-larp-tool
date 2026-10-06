@@ -24,6 +24,36 @@
   } = diagnosticSession;
   const { diagnostics, publishDiagnostics, publishRuntimeDiagnostics } = global.MagiaCircleDiagnosticView.create(diagnosticSession);
   let selectedImageDiagnosticRun = null;
+  let forbiddenWordsPromise = null;
+
+  async function loadForbiddenWords(job = null) {
+    const stage = (name, details = {}) => { if (job) recordAnalysisStage(job, name, details); };
+    if (!forbiddenWordsPromise) {
+      forbiddenWordsPromise = (async () => {
+        const url = new URL('assets/data/kotodama-lexicon.json', document.baseURI);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`コトダマギアの禁書目録が届かなかった (${response.status})。`);
+        const lexicon = await response.json();
+        if (lexicon?.formatVersion !== 1 || !Array.isArray(lexicon.forbidden) || !lexicon.forbidden.length ||
+            lexicon.forbidden.some(word => typeof word !== 'string' || !/^[a-z]+$/.test(word))) {
+          throw new Error('コトダマギアの禁書目録を読めません。');
+        }
+        return new Set(lexicon.forbidden);
+      })().catch(error => {
+        forbiddenWordsPromise = null;
+        throw error;
+      });
+    }
+    try {
+      const forbiddenWords = await forbiddenWordsPromise;
+      stage('forbidden-words-loaded', { wordCount: forbiddenWords.size });
+      return forbiddenWords;
+    } catch (error) {
+      stage('forbidden-words-error', { error: { name: String(error?.name || 'Error'), message: String(error?.message || error).slice(0, 240) } });
+      console.warn('コトダマギアの禁書目録を読み取れませんでした。', error);
+      throw error;
+    }
+  }
 
   async function loadVocabularyIndex(job = null) {
     const stage = (name, details = {}) => { if (job) recordAnalysisStage(job, name, details); };
@@ -37,22 +67,37 @@
   }
 
   async function validateVocabularyIndex() {
-    let index = await loadVocabularyIndex();
-    const available = Boolean(index && index.words.length >= 100000);
+    let index;
+    const [loadedIndex, forbiddenWords] = await Promise.all([loadVocabularyIndex(), loadForbiddenWords()]);
+    index = loadedIndex;
+    const available = Boolean(index && index.words.length >= 100000 && forbiddenWords.size);
     index = null;
     return available;
+  }
+
+  function rejectForbiddenSpell(recognition, forbiddenWords, job) {
+    try {
+      core.assertNoForbiddenWords(recognition?.path?.words || [], forbiddenWords, recognition?.path?.text || '');
+    } catch (error) {
+      recordAnalysisStage(job, 'spell-forbidden', { words: error.forbiddenWords || [] });
+      throw error;
+    }
   }
 
   async function applyVocabularyCorrection(recognition, job) {
     if (!recognition?.path?.words?.length) return core.applyVocabularyCorrection(recognition, null);
     assertActiveAnalysisJob(job);
-    let index = await loadVocabularyIndex(job);
+    let index;
+    const [loadedIndex, forbiddenWords] = await Promise.all([loadVocabularyIndex(job), loadForbiddenWords(job)]);
+    index = loadedIndex;
+    rejectForbiddenSpell(recognition, forbiddenWords, job);
     try {
       if (!index || index.words.length < 100000) {
         recordAnalysisStage(job, 'vocabulary-corrector-create-start', { wordCount: index?.words?.length || 0, fallback: true });
         recordAnalysisStage(job, 'vocabulary-corrector-create-done', { fallback: true });
         recordAnalysisStage(job, 'vocabulary-correction-run-start', { fallback: true });
         const corrected = core.applyVocabularyCorrection(recognition, null);
+        rejectForbiddenSpell(corrected, forbiddenWords, job);
         recordAnalysisStage(job, 'vocabulary-correction-run-done', { correctedWordCount: corrected?.path?.words?.length || 0, fallback: true });
         return corrected;
       }
@@ -63,6 +108,7 @@
       assertActiveAnalysisJob(job);
       recordAnalysisStage(job, 'vocabulary-correction-run-start', { wordCount: recognition.path.words.length });
       const corrected = core.applyVocabularyCorrection(recognition, corrector.size < 100000 ? null : corrector);
+      rejectForbiddenSpell(corrected, forbiddenWords, job);
       recordAnalysisStage(job, 'vocabulary-correction-run-done', { correctedWordCount: corrected?.path?.words?.length || 0 });
       return corrected;
     } finally {
@@ -1312,6 +1358,19 @@
         failedStage: diagnosticStageState.currentStage,
       });
       if (!isActiveAnalysisJob(job)) return;
+      if (error?.code === 'FORBIDDEN_WORDS') {
+        structureReady = false;
+        spellReady = false;
+        updateResultVisibility();
+        setImageBusy(false);
+        spellOutput.textContent = error.spellText || error.message;
+        setStatus(cameraStatus, '封じられた言霊を検知したため、解析結果を破棄しました。', 'error');
+        setStatus(modelStatus, error.message, 'error');
+        activeAnalysisJob = null;
+        analyzeButton.disabled = !hasSelectedImage;
+        publishDiagnostics();
+        return;
+      }
       if (ocrExecutionError) {
         structureReady = false;
         spellReady = false;
