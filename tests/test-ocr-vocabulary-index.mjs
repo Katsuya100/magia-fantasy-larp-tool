@@ -11,6 +11,15 @@ const codec = globalThis.OcrVocabularyIndex;
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const arrayBuffer = bytes => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 const fixture = core.createVocabularyNgramIndex('\uFEFFhello\nworld\ncat\nbat\na\ni\niv\nbar\nthunder\nthumber\nblast\nflashest', 'bat\nfoo bar');
+assert.deepEqual(core.findForbiddenWords(['cat', 'BAT', 'bat', 'bar!'], new Set(['bat', 'foo'])), ['bat']);
+assert.throws(
+  () => core.assertNoForbiddenWords(['cat', 'BAT', 'bat'], new Set(['bat']), 'Cat BAT bat'),
+  error => error.code === 'FORBIDDEN_WORDS' &&
+    error.name === 'ForbiddenWordsError' &&
+    error.message === '封じられた言霊が混じっている: bat' &&
+    error.spellText === 'Cat BAT bat' &&
+    JSON.stringify(error.forbiddenWords) === JSON.stringify(['bat']),
+);
 const binary = encode(fixture);
 const decoded = codec.decode(arrayBuffer(binary));
 const normalize = index => ({ ...index, bigramCounts: Array.from(index.bigramCounts), trigramCounts: Array.from(index.trigramCounts),
@@ -88,6 +97,14 @@ assert.throws(() => codec.decode(arrayBuffer(Buffer.concat([binary, Buffer.from(
 await assert.rejects(codec.readResponse(new Response(zip), { ...meta, decodedBytes: binary.length + 1 }), /byte count/);
 await assert.rejects(codec.readResponse(new Response(zip), { ...meta, vocabularySignature: 'bad' }), /metadata/);
 await assert.rejects(codec.readResponse(new Response(zip), { ...meta, compression: 'br' }), /compression/);
+
+const kotodamaLexicon = JSON.parse(await readFile(new URL('../assets/data/kotodama-lexicon.json', import.meta.url)));
+const sharedForbiddenWords = new Set(kotodamaLexicon.forbidden);
+for (const word of ['fuck', 'shit', 'damn']) assert.ok(sharedForbiddenWords.has(word));
+assert.throws(
+  () => core.assertNoForbiddenWords(['hello', 'fuck', 'shit', 'fuck'], sharedForbiddenWords, 'hello fuck shit fuck'),
+  error => error.message === '封じられた言霊が混じっている: fuck, shit',
+);
 
 const publishedMeta = JSON.parse(await readFile(new URL('../assets/data/ocr-vocabulary-index.meta.json', import.meta.url)));
 const publishedZip = await readFile(new URL(`../assets/data/${publishedMeta.file.file}`, import.meta.url));
