@@ -33,6 +33,31 @@
     return clean(value).toLowerCase().split(/\s+/).map(word => word.replace(/[^a-z]/g, '')).filter(Boolean);
   }
 
+  function findForbiddenWords(sourceWords, forbiddenWords) {
+    const forbidden = forbiddenWords instanceof Set ? forbiddenWords : new Set(forbiddenWords || []);
+    const sealed = [];
+    const seen = new Set();
+    for (const value of sourceWords || []) {
+      for (const word of words(value)) {
+        if (!forbidden.has(word) || seen.has(word)) continue;
+        seen.add(word);
+        sealed.push(word);
+      }
+    }
+    return sealed;
+  }
+
+  function assertNoForbiddenWords(sourceWords, forbiddenWords, spellText = '') {
+    const sealed = findForbiddenWords(sourceWords, forbiddenWords);
+    if (!sealed.length) return;
+    const error = new Error(`封じられた言霊が混じっている: ${sealed.join(', ')}`);
+    error.name = 'ForbiddenWordsError';
+    error.code = 'FORBIDDEN_WORDS';
+    error.forbiddenWords = sealed;
+    error.spellText = String(spellText || '');
+    throw error;
+  }
+
   function vocabularySignature(commonText, forbiddenText = '') {
     const source = `ngram-index-v2\u0000${String(commonText || '')}\u0000${String(forbiddenText || '')}`;
     let hash = 2166136261;
@@ -1061,6 +1086,8 @@
     config,
     clean,
     words,
+    findForbiddenWords,
+    assertNoForbiddenWords,
     normalize,
     vocabularySignature,
     createVocabularyNgramIndex,
