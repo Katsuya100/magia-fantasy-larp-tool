@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { dirname, extname, join, normalize, resolve } from 'node:path';
+import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const port = Number(process.argv[2] || 8765);
@@ -22,7 +22,7 @@ const server = createServer(async (request, response) => {
   const requestPath = decodeURIComponent(new URL(request.url, `http://${request.headers.host}`).pathname);
   const relativePath = normalize(requestPath === '/' ? '/index.html' : requestPath).replace(/^[/\\]+/, '');
   const filePath = resolve(root, relativePath);
-  if (filePath !== root && !filePath.startsWith(root + '\\')) {
+  if (filePath !== root && !filePath.startsWith(root + sep)) {
     response.writeHead(403);
     response.end('Forbidden');
     return;

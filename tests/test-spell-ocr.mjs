@@ -5,6 +5,7 @@ import '@gutenye/ocr-node';
 import { Detection } from '../node_modules/@gutenye/ocr-common/build/models/Detection.js';
 import sharp from 'sharp';
 
+await import('../assets/js/runtime-dependencies.js');
 await import('../assets/js/spell-ocr.js');
 await import('../assets/js/image-analysis-core.js');
 await import('../assets/js/power-calculation.js');

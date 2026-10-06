@@ -1,0 +1,50 @@
+{
+  "formatVersion": 1,
+  "method": "scripts/build-kotodama-lexicon.mjs; preserved candidate gates, fixed Natural Earth + GeoNames JSON snapshot",
+  "candidateFrequencyLimit": 5000,
+  "randomInkFrequencyLimit": 3000,
+  "candidateCount": 2516,
+  "file": {
+    "file": "kotodama-lexicon.json",
+    "bytes": 102960,
+    "sha256": "3b9ace13ccf3ef93cd4c6184fb09fb47c20ca009bac019436fb394dd818a0e56"
+  },
+  "sources": {
+    "canonical": {
+      "file": "canonical.txt",
+      "url": "https://raw.githubusercontent.com/nlile/dictionary-word-list/842089dfe25f96fc872f3dc260419b02abc9c5a2/word_list_very_common_en_us_spelling_no_diacritic.txt",
+      "sha256": "25e627fbdfc293fea2104ca3739ab56d3e9ede7f0d6901fb7756abdd341fc44e",
+      "bytes": 6866299
+    },
+    "frequency": {
+      "file": "frequency.csv",
+      "url": "https://raw.githubusercontent.com/filiph/english_words/4191ae1341c5e3dc640731c20f118746a51e7143/data/word-freq-top5000.csv",
+      "sha256": "87a73f5bca66862983dd430ba5d37129706f761291b433d33fcac8de117f66fc",
+      "bytes": 124805
+    },
+    "forbidden": {
+      "file": "profanity.txt",
+      "url": "https://raw.githubusercontent.com/dsojevic/profanity-list/c27924319aa9bd6f917e3782b4f4b6604a50b652/en.txt",
+      "sha256": "2eebcd97d34e45972b86f5631bc6d970aaed580cd9def3ce1ae4ee58e031a2c6",
+      "bytes": 8389
+    },
+    "names": {
+      "file": "names.txt",
+      "url": "https://raw.githubusercontent.com/FinNLP/humannames/515e406650b9f8b2b9b5b3f833e8e4b3b1fb07ed/list.txt",
+      "sha256": "e3dcba235a5d53dd60fdf1055438d999684ba9b991f5e2897f359c9bfe44083c",
+      "bytes": 1571370
+    },
+    "places": {
+      "file": "places.geojson",
+      "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/ca96624a56bd078437bca8184e78163e5039ad19/geojson/ne_10m_populated_places_simple.geojson",
+      "sha256": "fd3fa867a320cbd5c5b6bb5bc550afeec2939fb2cef688e508007282a55ac42f",
+      "bytes": 4932147
+    },
+    "cities": {
+      "file": "cities.json",
+      "url": "https://raw.githubusercontent.com/lmfmaier/cities-json/aed0822519df832873f6cca8e05d5224c418e657/cities500.json",
+      "sha256": "d9d3cd0b013dda20351fbe32fade487ffbaf846be5a2034a3b9e37fb551e2c88",
+      "bytes": 26854683
+    }
+  }
+}

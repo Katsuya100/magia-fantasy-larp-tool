@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const context = vm.createContext({});
-for (const name of ['spell-ocr.js', 'image-analysis-core.js', 'attribute-scoring.js', 'power-calculation.js', 'ocr-error-policy.js', 'magia-image-pipeline.js']) {
+for (const name of ['runtime-dependencies.js', 'spell-ocr.js', 'image-analysis-core.js', 'attribute-scoring.js', 'power-calculation.js', 'ocr-error-policy.js', 'magia-image-pipeline.js']) {
   const source = await readFile(new URL(`../assets/js/${name}`, import.meta.url), 'utf8');
   vm.runInContext(source, context, { filename: name });
 }

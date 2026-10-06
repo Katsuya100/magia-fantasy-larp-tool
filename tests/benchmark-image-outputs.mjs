@@ -10,7 +10,7 @@ const valueAfter = (flag, fallback = null) => {
   return index < 0 ? fallback : args[index + 1];
 };
 const image = valueAfter('--image');
-const baselinePath = valueAfter('--baseline', 'updated-web-wasm-sample.json');
+const baselinePath = valueAfter('--baseline', 'fixtures/image-outputs/updated-web-wasm-sample.json');
 const iterations = Number(valueAfter('--iterations', '5'));
 const outputPath = resolve(valueAfter('--output', 'test-results/onnxruntime/graph-optimization-ab.json'));
 const levels = (valueAfter('--levels', 'disabled,basic,extended,all') || '').split(',').filter(Boolean);

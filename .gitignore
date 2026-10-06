@@ -1,5 +1,10 @@
 # Dependencies
 node_modules/
+dist/
+
+# Local diagnostics and generated reports (committed fixtures remain tracked)
+.tmp/
+test-results/
 
 # Local package-manager cache and logs
 .npm-cache/

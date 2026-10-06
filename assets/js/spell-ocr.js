@@ -2,15 +2,17 @@
 (function attachSpellOcrCore(global) {
   'use strict';
 
+  const dependencies = global.MagiaRuntimeDependencies;
+  if (!dependencies) throw new Error('spell-ocr.js requires runtime-dependencies.js.');
   const config = Object.freeze({
     maxInputSide: 2048,
     analysisInputSide: 1400,
-    detectionModelUrl: 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_det_infer.onnx',
-    recognitionModelUrl: 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_rec_infer.onnx',
-    dictionaryUrl: 'https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ppocr_keys_v1.txt',
-    forbiddenWordsUrl: 'https://raw.githubusercontent.com/dsojevic/profanity-list/main/en.txt',
-    commonWordsUrl: 'https://raw.githubusercontent.com/nlile/dictionary-word-list/master/word_list_very_common_en_us_spelling_no_diacritic.txt',
-    onnxRuntimeWebVersion: '1.30.0',
+    detectionModelUrl: dependencies.detectionModelUrl,
+    recognitionModelUrl: dependencies.recognitionModelUrl,
+    dictionaryUrl: dependencies.dictionaryUrl,
+    forbiddenWordsUrl: dependencies.forbiddenWordsUrl,
+    commonWordsUrl: dependencies.commonWordsUrl,
+    onnxRuntimeWebVersion: dependencies.onnxRuntimeWebVersion,
     onnxRuntimeDefaults: Object.freeze({
       executionProvider: 'wasm',
       graphOptimizationLevel: 'all',

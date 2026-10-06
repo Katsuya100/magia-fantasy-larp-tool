@@ -1,6 +1,7 @@
 self.postMessage({ type: 'diagnostic-stage', stage: 'structure-worker-script-start', details: { scope: 'structure' } });
 self.postMessage({ type: 'diagnostic-stage', stage: 'structure-runtime-import-start', details: { scope: 'structure' } });
 importScripts(
+  new URL('runtime-dependencies.js', self.location.href).href,
   new URL('analysis-diagnostics.js', self.location.href).href,
   new URL('spell-ocr.js', self.location.href).href,
   new URL('image-analysis-core.js', self.location.href).href,

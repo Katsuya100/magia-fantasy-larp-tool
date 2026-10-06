@@ -171,6 +171,8 @@ assert.equal(mainEvents.at(-1).details.runtimeStates.ocrWorkerActive, false);
 
 const workerSource = await readFile(new URL('../assets/js/magia-circle-ocr-worker.js', import.meta.url), 'utf8');
 const appSource = await readFile(new URL('../assets/js/magia-circle-app.js', import.meta.url), 'utf8');
+const diagnosticSource = await readFile(new URL('../assets/js/magia-circle-diagnostics.js', import.meta.url), 'utf8');
+const diagnosticViewSource = await readFile(new URL('../assets/js/magia-circle-diagnostic-view.js', import.meta.url), 'utf8');
 assert.doesNotMatch(appSource, /imageAnalysis\.rgbaBytes/, 'Canvas byte estimates must use the diagnostics helper API, not ImageAnalysisCore.');
 assert.match(appSource, /MagiaAnalysisDiagnostics\.rgbaBytes\(captureCanvas\.width, captureCanvas\.height\)/, 'Image selection should complete using the exported byte estimator.');
 const detectorStart = workerSource.indexOf('async function ensureTextDetector()');
@@ -179,7 +181,7 @@ const browserImageRawStart = workerSource.indexOf('class BrowserImageRaw', detec
 const detectorSetup = workerSource.slice(detectorStart, detectionStart);
 const detectBody = workerSource.slice(detectionStart, browserImageRawStart);
 assert.equal(detectorSetup.includes('await ensureOcrImageRuntimes()'), false, 'Detection setup must not initialize OpenCV.');
-assert.ok(workerSource.includes("import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm')"));
+assert.ok(workerSource.includes('import(dependencies.opencvUrl)'));
 const orderedStages = [
   "reportStage('ocr-detection-run-start'",
   'await sessionForRun.run(',
@@ -198,21 +200,19 @@ assert.doesNotMatch(detectBody, /await ensureOcrImageRuntimes|MagiaOcrLineSplitt
 const geometryBody = workerSource.slice(workerSource.indexOf('async function prepareLines('), workerSource.indexOf('async function runPhase('));
 assert.ok(geometryBody.indexOf('MagiaOcrLineSplitter.alignSource(') < geometryBody.indexOf('await ensureOcrImageRuntimes();'), 'Geometry should align the source before importing OpenCV.');
 assert.doesNotMatch(geometryBody, /ensureTextDetector|ensureTextRecognizer/, 'Geometry must not initialize an ONNX session.');
-assert.match(appSource, /createReporter\('main'/, 'Each Main Thread diagnostic run should own a Reporter.');
+assert.match(diagnosticSource, /createReporter\('main'/, 'Each Main Thread diagnostic run should own a Reporter.');
 assert.match(appSource, /message\.type === 'diagnostic-stage'.*?recordAnalysisStage\(/s, 'Worker diagnostic messages should enter the Main Thread Reporter.');
-assert.match(appSource, /setItem\('magiaAnalysisTrace'/, 'Main Thread events should persist their bounded trace to localStorage.');
-assert.match(appSource, /createStageBatcher/, 'Main Thread trace snapshots should use the storage batcher.');
-assert.match(appSource, /run\.trace = run\.reporter\.trace/, 'Every diagnostic event should remain in the bounded in-memory trace.');
+assert.match(diagnosticSource, /setItem\('magiaAnalysisTrace'/, 'Main Thread events should persist their bounded trace to localStorage.');
+assert.match(diagnosticSource, /createStageBatcher/, 'Main Thread trace snapshots should use the storage batcher.');
+assert.match(diagnosticSource, /run\.trace = run\.reporter\.trace/, 'Every diagnostic event should remain in the bounded in-memory trace.');
 assert.match(appSource, /clearDiagnosticAllocationsByScope\(job, 'ocr'\)/, 'OCR worker termination should clear logical allocations owned by that Worker.');
 assert.match(appSource, /clearDiagnosticAllocationsByScope\(job, 'structure'\)/, 'Structure Worker termination should clear its logical allocations.');
 assert.match(appSource, /clearDiagnosticAllocationsByScope\(job, 'embedding'\)/, 'Embedding Worker termination should clear its logical allocations.');
-assert.match(appSource, /if \(!diagnosticsEnabled\) return;/, 'Diagnostic UI must remain hidden outside diagnostic mode.');
+assert.match(diagnosticViewSource, /if \(!diagnosticsEnabled\) return;/, 'Diagnostic UI must remain hidden outside diagnostic mode.');
 
 console.log(`Analysis diagnostics passed (${estimatedStorageWrites} modeled writes for a representative 274-stage batch plus source alignment).`);
 // Exercise the production persistence/reload/download functions with browser
 // primitives stubbed, so a real storage write is counted (not just stage count).
-const diagnosticPrefix = appSource.slice(0, appSource.indexOf('  function recordAllocation('));
-const diagnosticUi = appSource.slice(appSource.indexOf('  function createDiagnosticExport()'), appSource.indexOf('  function recordDiagnosticError('));
 const stored = new Map();
 const storageWrites = [];
 const localStorage = {
@@ -220,7 +220,7 @@ const localStorage = {
   setItem(key, value) { stored.set(key, value); storageWrites.push(key); },
   removeItem(key) { stored.delete(key); storageWrites.push(key); },
 };
-function loadDiagnosticPage() {
+function loadDiagnosticPage(enabled = true) {
   const elements = [];
   const downloads = [];
   const scheduled = [];
@@ -245,9 +245,14 @@ function loadDiagnosticPage() {
     URL: { createObjectURL(blob) { blobs.push(blob); return 'blob:diagnostics'; }, revokeObjectURL(url) { revoked.push(url); } },
     document: { createElement, body: createElement('body'), getElementById: id => elements.find(element => element.id === id) },
     localStorage, console,
+    diagnosticsEnabledForTest: enabled,
     setTimeout(callback) { scheduled.push(callback); },
   });
-  vm.runInContext(`${diagnosticPrefix}\n${diagnosticUi}\nconst render = publishRuntimeDiagnostics; publishRuntimeDiagnostics = () => {}; global.testDiagnostics = { beginDiagnosticRun, recordAnalysisStage, createDiagnosticExport, render }; })(globalThis);`, context);
+  vm.runInContext(`${diagnosticSource}\n${diagnosticViewSource}\n
+    const session = MagiaCircleDiagnostics.create({ config: SpellOcrCore.config, enabled: diagnosticsEnabledForTest });
+    const view = MagiaCircleDiagnosticView.create(session);
+    globalThis.testDiagnostics = { ...session, ...view, render: view.publishRuntimeDiagnostics };
+  `, context);
   return { api: context.testDiagnostics, elements, downloads, scheduled, blobs, revoked };
 }
 const page = loadDiagnosticPage();
@@ -286,6 +291,12 @@ assert.match(reloaded.elements.find(element => element.id === 'analysisRuntimeDi
 reloaded.scheduled.forEach(callback => callback());
 assert.deepEqual(reloaded.revoked, ['blob:diagnostics'], 'Downloading must release the temporary object URL.');
 console.log(`Persistence and interrupted-run download passed (${beforeReload.localStorageWrites} actual writes across 2005 stages).`);
+const ordinaryPage = loadDiagnosticPage(false);
+ordinaryPage.api.publishDiagnostics();
+ordinaryPage.api.render();
+assert.equal(ordinaryPage.api.diagnostics, null, 'An ordinary page must not collect the optional result JSON.');
+assert.equal(ordinaryPage.elements.length, 1, 'Diagnostic panels must remain absent outside diagnostic mode.');
+assert.equal(ordinaryPage.downloads.length, 0);
 const recognitionPeaks = new Map();
 assert.equal(diagnostics.isCriticalStage('ocr-recognition-preprocess-buffer-alloc-start', { estimatedBytes: 2 * 1024 * 1024 }, recognitionPeaks), true);
 assert.equal(diagnostics.isCriticalStage('ocr-recognition-preprocess-buffer-alloc-start', { estimatedBytes: 2 * 1024 * 1024 }, recognitionPeaks), false, 'Repeated same-size Recognition variants should not write storage.');

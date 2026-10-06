@@ -1,0 +1,67 @@
+{
+  "formatVersion": 1,
+  "reviewedOn": "2026-10-06",
+  "notes": "URLs and model options are shared in assets/js/runtime-dependencies.js. SHA-256 covers unmodified upstream response bytes. Browser caches use pinned URLs; the optional Node verification script streams hashes without retaining whole models. Kotodama generated inputs and outputs have separate *.meta.json provenance.",
+  "libraries": [
+    { "package": "@huggingface/transformers", "version": "3.8.1", "configUrl": "transformersUrl", "license": "Apache-2.0", "scope": "embedding Worker" },
+    { "package": "onnxruntime-web", "version": "1.30.0", "configUrl": "onnxRuntimeUrl", "license": "MIT", "scope": "OCR Worker" },
+    { "package": "onnxruntime-web", "version": "1.22.0-dev.20250409-89f8206ba4", "license": "MIT", "scope": "bundled by Transformers.js 3.8.1; matching runtime in Node embedding batch" },
+    { "package": "@techstark/opencv-js", "version": "4.9.0-release.3", "configUrl": "opencvUrl", "license": "Apache-2.0", "scope": "OCR geometry Worker" },
+    { "package": "js-clipper", "version": "1.0.1", "configUrl": "clipperUrl", "license": "BSL-1.0 plus JSBN notice", "scope": "OCR geometry Worker" }
+  ],
+  "assets": [
+    {
+      "id": "ocr-detection",
+      "kind": "model",
+      "configUrl": "detectionModelUrl",
+      "url": "https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_det_infer.onnx",
+      "version": "@gutenye/ocr-models 1.2.2; PP-OCRv4",
+      "bytes": 4745517,
+      "sha256": "30a86f5731181461d08021402766601e4302a9b9b9666be8aff402696339cdff"
+    },
+    {
+      "id": "ocr-recognition",
+      "kind": "model",
+      "configUrl": "recognitionModelUrl",
+      "url": "https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ch_PP-OCRv4_rec_infer.onnx",
+      "version": "@gutenye/ocr-models 1.2.2; PP-OCRv4",
+      "bytes": 10822323,
+      "sha256": "06b3e6af6c59a1ba5d53790ed8c2e4b2de389870b6cf5a97f349f3412cb269c0"
+    },
+    {
+      "id": "ocr-dictionary",
+      "kind": "dictionary",
+      "configUrl": "dictionaryUrl",
+      "url": "https://cdn.jsdelivr.net/npm/@gutenye/ocr-models@1.2.2/ppocr_keys_v1.txt",
+      "version": "@gutenye/ocr-models 1.2.2",
+      "bytes": 26249,
+      "sha256": "28b2362ad4ab2dc38769aa72feb535e3a9ddb3fd2a7585a05920e6393b1dc7f7"
+    },
+    {
+      "id": "forbidden-words",
+      "kind": "dictionary",
+      "configUrl": "forbiddenWordsUrl",
+      "url": "https://raw.githubusercontent.com/dsojevic/profanity-list/c27924319aa9bd6f917e3782b4f4b6604a50b652/en.txt",
+      "version": "c27924319aa9bd6f917e3782b4f4b6604a50b652",
+      "bytes": 8389,
+      "sha256": "2eebcd97d34e45972b86f5631bc6d970aaed580cd9def3ce1ae4ee58e031a2c6"
+    },
+    {
+      "id": "common-words",
+      "kind": "dictionary",
+      "configUrl": "commonWordsUrl",
+      "url": "https://raw.githubusercontent.com/nlile/dictionary-word-list/842089dfe25f96fc872f3dc260419b02abc9c5a2/word_list_very_common_en_us_spelling_no_diacritic.txt",
+      "version": "842089dfe25f96fc872f3dc260419b02abc9c5a2",
+      "bytes": 6866299,
+      "sha256": "25e627fbdfc293fea2104ca3739ab56d3e9ede7f0d6901fb7756abdd341fc44e"
+    },
+    {
+      "id": "attribute-embedding",
+      "kind": "model",
+      "url": "https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/751bff37182d3f1213fa05d7196b954e230abad9/onnx/model_quantized.onnx",
+      "version": "751bff37182d3f1213fa05d7196b954e230abad9",
+      "bytes": 22972370,
+      "sha256": "afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1"
+    }
+  ]
+}

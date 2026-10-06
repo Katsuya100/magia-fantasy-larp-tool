@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import sharp from 'sharp';
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,41 +15,12 @@ const analysisCoreSource = await readFile(resolve(here, '../assets/js/image-anal
 const analysisContext = vm.createContext({});
 vm.runInContext(analysisCoreSource, analysisContext, { filename: 'image-analysis-core.js' });
 const { analyzeSigilMetricsJs, detectCirclesJs } = analysisContext.ImageAnalysisCore;
-const decoder = resolve(here, 'decode-jpeg.ps1');
 const expectedShapes = { attack: 'attack', defense: 'defense', guard: 'defense', support: 'support', debuff: 'debuff' };
 
 for (const imagePath of imagePaths) {
-  const decoded = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', decoder, '-InputPath', resolve(imagePath)], {
-    encoding: null,
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  if (decoded.status !== 0) {
-    console.error(decoded.stderr?.toString() || `JPEG decode failed: ${imagePath}`);
-    process.exitCode = decoded.status || 1;
-    continue;
-  }
-
-  const payload = decoded.stdout;
-  if (payload.length < 8) {
-    console.error(`JPEG decoder returned no pixel data: ${imagePath}`);
-    process.exitCode = 1;
-    continue;
-  }
-  const width = payload.readInt32LE(0);
-  const height = payload.readInt32LE(4);
-  const bgra = payload.subarray(8);
-  if (bgra.length !== width * height * 4) {
-    console.error(`Unexpected BGRA payload length: ${bgra.length}`);
-    process.exitCode = 1;
-    continue;
-  }
-  const rgba = Buffer.alloc(bgra.length);
-  for (let index = 0; index < bgra.length; index += 4) {
-    rgba[index] = bgra[index + 2];
-    rgba[index + 1] = bgra[index + 1];
-    rgba[index + 2] = bgra[index];
-    rgba[index + 3] = bgra[index + 3];
-  }
+  const decoded = await sharp(resolve(imagePath)).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+  const {width,height} = decoded.info;
+  const rgba = decoded.data;
 
   const circle = detectCirclesJs(rgba, width, height);
   const metrics = analyzeSigilMetricsJs(rgba, width, height, circle);

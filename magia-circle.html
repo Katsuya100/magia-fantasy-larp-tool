@@ -223,13 +223,13 @@
 
     <section id="attribution" class="page archive-page">
       <h2 class="rune-title">外典の扉</h2>
-      <div class="rulebox">マギアサークルが頁の中で使う第三者ライブラリとモデルの由来を記します。正式な配布時には各ライセンス全文と著作権表示を同梱してください。</div>
+      <div class="rulebox">マギアサークルが頁の中で使う第三者ライブラリとモデルの由来を記します。ライセンス全文と著作権表示は assets/licenses に同梱し、配布物ごとの確認事項は THIRD_PARTY_NOTICES.md に記しています。</div>
       <details>
         <summary>使用ライブラリとモデル</summary>
         <ul>
           <li><strong>Guten OCR browser pipeline</strong><br>Source: <a href="https://github.com/gutenye/ocr" target="_blank" rel="noreferrer">gutenye/ocr</a><br>Work: <code>@gutenye/ocr-browser</code> / <code>@gutenye/ocr-common</code><br>License: MIT License<br>備考: PP-OCRv4の検出・認識をブラウザ内で実行し、環の文字区画を抽出するために使用。</li>
           <li><strong>OpenCV.js for OCR</strong><br>Source: <a href="https://github.com/TechStark/opencv-js" target="_blank" rel="noreferrer">TechStark/opencv-js</a><br>Work: <code>@techstark/opencv-js</code><br>License: Apache License 2.0<br>備考: OCRの遠近補正と文字行画像の切り出しに使用。</li>
-          <li><strong>PaddleOCR recognition model</strong><br>Source: <a href="https://github.com/PaddlePaddle/PaddleOCR" target="_blank" rel="noreferrer">PaddlePaddle/PaddleOCR</a><br>Work: <code>ch_PP-OCRv4_rec_infer.onnx</code> / <code>ppocr_keys_v1.txt</code> from <code>@gutenye/ocr-models</code><br>License: Apache License 2.0<br>備考: 整形した環の筆跡をブラウザ内で文字列へ変換するために使用。</li>
+          <li><strong>PaddleOCR recognition model</strong><br>Source: <a href="https://github.com/PaddlePaddle/PaddleOCR" target="_blank" rel="noreferrer">PaddlePaddle/PaddleOCR</a><br>Work: <code>ch_PP-OCRv4_rec_infer.onnx</code> / <code>ppocr_keys_v1.txt</code> from <code>@gutenye/ocr-models</code><br>License: 上流PaddleOCRはApache License 2.0（配布ONNX変換版の条件は第三者通知で要確認）<br>備考: 整形した環の筆跡をブラウザ内で文字列へ変換するために使用。</li>
           <li><strong>Transformers.js</strong><br>Source: <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noreferrer">huggingface/transformers.js</a><br>Work: Transformers.js<br>License: Apache License 2.0<br>備考: 文章Embeddingモデルをブラウザ内で実行するために使用。</li>
           <li><strong>文章Embeddingモデル</strong><br>Source: <a href="https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2" target="_blank" rel="noreferrer">sentence-transformers/all-MiniLM-L6-v2</a><br>Work: <code>all-MiniLM-L6-v2</code> / Transformers.js用ONNX変換版<br>License: Apache License 2.0<br>備考: 英語の呪文と属性説明文の意味比較に使用。</li>
           <li><strong>禁書目録</strong><br>Source: <a href="https://github.com/dsojevic/profanity-list" target="_blank" rel="noreferrer">dsojevic/profanity-list</a><br>Work: <code>en.txt</code><br>License: MIT License<br>備考: コトダマギアと共有する英語の禁止ワード辞書。起動時に取得して、このブラウザの控えに保存。</li>
@@ -242,6 +242,7 @@
       </details>
     </section>
   </div>
+  <script src="assets/js/runtime-dependencies.js"></script>
   <script src="assets/js/spell-ocr.js"></script>
   <script src="assets/js/analysis-diagnostics.js"></script>
   <script src="assets/js/ocr-error-policy.js"></script>
@@ -251,6 +252,9 @@
   <script src="assets/js/attribute-scoring.js"></script>
   <script src="assets/js/model-cache.js"></script>
   <script src="assets/js/magia-image-pipeline.js"></script>
+  <script src="assets/js/magia-circle-diagnostics.js"></script>
+  <script src="assets/js/magia-circle-diagnostic-view.js"></script>
+  <script src="assets/js/magia-circle-results.js"></script>
   <script src="assets/js/magia-circle-app.js"></script>
 </body>
 </html>

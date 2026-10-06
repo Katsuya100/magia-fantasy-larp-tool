@@ -6,3 +6,7 @@
 4. Compare both files with `npm run compare:image-outputs -- <browser.json> <batch.json>`.
 
 The comparator checks the rendered result by default: spell text, all displayed attribute and sigil percentages, power, word count, and rounded detail bars. It exits with status 1 if a displayed value differs. The result also reports whether low-level diagnostics match; OCR line boxes and vote counts, or tiny embedding floats, can differ even when the page displays the same result. Add `--strict` before the JSON paths to compare every diagnostic field with a `1e-9` numeric tolerance and fail on any difference. Add `--web-wasm` before the image path only when comparing the browser-compatible OCR runtime; the default batch remains the reference runtime.
+
+Fixed historical outputs live in `fixtures/image-outputs/`; historical timing reports live in `benchmarks/onnxruntime/`. Store new results in `test-results/` (ignored by Git). The benchmark script's default baseline is `fixtures/image-outputs/updated-web-wasm-sample.json` and its new report still goes to `test-results/onnxruntime/graph-optimization-ab.json`.
+
+`npm run test:e2e` executes the sample image plus actual Worker lifecycle/pipeline and detector checks. It needs model downloads on its first run, and is separate from the 18 offline suites in `npm test`. The GitHub Actions image workflow is manual. Runtime versions, model revision, q8 and WASM options are shared in `assets/js/runtime-dependencies.js`.

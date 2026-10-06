@@ -1,0 +1,132 @@
+{
+  "retrievedOn": "2026-10-06",
+  "hashEncoding": "UTF-8 with LF line endings",
+  "licenses": [
+    {
+      "file": "clipper-Boost-1.0.txt",
+      "source": "https://www.boost.org/LICENSE_1_0.txt",
+      "scope": "js-clipper 1.0.1",
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+    },
+    {
+      "file": "clipper-JSBN-LICENSE.txt",
+      "source": "https://raw.githubusercontent.com/andyperlitch/jsbn/v1.1.0/LICENSE",
+      "scope": "Tom Wu JSBN license as preserved by jsbn 1.1.0",
+      "sha256": "e0e396530fd1624126e9a7e0df94811e4062e03baeccb07bc33c934b0fd93a85"
+    },
+    {
+      "file": "english-words-MIT.txt",
+      "source": "https://raw.githubusercontent.com/filiph/english_words/4191ae1341c5e3dc640731c20f118746a51e7143/LICENSE",
+      "scope": "english_words repository (frequency dataset upstream terms need review)",
+      "sha256": "ef3c2cf1719b52a7519e91ce22e189f36e9eb0f9f34c524be3b22adb2999db17"
+    },
+    {
+      "file": "geonames-CC-BY-4.0.txt",
+      "source": "https://creativecommons.org/licenses/by/4.0/legalcode.txt",
+      "scope": "GeoNames data",
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411"
+    },
+    {
+      "file": "glove-PDDL-1.0.txt",
+      "source": "https://opendatacommons.org/licenses/pddl/pddl-10.txt",
+      "scope": "Stanford pretrained GloVe vectors",
+      "sha256": "dadae59f92215ab2bf66c43e79d7f9215cada0706b10f2294d5aad4d431ce61b"
+    },
+    {
+      "file": "guten-ocr-MIT.txt",
+      "source": "https://raw.githubusercontent.com/gutenye/ocr/b00d56c95a268bafd719c39eb22fbfb2d2a92a35/LICENSE",
+      "scope": "Guten OCR source code (not model weights)",
+      "sha256": "715b88cbf2514d594f2add74b68fdffe1db20e57a8a5b3ce4bdaf6cec97075db"
+    },
+    {
+      "file": "humannames-MIT.txt",
+      "source": "https://raw.githubusercontent.com/FinNLP/humannames/515e406650b9f8b2b9b5b3f833e8e4b3b1fb07ed/LICENSE.md",
+      "scope": "humannames pinned data",
+      "sha256": "192788fe4bd078fc940f62b83c74e051e236420dc726988f9d0efe817e66baf4"
+    },
+    {
+      "file": "jinja-MIT.txt",
+      "source": "node_modules/@huggingface/jinja/LICENSE",
+      "scope": "@huggingface/jinja (bundled in Transformers.js)",
+      "sha256": "d6e7b19451c1b3d1d66353bb4b1274138953b3bfd9ae60c56e77b1f548796982"
+    },
+    {
+      "file": "natural-earth-Public-Domain.txt",
+      "source": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/ca96624a56bd078437bca8184e78163e5039ad19/LICENSE.md",
+      "scope": "Natural Earth pinned vector data",
+      "sha256": "2631b5b39b6d1acc56de75235109b5af2dbb4b0ac5a127b6f06185977247fd4b"
+    },
+    {
+      "file": "onnxruntime-embedding-ThirdPartyNotices.txt",
+      "source": "https://raw.githubusercontent.com/microsoft/onnxruntime/89f8206ba4/ThirdPartyNotices.txt",
+      "scope": "ONNX Runtime Embedding Web 1.22.0-dev.20250409-89f8206ba4 source notices",
+      "sha256": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc"
+    },
+    {
+      "file": "onnxruntime-MIT.txt",
+      "source": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.21.0/LICENSE",
+      "scope": "ONNX Runtime",
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    {
+      "file": "onnxruntime-node-ThirdPartyNotices.txt",
+      "source": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.21.0/ThirdPartyNotices.txt",
+      "scope": "ONNX Runtime Node 1.21.0 source notices",
+      "sha256": "8c06e8cff286a4a117b3b246a4c7da68428a144af757823db50e3d6520941ec6"
+    },
+    {
+      "file": "onnxruntime-ocr-ThirdPartyNotices.txt",
+      "source": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.30.0/ThirdPartyNotices.txt",
+      "scope": "ONNX Runtime OCR Web 1.30.0 source notices",
+      "sha256": "143764b952fdb1a7c69ce653bfba74a7744d6a8a573bfb73e235fba356c83de3"
+    },
+    {
+      "file": "opencv-Apache-2.0.txt",
+      "source": "node_modules/@techstark/opencv-js/LICENSE",
+      "scope": "@techstark/opencv-js 4.9.0-release.3",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "file": "paddleocr-Apache-2.0.txt",
+      "source": "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/release/2.7/LICENSE",
+      "scope": "PaddleOCR PP-OCRv4 models and dictionary",
+      "sha256": "ff6311c56c1b22c9209c96cc8afc16da91c24ee55a15e14ebc46fe1960dbd856"
+    },
+    {
+      "file": "profanity-list-MIT.txt",
+      "source": "https://raw.githubusercontent.com/dsojevic/profanity-list/c27924319aa9bd6f917e3782b4f4b6604a50b652/LICENSE",
+      "scope": "profanity-list pinned data",
+      "sha256": "33962cb4fc7b987408d5ea301ad46a2f54f9ba11c56d7a039459f931736363aa"
+    },
+    {
+      "file": "scowl-upstream-Copyright.txt",
+      "source": "https://raw.githubusercontent.com/en-wl/wordlist/5ef55f9c42730ebe4394a78b77855468a6f15dd2/scowl/Copyright",
+      "scope": "SCOWL rel-2020.12.07 notice reference (nlile does not specify generation version)",
+      "sha256": "283326a422e29c510e2ba6805518c418ce3c35ed1fadc3eec83d2da4f6c5a055"
+    },
+    {
+      "file": "scowl-word-list-Copyright.txt",
+      "source": "https://raw.githubusercontent.com/nlile/dictionary-word-list/842089dfe25f96fc872f3dc260419b02abc9c5a2/README.md",
+      "scope": "dictionary-word-list pinned Copyright/Credits",
+      "sha256": "2c20695ae12ce3723493b06ef3697a241c2278303e5b68ecf15e1b032c1ebb15"
+    },
+    {
+      "file": "sharp-Apache-2.0.txt",
+      "source": "https://raw.githubusercontent.com/lovell/sharp/v0.35.4/LICENSE",
+      "scope": "sharp 0.35.4",
+      "sha256": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68"
+    },
+    {
+      "file": "tiny-invariant-MIT.txt",
+      "source": "node_modules/tiny-invariant/LICENSE",
+      "scope": "tiny-invariant (Node OCR dependency)",
+      "sha256": "b1c501095de70182748cb8e8d97ac5577701a4ef3b755ba30d59fd87b24bdb0f"
+    },
+    {
+      "file": "transformers-Apache-2.0.txt",
+      "source": "node_modules/@huggingface/transformers/LICENSE",
+      "scope": "@huggingface/transformers 3.8.1",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  ]
+}

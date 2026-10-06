@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import sharp from 'sharp';
 import { createClientHarness } from './test-ocr-worker-client.mjs';
-for (const name of ['spell-ocr', 'image-analysis-core', 'power-calculation', 'attribute-scoring', 'ocr-error-policy', 'magia-image-pipeline']) await import(`../assets/js/${name}.js`);
+for (const name of ['runtime-dependencies', 'spell-ocr', 'image-analysis-core', 'power-calculation', 'attribute-scoring', 'ocr-error-policy', 'magia-image-pipeline']) await import(`../assets/js/${name}.js`);
 const app = await readFile(new URL('../assets/js/magia-circle-app.js', import.meta.url), 'utf8');
 const section = (start, end) => app.slice(app.indexOf(start), app.indexOf(end, app.indexOf(start)));
 const imagePath = process.argv[2] || 'assets/images/sample.png';
@@ -12,6 +12,7 @@ const option = (key, fallback) => process.argv.includes(key) ? process.argv[proc
 const iterations = Number(option('--iterations', '1'));
 assert.ok(Number.isInteger(iterations) && iterations > 0);
 const baselinePath = option('--baseline', null);
+const outputPath = option('--output', 'test-results/review/full-worker-pipeline.json');
 const baseline = baselinePath ? JSON.parse(await readFile(baselinePath, 'utf8')) : null;
 const runs = [];
 const decoded = await sharp(imagePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -103,10 +104,10 @@ for (let iteration = 1; iteration <= iterations; iteration += 1) {
       function showCaptureCanvas() {}
       captureContext.clearRect = () => {};
       captureContext.drawImage = () => {};
-      ${section('  function countDictionaryEntries(', '  const diagnostics = diagnosticsEnabled')}
+      ${section('  function countDictionaryEntries(', '  function recordDiagnosticError(')}
       ${section('  function terminateAnalysisWorker(', '  function showCaptureCanvas(')}
       ${section('  function canvasFromImage(', '  function stopCamera(')}
-      ${section('  function embedAttributesInWorker(', '  function renderAttributeFallback(')}
+      ${section('  function embedAttributesInWorker(', '  function resetResults(')}
       async function runPipeline(job) {
         let masterImageAllocationBytes = 0;
         canvasFromImage(captureCanvas, job);
@@ -148,5 +149,5 @@ for (let iteration = 1; iteration <= iterations; iteration += 1) {
   runs.push({ iteration, localStorageWrites: report.localStorageWrites, lifecycle: lifecycle.slice(lifecycleStart), result, report, workerEvents: events.slice(eventStart) });
   console.log(JSON.stringify({ status: 'PASS_FULL_WORKER_PIPELINE', iteration, localStorageWrites: report.localStorageWrites, maximumActive, activeWorkers: active, spell: result.spell.path.text, attribute: result.attribute.top, sigil: result.sigil.top, power: result.power.power }));
 }
-await mkdir('.tmp/reload-fix', { recursive: true });
-await writeFile('.tmp/reload-fix/full-worker-pipeline.json', JSON.stringify({ imagePath, iterations, maximumActive, activeWorkers: active, runs }, null, 2));
+await mkdir(dirname(resolve(outputPath)), { recursive: true });
+await writeFile(outputPath, JSON.stringify({ imagePath, iterations, maximumActive, activeWorkers: active, runs }, null, 2));

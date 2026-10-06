@@ -25,6 +25,7 @@ if (!imagePath || !Number.isInteger(iterations) || iterations < 1 || !['recreate
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
+await import('../assets/js/runtime-dependencies.js');
 await import('../assets/js/spell-ocr.js');
 await import('../assets/js/image-analysis-core.js');
 await import('../assets/js/power-calculation.js');

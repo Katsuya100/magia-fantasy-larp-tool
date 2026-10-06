@@ -26,6 +26,7 @@ if (!input) {
 const here = dirname(fileURLToPath(import.meta.url));
 const transformersRequire = createRequire(resolve(here, '../node_modules/@huggingface/transformers/package.json'));
 const imagePath = resolve(input);
+await import('../assets/js/runtime-dependencies.js');
 await import('../assets/js/spell-ocr.js');
 await import('../assets/js/image-analysis-core.js');
 await import('../assets/js/power-calculation.js');
@@ -107,7 +108,7 @@ async function loadAttributeModel() {
     env.backends.onnx.wasm.numThreads = 1;
     env.backends.onnx.wasm.proxy = true;
     env.backends.onnx.wasm.wasmPaths = pathToFileURL(`${dirname(transformersRequire.resolve('onnxruntime-web'))}/`).href;
-    transformerPipelinePromise = pipeline('feature-extraction', imagePipeline.ATTRIBUTE_MODEL_ID, { dtype: 'q8' });
+    transformerPipelinePromise = pipeline('feature-extraction', imagePipeline.ATTRIBUTE_MODEL_ID, { ...imagePipeline.ATTRIBUTE_MODEL_OPTIONS });
   }
   attributeModel = await transformerPipelinePromise;
   return attributeModel;

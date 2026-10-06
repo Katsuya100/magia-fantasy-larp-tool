@@ -55,7 +55,14 @@ if (!isMainThread) {
       try { transformers = await import(pathToFileURL(resolve(root, 'node_modules/@huggingface/transformers/dist/transformers.web.js'))); }
       finally { Object.defineProperty(process, 'release', originalRelease); }
       const require = createRequire(resolve(root, 'node_modules/@huggingface/transformers/package.json'));
-      transformers.env.backends.onnx.wasm.wasmPaths = pathToFileURL(dirname(require.resolve('onnxruntime-web')) + '/').href;
+      const localWasm = pathToFileURL(dirname(require.resolve('onnxruntime-web')) + '/').href;
+      // Adapt browser HTTPS asset loading to Node's file-only ESM loader.
+      // Check the production path rather than silently accepting an arbitrary override.
+      Object.defineProperty(transformers.env.backends.onnx.wasm, 'wasmPaths', {
+        configurable: true,
+        get: () => localWasm,
+        set: value => assert.equal(value, globalThis.MagiaRuntimeDependencies.transformersWasmPath),
+      });
       return transformers;
     }
     throw new Error(`Unexpected runtime import: ${url}`);
@@ -83,7 +90,7 @@ if (!isMainThread) {
   const option = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback;
   const script = resolve(option('--worker', 'assets/js/magia-circle-ocr-worker.js'));
   const imagePath = resolve(option('--image', 'assets/images/sample.png'));
-  const outputPath = resolve(option('--output', '.tmp/reload-fix/worker-results.json'));
+  const outputPath = resolve(option('--output', 'test-results/review/worker-results.json'));
   const iterations = Number(option('--iterations', '1'));
   assert.ok(Number.isInteger(iterations) && iterations > 0, 'iterations must be a positive integer.');
   const baselinePath = option('--baseline', null);
@@ -91,6 +98,7 @@ if (!isMainThread) {
   const phases = args.includes('--legacy') ? [null] : ['detection', 'geometry', 'recognition'];
   const sharp = (await import('sharp')).default;
   await import('../assets/js/image-analysis-core.js');
+  await import('../assets/js/runtime-dependencies.js');
   await import('../assets/js/spell-ocr.js');
   const metadata = await sharp(imagePath).metadata();
   const scale = Math.min(1, globalThis.SpellOcrCore.config.maxInputSide / Math.max(metadata.width, metadata.height));

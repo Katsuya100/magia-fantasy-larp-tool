@@ -1,9 +1,10 @@
-importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tracker.js', 'spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-line-split.js');
+importScripts('runtime-dependencies.js', 'analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tracker.js', 'spell-ocr.js', 'image-analysis-core.js', 'model-cache.js', 'ocr-line-split.js');
 
 (function startMagiaCircleOcrWorker(global) {
   'use strict';
 
   const core = global.SpellOcrCore;
+  const dependencies = global.MagiaRuntimeDependencies;
   const imageAnalysis = global.ImageAnalysisCore;
   let activeJobId = null;
   let activeAbortController = null;
@@ -26,7 +27,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
   const runtimeDefaults = core.config.onnxRuntimeDefaults;
   // OCR uses only WASM. The +esm browser bundle also loads the larger JSEP
   // runtime, increasing memory during each short-lived Worker initialization.
-  const ocrRuntimeUrl = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/ort.wasm.min.mjs`;
+  const ocrRuntimeUrl = dependencies.onnxRuntimeUrl;
   const diagnosticReporter = global.MagiaAnalysisDiagnostics.createReporter('ocr', message => {
     if (activeJobId !== null) global.postMessage({ ...message, jobId: activeJobId });
   });
@@ -126,7 +127,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
       reportStage('ocr-recognition-ort-import-start', lineInfo);
       const ort = await loadOcrResource('recognition ONNX Runtime module', () => import(ocrRuntimeUrl));
       reportStage('ocr-recognition-ort-import-done', { ...lineInfo, version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
-      ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
+      ort.env.wasm.wasmPaths = dependencies.onnxRuntimeWasmPath;
       ort.env.wasm.numThreads = runtimeDefaults.numThreads;
       ort.env.wasm.proxy = false;
       let session;
@@ -304,7 +305,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
   let perspectiveTransform = null;
   async function ensureOcrImageRuntimes() {
     reportStage('ocr-opencv-import-start', { opencvLoaded: false });
-    const cvModule = await loadOcrResource('OpenCV module', () => import('https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.3/+esm'));
+    const cvModule = await loadOcrResource('OpenCV module', () => import(dependencies.opencvUrl));
     reportStage('ocr-opencv-import-done');
     const importedCv = cvModule.default ?? cvModule;
     reportStage('ocr-opencv-runtime-init-start');
@@ -371,7 +372,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
       releaseOcrCvResources = () => ocrCvResourceTracker?.releaseAll({ phase: 'worker-finally' }) ?? true;
     }
     reportStage('ocr-clipper-import-start', { opencvLoaded: true, clipperLoaded: false });
-    const clipperModule = await loadOcrResource('Clipper module', () => import('https://cdn.jsdelivr.net/npm/js-clipper@1.0.1/+esm'));
+    const clipperModule = await loadOcrResource('Clipper module', () => import(dependencies.clipperUrl));
     reportStage('ocr-clipper-import-done', { runtimeState: { clipperLoaded: true } });
     clipper = clipperModule.default ?? clipperModule;
   }
@@ -382,7 +383,7 @@ importScripts('analysis-diagnostics.js', 'ocr-error-policy.js', 'ocr-resource-tr
       reportStage('ocr-detection-ort-import-start');
       const ort = await loadOcrResource('detection ONNX Runtime module', () => import(ocrRuntimeUrl));
       reportStage('ocr-detection-ort-import-done', { version: ort.env.versions?.web || core.config.onnxRuntimeWebVersion });
-      ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${core.config.onnxRuntimeWebVersion}/dist/`;
+      ort.env.wasm.wasmPaths = dependencies.onnxRuntimeWasmPath;
       ort.env.wasm.numThreads = runtimeDefaults.numThreads;
       ort.env.wasm.proxy = false;
       let detectionSession = null;

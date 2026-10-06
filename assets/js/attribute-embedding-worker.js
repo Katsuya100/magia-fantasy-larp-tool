@@ -1,7 +1,9 @@
+import './runtime-dependencies.js';
 import './model-cache.js';
 import './analysis-diagnostics.js';
 
-const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
+const dependencies = globalThis.MagiaRuntimeDependencies;
+const MODEL_ID = dependencies.attributeModelId;
 const cache = globalThis.ModelCache.create({
   name: 'transformers-cache',
   onCacheError: error => send({ type: 'cache-error', message: error?.message || String(error) }),
@@ -42,7 +44,7 @@ self.addEventListener('message', event => {
       diagnosticReporter.stage('embedding-runtime-import-start');
       send({ type: 'stage', stage: 'embedding-runtime-loading' });
       send({ type: 'progress', stage: '呪文の相を測る準備をしています…' });
-      const { env, pipeline } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+      const { env, pipeline } = await import(dependencies.transformersUrl);
       diagnosticReporter.stage('embedding-runtime-import-done');
       if (signal.aborted) throw signal.reason || makeAbortError();
       env.allowLocalModels = false;
@@ -50,6 +52,7 @@ self.addEventListener('message', event => {
       env.customCache = cache;
       const wasm = env.backends?.onnx?.wasm;
       if (wasm) {
+        wasm.wasmPaths = dependencies.transformersWasmPath;
         wasm.numThreads = 1;
         // This worker is already disposable, so keep the WASM runtime in it directly.
         wasm.proxy = false;
@@ -58,8 +61,7 @@ self.addEventListener('message', event => {
       diagnosticReporter.stage('embedding-model-load-start', { modelId: MODEL_ID });
       diagnosticReporter.stage('embedding-pipeline-create-start', { modelId: MODEL_ID, device: 'wasm', dtype: 'q8' });
       extractor = await pipeline('feature-extraction', MODEL_ID, {
-        device: 'wasm',
-        dtype: 'q8',
+        ...dependencies.attributeModelOptions,
         progress_callback: info => {
           if (!info.file?.endsWith('.onnx')) return;
           if (info.status === 'progress') {

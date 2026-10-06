@@ -11,7 +11,9 @@
   }
   if (!ocrErrorPolicy) throw new Error('MagiaImagePipeline requires ocr-error-policy.js.');
 
-  const ATTRIBUTE_MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
+  const dependencies = global.MagiaRuntimeDependencies;
+  const ATTRIBUTE_MODEL_ID = dependencies.attributeModelId;
+  const ATTRIBUTE_MODEL_OPTIONS = dependencies.attributeModelOptions;
   const DEFAULT_SIGIL_SCORES = Object.freeze({ debuff: .25, attack: .25, defense: .25, support: .25 });
 
   function fitDimensions(width, height, maxSide) {
@@ -339,6 +341,7 @@
 
   global.MagiaImagePipeline = Object.freeze({
     ATTRIBUTE_MODEL_ID,
+    ATTRIBUTE_MODEL_OPTIONS,
     DEFAULT_SIGIL_SCORES,
     fitDimensions,
     fitInputDimensions,

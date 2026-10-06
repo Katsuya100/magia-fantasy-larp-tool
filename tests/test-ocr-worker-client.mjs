@@ -5,6 +5,8 @@ import vm from 'node:vm';
 import '../assets/js/analysis-diagnostics.js';
 
 const appSource = await readFile(new URL('../assets/js/magia-circle-app.js', import.meta.url), 'utf8');
+const diagnosticSource = await readFile(new URL('../assets/js/magia-circle-diagnostics.js', import.meta.url), 'utf8');
+const diagnosticViewSource = await readFile(new URL('../assets/js/magia-circle-diagnostic-view.js', import.meta.url), 'utf8');
 const section = (start, end) => {
   const from = appSource.indexOf(start);
   const to = appSource.indexOf(end, from);
@@ -107,14 +109,14 @@ export function createClientHarness(options = {}) {
     clearTimeout(id) { timers.delete(id); },
     ...options.globals,
   });
-  vm.runInContext(`${appSource.slice(0, appSource.indexOf('  function recordCanvasEstimate('))}
+  vm.runInContext(`${diagnosticSource}\n${diagnosticViewSource}`, context);
+  vm.runInContext(`${appSource.slice(0, appSource.indexOf('  function countDictionaryEntries(')).replace('onChange: () => publishRuntimeDiagnostics()', 'onChange: () => {}')}
     let activeAnalysisJob = null;
     let activeOcrRun = null;
     const captureContext = { getImageData: () => ({ data: new Uint8ClampedArray(global.pixels.data), width: global.pixels.width, height: global.pixels.height }) };
     const modelStatus = {};
     function setStatus() {}
-    function publishRuntimeDiagnostics() {}
-    ${section('  function createDiagnosticExport()', '  function downloadDiagnosticJson()')}
+    const createDiagnosticExport = global.MagiaCircleDiagnosticView.create(diagnosticSession).createDiagnosticExport;
     ${section('  function recordDiagnosticError(', '  function requireElement(')}
     ${section('  function makeAnalysisAbortError(', '  function appendProcessingRecord(')}
     ${section('  function terminateOcrWorker(', '  function embedAttributesInWorker(')}
