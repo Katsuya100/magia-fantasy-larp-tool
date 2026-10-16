@@ -20,3 +20,11 @@ export function weighted(rows,r=Math.random){let sum=rows.reduce((n,x)=>n+Number
 export function dropCount(l,r=Math.random){const p=clamp(.18+.012*(l-1),.18,.82);let n=1;for(let i=0;i<6;i++)if(r()<p)n++;return n;}
 export function drops(items,collections,l,r=Math.random){return Array.from({length:dropCount(l,r)},()=>{if(r()<.62){const x=weighted(items,r);return {type:'use',id:x.id,value:roll(Number(x.min_value),Number(x.max_value),r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};}return {type:'collection',id:weighted(collections,r).id};});}
 export function experience(p,xp){p.xp+=xp;while(p.level<99&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}return p.level;}
+export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/10;
+export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/35,.5,1.5);
+export const status=(actor,id)=>actor.statuses.find(s=>s.id===id);
+export function addStatus(actor,s){const old=status(actor,s.id);if(old){old.turns=Math.max(old.turns,s.turns);if(Math.abs(s.value)>Math.abs(old.value))old.value=s.value;return;}actor.statuses.push(s);}
+export function resist(actor,attr){let r=actor.resists[attr]??1;const b=status(actor,'resist_'+attr);if(b)r*=1-b.value;return clamp(r,.05,2);}
+export function factor(actor,effect){return clamp(actor.statuses.filter(x=>x.effect===effect).reduce((n,x)=>n*(1+x.value),1),.1,3);}
+export const armor=actor=>Math.max(0,actor.stats.def+actor.statuses.filter(x=>x.effect==='def').reduce((n,x)=>n+x.value,0));
+export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debuff_storm');if(dizzy&&r()<clamp(dizzy.value,0,.65))return 0;return Math.max(0,Math.round(effectivePower(src,spell)*resist(tgt,spell.attribute)*factor(src,'attack')*factor(src,'output')*factor(tgt,'incoming')*100/(100+armor(tgt))));}
