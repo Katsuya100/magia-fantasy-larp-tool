@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {GRID_COLUMNS,normalizeSlots,prepareCircles,prepareItems,setSlot,pickedValues,isFull} from '../assets/js/dungeon-loadout.mjs';
+import {GRID_COLUMNS,normalizeSlots,prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from '../assets/js/dungeon-loadout.mjs';
 import {spellGrid,itemGrid,circleChoices,itemChoices} from '../assets/js/dungeon-preparation-ui.mjs';
 const esc=s=>String(s).replace(/[&<>"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]));
 assert.equal(GRID_COLUMNS,5);
@@ -25,6 +25,26 @@ assert.deepEqual(prepareItems([0,null,1,0,7],inventory.length,3),[0,null,1,null,
 let equipped=prepareItems([0,1,2],inventory.length,3);
 equipped=setSlot(equipped,0,1);
 assert.deepEqual(equipped.slice(0,3),[1,0,2]);
+const inventoryProfile={
+ inventory:[{id:'heal_s',value:25},{id:'heal_s',value:25},{id:'heal_s',value:25}],
+ run:null
+};
+let number=0;
+assert.equal(ensureItemInstances(inventoryProfile,()=>String(++number)),true);
+assert.equal(ensureItemInstances(inventoryProfile,()=>String(++number)),false,'IDs are assigned only once');
+assert.equal(new Set(inventoryProfile.inventory.map(x=>x.instanceId)).size,3,'identical potion types have unique IDs');
+const equippedSlots=[1,null,0,null,2];
+const savedIds=saveCarrySlots(equippedSlots,inventoryProfile.inventory);
+assert.deepEqual(restoreCarrySlots(savedIds,inventoryProfile.inventory,3),equippedSlots,'slots retain their original positions');
+assert.deepEqual(restoreCarrySlots(savedIds,[...inventoryProfile.inventory].reverse(),3),[1,null,2,null,0],'reordering inventory does not break selection');
+const survived=[inventoryProfile.inventory[0],inventoryProfile.inventory[2]];
+assert.deepEqual(validCarrySlots(savedIds,survived,3),[null,null,inventoryProfile.inventory[0].instanceId,null,inventoryProfile.inventory[2].instanceId],'consumed potion does not reappear in saved loadout');
+assert.deepEqual(restoreCarrySlots(savedIds,survived,3),[null,null,0,null,1],'surviving potions return to old slot numbers');
+inventoryProfile.run={carry:[{id:'mana_s',value:15,instanceId:inventoryProfile.inventory[0].instanceId},null]};
+assert.equal(ensureItemInstances(inventoryProfile,()=>String(++number)),true,'legacy battle item with duplicate identity gets repaired');
+assert.notEqual(inventoryProfile.run.carry[0].instanceId,inventoryProfile.inventory[0].instanceId);
+const upgraded=restoreCarrySlots(savedIds,inventoryProfile.inventory,15);
+assert.equal(upgraded.length,15,'higher level keeps five-column rows');
 const circles=ids.slice(0,5).map((id,i)=>({id,name:'魔法陣'+i,image:new Blob(['x']),analysis:null}));
 const makeImg=()=>('blob:mock');
 const spellHtml=spellGrid(prepareCircles([],ids),circles,makeImg,esc);
