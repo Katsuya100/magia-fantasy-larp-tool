@@ -38,6 +38,21 @@
       <button type="button" id="resumeTab" data-view="battle" hidden><span class="tab-symbol" aria-hidden="true">✦</span><span>探索へ</span></button>
     </nav>
 
+    <dialog id="nameDialog" class="name-dialog" aria-labelledby="nameDialogTitle">
+      <div class="name-dialog-inner">
+        <span class="dialog-sigil" aria-hidden="true">✦</span>
+        <p class="chapter">THE ADVENTURER'S NAME</p>
+        <h2 id="nameDialogTitle">冒険者の名を刻む</h2>
+        <form id="nameForm">
+          <label for="playerNameInput">冒険者名</label>
+          <input id="playerNameInput" name="playerName" type="text" maxlength="20" required autocomplete="nickname" placeholder="名前を入力">
+          <p id="nameError" class="name-error" role="alert"></p>
+          <button type="submit" id="savePlayerName" class="primary-action">この名で冒険する <span aria-hidden="true">⟶</span></button>
+        </form>
+        <button type="button" id="cancelNameDialog" class="subtle" hidden>戻る</button>
+      </div>
+    </dialog>
+
     <section id="home" class="panel adventurer-panel">
       <div class="section-heading"><div><p class="chapter">CHAPTER I · ADVENTURER</p><h2>冒険者の記録</h2></div><span class="section-mark" aria-hidden="true">✧</span></div>
       <div class="adventurer-layout">
