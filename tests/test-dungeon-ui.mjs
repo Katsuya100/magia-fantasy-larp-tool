@@ -45,21 +45,33 @@ try{
  assert.equal($('library').hidden,false);
  assert.equal(($('slotCards').innerHTML.match(/data-open-slot="/g)||[]).length,5,'five magic-circle tiles');
  assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,5,'five item tiles');
+ assert.equal($('cameraPane').hidden,false,'viewfinder visible before camera starts');
+ assert.equal($('cameraPlaceholder').hidden,false);
+ assert.equal($('cameraCapture').hidden,true);
+ assert.equal($('cameraStop').hidden,true);
  await $('cameraStart').fire('click');
  assert.equal($('cameraPane').hidden,false);
+ assert.equal($('cameraPlaceholder').hidden,true);
+ assert.equal($('cameraStart').hidden,true);
+ assert.equal($('cameraCapture').hidden,false);
+ assert.equal($('cameraStop').hidden,false);
  await $('cameraStart').fire('click');
  assert.equal(env.opened,1,'opening an already running camera reuses its media stream');
  for(let i=0;i<5;i++){
-  $('circleName').value='撮影陣'+i;
   await $('cameraCapture').fire('click');
   assert.equal($('cameraPane').hidden,false,'camera remains open after every shot');
-  assert.equal($('circleName').value,'','name reset for the next photograph');
-  assert.equal($('notice').textContent,'','successful capture shows no redundant status log');
+  assert.equal($('cameraCapture').hidden,false,'capture action stays available');
+  assert.equal($('cameraPlaceholder').hidden,true,'camera feed stays visible after saving');
+  assert.equal($('notice').textContent,'','no global log is displayed');
  }
  assert.equal(env.opened,1,'camera stream opened once');
  assert.equal(env.closed,0,'camera stays active during five captures');
  await $('cameraStop').fire('click');
- assert.equal($('cameraPane').hidden,true);
+ assert.equal($('cameraPane').hidden,false,'viewfinder remains after closing video');
+ assert.equal($('cameraPlaceholder').hidden,false,'placeholder returns after closing video');
+ assert.equal($('cameraStart').hidden,false,'camera action returns after closing');
+ assert.equal($('cameraCapture').hidden,true);
+ assert.equal($('cameraStop').hidden,true);
  assert.equal(env.closed,1,'camera only stops when the user closes it');
  const captureCanvas=$('cameraCanvas');
  assert.equal(captureCanvas.width,720,'captured JPEG width matches square crop');
@@ -68,7 +80,15 @@ try{
  const db=await openStore(env.factory);
  let circles=await allCircles(db);
  assert.equal(circles.length,5);assert.ok(circles.every(c=>!c.analysis));
+ assert.ok(circles.every(c=>!Object.hasOwn(c,'name')),'photo registration does not ask for or save custom names');
+ assert.match($('libraryCards').innerHTML,/魔法陣 01/);
  assert.equal(await circles[0].image.text(),'camera-capture');
+ await doc.click(btn({view:'prepare'}));
+ await doc.click(btn({openSlot:'0'}));
+ assert.equal($('openGrimoireFromPicker').hidden,false,'open grimoire button offered for circle selection');
+ await $('openGrimoireFromPicker').fire('click');
+ assert.equal($('loadoutDialog').open,false);
+ assert.equal($('library').hidden,false,'picker links directly to the grimoire');
  await doc.click(btn({view:'prepare'}));
  for(let i=0;i<circles.length;i++){
   await doc.click(btn({openSlot:String(i)}));
@@ -108,7 +128,8 @@ try{
  env.analyzerState.attribute='invalid';
  await doc.click(btn({cast:'0'}));
  await wait(()=>$('analyzing').hidden===false,'failed analysis begins');
- await wait(()=>$('battle').hidden===false&&$('notice').textContent.includes('解析できません'),'failed analysis recovery');
+ await wait(()=>$('battle').hidden===false&&$('battleError').textContent.includes('解明できません'),'failed reveal recovery');
+ assert.equal($('notice').hidden,true,'global notice remains hidden');
  p=await getProfile(db);
  assert.equal(p.run.floor,1,'failed analysis does not consume a turn');
  assert.equal(p.run.hero.spells[0],null);
@@ -218,8 +239,8 @@ try{
  const noStorage=fakeDungeonBrowser({storage:{onOpen:'undefined'}});
  try{
   await import('../assets/js/dungeon-app.mjs?integration=storage-error');
-  await wait(()=>noStorage.document.getElementById('notice').textContent.includes('起動できません'),'unavailable storage');
-  assert.match(noStorage.document.getElementById('notice').textContent,/保存領域/);
+  await wait(()=>noStorage.document.getElementById('pageError').textContent.includes('起動できません'),'unavailable storage');
+  assert.match(noStorage.document.getElementById('pageError').textContent,/保存領域/);
  }finally{noStorage.restore();}
  const cameraDenied=fakeDungeonBrowser({cameraFailure:true});
  try{
@@ -227,8 +248,9 @@ try{
   await wait(()=>cameraDenied.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'camera test startup');
   await cameraDenied.document.click(btn({view:'library'}));
   await cameraDenied.document.getElementById('cameraStart').fire('click');
-  assert.match(cameraDenied.document.getElementById('notice').textContent,/カメラを起動できません/);
-  assert.equal(cameraDenied.document.getElementById('cameraPane').hidden,true);
+  assert.match(cameraDenied.document.getElementById('cameraError').textContent,/カメラを起動できません/);
+  assert.equal(cameraDenied.document.getElementById('cameraPane').hidden,false);
+  assert.equal(cameraDenied.document.getElementById('cameraPlaceholder').hidden,false);
  }finally{cameraDenied.restore();}
  console.log('PASS dungeon registration, rejected analysis, first-use success, 5-fight return, continued floor 6, free items, reload and defeat');
 }finally{Math.random=originalRandom;env.restore();}
