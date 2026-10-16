@@ -1,0 +1,135 @@
+import assert from 'node:assert/strict';
+import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
+import {openStore,getProfile,allCircles,saveProfile} from '../assets/js/dungeon-store.mjs';
+const originalRandom=Math.random;Math.random=()=>.9999;
+const wait=async(check,message)=>{const end=Date.now()+9000;while(Date.now()<end){if(await check())return;await new Promise(r=>setTimeout(r,25));}throw Error('UI timeout: '+message);};
+const btn=data=>({disabled:false,dataset:data,closest(){return this;}});
+const env=fakeDungeonBrowser(),doc=env.document,$=id=>doc.getElementById(id);
+try{
+ await import('../assets/js/dungeon-app.mjs?integration=first');
+ await wait(()=>$('playerStats').innerHTML.includes('Lv.1'),'first launch');
+ assert.equal($('home').hidden,false);
+ Math.random=()=>.01;
+ assert.equal($('resumeTab').hidden,true);
+ assert.equal($('startAttack').disabled,true);
+ assert.match($('playerStats').innerHTML,/持ち込み上限：3/);
+ await doc.click(btn({view:'library'}));
+ assert.equal($('library').hidden,false);
+ for(let i=0;i<5;i++){
+  await $('cameraStart').fire('click');
+  assert.equal($('cameraPane').hidden,false);
+  $('circleName').value='撮影陣'+i;
+  await $('cameraCapture').fire('click');
+  assert.equal($('cameraPane').hidden,true);
+ }
+ assert.equal(env.opened,5);assert.equal(env.closed,5);
+ const db=await openStore(env.factory);
+ let circles=await allCircles(db);
+ assert.equal(circles.length,5);assert.ok(circles.every(c=>!c.analysis));
+ assert.equal(await circles[0].image.text(),'camera-capture');
+ await doc.click(btn({view:'prepare'}));
+ for(const c of circles)await doc.click(btn({slot:c.id}));
+ assert.equal($('startAttack').disabled,false);
+ assert.match($('slotCards').innerHTML,/5\/5/);
+ assert.match($('gearCards').innerHTML,/最初の帰還成功後/);
+ await $('startAttack').fire('click');
+ await wait(()=>$('battle').hidden===false,'battle start');
+ let p=await getProfile(db);
+ assert.equal(p.attempts,1);assert.equal(p.run.floor,1);assert.equal(p.run.carry.length,0);
+ assert.equal(p.run.hero.spells[0],null);
+ env.analyzerState.attribute='invalid';
+ await doc.click(btn({cast:'0'}));
+ await wait(()=>$('analyzing').hidden===false,'failed analysis begins');
+ await wait(()=>$('battle').hidden===false&&$('notice').textContent.includes('鑑定できません'),'failed analysis recovery');
+ p=await getProfile(db);
+ assert.equal(p.run.floor,1,'failed analysis does not consume a turn');
+ assert.equal(p.run.hero.spells[0],null);
+ env.analyzerState.attribute='flame';
+ await doc.click(btn({cast:'0'}));
+ await wait(()=>$('analyzing').hidden===false,'first-use analysis');
+ await wait(async()=>(await getProfile(db)).run?.floor===2,'analysis results');
+ circles=await allCircles(db);
+ assert.equal(circles[0].analysis.attribute,'flame');
+ assert.equal(circles[0].analysis.role,'attack');
+ assert.equal(circles[0].analysis.power,5000);
+ p=await getProfile(db);
+ assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
+ for(let fight=2;fight<=5;fight++){
+  await doc.click(btn({cast:'0'}));
+  p=await getProfile(db);
+  if(fight<5)assert.equal(p.run.floor,fight+1);
+ }
+ assert.equal(p.run.stage,'checkpoint');
+ assert.equal($('checkpoint').hidden,false);
+ assert.ok(p.run.loot.length>=5&&p.run.loot.length<=35);
+ const loot=p.run.loot.length;
+ await $('returnHome').fire('click');
+ await wait(()=>$('result').hidden===false,'return');
+ p=await getProfile(db);
+ assert.equal(p.returns,1);assert.equal(p.run,null);
+ assert.equal(p.inventory.length,loot);
+ assert.equal(p.highest,5);
+ assert.ok(p.level>=2);
+ await doc.click(btn({view:'prepare'}));
+ for(let i=0;i<3;i++)await doc.click(btn({gear:String(i)}));
+ assert.match($('gearCounter').textContent,/3 \/ 3/);
+ await $('startAttack').fire('click');
+ p=await getProfile(db);
+ assert.equal(p.attempts,2);assert.equal(p.run.carry.length,3);
+ const before=p.run.hero.hp;
+ await doc.click(btn({use:'0'}));
+ p=await getProfile(db);
+ assert.equal(p.run.hero.hp,before,'free potion does not cost a battle turn');
+ assert.equal(p.run.floor,1);
+ assert.equal(p.run.carry.length,2);
+ assert.equal(p.run.usedItems,1);
+ await doc.click(btn({use:'0'}));
+ p=await getProfile(db);
+ assert.equal(p.run.carry.length,2,'one free item per round');
+ // An entire second 5-fight block must offer a choice, and continued runs retain HP.
+ for(let fight=1;fight<=5;fight++)await doc.click(btn({cast:'0'}));
+ p=await getProfile(db);
+ assert.equal(p.run.stage,'checkpoint');
+ const hpAtCheckpoint=p.run.hero.hp, pendingLoot=p.run.loot.length;
+ await $('deeper').fire('click');
+ p=await getProfile(db);
+ assert.equal(p.run.floor,6);
+ assert.equal(p.run.enemy.level,2);
+ assert.equal(p.run.hero.hp,hpAtCheckpoint,'continuation carries HP');
+ assert.equal(p.run.loot.length,pendingLoot,'rewards remain unconfirmed');
+ // Verify the photo+analysis persists through the second attack.
+ assert.equal((await allCircles(db))[0].analysis.power,5000);
+ const resumable=p.run;
+ resumable.hero.hp=1;
+ await saveProfile(db,{...p,run:resumable});
+ env.restore();
+ const env2=fakeDungeonBrowser({factory:env.factory}),doc2=env2.document,el=id=>doc2.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=reload');
+  await wait(()=>el('battle').hidden===false,'resume from IndexedDB');
+  assert.match(el('heroStats').innerHTML,/HP 1\//);
+  await doc2.click(btn({cast:'-1'}));
+  await wait(()=>el('result').hidden===false,'defeat');
+  const defeated=await getProfile(await openStore(env2.factory));
+  assert.equal(defeated.run,null);
+  assert.equal(defeated.returns,1,'previous rewards remain');
+  assert.equal(defeated.inventory.length,loot-1,'spent potion lost; two unused were refunded');
+  assert.equal((await allCircles(await openStore(env2.factory)))[0].analysis.power,5000);
+ }finally{env2.restore();}
+ const noStorage=fakeDungeonBrowser({storage:{onOpen:'undefined'}});
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=storage-error');
+  await wait(()=>noStorage.document.getElementById('notice').textContent.includes('起動できません'),'unavailable storage');
+  assert.match(noStorage.document.getElementById('notice').textContent,/保存領域/);
+ }finally{noStorage.restore();}
+ const cameraDenied=fakeDungeonBrowser({cameraFailure:true});
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=camera-denied');
+  await wait(()=>cameraDenied.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'camera test startup');
+  await cameraDenied.document.click(btn({view:'library'}));
+  await cameraDenied.document.getElementById('cameraStart').fire('click');
+  assert.match(cameraDenied.document.getElementById('notice').textContent,/カメラを起動できません/);
+  assert.equal(cameraDenied.document.getElementById('cameraPane').hidden,true);
+ }finally{cameraDenied.restore();}
+ console.log('PASS dungeon registration, rejected analysis, first-use success, 5-fight return, continued floor 6, free items, reload and defeat');
+}finally{Math.random=originalRandom;env.restore();}

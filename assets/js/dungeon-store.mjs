@@ -1,9 +1,54 @@
 import {startingBase} from './dungeon-core.mjs';
-const DB='magia-dungeon-v1';
-export function openStore(){return new Promise((resolve,reject)=>{const q=indexedDB.open(DB,1);q.onupgradeneeded=()=>{q.result.createObjectStore('circles',{keyPath:'id'});q.result.createObjectStore('settings');};q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);});}
-function request(db,store,mode,op){return new Promise((resolve,reject)=>{const tx=db.transaction(store,mode),q=op(tx.objectStore(store));q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);});}
+const DB_NAME='magia-dungeon-v1';
+const DB_VERSION=2;
+const STORES=['circles','settings'];
+export function validateDatabase(db){
+  if(!db||typeof db.transaction!=='function')throw Error('ブラウザの保存領域を開けませんでした。通常モードでページを開き直してください。');
+  if(!STORES.every(name=>db.objectStoreNames?.contains(name)))throw Error('魔導書の保存領域が不完全です。ブラウザのサイトデータ設定を確認してください。');
+  return db;
+}
+export function openStore(factory=globalThis.indexedDB){
+  return new Promise((resolve,reject)=>{
+    if(!factory?.open){reject(Error('このブラウザでは魔導書を保存できません（IndexedDB非対応）。'));return;}
+    let settled=false;
+    const fail=e=>{if(!settled){settled=true;reject(e instanceof Error?e:Error(String(e)));}};
+    let q;
+    try{q=factory.open(DB_NAME,DB_VERSION);}catch(e){fail(e);return;}
+    q.onupgradeneeded=()=>{const db=q.result;if(!db)throw Error('保存データベースの初期化に失敗');for(const name of STORES)if(!db.objectStoreNames.contains(name))db.createObjectStore(name,name==='circles'?{keyPath:'id'}:undefined);};
+    q.onsuccess=event=>{
+      let db;
+      try{db=validateDatabase(event?.target?.result||q.result);}
+      catch(e){fail(e);return;}
+      if(!settled){settled=true;db.onversionchange=()=>db.close();resolve(db);}
+    };
+    q.onerror=()=>fail(q.error||Error('魔導書の保存領域を開けませんでした。'));
+    q.onblocked=()=>fail(Error('別のタブで魔導書を開いています。ほかのタブを閉じて再度お試しください。'));
+  });
+}
+function request(db,store,mode,op){
+  validateDatabase(db);
+  return new Promise((resolve,reject)=>{
+    let result,transaction;
+    try{
+      transaction=db.transaction(store,mode);
+      transaction.oncomplete=()=>resolve(result);
+      transaction.onerror=()=>reject(transaction.error||Error('保存に失敗しました。'));
+      transaction.onabort=()=>reject(transaction.error||Error('保存が中断されました。'));
+      const q=op(transaction.objectStore(store));
+      q.onsuccess=()=>{result=q.result;};
+      q.onerror=()=>reject(q.error||Error('保存データにアクセスできません。'));
+    }catch(e){reject(e);}
+  });
+}
 export const allCircles=db=>request(db,'circles','readonly',s=>s.getAll());
 export const putCircle=(db,circle)=>request(db,'circles','readwrite',s=>s.put(circle));
 export const deleteCircle=(db,id)=>request(db,'circles','readwrite',s=>s.delete(id));
 export const saveProfile=(db,p)=>request(db,'settings','readwrite',s=>s.put(p,'profile'));
-export async function getProfile(db){let p=await request(db,'settings','readonly',s=>s.get('profile'));if(!p){p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,inventory:[],collection:{},highest:0,run:null};await saveProfile(db,p);}return p;}
+export async function getProfile(db){
+  let p=await request(db,'settings','readonly',s=>s.get('profile'));
+  if(!p){
+    p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,inventory:[],collection:{},highest:0,run:null};
+    await saveProfile(db,p);
+  }
+  return p;
+}
