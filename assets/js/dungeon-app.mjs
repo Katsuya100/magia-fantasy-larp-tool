@@ -1,17 +1,34 @@
-import * as G from './dungeon-core.mjs?v=20261017.2';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull} from './dungeon-loadout.mjs?v=20261017.2';
-import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.2';
+import * as G from './dungeon-core.mjs?v=20261017.3';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull} from './dungeon-loadout.mjs?v=20261017.3';
+import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.3';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.2';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.3';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
+let dungeonView='prepare',battleUrls=[];
 let busyAction=false;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){$('notice').textContent=message;}
 async function persist(){await saveProfile(db,profile);}
 async function load(){db=await openStore();const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};for(const [key,file] of Object.entries(files)){const res=await fetch('assets/data/'+file);if(!res.ok)throw Error(file+' の取得に失敗');masters[key]=G.parseCsv(await res.text());}configure(masters);G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);profile=await getProfile(db);circles=await allCircles(db);slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));wire();render();if(profile.run){if(profile.run.stage==='checkpoint'){$('checkpointInfo').textContent='未確定報酬 '+profile.run.loot.length+'個 / 経験値 '+profile.run.xp;}else renderRun();}show(profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');if(!profile.name)openNameDialog(true);}
-function show(name){for(const id of ['home','library','prepare','collection','battle','checkpoint','analyzing','result'])$(id).hidden=id!==name;for(const tab of ['home','library','prepare','collection']){const btn=$('tab-'+tab);if(btn){if(name===tab)btn.setAttribute('aria-current','page');else btn.removeAttribute('aria-current');}}const active=$('resumeTab');if(name==='battle'&&profile.run)active.setAttribute('aria-current','page');else active.removeAttribute('aria-current');if(['home','library','prepare','collection'].includes(name))render();}
+const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result']);
+function show(name){
+ if(name==='dungeon'){
+  if(profile?.run)name=activeAnalysis?'analyzing':profile.run.stage==='checkpoint'?'checkpoint':'battle';
+  else name=['library','result'].includes(dungeonView)?dungeonView:'prepare';
+ }
+ if(dungeonScenes.has(name))dungeonView=name;
+ for(const id of ['home','library','prepare','collection','battle','checkpoint','analyzing','result'])$(id).hidden=id!==name;
+ for(const tab of ['dungeon','collection','home']){
+  const b=$('tab-'+tab),active=tab==='dungeon'?dungeonScenes.has(name):name===tab;
+  if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+ }
+ if(['home','library','prepare','collection'].includes(name))render();
+ if(name==='battle'&&profile?.run)renderRun();
+}
 function imageUrl(blob){const url=URL.createObjectURL(blob);urls.push(url);return url;}
+function battleImageUrl(blob){const url=URL.createObjectURL(blob);battleUrls.push(url);return url;}
+function releaseBattleUrls(){for(const url of battleUrls)URL.revokeObjectURL(url);battleUrls=[];}
 function freeUrls(){for(const url of urls)URL.revokeObjectURL(url);urls=[];}
 function statusText(unit){return unit.statuses.map(s=>{const row=masters.buffs.find(x=>x.id===s.id);const label=row?.name||(s.id.startsWith('resist_')?s.attribute+'耐性':'強化');return esc(label)+'('+s.turns+')';}).join(' / ');}
 function rowUnit(unit){const hp=Math.max(0,100*unit.hp/unit.stats.hp),mp=Math.max(0,100*unit.mp/unit.maxMp);return '<p>HP '+unit.hp+'/'+unit.stats.hp+'</p><div class="meter"><div class="fill" style="width:'+hp+'%"></div></div><p>MP '+unit.mp+'/'+unit.maxMp+'</p><div class="meter"><div class="fill mp" style="width:'+mp+'%"></div></div><small>MAG '+unit.stats.mag+' / DEF '+G.armor(unit)+' / RES '+unit.stats.res+'</small>'+(unit.statuses.length?'<p class="effects">'+statusText(unit)+'</p>':'');}
@@ -41,31 +58,59 @@ function render(){
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
  }).join('');
- $('libraryCards').innerHTML=circles.map(c=>'<article class="card"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><b>'+esc(c.name)+'</b><p>'+(c.analysis?circleLabel(c.analysis):'？？？ · 未鑑定')+'</p><div class="card-actions"><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
+ $('libraryCards').innerHTML=circles.map(c=>'<article class="card"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><b>'+esc(c.name)+'</b><p>'+(c.analysis?circleLabel(c.analysis):'？？？ · 性能未判明')+'</p><div class="card-actions"><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run);
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
  $('gearCounter').textContent='携行 '+pickedValues(carry).length+' / '+limit+' 個'+(unlocked?'':' · 最初の帰還後に解放');
  $('startAttack').disabled=!isFull(slots)||Boolean(profile.run);
 }
-function renderRun(){const run=profile.run;if(!run)return;const enemy=run.enemy,hero=run.hero;$('floorLabel').textContent='第'+run.floor+'戦'+(run.floor%num('checkpoint_interval')===0?' / 階層の番人':'');$('enemyName').textContent=run.enemyName+' Lv.'+enemy.level;$('enemyStats').innerHTML=rowUnit(enemy);$('heroStats').innerHTML=rowUnit(hero);
-$('battleSpells').innerHTML=run.slotIds.map((id,i)=>{const c=circles.find(x=>x.id===id),s=hero.spells[i];return '<div class="card"><b>'+esc(c?.name||'魔法陣')+'</b><p>'+(s?circleLabel(s):'初回発動で鑑定')+'</p><button data-cast="'+i+'" '+(run.itemPending||s&&!G.canCast(hero,i)?'disabled':'')+'>発動</button><p>再使用待ち '+(hero.cooldowns[i]||0)+'</p></div>';}).join('')+'<div class="card"><b>通常攻撃</b><p>MP不要の最低限の攻撃</p><button data-cast="-1">通常攻撃</button></div>';
-$('battleItems').innerHTML=run.carry.map((it,i)=>'<div class="inventory-row"><span>'+esc(itemName(it))+' '+(it.value?'('+it.value+')':'')+(it.bonus?' ✨':'')+'</span><button data-use="'+i+'" '+((run.usedItems||0)>=num('item_per_round')?'disabled':'')+'>使用</button></div>').join('')||'<p>携行品なし</p>';
-$('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム無料使用 '+((run.usedItems||0)+'/'+num('item_per_round'));$('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(x)+'</p>').join('');}
+function renderRun(){
+ const run=profile.run;if(!run)return;
+ releaseBattleUrls();
+ const enemy=run.enemy,hero=run.hero;
+ $('floorLabel').textContent='第'+run.floor+'戦'+(run.floor%num('checkpoint_interval')===0?' / 階層の番人':'');
+ $('enemyName').textContent=run.enemyName+' Lv.'+enemy.level;
+ $('enemyStats').innerHTML=rowUnit(enemy);
+ $('heroStats').innerHTML=rowUnit(hero);
+ $('battleSpells').innerHTML=run.slotIds.map((id,i)=>{
+  const c=circles.find(x=>x.id===id),s=hero.spells[i],waiting=hero.cooldowns[i]||0;
+  const disabled=Boolean(s&&!G.canCast(hero,i)),name=esc(c?.name||'魔法陣');
+  return '<button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="'+name+' '+(s?circleLabel(s):'性能未判明')+'" '+(disabled?'disabled':'')+'>'
+    +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
+    +(c?.image?'<img alt="" src="'+battleImageUrl(c.image)+'">':'<span class="tile-empty-icon" aria-hidden="true">◎</span>')
+    +'<span class="tile-title">'+name+'</span>'
+    +'<span class="tile-detail">'+(s?circleLabel(s):'？？？')+'</span>'
+    +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>';
+ }).join('');
+ $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔ 通常攻撃</button>';
+ const maxSlots=Math.max(5,run.carry.length);
+ $('battleItems').innerHTML=Array.from({length:maxSlots},(_,i)=>{
+  const item=run.carry[i],disabled=(run.usedItems||0)>=num('item_per_round');
+  if(!item)return '<button type="button" class="loadout-tile battle-tile battle-item-tile empty" disabled aria-label="アイテム空き枠 '+(i+1)+'"><span class="tile-index">'+String(i+1).padStart(2,'0')+'</span><span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">空き</span></button>';
+  return '<button type="button" class="loadout-tile battle-tile battle-item-tile equipped" data-use="'+i+'" '+(disabled?'disabled':'')+' aria-label="'+esc(itemName(item))+'">'
+   +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
+   +'<span class="tile-item-icon" aria-hidden="true">'+(item.id.startsWith('heal_')?'✚':item.id.startsWith('mana_')?'✧':'◈')+'</span>'
+   +'<span class="tile-title">'+esc(itemName(item))+'</span>'
+   +'<span class="tile-detail">'+(item.value?'効果 '+item.value:'状態回復')+(item.bonus?' ✦':'')+'</span></button>';
+ }).join('');
+ $('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム '+(run.usedItems||0)+'/'+num('item_per_round');
+ $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(x)+'</p>').join('');
+}
 function createEnemy(floor){const rowFloor=floorMaster(floor),level=Number(rowFloor.enemy_level);const pool=masters.enemies.filter(x=>Number(x.min_level)<=level&&Number(x.min_level)>=Number(rowFloor.minimum_enemy_level)&&x.boss_only!=='1');let row;if(Number(rowFloor.boss)===1){row=masters.enemies.find(x=>x.id===rowFloor.boss_enemy_id);if(!row||Number(row.min_level)>level)throw Error('ボスの設定が不正');}else row=G.weighted(pool);return {unit:G.fromEnemy(row,level),name:row.name};}
 function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor);run.enemy=unit;run.enemyName=name;run.usedItems=0;run.stage='battle';run.log.push('第'+run.floor+'戦：'+name+'が現れた');}
 async function begin(){if(profile.run||!isFull(slots)){note('5つの魔法陣を編成してください');return;}const selectedIndices=pickedValues(carry);const selected=selectedIndices.map(i=>profile.inventory[i]);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,usedItems:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');}
 function enemyChoice(enemy){const ids=G.available(enemy);if(!ids.length)return -1;const heal=ids.find(i=>enemy.spells[i].role==='support');if(enemy.hp<enemy.stats.hp*num('enemy_heal_threshold')&&heal!==undefined)return heal;const offense=ids.filter(i=>enemy.spells[i].role==='attack');return offense.length&&Math.random()<num('enemy_attack_preference')?offense[Math.floor(Math.random()*offense.length)]:ids[Math.floor(Math.random()*ids.length)];}
 async function takeTurn(index){const run=profile.run;if(!run||run.stage!=='battle')return;const spell=run.hero.spells[index];if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs));}catch(e){note(e.message);return;}run.usedItems=0;
-if(run.hero.hp<=0){const dropped=run.loot.length,carry=run.carry.length;profile.inventory.push(...run.carry);profile.run=null;await persist();$('resultTitle').textContent='探索失敗';$('resultText').textContent='未確定報酬 '+dropped+'個と経験値を喪失。未使用の携行品 '+carry+'個は倉庫へ戻った。鑑定済みの魔法陣は残る。';show('result');return;}
+if(run.hero.hp<=0){const dropped=run.loot.length,carry=run.carry.length;profile.inventory.push(...run.carry);profile.run=null;await persist();$('resultTitle').textContent='探索失敗';$('resultText').textContent='未確定報酬 '+dropped+'個と経験値を喪失。未使用の携行品 '+carry+'個は倉庫へ戻った。性能が判明した魔法陣は残る。';show('result');return;}
 if(run.enemy.hp<=0){const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);profile.highest=Math.max(profile.highest,run.floor);if(run.floor%num('checkpoint_interval')===0){run.stage='checkpoint';$('checkpointInfo').textContent='第'+run.floor+'戦突破。未確定報酬 '+run.loot.length+'個 / 経験値 '+run.xp+'。続行して敗北すると失われる。';await persist();show('checkpoint');return;}run.floor++;enterFight();}
 await persist();renderRun();}
 async function useItem(index){const run=profile.run;if(!run||(run.usedItems||0)>=num('item_per_round'))return;const [item]=run.carry.splice(index,1);if(!item)return;try{const n=G.potion(run.hero,item,masters.items,masters.buffs);run.log.push(itemName(item)+'を使用 '+(n?'('+n+')':''));run.usedItems=(run.usedItems||0)+1;await persist();renderRun();}catch(e){run.carry.splice(index,0,item);note(e.message);}}
 async function leave(){const run=profile.run;if(!run||run.stage!=='checkpoint')return;let potions=0,collection=0;profile.inventory.push(...run.carry);for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else{profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}}const before=profile.level;G.experience(profile,run.xp);profile.returns++;profile.run=null;await persist();$('resultTitle').textContent='無事帰還！';$('resultText').textContent='消耗品 '+potions+'個・収集品 '+collection+'個・経験値 '+run.xp+'を獲得。Lv.'+before+' → Lv.'+profile.level+'。次回の持ち込み上限 '+G.capacity(profile.level)+'個。';show('result');}
-async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('鑑定が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
+async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
 async function analyzeUnknown(index){
  const circle=circles.find(x=>x.id===profile.run.slotIds[index]);if(!circle){note('魔法陣が見つからない');return;}
- const request={id:circle.id,index};activeAnalysis=request;show('analyzing');note('未鑑定の魔法陣を解析中');
+ const request={id:circle.id,index};activeAnalysis=request;show('analyzing');note('魔法陣の性能を解析中');
  const frame=$('analyzerFrame');
  frame.onload=async()=>{
   try{
@@ -86,9 +131,9 @@ async function analyzeUnknown(index){
    await putCircle(db,circle);
    if(!valid())return;
    profile.run.hero.spells[index]={...circle.analysis};await persist();
-   activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('鑑定完了：'+attribute+' / '+japaneseRole+' / 威力 '+power);
+   activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('性能判明：'+attribute+' / '+japaneseRole+' / 威力 '+power);
    show('battle');await takeTurn(index);
-  }catch(e){if(activeAnalysis!==request)return;activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('鑑定できませんでした：'+e.message);renderRun();show('battle');}
+  }catch(e){if(activeAnalysis!==request)return;activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('解析できませんでした：'+e.message);renderRun();show('battle');}
  };
  frame.src='magia-circle.html';
 }
@@ -170,7 +215,7 @@ function wire(){
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
  $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');}));
- $('cancelAnalyze').addEventListener('click',()=>{activeAnalysis=null;$('analyzerFrame').src='about:blank';note('鑑定を中止しました。');renderRun();show('battle');});
- window.addEventListener('beforeunload',()=>{stopCamera();freeUrls();});
+ $('cancelAnalyze').addEventListener('click',()=>{activeAnalysis=null;$('analyzerFrame').src='about:blank';note('解析を中止しました。');renderRun();show('battle');});
+ window.addEventListener('beforeunload',()=>{stopCamera();freeUrls();releaseBattleUrls();});
 }
 load().catch(e=>{console.error(e);note('起動できません：'+e.message);});
