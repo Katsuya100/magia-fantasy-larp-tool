@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {openStore,getProfile,allCircles,saveProfile} from '../assets/js/dungeon-store.mjs';
-const originalRandom=Math.random;Math.random=()=>.01;
-const wait=async(check,message)=>{const end=Date.now()+9000;while(Date.now()<end){if(check())return;await new Promise(r=>setTimeout(r,25));}throw Error('UI timeout: '+message);};
+const originalRandom=Math.random;Math.random=()=>.9999;
+const wait=async(check,message)=>{const end=Date.now()+9000;while(Date.now()<end){if(await check())return;await new Promise(r=>setTimeout(r,25));}throw Error('UI timeout: '+message);};
 const btn=data=>({disabled:false,dataset:data,closest(){return this;}});
 const env=fakeDungeonBrowser(),doc=env.document,$=id=>doc.getElementById(id);
 try{
  await import('../assets/js/dungeon-app.mjs?integration=first');
  await wait(()=>$('playerStats').innerHTML.includes('Lv.1'),'first launch');
  assert.equal($('home').hidden,false);
+ Math.random=()=>.01;
  assert.equal($('resumeTab').hidden,true);
  assert.equal($('startAttack').disabled,true);
  assert.match($('playerStats').innerHTML,/持ち込み上限：3/);
@@ -38,8 +39,7 @@ try{
  assert.equal(p.run.hero.spells[0],null);
  await doc.click(btn({cast:'0'}));
  await wait(()=>$('analyzing').hidden===false,'first-use analysis');
- await wait(()=>$('battle').hidden===false&&(p=undefined,true),'analysis results');
- await wait(async()=>true,'not used');
+ await wait(async()=>(await getProfile(db)).run?.floor===2,'analysis results');
  circles=await allCircles(db);
  assert.equal(circles[0].analysis.attribute,'flame');
  assert.equal(circles[0].analysis.role,'attack');
@@ -48,7 +48,6 @@ try{
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
  for(let fight=2;fight<=5;fight++){
   await doc.click(btn({cast:'0'}));
-  await wait(async()=>true,'round completed');
   p=await getProfile(db);
   if(fight<5)assert.equal(p.run.floor,fight+1);
  }
