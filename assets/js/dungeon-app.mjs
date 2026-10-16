@@ -1,8 +1,9 @@
-import * as G from './dungeon-core.mjs?v=20261017.5';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull} from './dungeon-loadout.mjs?v=20261017.5';
-import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.5';
+import * as G from './dungeon-core.mjs?v=20261017.6';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull} from './dungeon-loadout.mjs?v=20261017.6';
+import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.6';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.6';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.5';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.6';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
 let dungeonView='prepare',battleUrls=[];
@@ -15,9 +16,8 @@ function note(message){
  const target=/カメラ|撮影|HTTPS|localhost/.test(message)?'cameraError':profile?.run?'battleError':'pageError';
  $(target).textContent=message;$(target).hidden=false;
 }
-function circleTitle(circle){const i=circles.findIndex(x=>x.id===circle?.id);return i>=0?'魔法陣 '+String(i+1).padStart(2,'0'):'魔法陣';}
 async function persist(){await saveProfile(db,profile);}
-async function load(){db=await openStore();const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};for(const [key,file] of Object.entries(files)){const res=await fetch('assets/data/'+file);if(!res.ok)throw Error(file+' の取得に失敗');masters[key]=G.parseCsv(await res.text());}configure(masters);G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);profile=await getProfile(db);circles=await allCircles(db);slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));wire();render();if(profile.run){if(profile.run.stage==='checkpoint'){$('checkpointInfo').textContent='未確定報酬 '+profile.run.loot.length+'個 / 経験値 '+profile.run.xp;}else renderRun();}show(profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');if(!profile.name)openNameDialog(true);}
+async function load(){db=await openStore();const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};for(const [key,file] of Object.entries(files)){const res=await fetch('assets/data/'+file);if(!res.ok)throw Error(file+' の取得に失敗');masters[key]=G.parseCsv(await res.text());}configure(masters);G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);profile=await getProfile(db);circles=newestCirclesFirst(await allCircles(db));slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));wire();render();if(profile.run){if(profile.run.stage==='checkpoint'){$('checkpointInfo').textContent='未確定報酬 '+profile.run.loot.length+'個 / 経験値 '+profile.run.xp;}else renderRun();}show(profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');if(!profile.name)openNameDialog(true);}
 const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result']);
 function show(name){
  const exploring=Boolean(profile?.run);
@@ -76,7 +76,7 @@ function render(){
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
  }).join('');
- $('libraryCards').innerHTML=circles.map(c=>'<article class="card"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><b>'+esc(circleTitle(c))+'</b><p>'+(c.analysis?circleLabel(c.analysis):'？？？ · 性能未判明')+'</p><div class="card-actions"><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
+ $('libraryCards').innerHTML=circles.map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><p>'+(c.analysis?circleLabel(c.analysis):'？？？ · 性能未判明')+'</p><div class="card-actions"><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run);
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
@@ -93,11 +93,10 @@ function renderRun(){
  $('heroStats').innerHTML=rowUnit(hero);
  $('battleSpells').innerHTML=run.slotIds.map((id,i)=>{
   const c=circles.find(x=>x.id===id),s=hero.spells[i],waiting=hero.cooldowns[i]||0;
-  const disabled=Boolean(s&&!G.canCast(hero,i)),name=esc(circleTitle(c));
-  return '<button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="'+name+' '+(s?circleLabel(s):'性能未判明')+'" '+(disabled?'disabled':'')+'>'
+  const disabled=Boolean(s&&!G.canCast(hero,i));
+  return '<button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(s?circleLabel(s):'性能未判明')+'" '+(disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +(c?.image?'<img alt="" src="'+battleImageUrl(c.image)+'">':'<span class="tile-empty-icon" aria-hidden="true">◎</span>')
-    +'<span class="tile-title">'+name+'</span>'
     +'<span class="tile-detail">'+(s?circleLabel(s):'？？？')+'</span>'
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>';
  }).join('');
@@ -184,8 +183,8 @@ async function capture(){
  canvas.getContext('2d').drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,canvas.width,canvas.height);
  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));
  if(!blob){note('撮影画像を作成できません');return;}
- const circle={id:crypto.randomUUID(),image:blob,analysis:null};
- await putCircle(db,circle);circles.push(circle);
+ const circle={id:crypto.randomUUID(),registeredAt:nextCircleRegistration(circles),image:blob,analysis:null};
+ await putCircle(db,circle);circles=newestCirclesFirst([...circles,circle]);
  note('');render();
 }
 function openLoadoutPicker(kind,index){
