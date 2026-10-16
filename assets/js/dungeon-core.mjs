@@ -1,42 +1,44 @@
+import {num,level,range} from './dungeon-tuning.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
 export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
-export const capacity=level=>Math.min(15,3+Math.floor((level-1)/4));
-export const nextXp=level=>Math.round(100*Math.pow(level,1.35));
-export const basePower=p=>Math.round(20*Math.sqrt(Math.max(0,p)/100));
-export const mpCost=p=>2+Math.ceil(basePower(p)/12);
-const growth={hp:[.055,.0009],mag:[.045,.0005],def:[.035,.0004],res:[.035,.0004]};
-export const startingBase=(r=Math.random)=>({hp:roll(90,110,r),mag:roll(8,12,r),def:roll(5,10,r),res:roll(5,10,r)});
-export function stats(base,level){const n=level-1;return Object.fromEntries(Object.entries(growth).map(([k,[a,b]])=>[k,Math.round(base[k]*(1+a*n+b*n*n))]));}
+export const capacity=level=>+levelRow(level).carry_limit;
+export const nextXp=level=>+levelRow(level).xp_to_next;
+export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
+export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
+const levelRow=l=>level(l);
+const growthKeys=['hp','mag','def','res'];
+export const startingBase=(r=Math.random)=>Object.fromEntries(growthKeys.map(k=>[k,roll(...range(k),r)]));
+export function stats(base,level){const record=levelRow(level);return Object.fromEntries(growthKeys.map(k=>[k,Math.round(base[k]*Number(record[k+'_multiplier']))]));}
 export function makeUnit(base,level,resists={},spells=[],id='unit'){
- const s=stats(base,level);return {id,level,base,stats:s,hp:s.hp,maxMp:40+6*s.mag,mp:40+6*s.mag,spells:spells.map(x=>({...x})),cooldowns:spells.map(()=>0),statuses:[],resists:Object.fromEntries(ATTRS.map(a=>[a,Number(resists[a]??1)]))};
+ const s=stats(base,level);return {id,level,base,stats:s,hp:s.hp,maxMp:num('mp_base')+num('mp_per_mag')*s.mag,mp:num('mp_base')+num('mp_per_mag')*s.mag,spells:spells.map(x=>x?({...x}):null),cooldowns:spells.map(()=>0),statuses:[],resists:Object.fromEntries(ATTRS.map(a=>[a,Number(resists[a]??1)]))};
 }
 export function parseCsv(t){
  let lines=t.trim().split(/\r?\n/);let header=lines.shift().split(',');
  return lines.map(line=>{let cells=line.split(',');if(cells.length!==header.length)throw Error('CSV columns');return Object.fromEntries(header.map((k,i)=>[k,cells[i]]));});
 }
 export function weighted(rows,r=Math.random){let sum=rows.reduce((n,x)=>n+Number(x.weight||0),0),v=r()*sum;if(!sum)throw Error('Empty drops');for(const row of rows){v-=Number(row.weight||0);if(v<0)return row;}return rows.at(-1);}
-export function dropCount(l,r=Math.random){const p=clamp(.18+.012*(l-1),.18,.82);let n=1;for(let i=0;i<6;i++)if(r()<p)n++;return n;}
-export function drops(items,collections,l,r=Math.random){return Array.from({length:dropCount(l,r)},()=>{if(r()<.62){const x=weighted(items,r);return {type:'use',id:x.id,value:roll(Number(x.min_value),Number(x.max_value),r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};}return {type:'collection',id:weighted(collections,r).id};});}
-export function experience(p,xp){p.xp+=xp;while(p.level<99&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}return p.level;}
+export function dropCount(l,r=Math.random){const p=clamp(num('loot_chance_base')+num('loot_chance_per_level')*(l-1),num('loot_chance_base'),num('loot_chance_cap'));let n=num('loot_count_min');for(let i=0;i<num('loot_count_max')-num('loot_count_min');i++)if(r()<p)n++;return n;}
+export function drops(items,collections,l,r=Math.random){return Array.from({length:dropCount(l,r)},()=>{if(r()<num('consumable_drop_rate')){const x=weighted(items,r);return {type:'use',id:x.id,value:roll(Number(x.min_value),Number(x.max_value),r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};}return {type:'collection',id:weighted(collections,r).id};});}
+export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}return p.level;}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/10;
-export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/35,.5,1.5);
+export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
 export const status=(actor,id)=>actor.statuses.find(s=>s.id===id);
 export function addStatus(actor,s){const old=status(actor,s.id);if(old){old.turns=Math.max(old.turns,s.turns);if(Math.abs(s.value)>Math.abs(old.value))old.value=s.value;return;}actor.statuses.push(s);}
-export function resist(actor,attr){let r=actor.resists[attr]??1;const b=status(actor,'resist_'+attr);if(b)r*=1-b.value;return clamp(r,.05,2);}
-export function factor(actor,effect){return clamp(actor.statuses.filter(x=>x.effect===effect).reduce((n,x)=>n*(1+x.value),1),.1,3);}
+export function resist(actor,attr){let r=actor.resists[attr]??1;const b=status(actor,'resist_'+attr);if(b)r*=1-b.value;return clamp(r,num('status_min_resistance'),num('status_max_resistance'));}
+export function factor(actor,effect){return clamp(actor.statuses.filter(x=>x.effect===effect).reduce((n,x)=>n*(1+x.value),1),num('modifier_min'),num('modifier_max'));}
 export const armor=actor=>Math.max(0,actor.stats.def+actor.statuses.filter(x=>x.effect==='def').reduce((n,x)=>n+x.value,0));
-export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debuff_storm');if(dizzy&&r()<clamp(dizzy.value,0,.65))return 0;return Math.max(0,Math.round(effectivePower(src,spell)*resist(tgt,spell.attribute)*factor(src,'attack')*factor(src,'output')*factor(tgt,'incoming')*100/(100+armor(tgt))));}
+export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debuff_storm');if(dizzy&&r()<clamp(dizzy.value,0,num('dizzy_max_rate')))return 0;return Math.max(0,Math.round(effectivePower(src,spell)*resist(tgt,spell.attribute)*factor(src,'attack')*factor(src,'output')*factor(tgt,'incoming')*num('def_divisor')/(num('def_divisor')+armor(tgt))));}
 export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=mpCost(s.power)&&!u.cooldowns[i]&&!u.statuses.some(x=>x.effect==='seal'&&x.sealedRole===s.role));}
 export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
-export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=mpCost(sp.power);u.cooldowns[i]=2;const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]++;u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
+export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=mpCost(sp.power);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
 export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.id);if(!row)throw Error('Unknown potion');let amount=0;if(row.kind==='heal'){amount=Math.min(u.stats.hp-u.hp,item.value);u.hp+=amount;}else if(row.kind==='mana'){amount=Math.min(u.maxMp-u.mp,item.value);u.mp+=amount;}else if(row.kind==='clear')u.statuses=u.statuses.filter(s=>s.kind!=='debuff'||s.attribute!==row.attribute);else throw Error('Potion kind');if(item.bonus){const b=buffs.find(x=>x.id===item.bonus);if(b)addStatus(u,{id:b.id,kind:'buff',attribute:row.attribute||'law',effect:b.effect,value:Number(b.value),turns:Number(b.duration)||2});}return amount;}
 export function cast(src,tgt,spell,buffs,r=Math.random){const a=spell.attribute,B=effectivePower(src,spell),q=strength(src,spell);if(!ATTRS.includes(a)||!ROLES.includes(spell.role))throw Error('Bad magic');if(spell.role==='attack'){const d=damage(src,tgt,spell,r);tgt.hp=Math.max(0,tgt.hp-d);return 'ダメージ '+d;}
  if(spell.role==='support'){const heal=Math.max(0,Math.min(src.stats.hp-src.hp,Math.round(B*factor(src,'heal')*factor(src,'output'))));src.hp+=heal;src.statuses=src.statuses.filter(x=>x.kind!=='debuff'||x.attribute!==a);return 'HP '+heal+'回復・'+a+'解除';}
- if(spell.role==='defense'){addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(.3*q,0,.75),turns:2});const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:Number(row.duration)});return a+'耐性と強化';}
- const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);if(row){const power=q*resist(tgt,a)*100/(100+tgt.stats.res);addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:Number(row.duration),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});}return a+'弱体付与';}
-export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random){const ps=prepare(player,pickPlayer,r),es=prepare(enemy,pickEnemy,r),actions=[{u:player,t:enemy,sp:ps,name:'自分'},{u:enemy,t:player,sp:es,name:'敵'}],log=[];for(const role of ['support','defense','debuff','attack','basic'])for(const a of actions){if(a.sp.role!==role)continue;if(role==='basic'){const d=Math.max(1,Math.round(6*a.u.stats.mag/10*100/(100+armor(a.t))));a.t.hp=Math.max(0,a.t.hp-d);log.push(a.name+'：通常攻撃 '+d);}else log.push(a.name+'：'+cast(a.u,a.t,a.sp,buffs,r));}
- for(const a of actions){for(const s of a.u.statuses){if(s.effect==='burn'){const d=Math.max(1,Math.round(a.u.stats.hp*.045*s.value));a.u.hp=Math.max(0,a.u.hp-d);log.push(a.name+'：火傷 '+d);}s.turns--;}a.u.statuses=a.u.statuses.filter(s=>s.turns>0);a.u.cooldowns=a.u.cooldowns.map(x=>Math.max(0,x-1));}return log;}
+ if(spell.role==='defense'){addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(num('defense_resistance_gain')*q,0,num('defense_resistance_cap')),turns:2});const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:Number(row.duration)});return a+'耐性と強化';}
+ const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);if(row){const power=q*resist(tgt,a)*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:Number(row.duration),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});}return a+'弱体付与';}
+export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random){const ps=prepare(player,pickPlayer,r),es=prepare(enemy,pickEnemy,r),actions=[{u:player,t:enemy,sp:ps,name:'自分'},{u:enemy,t:player,sp:es,name:'敵'}],log=[];for(const role of ['support','defense','debuff','attack','basic'])for(const a of actions){if(a.sp.role!==role)continue;if(role==='basic'){const d=Math.max(1,Math.round(num('basic_attack')*a.u.stats.mag/10*num('def_divisor')/(num('def_divisor')+armor(a.t))));a.t.hp=Math.max(0,a.t.hp-d);log.push(a.name+'：通常攻撃 '+d);}else log.push(a.name+'：'+cast(a.u,a.t,a.sp,buffs,r));}
+ for(const a of actions){for(const s of a.u.statuses){if(s.effect==='burn'){const d=Math.max(1,Math.round(a.u.stats.hp*num('burn_hp_rate')*s.value));a.u.hp=Math.max(0,a.u.hp-d);log.push(a.name+'：火傷 '+d);}s.turns--;}a.u.statuses=a.u.statuses.filter(s=>s.turns>0);a.u.cooldowns=a.u.cooldowns.map(x=>Math.max(0,x-1));}return log;}
 export function fromEnemy(row,level){const b={hp:+row.hp,mag:+row.mag,def:+row.def,res:+row.res};const resists=Object.fromEntries(ATTRS.map(a=>[a,+row['resist_'+a]]));const spells=row.spells.split('|').map(s=>{const [role,attribute,power]=s.split(':');return {role,attribute,power:+power};});return makeUnit(b,level,resists,spells,row.id);}
 export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items)if(+i.min_value>+i.max_value)throw Error('Bad item roll');return true;}
