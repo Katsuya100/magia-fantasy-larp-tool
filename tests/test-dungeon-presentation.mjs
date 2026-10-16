@@ -16,6 +16,17 @@ assert.match(page,/id="playerNameInput"[^>]+maxlength="20"/);
 assert.match(page,/id="nameForm"/);
 assert.match(page,/id="collectionGrid"[^>]+role="list"/);
 assert.match(page,/id="tab-collection" data-view="collection"/);
+assert.match(page,/id="tab-prepare" data-view="prepare" aria-current="page"[^>]*>.*?準備&amp;出発/s);
+assert.match(page,/id="tab-home" data-view="home"[^>]*>.*?プロフィール/s);
+assert.doesNotMatch(page,/data-view="home"[^>]*>.*?冒険者<\/span>/s);
+const tabMarkup=page.match(/<nav class="tabs"[^>]*>([\s\S]*?)<\/nav>/)?.[1];
+assert.ok(tabMarkup,'navigation bar exists');
+const tabOrder=[...tabMarkup.matchAll(/data-view="([^"]+)"/g)].map(x=>x[1]);
+assert.deepEqual(tabOrder,['prepare','library','collection','battle','home'],'profile must be the final tab');
+assert.match(page,/<section id="prepare" class="panel loadout-panel">/,'preparation visible on initial HTML');
+assert.match(page,/<section id="home" class="panel adventurer-panel" hidden>/,'profile initially hidden');
+assert.match(page,/<h2>準備&amp;出発<\/h2>/);
+
 assert.match(page,/id="collectionProgress"/);
 assert.doesNotMatch(page,/<input[^>]*type="file"/);
 assert.match(page,/id="cameraStart"/);
