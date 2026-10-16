@@ -10,7 +10,7 @@ const current = await lstat(output).catch(error => { if(error.code !== 'ENOENT')
 if(current?.isSymbolicLink()) throw new Error('dist must not be a symbolic link');
 await rm(output,{recursive:true,force:true});
 await mkdir(output,{recursive:true});
-for(const name of ['index.html','kotodama.html','magia-circle.html','assets','LICENSE','THIRD_PARTY_NOTICES.md']){
+for(const name of ['index.html','kotodama.html','magia-circle.html','dungeon.html','assets','LICENSE','THIRD_PARTY_NOTICES.md']){
   await cp(resolve(root,name),resolve(output,name),{recursive:true});
 }
 console.log(`Static site built: ${output}`);
