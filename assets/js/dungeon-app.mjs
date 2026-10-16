@@ -1,13 +1,14 @@
-import * as G from './dungeon-core.mjs?v=20261017.7';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.7';
-import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.7';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.7';
+import * as G from './dungeon-core.mjs?v=20261017.8';
+import {playCombatSequence,effectCaption} from './dungeon-combat-fx.mjs?v=20261017.8';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.8';
+import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.8';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.8';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.7';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.8';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
 let dungeonView='prepare',battleUrls=[];
-let busyAction=false;
+let busyAction=false,playingEffects=false;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){
  const targets=['pageError','battleError','cameraError'];
@@ -42,7 +43,7 @@ function show(name){
   else b.removeAttribute('aria-current');
  }
  if(['home','library','prepare','collection'].includes(name))render();
- if(name==='battle'&&profile?.run)renderRun();
+ if(name==='battle'&&profile?.run&&!playingEffects)renderRun();
 }
 function imageUrl(blob){const url=URL.createObjectURL(blob);urls.push(url);return url;}
 function battleImageUrl(blob){const url=URL.createObjectURL(blob);battleUrls.push(url);return url;}
@@ -89,6 +90,7 @@ function renderRun(){
  const enemy=run.enemy,hero=run.hero;
  $('floorLabel').textContent='第'+run.floor+'戦'+(run.floor%num('checkpoint_interval')===0?' / 階層の番人':'');
  $('enemyName').textContent=run.enemyName+' Lv.'+enemy.level;
+ $('heroName').textContent=profile.name?.trim()||'名もなき冒険者';
  $('enemyStats').innerHTML=rowUnit(enemy);
  $('heroStats').innerHTML=rowUnit(hero);
  $('battleSpells').innerHTML=run.slotIds.map((id,i)=>{
@@ -114,15 +116,55 @@ function renderRun(){
  $('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム '+(run.usedItems||0)+'/'+num('item_per_round');
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(x)+'</p>').join('');
 }
+async function animateBattle(steps){
+ if(!steps.length)return;
+ playingEffects=true;
+ $('battleSpells').setAttribute('aria-busy','true');
+ $('battleItems').setAttribute('aria-busy','true');
+ try{
+  await playCombatSequence(steps,step=>{
+   const arena=$('battleArena');
+   // Reset the phase between steps to retrigger CSS animations when the role repeats.
+   arena.dataset.role='idle';
+   arena.dataset.side=step.side;
+   arena.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
+   arena.dataset.role=step.role;
+   $('battleFxText').textContent=effectCaption(step);
+   $('heroStats').innerHTML=rowUnit(step.hero);
+   $('enemyStats').innerHTML=rowUnit(step.enemy);
+  });
+ }finally{
+  $('battleArena').dataset.role='idle';
+  $('battleArena').dataset.side='none';
+  $('battleFxText').textContent='';
+  $('battleSpells').removeAttribute('aria-busy');
+  $('battleItems').removeAttribute('aria-busy');
+  playingEffects=false;
+ }
+}
 function createEnemy(floor){const rowFloor=floorMaster(floor),level=Number(rowFloor.enemy_level);const pool=masters.enemies.filter(x=>Number(x.min_level)<=level&&Number(x.min_level)>=Number(rowFloor.minimum_enemy_level)&&x.boss_only!=='1');let row;if(Number(rowFloor.boss)===1){row=masters.enemies.find(x=>x.id===rowFloor.boss_enemy_id);if(!row||Number(row.min_level)>level)throw Error('ボスの設定が不正');}else row=G.weighted(pool);return {unit:G.fromEnemy(row,level),name:row.name};}
 function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor);run.enemy=unit;run.enemyName=name;run.usedItems=0;run.stage='battle';run.log.push('第'+run.floor+'戦：'+name+'が現れた');}
 async function begin(){if(profile.run||!isFull(slots)){note('5つの魔法陣を編成してください');return;}const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,usedItems:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');}
 function enemyChoice(enemy){const ids=G.available(enemy);if(!ids.length)return -1;const heal=ids.find(i=>enemy.spells[i].role==='support');if(enemy.hp<enemy.stats.hp*num('enemy_heal_threshold')&&heal!==undefined)return heal;const offense=ids.filter(i=>enemy.spells[i].role==='attack');return offense.length&&Math.random()<num('enemy_attack_preference')?offense[Math.floor(Math.random()*offense.length)]:ids[Math.floor(Math.random()*ids.length)];}
-async function takeTurn(index){const run=profile.run;if(!run||run.stage!=='battle')return;const spell=run.hero.spells[index];if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs));}catch(e){note(e.message);return;}run.usedItems=0;
+async function takeTurn(index){const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;const spell=run.hero.spells[index];if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}run.usedItems=0;await animateBattle(steps);
 if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='探索失敗';$('resultText').textContent='未確定報酬 '+dropped+'個と経験値を喪失。未使用の携行品 '+unusedCount+'個は倉庫へ戻った。性能が判明した魔法陣は残る。';show('result');return;}
 if(run.enemy.hp<=0){const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);profile.highest=Math.max(profile.highest,run.floor);if(run.floor%num('checkpoint_interval')===0){run.stage='checkpoint';$('checkpointInfo').textContent='第'+run.floor+'戦突破。未確定報酬 '+run.loot.length+'個 / 経験値 '+run.xp+'。続行して敗北すると失われる。';await persist();show('checkpoint');return;}run.floor++;enterFight();}
 await persist();renderRun();}
-async function useItem(index){const run=profile.run;if(!run||(run.usedItems||0)>=num('item_per_round'))return;const item=run.carry[index];if(!item)return;try{const n=G.potion(run.hero,item,masters.items,masters.buffs);run.carry[index]=null;run.log.push(itemName(item)+'を使用 '+(n?'('+n+')':''));run.usedItems=(run.usedItems||0)+1;await persist();renderRun();}catch(e){note(e.message);}}
+async function useItem(index){
+ const run=profile.run;if(playingEffects||!run||(run.usedItems||0)>=num('item_per_round'))return;
+ const item=run.carry[index];if(!item)return;
+ try{
+  const row=masters.items.find(x=>x.id===item.id);
+  const n=G.potion(run.hero,item,masters.items,masters.buffs);
+  run.carry[index]=null;
+  run.log.push(itemName(item)+'を使用 '+(n?'('+n+')':''));
+  run.usedItems=(run.usedItems||0)+1;
+  const snapshot=u=>({...u,statuses:u.statuses.map(s=>({...s})),cooldowns:[...u.cooldowns]});
+  const step=(role,amount)=>({role,side:'hero',attribute:row?.attribute||'law',amount,hero:snapshot(run.hero),enemy:snapshot(run.enemy)});
+  await animateBattle([step('item',n),...(item.bonus?[step('buff',0)]:[])]);
+  await persist();renderRun();
+ }catch(e){note(e.message);}
+}
 async function leave(){const run=profile.run;if(!run||run.stage!=='checkpoint')return;let potions=0,collection=0;profile.inventory.push(...run.carry.filter(Boolean));for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else{profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}}const before=profile.level;G.experience(profile,run.xp);profile.returns++;profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='無事帰還！';$('resultText').textContent='消耗品 '+potions+'個・収集品 '+collection+'個・経験値 '+run.xp+'を獲得。Lv.'+before+' → Lv.'+profile.level+'。次回の持ち込み上限 '+G.capacity(profile.level)+'個。';show('result');}
 async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
 async function analyzeUnknown(index){
