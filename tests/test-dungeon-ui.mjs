@@ -136,6 +136,13 @@ try{
  assert.equal($('tab-library').hidden,true,'grimoire tab disappears during battle');
  assert.equal($('tab-dungeon').hidden,false,'dungeon tab replaces preparation tabs');
  assert.equal($('tab-dungeon').attributes['aria-current'],'page');
+ assert.equal($('heroName').textContent,'暁の旅人','battle uses the saved adventurer name');
+ assert.equal($('battleArena').dataset.role,'idle');
+ const animationRoles=[];
+ $('battleArena').dataset=new Proxy($('battleArena').dataset,{set(target,key,value){
+  if(key==='role'&&value!=='idle')animationRoles.push(value);
+  target[key]=value;return true;
+ }});
  assert.equal(p.run.hero.spells[0],null);
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
  assert.doesNotMatch($('battleSpells').innerHTML,/魔法陣\s*0[1-9]/,'battle also has no generated circle name');
@@ -156,6 +163,7 @@ try{
  await wait(()=>$('battle').hidden===false&&$('battleError').textContent.includes('解明できません'),'failed reveal recovery');
  assert.equal($('notice').hidden,true,'global notice remains hidden');
  p=await getProfile(db);
+ assert.equal(animationRoles.length,0,'failed spell analysis does not play combat effects');
  assert.equal(p.run.floor,1,'failed analysis does not consume a turn');
  assert.equal(p.run.hero.spells[0],null);
  env.analyzerState.attribute='flame';
@@ -168,6 +176,10 @@ try{
  assert.equal(circles[0].analysis.power,5000);
  p=await getProfile(db);
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
+ assert.ok(animationRoles.includes('attack'),'real attack triggers the clash animation');
+ assert.equal($('battleArena').dataset.role,'idle','animation stage resets after resolution');
+ assert.equal($('battleFxText').textContent,'','floating caption clears after each action');
+ assert.equal($('battleSpells').attributes['aria-busy'],undefined,'buttons become available after playback');
  for(let fight=2;fight<=5;fight++){
   if(fight===5)Math.random=()=>.99;
   await doc.click(btn({cast:'0'}));
@@ -259,6 +271,7 @@ try{
   await wait(()=>el('battle').hidden===false,'resume from IndexedDB');
   assert.equal(el('prepare').hidden,true,'active dungeon takes priority over first-view preparation');
   assert.equal(el('tab-dungeon').attributes['aria-current'],'page','battle is under the dungeon tab');
+  assert.equal(el('heroName').textContent,'暁の旅人','reloaded dungeon restores saved name');
   assert.match(el('heroStats').innerHTML,/HP 1\//);
   assert.equal(el('nameDialog').open,false,'returning player has no rename prompt');
   await doc2.click(btn({cast:'-1'}));
