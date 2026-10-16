@@ -1,0 +1,13 @@
+id,name,rarity,description,weight
+fang,魔獣の牙,common,洞窟の魔物から回収される牙,35
+slime_core,スライム核,common,柔らかく光る核,28
+bone,刻印の骨片,common,古い魔導刻印が残る骨,25
+copper_sigil,銅の護符,common,旅人が残した護符,22
+obsidian,黒曜石片,uncommon,黒曜の守護者の外殻,17
+moon_scale,月影の鱗,uncommon,不思議な光を宿す鱗,15
+ancient_scroll,古文書の切れ端,uncommon,読めない言葉が残る紙片,15
+lightning_crystal,雷晶石,rare,内側で雷が走る鉱石,11
+aqua_pearl,水鏡の真珠,rare,水面が映る真珠,10
+labyrinth_key,迷宮の鍵,rare,扉の紋様に合致しない鍵,9
+sealed_eye,封印された瞳,epic,何かを観察する遺物,5
+forgotten_crown,失われた王冠,legendary,深淵の王が遺した王冠,2
