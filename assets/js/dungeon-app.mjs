@@ -31,8 +31,36 @@ if(run.enemy.hp<=0){const rewards=G.drops(masters.items,masters.collections,run.
 await persist();renderRun();}
 async function useItem(index){const run=profile.run;if(!run||run.usedItem)return;const [item]=run.carry.splice(index,1);if(!item)return;try{const n=G.potion(run.hero,item,masters.items,masters.buffs);run.log.push(itemName(item)+'を使用 '+(n?'('+n+')':''));run.usedItem=true;await persist();renderRun();}catch(e){run.carry.splice(index,0,item);note(e.message);}}
 async function leave(){const run=profile.run;if(!run||run.stage!=='checkpoint')return;let potions=0,collection=0;profile.inventory.push(...run.carry);for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else{profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}}const before=profile.level;G.experience(profile,run.xp);profile.returns++;profile.run=null;await persist();$('resultTitle').textContent='無事帰還！';$('resultText').textContent='消耗品 '+potions+'個・収集品 '+collection+'個・経験値 '+run.xp+'を獲得。Lv.'+before+' → Lv.'+profile.level+'。次回の持ち込み上限 '+G.capacity(profile.level)+'個。';show('result');}
-async function analyzeUnknown(index){const c=circles.find(x=>x.id===profile.run.slotIds[index]);if(!c){note('魔法陣を発見できません');return;}activeAnalysis={id:c.id,index,token:crypto.randomUUID()};show('analyzing');note('魔法陣「'+c.name+'」を初めて鑑定中。初回はモデルの読み込みで時間がかかります。');const frame=$('analyzerFrame');frame.onload=()=>{if(activeAnalysis)frame.contentWindow.postMessage({type:'dungeon-request',token:activeAnalysis.token,blob:c.image},location.origin);};frame.src='magia-circle.html?dungeon-analyzer=1';}
-window.addEventListener('message',async event=>{if(event.origin!==location.origin||event.source!==$('analyzerFrame').contentWindow||!activeAnalysis)return;const data=event.data;if(data?.token!==activeAnalysis.token||!['dungeon-result','dungeon-error'].includes(data.type))return;const a=activeAnalysis;activeAnalysis=null;$('analyzerFrame').src='about:blank';if(data.type==='dungeon-error'){note('鑑定失敗：'+data.message+'。ターンは消費されていません。');show('battle');return;}const v=data.analysis;if(!G.ATTRS.includes(v.attribute)||!G.ROLES.includes(v.role)||!(Number(v.power)>0)){note('鑑定結果が不完全です。ターンは消費しません。');show('battle');return;}const c=circles.find(x=>x.id===a.id);c.analysis={role:v.role,attribute:v.attribute,power:v.power};await putCircle(db,c);if(profile.run){profile.run.hero.spells[a.index]={...c.analysis};await persist();note('初顕現！ '+v.attribute+' / '+v.role+' / 威力 '+v.power);show('battle');await takeTurn(a.index);}},false);
+async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('鑑定が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
+async function analyzeUnknown(index){
+ const circle=circles.find(x=>x.id===profile.run.slotIds[index]);if(!circle){note('魔法陣が見つからない');return;}
+ const request={id:circle.id,index};activeAnalysis=request;show('analyzing');note('未鑑定の魔法陣を解析中');
+ const frame=$('analyzerFrame');
+ frame.onload=async()=>{
+  try{
+   const valid=()=>activeAnalysis===request;
+   const doc=frame.contentDocument;
+   const input=await waitUntil(()=>{const el=doc?.getElementById('fileInput');return el&&!el.disabled?el:null;},valid);
+   const transfer=new DataTransfer();transfer.items.add(new File([circle.image],'circle.jpg',{type:circle.image.type||'image/jpeg'}));
+   input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
+   const analyze=await waitUntil(()=>{const el=doc.getElementById('analyzeButton');return el&&!el.disabled?el:null;},valid);
+   analyze.click();
+   await waitUntil(()=>!doc.getElementById('altarSection')?.hidden,valid);
+   const attribute=doc.querySelector('#attributeResult .altar-value')?.textContent?.trim();
+   const japaneseRole=doc.querySelector('#shapeResult .altar-value')?.textContent?.trim();
+   const power=Number(doc.querySelector('#powerResult .altar-value')?.textContent?.trim());
+   const role=({'攻撃':'attack','防御':'defense','回復':'support','弱体':'debuff'})[japaneseRole];
+   if(!G.ATTRS.includes(attribute)||!G.ROLES.includes(role)||!Number.isFinite(power)||power<=0)throw Error('有効な相・紋・威力を取得できませんでした');
+   circle.analysis={attribute,role,power};
+   await putCircle(db,circle);
+   if(!valid())return;
+   profile.run.hero.spells[index]={...circle.analysis};await persist();
+   activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('鑑定完了：'+attribute+' / '+japaneseRole+' / 威力 '+power);
+   show('battle');await takeTurn(index);
+  }catch(e){if(activeAnalysis!==request)return;activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('鑑定できませんでした：'+e.message);renderRun();show('battle');}
+ };
+ frame.src='magia-circle.html';
+}
 async function startCamera(){if(!navigator.mediaDevices?.getUserMedia){note('HTTPSまたはlocalhostのカメラ対応ブラウザが必要です。');return;}try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});$('cameraVideo').srcObject=stream;await $('cameraVideo').play();$('cameraPane').hidden=false;note('魔法陣が映るようにカメラを向けて撮影してください。');}catch(e){note('カメラを起動できません：'+e.message);}}
 function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$('cameraVideo').srcObject=null;$('cameraPane').hidden=true;}
 async function capture(){if(!stream||!$('cameraVideo').videoWidth)return;const v=$('cameraVideo'),canvas=$('cameraCanvas'),side=Math.min(v.videoWidth,v.videoHeight),max=1280,scale=Math.min(1,max/side);canvas.width=Math.round(side*scale);canvas.height=canvas.width;canvas.getContext('2d').drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));if(!blob){note('撮影画像を作成できません');return;}const circle={id:crypto.randomUUID(),name:$('circleName').value.trim()||'無名の魔法陣',image:blob,analysis:null};await putCircle(db,circle);circles.push(circle);$('circleName').value='';stopCamera();note('魔法陣を保存した。性能は初回使用時に判明する。');render();}
