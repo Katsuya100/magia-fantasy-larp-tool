@@ -8,7 +8,14 @@ let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysi
 let dungeonView='prepare',battleUrls=[];
 let busyAction=false;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
-function note(message){$('notice').textContent=message;}
+function note(message){
+ const targets=['pageError','battleError','cameraError'];
+ for(const id of targets){$(id).hidden=true;$(id).textContent='';}
+ if(!message||!/できません|失敗|不足|見つからない|不正|中断|対応ブラウザ|開けません|起動できません|してください/.test(message))return;
+ const target=/カメラ|撮影|HTTPS|localhost/.test(message)?'cameraError':profile?.run?'battleError':'pageError';
+ $(target).textContent=message;$(target).hidden=false;
+}
+function circleTitle(circle){const i=circles.findIndex(x=>x.id===circle?.id);return i>=0?'魔法陣 '+String(i+1).padStart(2,'0'):'魔法陣';}
 async function persist(){await saveProfile(db,profile);}
 async function load(){db=await openStore();const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};for(const [key,file] of Object.entries(files)){const res=await fetch('assets/data/'+file);if(!res.ok)throw Error(file+' の取得に失敗');masters[key]=G.parseCsv(await res.text());}configure(masters);G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);profile=await getProfile(db);circles=await allCircles(db);slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));wire();render();if(profile.run){if(profile.run.stage==='checkpoint'){$('checkpointInfo').textContent='未確定報酬 '+profile.run.loot.length+'個 / 経験値 '+profile.run.xp;}else renderRun();}show(profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');if(!profile.name)openNameDialog(true);}
 const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result']);
@@ -58,7 +65,7 @@ function render(){
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
  }).join('');
- $('libraryCards').innerHTML=circles.map(c=>'<article class="card"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><b>'+esc(c.name)+'</b><p>'+(c.analysis?circleLabel(c.analysis):'？？？ · 性能未判明')+'</p><div class="card-actions"><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
+ $('libraryCards').innerHTML=circles.map(c=>'<article class="card"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><b>'+esc(circleTitle(c))+'</b><p>'+(c.analysis?circleLabel(c.analysis):'？？？ · 性能未判明')+'</p><div class="card-actions"><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run);
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
@@ -75,7 +82,7 @@ function renderRun(){
  $('heroStats').innerHTML=rowUnit(hero);
  $('battleSpells').innerHTML=run.slotIds.map((id,i)=>{
   const c=circles.find(x=>x.id===id),s=hero.spells[i],waiting=hero.cooldowns[i]||0;
-  const disabled=Boolean(s&&!G.canCast(hero,i)),name=esc(c?.name||'魔法陣');
+  const disabled=Boolean(s&&!G.canCast(hero,i)),name=esc(circleTitle(c));
   return '<button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="'+name+' '+(s?circleLabel(s):'性能未判明')+'" '+(disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +(c?.image?'<img alt="" src="'+battleImageUrl(c.image)+'">':'<span class="tile-empty-icon" aria-hidden="true">◎</span>')
@@ -110,7 +117,7 @@ async function leave(){const run=profile.run;if(!run||run.stage!=='checkpoint')r
 async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
 async function analyzeUnknown(index){
  const circle=circles.find(x=>x.id===profile.run.slotIds[index]);if(!circle){note('魔法陣が見つからない');return;}
- const request={id:circle.id,index};activeAnalysis=request;show('analyzing');note('魔法陣の性能を解析中');
+ const request={id:circle.id,index};activeAnalysis=request;show('analyzing');note('');
  const frame=$('analyzerFrame');
  frame.onload=async()=>{
   try{
@@ -131,15 +138,45 @@ async function analyzeUnknown(index){
    await putCircle(db,circle);
    if(!valid())return;
    profile.run.hero.spells[index]={...circle.analysis};await persist();
-   activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('性能判明：'+attribute+' / '+japaneseRole+' / 威力 '+power);
+   activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('');
    show('battle');await takeTurn(index);
-  }catch(e){if(activeAnalysis!==request)return;activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('解析できませんでした：'+e.message);renderRun();show('battle');}
+  }catch(e){if(activeAnalysis!==request)return;activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('解明できませんでした：'+e.message);renderRun();show('battle');}
  };
  frame.src='magia-circle.html';
 }
-async function startCamera(){if(stream){$('cameraPane').hidden=false;return;}if(!navigator.mediaDevices?.getUserMedia){note('HTTPSまたはlocalhostのカメラ対応ブラウザが必要です。');return;}try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});$('cameraVideo').srcObject=stream;await $('cameraVideo').play();$('cameraPane').hidden=false;note('魔法陣が映るようにカメラを向けて撮影してください。');}catch(e){note('カメラを起動できません：'+e.message);}}
-function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$('cameraVideo').srcObject=null;$('cameraPane').hidden=true;}
-async function capture(){if(!stream||!$('cameraVideo').videoWidth)return;const v=$('cameraVideo'),canvas=$('cameraCanvas'),side=Math.min(v.videoWidth,v.videoHeight),max=1280,scale=Math.min(1,max/side);canvas.width=Math.round(side*scale);canvas.height=canvas.width;canvas.getContext('2d').drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));if(!blob){note('撮影画像を作成できません');return;}const circle={id:crypto.randomUUID(),name:$('circleName').value.trim()||'無名の魔法陣',image:blob,analysis:null};await putCircle(db,circle);circles.push(circle);$('circleName').value='';note('');render();}
+function syncCameraUi(active){
+ $('cameraPlaceholder').hidden=active;
+ $('cameraVideo').hidden=!active;
+ $('cameraStart').hidden=active;
+ $('cameraCapture').hidden=!active;
+ $('cameraStop').hidden=!active;
+}
+async function startCamera(){
+ if(stream){syncCameraUi(true);return;}
+ if(!navigator.mediaDevices?.getUserMedia){note('HTTPSまたはlocalhostのカメラ対応ブラウザが必要です。');return;}
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});
+  $('cameraVideo').srcObject=stream;
+  $('cameraVideo').hidden=false;
+  await $('cameraVideo').play();
+  syncCameraUi(true);note('');
+ }catch(e){stopCamera();note('カメラを起動できません：'+e.message);}
+}
+function stopCamera(){
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+ $('cameraVideo').srcObject=null;syncCameraUi(false);
+}
+async function capture(){
+ if(!stream||!$('cameraVideo').videoWidth)return;
+ const v=$('cameraVideo'),canvas=$('cameraCanvas'),side=Math.min(v.videoWidth,v.videoHeight),max=1280,scale=Math.min(1,max/side);
+ canvas.width=Math.round(side*scale);canvas.height=canvas.width;
+ canvas.getContext('2d').drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,canvas.width,canvas.height);
+ const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));
+ if(!blob){note('撮影画像を作成できません');return;}
+ const circle={id:crypto.randomUUID(),image:blob,analysis:null};
+ await putCircle(db,circle);circles.push(circle);
+ note('');render();
+}
 function openLoadoutPicker(kind,index){
  if(profile.run)return;
  if(kind==='circle'){
@@ -154,6 +191,7 @@ function openLoadoutPicker(kind,index){
   ?circleChoices(circles,slots,imageUrl,esc)
   :itemChoices(profile.inventory,carry,itemName,esc);
  $('clearLoadoutSlot').hidden=kind==='circle'?slots[index]===null:carry[index]===null;
+ $('openGrimoireFromPicker').hidden=kind!=='circle';
  if(!dialog.open)dialog.showModal();
 }
 function closeLoadoutPicker(){
@@ -210,12 +248,13 @@ function wire(){
  $('cancelNameDialog').addEventListener('click',()=>$('nameDialog').close());
  $('nameDialog').addEventListener('cancel',event=>{if(!profile.name)event.preventDefault();});
  $('closeLoadoutDialog').addEventListener('click',closeLoadoutPicker);
+ $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>exclusive(()=>chooseLoadout(null)));
  $('loadoutDialog').addEventListener('close',()=>{picker=null;});
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
  $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');}));
- $('cancelAnalyze').addEventListener('click',()=>{activeAnalysis=null;$('analyzerFrame').src='about:blank';note('解析を中止しました。');renderRun();show('battle');});
+ $('cancelAnalyze').addEventListener('click',()=>{activeAnalysis=null;$('analyzerFrame').src='about:blank';note('');renderRun();show('battle');});
  window.addEventListener('beforeunload',()=>{stopCamera();freeUrls();releaseBattleUrls();});
 }
 load().catch(e=>{console.error(e);note('起動できません：'+e.message);});
