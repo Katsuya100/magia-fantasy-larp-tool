@@ -10,7 +10,10 @@ try{
  await wait(()=>$('playerStats').innerHTML.includes('Lv.1'),'first launch');
  assert.equal($('prepare').hidden,false,'first view is preparation and departure');
  assert.equal($('home').hidden,true,'profile opens only when selected');
- assert.equal($('tab-dungeon').attributes['aria-current'],'page','first tab selected');
+ assert.equal($('tab-prepare').attributes['aria-current'],'page','preparation tab initially selected');
+ assert.equal($('tab-prepare').hidden,false);
+ assert.equal($('tab-library').hidden,false);
+ assert.equal($('tab-dungeon').hidden,true,'no dungeon tab before an expedition');
  assert.equal($('tab-home').attributes['aria-current'],undefined);
  assert.equal($('nameDialog').open,true,'new adventurer is named in a dialog');
  $('playerNameInput').value='　 ';
@@ -38,11 +41,15 @@ try{
  assert.equal($('nameDialog').open,false);
  assert.match($('playerStats').innerHTML,/暁の旅人/);
 
- assert.equal($('tab-dungeon').attributes['aria-current'],undefined,'profile is the selected top-level tab');
+ assert.equal($('tab-home').attributes['aria-current'],'page');
+ assert.equal($('tab-prepare').hidden,false,'preparation tab is still present before adventure');
+ assert.equal($('tab-dungeon').hidden,true);
  assert.equal($('startAttack').disabled,true);
  assert.match($('playerStats').innerHTML,/持ち込み上限：3/);
  await doc.click(btn({view:'library'}));
  assert.equal($('library').hidden,false);
+ assert.equal($('tab-library').attributes['aria-current'],'page','library is its own preparation tab');
+ assert.equal($('tab-prepare').hidden,false);
  assert.equal(($('slotCards').innerHTML.match(/data-open-slot="/g)||[]).length,5,'five magic-circle tiles');
  assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,5,'five item tiles');
  assert.equal($('cameraPane').hidden,false,'viewfinder visible before camera starts');
@@ -84,6 +91,7 @@ try{
  assert.match($('libraryCards').innerHTML,/魔法陣 01/);
  assert.equal(await circles[0].image.text(),'camera-capture');
  await doc.click(btn({view:'prepare'}));
+ assert.equal($('tab-prepare').attributes['aria-current'],'page');
  await doc.click(btn({openSlot:'0'}));
  assert.equal($('openGrimoireFromPicker').hidden,false,'open grimoire button offered for circle selection');
  await $('openGrimoireFromPicker').fire('click');
@@ -112,6 +120,10 @@ try{
  await wait(()=>$('battle').hidden===false,'battle start');
  let p=await getProfile(db);
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);assert.equal(p.run.carry.length,0);
+ assert.equal($('tab-prepare').hidden,true,'preparation tab disappears during battle');
+ assert.equal($('tab-library').hidden,true,'grimoire tab disappears during battle');
+ assert.equal($('tab-dungeon').hidden,false,'dungeon tab replaces preparation tabs');
+ assert.equal($('tab-dungeon').attributes['aria-current'],'page');
  assert.equal(p.run.hero.spells[0],null);
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
  assert.equal(($('battleSpells').innerHTML.match(/<img alt="" src="blob:/g)||[]).length,5,'all five spells have photo thumbnails');
@@ -158,6 +170,9 @@ try{
  await wait(()=>$('result').hidden===false,'return');
  p=await getProfile(db);
  assert.equal(p.returns,1);assert.equal(p.run,null);
+ assert.equal($('tab-prepare').hidden,false,'return restores preparation');
+ assert.equal($('tab-library').hidden,false,'return restores the grimoire');
+ assert.equal($('tab-dungeon').hidden,true,'dungeon tab disappears after returning');
  const collectibleCount=Object.values(p.collection).reduce((a,b)=>a+b,0);
  assert.equal(collectibleCount,1,'collected treasure is tracked separately');
  assert.equal(p.inventory.length+collectibleCount,loot);
@@ -171,6 +186,7 @@ try{
  assert.doesNotMatch($('collectionGrid').innerHTML,/魔獣の牙/,'uncollected treasure stays secret');
  assert.ok(p.level>=2);
  await doc.click(btn({view:'prepare'}));
+ assert.equal($('tab-prepare').attributes['aria-current'],'page');
  for(let i=0;i<3;i++){
   await doc.click(btn({openItem:String(i)}));
   assert.equal($('loadoutDialog').open,true,'item picker opens');
@@ -188,6 +204,7 @@ try{
  await $('startAttack').fire('click');
  p=await getProfile(db);
  assert.equal(p.attempts,2);assert.equal(p.run.carry.length,3);
+ assert.equal($('tab-dungeon').hidden,false,'second adventure switches to dungeon tab');
  const before=p.run.hero.hp;
  await doc.click(btn({use:'0'}));
  p=await getProfile(db);
@@ -230,6 +247,9 @@ try{
   await wait(()=>el('result').hidden===false,'defeat');
   const defeated=await getProfile(await openStore(env2.factory));
   assert.equal(defeated.run,null);
+  assert.equal(el('tab-prepare').hidden,false,'defeat restores the pre-adventure tabs');
+  assert.equal(el('tab-library').hidden,false);
+  assert.equal(el('tab-dungeon').hidden,true);
   assert.equal(defeated.returns,1,'previous rewards remain');
   assert.equal(defeated.inventory.length,loot-collectibleCount-1,'spent potion lost; two unused were refunded');
   assert.equal(defeated.name,'暁の旅人','player name persists across reload');
