@@ -37,6 +37,14 @@ try{
  let p=await getProfile(db);
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);assert.equal(p.run.carry.length,0);
  assert.equal(p.run.hero.spells[0],null);
+ env.analyzerState.attribute='invalid';
+ await doc.click(btn({cast:'0'}));
+ await wait(()=>$('analyzing').hidden===false,'failed analysis begins');
+ await wait(()=>$('battle').hidden===false&&$('notice').textContent.includes('鑑定できません'),'failed analysis recovery');
+ p=await getProfile(db);
+ assert.equal(p.run.floor,1,'failed analysis does not consume a turn');
+ assert.equal(p.run.hero.spells[0],null);
+ env.analyzerState.attribute='flame';
  await doc.click(btn({cast:'0'}));
  await wait(()=>$('analyzing').hidden===false,'first-use analysis');
  await wait(async()=>(await getProfile(db)).run?.floor===2,'analysis results');
@@ -78,6 +86,17 @@ try{
  await doc.click(btn({use:'0'}));
  p=await getProfile(db);
  assert.equal(p.run.carry.length,2,'one free item per round');
+ // An entire second 5-fight block must offer a choice, and continued runs retain HP.
+ for(let fight=1;fight<=5;fight++)await doc.click(btn({cast:'0'}));
+ p=await getProfile(db);
+ assert.equal(p.run.stage,'checkpoint');
+ const hpAtCheckpoint=p.run.hero.hp, pendingLoot=p.run.loot.length;
+ await $('deeper').fire('click');
+ p=await getProfile(db);
+ assert.equal(p.run.floor,6);
+ assert.equal(p.run.enemy.level,2);
+ assert.equal(p.run.hero.hp,hpAtCheckpoint,'continuation carries HP');
+ assert.equal(p.run.loot.length,pendingLoot,'rewards remain unconfirmed');
  // Verify the photo+analysis persists through the second attack.
  assert.equal((await allCircles(db))[0].analysis.power,5000);
  const resumable=p.run;
@@ -97,5 +116,5 @@ try{
   assert.equal(defeated.inventory.length,loot-1,'spent potion lost; two unused were refunded');
   assert.equal((await allCircles(await openStore(env2.factory)))[0].analysis.power,5000);
  }finally{env2.restore();}
- console.log('PASS dungeon camera-only registration, first-use analysis, 5 battles, loot, return, carry limit, free potions, reload and defeat');
+ console.log('PASS dungeon registration, rejected analysis, first-use success, 5-fight return, continued floor 6, free items, reload and defeat');
 }finally{Math.random=originalRandom;env.restore();}
