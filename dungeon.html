@@ -96,9 +96,21 @@
     <section id="prepare" class="panel loadout-panel">
       <div class="section-heading"><div><p class="chapter">CHAPTER III · PREPARATION</p><h2>準備&amp;出発</h2></div><span class="section-mark" aria-hidden="true">⚔</span></div>
       <div class="subheading"><h3>術式の編成</h3><span>THE FIVE SIGILS</span></div>
-      <div id="slotCards"></div>
+      <div id="slotCards"><div class="loadout-grid" role="group" aria-label="魔法陣の編成" data-static-slots="5">
+          <button type="button" class="loadout-tile empty" data-open-slot="0" aria-label="魔法陣 1枠目 未装備" ><span class="tile-index">01</span><span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">未装備</span></button>
+          <button type="button" class="loadout-tile empty" data-open-slot="1" aria-label="魔法陣 2枠目 未装備" ><span class="tile-index">02</span><span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">未装備</span></button>
+          <button type="button" class="loadout-tile empty" data-open-slot="2" aria-label="魔法陣 3枠目 未装備" ><span class="tile-index">03</span><span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">未装備</span></button>
+          <button type="button" class="loadout-tile empty" data-open-slot="3" aria-label="魔法陣 4枠目 未装備" ><span class="tile-index">04</span><span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">未装備</span></button>
+          <button type="button" class="loadout-tile empty" data-open-slot="4" aria-label="魔法陣 5枠目 未装備" ><span class="tile-index">05</span><span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">未装備</span></button>
+        </div></div>
       <div class="subheading"><h3>携行品</h3><span>SUPPLIES</span></div>
-      <div id="gearCards"></div><p id="gearCounter" class="gear-counter"></p>
+      <div id="gearCards"><div class="loadout-grid" role="group" aria-label="持ち込みアイテム" data-static-slots="5">
+          <button type="button" class="loadout-tile locked" data-open-item="0" aria-label="持ち込み 1枠目 未解放" disabled><span class="tile-index">01</span><span class="tile-item-icon" aria-hidden="true">♙</span><span class="tile-title">未解放</span></button>
+          <button type="button" class="loadout-tile locked" data-open-item="1" aria-label="持ち込み 2枠目 未解放" disabled><span class="tile-index">02</span><span class="tile-item-icon" aria-hidden="true">♙</span><span class="tile-title">未解放</span></button>
+          <button type="button" class="loadout-tile locked" data-open-item="2" aria-label="持ち込み 3枠目 未解放" disabled><span class="tile-index">03</span><span class="tile-item-icon" aria-hidden="true">♙</span><span class="tile-title">未解放</span></button>
+          <button type="button" class="loadout-tile locked" data-open-item="3" aria-label="持ち込み 4枠目 未解放" disabled><span class="tile-index">04</span><span class="tile-item-icon" aria-hidden="true">♙</span><span class="tile-title">未解放</span></button>
+          <button type="button" class="loadout-tile locked" data-open-item="4" aria-label="持ち込み 5枠目 未解放" disabled><span class="tile-index">05</span><span class="tile-item-icon" aria-hidden="true">♙</span><span class="tile-title">未解放</span></button>
+        </div></div><p id="gearCounter" class="gear-counter"></p>
       <dialog id="loadoutDialog" class="loadout-dialog" aria-labelledby="loadoutDialogTitle">
         <div class="loadout-dialog-inner">
           <div class="chooser-header"><div><p class="chapter">GRIMOIRE · EQUIPMENT</p><h3 id="loadoutDialogTitle">魔法陣を選ぶ</h3></div><button type="button" id="closeLoadoutDialog" class="subtle" aria-label="選択を閉じる">✕</button></div>
@@ -106,7 +118,7 @@
           <button type="button" id="clearLoadoutSlot" class="subtle">この枠を空にする</button>
         </div>
       </dialog>
-      <div class="entry-actions"><button type="button" id="startAttack" class="primary-action">迷宮へ入る <span aria-hidden="true">⟶</span></button></div>
+      <div class="entry-actions"><button type="button" id="startAttack" class="primary-action" disabled>迷宮へ入る <span aria-hidden="true">⟶</span></button></div>
     </section>
 
     <section id="collection" class="panel collection-panel" hidden>
@@ -155,7 +167,7 @@
       <h2 id="resultTitle"></h2><div id="resultText"></div><button type="button" data-view="home">冒険者の記録へ戻る</button>
     </section>
 
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.17.2</span></footer>
   </main>
   <script type="module" src="assets/js/dungeon-app.mjs?v=20261017.2"></script>
 </body>
