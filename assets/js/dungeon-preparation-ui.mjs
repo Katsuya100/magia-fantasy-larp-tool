@@ -1,4 +1,4 @@
-import {GRID_COLUMNS} from './dungeon-loadout.mjs?v=20261017.2';
+import {GRID_COLUMNS} from './dungeon-loadout.mjs';
 export function itemSymbol(item){return item?.id?.startsWith('heal_')?'✚':item?.id?.startsWith('mana_')?'✧':'◈';}
 export function spellGrid(slots,circles,imageUrl,escapeText,active=true){
  const byId=new Map(circles.map(circle=>[circle.id,circle]));
