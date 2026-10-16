@@ -10,7 +10,7 @@ try{
  await wait(()=>$('playerStats').innerHTML.includes('Lv.1'),'first launch');
  assert.equal($('prepare').hidden,false,'first view is preparation and departure');
  assert.equal($('home').hidden,true,'profile opens only when selected');
- assert.equal($('tab-prepare').attributes['aria-current'],'page','first tab selected');
+ assert.equal($('tab-dungeon').attributes['aria-current'],'page','first tab selected');
  assert.equal($('tab-home').attributes['aria-current'],undefined);
  assert.equal($('nameDialog').open,true,'new adventurer is named in a dialog');
  $('playerNameInput').value='　 ';
@@ -38,7 +38,7 @@ try{
  assert.equal($('nameDialog').open,false);
  assert.match($('playerStats').innerHTML,/暁の旅人/);
 
- assert.equal($('resumeTab').hidden,true);
+ assert.equal($('tab-dungeon').attributes['aria-current'],undefined,'profile is the selected top-level tab');
  assert.equal($('startAttack').disabled,true);
  assert.match($('playerStats').innerHTML,/持ち込み上限：3/);
  await doc.click(btn({view:'library'}));
@@ -93,10 +93,22 @@ try{
  let p=await getProfile(db);
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);assert.equal(p.run.carry.length,0);
  assert.equal(p.run.hero.spells[0],null);
+ assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
+ assert.equal(($('battleSpells').innerHTML.match(/<img alt="" src="blob:/g)||[]).length,5,'all five spells have photo thumbnails');
+ assert.equal(($('battleItems').innerHTML.match(/class="loadout-tile battle-tile battle-item-tile empty"/g)||[]).length,5,'five empty battle item slots');
+ assert.match($('battleBasic').innerHTML,/data-cast="-1"/,'basic attack remains available');
+ await doc.click(btn({view:'collection'}));
+ assert.equal($('battle').hidden,true,'collection is another top-level tab');
+ assert.equal($('tab-collection').attributes['aria-current'],'page');
+ await doc.click(btn({view:'home'}));
+ assert.equal($('tab-home').attributes['aria-current'],'page');
+ await doc.click(btn({view:'dungeon'}));
+ assert.equal($('battle').hidden,false,'dungeon tab resumes the ongoing battle');
+ assert.equal($('tab-dungeon').attributes['aria-current'],'page');
  env.analyzerState.attribute='invalid';
  await doc.click(btn({cast:'0'}));
  await wait(()=>$('analyzing').hidden===false,'failed analysis begins');
- await wait(()=>$('battle').hidden===false&&$('notice').textContent.includes('鑑定できません'),'failed analysis recovery');
+ await wait(()=>$('battle').hidden===false&&$('notice').textContent.includes('解析できません'),'failed analysis recovery');
  p=await getProfile(db);
  assert.equal(p.run.floor,1,'failed analysis does not consume a turn');
  assert.equal(p.run.hero.spells[0],null);
@@ -162,6 +174,9 @@ try{
  assert.equal(p.run.floor,1);
  assert.equal(p.run.carry.length,2);
  assert.equal(p.run.usedItems,1);
+ assert.equal(($('battleItems').innerHTML.match(/data-use="/g)||[]).length,2,'item grid keeps usable tiles');
+ assert.equal(($('battleItems').innerHTML.match(/data-open-item="/g)||[]).length,0,'battle items are not preparation slots');
+ assert.equal(($('battleItems').innerHTML.match(/battle-item-tile empty/g)||[]).length,3,'remaining item slots stay visible');
  await doc.click(btn({use:'0'}));
  p=await getProfile(db);
  assert.equal(p.run.carry.length,2,'one free item per round');
@@ -187,6 +202,7 @@ try{
   await import('../assets/js/dungeon-app.mjs?integration=reload');
   await wait(()=>el('battle').hidden===false,'resume from IndexedDB');
   assert.equal(el('prepare').hidden,true,'active dungeon takes priority over first-view preparation');
+  assert.equal(el('tab-dungeon').attributes['aria-current'],'page','battle is under the dungeon tab');
   assert.match(el('heroStats').innerHTML,/HP 1\//);
   assert.equal(el('nameDialog').open,false,'returning player has no rename prompt');
   await doc2.click(btn({cast:'-1'}));
