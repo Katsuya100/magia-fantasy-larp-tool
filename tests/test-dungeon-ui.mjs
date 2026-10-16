@@ -9,7 +9,31 @@ try{
  await import('../assets/js/dungeon-app.mjs?integration=first');
  await wait(()=>$('playerStats').innerHTML.includes('Lv.1'),'first launch');
  assert.equal($('home').hidden,false);
+ assert.equal($('nameDialog').open,true,'new adventurer is named in a dialog');
+ $('playerNameInput').value='　 ';
+ await $('nameForm').fire('submit');
+ assert.match($('nameError').textContent,/1〜20文字/);
+ assert.equal($('nameDialog').open,true,'empty name remains invalid');
+ $('playerNameInput').value='星渡り';
+ await $('nameForm').fire('submit');
+ assert.equal($('nameDialog').open,false,'naming dialog closes after saving');
+ assert.equal((await getProfile(await openStore(env.factory))).name,'星渡り');
+ assert.match($('playerStats').innerHTML,/星渡り/);
  Math.random=()=>.01;
+ assert.match($('collectionGrid').innerHTML,/？？？/);
+ assert.doesNotMatch($('collectionGrid').innerHTML,/失われた王冠/);
+ await doc.click(btn({view:'collection'}));
+ assert.equal($('collection').hidden,false);
+ assert.equal($('tab-collection').attributes['aria-current'],'page');
+ assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,12);
+ await doc.click(btn({view:'home'}));
+ await doc.click(btn({action:'rename'}));
+ assert.equal($('nameDialog').open,true);
+ $('playerNameInput').value='暁の旅人';
+ await $('nameForm').fire('submit');
+ assert.equal($('nameDialog').open,false);
+ assert.match($('playerStats').innerHTML,/暁の旅人/);
+
  assert.equal($('resumeTab').hidden,true);
  assert.equal($('startAttack').disabled,true);
  assert.match($('playerStats').innerHTML,/持ち込み上限：3/);
@@ -55,7 +79,9 @@ try{
  p=await getProfile(db);
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
  for(let fight=2;fight<=5;fight++){
+  if(fight===5)Math.random=()=>.99;
   await doc.click(btn({cast:'0'}));
+  Math.random=()=>.01;
   p=await getProfile(db);
   if(fight<5)assert.equal(p.run.floor,fight+1);
  }
@@ -67,8 +93,17 @@ try{
  await wait(()=>$('result').hidden===false,'return');
  p=await getProfile(db);
  assert.equal(p.returns,1);assert.equal(p.run,null);
- assert.equal(p.inventory.length,loot);
+ const collectibleCount=Object.values(p.collection).reduce((a,b)=>a+b,0);
+ assert.equal(collectibleCount,1,'collected treasure is tracked separately');
+ assert.equal(p.inventory.length+collectibleCount,loot);
  assert.equal(p.highest,5);
+ await doc.click(btn({view:'collection'}));
+ assert.equal($('collection').hidden,false);
+ assert.match($('collectionGrid').innerHTML,/失われた王冠/);
+ assert.match($('collectionProgress').innerHTML,/1 \/ 12/);
+ assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,11);
+ assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,1);
+ assert.doesNotMatch($('collectionGrid').innerHTML,/魔獣の牙/,'uncollected treasure stays secret');
  assert.ok(p.level>=2);
  await doc.click(btn({view:'prepare'}));
  for(let i=0;i<3;i++)await doc.click(btn({gear:String(i)}));
@@ -108,12 +143,15 @@ try{
   await import('../assets/js/dungeon-app.mjs?integration=reload');
   await wait(()=>el('battle').hidden===false,'resume from IndexedDB');
   assert.match(el('heroStats').innerHTML,/HP 1\//);
+  assert.equal(el('nameDialog').open,false,'returning player has no rename prompt');
   await doc2.click(btn({cast:'-1'}));
   await wait(()=>el('result').hidden===false,'defeat');
   const defeated=await getProfile(await openStore(env2.factory));
   assert.equal(defeated.run,null);
   assert.equal(defeated.returns,1,'previous rewards remain');
-  assert.equal(defeated.inventory.length,loot-1,'spent potion lost; two unused were refunded');
+  assert.equal(defeated.inventory.length,loot-collectibleCount-1,'spent potion lost; two unused were refunded');
+  assert.equal(defeated.name,'暁の旅人','player name persists across reload');
+  assert.equal(defeated.collection.forgotten_crown,1,'collection survives defeat');
   assert.equal((await allCircles(await openStore(env2.factory)))[0].analysis.power,5000);
  }finally{env2.restore();}
  const noStorage=fakeDungeonBrowser({storage:{onOpen:'undefined'}});
