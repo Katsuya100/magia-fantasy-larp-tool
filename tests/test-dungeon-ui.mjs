@@ -84,7 +84,7 @@ try{
  await doc.click(btn({chooseCircle:'0'}));
  prepared=await getProfile(db);
  assert.deepEqual(prepared.slots.slice(0,2),[circles[0].id,circles[1].id],'swap back');
- assert.match($('gearCards').innerHTML,/最初の帰還成功後/);
+ assert.match($('gearCounter').textContent,/最初の帰還後に解放/);
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
  let p=await getProfile(db);
