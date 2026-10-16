@@ -31,7 +31,7 @@ const spellHtml=spellGrid(prepareCircles([],ids),circles,makeImg,esc);
 assert.equal((spellHtml.match(/data-open-slot=/g)||[]).length,5);
 assert.equal((spellHtml.match(/class="loadout-tile empty"/g)||[]).length,5);
 assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/data-open-slot="0"/);
-assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/魔法陣0/);
+assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/魔法陣 01/);
 const itemName=x=>x.id;
 const beforeReturn=itemGrid(prepareItems([],3,3),inventory,3,false,itemName,esc);
 assert.equal((beforeReturn.match(/data-open-item=/g)||[]).length,5);
