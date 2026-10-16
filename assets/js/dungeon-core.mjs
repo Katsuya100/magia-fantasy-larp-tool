@@ -48,7 +48,46 @@ export function cast(src,tgt,spell,buffs,r=Math.random){const a=spell.attribute,
  if(spell.role==='support'){const heal=Math.max(0,Math.min(src.stats.hp-src.hp,Math.round(B*factor(src,'heal')*factor(src,'output'))));src.hp+=heal;src.statuses=src.statuses.filter(x=>x.kind!=='debuff'||x.attribute!==a);return 'HP '+heal+'回復・'+a+'解除';}
  if(spell.role==='defense'){addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(num('defense_resistance_gain')*q,0,num('defense_resistance_cap')),turns:num('resistance_buff_duration')});const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:Number(row.duration)});return a+'耐性と強化';}
  const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);if(row){const law=status(tgt,'buff_law');const protection=law?Math.max(0,1-law.value):1;const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:clamp(Math.round(Number(row.duration)*power),num('debuff_min_duration'),num('debuff_max_duration')),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});}return a+'弱体付与';}
-export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random){const ps=prepare(player,pickPlayer,r),es=prepare(enemy,pickEnemy,r),actions=[{u:player,t:enemy,sp:ps,name:'自分'},{u:enemy,t:player,sp:es,name:'敵'}],log=[];for(const role of ['support','defense','debuff','attack','basic'])for(const a of actions){if(a.sp.role!==role)continue;if(role==='basic'){const d=Math.max(1,Math.round(num('basic_attack')*a.u.stats.mag/num('mag_reference')*num('def_divisor')/(num('def_divisor')+armor(a.t))));a.t.hp=Math.max(0,a.t.hp-d);log.push(a.name+'：通常攻撃 '+d);}else log.push(a.name+'：'+cast(a.u,a.t,a.sp,buffs,r));}
- for(const a of actions){for(const s of a.u.statuses){if(s.effect==='burn'){const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*num('burn_hp_rate')*s.value));a.u.hp=Math.max(0,a.u.hp-d);log.push(a.name+'：火傷 '+d);}s.turns--;}a.u.statuses=a.u.statuses.filter(s=>s.turns>0);a.u.cooldowns=a.u.cooldowns.map(x=>Math.max(0,x-1));}return log;}
+// Optional onStep is a read-only timeline of resolved actions; combat rules are unchanged.
+export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onStep){
+ const ps=prepare(player,pickPlayer,r),es=prepare(enemy,pickEnemy,r);
+ const actions=[{u:player,t:enemy,sp:ps,name:'自分',side:'hero'},{u:enemy,t:player,sp:es,name:'敵',side:'enemy'}],log=[];
+ const snapshot=u=>({...u,statuses:u.statuses.map(x=>({...x})),cooldowns:[...u.cooldowns]});
+ const publish=(a,role,attribute,message,amount=0)=>{
+  if(onStep)onStep({side:a.side,role,attribute,text:message,amount,
+   hero:snapshot(player),enemy:snapshot(enemy)});
+ };
+ for(const role of ['support','defense','debuff','attack','basic']){
+  for(const a of actions){
+   if(a.sp.role!==role)continue;
+   const oldHp=role==='support'?a.u.hp:a.t.hp;
+   let message;
+   if(role==='basic'){
+    const d=Math.max(1,Math.round(num('basic_attack')*a.u.stats.mag/num('mag_reference')*num('def_divisor')/(num('def_divisor')+armor(a.t))));
+    a.t.hp=Math.max(0,a.t.hp-d);
+    message=a.name+'：通常攻撃 '+d;
+   }else message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
+   log.push(message);
+   const amount=role==='support'?a.u.hp-oldHp:oldHp-a.t.hp;
+   publish(a,role,a.sp.attribute,message,amount);
+  }
+ }
+ for(const a of actions){
+  for(const s of a.u.statuses){
+   if(s.effect==='burn'){
+    const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*num('burn_hp_rate')*s.value));
+    const oldHp=a.u.hp;
+    a.u.hp=Math.max(0,a.u.hp-d);
+    const message=a.name+'：火傷 '+d;
+    log.push(message);
+    publish(a,'burn',s.attribute,message,oldHp-a.u.hp);
+   }
+   s.turns--;
+  }
+  a.u.statuses=a.u.statuses.filter(s=>s.turns>0);
+  a.u.cooldowns=a.u.cooldowns.map(x=>Math.max(0,x-1));
+ }
+ return log;
+}
 export function fromEnemy(row,level){const b={hp:+row.hp,mag:+row.mag,def:+row.def,res:+row.res};const resists=Object.fromEntries(ATTRS.map(a=>[a,+row['resist_'+a]]));const spells=row.spells.split('|').map(s=>{const [role,attribute,power]=s.split(':');return {role,attribute,power:+power};});return makeUnit(b,level,resists,spells,row.id);}
 export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items)if(+i.min_value>+i.max_value)throw Error('Bad item roll');return true;}
