@@ -88,15 +88,15 @@ const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
 assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
-assert.match(page,/data-release="20261017\.6"/);
-assert.match(page,/dungeon\.css\?v=20261017\.6/);
-assert.match(page,/dungeon-app\.mjs\?v=20261017\.6/);
+assert.match(page,/data-release="20261017\.7"/);
+assert.match(page,/dungeon\.css\?v=20261017\.7/);
+assert.match(page,/dungeon-app\.mjs\?v=20261017\.7/);
 const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.6','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.7','stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
