@@ -116,5 +116,20 @@ try{
   assert.equal(defeated.inventory.length,loot-1,'spent potion lost; two unused were refunded');
   assert.equal((await allCircles(await openStore(env2.factory)))[0].analysis.power,5000);
  }finally{env2.restore();}
+ const noStorage=fakeDungeonBrowser({storage:{onOpen:'undefined'}});
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=storage-error');
+  await wait(()=>noStorage.document.getElementById('notice').textContent.includes('起動できません'),'unavailable storage');
+  assert.match(noStorage.document.getElementById('notice').textContent,/保存領域/);
+ }finally{noStorage.restore();}
+ const cameraDenied=fakeDungeonBrowser({cameraFailure:true});
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=camera-denied');
+  await wait(()=>cameraDenied.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'camera test startup');
+  await cameraDenied.document.click(btn({view:'library'}));
+  await cameraDenied.document.getElementById('cameraStart').fire('click');
+  assert.match(cameraDenied.document.getElementById('notice').textContent,/カメラを起動できません/);
+  assert.equal(cameraDenied.document.getElementById('cameraPane').hidden,true);
+ }finally{cameraDenied.restore();}
  console.log('PASS dungeon registration, rejected analysis, first-use success, 5-fight return, continued floor 6, free items, reload and defeat');
 }finally{Math.random=originalRandom;env.restore();}
