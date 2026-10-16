@@ -2,11 +2,12 @@
 
 描いた陣から魔法を顕現させる「マギアサークル」と、英語の言霊を足し引きして魔法を作る「コトダマギア」を収録した、ブラウザ向けのファンタジーLARPツールです。サーバー側の推論サービスは不要で、GitHub Pagesなどの静的ホスティングから利用できます。
 
-[公開ページ](https://katsuya100.github.io/magia-fantasy-larp-tool/) / [コトダマギア](kotodama.html) / [マギアサークル](magia-circle.html)
+[公開ページ](https://katsuya100.github.io/magia-fantasy-larp-tool/) / [コトダマギア](kotodama.html) / [マギアサークル](magia-circle.html) / [マギアサークル-ダンジョンアタック](dungeon.html)
 
 ## 遊べること
 
 - **コトダマギア**: `fire + heat - reporting` のような魔導式を刻み、意味の共鳴から相と顕現魔力を求めます。偶然の墨、写本の導き、近似解、反転術式、顕現録を利用できます。
+- **マギアサークル-ダンジョンアタック**: カメラで魔法陣を登録し、5枚を編成して連戦する探索ゲーム。5戦ごとの帰還で消耗品・収集品・経験値を確定します。仕様と調整用CSVは [ダンジョンアタック仕様書](docs/DUNGEON-ATTACK-DESIGN.md) に記載。
 - **マギアサークル**: 画像を選ぶかカメラで撮影し、外円・内円・環の呪文・紋を読み取ります。相と紋の全候補の割合、威力と内訳を表示します。処理はStructure → OCR →画像資源の解放 → Embeddingの順で行い、重いWorkerを重ねない設計です。
 
 世界観・用語・計算式を維持しています。コトダマギアの入力と候補は別レイヤーです。
@@ -76,7 +77,7 @@ npm run check
 npm run build
 ```
 
-`npm test` は既存18本を維持し、入力分離・事前OCR索引・Node model cacheの3本を追加した21本のネットワーク不要unit/integrationスイートです。威力・相・画像pipeline、OCR retry方針とcleanup、Worker handshake/client、model cache、診断、結果描画、外部依存固定情報、軽量辞書生成・ロード・語彙・旧コトダマギアの14術式と新しい自由入力8術式との一致を確認します。`npm run check` はアプリ・Worker・開発スクリプト・テスト・HTML内scriptの構文確認です。
+`npm test` は既存18本を維持し、入力分離・事前OCR索引・Node model cacheの3本を追加した22本のネットワーク不要unit/integrationスイートです。威力・相・画像pipeline、OCR retry方針とcleanup、Worker handshake/client、model cache、診断、結果描画、外部依存固定情報、軽量辞書生成・ロード・語彙・旧コトダマギアの14術式と新しい自由入力8術式との一致を確認します。`npm run check` はアプリ・Worker・開発スクリプト・テスト・HTML内scriptの構文確認です。
 
 通常CIは `npm ci`、上のテスト、構文確認、静的buildを行います。npmのパッケージ取得（同梱OCRモデルを含む）は必要ですが、テスト実行でEmbeddingモデルを取得しません。大量のモデルを使う画像E2Eは通常CIに含めません。
 

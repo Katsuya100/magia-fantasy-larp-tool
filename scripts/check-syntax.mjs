@@ -16,7 +16,7 @@ async function checkDirectory(directory){
   }
 }
 for(const directory of ['assets/js','scripts','tests']) await checkDirectory(resolve(root,directory));
-for(const name of ['index.html','kotodama.html','magia-circle.html']){
+for(const name of ['index.html','kotodama.html','magia-circle.html','dungeon.html']){
   const html = await readFile(resolve(root,name),'utf8');
   for(const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
     if(/\bsrc\s*=/.test(match[1]) || !match[2].trim()) continue;

@@ -1,0 +1,17 @@
+id,name,hp,mag,def,res,resist_flame,resist_bolt,resist_aqua,resist_storm,resist_gravity,resist_law,resist_chaos,spells,weight,min_level,boss_only
+slime,洞窟スライム,70,8,3,5,1,1.1,0.7,1,1,1,1,attack:aqua:160|defense:aqua:120|support:aqua:110|debuff:aqua:120|attack:law:130,30,1,0
+bat,雷鳴コウモリ,65,10,4,7,1,0.5,1.3,0.8,1.2,1,1,attack:bolt:170|debuff:bolt:145|defense:bolt:110|attack:storm:160|support:storm:100,24,1,0
+goblin,迷宮ゴブリン,90,9,6,7,1,1,1,1,1,1,1,attack:flame:170|defense:gravity:110|debuff:storm:150|support:aqua:120|attack:bolt:160,28,1,0
+wisp,漂流する鬼火,75,13,3,12,0.35,1.1,1.4,1.1,1,1,1.2,attack:flame:200|debuff:flame:170|defense:flame:170|support:chaos:120|attack:chaos:160,18,3,0
+skeleton,骨兵,105,10,9,10,1.2,1,1,0.8,0.6,1,1.3,attack:gravity:200|debuff:law:130|defense:gravity:190|support:law:110|attack:storm:170,19,4,0
+mage,深淵の魔術師,85,15,5,14,0.9,1.1,1.1,0.9,1,1.3,0.75,attack:chaos:230|debuff:law:190|support:aqua:150|defense:law:190|attack:bolt:210,14,6,0
+guardian,封印の番人,150,13,15,15,0.8,0.8,1.2,1.1,0.7,0.5,1.2,attack:law:250|debuff:law:210|defense:law:240|support:law:160|attack:gravity:240,10,8,0
+golem,黒曜のゴーレム,220,12,20,16,0.3,0.8,1.4,1,0.25,1,1.2,attack:gravity:260|defense:gravity:250|debuff:gravity:180|attack:flame:280|support:gravity:180,9,10,0
+serpent,水鏡の大蛇,180,18,10,18,1.2,1.2,0.35,0.7,1.1,0.8,1.1,attack:aqua:290|debuff:aqua:230|defense:aqua:250|support:aqua:180|attack:storm:280,8,14,0
+harbinger,混沌の先触れ,200,22,13,21,1,1,1,1,1,1,0.3,attack:chaos:360|debuff:chaos:300|defense:chaos:260|support:chaos:220|attack:law:290,6,20,0
+wyrm,炎獄の竜,300,24,20,25,0.2,0.8,1.4,0.7,1,1.3,0.8,attack:flame:430|debuff:flame:330|defense:flame:340|support:flame:220|attack:gravity:320,4,28,0
+arbiter,深淵の裁定者,350,30,25,28,0.8,0.8,0.8,0.8,0.8,0.4,1.2,attack:law:500|debuff:law:360|defense:law:400|support:law:280|attack:chaos:450,3,40,0
+gatekeeper_1,第一の番人,95,8,7,7,1,1,0.9,1,1.1,1,1,attack:flame:110|defense:flame:110|support:aqua:90|debuff:bolt:100|attack:law:115,0,1,1
+gatekeeper_2,雷音の番人,120,9,8,8,1.1,0.55,1.15,1,1,1,1,attack:bolt:140|defense:bolt:125|debuff:bolt:110|support:aqua:100|attack:storm:130,0,2,1
+gatekeeper_3,幻炎の番人,145,10,9,10,0.5,1,1.4,1.2,1,1,1,attack:flame:170|debuff:flame:140|defense:flame:140|support:law:120|attack:chaos:150,0,3,1
+gatekeeper_4,迷宮の監視者,160,12,13,11,1.1,1,1,0.75,0.7,1.15,0.8,attack:gravity:200|debuff:storm:160|defense:gravity:180|support:aqua:135|attack:law:180,0,4,1

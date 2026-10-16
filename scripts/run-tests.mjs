@@ -7,7 +7,7 @@ const tests = [
   'detection-tensor-input', 'sigil-classification', 'analysis-diagnostics',
   'structure-worker-handshake', 'ocr-line-materialization', 'ocr-worker-client',
   'ocr-resource-tracker', 'magia-circle-results', 'runtime-dependencies', 'kotodama-vectors',
-  'kotodama-input-vectors', 'kotodama-data', 'kotodama-scoring', 'kotodama-lexicon', 'kotodama-app', 'ocr-vocabulary-index',
+  'kotodama-input-vectors', 'kotodama-data', 'kotodama-scoring', 'kotodama-lexicon', 'kotodama-app', 'ocr-vocabulary-index', 'dungeon-core',
 ];
 const root = fileURLToPath(new URL('../', import.meta.url));
 for(const test of tests){
