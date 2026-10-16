@@ -22,6 +22,11 @@
 | 名前入力ダイアログ | `test-dungeon-ui`, `test-dungeon-presentation` | 初回の必須入力、空白拒否、変更、永続保存と再読込時の非表示 |
 | 収集図鑑 | `test-dungeon-ui`, `test-dungeon-presentation` | 独立タブ、12枠マトリクス、未発見の？？？、入手時の開示、敗北後の保持 |
 | 世界観・作図規則 | `test-dungeon-presentation` | キャッチコピー、カメラ限定、紋の説明、共鳴率表記なし、既存サンプルPNG、スマホ幅レイアウト |
+| 準備画面の5列グリッド | `test-dungeon-loadout`, `test-dungeon-ui`, `test-dungeon-presentation` | 魔法陣5枠とアイテム5列、位置保持・重複防止・スワップ、レベル上昇による追加行と既存セーブ移行 |
+| 編成選択ダイアログ | `test-dungeon-loadout`, `test-dungeon-ui` | 各枠から開き、魔法陣一覧・アイテム一覧から指定枠へ編成 |
+| カメラ連続撮影 | `test-dungeon-ui` | カメラを閉じず5枚連続登録・通知の非表示・1つのストリーム再利用・閉じるときだけ停止 |
+| プロフィール紋章の位置 | `test-dungeon-presentation` | 紋章と円形装飾の中心固定、スマートフォンの表示サイズ |
+| 属性表示 | `test-dungeon-presentation` | 7属性すべての絵文字付き作図規則表記 |
 | 表示・ビルド | `npm run check`, `npm run build` | JavaScript構文とページの静的ビルド |
 
 ## テストの信頼範囲
