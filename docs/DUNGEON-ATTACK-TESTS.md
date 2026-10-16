@@ -19,6 +19,9 @@
 | 帰還・敗北 | `test-dungeon-ui` | 5戦ごとの帰還、経験値/物資確定、再アタック、敗北時未確定分破棄 |
 | 再読込からの再開 | `test-dungeon-store`, `test-dungeon-ui` | 保存した探索・アイテム・既知魔法陣を再読み込み |
 | カメラ許可拒否 | `test-dungeon-ui` | 撮影不可時のエラー表示 |
+| 名前入力ダイアログ | `test-dungeon-ui`, `test-dungeon-presentation` | 初回の必須入力、空白拒否、変更、永続保存と再読込時の非表示 |
+| 収集図鑑 | `test-dungeon-ui`, `test-dungeon-presentation` | 独立タブ、12枠マトリクス、未発見の？？？、入手時の開示、敗北後の保持 |
+| 世界観・作図規則 | `test-dungeon-presentation` | キャッチコピー、カメラ限定、紋の説明、共鳴率表記なし、既存サンプルPNG、スマホ幅レイアウト |
 | 表示・ビルド | `npm run check`, `npm run build` | JavaScript構文とページの静的ビルド |
 
 ## テストの信頼範囲
