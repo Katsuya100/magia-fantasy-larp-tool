@@ -1,0 +1,14 @@
+export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
+export const ROLES=['attack','defense','support','debuff'];
+export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
+export const capacity=level=>Math.min(15,3+Math.floor((level-1)/4));
+export const nextXp=level=>Math.round(100*Math.pow(level,1.35));
+export const basePower=p=>Math.round(20*Math.sqrt(Math.max(0,p)/100));
+export const mpCost=p=>2+Math.ceil(basePower(p)/12);
+const growth={hp:[.055,.0009],mag:[.045,.0005],def:[.035,.0004],res:[.035,.0004]};
+export const startingBase=(r=Math.random)=>({hp:roll(90,110,r),mag:roll(8,12,r),def:roll(5,10,r),res:roll(5,10,r)});
+export function stats(base,level){const n=level-1;return Object.fromEntries(Object.entries(growth).map(([k,[a,b]])=>[k,Math.round(base[k]*(1+a*n+b*n*n))]));}
+export function makeUnit(base,level,resists={},spells=[],id='unit'){
+ const s=stats(base,level);return {id,level,base,stats:s,hp:s.hp,maxMp:40+6*s.mag,mp:40+6*s.mag,spells:spells.map(x=>({...x})),cooldowns:spells.map(()=>0),statuses:[],resists:Object.fromEntries(ATTRS.map(a=>[a,Number(resists[a]??1)]))};
+}
