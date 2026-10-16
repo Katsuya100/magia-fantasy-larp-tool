@@ -15,7 +15,7 @@ export function fakeDungeonBrowser(config={}){
    closest(){return element;},
    focus(){},
    play:async()=>{},
-   getContext:()=>({drawImage(){}}),
+   getContext:()=>({drawImage(...args){element.drawImageArgs=args;}}),
    toBlob:callback=>callback(new Blob(['camera-capture'],{type:'image/jpeg'}))
   };
   return element;
@@ -41,7 +41,7 @@ export function fakeDungeonBrowser(config={}){
  const iframe=document.getElementById('analyzerFrame');iframe.contentDocument=analyzer;
  let frameSource='';
  Object.defineProperty(iframe,'src',{get(){return frameSource;},set(s){frameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>iframe.onload?.());}}});
- const video=document.getElementById('cameraVideo');video.videoWidth=640;video.videoHeight=640;
+ const video=document.getElementById('cameraVideo');video.videoWidth=960;video.videoHeight=720;
  let mediaOpened=0,mediaClosed=0;
  const old={document:globalThis.document,window:globalThis.window,indexedDB:globalThis.indexedDB,fetch:globalThis.fetch,createObjectURL:URL.createObjectURL,revokeObjectURL:URL.revokeObjectURL,DataTransfer:globalThis.DataTransfer,navigator:globalThis.navigator};
  globalThis.document=document;

@@ -31,11 +31,11 @@
     <p id="notice" class="notice" role="status" aria-live="polite"></p>
 
     <nav class="tabs" aria-label="探索メニュー">
-      <button type="button" id="tab-home" data-view="home"><span class="tab-symbol" aria-hidden="true">♜</span><span>冒険者</span></button>
+      <button type="button" id="tab-prepare" data-view="prepare" aria-current="page"><span class="tab-symbol" aria-hidden="true">⚔</span><span>準備&amp;出発</span></button>
       <button type="button" id="tab-library" data-view="library"><span class="tab-symbol" aria-hidden="true">◎</span><span>魔導書</span></button>
-      <button type="button" id="tab-prepare" data-view="prepare"><span class="tab-symbol" aria-hidden="true">⚔</span><span>編成</span></button>
       <button type="button" id="tab-collection" data-view="collection"><span class="tab-symbol" aria-hidden="true">✥</span><span>収集図鑑</span></button>
       <button type="button" id="resumeTab" data-view="battle" hidden><span class="tab-symbol" aria-hidden="true">✦</span><span>探索へ</span></button>
+      <button type="button" id="tab-home" data-view="home"><span class="tab-symbol" aria-hidden="true">♜</span><span>プロフィール</span></button>
     </nav>
 
     <dialog id="nameDialog" class="name-dialog" aria-labelledby="nameDialogTitle">
@@ -53,13 +53,13 @@
       </div>
     </dialog>
 
-    <section id="home" class="panel adventurer-panel">
+    <section id="home" class="panel adventurer-panel" hidden>
       <div class="section-heading"><div><p class="chapter">CHAPTER I · ADVENTURER</p><h2>冒険者の記録</h2></div><span class="section-mark" aria-hidden="true">✧</span></div>
       <div class="adventurer-layout">
         <div class="character-portrait" aria-hidden="true"><div class="portrait-halo"></div><span class="portrait-glyph">♜</span><span class="portrait-bottom">THE WANDERER</span></div>
         <div id="playerStats" class="stats-sheet"></div>
       </div>
-      <div class="home-cta"><button type="button" data-view="library" class="subtle">魔導書を開く <span aria-hidden="true">›</span></button><button type="button" data-view="prepare">探索の支度 <span aria-hidden="true">›</span></button></div>
+      <div class="home-cta"><button type="button" data-view="library" class="subtle">魔導書を開く <span aria-hidden="true">›</span></button><button type="button" data-view="prepare">準備&amp;出発 <span aria-hidden="true">›</span></button></div>
     </section>
 
     <section id="library" class="panel grimoire-panel" hidden>
@@ -79,14 +79,14 @@
       <button type="button" id="cameraStart" class="camera-trigger"><span aria-hidden="true">◉</span> 魔法陣を撮影する</button>
       <div id="cameraPane" class="capture-pane" hidden>
         <label for="circleName">魔法陣の名前</label><input id="circleName" maxlength="60" placeholder="無名の魔法陣">
-        <video id="cameraVideo" autoplay muted playsinline></video><canvas id="cameraCanvas" hidden></canvas>
+        <div class="camera-viewfinder" aria-label="正方形の撮影範囲"><video id="cameraVideo" autoplay muted playsinline></video><span class="viewfinder-corners" aria-hidden="true"></span></div><canvas id="cameraCanvas" hidden></canvas>
         <div class="buttons"><button type="button" id="cameraCapture">撮影して登録</button><button type="button" id="cameraStop" class="subtle">閉じる</button></div>
       </div>
       <div id="libraryCards" class="cards circle-grid"></div>
     </section>
 
-    <section id="prepare" class="panel loadout-panel" hidden>
-      <div class="section-heading"><div><p class="chapter">CHAPTER III · PREPARATION</p><h2>探索の支度</h2></div><span class="section-mark" aria-hidden="true">⚔</span></div>
+    <section id="prepare" class="panel loadout-panel">
+      <div class="section-heading"><div><p class="chapter">CHAPTER III · PREPARATION</p><h2>準備&amp;出発</h2></div><span class="section-mark" aria-hidden="true">⚔</span></div>
       <div class="subheading"><h3>術式の編成</h3><span>THE FIVE SIGILS</span></div>
       <div id="slotCards"></div>
       <div class="subheading"><h3>携行品</h3><span>SUPPLIES</span></div>
