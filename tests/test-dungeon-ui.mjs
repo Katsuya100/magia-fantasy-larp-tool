@@ -131,7 +131,7 @@ try{
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
  let p=await getProfile(db);
- assert.equal(p.attempts,1);assert.equal(p.run.floor,1);assert.equal(p.run.carry.length,0);
+ assert.equal(p.attempts,1);assert.equal(p.run.floor,1);assert.equal(p.run.carry.filter(Boolean).length,0,'first outing has no carried items');
  assert.equal($('tab-prepare').hidden,true,'preparation tab disappears during battle');
  assert.equal($('tab-library').hidden,true,'grimoire tab disappears during battle');
  assert.equal($('tab-dungeon').hidden,false,'dungeon tab replaces preparation tabs');
@@ -214,23 +214,28 @@ try{
  assert.match($('gearCounter').textContent,/3 \/ 3/,'same item cannot be equipped twice');
  await doc.click(btn({openItem:'0'}));
  await doc.click(btn({chooseItem:'0'}));
+ const savedBeforeAttack=await getProfile(db);
+ assert.equal(savedBeforeAttack.carrySlots.length,5,'item loadout saved with all five positions');
+ assert.deepEqual(savedBeforeAttack.carrySlots.slice(0,3),savedBeforeAttack.inventory.slice(0,3).map(x=>x.instanceId),'saved slots track individual potions');
  await $('startAttack').fire('click');
  p=await getProfile(db);
- assert.equal(p.attempts,2);assert.equal(p.run.carry.length,3);
+ assert.equal(p.attempts,2);assert.equal(p.run.carry.filter(Boolean).length,3);
  assert.equal($('tab-dungeon').hidden,false,'second adventure switches to dungeon tab');
  const before=p.run.hero.hp;
  await doc.click(btn({use:'0'}));
  p=await getProfile(db);
  assert.equal(p.run.hero.hp,before,'free potion does not cost a battle turn');
  assert.equal(p.run.floor,1);
- assert.equal(p.run.carry.length,2);
+ assert.equal(p.run.carry.filter(Boolean).length,2,'used potion removed, other slots remain');
+ assert.equal(p.run.carry[0],null,'consumed item leaves a blank slot');
+ assert.equal(p.run.carry[1].instanceId,savedBeforeAttack.carrySlots[1],'other slots keep their identities');
  assert.equal(p.run.usedItems,1);
  assert.equal(($('battleItems').innerHTML.match(/data-use="/g)||[]).length,2,'item grid keeps usable tiles');
  assert.equal(($('battleItems').innerHTML.match(/data-open-item="/g)||[]).length,0,'battle items are not preparation slots');
  assert.equal(($('battleItems').innerHTML.match(/battle-item-tile empty/g)||[]).length,3,'remaining item slots stay visible');
  await doc.click(btn({use:'0'}));
  p=await getProfile(db);
- assert.equal(p.run.carry.length,2,'one free item per round');
+ assert.equal(p.run.carry.filter(Boolean).length,2,'one free item per round');
  // An entire second 5-fight block must offer a choice, and continued runs retain HP.
  for(let fight=1;fight<=5;fight++)await doc.click(btn({cast:'0'}));
  p=await getProfile(db);
@@ -265,10 +270,21 @@ try{
   assert.equal(el('tab-dungeon').hidden,true);
   assert.equal(defeated.returns,1,'previous rewards remain');
   assert.equal(defeated.inventory.length,loot-collectibleCount-1,'spent potion lost; two unused were refunded');
+  assert.equal(defeated.carrySlots[0],null,'consumed potion is not re-equipped after defeat');
+  assert.equal(defeated.carrySlots[1],savedBeforeAttack.carrySlots[1],'first unused potion returns to its saved slot');
+  assert.equal(defeated.carrySlots[2],savedBeforeAttack.carrySlots[2],'second unused potion returns to its saved slot');
   assert.equal(defeated.name,'暁の旅人','player name persists across reload');
   assert.equal(defeated.collection.forgotten_crown,1,'collection survives defeat');
   assert.equal(newestCirclesFirst(await allCircles(await openStore(env2.factory)))[0].analysis.power,5000);
  }finally{env2.restore();}
+ const env3=fakeDungeonBrowser({factory:env.factory}),doc3=env3.document,el3=id=>doc3.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=restored-carry');
+  await wait(()=>el3('playerStats').innerHTML.includes('Lv.'),'restore prepared inventory slots from IndexedDB');
+  assert.equal((el3('gearCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,2,'two unspent potions reappear in preparation');
+  assert.match(el3('gearCounter').textContent,/2 \/ 3/);
+  assert.equal(el3('tab-prepare').hidden,false);
+ }finally{env3.restore();}
  const noStorage=fakeDungeonBrowser({storage:{onOpen:'undefined'}});
  try{
   await import('../assets/js/dungeon-app.mjs?integration=storage-error');
