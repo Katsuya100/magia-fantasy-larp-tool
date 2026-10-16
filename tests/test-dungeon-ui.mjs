@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {openStore,getProfile,allCircles,saveProfile} from '../assets/js/dungeon-store.mjs';
+import {newestCirclesFirst} from '../assets/js/dungeon-circle-order.mjs';
 const originalRandom=Math.random;Math.random=()=>.9999;
 const wait=async(check,message)=>{const end=Date.now()+9000;while(Date.now()<end){if(await check())return;await new Promise(r=>setTimeout(r,25));}throw Error('UI timeout: '+message);};
 const btn=data=>({disabled:false,dataset:data,closest(){return this;}});
@@ -85,10 +86,18 @@ try{
  assert.equal(captureCanvas.height,720,'captured JPEG height matches square crop');
  assert.deepEqual(captureCanvas.drawImageArgs.slice(1),[120,0,720,720,0,0,720,720],'the saved square is center-cropped from landscape video');
  const db=await openStore(env.factory);
- let circles=await allCircles(db);
+ let circles=newestCirclesFirst(await allCircles(db));
  assert.equal(circles.length,5);assert.ok(circles.every(c=>!c.analysis));
  assert.ok(circles.every(c=>!Object.hasOwn(c,'name')),'photo registration does not ask for or save custom names');
- assert.match($('libraryCards').innerHTML,/魔法陣 01/);
+ assert.doesNotMatch($('libraryCards').innerHTML,/魔法陣\s*0[1-9]/,'circles must not receive generated names');
+ assert.doesNotMatch($('libraryCards').innerHTML,/<b>[^<]*魔法陣/,'no circle heading');
+ assert.equal(($('libraryCards').innerHTML.match(/class="card" data-circle-id=/g)||[]).length,5,'all photos displayed');
+ assert.equal(circles.length,5);
+ assert.ok(circles[0].registeredAt>circles[1].registeredAt,'newest photographed circle appears first');
+ const photographedOrder=circles.map(x=>x.id);
+ const libraryMarkup=$('libraryCards').innerHTML;
+ const visualOrder=[...libraryMarkup.matchAll(/data-circle-id="([^"]+)"/g)].map(m=>m[1]);
+ assert.deepEqual(visualOrder,photographedOrder,'newest first in photo library');
  assert.equal(await circles[0].image.text(),'camera-capture');
  await doc.click(btn({view:'prepare'}));
  assert.equal($('tab-prepare').attributes['aria-current'],'page');
@@ -102,10 +111,13 @@ try{
   await doc.click(btn({openSlot:String(i)}));
   assert.equal($('loadoutDialog').open,true,'opens the spell picker for each slot');
   assert.match($('loadoutOptions').innerHTML,/data-choose-circle="/);
+  assert.doesNotMatch($('loadoutOptions').innerHTML,/魔法陣\s*0[1-9]/,'selection dialog also hides generated names');
+  if(i===0) assert.equal(($('loadoutOptions').innerHTML.match(/data-choose-circle="/g)||[]).length,5);
   await doc.click(btn({chooseCircle:String(i)}));
   assert.equal($('loadoutDialog').open,false);
  }
  assert.equal($('startAttack').disabled,false);
+ assert.doesNotMatch($('slotCards').innerHTML,/魔法陣\s*0[1-9]/,'equipped circles have no generated names');
  assert.equal(($('slotCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,5,'five filled spell slots');
  await doc.click(btn({openSlot:'0'}));
  await doc.click(btn({chooseCircle:'1'}));
@@ -126,6 +138,7 @@ try{
  assert.equal($('tab-dungeon').attributes['aria-current'],'page');
  assert.equal(p.run.hero.spells[0],null);
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
+ assert.doesNotMatch($('battleSpells').innerHTML,/魔法陣\s*0[1-9]/,'battle also has no generated circle name');
  assert.equal(($('battleSpells').innerHTML.match(/<img alt="" src="blob:/g)||[]).length,5,'all five spells have photo thumbnails');
  assert.equal(($('battleItems').innerHTML.match(/class="loadout-tile battle-tile battle-item-tile empty"/g)||[]).length,5,'five empty battle item slots');
  assert.match($('battleBasic').innerHTML,/data-cast="-1"/,'basic attack remains available');
@@ -149,7 +162,7 @@ try{
  await doc.click(btn({cast:'0'}));
  await wait(()=>$('analyzing').hidden===false,'first-use analysis');
  await wait(async()=>(await getProfile(db)).run?.floor===2,'analysis results');
- circles=await allCircles(db);
+ circles=newestCirclesFirst(await allCircles(db));
  assert.equal(circles[0].analysis.attribute,'flame');
  assert.equal(circles[0].analysis.role,'attack');
  assert.equal(circles[0].analysis.power,5000);
@@ -230,7 +243,7 @@ try{
  assert.equal(p.run.hero.hp,hpAtCheckpoint,'continuation carries HP');
  assert.equal(p.run.loot.length,pendingLoot,'rewards remain unconfirmed');
  // Verify the photo+analysis persists through the second attack.
- assert.equal((await allCircles(db))[0].analysis.power,5000);
+ assert.equal(newestCirclesFirst(await allCircles(db))[0].analysis.power,5000);
  const resumable=p.run;
  resumable.hero.hp=1;
  await saveProfile(db,{...p,run:resumable});
@@ -254,7 +267,7 @@ try{
   assert.equal(defeated.inventory.length,loot-collectibleCount-1,'spent potion lost; two unused were refunded');
   assert.equal(defeated.name,'暁の旅人','player name persists across reload');
   assert.equal(defeated.collection.forgotten_crown,1,'collection survives defeat');
-  assert.equal((await allCircles(await openStore(env2.factory)))[0].analysis.power,5000);
+  assert.equal(newestCirclesFirst(await allCircles(await openStore(env2.factory)))[0].analysis.power,5000);
  }finally{env2.restore();}
  const noStorage=fakeDungeonBrowser({storage:{onOpen:'undefined'}});
  try{
