@@ -7,11 +7,11 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261017.2">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261017.3">
 </head>
 <body>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main class="shell" data-release="20261017.2">
+  <main class="shell" data-release="20261017.3">
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -31,10 +31,8 @@
     <p id="notice" class="notice" role="status" aria-live="polite"></p>
 
     <nav class="tabs" aria-label="探索メニュー">
-      <button type="button" id="tab-prepare" data-view="prepare" aria-current="page"><span class="tab-symbol" aria-hidden="true">⚔</span><span>準備&amp;出発</span></button>
-      <button type="button" id="tab-library" data-view="library"><span class="tab-symbol" aria-hidden="true">◎</span><span>魔導書</span></button>
+      <button type="button" id="tab-dungeon" data-view="dungeon" aria-current="page"><span class="tab-symbol" aria-hidden="true">⚔</span><span>ダンジョン</span></button>
       <button type="button" id="tab-collection" data-view="collection"><span class="tab-symbol" aria-hidden="true">✥</span><span>収集図鑑</span></button>
-      <button type="button" id="resumeTab" data-view="battle" hidden><span class="tab-symbol" aria-hidden="true">✦</span><span>探索へ</span></button>
       <button type="button" id="tab-home" data-view="home"><span class="tab-symbol" aria-hidden="true">♜</span><span>プロフィール</span></button>
     </nav>
 
@@ -72,6 +70,7 @@
 
     <section id="library" class="panel grimoire-panel" hidden>
       <div class="section-heading"><div><p class="chapter">CHAPTER II · GRIMOIRE</p><h2>魔導書</h2></div><span class="section-mark" aria-hidden="true">◎</span></div>
+      <button type="button" data-view="prepare" class="subtle inner-nav">‹ 準備＆出発へ</button>
       <details class="regulations">
         <summary>魔法陣の描き方・登録規則 <span aria-hidden="true">⌄</span></summary>
         <ol>
@@ -82,7 +81,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>登録した時点では性能は分かりません。<strong>初めて使用すると性能が明らかになります。</strong></li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261017.2" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261017.3" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <button type="button" id="cameraStart" class="camera-trigger"><span aria-hidden="true">◉</span> 魔法陣を撮影する</button>
       <div id="cameraPane" class="capture-pane" hidden>
@@ -95,6 +94,7 @@
 
     <section id="prepare" class="panel loadout-panel">
       <div class="section-heading"><div><p class="chapter">CHAPTER III · PREPARATION</p><h2>準備&amp;出発</h2></div><span class="section-mark" aria-hidden="true">⚔</span></div>
+      <button type="button" data-view="library" class="subtle inner-nav">◎ 魔導書・魔法陣登録</button>
       <div class="subheading"><h3>術式の編成</h3><span>THE FIVE SIGILS</span></div>
       <div id="slotCards"><div class="loadout-grid" role="group" aria-label="魔法陣の編成" data-static-slots="5">
           <button type="button" class="loadout-tile empty" data-open-slot="0" aria-label="魔法陣 1枠目 未装備" ><span class="tile-index">01</span><span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">未装備</span></button>
@@ -143,9 +143,10 @@
         </article>
       </div>
       <div class="subheading"><h3>魔法陣</h3><span>CAST A SPELL</span></div>
-      <div id="battleSpells" class="cards battle-spells"></div>
+      <div id="battleSpells" class="loadout-grid battle-spells" role="group" aria-label="戦闘中の魔法陣"></div>
+      <div id="battleBasic" class="battle-basic"></div>
       <div class="subheading"><h3>携行品</h3><span>FREE ACTION · 1 / ROUND</span></div>
-      <div id="battleItems"></div>
+      <div id="battleItems" class="loadout-grid battle-items" role="group" aria-label="戦闘中のアイテム"></div>
       <p id="battleInfo" class="battle-info"></p>
       <details class="battle-history"><summary>戦闘の記録</summary><div id="battleLog" class="log" aria-live="polite"></div></details>
     </section>
@@ -157,9 +158,9 @@
     </section>
 
     <section id="analyzing" class="panel analyzing-panel" hidden>
-      <div class="analyzing-sigil" aria-hidden="true">◎</div><h2>魔法陣を鑑定中</h2>
+      <div class="analyzing-sigil" aria-hidden="true">◎</div><h2>魔法陣の性能を解析中</h2>
       <iframe id="analyzerFrame" title="マギアサークル解析"></iframe>
-      <button type="button" id="cancelAnalyze" class="subtle">鑑定を中止</button>
+      <button type="button" id="cancelAnalyze" class="subtle">解析を中止</button>
     </section>
 
     <section id="result" class="panel result-panel" hidden>
@@ -167,8 +168,8 @@
       <h2 id="resultTitle"></h2><div id="resultText"></div><button type="button" data-view="home">冒険者の記録へ戻る</button>
     </section>
 
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.17.2</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.17.3</span></footer>
   </main>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261017.2"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261017.3"></script>
 </body>
 </html>
