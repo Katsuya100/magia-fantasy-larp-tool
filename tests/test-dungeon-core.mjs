@@ -37,4 +37,12 @@ const logs=G.round(u,v,0,0,buffs,()=>.7);assert.ok(logs.length===2);assert.ok(u.
 const profile={level:1,xp:0};G.experience(profile,100);assert.equal(profile.level,2);
 const page=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 assert.match(page,/id="cameraStart"/);assert.doesNotMatch(page,/type="file"/);
+const cured=G.makeUnit(base,1);
+G.addStatus(cured,{id:'debuff_flame',kind:'debuff',attribute:'flame',effect:'burn',value:.6,turns:2});
+G.potion(cured,{id:'clear_flame',value:0,bonus:'resist_flame'},items,buffs);
+assert.equal(G.status(cured,'debuff_flame'),undefined);
+assert.ok(G.resist(cured,'flame')<1);
+G.addStatus(cured,{id:'debuff_chaos',kind:'debuff',attribute:'chaos',effect:'shock',value:1,turns:2});
+G.addStatus(cured,{id:'debuff_chaos',kind:'debuff',attribute:'chaos',effect:'seal',value:1,turns:2});
+assert.equal(G.status(cured,'debuff_chaos').effect,'seal');
 console.log('PASS dungeon master, progression, symmetry, magic and potion tests');
