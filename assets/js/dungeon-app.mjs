@@ -1,8 +1,8 @@
-import * as G from './dungeon-core.mjs?v=20261017.4';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull} from './dungeon-loadout.mjs?v=20261017.4';
-import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.4';
+import * as G from './dungeon-core.mjs?v=20261017.5';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull} from './dungeon-loadout.mjs?v=20261017.5';
+import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.5';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.4';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.5';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
 let dungeonView='prepare',battleUrls=[];
@@ -20,15 +20,26 @@ async function persist(){await saveProfile(db,profile);}
 async function load(){db=await openStore();const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};for(const [key,file] of Object.entries(files)){const res=await fetch('assets/data/'+file);if(!res.ok)throw Error(file+' の取得に失敗');masters[key]=G.parseCsv(await res.text());}configure(masters);G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);profile=await getProfile(db);circles=await allCircles(db);slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));wire();render();if(profile.run){if(profile.run.stage==='checkpoint'){$('checkpointInfo').textContent='未確定報酬 '+profile.run.loot.length+'個 / 経験値 '+profile.run.xp;}else renderRun();}show(profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');if(!profile.name)openNameDialog(true);}
 const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result']);
 function show(name){
+ const exploring=Boolean(profile?.run);
  if(name==='dungeon'){
-  if(profile?.run)name=activeAnalysis?'analyzing':profile.run.stage==='checkpoint'?'checkpoint':'battle';
-  else name=['library','result'].includes(dungeonView)?dungeonView:'prepare';
+  name=exploring?(activeAnalysis?'analyzing':profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare';
  }
+ // The grimoire and preparation are top-level tabs only outside an expedition.
+ if(exploring&&(name==='prepare'||name==='library'))name=profile.run.stage==='checkpoint'?'checkpoint':'battle';
  if(dungeonScenes.has(name))dungeonView=name;
  for(const id of ['home','library','prepare','collection','battle','checkpoint','analyzing','result'])$(id).hidden=id!==name;
- for(const tab of ['dungeon','collection','home']){
-  const b=$('tab-'+tab),active=tab==='dungeon'?dungeonScenes.has(name):name===tab;
-  if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+ $('tab-prepare').hidden=exploring;
+ $('tab-library').hidden=exploring;
+ $('tab-dungeon').hidden=!exploring;
+ const selected=exploring?(dungeonScenes.has(name)?'dungeon':name):(
+  name==='library'?'library':
+  name==='collection'?'collection':
+  name==='home'?'home':'prepare'
+ );
+ for(const tab of ['prepare','library','dungeon','collection','home']){
+  const b=$('tab-'+tab);
+  if(tab===selected)b.setAttribute('aria-current','page');
+  else b.removeAttribute('aria-current');
  }
  if(['home','library','prepare','collection'].includes(name))render();
  if(name==='battle'&&profile?.run)renderRun();
