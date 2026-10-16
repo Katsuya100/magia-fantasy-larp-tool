@@ -59,3 +59,45 @@ const dizzy=unit(),victim=unit();
 G.addStatus(dizzy,{id:'debuff_storm',kind:'debuff',attribute:'storm',effect:'dizzy',value:.4,turns:2});
 assert.equal(G.damage(dizzy,victim,spell('attack','law'),()=>0),0);
 assert.ok(G.damage(dizzy,victim,spell('attack','law'),()=>.99)>0);
+const burnt=unit([spell('defense','law')]),normal=unit([spell('defense','law')]),other=unit([spell('defense','law')]);
+G.addStatus(burnt,{id:'debuff_flame',kind:'debuff',attribute:'flame',effect:'burn',value:1,turns:2});
+G.round(burnt,other,-1,-1,buffs,()=>.99);
+G.round(normal,unit(),-1,-1,buffs,()=>.99);
+assert.ok(burnt.hp<normal.hp,'burn deals delayed status damage');
+const wet=unit();
+G.addStatus(wet,{id:'resist_aqua',kind:'buff',attribute:'aqua',effect:'resist',value:.4,turns:2});
+const dryRes=G.resist(wet,'aqua');
+G.addStatus(wet,{id:'debuff_aqua',kind:'debuff',attribute:'aqua',effect:'soak',value:.5,turns:2});
+assert.ok(G.resist(wet,'aqua')>dryRes,'soaking degrades resistance buffs');
+const chaos=unit([spell('attack','law'),spell('support','law')]);
+G.addStatus(chaos,{id:'debuff_chaos',kind:'debuff',attribute:'chaos',effect:'confused',value:1,turns:2});
+G.prepare(chaos,0,()=>.99);
+assert.equal(G.status(chaos,'debuff_chaos'),undefined,'confusion consumed by cast');
+const foe1=G.makeUnit(base,1,{flame:.3},[spell('attack','flame')]);
+const foe2=G.makeUnit(base,1,{flame:1.4},[spell('attack','flame')]);
+assert.ok(G.damage(a,foe1,spell('attack','flame'))<G.damage(a,foe2,spell('attack','flame')),'enemy-specific resistance');
+for(let lv=1;lv<=99;lv++){
+ const row=level(lv);assert.ok(+row.carry_limit>=3&&+row.carry_limit<=15);
+ if(lv>1)assert.ok(+row.hp_multiplier>=+level(lv-1).hp_multiplier);
+ assert.ok(+row.xp_to_next>0);
+}
+for(let f=1;f<=495;f++){
+ const spec=floor(f);assert.ok(+spec.enemy_level>=1);
+ if(+spec.boss===1)assert.ok(enemies.some(e=>e.id===spec.boss_enemy_id));
+}
+for(const en of enemies){
+ const u=G.fromEnemy(en,Math.max(1,+en.min_level));
+ assert.equal(u.spells.length,5);
+ assert.equal(Object.keys(u.resists).length,7);
+ assert.ok(u.spells.every(sp=>G.ROLES.includes(sp.role)&&G.ATTRS.includes(sp.attribute)&&sp.power>0));
+}
+for(const item of items){assert.ok(+item.max_value>=+item.min_value);if(item.bonus_buff_id)assert.ok(buffs.some(b=>b.id===item.bonus_buff_id),'valid bonus '+item.id);}
+for(const collection of collections)assert.ok(+collection.weight>0);
+assert.deepEqual(G.parseCsv('key,name\n1,"quoted,value"\n'),[{key:'1',name:'quoted,value'}]);
+assert.throws(()=>G.parseCsv('key,name\n1\n'),/CSV columns/);
+const altered=config.balance.map(row=>({...row,value:row.key==='spell_cooldown'?'4':row.value}));
+configure({...config,balance:altered});
+const modified=unit([spell('attack','law')]);G.prepare(modified,0);
+assert.equal(modified.cooldowns[0],4,'balance edit changes runtime');
+configure(config);
+console.log('PASS 7 elements x 4 sigils, 7 cleansers, debuff mechanics, 99 levels, 495 floors, CSV references and tunable rules');
