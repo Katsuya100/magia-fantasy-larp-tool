@@ -3,6 +3,8 @@ import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[];
+let busyAction=false;
+async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){$('notice').textContent=message;}
 async function persist(){await saveProfile(db,profile);}
 async function load(){db=await openStore();const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};for(const [key,file] of Object.entries(files)){const res=await fetch('assets/data/'+file);if(!res.ok)throw Error(file+' の取得に失敗');masters[key]=G.parseCsv(await res.text());}configure(masters);G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);profile=await getProfile(db);circles=await allCircles();slots=profile.slots||[];carry=[];wire();render();if(profile.run){if(profile.run.stage==='checkpoint'){$('checkpointInfo').textContent='未確定報酬 '+profile.run.loot.length+'個 / 経験値 '+profile.run.xp;}else renderRun();}show(profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'home');}
@@ -73,12 +75,12 @@ function wire(){
  if(b.dataset.remove){if(profile.run)return;await deleteCircle(db,b.dataset.remove);circles=circles.filter(c=>c.id!==b.dataset.remove);slots=slots.filter(id=>id!==b.dataset.remove);profile.slots=[...slots];await persist();render();return;}
  if(b.dataset.slot){const id=b.dataset.slot;slots=slots.includes(id)?slots.filter(x=>x!==id):slots.length<num('spell_slots')?[...slots,id]:slots;profile.slots=[...slots];await persist();render();return;}
  if(b.dataset.gear!==undefined){if(profile.returns===0)return;const i=Number(b.dataset.gear),at=carry.indexOf(i);if(at>=0)carry.splice(at,1);else if(carry.length<G.capacity(profile.level))carry.push(i);else note('持ち込み上限です');render();return;}
- if(b.dataset.cast!==undefined){await takeTurn(Number(b.dataset.cast));return;}
- if(b.dataset.use!==undefined){await useItem(Number(b.dataset.use));return;}
+ if(b.dataset.cast!==undefined){await exclusive(()=>takeTurn(Number(b.dataset.cast)));return;}
+ if(b.dataset.use!==undefined){await exclusive(()=>useItem(Number(b.dataset.use)));return;}
  });
- $('cameraStart').addEventListener('click',startCamera);$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',capture);
- $('startAttack').addEventListener('click',begin);$('returnHome').addEventListener('click',leave);
- $('deeper').addEventListener('click',async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');});
+ $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
+ $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
+ $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');}));
  $('cancelAnalyze').addEventListener('click',()=>{activeAnalysis=null;$('analyzerFrame').src='about:blank';note('鑑定を中止しました。');renderRun();show('battle');});
  window.addEventListener('beforeunload',()=>{stopCamera();freeUrls();});
 }
