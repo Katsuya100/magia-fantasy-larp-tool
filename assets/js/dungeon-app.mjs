@@ -37,7 +37,7 @@ function circleLabel(a){return esc(a.attribute+' / '+(roles[a.role]||a.role)+' /
 function itemName(item){return masters.items.find(x=>x.id===item.id)?.name||item.id;}
 function render(){
  carry=prepareItems(carry,profile.inventory.length,G.capacity(profile.level));
- $('resumeTab').hidden=!profile.run;
+
  freeUrls();
  const s=G.stats(profile.base,profile.level),experienceNeeded=G.nextXp(profile.level),xpProgress=Math.min(100,100*profile.xp/experienceNeeded);
  const name=esc(profile.name||'名もなき冒険者');
