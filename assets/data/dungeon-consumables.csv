@@ -5,10 +5,10 @@ heal_l,ヒールポーション大,heal,,70,110,buff_aqua,0.12,8
 mana_s,マジックポーション小,mana,,14,25,buff_bolt,0.08,32
 mana_m,マジックポーション中,mana,,30,48,buff_bolt,0.1,20
 mana_l,マジックポーション大,mana,,55,85,buff_bolt,0.12,7
-clear_flame,火傷の浄化薬,clear,flame,0,0,buff_flame,0.1,16
-clear_bolt,感電の浄化薬,clear,bolt,0,0,buff_bolt,0.1,16
-clear_aqua,浸水の浄化薬,clear,aqua,0,0,buff_aqua,0.1,16
-clear_storm,目眩の浄化薬,clear,storm,0,0,buff_storm,0.1,16
-clear_gravity,重圧の浄化薬,clear,gravity,0,0,buff_gravity,0.1,16
-clear_law,封印の浄化薬,clear,law,0,0,buff_law,0.1,16
-clear_chaos,混乱の浄化薬,clear,chaos,0,0,buff_chaos,0.1,16
+clear_flame,火傷の浄化薬,clear,flame,0,0,resist_flame,0.1,16
+clear_bolt,感電の浄化薬,clear,bolt,0,0,resist_bolt,0.1,16
+clear_aqua,浸水の浄化薬,clear,aqua,0,0,resist_aqua,0.1,16
+clear_storm,目眩の浄化薬,clear,storm,0,0,resist_storm,0.1,16
+clear_gravity,重圧の浄化薬,clear,gravity,0,0,resist_gravity,0.1,16
+clear_law,封印の浄化薬,clear,law,0,0,resist_law,0.1,16
+clear_chaos,混乱の浄化薬,clear,chaos,0,0,resist_chaos,0.1,16
