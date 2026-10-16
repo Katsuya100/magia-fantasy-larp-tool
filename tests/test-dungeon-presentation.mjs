@@ -39,6 +39,17 @@ assert.match(page,/CHAPTER IV · GRIMOIRE/);
 assert.match(page,/魔法陣の力を解明中/);
 
 
+assert.match(page,/id="heroName"/,'name in duel is populated from saved profile');
+assert.doesNotMatch(page,/<h3>冒険者<\/h3>/,'no generic name hard-coded inside the duel');
+assert.match(page,/id="battleArena" class="arena" data-role="idle"/,'duel stage has animation state');
+assert.match(page,/id="battleFxText" class="fx-caption"/,'visual event label stays within battle arena');
+assert.match(css,/@keyframes fx-rush-left/);
+assert.match(css,/@keyframes fx-rush-right/);
+assert.match(css,/@keyframes fx-guard/);
+assert.match(css,/@keyframes fx-hex/);
+assert.match(css,/@keyframes fx-heal/);
+assert.match(css,/@keyframes fx-burn/);
+assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 assert.match(page,/id="battleSpells" class="loadout-grid battle-spells"/);
 assert.match(page,/id="battleItems" class="loadout-grid battle-items"/);
 assert.match(page,/id="battleBasic" class="battle-basic"/);
@@ -88,15 +99,15 @@ const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
 assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
-assert.match(page,/data-release="20261017\.7"/);
-assert.match(page,/dungeon\.css\?v=20261017\.7/);
-assert.match(page,/dungeon-app\.mjs\?v=20261017\.7/);
+assert.match(page,/data-release="20261017\.8"/);
+assert.match(page,/dungeon\.css\?v=20261017\.8/);
+assert.match(page,/dungeon-app\.mjs\?v=20261017\.8/);
 const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.7','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.8','stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
@@ -106,6 +117,12 @@ assert.doesNotMatch(app,/鑑定/);
 assert.doesNotMatch(picker,/鑑定/);
 assert.match(app,/battleImageUrl\(c\.image\)/);
 assert.match(app,/Math\.max\(5,run\.carry\.length\)/);
+assert.match(app,/\$\('heroName'\)\.textContent=profile\.name/);
+assert.match(app,/step=>steps\.push\(step\)/,'game engine steps are captured for sequential playback');
+assert.match(app,/await animateBattle\(steps\)/);
+assert.match(app,/await playCombatSequence\(steps,step=>/);
+assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
+
 
 assert.match(app,/circles=newestCirclesFirst\(\[\.\.\.circles,circle\]\);[\s\S]*?note\(''\);render\(\)/);
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
