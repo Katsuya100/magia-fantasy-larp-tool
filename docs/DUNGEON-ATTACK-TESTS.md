@@ -6,8 +6,8 @@
 |---|---|---|
 | 起動・CSV読込 | `test-dungeon-ui`, `test-dungeon-core` | 画面初期化、CSV読込、プレイヤー作成 |
 | IndexedDB接続・初期化 | `test-dungeon-store`, `test-dungeon-ui` | 接続・スキーマ生成・再接続、接続失敗、blocked、接続オブジェクト未取得 |
-| 魔法陣ライブラリ | `test-dungeon-store`, `test-dungeon-ui` | カメラ登録、写真Blob保存、5枚編成、鑑定前の非公開、登録内容永続化 |
-| 魔法陣初回鑑定 | `test-dungeon-ui` | 既存画面への画像引き渡しを模擬、結果反映、失敗時の非消費・再試行 |
+| 魔法陣ライブラリ | `test-dungeon-store`, `test-dungeon-ui` | カメラ登録、写真Blob保存、5枚編成、性能判明前の非公開、登録内容永続化 |
+| 魔法陣初回使用時の解析 | `test-dungeon-ui` | 既存画面への画像引き渡しを模擬、結果反映、失敗時の非消費・再試行 |
 | 攻撃・防御・回復・弱体 | `test-dungeon-core`, `test-dungeon-effects` | 全7属性×4紋、属性耐性、補正とDEF、回復上限、同属性弱体解除 |
 | 属性固有の弱体 | `test-dungeon-effects` | 火傷、感電、浸水、目眩、重圧、封印、混乱 |
 | プレイヤー/敵の共通ルール | `test-dungeon-core`, `test-dungeon-effects` | 同値ステータスなら同ダメージ/同MP消費、同ターン解決 |
@@ -40,3 +40,5 @@
 `dungeon-app.mjs` の初期化時に `allCircles()` へDBを渡さず `db.transaction` が失敗する不具合を修正した。画面の最初のロードから5枚登録する統合テストが、同種の呼び出し漏れを捕まえる。
 
 `dungeon-store.mjs` は有効なIndexedDB接続かを確認し、保存トランザクションの完了を待つ。接続が取れないケースでも意味のある日本語エラーを出す。
+
+| 3タブ・戦闘グリッド | `test-dungeon-presentation`, `test-dungeon-ui` | ダンジョン／収集図鑑／プロフィール、戦闘中の魔法陣5枚の画像、アイテム5列・空枠、図鑑やプロフィールから戦闘に復帰 |
