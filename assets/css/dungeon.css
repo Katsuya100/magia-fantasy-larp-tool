@@ -94,7 +94,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .camera-actions{justify-content:center;margin:16px auto 2px}
 .camera-actions button{min-width:150px}
 .inline-error{margin:12px 0;color:#f3aca8;font-size:13px;line-height:1.6}
-.picker-footer{margin-top:14px}
+.picker-footer{display:flex;flex-direction:column;align-items:stretch;gap:9px;margin-top:14px}.picker-footer button{width:100%;margin:0!important}
 @media(max-width:630px){
  #slotCards .loadout-tile,#gearCards .loadout-tile{aspect-ratio:1 / 1;min-height:0}
  .camera-actions button{min-width:0;flex:1}
