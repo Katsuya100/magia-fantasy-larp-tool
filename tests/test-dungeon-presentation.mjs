@@ -64,11 +64,12 @@ const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
-for(const [name,moduleText] of [['app',app],['core',core],['store',store],['picker',picker]]){
- for(const specifier of moduleText.matchAll(/from ['"]\.\/[^'"]+\.mjs(\?[^'"]*)?['"]/g)){
-  assert.equal(specifier[1],'?v=20261017.2','stale module import in '+name);
- }
+for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.2','stale entry module '+specifier[1]);
 }
+assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
+assert.match(store,/from '\.\/dungeon-core\.mjs'/);
+assert.match(picker,/from '\.\/dungeon-loadout\.mjs'/);
 assert.doesNotMatch(app,/魔法陣を保存した。性能は初回使用時に判明する。/);
 assert.match(app,/circles\.push\(circle\);\$\('circleName'\)\.value='';note\(''\);render\(\)/);
 console.log('PASS dungeon hero copy, image rules, sample PNG, naming modal, sealed gallery and fantasy layout');
