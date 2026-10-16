@@ -3,7 +3,7 @@ const expectedCss=await readFile(new URL('../assets/css/dungeon.css',import.meta
 const expectedJs=await readFile(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
 // This checks the real public GitHub Pages website, not repository files or a CI build.
 const origin='https://katsuya100.github.io/magia-fantasy-larp-tool/';
-const version='20261017.6';
+const version='20261017.7';
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function remote(path,tryNo){
  const url=origin+path+(path.includes('?')?'&':'?')+'smoke='+tryNo+'-'+Date.now();
