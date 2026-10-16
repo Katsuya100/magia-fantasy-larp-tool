@@ -1,3 +1,6 @@
+import {readFile} from 'node:fs/promises';
+const expectedCss=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+const expectedJs=await readFile(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
 // This checks the real public GitHub Pages website, not repository files or a CI build.
 const origin='https://katsuya100.github.io/magia-fantasy-larp-tool/';
 const version='20261017.2';
@@ -19,9 +22,9 @@ for(let attempt=1;attempt<=24;attempt++){
   const nItem=(itemPart.match(/data-open-item=/g)||[]).length;
   if(nCircle!==5||nItem!==5)throw Error('Published empty slots '+nCircle+'/'+nItem);
   const css=await remote('assets/css/dungeon.css?v='+version,attempt);
-  if(!css.includes('.portrait-seal{')||!css.includes('.loadout-grid{display:grid;grid-template-columns:repeat(5,'))throw Error('CSS is stale');
+  if(css!==expectedCss)throw Error('Published CSS differs from the current repository revision');
   const js=await remote('assets/js/dungeon-app.mjs?v='+version,attempt);
-  if(!js.includes('openLoadoutPicker')||!js.includes("note('');render();"))throw Error('JS is stale');
+  if(js!==expectedJs)throw Error('Published app JavaScript differs from the current repository revision');
   if(js.includes("note('魔法陣を保存した。性能は初回使用時に判明する。')"))throw Error('Old photo log remains in JS');
   console.log('LIVE VERIFIED: GitHub Pages HTML, five empty slots, SVG/CSS and continuous-camera JS at '+origin);
   process.exit(0);
