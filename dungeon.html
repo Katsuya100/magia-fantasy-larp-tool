@@ -91,6 +91,13 @@
       <div id="slotCards"></div>
       <div class="subheading"><h3>携行品</h3><span>SUPPLIES</span></div>
       <div id="gearCards"></div><p id="gearCounter" class="gear-counter"></p>
+      <dialog id="loadoutDialog" class="loadout-dialog" aria-labelledby="loadoutDialogTitle">
+        <div class="loadout-dialog-inner">
+          <div class="chooser-header"><div><p class="chapter">GRIMOIRE · EQUIPMENT</p><h3 id="loadoutDialogTitle">魔法陣を選ぶ</h3></div><button type="button" id="closeLoadoutDialog" class="subtle" aria-label="選択を閉じる">✕</button></div>
+          <div id="loadoutOptions" class="picker-grid"></div>
+          <button type="button" id="clearLoadoutSlot" class="subtle">この枠を空にする</button>
+        </div>
+      </dialog>
       <div class="entry-actions"><button type="button" id="startAttack" class="primary-action">迷宮へ入る <span aria-hidden="true">⟶</span></button></div>
     </section>
 
