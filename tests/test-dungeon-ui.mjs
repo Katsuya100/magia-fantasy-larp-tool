@@ -51,6 +51,10 @@ try{
   assert.equal($('cameraPane').hidden,true);
  }
  assert.equal(env.opened,5);assert.equal(env.closed,5);
+ const captureCanvas=$('cameraCanvas');
+ assert.equal(captureCanvas.width,720,'captured JPEG width matches square crop');
+ assert.equal(captureCanvas.height,720,'captured JPEG height matches square crop');
+ assert.deepEqual(captureCanvas.drawImageArgs.slice(1),[120,0,720,720,0,0,720,720],'the saved square is center-cropped from landscape video');
  const db=await openStore(env.factory);
  let circles=await allCircles(db);
  assert.equal(circles.length,5);assert.ok(circles.every(c=>!c.analysis));
