@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#08121d">
+<title>マギアサークル-ダンジョンアタック</title><link rel="stylesheet" href="assets/css/dungeon.css"></head>
+<body><main class="shell">
+<header class="top"><a href="index.html">← 作品選択へ</a><p class="kicker">MAGIA CIRCLE</p><h1>マギアサークル<br><span>ダンジョンアタック</span></h1><p>未知の陣を読み解き、深淵から報酬を持ち帰れ。</p></header>
+<p id="notice" role="status" aria-live="polite"></p>
+<nav class="tabs" aria-label="探索メニュー"><button data-view="home">冒険者</button><button data-view="library">魔導書</button><button data-view="prepare">探索準備</button></nav>
+<section id="home" class="panel"><h2>冒険者の記録</h2><div id="playerStats"></div><div id="collectionList"></div></section>
+<section id="library" class="panel" hidden><h2>魔法陣ライブラリ</h2><p>魔法陣は写真機能でのみ登録できる。初回発動まで性能は不明。</p><button id="cameraStart">📷 カメラを開く</button><div id="cameraPane" hidden><label>陣の名前 <input id="circleName" maxlength="60" placeholder="無名の魔法陣"></label><video id="cameraVideo" autoplay muted playsinline></video><canvas id="cameraCanvas" hidden></canvas><div class="buttons"><button id="cameraCapture">この陣を撮影して登録</button><button id="cameraStop" class="subtle">閉じる</button></div></div><div id="libraryCards" class="cards"></div></section>
+<section id="prepare" class="panel" hidden><h2>探索の支度</h2><p>魔法陣を5つ選択。持ち込みは最初の帰還後から解放される。</p><h3>魔法陣（5枠）</h3><div id="slotCards"></div><h3>携行品</h3><div id="gearCards"></div><p id="gearCounter"></p><button id="startAttack">迷宮へ入る</button></section>
+<section id="battle" class="panel" hidden><h2 id="floorLabel"></h2><div class="arena"><article class="unit"><h3 id="enemyName"></h3><div id="enemyStats"></div></article><article class="unit"><h3>冒険者</h3><div id="heroStats"></div></article></div><h3>魔法陣を選ぶ</h3><div id="battleSpells" class="cards"></div><h3>携行品（ターン消費なし・各ラウンド1個まで）</h3><div id="battleItems"></div><p id="battleInfo"></p><div id="battleLog" class="log" aria-live="polite"></div></section>
+<section id="checkpoint" class="panel" hidden><h2>帰還の祭壇</h2><p id="checkpointInfo"></p><div class="buttons"><button id="returnHome">帰還して報酬を確定</button><button id="deeper" class="danger">さらに深層へ</button></div></section>
+<section id="analyzing" class="panel" hidden><h2>初めての顕現</h2><p>未知の魔法陣を解析している。解析に失敗した場合、行動やMPは消費されない。</p><iframe id="analyzerFrame" title="マギアサークル解析" loading="lazy"></iframe><button id="cancelAnalyze" class="subtle">解析を中止して魔法を選び直す</button></section>
+<section id="result" class="panel" hidden><h2 id="resultTitle"></h2><div id="resultText"></div><button data-view="home">拠点へ</button></section>
+<footer>画像とプレイ記録はこのブラウザ内に保存します。ブラウザのサイトデータを削除すると記録が失われます。</footer>
+</main><script type="module" src="assets/js/dungeon-app.mjs"></script></body></html>
