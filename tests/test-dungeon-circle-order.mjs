@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {newestCirclesFirst,nextCircleRegistration} from '../assets/js/dungeon-circle-order.mjs';
+const oldA={id:'old-a',image:new Blob(['A'])},oldB={id:'old-b',image:new Blob(['B'])};
+const earlier={id:'earlier',registeredAt:1000},later={id:'later',registeredAt:2000};
+const source=[oldA,earlier,oldB,later];
+const result=newestCirclesFirst(source);
+assert.deepEqual(result.map(x=>x.id),['later','earlier','old-a','old-b']);
+assert.deepEqual(source.map(x=>x.id),['old-a','earlier','old-b','later'],'sorting never changes saved array');
+assert.equal(nextCircleRegistration(source,1500),2001,'timestamp remains unique even when clock goes backwards');
+assert.equal(nextCircleRegistration(source,3000),3000,'use time when later than all existing');
+const newShot={id:'new-shot',registeredAt:nextCircleRegistration(source,1500)};
+assert.equal(newestCirclesFirst([...source,newShot])[0].id,'new-shot');
+assert.equal(newestCirclesFirst([oldB,oldA])[0],oldB,'legacy data without timestamps retains its order');
+assert.deepEqual(newestCirclesFirst([{id:'a',registeredAt:100},{id:'b',registeredAt:100}]).map(x=>x.id),['a','b'],'timestamp ties are stable');
+console.log('PASS newest registered circles first, old records stable, unique timestamps and unmodified saved data');
