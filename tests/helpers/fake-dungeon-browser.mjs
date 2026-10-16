@@ -26,12 +26,13 @@ export function fakeDungeonBrowser(config={}){
  input.addEventListener('change',()=>{analyze.disabled=false;});
  analyze.disabled=true;
  analyze.addEventListener('click',()=>{altar.hidden=false;});
+ const analyzerState={attribute:'flame',role:'攻撃',power:'5000'};
  const analyzer={
   getElementById(id){return {fileInput:input,analyzeButton:analyze,altarSection:altar}[id]||null;},
   querySelector(query){return {
-   '#attributeResult .altar-value':{textContent:'flame'},
-   '#shapeResult .altar-value':{textContent:'攻撃'},
-   '#powerResult .altar-value':{textContent:'5000'}
+   '#attributeResult .altar-value':{textContent:analyzerState.attribute},
+   '#shapeResult .altar-value':{textContent:analyzerState.role},
+   '#powerResult .altar-value':{textContent:analyzerState.power}
   }[query]||null;}
  };
  const iframe=document.getElementById('analyzerFrame');iframe.contentDocument=analyzer;
@@ -53,5 +54,5 @@ export function fakeDungeonBrowser(config={}){
  globalThis.DataTransfer=class{constructor(){this.files=[];this.items={add:file=>this.files.push(file)};}};
  Object.defineProperty(globalThis,'navigator',{value:{mediaDevices:{getUserMedia:async()=>{mediaOpened++;return {getTracks:()=>[{stop(){mediaClosed++;}}]};}}},configurable:true});
  function restore(){globalThis.document=old.document;globalThis.window=old.window;globalThis.indexedDB=old.indexedDB;globalThis.fetch=old.fetch;URL.createObjectURL=old.createObjectURL;URL.revokeObjectURL=old.revokeObjectURL;globalThis.DataTransfer=old.DataTransfer;Object.defineProperty(globalThis,'navigator',{value:old.navigator,configurable:true});}
- return {factory,document,dom,restore,get opened(){return mediaOpened;},get closed(){return mediaClosed;},get iframe(){return iframe;}};
+ return {factory,document,dom,analyzerState,restore,get opened(){return mediaOpened;},get closed(){return mediaClosed;},get iframe(){return iframe;}};
 }
