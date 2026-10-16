@@ -1,23 +1,147 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#08121d">
-<title>マギアサークル-ダンジョンアタック</title><link rel="stylesheet" href="assets/css/dungeon.css"></head>
-<body><main class="shell">
-<header class="top"><a href="index.html">← 作品選択へ</a><p class="kicker">MAGIA CIRCLE</p><h1>マギアサークル<br><span>ダンジョンアタック</span></h1><p>五つの魔法陣で迷宮へ。</p></header>
-<p id="notice" role="status" aria-live="polite"></p>
-<nav class="tabs" aria-label="探索メニュー"><button data-view="home">冒険者</button><button data-view="library">魔導書</button><button data-view="prepare">編成</button><button id="resumeTab" data-view="battle" hidden>探索へ</button></nav>
-<section id="home" class="panel"><h2>冒険者</h2><div id="playerStats"></div><div id="collectionList"></div></section>
-<section id="library" class="panel" hidden><h2>魔導書</h2><details class="regulations"><summary>魔法陣の描き方・登録規則</summary>
-<ol><li>紙に大きな<strong>外円</strong>を描き、その内側に<strong>内円</strong>を描きます。円は閉じた線にしてください。</li>
-<li>二つの円の間（<strong>環</strong>）に、魔法の意味を持つ<strong>英語の単語</strong>を呪文として記します。文字は読み取れる大きさで書きます。</li>
-<li><strong>内円の中</strong>に、魔法を表す<strong>紋様</strong>を描きます。紋様の判定で「攻撃・防御・回復・弱体」が決まります。</li>
-<li>呪文から7つの相（flame / bolt / aqua / storm / gravity / law / chaos）を判定します。円や線の精度、呪文、共鳴率、異なる単語数が威力に影響します。</li>
-<li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録はカメラ撮影のみです。</li>
-<li>登録しただけでは性能は分かりません。<strong>冒険で最初に使ったとき</strong>に鑑定し、以降は魔導書に保存します。</li></ol>
-</details><button id="cameraStart">📷 カメラを開く</button><div id="cameraPane" hidden><label>陣の名前 <input id="circleName" maxlength="60" placeholder="無名の魔法陣"></label><video id="cameraVideo" autoplay muted playsinline></video><canvas id="cameraCanvas" hidden></canvas><div class="buttons"><button id="cameraCapture">この陣を撮影して登録</button><button id="cameraStop" class="subtle">閉じる</button></div></div><div id="libraryCards" class="cards"></div></section>
-<section id="prepare" class="panel" hidden><h2>編成</h2><h3>魔法陣</h3><div id="slotCards"></div><h3>携行品</h3><div id="gearCards"></div><p id="gearCounter"></p><button id="startAttack">迷宮へ入る</button></section>
-<section id="battle" class="panel" hidden><h2 id="floorLabel"></h2><div class="arena"><article class="unit"><h3 id="enemyName"></h3><div id="enemyStats"></div></article><article class="unit"><h3>冒険者</h3><div id="heroStats"></div></article></div><h3>魔法陣を選ぶ</h3><div id="battleSpells" class="cards"></div><h3>携行品 <small>無料・1回/ラウンド</small></h3><div id="battleItems"></div><p id="battleInfo"></p><div id="battleLog" class="log" aria-live="polite"></div></section>
-<section id="checkpoint" class="panel" hidden><h2>帰還の祭壇</h2><p id="checkpointInfo"></p><div class="buttons"><button id="returnHome">帰還して報酬を確定</button><button id="deeper" class="danger">さらに深層へ</button></div></section>
-<section id="analyzing" class="panel" hidden><h2>魔法陣を鑑定中</h2><iframe id="analyzerFrame" title="マギアサークル解析"></iframe><button id="cancelAnalyze" class="subtle">解析を中止して魔法を選び直す</button></section>
-<section id="result" class="panel" hidden><h2 id="resultTitle"></h2><div id="resultText"></div><button data-view="home">拠点へ</button></section>
-<footer>保存先：このブラウザ内。サイトデータ削除で消失します。</footer>
-</main><script type="module" src="assets/js/dungeon-app.mjs"></script></body></html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#120e19">
+  <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <title>マギアサークル-ダンジョンアタック</title>
+  <link rel="stylesheet" href="assets/css/dungeon.css">
+</head>
+<body>
+  <div class="ambient-stars" aria-hidden="true"></div>
+  <main class="shell">
+    <header class="hero">
+      <div class="hero-top">
+        <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
+        <span class="hero-edition">THE ARCANE EXPEDITION</span>
+      </div>
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <p class="eyebrow">MAGIA CIRCLE <span>✧</span> DUNGEON ATTACK</p>
+          <h1>マギアサークル<span>ダンジョンアタック</span></h1>
+          <p class="tagline">自分だけの魔法陣で迷宮へ</p>
+          <div class="hero-rule" aria-hidden="true"><span>✦</span></div>
+        </div>
+        <div class="hero-emblem" aria-hidden="true"><span class="emblem-ring"><span class="emblem-inner">✧<small>✦</small></span></span></div>
+      </div>
+    </header>
+
+    <p id="notice" class="notice" role="status" aria-live="polite"></p>
+
+    <nav class="tabs" aria-label="探索メニュー">
+      <button type="button" id="tab-home" data-view="home"><span class="tab-symbol" aria-hidden="true">♜</span><span>冒険者</span></button>
+      <button type="button" id="tab-library" data-view="library"><span class="tab-symbol" aria-hidden="true">◎</span><span>魔導書</span></button>
+      <button type="button" id="tab-prepare" data-view="prepare"><span class="tab-symbol" aria-hidden="true">⚔</span><span>編成</span></button>
+      <button type="button" id="tab-collection" data-view="collection"><span class="tab-symbol" aria-hidden="true">✥</span><span>収集図鑑</span></button>
+      <button type="button" id="resumeTab" data-view="battle" hidden><span class="tab-symbol" aria-hidden="true">✦</span><span>探索へ</span></button>
+    </nav>
+
+    <dialog id="nameDialog" class="name-dialog" aria-labelledby="nameDialogTitle">
+      <div class="name-dialog-inner">
+        <span class="dialog-sigil" aria-hidden="true">✦</span>
+        <p class="chapter">THE ADVENTURER'S NAME</p>
+        <h2 id="nameDialogTitle">冒険者の名を刻む</h2>
+        <form id="nameForm">
+          <label for="playerNameInput">冒険者名</label>
+          <input id="playerNameInput" name="playerName" type="text" maxlength="20" required autocomplete="nickname" placeholder="名前を入力">
+          <p id="nameError" class="name-error" role="alert"></p>
+          <button type="submit" id="savePlayerName" class="primary-action">この名で冒険する <span aria-hidden="true">⟶</span></button>
+        </form>
+        <button type="button" id="cancelNameDialog" class="subtle" hidden>戻る</button>
+      </div>
+    </dialog>
+
+    <section id="home" class="panel adventurer-panel">
+      <div class="section-heading"><div><p class="chapter">CHAPTER I · ADVENTURER</p><h2>冒険者の記録</h2></div><span class="section-mark" aria-hidden="true">✧</span></div>
+      <div class="adventurer-layout">
+        <div class="character-portrait" aria-hidden="true"><div class="portrait-halo"></div><span class="portrait-glyph">♜</span><span class="portrait-bottom">THE WANDERER</span></div>
+        <div id="playerStats" class="stats-sheet"></div>
+      </div>
+      <div class="home-cta"><button type="button" data-view="library" class="subtle">魔導書を開く <span aria-hidden="true">›</span></button><button type="button" data-view="prepare">探索の支度 <span aria-hidden="true">›</span></button></div>
+    </section>
+
+    <section id="library" class="panel grimoire-panel" hidden>
+      <div class="section-heading"><div><p class="chapter">CHAPTER II · GRIMOIRE</p><h2>魔導書</h2></div><span class="section-mark" aria-hidden="true">◎</span></div>
+      <details class="regulations">
+        <summary>魔法陣の描き方・登録規則 <span aria-hidden="true">⌄</span></summary>
+        <ol>
+          <li>紙に大きな<strong>外円</strong>を描き、その内側に<strong>内円</strong>を描きます。円は閉じた線にしてください。</li>
+          <li>二つの円の間（<strong>環</strong>）に、魔法の意味を持つ<strong>英語の単語</strong>を呪文として記します。文字は読み取れる大きさで書きます。</li>
+          <li><strong>内円の中</strong>に魔法を表す<strong>紋様</strong>を描きます。紋様によって「攻撃・防御・回復・弱体」が決まります。</li>
+          <li>呪文から7つの相（flame / bolt / aqua / storm / gravity / law / chaos）を判定します。円や線の精度、呪文、異なる単語数が威力に影響します。</li>
+          <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
+          <li>登録した時点では性能は分かりません。<strong>初めて使用すると性能が明らかになります。</strong></li>
+        </ol>
+        <figure class="regulation-sample"><img src="assets/images/sample.png" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+      </details>
+      <button type="button" id="cameraStart" class="camera-trigger"><span aria-hidden="true">◉</span> 魔法陣を撮影する</button>
+      <div id="cameraPane" class="capture-pane" hidden>
+        <label for="circleName">魔法陣の名前</label><input id="circleName" maxlength="60" placeholder="無名の魔法陣">
+        <video id="cameraVideo" autoplay muted playsinline></video><canvas id="cameraCanvas" hidden></canvas>
+        <div class="buttons"><button type="button" id="cameraCapture">撮影して登録</button><button type="button" id="cameraStop" class="subtle">閉じる</button></div>
+      </div>
+      <div id="libraryCards" class="cards circle-grid"></div>
+    </section>
+
+    <section id="prepare" class="panel loadout-panel" hidden>
+      <div class="section-heading"><div><p class="chapter">CHAPTER III · PREPARATION</p><h2>探索の支度</h2></div><span class="section-mark" aria-hidden="true">⚔</span></div>
+      <div class="subheading"><h3>術式の編成</h3><span>THE FIVE SIGILS</span></div>
+      <div id="slotCards"></div>
+      <div class="subheading"><h3>携行品</h3><span>SUPPLIES</span></div>
+      <div id="gearCards"></div><p id="gearCounter" class="gear-counter"></p>
+      <div class="entry-actions"><button type="button" id="startAttack" class="primary-action">迷宮へ入る <span aria-hidden="true">⟶</span></button></div>
+    </section>
+
+    <section id="collection" class="panel collection-panel" hidden>
+      <div class="section-heading">
+        <div><p class="chapter">CHAPTER IV · RELIQUARY</p><h2>深淵の収集図鑑</h2></div>
+        <div id="collectionProgress" class="collection-progress" aria-label="収集進捗"></div>
+      </div>
+      <div id="collectionGrid" class="collection-grid" role="list" aria-label="コレクション一覧"></div>
+    </section>
+
+    <section id="battle" class="panel battle-panel" hidden>
+      <div class="section-heading"><div><p class="chapter">THE DESCENT · ENCOUNTER</p><h2 id="floorLabel"></h2></div><span class="section-mark" aria-hidden="true">⚔</span></div>
+      <div class="arena">
+        <article class="unit enemy-unit">
+          <div class="enemy-portrait" aria-hidden="true"><div class="enemy-sigil">⟁</div></div>
+          <div class="unit-info"><h3 id="enemyName"></h3><div id="enemyStats"></div></div>
+        </article>
+        <div class="versus" aria-hidden="true">VS</div>
+        <article class="unit hero-unit">
+          <div class="hero-portrait" aria-hidden="true">✦</div>
+          <div class="unit-info"><h3>冒険者</h3><div id="heroStats"></div></div>
+        </article>
+      </div>
+      <div class="subheading"><h3>魔法陣</h3><span>CAST A SPELL</span></div>
+      <div id="battleSpells" class="cards battle-spells"></div>
+      <div class="subheading"><h3>携行品</h3><span>FREE ACTION · 1 / ROUND</span></div>
+      <div id="battleItems"></div>
+      <p id="battleInfo" class="battle-info"></p>
+      <details class="battle-history"><summary>戦闘の記録</summary><div id="battleLog" class="log" aria-live="polite"></div></details>
+    </section>
+
+    <section id="checkpoint" class="panel checkpoint-panel" hidden>
+      <p class="chapter">SANCTUARY · THE FIFTH SEAL</p><div class="checkpoint-seal" aria-hidden="true">✦</div>
+      <h2>帰還の祭壇</h2><p id="checkpointInfo"></p>
+      <div class="buttons checkpoint-actions"><button type="button" id="returnHome">帰還して報酬を持ち帰る</button><button type="button" id="deeper" class="danger">さらに深層へ進む</button></div>
+    </section>
+
+    <section id="analyzing" class="panel analyzing-panel" hidden>
+      <div class="analyzing-sigil" aria-hidden="true">◎</div><h2>魔法陣を鑑定中</h2>
+      <iframe id="analyzerFrame" title="マギアサークル解析"></iframe>
+      <button type="button" id="cancelAnalyze" class="subtle">鑑定を中止</button>
+    </section>
+
+    <section id="result" class="panel result-panel" hidden>
+      <p class="chapter">EXPEDITION RECORD</p><div class="result-seal" aria-hidden="true">✧</div>
+      <h2 id="resultTitle"></h2><div id="resultText"></div><button type="button" data-view="home">冒険者の記録へ戻る</button>
+    </section>
+
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span></footer>
+  </main>
+  <script type="module" src="assets/js/dungeon-app.mjs"></script>
+</body>
+</html>
