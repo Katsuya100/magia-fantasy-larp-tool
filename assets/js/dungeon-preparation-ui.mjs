@@ -29,7 +29,7 @@ export function circleChoices(circles,slots,imageUrl,escapeText){
  if(!circles.length)return '<p class="collection-empty">魔導書に魔法陣を登録してください。</p>';
  return circles.map((c,i)=>'<button type="button" class="picker-option" data-choose-circle="'+i+'">'
   +'<img alt="" src="'+imageUrl(c.image)+'"><span class="picker-label">'+escapeText(c.name)
-  +'<small>'+(c.analysis?escapeText(c.analysis.attribute+' / '+c.analysis.role):'？？？ 未鑑定')+'</small></span>'
+  +'<small>'+(c.analysis?escapeText(c.analysis.attribute+' / '+c.analysis.role):'？？？ 性能未判明')+'</small></span>'
   +(slots.includes(c.id)?'<span class="picker-equipped">編成中</span>':'')+'</button>').join('');
 }
 export function itemChoices(inventory,slots,itemName,escapeText){
