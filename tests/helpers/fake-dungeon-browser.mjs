@@ -38,6 +38,7 @@ export function fakeDungeonBrowser(config={}){
    '#powerResult .altar-value':{textContent:analyzerState.power}
   }[query]||null;}
  };
+ const arena=document.getElementById('battleArena');arena.dataset={role:'idle',side:'none',attribute:'law'};
  const iframe=document.getElementById('analyzerFrame');iframe.contentDocument=analyzer;
  let frameSource='';
  Object.defineProperty(iframe,'src',{get(){return frameSource;},set(s){frameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>iframe.onload?.());}}});
