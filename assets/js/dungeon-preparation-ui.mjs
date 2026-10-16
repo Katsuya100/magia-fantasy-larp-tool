@@ -1,14 +1,14 @@
 import {GRID_COLUMNS} from './dungeon-loadout.mjs';
 export function itemSymbol(item){return item?.id?.startsWith('heal_')?'✚':item?.id?.startsWith('mana_')?'✧':'◈';}
 export function spellGrid(slots,circles,imageUrl,escapeText,active=true){
- const byId=new Map(circles.map((circle,i)=>[circle.id,{...circle,displayName:'魔法陣 '+String(i+1).padStart(2,'0')}]));
+ const byId=new Map(circles.map(circle=>[circle.id,circle]));
  return '<div class="loadout-grid" role="group" aria-label="魔法陣の編成">'
   +slots.map((id,index)=>{
    const c=byId.get(id);
-   return '<button type="button" class="loadout-tile '+(c?'equipped':'empty')+'" data-open-slot="'+index+'" aria-label="魔法陣 '+(index+1)+'枠目 '+(c?escapeText(c.displayName):'未装備')+'" '+(active?'':'disabled')+'>'
+   return '<button type="button" class="loadout-tile '+(c?'equipped':'empty')+'" data-open-slot="'+index+'" aria-label="魔法陣 '+(index+1)+'枠目 '+(c?'装備中':'未装備')+'" '+(active?'':'disabled')+'>'
    +'<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span>'
    +(c?'<img alt="" src="'+imageUrl(c.image)+'">':'<span class="tile-empty-icon" aria-hidden="true">＋</span>')
-   +'<span class="tile-title">'+(c?escapeText(c.displayName):'未装備')+'</span>'
+   +(c?'':'<span class="tile-title">未装備</span>')
    +'</button>';
   }).join('')+'</div>';
 }
@@ -27,10 +27,9 @@ export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,a
 }
 export function circleChoices(circles,slots,imageUrl,escapeText){
  if(!circles.length)return '<p class="collection-empty">魔導書に魔法陣を登録してください。</p>';
- return circles.map((item,i)=>{const c={...item,displayName:'魔法陣 '+String(i+1).padStart(2,'0')};return '<button type="button" class="picker-option" data-choose-circle="'+i+'">'
-  +'<img alt="" src="'+imageUrl(c.image)+'"><span class="picker-label">'+escapeText(c.displayName)
-  +'<small>'+(c.analysis?escapeText(c.analysis.attribute+' / '+c.analysis.role):'？？？ 性能未判明')+'</small></span>'
-  +(slots.includes(c.id)?'<span class="picker-equipped">編成中</span>':'')+'</button>';}).join('');
+ return circles.map((c,i)=>'<button type="button" class="picker-option" data-choose-circle="'+i+'" aria-label="魔法陣の候補 '+(i+1)+'">'
+  +'<img alt="" src="'+imageUrl(c.image)+'"><span class="picker-label"><small>'+(c.analysis?escapeText(c.analysis.attribute+' / '+c.analysis.role):'？？？ 性能未判明')+'</small></span>'
+  +(slots.includes(c.id)?'<span class="picker-equipped">編成中</span>':'')+'</button>').join('');
 }
 export function itemChoices(inventory,slots,itemName,escapeText){
  if(!inventory.length)return '<p class="collection-empty">持ち込みできるアイテムがありません。</p>';
