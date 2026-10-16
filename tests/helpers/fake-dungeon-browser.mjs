@@ -52,7 +52,7 @@ export function fakeDungeonBrowser(config={}){
  URL.createObjectURL=()=>('blob:mock-'+Math.random());
  URL.revokeObjectURL=()=>{};
  globalThis.DataTransfer=class{constructor(){this.files=[];this.items={add:file=>this.files.push(file)};}};
- Object.defineProperty(globalThis,'navigator',{value:{mediaDevices:{getUserMedia:async()=>{mediaOpened++;return {getTracks:()=>[{stop(){mediaClosed++;}}]};}}},configurable:true});
+ Object.defineProperty(globalThis,'navigator',{value:{mediaDevices:{getUserMedia:async()=>{mediaOpened++;if(config.cameraFailure)throw Error('Permission denied');return {getTracks:()=>[{stop(){mediaClosed++;}}]};}}},configurable:true});
  function restore(){globalThis.document=old.document;globalThis.window=old.window;globalThis.indexedDB=old.indexedDB;globalThis.fetch=old.fetch;URL.createObjectURL=old.createObjectURL;URL.revokeObjectURL=old.revokeObjectURL;globalThis.DataTransfer=old.DataTransfer;Object.defineProperty(globalThis,'navigator',{value:old.navigator,configurable:true});}
  return {factory,document,dom,analyzerState,restore,get opened(){return mediaOpened;},get closed(){return mediaClosed;},get iframe(){return iframe;}};
 }
