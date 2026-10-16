@@ -78,3 +78,24 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  .battle-spells .tile-detail,.battle-items .tile-detail,.battle-spells .tile-cooldown{font-size:9px;min-height:0}
  .inner-nav{margin-bottom:13px}
 }
+
+/* Stable square equipment slots: the item title and quantity never size the grid tracks. */
+#slotCards .loadout-grid,#gearCards .loadout-grid{grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-flow:row;align-items:start}
+#slotCards .loadout-tile,#gearCards .loadout-tile{
+ width:100%;height:auto;min-width:0;min-height:0;aspect-ratio:1 / 1;
+ contain:size;overflow:hidden;box-sizing:border-box;
+}
+#slotCards .tile-title,#gearCards .tile-title{
+ display:block;flex:0 0 auto;max-width:100%;overflow:hidden;white-space:nowrap;
+ text-overflow:ellipsis;
+}
+.camera-placeholder{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(circle,#362f3f,#0b111a 70%);color:#d6b57b}
+.camera-placeholder span{font:clamp(72px,15vw,130px) var(--roman);opacity:.5;text-shadow:0 0 28px #ddb77755}
+.camera-actions{justify-content:center;margin:16px auto 2px}
+.camera-actions button{min-width:150px}
+.inline-error{margin:12px 0;color:#f3aca8;font-size:13px;line-height:1.6}
+.picker-footer{margin-top:14px}
+@media(max-width:630px){
+ #slotCards .loadout-tile,#gearCards .loadout-tile{aspect-ratio:1 / 1;min-height:0}
+ .camera-actions button{min-width:0;flex:1}
+}
