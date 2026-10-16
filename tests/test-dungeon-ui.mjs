@@ -47,11 +47,14 @@ try{
  assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,5,'five item tiles');
  await $('cameraStart').fire('click');
  assert.equal($('cameraPane').hidden,false);
+ await $('cameraStart').fire('click');
+ assert.equal(env.opened,1,'opening an already running camera reuses its media stream');
  for(let i=0;i<5;i++){
   $('circleName').value='撮影陣'+i;
   await $('cameraCapture').fire('click');
   assert.equal($('cameraPane').hidden,false,'camera remains open after every shot');
   assert.equal($('circleName').value,'','name reset for the next photograph');
+  assert.equal($('notice').textContent,'','successful capture shows no redundant status log');
  }
  assert.equal(env.opened,1,'camera stream opened once');
  assert.equal(env.closed,0,'camera stays active during five captures');
