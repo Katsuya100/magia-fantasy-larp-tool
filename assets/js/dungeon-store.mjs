@@ -1,4 +1,4 @@
-import {startingBase} from './dungeon-core.mjs?v=20261017.2';
+import {startingBase} from './dungeon-core.mjs';
 const DB_NAME='magia-dungeon-v1';
 const DB_VERSION=2;
 const STORES=['circles','settings'];
