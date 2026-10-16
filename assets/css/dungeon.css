@@ -50,3 +50,31 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 @media(max-width:630px){.loadout-grid{gap:5px}.loadout-tile{padding:16px 3px 6px!important;gap:4px}.loadout-tile img{width:85%}.tile-index{top:3px;left:5px;font-size:9px}.tile-title{font-size:9px}.tile-empty-icon{font-size:28px}.tile-item-icon{font-size:31px}.loadout-dialog-inner{padding:14px}.picker-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.picker-option{min-height:80px;gap:6px;padding:6px!important}.picker-option img{width:45px;height:45px}.picker-label{font-size:11px}.picker-equipped{display:none}}
 
 .release-id{margin-left:8px;font:10px var(--roman);letter-spacing:.04em;opacity:.5}
+
+/* The dungeon uses exactly five visual columns; higher item counts wrap into new rows. */
+.inner-nav{margin:-6px 0 17px;padding:7px 12px!important;font-size:12px!important}
+.battle-spells,.battle-items{grid-template-columns:repeat(5,minmax(0,1fr));margin:12px 0 7px}
+.battle-spells .battle-tile,.battle-items .battle-tile{
+ aspect-ratio:auto;min-height:190px;justify-content:flex-start;gap:7px;
+ padding:24px 7px 10px!important;cursor:pointer
+}
+.battle-spells .battle-tile img{width:100%;max-width:112px;aspect-ratio:1 / 1;object-fit:cover;flex:none;border:1px solid #d6b47e80}
+.battle-spells .tile-empty-icon{min-height:94px;display:grid;place-items:center}
+.battle-spells .tile-title,.battle-items .tile-title{max-width:100%;line-height:1.3}
+.battle-spells .tile-detail,.battle-items .tile-detail{font-size:10px;color:var(--soft);line-height:1.3;overflow-wrap:anywhere;text-align:center;min-height:24px}
+.battle-spells .tile-cooldown{margin-top:auto;font-size:11px;color:var(--gold);font-weight:700}
+.battle-items .tile-item-icon{width:100%;min-height:90px;display:grid;place-items:center}
+.battle-items .tile-empty-icon{min-height:90px;display:grid;place-items:center}
+.battle-items .battle-tile{min-height:168px}
+.battle-basic{display:flex;justify-content:flex-end;margin:9px 0 16px}
+.battle-basic .basic-attack{font-size:13px!important}
+.battle-spells button:disabled,.battle-items button:disabled{opacity:.46}
+@media(max-width:630px){
+ .battle-spells,.battle-items{gap:5px}
+ .battle-spells .battle-tile,.battle-items .battle-tile{min-height:127px;padding:17px 3px 7px!important;gap:4px}
+ .battle-spells .battle-tile img{max-width:100%;width:100%}
+ .battle-spells .tile-empty-icon,.battle-items .tile-empty-icon,.battle-items .tile-item-icon{min-height:40px}
+ .battle-spells .tile-title,.battle-items .tile-title{font-size:9px}
+ .battle-spells .tile-detail,.battle-items .tile-detail,.battle-spells .tile-cooldown{font-size:9px;min-height:0}
+ .inner-nav{margin-bottom:13px}
+}
