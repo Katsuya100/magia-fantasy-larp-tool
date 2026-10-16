@@ -107,7 +107,7 @@ assert.doesNotMatch(picker,/鑑定/);
 assert.match(app,/battleImageUrl\(c\.image\)/);
 assert.match(app,/Math\.max\(5,run\.carry\.length\)/);
 
-assert.match(app,/circles\.push\(circle\);[\s\S]*?note\(''\);render\(\)/);
+assert.match(app,/circles=newestCirclesFirst\(\[\.\.\.circles,circle\]\);[\s\S]*?note\(''\);render\(\)/);
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
 assert.match(app,/newestCirclesFirst\(await allCircles\(db\)\)/);
 assert.match(app,/newestCirclesFirst\(\[\.\.\.circles,circle\]\)/);
