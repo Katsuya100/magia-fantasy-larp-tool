@@ -1,4 +1,4 @@
-import {num,level,range} from './dungeon-tuning.mjs?v=20261017.2';
+import {num,level,range} from './dungeon-tuning.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
 export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
