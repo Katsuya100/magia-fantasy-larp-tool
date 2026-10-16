@@ -79,7 +79,7 @@
       <button type="button" id="cameraStart" class="camera-trigger"><span aria-hidden="true">◉</span> 魔法陣を撮影する</button>
       <div id="cameraPane" class="capture-pane" hidden>
         <label for="circleName">魔法陣の名前</label><input id="circleName" maxlength="60" placeholder="無名の魔法陣">
-        <video id="cameraVideo" autoplay muted playsinline></video><canvas id="cameraCanvas" hidden></canvas>
+        <div class="camera-viewfinder" aria-label="正方形の撮影範囲"><video id="cameraVideo" autoplay muted playsinline></video><span class="viewfinder-corners" aria-hidden="true"></span></div><canvas id="cameraCanvas" hidden></canvas>
         <div class="buttons"><button type="button" id="cameraCapture">撮影して登録</button><button type="button" id="cameraStop" class="subtle">閉じる</button></div>
       </div>
       <div id="libraryCards" class="cards circle-grid"></div>
