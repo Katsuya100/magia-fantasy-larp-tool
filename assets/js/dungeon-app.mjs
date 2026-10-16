@@ -35,3 +35,19 @@ window.addEventListener('message',async event=>{if(event.origin!==location.origi
 async function startCamera(){if(!navigator.mediaDevices?.getUserMedia){note('HTTPSまたはlocalhostのカメラ対応ブラウザが必要です。');return;}try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});$('cameraVideo').srcObject=stream;await $('cameraVideo').play();$('cameraPane').hidden=false;note('魔法陣が映るようにカメラを向けて撮影してください。');}catch(e){note('カメラを起動できません：'+e.message);}}
 function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$('cameraVideo').srcObject=null;$('cameraPane').hidden=true;}
 async function capture(){if(!stream||!$('cameraVideo').videoWidth)return;const v=$('cameraVideo'),canvas=$('cameraCanvas'),side=Math.min(v.videoWidth,v.videoHeight),max=1280,scale=Math.min(1,max/side);canvas.width=Math.round(side*scale);canvas.height=canvas.width;canvas.getContext('2d').drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));if(!blob){note('撮影画像を作成できません');return;}const circle={id:crypto.randomUUID(),name:$('circleName').value.trim()||'無名の魔法陣',image:blob,analysis:null};await putCircle(db,circle);circles.push(circle);$('circleName').value='';stopCamera();note('魔法陣を保存した。性能は初回使用時に判明する。');render();}
+function wire(){
+ document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
+ if(b.dataset.view){stopCamera();show(b.dataset.view);return;}
+ if(b.dataset.remove){if(profile.run)return;await deleteCircle(db,b.dataset.remove);circles=circles.filter(c=>c.id!==b.dataset.remove);slots=slots.filter(id=>id!==b.dataset.remove);profile.slots=[...slots];await persist();render();return;}
+ if(b.dataset.slot){const id=b.dataset.slot;slots=slots.includes(id)?slots.filter(x=>x!==id):slots.length<5?[...slots,id]:slots;profile.slots=[...slots];await persist();render();return;}
+ if(b.dataset.gear!==undefined){if(profile.returns===0)return;const i=Number(b.dataset.gear),at=carry.indexOf(i);if(at>=0)carry.splice(at,1);else if(carry.length<G.capacity(profile.level))carry.push(i);else note('持ち込み上限です');render();return;}
+ if(b.dataset.cast!==undefined){await takeTurn(Number(b.dataset.cast));return;}
+ if(b.dataset.use!==undefined){await useItem(Number(b.dataset.use));return;}
+ });
+ $('cameraStart').addEventListener('click',startCamera);$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',capture);
+ $('startAttack').addEventListener('click',begin);$('returnHome').addEventListener('click',leave);
+ $('deeper').addEventListener('click',async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');});
+ $('cancelAnalyze').addEventListener('click',()=>{activeAnalysis=null;$('analyzerFrame').src='about:blank';note('鑑定を中止しました。');renderRun();show('battle');});
+ window.addEventListener('beforeunload',()=>{stopCamera();freeUrls();});
+}
+load().catch(e=>{console.error(e);note('起動できません：'+e.message);});
