@@ -43,14 +43,21 @@ try{
  assert.match($('playerStats').innerHTML,/持ち込み上限：3/);
  await doc.click(btn({view:'library'}));
  assert.equal($('library').hidden,false);
+ assert.equal(($('slotCards').innerHTML.match(/data-open-slot="/g)||[]).length,5,'five magic-circle tiles');
+ assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,5,'five item tiles');
+ await $('cameraStart').fire('click');
+ assert.equal($('cameraPane').hidden,false);
  for(let i=0;i<5;i++){
-  await $('cameraStart').fire('click');
-  assert.equal($('cameraPane').hidden,false);
   $('circleName').value='撮影陣'+i;
   await $('cameraCapture').fire('click');
-  assert.equal($('cameraPane').hidden,true);
+  assert.equal($('cameraPane').hidden,false,'camera remains open after every shot');
+  assert.equal($('circleName').value,'','name reset for the next photograph');
  }
- assert.equal(env.opened,5);assert.equal(env.closed,5);
+ assert.equal(env.opened,1,'camera stream opened once');
+ assert.equal(env.closed,0,'camera stays active during five captures');
+ await $('cameraStop').fire('click');
+ assert.equal($('cameraPane').hidden,true);
+ assert.equal(env.closed,1,'camera only stops when the user closes it');
  const captureCanvas=$('cameraCanvas');
  assert.equal(captureCanvas.width,720,'captured JPEG width matches square crop');
  assert.equal(captureCanvas.height,720,'captured JPEG height matches square crop');
@@ -60,9 +67,23 @@ try{
  assert.equal(circles.length,5);assert.ok(circles.every(c=>!c.analysis));
  assert.equal(await circles[0].image.text(),'camera-capture');
  await doc.click(btn({view:'prepare'}));
- for(const c of circles)await doc.click(btn({slot:c.id}));
+ for(let i=0;i<circles.length;i++){
+  await doc.click(btn({openSlot:String(i)}));
+  assert.equal($('loadoutDialog').open,true,'opens the spell picker for each slot');
+  assert.match($('loadoutOptions').innerHTML,/data-choose-circle="/);
+  await doc.click(btn({chooseCircle:String(i)}));
+  assert.equal($('loadoutDialog').open,false);
+ }
  assert.equal($('startAttack').disabled,false);
- assert.match($('slotCards').innerHTML,/5\/5/);
+ assert.equal(($('slotCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,5,'five filled spell slots');
+ await doc.click(btn({openSlot:'0'}));
+ await doc.click(btn({chooseCircle:'1'}));
+ let prepared=await getProfile(db);
+ assert.deepEqual(prepared.slots.slice(0,2),[circles[1].id,circles[0].id],'selecting an equipped spell swaps the slots');
+ await doc.click(btn({openSlot:'0'}));
+ await doc.click(btn({chooseCircle:'0'}));
+ prepared=await getProfile(db);
+ assert.deepEqual(prepared.slots.slice(0,2),[circles[0].id,circles[1].id],'swap back');
  assert.match($('gearCards').innerHTML,/最初の帰還成功後/);
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
@@ -114,8 +135,20 @@ try{
  assert.doesNotMatch($('collectionGrid').innerHTML,/魔獣の牙/,'uncollected treasure stays secret');
  assert.ok(p.level>=2);
  await doc.click(btn({view:'prepare'}));
- for(let i=0;i<3;i++)await doc.click(btn({gear:String(i)}));
+ for(let i=0;i<3;i++){
+  await doc.click(btn({openItem:String(i)}));
+  assert.equal($('loadoutDialog').open,true,'item picker opens');
+  assert.match($('loadoutOptions').innerHTML,/data-choose-item="/);
+  await doc.click(btn({chooseItem:String(i)}));
+ }
  assert.match($('gearCounter').textContent,/3 \/ 3/);
+ assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,3);
+ assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile locked"/g)||[]).length,2);
+ await doc.click(btn({openItem:'0'}));
+ await doc.click(btn({chooseItem:'1'}));
+ assert.match($('gearCounter').textContent,/3 \/ 3/,'same item cannot be equipped twice');
+ await doc.click(btn({openItem:'0'}));
+ await doc.click(btn({chooseItem:'0'}));
  await $('startAttack').fire('click');
  p=await getProfile(db);
  assert.equal(p.attempts,2);assert.equal(p.run.carry.length,3);
