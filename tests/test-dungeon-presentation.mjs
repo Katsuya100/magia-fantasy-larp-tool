@@ -27,6 +27,12 @@ assert.match(page,/data-view="library" class="subtle inner-nav"/,'grimoire acces
 assert.match(page,/<section id="prepare" class="panel loadout-panel">/,'preparation visible on initial HTML');
 assert.match(page,/<section id="home" class="panel adventurer-panel" hidden>/,'profile initially hidden');
 assert.match(page,/<h2>準備&amp;出発<\/h2>/);
+assert.match(page,/CHAPTER I · ADVENTURER/);
+assert.match(page,/CHAPTER II · RELIQUARY/);
+assert.match(page,/CHAPTER III · PREPARATION/);
+assert.match(page,/CHAPTER IV · GRIMOIRE/);
+assert.match(page,/魔法陣の力を解明中/);
+
 
 assert.match(page,/id="battleSpells" class="loadout-grid battle-spells"/);
 assert.match(page,/id="battleItems" class="loadout-grid battle-items"/);
@@ -37,7 +43,18 @@ assert.doesNotMatch(page,/鑑定/);
 assert.match(page,/id="collectionProgress"/);
 assert.doesNotMatch(page,/<input[^>]*type="file"/);
 assert.match(page,/id="cameraStart"/);
-assert.match(page,/<div class="camera-viewfinder"[^>]*>\s*<video id="cameraVideo"/);
+assert.match(page,/id="cameraPane" class="capture-pane"(?! hidden)/);
+assert.match(page,/<div class="camera-viewfinder"[^>]*>[\s\S]*?id="cameraPlaceholder"[\s\S]*?<video id="cameraVideo"[^>]* hidden/);
+assert.match(page,/id="cameraCapture" hidden/);
+assert.match(page,/id="cameraStop"[^>]* hidden/);
+assert.doesNotMatch(page,/id="circleName"/);
+assert.doesNotMatch(page,/id="cameraNameWrap"/);
+assert.match(page,/id="openGrimoireFromPicker"/);
+assert.doesNotMatch(page,/class="home-cta"/);
+assert.match(page,/<p id="notice" hidden aria-hidden="true"><\/p>/);
+assert.match(css,/\.camera-placeholder\{[^}]*display:grid/);
+assert.match(css,/#slotCards \.loadout-tile,#gearCards \.loadout-tile\{[^}]*aspect-ratio:1\s*\/\s*1/);
+assert.match(css,/#slotCards \.loadout-grid,#gearCards \.loadout-grid\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
 assert.match(css,/\.camera-viewfinder\{[^}]*aspect-ratio:1\s*\/\s*1/);
 assert.match(css,/#cameraVideo\{[^}]*object-fit:cover/);
 assert.match(css,/\.card img\{[^}]*aspect-ratio:1\s*\/\s*1/);
@@ -72,7 +89,7 @@ const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.3','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.4','stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
@@ -83,5 +100,11 @@ assert.doesNotMatch(picker,/鑑定/);
 assert.match(app,/battleImageUrl\(c\.image\)/);
 assert.match(app,/Math\.max\(5,run\.carry\.length\)/);
 
-assert.match(app,/circles\.push\(circle\);\$\('circleName'\)\.value='';note\(''\);render\(\)/);
+assert.match(app,/circles\.push\(circle\);[\s\S]*?note\(''\);render\(\)/);
+assert.match(app,/name=esc\(circleTitle\(c\)\)/);
+assert.match(app,/openGrimoireFromPicker/);
+assert.match(app,/syncCameraUi\(true\)/);
+assert.match(app,/syncCameraUi\(false\)/);
+assert.doesNotMatch(app,/\$\('circleName'\)/);
+assert.doesNotMatch(picker,/escapeText\(c\.name\)/);
 console.log('PASS dungeon hero copy, image rules, sample PNG, naming modal, sealed gallery and fantasy layout');
