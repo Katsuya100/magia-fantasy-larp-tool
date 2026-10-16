@@ -8,7 +8,10 @@ const env=fakeDungeonBrowser(),doc=env.document,$=id=>doc.getElementById(id);
 try{
  await import('../assets/js/dungeon-app.mjs?integration=first');
  await wait(()=>$('playerStats').innerHTML.includes('Lv.1'),'first launch');
- assert.equal($('home').hidden,false);
+ assert.equal($('prepare').hidden,false,'first view is preparation and departure');
+ assert.equal($('home').hidden,true,'profile opens only when selected');
+ assert.equal($('tab-prepare').attributes['aria-current'],'page','first tab selected');
+ assert.equal($('tab-home').attributes['aria-current'],undefined);
  assert.equal($('nameDialog').open,true,'new adventurer is named in a dialog');
  $('playerNameInput').value='　 ';
  await $('nameForm').fire('submit');
@@ -27,6 +30,7 @@ try{
  assert.equal($('tab-collection').attributes['aria-current'],'page');
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,12);
  await doc.click(btn({view:'home'}));
+ assert.equal($('home').hidden,false,'profile is accessible from the rightmost tab');
  await doc.click(btn({action:'rename'}));
  assert.equal($('nameDialog').open,true);
  $('playerNameInput').value='暁の旅人';
@@ -142,6 +146,7 @@ try{
  try{
   await import('../assets/js/dungeon-app.mjs?integration=reload');
   await wait(()=>el('battle').hidden===false,'resume from IndexedDB');
+  assert.equal(el('prepare').hidden,true,'active dungeon takes priority over first-view preparation');
   assert.match(el('heroStats').innerHTML,/HP 1\//);
   assert.equal(el('nameDialog').open,false,'returning player has no rename prompt');
   await doc2.click(btn({cast:'-1'}));
