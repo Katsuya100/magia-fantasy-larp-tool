@@ -4,9 +4,12 @@ export function fakeDungeonBrowser(config={}){
  const factory=config.factory||fakeIndexedDB(config.storage),dom=new Map(),listeners=new Map();
  const make=(id)=>{
   const handlers=new Map();
-  const element={id,hidden:['library','prepare','battle','checkpoint','analyzing','result','cameraPane','resumeTab','cameraCanvas'].includes(id),disabled:false,innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
+  const element={id,hidden:['library','prepare','collection','battle','checkpoint','analyzing','result','cameraPane','resumeTab','cameraCanvas'].includes(id),disabled:false,open:false,attributes:{},innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
    addEventListener(name,fn){handlers.set(name,fn);},
-   fire(name){return handlers.get(name)?.({target:element});},
+   fire(name){return handlers.get(name)?.({target:element,preventDefault(){this.defaultPrevented=true;}});},
+   setAttribute(name,value){this.attributes[name]=String(value);},
+   removeAttribute(name){delete this.attributes[name];},
+   showModal(){this.open=true;},close(){this.open=false;},
    click(){return element.fire('click');},
    dispatchEvent(event){return element.fire(event.type);},
    closest(){return element;},
