@@ -31,7 +31,9 @@ const spellHtml=spellGrid(prepareCircles([],ids),circles,makeImg,esc);
 assert.equal((spellHtml.match(/data-open-slot=/g)||[]).length,5);
 assert.equal((spellHtml.match(/class="loadout-tile empty"/g)||[]).length,5);
 assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/data-open-slot="0"/);
-assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/魔法陣 01/);
+assert.doesNotMatch(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/魔法陣\s*0[1-9]|魔法陣0/);
+assert.doesNotMatch(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/魔法陣0/,'legacy names remain hidden');
+assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/<img alt="" src="blob:mock"/);
 const itemName=x=>x.id;
 const beforeReturn=itemGrid(prepareItems([],3,3),inventory,3,false,itemName,esc);
 assert.equal((beforeReturn.match(/data-open-item=/g)||[]).length,5);
@@ -42,6 +44,7 @@ assert.equal((afterReturn.match(/class="loadout-tile equipped"/g)||[]).length,3)
 const maxItemGrid=itemGrid(prepareItems([],3,15),inventory,15,true,itemName,esc);
 assert.equal((maxItemGrid.match(/data-open-item=/g)||[]).length,15,'later item slots become additional rows');
 assert.equal((circleChoices(circles,['a'],makeImg,esc).match(/data-choose-circle=/g)||[]).length,5);
+assert.doesNotMatch(circleChoices(circles,['a'],makeImg,esc),/魔法陣\s*0[1-9]|魔法陣0/,'picker shows no circle names');
 assert.equal((itemChoices(inventory,[0],itemName,esc).match(/data-choose-item=/g)||[]).length,3);
 assert.match(circleChoices([],[],makeImg,esc),/魔導書に魔法陣を登録/);
 assert.match(itemChoices([],[],itemName,esc),/アイテムがありません/);
