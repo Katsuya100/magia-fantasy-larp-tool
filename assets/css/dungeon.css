@@ -99,3 +99,62 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  #slotCards .loadout-tile,#gearCards .loadout-tile{aspect-ratio:1 / 1;min-height:0}
  .camera-actions button{min-width:0;flex:1}
 }
+
+
+/* Animated duel. Each phase is driven by snapshots emitted by the combat engine. */
+#battleArena{position:relative;isolation:isolate;--fx-color:#d8be89;--fx-aura:rgba(216,190,137,.45)}
+#battleArena[data-attribute="flame"]{--fx-color:#ff9b58;--fx-aura:rgba(255,108,48,.45)}
+#battleArena[data-attribute="bolt"]{--fx-color:#f8db64;--fx-aura:rgba(242,219,83,.45)}
+#battleArena[data-attribute="aqua"]{--fx-color:#71d8e6;--fx-aura:rgba(81,192,228,.4)}
+#battleArena[data-attribute="storm"]{--fx-color:#a5f0d4;--fx-aura:rgba(144,245,202,.4)}
+#battleArena[data-attribute="gravity"]{--fx-color:#aa92e4;--fx-aura:rgba(143,104,224,.45)}
+#battleArena[data-attribute="law"]{--fx-color:#f2d995;--fx-aura:rgba(238,205,125,.45)}
+#battleArena[data-attribute="chaos"]{--fx-color:#f68fcb;--fx-aura:rgba(248,112,184,.45)}
+#battleArena .unit{position:relative;z-index:1;will-change:transform,filter;transition:border-color .2s}
+#battleArena .enemy-portrait,#battleArena .hero-portrait{position:relative;z-index:1}
+#battleArena .arena-fx{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;display:grid;place-items:center}
+#battleArena[data-role]:not([data-role="idle"]) .arena-fx{opacity:1}
+#battleArena .fx-caption{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);min-width:84px;max-width:45%;text-align:center;padding:7px 5px;font-weight:800;font-size:13px;line-height:1.25;color:#fff8e6;text-shadow:0 1px 4px #000,0 0 10px var(--fx-color);background:#121321d9;border:1px solid var(--fx-color);border-radius:28px;box-shadow:0 0 22px var(--fx-aura);animation:fx-caption-in .75s both}
+#battleArena .fx-orbit,#battleArena .fx-spark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);opacity:0}
+#battleArena .fx-orbit{width:112px;height:112px;border:3px solid var(--fx-color);border-radius:50%;box-shadow:0 0 30px var(--fx-aura),inset 0 0 25px var(--fx-aura)}
+#battleArena .fx-spark{width:120px;height:5px;border-radius:100%;background:var(--fx-color);box-shadow:0 0 18px 8px var(--fx-aura)}
+#battleArena:is([data-role="attack"],[data-role="basic"]) .fx-spark{animation:fx-clash .75s ease-out both}
+#battleArena:is([data-role="attack"],[data-role="basic"]) .hero-unit:is(*){border-color:var(--border)}
+#battleArena:is([data-role="attack"],[data-role="basic"])[data-side="hero"] .hero-unit{animation:fx-rush-left .75s ease-in-out both}
+#battleArena:is([data-role="attack"],[data-role="basic"])[data-side="enemy"] .enemy-unit{animation:fx-rush-right .75s ease-in-out both}
+#battleArena:is([data-role="attack"],[data-role="basic"])[data-side="hero"] .enemy-unit{animation:fx-impact .75s ease-out both}
+#battleArena:is([data-role="attack"],[data-role="basic"])[data-side="enemy"] .hero-unit{animation:fx-impact .75s ease-out both}
+#battleArena:is([data-role="defense"],[data-role="buff"]) .fx-orbit{animation:fx-guard .75s ease-out both}
+#battleArena[data-role="defense"][data-side="hero"] .hero-unit,
+#battleArena[data-role="buff"][data-side="hero"] .hero-unit,
+#battleArena[data-role="support"][data-side="hero"] .hero-unit{animation:fx-sanctuary .75s ease-out both}
+#battleArena[data-role="defense"][data-side="enemy"] .enemy-unit,
+#battleArena[data-role="buff"][data-side="enemy"] .enemy-unit,
+#battleArena[data-role="support"][data-side="enemy"] .enemy-unit{animation:fx-sanctuary .75s ease-out both}
+#battleArena[data-role="support"] .fx-orbit{animation:fx-heal .75s ease-out both}
+#battleArena[data-role="debuff"] .fx-orbit{border-style:dashed;animation:fx-hex .75s ease-out both}
+#battleArena[data-role="debuff"][data-side="hero"] .enemy-unit,
+#battleArena[data-role="burn"][data-side="enemy"] .enemy-unit{animation:fx-hex-hit .75s ease-out both}
+#battleArena[data-role="debuff"][data-side="enemy"] .hero-unit,
+#battleArena[data-role="burn"][data-side="hero"] .hero-unit{animation:fx-hex-hit .75s ease-out both}
+#battleArena[data-role="burn"] .fx-spark{animation:fx-burn .75s ease-out both}
+#battleArena[data-role="item"] .fx-orbit{animation:fx-heal .75s ease-out both}
+@keyframes fx-rush-left{0%,100%{transform:translateX(0)}36%{transform:translateX(-24px) scale(1.05)}54%{transform:translateX(-31px) scale(1.08)}}
+@keyframes fx-rush-right{0%,100%{transform:translateX(0)}36%{transform:translateX(24px) scale(1.05)}54%{transform:translateX(31px) scale(1.08)}}
+@keyframes fx-impact{0%,44%,100%{transform:translateX(0);filter:brightness(1)}55%{transform:translateX(-5px);filter:brightness(2.3)}65%{transform:translateX(5px);filter:brightness(1.6)}}
+@keyframes fx-clash{0%,30%{opacity:0;transform:translate(-50%,-50%) scale(.1)}51%{opacity:1;transform:translate(-50%,-50%) rotate(-22deg) scale(1.6)}84%,100%{opacity:0;transform:translate(-50%,-50%) rotate(20deg) scale(.5)}}
+@keyframes fx-caption-in{0%{opacity:0;transform:translate(-50%,-15%) scale(.8)}24%,75%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}100%{opacity:0;transform:translate(-50%,-82%) scale(.95)}}
+@keyframes fx-guard{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}28%,60%{opacity:.95;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.4)}}
+@keyframes fx-heal{0%{opacity:0;transform:translate(-50%,-30%) scale(.3)}36%{opacity:1;transform:translate(-50%,-65%) scale(.85)}100%{opacity:0;transform:translate(-50%,-140%) scale(1.3)}}
+@keyframes fx-hex{0%{opacity:0;transform:translate(-50%,-50%) rotate(0) scale(1.4)}30%,60%{opacity:1;transform:translate(-50%,-50%) rotate(120deg) scale(.9)}100%{opacity:0;transform:translate(-50%,-50%) rotate(220deg) scale(.4)}}
+@keyframes fx-hex-hit{0%,100%{filter:none}40%,65%{filter:drop-shadow(0 0 17px var(--fx-color)) brightness(.7)}}
+@keyframes fx-sanctuary{0%,100%{filter:none}35%,68%{filter:drop-shadow(0 0 24px var(--fx-color)) brightness(1.45)}}
+@keyframes fx-burn{0%{opacity:0;transform:translate(-50%,-10%) scale(.6) rotate(-40deg)}44%{opacity:1;transform:translate(-50%,-50%) scale(1.3) rotate(32deg)}100%{opacity:0;transform:translate(-50%,-150%) scale(.6) rotate(100deg)}}
+@media(max-width:630px){
+ #battleArena .fx-caption{font-size:10px;min-width:65px;max-width:33%;padding:5px 3px}
+ #battleArena .fx-orbit{width:75px;height:75px}
+ #battleArena .fx-spark{width:72px}
+}
+@media(prefers-reduced-motion:reduce){
+ #battleArena .unit,#battleArena .fx-orbit,#battleArena .fx-spark,#battleArena .fx-caption{animation:none!important;transition:none!important}
+}
