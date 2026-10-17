@@ -375,7 +375,7 @@ async function claimBonus(choice){
   const row=bonusConsumable(masters.items,layer);
   const item={type:'use',id:row.id,value:G.rollPotionValue(row,layer),bonus:row.bonus_buff_id&&Math.random()<Number(row.bonus_chance)?row.bonus_buff_id:null};
   const free=run.carry.findIndex(x=>!x);
-  if(free>=0)run.carry[free]=item;else run.loot.push(item);
+  if(free>=0)run.carry[free]={...item,returnBonus:true};else run.loot.push(item);
  }else return;
  run.bonusClaimed=true;await persist();renderCheckpoint();renderRun();show('checkpoint');
 }
@@ -508,14 +508,23 @@ async function leave(mode='checkpoint'){
  if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;
  const found=new Map(),items=new Map(),badges=[];
  let stones=0;
- profile.inventory.push(...run.carry.filter(Boolean));
+ const registerItem=item=>{
+  const key=JSON.stringify([item.id,item.value,item.bonus]);
+  const existing=items.get(key);
+  if(existing)existing.count++;
+  else items.set(key,{type:'use',item,count:1});
+ };
+ // A checkpoint bonus enters the carry slots directly, not the loot ledger.
+ for(const item of run.carry.filter(item=>item?.returnBonus))registerItem(item);
+ profile.inventory.push(...run.carry.filter(Boolean).map(item=>{
+  if(!item.returnBonus)return item;
+  const {returnBonus,...saved}=item;
+  return saved;
+ }));
  for(const item of run.loot){
   if(item.type==='use'){
    profile.inventory.push(item);
-   const key=JSON.stringify([item.id,item.value,item.bonus]);
-   const existing=items.get(key);
-   if(existing)existing.count++;
-   else items.set(key,{type:'use',item,count:1});
+   registerItem(item);
   }else if(item.type==='stone'){
    profile.magicStones++;
    stones++;
