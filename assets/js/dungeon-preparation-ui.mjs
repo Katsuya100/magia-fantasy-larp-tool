@@ -26,7 +26,7 @@ export function spellGrid(slots,circles,imageUrl,escapeText,active=true,buffs=[]
    +(c?'':'<span class="tile-title">未装備</span>')
    +'</button>'+(c?'<div class="circle-card-effects">'+compactCircleLabel(c,buffs,mpCost,escapeText)
     +circleEffectBadges(c,buffs,escapeText)+'</div>'
-    +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">効果を拡大 ⤢</button>':'')+'</div>';
+    +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">詳細</button>':'')+'</div>';
   }).join('')+'</div>';
 }
 export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,active=true){
@@ -48,7 +48,7 @@ export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[]
   +'<img alt="" src="'+imageUrl(c.image)+'"><span class="picker-label"><small>'+escapeText(summary?summary(c):(c.analysis?c.analysis.attribute+' / '+c.analysis.role:'未解析'))+'</small></span>'
   +(slots.includes(c.id)?'<span class="picker-equipped">編成中</span>':'')+'</button>'
   +circleEffectBadges(c,buffs,escapeText)
-  +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">効果を大きく見る ⤢</button></div>').join('');
+  +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">詳細</button></div>').join('');
 }
 export function itemChoices(inventory,slots,itemName,escapeText){
  if(!inventory.length)return '<p class="collection-empty">持ち込みできるアイテムがありません。</p>';
