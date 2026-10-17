@@ -240,6 +240,14 @@ try{
    target[key]=value;return true;
   }});
  }
+ const projectileEvents=[];
+ for(const side of ['hero','enemy']){
+  const shot=$(side+'Projectile');
+  shot.dataset=new Proxy(shot.dataset,{set(target,key,value){
+   if(key==='effect'&&value==='attack')projectileEvents.push({side,attribute:target.attribute});
+   target[key]=value;return true;
+  }});
+ }
  assert.ok(p.run.hero.spells[0],'preanalyzed magic is available before first cast');
  assert.match($('battleSpells').innerHTML,/data-circle-detail=/,'touch expansion is available during battle');
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
@@ -268,6 +276,9 @@ try{
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
  assert.equal($('floorLabel').textContent,'1層2戦目');
  assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
+ assert.ok(projectileEvents.some(event=>event.side==='hero'&&event.attribute==='flame'),'flame attack launches from hero toward enemy');
+ assert.equal($('heroProjectile').dataset.effect,'idle','attacker projectile resets after the combat phase');
+ assert.equal($('enemyProjectile').dataset.effect,'idle','enemy projectile resets after the combat phase');
   assert.ok(combatShake.includes('true'),'damaging attack triggers only the confined arena shake');
  assert.ok(ceremonies.includes('enemy-death'),'enemy death ceremony played');
  assert.ok(ceremonies.includes('loot'),'loot ceremony played');
