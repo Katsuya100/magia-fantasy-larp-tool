@@ -228,3 +228,42 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 /* Both sides can be struck while lunging in the same simultaneous attack phase. */
 #battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-left .78s ease-out both}
 #battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-right .78s ease-out both}
+
+
+/* Legible per-circle magic details via independent touch controls. */
+.magic-equipment-help{font-size:13px;color:var(--soft);margin:0 0 5px}
+.attribute-effect-guide{margin:12px 0;padding:10px 12px;border:1px solid var(--border);font-size:13px}
+.attribute-effect-guide summary{cursor:pointer;color:var(--gold)}
+.attribute-effect-guide ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.attribute-effect-guide li{display:grid;gap:3px;border-top:1px solid var(--border);padding-top:7px}
+.attribute-effect-guide li span{font-size:12px;color:var(--soft)}
+.magic-details-dialog{width:min(90vw,550px);max-height:88vh;overflow-y:auto;padding:0;border:1px solid var(--gold);background:#171929;color:var(--pale);box-shadow:0 20px 100px #000d}
+.magic-details-dialog::backdrop{background:#040612da;backdrop-filter:blur(3px)}
+.magic-details-content{padding:clamp(17px,4vw,30px)}
+.magic-details-content img{display:block;width:min(100%,320px);aspect-ratio:1 / 1;object-fit:cover;margin:12px auto;border:1px solid var(--border)}
+.magic-details-stats{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 14px;align-items:baseline;font-size:clamp(16px,3vw,21px);line-height:1.65}
+.magic-details-stats dt{color:var(--gold);font-size:clamp(13px,2.5vw,16px);font-weight:600;white-space:nowrap}
+.magic-details-stats dd{margin:0;overflow-wrap:anywhere}
+.magic-expand{min-height:40px!important;touch-action:manipulation;cursor:zoom-in}
+.card .magic-expand{width:100%;margin:3px auto 6px;font-size:14px!important}
+.picker-circle-wrap{min-width:0;display:flex;flex-direction:column;gap:5px}
+.picker-circle-wrap .picker-option{flex:1}
+.picker-circle-wrap .magic-expand{font-size:13px!important}
+.prepare-spell-frame{min-width:0;display:flex;flex-direction:column;gap:4px}
+.prepare-spell-frame .loadout-tile{width:100%;flex:none}
+.prepare-spell-frame .magic-expand{font-size:11px!important;min-height:42px;padding:4px 0!important}
+.battle-spell-frame{position:relative;min-width:0;display:flex;flex-direction:column;gap:4px}
+.battle-spell-frame .battle-tile{width:100%;flex:1;min-height:0}
+.battle-spell-frame .magic-expand{font-size:11px!important;min-height:37px;padding:5px 2px!important}
+.battle-spells .tile-detail{font-size:clamp(11px,1.6vw,14px);line-height:1.45}
+#battleArena .battle-ceremony[data-event="encounter"]{background:none;justify-content:flex-start;padding-top:1px;pointer-events:none}
+#battleArena .battle-ceremony[data-event="encounter"] .ceremony-glyph{font-size:20px}
+#battleArena .battle-ceremony[data-event="encounter"] strong{font-size:15px}
+#battleArena .battle-ceremony[data-event="encounter"] span{display:none}
+#battleArena .enemy-unit[data-entering="true"]{animation:enemy-entrance 1.12s cubic-bezier(.15,.7,.26,1) both}
+@keyframes enemy-entrance{0%{opacity:.05;transform:translateX(-22px) scale(.91);filter:brightness(.4)}23%{opacity:.8;transform:translateX(6px) scale(1.04)}45%{opacity:1;transform:translateX(0) scale(1.02)}100%{opacity:1;transform:none;filter:none}}
+/* Separate fatal overlay from the unit lunge so both remain visible for 260ms. */
+#battleArena .unit[data-dying="true"] .enemy-portrait,#battleArena .unit[data-dying="true"] .hero-portrait{animation:duel-defeat 1.1s ease-in both;filter:grayscale(.8)}
+#battleArena .unit[data-dying="true"]{box-shadow:0 0 22px #f37d7d88;border-color:#cf5d76}
+@media(max-width:630px){.battle-spell-frame .magic-expand,.prepare-spell-frame .magic-expand{font-size:10px!important;min-height:39px;padding:4px 1px!important}}
+@media(prefers-reduced-motion:reduce){#battleArena .enemy-unit[data-entering="true"],#battleArena .unit[data-dying="true"] .enemy-portrait,#battleArena .unit[data-dying="true"] .hero-portrait{animation:none!important}}
