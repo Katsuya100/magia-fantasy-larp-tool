@@ -10,7 +10,7 @@ const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
 let dungeonView='prepare',battleUrls=[];
 let busyAction=false,playingEffects=false;
-let photoAnalysisQueue=Promise.resolve(),photoAnalysisEpoch=0;
+let photoAnalysisQueue=Promise.resolve(),photoAnalysisEpoch=0,lastCaptureRegistration=0;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){
  const targets=['pageError','battleError','cameraError'];
@@ -56,6 +56,7 @@ function rowUnit(unit){const hp=Math.max(0,100*unit.hp/unit.stats.hp),mp=Math.ma
 const roles={attack:'⚔️攻撃',defense:'🛡️防御',support:'✚回復',debuff:'🕸️弱体'};
 function circleLabel(a,revealed=true){return esc(circleSummary({analysis:a,revealed},masters.buffs,G.mpCost));}
 function itemName(item){return masters.items.find(x=>x.id===item.id)?.name||item.id;}
+function roleText(text){return String(text).replace(/通常攻撃|攻撃|防御|弱体|回復/g,word=>({'通常攻撃':'⚔️通常攻撃',攻撃:'⚔️攻撃',防御:'🛡️防御',弱体:'🕸️弱体',回復:'✚回復'})[word]);}
 function render(){
  carry=prepareItems(carry,profile.inventory.length,G.capacity(profile.level));
 
@@ -119,7 +120,7 @@ function renderRun(){
    +'<span class="tile-detail">'+(item.value?'効果 '+item.value:'✚状態回復')+(item.bonus?' ✦':'')+'</span></button>';
  }).join('');
  $('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム '+(run.usedItems||0)+'/'+num('item_per_round');
- $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(x)+'</p>').join('');
+ $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');
 }
 function clearCombatEffects(){
  for(const side of ['hero','enemy']){
@@ -327,7 +328,8 @@ async function capture(){
  canvas.getContext('2d').drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,canvas.width,canvas.height);
  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));
  if(!blob){note('撮影画像を作成できません');return;}
- const circle=newCapturedCircle(crypto.randomUUID(),blob,nextCircleRegistration(circles));
+ lastCaptureRegistration=Math.max(nextCircleRegistration(circles),lastCaptureRegistration+1);
+ const circle=newCapturedCircle(crypto.randomUUID(),blob,lastCaptureRegistration);
  // Do not save until the analysis succeeded. Photo stays in memory while queued.
  $('cameraError').hidden=true;$('cameraError').textContent='';
  queuePhotoAnalysis(circle);
