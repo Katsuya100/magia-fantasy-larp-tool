@@ -207,3 +207,18 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 @keyframes duel-defeat{0%{opacity:1;transform:scale(1)}50%{opacity:.65;transform:scale(1.05)}100%{opacity:0;transform:translateY(16px) scale(.82)}}
 @media(max-width:630px){#battleArena .combatant-fx strong{font-size:10px;padding:4px 5px}#battleArena .combatant-ring{width:56px;height:56px;margin:-28px}#battleArena .combatant-burst{width:68px;margin-left:-34px}#battleArena .ceremony-glyph{font-size:42px}}
 @media(prefers-reduced-motion:reduce){#battleArena .unit,#battleArena .combatant-fx *,#battleArena .battle-ceremony,#battleArena .ceremony-glyph{animation:none!important;transition:none!important}}
+
+/* Each physical drop becomes a separate chest which leaps from the fallen enemy and opens. */
+#battleArena .loot-chests{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));align-items:center;justify-items:center;gap:4px;width:min(92%,440px);margin-top:7px;max-height:210px;overflow:visible}
+#battleArena .loot-chests:empty{display:none}
+#battleArena .loot-chest{--chest-delay:0s;display:block;position:relative;width:35px;height:29px;opacity:0;transform-origin:50% 100%;animation:chest-leap .92s cubic-bezier(.2,.7,.25,1.2) var(--chest-delay) both;filter:drop-shadow(0 2px 4px #000b)}
+#battleArena .loot-chest-body{position:absolute;left:10%;right:10%;bottom:0;height:61%;border:2px solid #eac577;border-radius:2px 2px 5px 5px;background:linear-gradient(90deg,#9b542c 0 24%,#e9ae4d 24% 35%,#8c4223 35% 64%,#e6b45c 64% 76%,#9a4c27 76%);box-shadow:inset 0 -5px 0 #4d2b23,0 0 10px #ffc8797a}
+#battleArena .loot-chest-lid{position:absolute;z-index:2;left:7%;right:7%;top:18%;height:31%;border:2px solid #f6d58c;border-radius:7px 7px 2px 2px;background:linear-gradient(90deg,#915029 0 25%,#ffe49b 25% 34%,#ac572b 34% 67%,#ffe49b 67% 77%,#915029 77%);transform-origin:12% 100%;animation:chest-open .7s ease-out calc(var(--chest-delay) + .43s) both}
+#battleArena .loot-chest-light{position:absolute;left:43%;top:18%;width:14%;height:47%;background:radial-gradient(ellipse,#fff7bd,transparent);box-shadow:0 0 12px 5px #ffe4a1bb;opacity:0;animation:chest-treasure-light .75s ease-out calc(var(--chest-delay) + .54s) both}
+@keyframes chest-leap{0%{opacity:0;transform:translate(-36px,-110px) rotate(-32deg) scale(.15)}52%{opacity:1;transform:translate(0,8px) rotate(8deg) scale(1.17)}71%{transform:translate(0,-7px) rotate(-4deg) scale(1.05)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
+@keyframes chest-open{0%,20%{transform:rotate(0) translateY(0)}75%,100%{transform:rotate(-43deg) translateY(-4px)}}
+@keyframes chest-treasure-light{0%,20%{opacity:0;transform:scale(.3)}55%{opacity:1;transform:translateY(-9px) scale(2)}100%{opacity:.1;transform:translateY(-20px) scale(.5)}}
+#battleArena .battle-ceremony[data-event="loot"] .ceremony-glyph{font-size:33px}
+#battleArena .battle-ceremony[data-event="loot"]{gap:4px}
+@media(max-width:630px){#battleArena .loot-chests{width:98%;gap:2px;max-height:none}#battleArena .loot-chest{width:22px;height:20px}#battleArena .loot-chest-lid,#battleArena .loot-chest-body{border-width:1px}}
+@media(prefers-reduced-motion:reduce){#battleArena .loot-chest{animation:none!important;opacity:1}#battleArena .loot-chest-lid{animation:none!important;transform:rotate(-43deg) translateY(-4px)}#battleArena .loot-chest-light{animation:none!important;opacity:.4}}
