@@ -60,7 +60,7 @@ for(const ceremony of ['encounter','hero-death','enemy-death','loot']){
 assert.match(css,/@keyframes chest-leap/);
 assert.match(css,/@keyframes chest-open/);
 assert.match(css,/@keyframes loot-shower/);
-assert.match(css,/@media\\(prefers-reduced-motion:reduce\\)/);
+assert.ok(css.includes('@media(prefers-reduced-motion:reduce)'));
 
 assert.match(css,/@keyframes fx-rush-left/);
 assert.match(css,/@keyframes fx-rush-right/);
@@ -68,7 +68,7 @@ assert.match(css,/@keyframes fx-guard/);
 assert.match(css,/@keyframes fx-hex/);
 assert.match(css,/@keyframes fx-heal/);
 assert.match(css,/@keyframes fx-burn/);
-assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+assert.ok(css.includes('@media(prefers-reduced-motion:reduce)'));
 assert.match(page,/id="battleSpells" class="loadout-grid battle-spells"/);
 assert.match(page,/id="battleItems" class="loadout-grid battle-items"/);
 assert.match(page,/id="battleBasic" class="battle-basic"/);
