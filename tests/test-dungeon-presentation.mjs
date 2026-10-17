@@ -151,14 +151,13 @@ assert.ok(app.includes("onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy
 assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 
-assert.match(app,/circles=newestCirclesFirst\(\[\.\.\.circles,circle\]\)/);
-assert.match(app,/await putCircle\(db,circle\)/);
+assert.ok(app.includes('circles=newestCirclesFirst([...circles,analyzed])'),'successful captures sort newest first');
+assert.ok(app.includes('await putCircle(db,analyzed)'),'save only after successful camera analysis');
 assert.match(app,/await analyzeCapturedCircle\(circle\)/,'camera opens analysis before registering');
-assert.match(app,/if\(!valid\(\)\)return;[\s\S]*?await putCircle\(db,circle\)/,'successful analysis required before saving');
+assert.match(app,/const analyzed=savePreanalysis\(circle,result\);[\s\S]*?await putCircle\(db,analyzed\)/,'save follows validation');
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
 assert.match(app,/newestCirclesFirst\(await allCircles\(db\)\)/);
-assert.match(app,/newestCirclesFirst\(\[\.\.\.circles,circle\]\)/);
-assert.match(app,/newCapturedCircle\(crypto\.randomUUID\(\),blob,nextCircleRegistration\(circles\)\)/);
+assert.match(app,/newCapturedCircle\(crypto\.randomUUID\(\),blob,lastCaptureRegistration\)/);
 assert.doesNotMatch(picker,/displayName|c\.name/);
 assert.match(app,/openGrimoireFromPicker/);
 assert.match(app,/\$\('tab-prepare'\)\.hidden=exploring/);
