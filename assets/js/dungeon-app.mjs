@@ -1,14 +1,14 @@
-import * as G from './dungeon-core.mjs?v=20261017.22';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.22';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.22';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.22';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.22';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.22';
+import * as G from './dungeon-core.mjs?v=20261017.23';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.23';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.23';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.23';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.23';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.23';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.22';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.22';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.22';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.22';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.23';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.23';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.23';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.23';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const circleImages=createCircleImageUrls();
@@ -98,7 +98,7 @@ function show(requested){
  },180);
 }
 function scrollToDungeonTabs(){
- $('tab-dungeon').closest('nav')?.scrollIntoView?.({behavior:'smooth',block:'start'});
+ $('tab-dungeon').closest('nav')?.scrollIntoView?.({behavior:'instant',block:'start'});
 }
 function imageUrl(blob){return circleImages.get(blob);}
 function battleImageUrl(blob){return circleImages.get(blob);}

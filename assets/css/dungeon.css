@@ -258,10 +258,11 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .battle-spells .tile-detail{font-size:clamp(11px,1.6vw,14px);line-height:1.45}
 #battleArena .battle-ceremony[data-event="encounter"]{background:none;justify-content:flex-start;padding-top:1px;pointer-events:none}
 #battleArena .battle-ceremony[data-event="encounter"] .ceremony-glyph{font-size:20px}
-#battleArena .battle-ceremony[data-event="encounter"] strong{font-size:15px}
+#battleArena .battle-ceremony[data-event="encounter"] strong{
+ font-size:15px;
+ animation:encounter-title-slide .82s cubic-bezier(.2,.85,.25,1) both;
+}
 #battleArena .battle-ceremony[data-event="encounter"] span{display:none}
-#battleArena .enemy-unit[data-entering="true"]{animation:enemy-entrance 1.12s cubic-bezier(.15,.7,.26,1) both}
-@keyframes enemy-entrance{0%{opacity:.05;transform:translateX(-22px) scale(.91);filter:brightness(.4)}23%{opacity:.8;transform:translateX(6px) scale(1.04)}45%{opacity:1;transform:translateX(0) scale(1.02)}100%{opacity:1;transform:none;filter:none}}
 /* Separate fatal overlay from the unit lunge so both remain visible for 260ms. */
 #battleArena .unit[data-dying="true"] .enemy-portrait,#battleArena .unit[data-dying="true"] .hero-portrait{animation:duel-defeat 1.1s ease-in both;filter:grayscale(.8)}
 #battleArena .unit[data-dying="true"]{box-shadow:0 0 22px #f37d7d88;border-color:#cf5d76}
@@ -447,23 +448,21 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .battle-ceremony[data-event="encounter"] .ceremony-glyph{
  animation:encounter-mark .82s cubic-bezier(.16,1,.3,1) both
 }
-#battleArena .enemy-unit[data-entering="true"]{
- animation:enemy-snap-entrance .42s cubic-bezier(.12,.88,.19,1) both
-}
 @keyframes encounter-slide{
- 0%{opacity:0;transform:translateX(62px)}
- 19%,69%{opacity:1;transform:translateX(0)}
- 100%{opacity:0;transform:translateX(-62px)}
+ /* Fixed full-width overlay: move only children, never the viewport. */
+ 0%{opacity:0}
+ 19%,69%{opacity:1}
+ 100%{opacity:0}
 }
 @keyframes encounter-mark{
- 0%{opacity:0;transform:translateX(22px) scale(.6) rotate(-22deg)}
+ 0%{opacity:0;transform:translateX(14px) rotate(-12deg)}
  20%,69%{opacity:1;transform:none}
- 100%{opacity:0;transform:translateX(-22px) scale(.86) rotate(12deg)}
+ 100%{opacity:0;transform:translateX(-14px) rotate(10deg)}
 }
-@keyframes enemy-snap-entrance{
- 0%{opacity:0;transform:translateX(-48px) scale(.95);filter:brightness(.55)}
- 70%{opacity:1;transform:translateX(3px) scale(1.02);filter:brightness(1.3)}
- 100%{opacity:1;transform:none;filter:none}
+@keyframes encounter-title-slide{
+ 0%{opacity:0;transform:translateX(25px)}
+ 19%,69%{opacity:1;transform:none}
+ 100%{opacity:0;transform:translateX(-25px)}
 }
 /* Sanctuary entrance has a gentle, slower weight than tab changes. */
 #checkpoint.panel:not([hidden]){
@@ -569,11 +568,20 @@ dialog[open]::backdrop{opacity:1}
  animation-duration:var(--ceremony-duration,2.4s)
 }
 @keyframes loot-ceremony-arrive{
- 0%{opacity:0;transform:scale(.88)}
- 24%,76%{opacity:1;transform:scale(1)}
- 100%{opacity:0;transform:scale(1.05)}
+ /* No full-arena zoom just before the next encounter. */
+ 0%{opacity:0}
+ 24%,76%{opacity:1}
+ 100%{opacity:0}
 }
 @media(prefers-reduced-motion:reduce){
  #battleArena .enemy-unit[data-entering="true"]{animation:none!important}
  .scene-stack > .panel[data-exiting="true"],.scene-stack > .panel[data-entering="true"]{animation:none!important}
+}
+
+/* Stable mobile viewport while the encounter title and enemy slide in. */
+html,body{overflow-x:clip}
+#battleArena{overflow-x:clip;min-width:0;max-width:100%}
+#battleArena .battle-ceremony[data-event="encounter"]{transform:none}
+@media(prefers-reduced-motion:reduce){
+ #battleArena .battle-ceremony[data-event="encounter"] strong{animation:none!important}
 }

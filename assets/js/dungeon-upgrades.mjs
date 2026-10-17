@@ -18,8 +18,10 @@ export function savedUpgrade(circle){
  return {basePower:circle.basePower,upgradeLevel:circle.upgradeLevel};
 }
 export function applySavedUpgrade(circle,record){
- if(!circle?.analysis||!record)return circle;
- const base=Number(record.basePower),level=Number(record.upgradeLevel);
+ if(!circle?.analysis)return circle;
+ // Read either current profile metadata or the older upgraded photo record.
+ const source=record??circle;
+ const base=Number(source.basePower),level=Number(source.upgradeLevel);
  if(!Number.isFinite(base)||base<=0||!Number.isSafeInteger(level)||level<1||level>100000)return circle;
  return {...circle,basePower:base,upgradeLevel:level,
   analysis:{...circle.analysis,power:strengthenedPower(base,level)}};
