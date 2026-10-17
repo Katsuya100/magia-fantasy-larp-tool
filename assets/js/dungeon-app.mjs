@@ -360,7 +360,7 @@ async function claimBonus(choice){
  else if(choice==='collection'){const item=bonusCollection(masters.collections,layer);run.loot.push({type:'collection',id:item.id});}
  else if(choice==='item'){
   const row=bonusConsumable(masters.items,layer);
-  const item={type:'use',id:row.id,value:G.roll(Number(row.min_value),Number(row.max_value)),bonus:row.bonus_buff_id&&Math.random()<Number(row.bonus_chance)?row.bonus_buff_id:null};
+  const item={type:'use',id:row.id,value:G.rollPotionValue(row,layer),bonus:row.bonus_buff_id&&Math.random()<Number(row.bonus_chance)?row.bonus_buff_id:null};
   const free=run.carry.findIndex(x=>!x);
   if(free>=0)run.carry[free]=item;else run.loot.push(item);
  }else return;
