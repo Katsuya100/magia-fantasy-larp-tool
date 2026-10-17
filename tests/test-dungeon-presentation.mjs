@@ -189,7 +189,7 @@ assert.match(page,/id="deleteSaveData"[^>]*data-action="delete-data"/,'profile h
 assert.match(page,/id="deleteDataDialog"/,'data reset is confirmed');
 assert.match(page,/id="deleteDataPhrase"/,'data reset requires typing a confirmation word');
 assert.match(app,/clearDungeonData\(db\)/,'save reset clears both persistent stores');
-assert.match(app,/document.startViewTransition/,'tabs crossfade on capable browsers');
+assert.match(app,/applyView\(name,before\)/,'tabs crossfade while preserving the outgoing scene');
 assert.match(css,/@keyframes snappy-rush-hero/,'hero attacks have accelerated easing');
 assert.match(css,/@keyframes snappy-rush-enemy/,'enemy attacks have accelerated easing');
 assert.match(css,/@keyframes snappy-screen-shake/,'attacks shake the arena');
