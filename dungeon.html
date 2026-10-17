@@ -7,11 +7,11 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261017.19">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261017.20">
 </head>
 <body>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main class="shell" data-release="20261017.19">
+  <main class="shell" data-release="20261017.20">
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -67,7 +67,10 @@
         </div>
         <div id="playerStats" class="stats-sheet"></div>
       </div>
-
+      <div class="profile-data-actions">
+        <p>この端末に保存されている冒険のデータを管理します。</p>
+        <button type="button" id="deleteSaveData" class="danger" data-action="delete-data">冒険データをすべて削除</button>
+      </div>
     </section>
 
     <section id="library" class="panel grimoire-panel" hidden>
@@ -82,7 +85,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261017.19" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261017.20" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -210,8 +213,22 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.17.11</span></footer>
+    <dialog id="deleteDataDialog" class="name-dialog delete-data-dialog" aria-labelledby="deleteDataTitle">
+      <div class="delete-data-dialog-inner">
+        <h2 id="deleteDataTitle">すべての冒険データを削除しますか？</h2>
+        <p>冒険者プロフィール・レベル・実績・魔導石・所持品・登録済み魔法陣の画像・進行中の探索を、この端末から完全に削除します。</p>
+        <p><strong>この操作は取り消せません。</strong> 続行する場合は「削除」と入力してください。</p>
+        <label for="deleteDataPhrase">確認のため「削除」と入力</label>
+        <input type="text" id="deleteDataPhrase" autocomplete="off" spellcheck="false" placeholder="削除" aria-describedby="deleteDataError">
+        <p id="deleteDataError" class="name-error" role="alert"></p>
+        <div class="buttons">
+          <button type="button" id="cancelDeleteData" class="subtle">キャンセル</button>
+          <button type="button" id="confirmDeleteData" class="danger" disabled>データを完全に削除</button>
+        </div>
+      </div>
+    </dialog>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.17.12</span></footer>
   </main>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261017.19"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261017.20"></script>
 </body>
 </html>
