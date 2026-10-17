@@ -354,11 +354,11 @@ assert.match(css,/\.battle-spells\{grid-template-columns:repeat\(5,minmax\(0,1fr
 assert.match(css,/\.battle-spells\{align-items:start\}/,'spell frames start aligned without stretching');
 assert.match(css,/\.battle-spell-frame \.battle-tile\{\s*flex:0 0 auto;height:auto;min-height:0/,'cast button sizes to its own image and 発動 label');
 assert.match(css,/\.battle-spells \.tile-cooldown\{\s*margin-top:4px/,'cast label stays just below the image');
-assert.match(css,/#battleArena \.unit\{\s*height:280px;min-height:280px;max-height:280px/,'both combatants have fixed identical desktop height');
-assert.match(css,/#battleArena \.unit\{\s*height:240px;min-height:240px;max-height:240px/,'both combatants have fixed identical mobile height');
+assert.match(css,/#battleArena \.unit\{\s*height:270px;min-height:270px;max-height:270px/,'both combatants have fixed identical desktop height');
+assert.match(css,/#battleArena \.unit\{\s*height:232px;min-height:232px;max-height:232px/,'both combatants have fixed identical mobile height');
 assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:38px minmax\(0,1fr\)/,'both names reserve the exact same fixed row height');
 assert.match(css,/#battleArena \.unit-info h3\{[\s\S]*?white-space:normal;overflow-wrap:anywhere;[\s\S]*?-webkit-line-clamp:2/,'long names wrap over two lines instead of escaping the card');
-assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:38px 38px 35px minmax\(0,1fr\)/,'both sides align HP, MP and MAG/DEF/RES rows');
+assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:34px 34px 33px minmax\(0,1fr\)/,'both sides align HP, MP and MAG/DEF/RES rows');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*min-width:0;min-height:0;flex:1;overflow:visible/,'status area stops scrolling');
 assert.doesNotMatch(css,/#battleArena #enemyStats,#battleArena #heroStats\{[^}]*overflow-y:auto/,'no hidden per-combatant stats scrollbars');
 assert.match(css,/#battleArena \.combat-attributes\{\s*min-width:0;display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'MAG, DEF and RES are in separate columns');
@@ -368,8 +368,24 @@ assert.match(app,/function rowUnit\(unit\)\{[\s\S]*?class="battle-vital"[\s\S]*?
 // margin between glowing glyphs and two-line names on both mobile and desktop.
 assert.match(css,/#battleArena \.unit \.enemy-portrait,#battleArena \.unit \.hero-portrait\{\s*box-sizing:border-box;width:100%;height:64px;flex:0 0 64px;[\s\S]*?margin:0 0 14px;font-size:46px/,'desktop combat portraits leave 14px between icon area and names');
 assert.match(css,/#battleArena \.unit \.enemy-portrait,#battleArena \.unit \.hero-portrait\{\s*height:44px;flex-basis:44px;margin-bottom:12px;font-size:36px/,'mobile combat portraits leave a 12px gap above names');
-assert.match(css,/#battleArena \.unit\{\s*height:280px;min-height:280px;max-height:280px/,'spacing does not increase desktop fighter box height');
-assert.match(css,/#battleArena \.unit\{\s*height:240px;min-height:240px;max-height:240px/,'spacing does not increase mobile fighter box height');
+assert.match(css,/#battleArena \.unit\{\s*height:270px;min-height:270px;max-height:270px/,'spacing does not increase desktop fighter box height');
+assert.match(css,/#battleArena \.unit\{\s*height:232px;min-height:232px;max-height:232px/,'spacing does not increase mobile fighter box height');
 assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:38px minmax\(0,1fr\)/,'left and right names reserve the same two-line row');
-assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:38px 38px 35px minmax\(0,1fr\)/,'HP/MP and attributes stay vertically aligned');
+assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:34px 34px 33px minmax\(0,1fr\)/,'HP/MP and attributes stay vertically aligned');
+
+/* Glow is drawn outside the short icon track, without changing layout. */
+assert.match(css,/#battleArena \.enemy-portrait,\s*#battleArena \.hero-portrait\{\s*background:none;\s*isolation:isolate/,'remove the portrait-sized clipped radial backgrounds');
+assert.match(css,/#battleArena \.enemy-portrait::before,[\s\S]*?#battleArena \.hero-portrait::before\{\s*content:"";position:absolute;inset:-17px 0 -19px;z-index:-1/,'enemy and hero glows extend vertically without enlarging their icons');
+assert.match(css,/background:radial-gradient\(ellipse 37% 51% at 50% 50%,\s*var\(--portrait-aura\)/,'portrait glow is a soft vertical ellipse');
+assert.match(css,/#battleArena \.enemy-portrait\{--portrait-aura:rgba\(167,73,100,\.53\)\}/,'enemy keeps rosy aura');
+assert.match(css,/#battleArena \.hero-portrait\{--portrait-aura:rgba\(57,143,159,\.56\)\}/,'hero keeps cool aura');
+assert.match(css,/#battleArena \.unit\{\s*height:270px;min-height:270px;max-height:270px/,'desktop frames remain equal fixed height, slightly shorter');
+assert.match(css,/#battleArena \.unit\{\s*height:232px;min-height:232px;max-height:232px/,'mobile frames remain equal fixed height, slightly shorter');
+assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*grid-template-rows:31px 31px 33px minmax\(0,1fr\)/,'matching mobile HP, MP and attribute rows leave room for status effects');
+assert.match(css,/\.relic-card\.discovered\[data-rarity="common"\] \.relic-art\{box-shadow:none\}/,'only common loses the surrounding aura');
+assert.match(css,/\.relic-card\.discovered\[data-rarity="common"\] \.relic-glyph,[\s\S]*?\.relic-card\.discovered\[data-rarity="common"\] \.relic-rarity\{text-shadow:none\}/,'common text does not glow');
+for(const rarity of ['uncommon','rare','epic','legendary']){
+ assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--rarity-glow:#[0-9a-f]{8}'),rarity+' keeps its colorful glow');
+}
+assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?0 0 32px var\(--rarity-glow\)/,'rarer halo remains intact');
 console.log('PASS camera circle guide, layer progression, 3-column items, readable story, terminology and fantasy layout');
