@@ -158,6 +158,14 @@ export function enemyScaling(level){
  return {hp:num('enemy_hp_scale_early')+(num('enemy_hp_scale_late')-num('enemy_hp_scale_early'))*t,
   mag:num('enemy_mag_scale_early')+(num('enemy_mag_scale_late')-num('enemy_mag_scale_early'))*t};
 }
+// Old 10-layer full-recovery saves could contain undefined MP after
+// reading hero.stats.mp (which does not exist). Repair only invalid values;
+// legitimate 0 MP must remain 0.
+export function repairInvalidMp(hero){
+ if(!hero||Number.isFinite(hero.mp)||!Number.isFinite(hero.maxMp)||hero.maxMp<=0)return false;
+ hero.mp=hero.maxMp;
+ return true;
+}
 export function recoverVictoryMp(hero){
  const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1);
  const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
