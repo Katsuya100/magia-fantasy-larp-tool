@@ -187,7 +187,12 @@ async function ceremony(event,title,detail='',drops=0){
  playingEffects=true;
  const stage=$('battleCeremony');
  const entering=event==='encounter';
- if(entering)$('enemyCombatant').dataset.entering='true';
+ if(entering){
+  // Enemy data is already rendered; reveal the fresh opponent only when
+  // the new encounter animation actually begins.
+  $('enemyCombatant').dataset.defeated='false';
+  $('enemyCombatant').dataset.entering='true';
+ }
  const side=event==='hero-death'?'hero':event==='enemy-death'?'enemy':null;
  const duration=effectDuration()?(event==='loot'?lootCeremonyDuration(drops):1120):0;
  stage.dataset.event=event;
@@ -210,9 +215,8 @@ async function ceremony(event,title,detail='',drops=0){
 }
 function createEnemy(floor){const rowFloor=floorMaster(floor),level=Number(rowFloor.enemy_level);if(Number(rowFloor.boss)!==Number(isLayerBoss(floor)))throw Error('階層ボスの配置が不正');const pool=masters.enemies.filter(x=>Number(x.min_level)<=level&&Number(x.min_level)>=Number(rowFloor.minimum_enemy_level)&&x.boss_only!=='1');let row;if(Number(rowFloor.boss)===1){row=masters.enemies.find(x=>x.id===rowFloor.boss_enemy_id);if(!row||Number(row.min_level)>level)throw Error('ボスの設定が不正');}else row=G.weighted(pool);return {unit:G.fromEnemy(row,level),name:row.name};}
 function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor);
- // A defeated foe stays invisible throughout loot / checkpoint; only a freshly
- // prepared opponent is allowed to become visible during its entrance.
- $('enemyCombatant').dataset.defeated='false';
+ // Keep the previous defeated opponent hidden while the next opponent is prepared.
+ // The encounter ceremony reveals the replacement after renderRun().
  run.enemy=unit;run.enemyName=name;run.usedItems=0;run.stage='battle';recordLayerVisit(profile,run.floor);run.log.push(encounterLabel(run.floor)+(isLayerBoss(run.floor)?'・階層ボス':'')+'：'+name+'が現れた');}
 function renderCheckpoint(){
  const run=profile.run;if(!run)return;
