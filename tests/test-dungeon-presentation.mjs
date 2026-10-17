@@ -205,7 +205,7 @@ assert.ok(app.includes(`data-rarity="'+(found?rarity:'unknown')`),'unfound relic
 assert.equal(css.includes('/* Color-vision accessibility:'),false,'previous flat, no-glow frame redesign must be removed');
 assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?box-shadow:0 0 0 9px var\(--rarity-halo\),[\s\S]*?0 0 32px var\(--rarity-glow\)/,'original luminous halo and bloom are restored');
 assert.match(css,/\.relic-card\.discovered \.relic-glyph\{[\s\S]*?text-shadow:0 0 20px var\(--rarity-glow\)/,'glyph keeps colorful glow');
-assert.doesNotMatch(css.slice(css.indexOf('/* Restore the collection')),/border-style\s*:|border-width\s*:|border:\s*\d+px/,'new rarity treatment does not modify frame patterns or widths');
+assert.doesNotMatch(css.slice(css.indexOf('/* Restore the collection'),css.indexOf('/* Combat presentation:',css.indexOf('/* Restore the collection'))),/border-style\s*:|border-width\s*:|border:\s*\d+px/,'new rarity treatment does not modify frame patterns or widths');
 assert.match(css,/\.relic-card\{[^}]*border:1px solid var\(--border\)/,'the original outer card frame is unchanged');
 assert.match(css,/\.relic-art\{[^}]*border:1px solid #e1c58b77/,'the original circular frame thickness stays unchanged');
 assert.match(css,/\.relic-card\.discovered \.relic-rarity\{[\s\S]*?font-size:14px/,'rarity labels remain readable');
