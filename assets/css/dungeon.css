@@ -158,3 +158,52 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 @media(prefers-reduced-motion:reduce){
  #battleArena .unit,#battleArena .fx-orbit,#battleArena .fx-spark,#battleArena .fx-caption{animation:none!important;transition:none!important}
 }
+
+/* Concurrent actions: each fighter has its own element palette and visual track. */
+#battleArena .unit{--combat-color:#e5c98b;--combat-aura:rgba(229,201,139,.48);overflow:visible}
+#battleArena .unit[data-attribute="flame"]{--combat-color:#ff9b58;--combat-aura:rgba(255,108,48,.45)}
+#battleArena .unit[data-attribute="bolt"]{--combat-color:#f8db64;--combat-aura:rgba(242,219,83,.45)}
+#battleArena .unit[data-attribute="aqua"]{--combat-color:#71d8e6;--combat-aura:rgba(81,192,228,.4)}
+#battleArena .unit[data-attribute="storm"]{--combat-color:#a5f0d4;--combat-aura:rgba(144,245,202,.4)}
+#battleArena .unit[data-attribute="gravity"]{--combat-color:#aa92e4;--combat-aura:rgba(143,104,224,.45)}
+#battleArena .unit[data-attribute="law"]{--combat-color:#f2d995;--combat-aura:rgba(238,205,125,.45)}
+#battleArena .unit[data-attribute="chaos"]{--combat-color:#f68fcb;--combat-aura:rgba(248,112,184,.45)}
+#battleArena .combatant-fx{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:4;opacity:0;color:var(--combat-color)}
+#battleArena .unit[data-effect]:not([data-effect="idle"]) .combatant-fx{opacity:1}
+#battleArena .combatant-fx strong{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-size:12px;line-height:1.25;white-space:normal;max-width:96%;text-align:center;color:#fff9df;text-shadow:0 1px 5px #000,0 0 12px var(--combat-color);border-radius:18px;border:1px solid var(--combat-color);background:#101725dd;padding:5px 9px;box-shadow:0 0 16px var(--combat-aura);animation:duel-fade .78s ease-out both}
+#battleArena .combatant-ring,#battleArena .combatant-burst{position:absolute;left:50%;top:44%;opacity:0;pointer-events:none}
+#battleArena .combatant-ring{width:85px;height:85px;margin:-43px;border:3px solid var(--combat-color);border-radius:50%;box-shadow:0 0 25px var(--combat-aura),inset 0 0 15px var(--combat-aura)}
+#battleArena .combatant-burst{width:115px;height:5px;margin:-2px -57px;background:var(--combat-color);box-shadow:0 0 22px 6px var(--combat-aura);border-radius:50%}
+#battleArena .unit[data-effect="attack"] .combatant-burst,
+#battleArena .unit[data-effect="basic"] .combatant-burst{animation:duel-burst .78s ease-out both}
+#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"]){animation:fx-rush-left .78s ease-out both}
+#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"]){animation:fx-rush-right .78s ease-out both}
+#battleArena .unit[data-hit="true"]{animation:fx-impact .78s ease-out both;border-color:var(--combat-color)}
+#battleArena .unit[data-effect="defense"] .combatant-ring,
+#battleArena .unit[data-effect="buff"] .combatant-ring{animation:fx-guard .78s ease-out both}
+#battleArena .unit[data-effect="support"] .combatant-ring,
+#battleArena .unit[data-effect="item"] .combatant-ring{animation:fx-heal .78s ease-out both}
+#battleArena .unit[data-effect="debuff"] .combatant-ring{border-style:dashed;animation:fx-hex .78s ease-out both}
+#battleArena .unit[data-effect="burn"] .combatant-burst{animation:fx-burn .78s ease-out both}
+#battleArena .unit:is([data-effect="defense"],[data-effect="buff"],[data-effect="support"],[data-effect="item"]){border-color:var(--combat-color);box-shadow:0 0 17px var(--combat-aura)}
+#battleArena .unit[data-effect="debuff"]{border-color:var(--combat-color)}
+#battleArena .unit[data-hit="true"][data-effect="debuff"]{animation:fx-hex-hit .78s ease-out both}
+@keyframes duel-burst{0%,17%{opacity:0;transform:rotate(-40deg) scale(.1)}44%{opacity:1;transform:rotate(30deg) scale(1.25)}95%,100%{opacity:0;transform:rotate(115deg) scale(.45)}}
+@keyframes duel-fade{0%{opacity:0;transform:translate(-50%,9px) scale(.8)}26%,72%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-19px) scale(.9)}}
+#battleArena .battle-ceremony{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;pointer-events:none;text-align:center;background:radial-gradient(ellipse,#0e1021ef 18%,#0709138a 70%,transparent);animation:ceremony-arrive 1.1s ease-in-out both;color:#fbe0a2}
+#battleArena .battle-ceremony[hidden]{display:none!important}
+#battleArena .ceremony-glyph{font-size:60px;line-height:1;color:#e7c77e;text-shadow:0 0 22px #e4a9519e;animation:ceremony-seal 1.1s ease-out both}
+#battleArena .battle-ceremony strong{font:700 clamp(17px,3vw,28px) var(--roman);letter-spacing:.06em;text-shadow:0 0 25px #e0b869}
+#battleArena .battle-ceremony span{font-size:12px;color:#f4e6ce}
+#battleArena .battle-ceremony[data-event="encounter"]{background:radial-gradient(ellipse,#591f27e3 4%,#0b0d20bb 73%,transparent)}
+#battleArena .battle-ceremony[data-event="hero-death"]{background:radial-gradient(ellipse,#430c1df5 14%,#09040ccb 80%,transparent);color:#ffb0b0}
+#battleArena .battle-ceremony[data-event="enemy-death"]{background:radial-gradient(ellipse,#252038ec 12%,#0d0b1eae 75%,transparent)}
+#battleArena .battle-ceremony[data-event="loot"]{background:radial-gradient(ellipse,#6f521dcb 10%,#16121bd4 75%,transparent)}
+#battleArena .battle-ceremony[data-event="loot"] .ceremony-glyph{animation:loot-shower 1.1s ease-in-out both}
+#battleArena .unit[data-effect="death"]{animation:duel-defeat 1.1s ease-in both;filter:grayscale(.8)}
+@keyframes ceremony-arrive{0%{opacity:0;transform:scale(.88)}24%,76%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.05)}}
+@keyframes ceremony-seal{0%{opacity:0;transform:scale(.15) rotate(-100deg)}65%{opacity:1;transform:scale(1.16) rotate(12deg)}100%{opacity:.45;transform:scale(1.3) rotate(30deg)}}
+@keyframes loot-shower{0%{opacity:0;transform:translateY(-60px) rotate(-60deg) scale(.35)}45%{opacity:1;transform:translateY(0) rotate(12deg) scale(1.35)}100%{opacity:0;transform:translateY(50px) rotate(35deg) scale(.9)}}
+@keyframes duel-defeat{0%{opacity:1;transform:scale(1)}50%{opacity:.65;transform:scale(1.05)}100%{opacity:0;transform:translateY(16px) scale(.82)}}
+@media(max-width:630px){#battleArena .combatant-fx strong{font-size:10px;padding:4px 5px}#battleArena .combatant-ring{width:56px;height:56px;margin:-28px}#battleArena .combatant-burst{width:68px;margin-left:-34px}#battleArena .ceremony-glyph{font-size:42px}}
+@media(prefers-reduced-motion:reduce){#battleArena .unit,#battleArena .combatant-fx *,#battleArena .battle-ceremony,#battleArena .ceremony-glyph{animation:none!important;transition:none!important}}
