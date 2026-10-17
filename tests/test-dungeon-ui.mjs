@@ -327,7 +327,10 @@ try{
   'collection discovery filter shows only found relics');
  assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/);
  $('collectionRarityFilter').value='legendary';await $('collectionRarityFilter').fire('change');
- assert.match($('collectionGrid').innerHTML,/該当するコレクションはありません/,'unknown legendary rarity remains undisclosed');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,
+  Number(p.collection.forgotten_crown)>0?1:0,'legendary filter displays only collected legendary items');
+ assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/,
+  'rarity filtering never discloses uncollected rarity');
  $('collectionRarityFilter').value='all';await $('collectionRarityFilter').fire('change');
  $('collectionDiscoveryFilter').value='missing';await $('collectionDiscoveryFilter').fire('change');
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card locked"/g)||[]).length,11,
