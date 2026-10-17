@@ -213,6 +213,8 @@ assert.match(app,/\$\('battleArena'\)\.dataset\.shake/,'combat shake JS only tar
 assert.doesNotMatch(app,/\$\('battle'\)\.dataset\.shake/,'battle scene is never transformed by attack shake');
 assert.match(app,/const terminalSwap=\['checkpoint','result'\]\.includes\(name\)/,'short end scenes do not crossfade against the tall battle panel');
 assert.match(css,/@keyframes terminal-fade-in\{from\{opacity:0\}to\{opacity:1\}\}/,'end screens fade opacity only');
+const deathOverlayFrames=css.match(/@keyframes ceremony-arrive\{([^\n]+)\}/)?.[1]||'';
+assert.ok(deathOverlayFrames&&!deathOverlayFrames.includes('transform:'),'fatal overlay must not shrink or enlarge during transition');
 assert.match(css,/\.scene-stack > #checkpoint\.panel:not\(\[hidden\]\)/,'checkpoint transition does not overlap the old battle');
 assert.match(css,/\.scene-stack > #result\.panel:not\(\[hidden\]\)/,'defeat and return transition does not overlap the old battle');
 const battleMarkup=page.match(/<section id="battle"[^>]*>([\s\S]*?)<\/section>/)?.[1]||'';
