@@ -28,9 +28,9 @@ assert.equal((itemGrid(Array(15).fill(null),inventory,15,true,x=>x.id,esc).match
 const relics=[{id:'common',name:'短剣',rarity:'common'},{id:'rare',name:'宝珠',rarity:'rare'},
  {id:'legend',name:'秘密の王冠',rarity:'legendary'},{id:'epic',name:'魔杖',rarity:'epic'}];
 const owned={common:5,rare:1};
-assert.deepEqual(collectionListIndexes(relics,owned),[0,1,2,3]);
+assert.deepEqual(collectionListIndexes(relics,owned),[0,1,3,2],'default is common to legendary regardless of input order');
 assert.deepEqual(collectionListIndexes(relics,owned,{discovery:'found'}),[0,1]);
-assert.deepEqual(collectionListIndexes(relics,owned,{discovery:'missing'}),[2,3]);
+assert.deepEqual(collectionListIndexes(relics,owned,{discovery:'missing'}),[3,2],'rarity ordering also applies to undiscovered entries');
 assert.deepEqual(collectionListIndexes(relics,owned,{rarity:'rare'}),[1],'undiscovered rarity cannot leak through filters');
 assert.deepEqual(collectionListIndexes(relics,owned,{rarity:'legendary'}),[],'hidden legendary relic remains secret');
 assert.deepEqual(collectionListIndexes(relics,owned,{sort:'rare'}),[1,0,2,3],'discovered rarity first, unknown last');

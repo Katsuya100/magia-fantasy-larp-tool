@@ -10,6 +10,44 @@ const [enemies,items,collections,buffs,balance,levels,floors,playerBase]=await P
 configure({balance,levels,floors,playerBase});
 assert.equal(enemies.length,500);
 assert.equal(collections.length,300);
+const rarityRanks={common:0,uncommon:1,rare:2,epic:3,legendary:4};
+const names=collections.map(x=>x.name);
+assert.equal(new Set(names).size,300,'all relic names must be distinct');
+assert.ok(names.every(name=>!/\\d/.test(name)&&name.length<=20),'relic display names have no serial numbers');
+for(let i=1;i<collections.length;i++)
+ assert.ok(rarityRanks[collections[i].rarity]>=rarityRanks[collections[i-1].rarity],'CSV is ordered by rarity');
+for(const id of ['fang','slime_core','bone','copper_sigil','obsidian','moon_scale','ancient_scroll',
+ 'lightning_crystal','aqua_pearl','labyrinth_key','sealed_eye','forgotten_crown'])
+ assert.ok(collections.some(item=>item.id===id),'preserve original collectible ID '+id);
+assert.deepEqual(enemies.slice(0,4).map(x=>x.name),['スライム','コウモリ','ネズミ','ゴブリン']);
+assert.ok(enemies.slice(0,95).every(x=>x.name.length<=13),'early monster names stay approachable');
+const earlySpecies=new Set(enemies.slice(0,95).filter(x=>x.boss_only==='0').map(x=>x.name));
+const variantPrefixes=['赤','青','黒','白','金','銀','岩','霧','砂','氷','炎','雷',
+ '毒','影','森','闇','鉄','翡翠','灼熱','吹雪','雷光','幽霊','深淵','星屑'];
+let midNew=0,midVariants=0;
+for(let layer=20;layer<=79;layer++){
+ for(let slot=0;slot<4;slot++){
+  const row=enemies[(layer-1)*5+slot];
+  const match=variantPrefixes.some(prefix=>row.name.startsWith(prefix)&&
+   earlySpecies.has(row.name.slice(prefix.length)));
+  if(slot%2===0){
+   assert.ok(!match&&!earlySpecies.has(row.name),'new species at layer '+layer);
+   midNew++;
+  }else{
+   assert.ok(match,'existing monster variation at layer '+layer);
+   midVariants++;
+  }
+ }
+}
+assert.equal(midNew,120,'half of mid-layer normal foes are new types');
+assert.equal(midVariants,120,'half of mid-layer normal foes are variations');
+for(let layer=1;layer<=100;layer++){
+ const boss=enemies[layer*5-1],trophy=collections.find(x=>x.boss_enemy_id===boss.id);
+ assert.equal(boss.boss_only,'1');
+ assert.ok(!/(先遣|守衛|潜伏|術師|スライム)/.test(boss.name),'boss has a distinct formidable name');
+ assert.ok(trophy?.description.includes(boss.name),'named boss and trophy lore stay consistent');
+}
+
 assert.equal(levels.length,150);
 assert.equal(floors.length,500);
 assert.equal(num('level_max'),150);
