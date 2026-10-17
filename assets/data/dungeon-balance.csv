@@ -46,4 +46,5 @@ enemy_hp_scale_early,0.84,序盤の敵最大HP倍率
 enemy_hp_scale_late,0.96,深層の敵最大HP倍率
 enemy_mag_scale_early,0.82,序盤の敵魔力倍率
 enemy_mag_scale_late,0.92,深層の敵魔力倍率
-victory_mp_restore_rate,0.05,各戦闘勝利後に回復する最大MP割合
+victory_mp_restore_rate_early,0.09,序盤の戦闘勝利時MP回復率
+victory_mp_restore_rate_late,0.025,深層の戦闘勝利時MP回復率
