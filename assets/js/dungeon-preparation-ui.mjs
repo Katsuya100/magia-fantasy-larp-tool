@@ -7,7 +7,8 @@ export function circleEffectBadges(circle,buffs=[],escapeText=x=>String(x),mpCos
  return '<div class="circle-card-info">'
   +'<span class="circle-card-symbols">'+escapeText(d.symbols)+'</span>'
   +(d.statusName?'<span class="circle-card-status">'+escapeText(d.statusName)+'</span>':'')
-  +'<span class="circle-card-stats">MP:'+escapeText(d.mp)+' / 威力:'+escapeText(d.power)+'</span>'
+  +'<span class="circle-card-stats"><span class="circle-card-mp">MP:'+escapeText(d.mp)+'</span>'
+  +'<span class="circle-card-power">威力:'+escapeText(d.power)+'</span></span>'
   +'</div>';
 }
 export function itemSymbol(item){return item?.id?.startsWith('heal_')?'✚':item?.id?.startsWith('mana_')?'✧':'◈';}
