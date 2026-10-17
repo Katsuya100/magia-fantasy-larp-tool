@@ -39,7 +39,7 @@ const item={id:'heal_s',value:27,bonus:'buff_aqua'};b.hp=10;assert.equal(G.potio
 const en=G.fromEnemy(enemies[0],2);assert.equal(en.spells.length,5);assert.ok(en.stats.hp>70);
 const u=G.makeUnit(base,1,{},[sp]),v=G.makeUnit(base,1,{},[sp]);
 const logs=G.round(u,v,0,0,buffs,()=>.7);assert.ok(logs.length===2);assert.ok(u.hp<100&&v.hp<100);
-const profile={level:1,xp:0};G.experience(profile,100);assert.equal(profile.level,2);
+const profile={level:1,xp:0};G.experience(profile,G.nextXp(1));assert.equal(profile.level,2);
 const page=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 assert.match(page,/id="cameraStart"/);assert.doesNotMatch(page,/type="file"/);
 const cured=G.makeUnit(base,1);
