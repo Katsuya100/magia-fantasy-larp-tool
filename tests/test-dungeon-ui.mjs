@@ -197,7 +197,7 @@ try{
  $('tab-dungeon').closest=()=>({scrollIntoView:opts=>tabScrolls.push(opts)});
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
- assert.deepEqual(tabScrolls,[{behavior:'smooth',block:'start'}],'entering the labyrinth scrolls to the top edge of the tabs');
+ assert.deepEqual(tabScrolls,[{behavior:'instant',block:'start'}],'entering the labyrinth scrolls to the top edge of the tabs');
  let p=await getProfile(db);
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);
  assert.equal(p.deepestReturnedLayer,0,'entering 1層 does not count as a completed return');
