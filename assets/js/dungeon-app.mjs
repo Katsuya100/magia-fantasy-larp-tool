@@ -53,7 +53,7 @@ function releaseBattleUrls(){for(const url of battleUrls)URL.revokeObjectURL(url
 function freeUrls(){for(const url of urls)URL.revokeObjectURL(url);urls=[];}
 function statusText(unit){return unit.statuses.map(s=>{const row=masters.buffs.find(x=>x.id===s.id);const label=row?.name||(s.id.startsWith('resist_')?s.attribute+'耐性':'強化');return esc(label)+'('+s.turns+')';}).join(' / ');}
 function rowUnit(unit){const hp=Math.max(0,100*unit.hp/unit.stats.hp),mp=Math.max(0,100*unit.mp/unit.maxMp);return '<p>HP '+unit.hp+'/'+unit.stats.hp+'</p><div class="meter"><div class="fill" style="width:'+hp+'%"></div></div><p>MP '+unit.mp+'/'+unit.maxMp+'</p><div class="meter"><div class="fill mp" style="width:'+mp+'%"></div></div><small>MAG '+unit.stats.mag+' / DEF '+G.armor(unit)+' / RES '+unit.stats.res+'</small>'+(unit.statuses.length?'<p class="effects">'+statusText(unit)+'</p>':'');}
-const roles={attack:'⚔ 攻撃',defense:'🛡 防御',support:'✚ 回復',debuff:'🕸 弱体'};
+const roles={attack:'⚔️攻撃',defense:'🛡️防御',support:'✚回復',debuff:'🕸️弱体'};
 function circleLabel(a,revealed=true){return esc(circleSummary({analysis:a,revealed},masters.buffs,G.mpCost));}
 function itemName(item){return masters.items.find(x=>x.id===item.id)?.name||item.id;}
 function render(){
@@ -81,7 +81,7 @@ function render(){
  }).join('');
  $('libraryCards').innerHTML=circles.map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><p>'+esc(circleSummary(c,masters.buffs,G.mpCost))+'</p><div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">効果を大きく見る ⤢</button><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run);
- $('attributeEffects').innerHTML=attributeEffectGuide(masters.buffs).map(x=>'<li><b>'+esc(x.icon+' '+x.label)+'</b><span>強化：'+esc(x.buff)+' / 弱体：'+esc(x.debuff)+'</span></li>').join('');
+ $('attributeEffects').innerHTML=attributeEffectGuide(masters.buffs).map(x=>'<li><b>'+esc(x.icon+' '+x.label)+'</b><span>強化：'+esc(x.buff)+' / 🕸️弱体：'+esc(x.debuff)+'</span></li>').join('');
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
  $('gearCounter').textContent='携行 '+pickedValues(carry).length+' / '+limit+' 個'+(unlocked?'':' · 最初の帰還後に解放');
@@ -107,7 +107,7 @@ function renderRun(){
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
     +(c?'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">効果を拡大 ⤢</button>':'')+'</div>';
  }).join('');
- $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔ 通常攻撃</button>';
+ $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
  const maxSlots=Math.max(5,run.carry.length);
  $('battleItems').innerHTML=Array.from({length:maxSlots},(_,i)=>{
   const item=run.carry[i],disabled=(run.usedItems||0)>=num('item_per_round');
@@ -116,7 +116,7 @@ function renderRun(){
    +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
    +'<span class="tile-item-icon" aria-hidden="true">'+(item.id.startsWith('heal_')?'✚':item.id.startsWith('mana_')?'✧':'◈')+'</span>'
    +'<span class="tile-title">'+esc(itemName(item))+'</span>'
-   +'<span class="tile-detail">'+(item.value?'効果 '+item.value:'状態回復')+(item.bonus?' ✦':'')+'</span></button>';
+   +'<span class="tile-detail">'+(item.value?'効果 '+item.value:'✚状態回復')+(item.bonus?' ✦':'')+'</span></button>';
  }).join('');
  $('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム '+(run.usedItems||0)+'/'+num('item_per_round');
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(x)+'</p>').join('');
