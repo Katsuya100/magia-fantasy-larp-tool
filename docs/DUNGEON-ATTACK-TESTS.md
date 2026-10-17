@@ -45,3 +45,5 @@
 
 
 | 名前と行動別戦闘演出 | `test-dungeon-combat-fx`, `test-dungeon-ui`, `test-dungeon-presentation` | 保存済み冒険者名、回復→防御→弱体→攻撃→通常攻撃→火傷の実解決順、各段階のHPスナップショット、属性ごとの衝突・障壁・弱体・回復・強化の演出、アニメーション終了後の操作復帰、動きを減らす端末設定 |
+
+| 同時戦闘・属性別演出・宝箱 | `test-dungeon-combat-fx`, `test-dungeon-ui`, `test-dungeon-presentation` | 同じ優先順位の両者を同時再生、7属性の独立色、戦闘開始・死亡・勝利演出、ドロップ実数と1:1の開く宝箱、未確定報酬、端末の視差効果設定 |
