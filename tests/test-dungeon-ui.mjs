@@ -65,6 +65,11 @@ try{
  assert.equal($('cameraStop').hidden,false);
  await $('cameraStart').fire('click');
  assert.equal(env.opened,1,'opening an already running camera reuses its media stream');
+ env.analyzerState.attribute='invalid';
+ await $('cameraCapture').fire('click');
+ await wait(()=>$('cameraError').textContent.includes('保存していません'),'failed capture rejected');
+ assert.equal((await allCircles(await openStore(env.factory))).length,0,'failed camera analysis must not save a photo');
+ env.analyzerState.attribute='flame';
  for(let i=0;i<5;i++){
   await $('cameraCapture').fire('click');
   assert.equal($('cameraPane').hidden,false,'camera remains open after every shot');
@@ -86,8 +91,12 @@ try{
  assert.equal(captureCanvas.height,720,'captured JPEG height matches square crop');
  assert.deepEqual(captureCanvas.drawImageArgs.slice(1),[120,0,720,720,0,0,720,720],'the saved square is center-cropped from landscape video');
  const db=await openStore(env.factory);
+ await wait(async()=>(await allCircles(db)).length===5,'five analyzed photographs saved');
  let circles=newestCirclesFirst(await allCircles(db));
- assert.equal(circles.length,5);assert.ok(circles.every(c=>!c.analysis));
+ assert.equal(circles.length,5);assert.ok(circles.every(c=>c.analysis?.attribute==='flame'),'only successful analyses are saved');
+ assert.ok(circles.every(c=>c.revealed===false),'first-use power remains secret');
+ assert.doesNotMatch($('libraryCards').innerHTML,/威力 5000/,'grimoire conceals unused spell power');
+ assert.match($('libraryCards').innerHTML,/消費MP /,'capture reveals MP rating');
  assert.ok(circles.every(c=>!Object.hasOwn(c,'name')),'photo registration does not ask for or save custom names');
  assert.doesNotMatch($('libraryCards').innerHTML,/魔法陣\s*0[1-9]/,'circles must not receive generated names');
  assert.doesNotMatch($('libraryCards').innerHTML,/<b>[^<]*魔法陣/,'no circle heading');
@@ -117,6 +126,14 @@ try{
   assert.equal($('loadoutDialog').open,false);
  }
  assert.equal($('startAttack').disabled,false);
+ await doc.click(btn({openSlot:'4'}));
+ await $('clearLoadoutSlot').fire('click');
+ assert.equal($('startAttack').disabled,false,'four equipped spells can depart');
+ await doc.click(btn({openSlot:'3'}));
+ await $('clearLoadoutSlot').fire('click');
+ assert.equal($('startAttack').disabled,false,'three equipped spells can depart');
+ await doc.click(btn({openSlot:'3'}));await doc.click(btn({chooseCircle:'3'}));
+ await doc.click(btn({openSlot:'4'}));await doc.click(btn({chooseCircle:'4'}));
  assert.doesNotMatch($('slotCards').innerHTML,/魔法陣\s*0[1-9]/,'equipped circles have no generated names');
  assert.equal(($('slotCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,5,'five filled spell slots');
  await doc.click(btn({openSlot:'0'}));
@@ -154,7 +171,8 @@ try{
    target[key]=value;return true;
   }});
  }
- assert.equal(p.run.hero.spells[0],null);
+ assert.ok(p.run.hero.spells[0],'preanalyzed magic is available before first cast');
+ assert.match($('battleSpells').innerHTML,/data-circle-detail=/,'touch expansion is available during battle');
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
  assert.doesNotMatch($('battleSpells').innerHTML,/魔法陣\s*0[1-9]/,'battle also has no generated circle name');
  assert.equal(($('battleSpells').innerHTML.match(/<img alt="" src="blob:/g)||[]).length,5,'all five spells have photo thumbnails');
@@ -168,23 +186,14 @@ try{
  await doc.click(btn({view:'dungeon'}));
  assert.equal($('battle').hidden,false,'dungeon tab resumes the ongoing battle');
  assert.equal($('tab-dungeon').attributes['aria-current'],'page');
- env.analyzerState.attribute='invalid';
+ assert.equal($('battleError').hidden,true);
  await doc.click(btn({cast:'0'}));
- await wait(()=>$('analyzing').hidden===false,'failed analysis begins');
- await wait(()=>$('battle').hidden===false&&$('battleError').textContent.includes('解明できません'),'failed reveal recovery');
- assert.equal($('notice').hidden,true,'global notice remains hidden');
- p=await getProfile(db);
- assert.equal(animationRoles.length,0,'failed spell analysis does not play combat effects');
- assert.equal(p.run.floor,1,'failed analysis does not consume a turn');
- assert.equal(p.run.hero.spells[0],null);
- env.analyzerState.attribute='flame';
- await doc.click(btn({cast:'0'}));
- await wait(()=>$('analyzing').hidden===false,'first-use analysis');
- await wait(async()=>(await getProfile(db)).run?.floor===2,'analysis results');
+ await wait(async()=>(await getProfile(db)).run?.floor===2,'first preanalyzed spell cast');
  circles=newestCirclesFirst(await allCircles(db));
  assert.equal(circles[0].analysis.attribute,'flame');
  assert.equal(circles[0].analysis.role,'attack');
  assert.equal(circles[0].analysis.power,5000);
+ assert.equal(circles[0].revealed,true,'only after a successful cast is power revealed');
  p=await getProfile(db);
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
  assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
