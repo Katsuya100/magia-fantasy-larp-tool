@@ -14,6 +14,7 @@ import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clear
 import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.8';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.8';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.8';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.8';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -118,7 +119,17 @@ function scrollToDungeonTabs(){
 }
 function imageUrl(blob){return circleImages.get(blob);}
 function battleImageUrl(blob){return circleImages.get(blob);}
-function statusText(unit){return unit.statuses.map(s=>{const row=masters.buffs.find(x=>x.id===s.id);const label=row?.name||(s.id.startsWith('resist_')?s.attribute+'耐性':'強化');return esc(label)+'('+s.turns+')';}).join(' / ');}
+function renderHeroName(hero){
+ const name=$('heroName'),displayName=profile.name?.trim()||'名もなき冒険者';
+ name.textContent=displayName+(hero.reviveArmed?' 🪽':'');
+ if(hero.reviveArmed){
+  name.setAttribute('title','生命の紅石：復活待機中');
+  name.setAttribute('aria-label',displayName+'・生命の紅石：復活待機中');
+ }else{
+  name.removeAttribute('title');
+  name.removeAttribute('aria-label');
+ }
+}
 function rowUnit(unit){
  const hp=Math.max(0,100*unit.hp/unit.stats.hp),mp=Math.max(0,100*unit.mp/unit.maxMp);
  // Identical fixed tracks on both sides keep HP, MP and every attribute aligned.
@@ -130,7 +141,7 @@ function rowUnit(unit){
   +[['MAG',unit.stats.mag],['DEF',G.armor(unit)],['RES',unit.stats.res]]
    .map(([label,value])=>'<span class="combat-attribute"><span>'+label+'</span><strong>'+value+'</strong></span>').join('')
   +'</div>';
- const effects=unit.statuses.length?'<p class="effects" title="'+statusText(unit)+'">'+statusText(unit)+'</p>':'<p class="effects" aria-hidden="true"></p>';
+ const effects=unit.statuses.length?'<p class="effects" aria-label="状態効果">'+statusBadges(unit.statuses,masters.buffs,esc)+'</p>':'<p class="effects" aria-hidden="true"></p>';
  return vital('HP',unit.hp,unit.stats.hp,hp,'')
   +vital('MP',unit.mp,unit.maxMp,mp,'mp')+attrs+effects;
 }
@@ -193,7 +204,7 @@ function renderRun(){
  const enemy=run.enemy,hero=run.hero;
  $('floorLabel').textContent=battleHeading(run.floor);
  $('enemyName').textContent=run.enemyName+' Lv.'+enemy.level;
- $('heroName').textContent=profile.name?.trim()||'名もなき冒険者';
+ renderHeroName(hero);
  $('enemyStats').innerHTML=rowUnit(enemy);
  $('heroStats').innerHTML=rowUnit(hero);
  $('battleSpells').innerHTML=run.slotIds.map((id,i)=>{
@@ -271,7 +282,8 @@ async function animateBattle(steps){
     if(victim.dataset.effect==='idle')victim.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
    }
    const final=phase.at(-1);
-   $('heroStats').innerHTML=rowUnit(final.hero);
+   renderHeroName(final.hero);
+    $('heroStats').innerHTML=rowUnit(final.hero);
    $('enemyStats').innerHTML=rowUnit(final.enemy);
   },{overlap:125,onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death',
    side==='hero'?'探索失敗':'討伐成功',
