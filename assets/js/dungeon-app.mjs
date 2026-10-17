@@ -429,7 +429,7 @@ async function leave(mode='checkpoint'){const run=profile.run;if(!run||(mode==='
   ...(mode==='escape'?['脱出の巻物で経験値と戦利品を持ち帰った。']:[]),
  '消耗品 '+potions+'個・収集品 '+collection+'個・魔導石 '+stones+'個・経験値 '+run.xp+'を獲得。',
  'Lv.'+before+' → Lv.'+profile.level+'。',
- ...(rankReward?['冒険者章 '+rankReward+'を獲得！ 次回以降の開始階層が解放。']:[]),
+ ...(rankReward?[rankReward+'を獲得！ 次回以降の開始階層が解放。']:[]),
  '次回の携行品上限 '+G.capacity(profile.level)+'個。'
 ]);show('result');}
 async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
