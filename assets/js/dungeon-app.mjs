@@ -6,7 +6,7 @@ import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from '.
 import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.27';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.27';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight} from './dungeon-design.mjs';
+import {enemyForFight,layerForFight} from './dungeon-design.mjs?v=20261017.27';
 import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.27';
 import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.27';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.27';
