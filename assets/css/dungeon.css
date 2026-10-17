@@ -372,3 +372,151 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  .magic-details-dialog[data-enhancing="true"] .magic-details-content:after,
  .magic-details-dialog[data-enhancing="true"] #magicDetailsImage{animation:none}
 }
+
+/* Responsive combat timing: one brief rush, held contact, and elastic recoil. */
+#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"]),
+#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
+ animation:snappy-rush-hero .44s cubic-bezier(.22,.8,.18,1) both
+}
+#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"]),
+#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
+ animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both
+}
+#battleArena .unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
+ animation:snappy-impact .44s cubic-bezier(.15,.85,.24,1) both
+}
+#battleArena .unit:is([data-effect="attack"],[data-effect="basic"]) .combatant-burst{
+ animation:snappy-burst .44s cubic-bezier(.12,.8,.25,1) both
+}
+#battleArena .combatant-fx strong{animation:duel-fade .44s cubic-bezier(.2,.85,.25,1) both}
+#battleArena .unit:is([data-effect="defense"],[data-effect="buff"]) .combatant-ring{
+ animation:fx-guard .44s cubic-bezier(.16,1,.3,1) both
+}
+#battleArena .unit:is([data-effect="support"],[data-effect="item"]) .combatant-ring{
+ animation:fx-heal .44s cubic-bezier(.16,1,.3,1) both
+}
+#battleArena .unit[data-effect="debuff"] .combatant-ring{
+ animation:fx-hex .44s cubic-bezier(.16,1,.3,1) both
+}
+#battleArena .unit[data-effect="burn"] .combatant-burst{
+ animation:fx-burn .44s cubic-bezier(.16,1,.3,1) both
+}
+@keyframes snappy-rush-hero{
+ 0%{transform:translateX(0) scale(1) rotate(0)}
+ 20%{transform:translateX(8px) scale(.97) rotate(2deg);animation-timing-function:cubic-bezier(.08,.82,.15,1)}
+ 46%,55%{transform:translateX(-34px) scale(1.1) rotate(-4deg);filter:brightness(1.6)}
+ 73%{transform:translateX(5px) scale(.99) rotate(1deg);animation-timing-function:cubic-bezier(.15,.9,.25,1)}
+ 100%{transform:none;filter:none}
+}
+@keyframes snappy-rush-enemy{
+ 0%{transform:translateX(0) scale(1) rotate(0)}
+ 20%{transform:translateX(-8px) scale(.97) rotate(-2deg);animation-timing-function:cubic-bezier(.08,.82,.15,1)}
+ 46%,55%{transform:translateX(34px) scale(1.1) rotate(4deg);filter:brightness(1.6)}
+ 73%{transform:translateX(-5px) scale(.99) rotate(-1deg);animation-timing-function:cubic-bezier(.15,.9,.25,1)}
+ 100%{transform:none;filter:none}
+}
+@keyframes snappy-impact{
+ 0%,38%{transform:none;filter:none}
+ 46%,55%{transform:translateX(7px) scale(.94) rotate(2deg);filter:brightness(2.5)}
+ 68%{transform:translateX(-4px) scale(1.035) rotate(-1deg);filter:brightness(1.25)}
+ 100%{transform:none;filter:none}
+}
+@keyframes snappy-burst{
+ 0%,33%{opacity:0;transform:rotate(-38deg) scale(.1)}
+ 46%,55%{opacity:1;transform:rotate(28deg) scale(1.5)}
+ 100%{opacity:0;transform:rotate(110deg) scale(.35)}
+}
+/* Camera jolt peaks at the same moment as the frozen hit keyframes. */
+#battle.battle-panel[data-shake="true"]:not([hidden]){
+ animation:snappy-screen-shake .44s cubic-bezier(.22,.74,.28,1) both;
+ transform-origin:50% 40%
+}
+@keyframes snappy-screen-shake{
+ 0%,39%{transform:none}
+ 45%,53%{transform:translate(6px,-3px) rotate(.38deg)}
+ 57%{transform:translate(-7px,4px) rotate(-.42deg)}
+ 65%{transform:translate(4px,-2px) rotate(.24deg)}
+ 73%{transform:translate(-2px,1px) rotate(-.12deg)}
+ 100%{transform:none}
+}
+/* Encounter title: quick slide in, short readable hold, quick slide out.
+   Enemy remains on stage after its own fast entrance. Fatal animation unchanged. */
+#battleArena .battle-ceremony[data-event="encounter"]{
+ animation:encounter-slide .82s cubic-bezier(.2,.85,.25,1) both
+}
+#battleArena .battle-ceremony[data-event="encounter"] .ceremony-glyph{
+ animation:encounter-mark .82s cubic-bezier(.16,1,.3,1) both
+}
+#battleArena .enemy-unit[data-entering="true"]{
+ animation:enemy-snap-entrance .42s cubic-bezier(.12,.88,.19,1) both
+}
+@keyframes encounter-slide{
+ 0%{opacity:0;transform:translateX(62px)}
+ 19%,69%{opacity:1;transform:translateX(0)}
+ 100%{opacity:0;transform:translateX(-62px)}
+}
+@keyframes encounter-mark{
+ 0%{opacity:0;transform:translateX(22px) scale(.6) rotate(-22deg)}
+ 20%,69%{opacity:1;transform:none}
+ 100%{opacity:0;transform:translateX(-22px) scale(.86) rotate(12deg)}
+}
+@keyframes enemy-snap-entrance{
+ 0%{opacity:0;transform:translateX(-48px) scale(.95);filter:brightness(.55)}
+ 70%{opacity:1;transform:translateX(3px) scale(1.02);filter:brightness(1.3)}
+ 100%{opacity:1;transform:none;filter:none}
+}
+/* Sanctuary entrance has a gentle, slower weight than tab changes. */
+#checkpoint.panel:not([hidden]){
+ animation:sanctuary-gentle-arrival .95s cubic-bezier(.16,1,.3,1) both
+}
+#checkpoint.panel:not([hidden]) .checkpoint-seal{
+ animation:sanctuary-seal-arrival 1.15s cubic-bezier(.16,1,.3,1) both
+}
+@keyframes sanctuary-gentle-arrival{
+ 0%{opacity:0;transform:translateY(33px)}
+ 100%{opacity:1;transform:translateY(0)}
+}
+@keyframes sanctuary-seal-arrival{
+ 0%{opacity:0;transform:translateY(16px) scale(.86) rotate(-8deg)}
+ 100%{opacity:1;transform:none}
+}
+/* Fast panel crossfade, with View Transitions when supported and CSS fallback. */
+:root::view-transition-old(root){animation:.18s cubic-bezier(.25,.75,.3,1) both scene-fade-out}
+:root::view-transition-new(root){animation:.18s cubic-bezier(.25,.75,.3,1) both scene-fade-in}
+@keyframes scene-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes scene-fade-out{from{opacity:1}to{opacity:0}}
+.panel:not([hidden]):not(#checkpoint){animation:panel-quick-arrival .18s ease-out both}
+@keyframes panel-quick-arrival{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+/* Dialog transitions use discrete display/overlay so close also fades in capable browsers. */
+dialog{
+ opacity:0;transform:translateY(9px) scale(.985);
+ transition:opacity .16s ease-out,transform .16s cubic-bezier(.16,1,.3,1),
+  display .16s allow-discrete,overlay .16s allow-discrete
+}
+dialog[open]{opacity:1;transform:none}
+@starting-style{
+ dialog[open]{opacity:0;transform:translateY(9px) scale(.985)}
+ dialog[open]::backdrop{opacity:0}
+}
+dialog::backdrop{opacity:0;transition:opacity .16s ease-out,display .16s allow-discrete,overlay .16s allow-discrete}
+dialog[open]::backdrop{opacity:1}
+/* Confirmation for the irreversible local-save reset. */
+.profile-data-actions{margin-top:26px;padding-top:18px;border-top:1px solid var(--border);text-align:right}
+.profile-data-actions p{font-size:12px;color:var(--soft);margin:0 0 10px}
+.profile-data-actions .danger{font-size:13px}
+.delete-data-dialog{width:min(92vw,530px)}
+.delete-data-dialog-inner{padding:clamp(21px,4vw,32px)}
+.delete-data-dialog-inner h2{font-size:clamp(19px,4vw,24px);margin:0 0 12px}
+.delete-data-dialog-inner p{font-size:14px;line-height:1.75;color:var(--pale)}
+.delete-data-dialog-inner strong{color:#ffaba5}
+.delete-data-dialog-inner .buttons{justify-content:flex-end;gap:9px}
+.delete-data-dialog-inner .buttons button{flex:1;font-size:13px}
+.delete-data-dialog-inner input{text-align:center;margin:10px 0}
+@media(prefers-reduced-motion:reduce){
+ #battle.battle-panel[data-shake="true"]:not([hidden]),
+ #battleArena .unit,#battleArena .unit .combatant-burst,#battleArena .combatant-fx strong,
+ #battleArena .battle-ceremony[data-event="encounter"],#battleArena .enemy-unit[data-entering="true"],
+ #checkpoint.panel:not([hidden]),#checkpoint.panel:not([hidden]) .checkpoint-seal,
+ .panel:not([hidden]):not(#checkpoint){animation:none!important}
+ dialog,dialog::backdrop{transition:none!important}
+}

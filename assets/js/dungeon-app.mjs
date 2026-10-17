@@ -1,14 +1,14 @@
-import * as G from './dungeon-core.mjs?v=20261017.19';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.19';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.19';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.19';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.19';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.19';
+import * as G from './dungeon-core.mjs?v=20261017.20';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.20';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.20';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.20';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.20';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.20';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.19';
-import {upgradeCircle} from './dungeon-upgrades.mjs?v=20261017.19';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.19';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.19';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.20';
+import {upgradeCircle} from './dungeon-upgrades.mjs?v=20261017.20';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.20';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.20';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const circleImages=createCircleImageUrls();
@@ -38,7 +38,7 @@ function returnToCameraScroll(){
  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(restore));
  else restore();
 }
-function show(name){
+function applyView(name){
  const exploring=Boolean(profile?.run);
  if(name==='dungeon'){
   name=exploring?(activeAnalysis?'analyzing':profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare';
@@ -62,6 +62,16 @@ function show(name){
  }
  if(['home','library','prepare','collection'].includes(name))render();
  if(name==='battle'&&profile?.run&&!playingEffects)renderRun();
+}
+function show(name){
+ // Native View Transitions crossfade outgoing and incoming tab content.
+ // Older browsers receive an equally short CSS entrance fade.
+ const scenes=['home','library','prepare','collection','battle','checkpoint','analyzing','result'];
+ const before=scenes.find(id=>!$(id).hidden);
+ const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+ if(before&&before!==name&&!reduced&&typeof document.startViewTransition==='function'){
+  document.startViewTransition(()=>applyView(name));
+ }else applyView(name);
 }
 function scrollToDungeonTabs(){
  $('tab-dungeon').closest('nav')?.scrollIntoView?.({behavior:'smooth',block:'start'});
@@ -103,6 +113,7 @@ function render(){
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
  $('gearCounter').textContent='携行品 '+pickedValues(carry).length+' / '+limit+' 個'+(unlocked?'':' · 最初の帰還後に解放');
  $('startAttack').disabled=!canDepartWithCircles(slots)||Boolean(profile.run);
+ $('deleteSaveData').disabled=Boolean(profile.run);
  $('circleCounter').textContent='魔法陣 '+slots.filter(Boolean).length+' / 3〜5 個';
 }
 function renderRun(){
@@ -145,6 +156,7 @@ function renderRun(){
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');
 }
 function clearCombatEffects(){
+ $('battle').dataset.shake='false';
  for(const side of ['hero','enemy']){
   const target=$(side+'Combatant');
   target.dataset.effect='idle';
@@ -162,6 +174,7 @@ async function animateBattle(steps){
    clearCombatEffects();
    // Force a new CSS animation cycle even after consecutive turns with the same role.
    void $('battleArena').offsetWidth;
+   $('battle').dataset.shake=phase.some(step=>['attack','basic'].includes(step.role)&&step.amount>0)?'true':'false';
    for(const step of phase){
     const actor=$(step.side+'Combatant');
     actor.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
@@ -178,7 +191,7 @@ async function animateBattle(steps){
    const final=phase.at(-1);
    $('heroStats').innerHTML=rowUnit(final.hero);
    $('enemyStats').innerHTML=rowUnit(final.enemy);
-  },{overlap:260,onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death',
+  },{overlap:125,onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death',
    side==='hero'?'探索失敗':'討伐成功',
    side==='hero'?(profile.name||'冒険者'):(profile.run?.enemyName||''))});
  }finally{
@@ -199,7 +212,7 @@ async function ceremony(event,title,detail='',drops=0){
   $('enemyCombatant').dataset.entering='true';
  }
  const side=event==='hero-death'?'hero':event==='enemy-death'?'enemy':null;
- const duration=effectDuration()?(event==='loot'?lootCeremonyDuration(drops):1120):0;
+ const duration=effectDuration()?(event==='loot'?lootCeremonyDuration(drops):event==='encounter'?ENCOUNTER_EFFECT_MS:1120):0;
  stage.dataset.event=event;
  stage.setAttribute('style','--ceremony-duration:'+(duration/1000)+'s');
  $('ceremonyTitle').textContent=title;
@@ -496,6 +509,37 @@ async function chooseLoadout(choice){
  closeLoadoutPicker();
  render();
 }
+function openDeleteDataDialog(){
+ if(profile.run||activeAnalysis)return;
+ $('deleteDataPhrase').value='';
+ $('confirmDeleteData').disabled=true;
+ $('deleteDataError').textContent='';
+ if(!$('deleteDataDialog').open)$('deleteDataDialog').showModal();
+}
+async function eraseSaveData(){
+ if(profile.run||activeAnalysis||$('deleteDataPhrase').value.trim()!=='削除')return;
+ try{
+  await clearDungeonData(db);
+  stopCamera();
+  circleImages.releaseAll();
+  photoAnalysisEpoch++;
+  lastCaptureRegistration=0;
+  cameraReturnScroll=null;
+  pendingCircleAction=null;
+  picker=null;
+  circles=[];
+  profile=await getProfile(db);
+  slots=prepareCircles(null,[],num('spell_slots'));
+  carry=prepareItems([],0,G.capacity(profile.level));
+  $('deleteDataDialog').close();
+  note('');
+  render();
+  show('prepare');
+  openNameDialog(true);
+ }catch(e){
+  $('deleteDataError').textContent='データの削除に失敗しました：'+e.message;
+ }
+}
 function openNameDialog(required){
  const dialog=$('nameDialog');
  $('playerNameInput').value=profile.name||'';
@@ -512,6 +556,7 @@ function wire(){
   stopCamera();show(b.dataset.view);return;
  }
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
+ if(b.dataset.action==='delete-data'){openDeleteDataDialog();return;}
  if(b.dataset.circleDetail){openMagicDetails(b.dataset.circleDetail);return;}
  if(b.dataset.remove){askCircleAction('remove',b.dataset.remove);return;}
  if(b.dataset.upgrade){askCircleAction('upgrade',b.dataset.upgrade);return;}
@@ -531,6 +576,11 @@ function wire(){
  });
  $('cancelNameDialog').addEventListener('click',()=>$('nameDialog').close());
  $('nameDialog').addEventListener('cancel',event=>{if(!profile.name)event.preventDefault();});
+ $('deleteDataPhrase').addEventListener('input',()=>{
+  $('confirmDeleteData').disabled=$('deleteDataPhrase').value.trim()!=='削除';
+ });
+ $('cancelDeleteData').addEventListener('click',()=>$('deleteDataDialog').close());
+ $('confirmDeleteData').addEventListener('click',()=>exclusive(eraseSaveData));
  $('closeMagicDetails').addEventListener('click',()=>$('magicDetailsDialog').close());
  $('upgradeCircle').addEventListener('click',()=>askCircleAction('upgrade',$('magicDetailsDialog').dataset.circleId));
  $('cancelCircleAction').addEventListener('click',()=>{$('circleActionDialog').close();pendingCircleAction=null;});
