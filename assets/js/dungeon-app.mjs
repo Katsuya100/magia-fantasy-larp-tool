@@ -1,14 +1,14 @@
-import * as G from './dungeon-core.mjs?v=20261017.20';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.20';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.20';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.20';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.20';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.20';
+import * as G from './dungeon-core.mjs?v=20261017.21';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.21';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.21';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.21';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.21';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.21';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.20';
-import {upgradeCircle} from './dungeon-upgrades.mjs?v=20261017.20';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.20';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.20';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.21';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.21';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.21';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.21';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const circleImages=createCircleImageUrls();
@@ -404,9 +404,11 @@ async function capture(){
  $('cameraError').hidden=true;$('cameraError').textContent='';
  await analyzeCapturedCircle(circle);
 }
+function oneSentencePerLine(value){return String(value).replace(/([。！？])\s*(?=\S)/gu,'$1\n');}
 function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
  $('magicDetailsDialog').dataset.circleId=id;
+ $('upgradeFeedback').textContent='';
  $('magicStoneStock').textContent='所持魔導石：'+profile.magicStones+'個 / 強化1回につき1個';
  $('upgradeCircle').hidden=Boolean(profile.run);
  $('upgradeCircle').disabled=Boolean(profile.run)||!isRevealed(circle)||profile.magicStones<1;
@@ -418,7 +420,7 @@ function openMagicDetails(id){
  if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
  rows.push(['MP',d.mp],['威力',d.power]);
  if(isRevealed(circle)&&circle.upgradeLevel)rows.push(['強化', '+'+(circle.upgradeLevel*10)+'%']);
- $('magicDetailsStats').innerHTML=rows.map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(value)+'</dd>').join('');
+ $('magicDetailsStats').innerHTML=rows.map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(oneSentencePerLine(value))+'</dd>').join('');
  if(!$('magicDetailsDialog').open)$('magicDetailsDialog').showModal();
 }
 function askCircleAction(type,id){
@@ -429,8 +431,8 @@ function askCircleAction(type,id){
  pendingCircleAction={type,id};
  $('circleActionTitle').textContent=type==='upgrade'?'魔法陣を強化しますか？':'魔法陣を削除しますか？';
  $('circleActionMessage').textContent=type==='upgrade'
-  ?'魔導石を1個消費して威力を初期値の10%分アップします。この強化は元に戻せません。'
-  :'登録した魔法陣は元に戻せません。削除してもよろしいですか？';
+  ?'魔導石を1個消費して威力を初期値の10%分アップします。\nこの強化は元に戻せません。'
+  :'登録した魔法陣は元に戻せません。\n削除してもよろしいですか？';
  $('confirmCircleAction').textContent=type==='upgrade'?'魔導石を使って強化':'削除する';
  if(!$('circleActionDialog').open)$('circleActionDialog').showModal();
 }
@@ -443,19 +445,26 @@ async function confirmCircleAction(){
   if(action.type==='upgrade'){
    if(!isRevealed(circle)||profile.magicStones<1)return;
    const enhanced=upgradeCircle(circle);
-   await putCircle(db,enhanced);
-   profile.magicStones--;
-   await persist();
+   // Persist only scalar metadata: rewriting a stored photo Blob can fail on mobile browsers.
+   const nextProfile={...profile,magicStones:profile.magicStones-1,
+    circleUpgrades:{...(profile.circleUpgrades||{}),[circle.id]:savedUpgrade(enhanced)}};
+   await saveProfile(db,nextProfile);
+   profile=nextProfile;
    Object.assign(circle,enhanced);
    render();
    openMagicDetails(circle.id);
-   $('upgradeFeedback').textContent='✦ 強化成功！ 威力 '+enhanced.analysis.power+' ✦';
+   $('upgradeFeedback').textContent='✦ 強化成功！\n威力 '+enhanced.analysis.power+' ✦';
    const dialog=$('magicDetailsDialog');
    dialog.dataset.enhancing='false';
    void dialog.offsetWidth;
    dialog.dataset.enhancing='true';
   }else if(action.type==='remove'){
    await deleteCircle(db,circle.id);
+   if(profile.circleUpgrades){
+    const upgrades={...profile.circleUpgrades};
+    delete upgrades[circle.id];
+    profile.circleUpgrades=upgrades;
+   }
    circleImages.release(circle.image);
    circles=circles.filter(c=>c.id!==circle.id);
    slots=slots.map(id=>id===circle.id?null:id);
