@@ -155,7 +155,9 @@ async function animateBattle(steps){
    const final=phase.at(-1);
    $('heroStats').innerHTML=rowUnit(final.hero);
    $('enemyStats').innerHTML=rowUnit(final.enemy);
-  });
+  },{overlap:260,onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death',
+   side==='hero'?'探索失敗':'討伐成功',
+   side==='hero'?(profile.name||'冒険者'):(profile.run?.enemyName||''))});
  }finally{
   clearCombatEffects();
   $('battleSpells').removeAttribute('aria-busy');
@@ -166,6 +168,8 @@ async function animateBattle(steps){
 async function ceremony(event,title,detail='',drops=0){
  playingEffects=true;
  const stage=$('battleCeremony');
+ const entering=event==='encounter';
+ if(entering)$('enemyCombatant').dataset.entering='true';
  const side=event==='hero-death'?'hero':event==='enemy-death'?'enemy':null;
  const duration=effectDuration()?(event==='loot'?lootCeremonyDuration(drops):1120):0;
  stage.dataset.event=event;
@@ -173,13 +177,14 @@ async function ceremony(event,title,detail='',drops=0){
  $('ceremonyTitle').textContent=title;
  $('ceremonyDetail').textContent=detail;
  $('lootChests').innerHTML=event==='loot'?treasureChestMarkup(drops):'';
- if(side)$(side+'Combatant').dataset.effect='death';
+ if(side)$(side+'Combatant').dataset.dying='true';
  try{
   await playBattleCeremony(event,()=>{stage.hidden=false;},{duration});
  }finally{
   stage.hidden=true;
   stage.dataset.event='idle';
-  if(side)$(side+'Combatant').dataset.effect='idle';
+  if(entering)$('enemyCombatant').dataset.entering='false';
+  if(side)$(side+'Combatant').dataset.dying='false';
   $('lootChests').innerHTML='';
   playingEffects=false;
  }
@@ -199,9 +204,8 @@ async function takeTurn(index){
  if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
  if(circle?.analysis&&!isRevealed(circle)){Object.assign(circle,revealOnUse(circle));await putCircle(db,circle);}
  run.usedItems=0;await animateBattle(steps);
-if(run.hero.hp<=0){await ceremony('hero-death','探索失敗',profile.name||'冒険者');}
 if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='探索失敗';$('resultText').textContent='未確定報酬 '+dropped+'個と経験値を喪失。未使用の携行品 '+unusedCount+'個は倉庫へ戻った。性能が判明した魔法陣は残る。';show('result');return;}
-if(run.enemy.hp<=0){await ceremony('enemy-death','討伐成功',run.enemyName);const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);profile.highest=Math.max(profile.highest,run.floor);if(run.floor%num('checkpoint_interval')===0){run.stage='checkpoint';$('checkpointInfo').textContent='第'+run.floor+'戦突破。未確定報酬 '+run.loot.length+'個 / 経験値 '+run.xp+'。続行して敗北すると失われる。';await persist();show('checkpoint');return;}run.floor++;enterFight();await persist();renderRun();await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}
+if(run.enemy.hp<=0){const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);profile.highest=Math.max(profile.highest,run.floor);if(run.floor%num('checkpoint_interval')===0){run.stage='checkpoint';$('checkpointInfo').textContent='第'+run.floor+'戦突破。未確定報酬 '+run.loot.length+'個 / 経験値 '+run.xp+'。続行して敗北すると失われる。';await persist();show('checkpoint');return;}run.floor++;enterFight();await persist();renderRun();await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}
 await persist();renderRun();}
 async function useItem(index){
  const run=profile.run;if(playingEffects||!run||(run.usedItems||0)>=num('item_per_round'))return;
