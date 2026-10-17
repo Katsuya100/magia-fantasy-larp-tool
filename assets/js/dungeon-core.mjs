@@ -5,7 +5,22 @@ export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
-export const nextXp=level=>+levelRow(level).xp_to_next;
+// Raise level-up requirements steeply while keeping the authored baseline.
+export const nextXp=level=>Math.ceil(Number(levelRow(level).xp_to_next)*
+ Math.pow(num('xp_growth_per_10_levels'),(Number(level)-1)/10));
+// Five fights at the intended level supply approximately the XP needed
+// to start the following layer. Lower-level enemies have diminishing returns.
+export function fightExperience(enemyLevel,playerLevel,layer){
+ if(Number(playerLevel)>=num('level_max'))return 0;
+ const current=targetClearLevel(Number(layer));
+ const next=targetClearLevel(Number(layer)+1);
+ const budget=next>current
+  ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
+  :nextXp(current);
+ const full=Math.max(1,Math.ceil(budget/5));
+ const gap=Math.max(0,Number(playerLevel)-Number(enemyLevel));
+ return Math.max(1,Math.round(full*Math.pow(num('xp_overlevel_factor_per_level'),gap)));
+}
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
 export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
 const levelRow=l=>level(l);
@@ -66,7 +81,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
  }
  return rewards;
 }
-export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}return p.level;}
+export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
 export const status=(actor,id)=>actor.statuses.find(s=>s.id===id);
