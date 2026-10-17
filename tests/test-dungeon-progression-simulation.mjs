@@ -1,25 +1,25 @@
-// Seeded, real-combat simulations from the first floor through the target boss.
-// Unlike per-boss TTK estimates, these retain hero HP, MP and carried supplies.
-// Results in a continuous expedition do not award XP until the hero returns.
+// Real combat simulations of consecutive five-encounter layers without carried items.
+// Only the actual tenth-layer checkpoint can fully restore HP/MP. No XP is
+// applied while the expedition is underway; stone rewards are banked on return.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
-import {enemyForFight,layerForFight} from '../assets/js/dungeon-design.mjs';
+import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
+import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
- buffs:csv('buffs'),balance:csv('balance'),levels:csv('levels'),
- floors:csv('floors'),playerBase:csv('player-base')};
+ buffs:csv('buffs'),balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')};
 configure(data);
-const random=seed=>()=>{
+const rng=seed=>()=>{
  seed=(Math.imul(seed,1664525)+1013904223)>>>0;
  return seed/4294967296;
 };
 const SPELLS={
+ beginner:[{role:'attack',attribute:'flame',power:300},{role:'attack',attribute:'bolt',power:330},{role:'support',attribute:'aqua',power:270}],
  three:[{role:'attack',attribute:'flame',power:360},{role:'attack',attribute:'bolt',power:420},{role:'support',attribute:'aqua',power:300}],
  five:[{role:'attack',attribute:'flame',power:360},{role:'attack',attribute:'bolt',power:420},{role:'attack',attribute:'gravity',power:540},
-  {role:'support',attribute:'aqua',power:320},{role:'defense',attribute:'law',power:270}],
- beginner:[{role:'attack',attribute:'flame',power:300},{role:'attack',attribute:'bolt',power:330},{role:'support',attribute:'aqua',power:270}]
+  {role:'support',attribute:'aqua',power:320},{role:'defense',attribute:'law',power:270}]
 };
 function enemyAction(unit,r){
  const ids=G.available(unit);
@@ -39,71 +39,125 @@ function heroAction(hero,enemy){
  if(offense.length)return offense.sort((a,b)=>G.damage(hero,enemy,hero.spells[b],()=>.999)-G.damage(hero,enemy,hero.spells[a],()=>.999))[0];
  return heal!==undefined&&hero.hp/hero.stats.hp<.9?heal:-1;
 }
-export function simulate(seed,{level=12,layers=3,spells='five',heals=3,manas=1}={}){
- const r=random(seed),base={hp:100,mag:10,def:7,res:7};
- const hero=G.makeUnit(base,level,{},SPELLS[spells],'player');
- const carry=[
-  ...Array.from({length:heals},()=>({id:'heal_s',value:G.rollPotionValue(data.items[0],1,r),bonus:null})),
-  ...Array.from({length:manas},()=>({id:'mana_s',value:G.rollPotionValue(data.items[4],1,r),bonus:null}))
- ];
- const stats={win:false,clear:0,turns:0,itemUses:0,fightStats:[],startLevel:level,spells,heals,manas};
- for(let fight=1;fight<=layers*5;fight++){
-  const row=enemyForFight(data.enemies,fight);
-  const enemy=G.fromEnemy(row,+data.floors[fight-1].enemy_level);
+// Rewards and XP are gathered fight-by-fight but committed only on boss return.
+// The ledger is a plausible *supply forecast*, not a guarantee that the fights
+// were winnable; the combat simulator validates survivability separately.
+export function stoneLedger(seed,throughLayer){
+ const r=rng(seed),progress={level:1,xp:0},levels=[],returns=[];
+ let unconfirmedXp=0,unconfirmedStones=0,bank=0,lastLevel=1;
+ for(let layer=1;layer<=throughLayer;layer++){
+  for(let i=0;i<5;i++){
+   const fight=(layer-1)*5+i+1;
+   const foe=enemyForFight(data.enemies,fight);
+   const enemyLevel=Number(data.floors[fight-1].enemy_level);
+   const drops=G.drops(data.items,data.collections,enemyLevel,r,{layer,bossEnemyId:i===4?foe.id:null});
+   unconfirmedStones+=drops.filter(x=>x.type==='stone').length;
+   unconfirmedXp+=num('xp_base')+num('xp_per_level')*enemyLevel;
+  }
+  // Boss return: only now are stones and experience banked.
+  bank+=unconfirmedStones;
+  G.experience(progress,unconfirmedXp);
+  if(progress.level>lastLevel)levels.push({from:lastLevel,to:progress.level,stones:bank,layer});
+  lastLevel=progress.level;
+  returns.push({layer,level:progress.level,stones:bank});
+  unconfirmedStones=0;unconfirmedXp=0;
+ }
+ return {level:progress.level,stones:bank,levels,returns};
+}
+// Spend a modest fraction of acquired stones on the currently selected circles.
+// Most previously earned stones are assumed to have been spent on earlier gear
+// or saved. Upgrades use the same permanent 10%-of-base rule as the real game.
+export function upgradeSpells(spells,budget){
+ const base=spells.map(s=>({...s}));
+ const counts=base.map(()=>0);
+ for(let n=0;n<budget;n++){
+  const candidate=base.map((s,i)=>({s,i})).filter(x=>x.s.role==='attack'||x.s.role==='support');
+  candidate.sort((a,b)=>{
+   const score=x=>{
+    const orig=spells[x.i].power,now=x.s.power,next=strengthenedPower(orig,counts[x.i]+1);
+    const gain=G.basePower(next)-G.basePower(now);
+    const extraMp=G.mpCost(next)-G.mpCost(now);
+    return (gain+.15)/(1+extraMp) / (counts[x.i]+1)**.25;
+   };
+   return score(b)-score(a)||a.i-b.i;
+  });
+  const {i}=candidate[0];
+  counts[i]++;
+  base[i].power=strengthenedPower(spells[i].power,counts[i]);
+ }
+ return {spells:base,counts,costs:base.map(s=>G.mpCost(s.power))};
+}
+export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null}={}){
+ const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
+ const history=stones==='earned'?stoneLedger(seed+81,fromLayer-1):{stones:0};
+ const budget=stones==='earned'?Math.min(16,Math.floor(history.stones*.12)):Math.max(0,Number(stones)||0);
+ const equipment=upgradeSpells(SPELLS[spells],budget);
+ const hero=G.makeUnit(base,level,{},equipment.spells,'player');
+ const first=(fromLayer-1)*5+1,last=toLayer*5;
+ const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
+  startLevel:level,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,
+  initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[]};
+ for(let fight=first;fight<=last;fight++){
+  const foe=enemyForFight(data.enemies,fight);
+  const enemy=G.fromEnemy(foe,+data.floors[fight-1].enemy_level);
   const hpBefore=hero.hp,mpBefore=hero.mp;
   let turns=0,win=false;
-  for(;turns<90;turns++){
-   if(hero.hp/hero.stats.hp<.45){
-    const index=carry.findIndex(x=>x.id.startsWith('heal_'));
-    if(index>=0){G.potion(hero,carry[index],data.items,data.buffs);carry.splice(index,1);stats.itemUses++;}
-   }else if(hero.mp/hero.maxMp<.26){
-    const index=carry.findIndex(x=>x.id.startsWith('mana_'));
-    if(index>=0){G.potion(hero,carry[index],data.items,data.buffs);carry.splice(index,1);stats.itemUses++;}
-   }
+  for(;turns<80;turns++){
    const pick=heroAction(hero,enemy);
-   const foePick=enemyAction(enemy,r);
-   G.round(hero,enemy,pick,foePick,data.buffs,r);
+   const enemyPick=enemyAction(enemy,r);
+   if(pick===-1)stats.normalAttacks++;
+   G.round(hero,enemy,pick,enemyPick,data.buffs,r);
    stats.turns++;
-   if(hero.hp<=0)break;  // same rule as app: hero death takes precedence.
+   stats.minMp=Math.min(hero.mp,stats.minMp);
+   if(hero.hp<=0)break;
    if(enemy.hp<=0){win=true;break;}
   }
-  stats.fightStats.push({fight,layer:layerForFight(fight),win,turns:turns+1,hpBefore,hpAfter:hero.hp,mpBefore,mpAfter:hero.mp});
+  stats.fightStats.push({fight,layer:Math.ceil(fight/5),win,turns:turns+1,hpBefore,hpAfter:hero.hp,mpBefore,mpAfter:hero.mp});
   if(!win)break;
   stats.clear=fight;
-  if(fight%50===0&&fight<layers*5){hero.hp=hero.stats.hp;hero.mp=hero.maxMp;stats.restores=(stats.restores||0)+1;}
-  hero.statuses=[];
-  hero.cooldowns=hero.cooldowns.map(()=>0);
-  G.recoverVictoryMp(hero);
+  hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
+  stats.mpRestored+=G.recoverVictoryMp(hero);
+  if(fight%50===0&&fight<last){ // 10th/20th/... layer, after the boss
+   hero.hp=hero.stats.hp;hero.mp=hero.maxMp;stats.restores++;
+  }
  }
- stats.win=stats.clear===layers*5;
+ stats.win=stats.clear===last;
  stats.hp=hero.hp;stats.mp=hero.mp;
  return stats;
 }
-// Player's target-level expectation: five fights, zero carried items.
-// Every tenth cleared layer may take the offered full HP/MP restoration.
+// A target-level player starts fully recovered at the beginning of the chosen
+// band. Each band is a true unbroken expedition through consecutive fights.
 export const scenarios=[
- {name:'expected L1, 1 layer, 3 circles, no items',level:1,layers:1,spells:'beginner',heals:0,manas:0},
- {name:'expected L3, 2 layers, 3 circles, no items',level:3,layers:2,spells:'beginner',heals:0,manas:0},
- {name:'expected L5, 3 layers, 3 circles, no items',level:5,layers:3,spells:'beginner',heals:0,manas:0},
- {name:'L12, 3 layers, 3 circles, no items',level:12,layers:3,spells:'three',heals:0,manas:0},
- {name:'L12, 3 layers, 5 circles, no items',level:12,layers:3,spells:'five',heals:0,manas:0},
- {name:'expected L19, 10 layers, 5 circles, no items',level:19,layers:10,spells:'five',heals:0,manas:0},
- {name:'L22, 11 layers, 5 circles, no items, decade heal',level:22,layers:11,spells:'five',heals:0,manas:0}
+ {name:'Lv1 / 1F / 3 circles / no items',level:1,fromLayer:1,toLayer:1,spells:'beginner'},
+ {name:'Lv3 / 1-2F / 3 circles / no items',level:3,fromLayer:1,toLayer:2,spells:'beginner'},
+ {name:'Lv5 / 1-3F / 3 circles / no items',level:5,fromLayer:1,toLayer:3,spells:'beginner'},
+ {name:'Lv12 / 1-3F / 3 circles / no items',level:12,fromLayer:1,toLayer:3,spells:'three'},
+ {name:'Lv19 / 1-10F / 5 circles / no items',level:19,fromLayer:1,toLayer:10,spells:'five'},
+ {name:'Lv37 / 10-20F / 5 circles / no items',level:37,fromLayer:10,toLayer:20,spells:'five'},
+ {name:'Lv87 / 40-50F / 5 circles / no items',level:87,fromLayer:40,toLayer:50,spells:'five'},
+ {name:'Lv150 / 90-100F / 5 circles / no items / no stones',level:150,fromLayer:90,toLayer:100,spells:'five',stones:'none'},
+ {name:'Lv150 / 90-100F / 5 circles / no items / earned stones',level:150,fromLayer:90,toLayer:100,spells:'five',stones:'earned'}
 ];
-export function summarize(config,samples=80){
+export function summarize(config,samples=32){
  const runs=Array.from({length:samples},(_,i)=>simulate(17011+i*13,config));
  const wins=runs.filter(x=>x.win);
  const avg=x=>Math.round(x.reduce((n,v)=>n+v,0)/x.length*10)/10;
  return {name:config.name,winRate:Math.round(100*wins.length/samples),
-  reachedBoss:Math.round(100*runs.filter(x=>x.clear>=config.layers*5-1).length/samples),
   avgCleared:avg(runs.map(x=>x.clear)),
-  avgTurns:avg(runs.map(x=>x.turns)),
-  avgItems:avg(runs.map(x=>x.itemUses)),
-  avgRestores:avg(runs.map(x=>x.restores||0)),
-  avgHp: wins.length?avg(wins.map(x=>x.hp)):null,
+  avgTurns:avg(runs.map(x=>x.turns)),avgNormalAttacks:avg(runs.map(x=>x.normalAttacks)),
+  avgRestores:avg(runs.map(x=>x.restores)),
+  avgHpPercent:wins.length?Math.round(100*avg(wins.map(x=>x.hp/x.initialHp))):null,
+  avgMpPercent:wins.length?Math.round(100*avg(wins.map(x=>x.mp/x.initialMp))):null,
+  avgStones:avg(runs.map(x=>x.availableStones)),
+  avgSpentStones:avg(runs.map(x=>x.spentStones)),
   lossByFight:Object.entries(runs.filter(x=>!x.win).reduce((a,x)=>{const f=x.clear+1;a[f]=(a[f]||0)+1;return a;},{}))};
 }
 for(const config of scenarios)console.log('PROGRESSION_SIM '+JSON.stringify(summarize(config)));
-assert.ok(scenarios.every(x=>x.layers>=1&&x.heals===0&&x.manas===0),'scenarios include full early-game five-fight chains');
-assert.ok(SPELLS.beginner.length>=3&&SPELLS.five.length===5);
-console.log('PASS deterministic full-fight sequence, enemy AI, cooldowns, potions, and carry-over HP/MP');
+const ledger=stoneLedger(7293,10);
+console.log('MAGIC_STONE_LEDGER '+JSON.stringify({throughLayer:10,level:ledger.level,stones:ledger.stones,
+ levels:ledger.levels,returns:ledger.returns}));
+assert.ok(scenarios.every(x=>x.fromLayer<=x.toLayer),'scenarios cover consecutive layer bands');
+assert.equal(simulate(1,{level:1,fromLayer:1,toLayer:1,spells:'beginner'}).spentStones,0);
+assert.ok(upgradeSpells(SPELLS.five,10).spells.every((s,i)=>s.power>=SPELLS.five[i].power));
+assert.equal(stoneLedger(1,0).stones,0);
+console.log('PASS seeded full combat with resource carryover, tenth-layer HP/MP recovery, saved reward ledger and permanent stone upgrades');
