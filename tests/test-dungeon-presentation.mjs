@@ -153,7 +153,8 @@ assert.doesNotMatch(app,/鑑定/);
 assert.doesNotMatch(picker,/鑑定/);
 assert.match(app,/battleImageUrl\(c\.image\)/);
 assert.match(app,/Math\.max\(5,run\.carry\.length\)/);
-assert.match(app,/\$\('heroName'\)\.textContent=profile\.name/);
+assert.match(app,/renderHeroName\(hero\)/,'life ruby readiness appears beside the player name');
+assert.match(app,/statusBadges\(unit\.statuses,masters\.buffs,esc\)/,'combat statuses render as icons');
 assert.match(app,/step=>steps\.push\(step\)/,'game engine steps are captured for sequential playback');
 assert.match(app,/await animateBattle\(steps\)/);
 assert.ok(app.includes('await playCombatSequence(steps,phase=>'));
@@ -204,7 +205,7 @@ assert.ok(app.includes(`data-rarity="'+(found?rarity:'unknown')`),'unfound relic
 assert.equal(css.includes('/* Color-vision accessibility:'),false,'previous flat, no-glow frame redesign must be removed');
 assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?box-shadow:0 0 0 9px var\(--rarity-halo\),[\s\S]*?0 0 32px var\(--rarity-glow\)/,'original luminous halo and bloom are restored');
 assert.match(css,/\.relic-card\.discovered \.relic-glyph\{[\s\S]*?text-shadow:0 0 20px var\(--rarity-glow\)/,'glyph keeps colorful glow');
-assert.doesNotMatch(css.slice(css.indexOf('/* Restore the collection')),/border-style\s*:|border-width\s*:|border:\s*\d+px/,'new rarity treatment does not modify frame patterns or widths');
+assert.doesNotMatch(css.slice(css.indexOf('/* Restore the collection'),css.indexOf('/* Combat presentation:',css.indexOf('/* Restore the collection'))),/border-style\s*:|border-width\s*:|border:\s*\d+px/,'new rarity treatment does not modify frame patterns or widths');
 assert.match(css,/\.relic-card\{[^}]*border:1px solid var\(--border\)/,'the original outer card frame is unchanged');
 assert.match(css,/\.relic-art\{[^}]*border:1px solid #e1c58b77/,'the original circular frame thickness stays unchanged');
 assert.match(css,/\.relic-card\.discovered \.relic-rarity\{[\s\S]*?font-size:14px/,'rarity labels remain readable');
@@ -362,6 +363,7 @@ assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height
 assert.match(css,/#battleArena \.unit-info h3\{[\s\S]*?white-space:normal;overflow-wrap:anywhere;[\s\S]*?-webkit-line-clamp:2/,'long names wrap over two lines instead of escaping the card');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:34px 34px 33px minmax\(0,1fr\)/,'both sides align HP, MP and MAG/DEF/RES rows');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*min-width:0;min-height:0;flex:1;overflow:visible/,'status area stops scrolling');
+assert.match(css,/#battleArena #enemyStats>\.effects,#battleArena #heroStats>\.effects\{\s*display:flex/,'compact icons form one horizontal status row');
 assert.doesNotMatch(css,/#battleArena #enemyStats,#battleArena #heroStats\{[^}]*overflow-y:auto/,'no hidden per-combatant stats scrollbars');
 assert.match(css,/#battleArena \.combat-attributes\{\s*min-width:0;display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'MAG, DEF and RES are in separate columns');
 assert.match(app,/function rowUnit\(unit\)\{[\s\S]*?class="battle-vital"[\s\S]*?class="combat-attributes"[\s\S]*?class="combat-attribute"/,'fighter HP/MP and attributes use non-wrapping, compact markup');
