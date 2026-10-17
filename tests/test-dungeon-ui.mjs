@@ -47,6 +47,7 @@ try{
  assert.equal($('tab-dungeon').hidden,true);
  assert.equal($('startAttack').disabled,true);
  assert.match($('playerStats').innerHTML,/携行品上限：3/);
+ assert.match($('playerStats').innerHTML,/最深:-/,'new player has no deepest returned layer');
  await doc.click(btn({view:'library'}));
  assert.equal($('library').hidden,false);
  assert.equal($('tab-library').attributes['aria-current'],'page','library is its own preparation tab');
@@ -179,12 +180,14 @@ try{
  const chestElement=$('lootChests');
  let chestMarkup=chestElement.innerHTML;
  Object.defineProperty(chestElement,'innerHTML',{get(){return chestMarkup;},set(v){chestMarkup=v;const n=(v.match(/class="loot-chest"/g)||[]).length;if(n)chestDrops.push(n);}});
+ const tabScrolls=[];
+ $('tab-dungeon').closest=()=>({scrollIntoView:opts=>tabScrolls.push(opts)});
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
+ assert.deepEqual(tabScrolls,[{behavior:'smooth',block:'start'}],'entering the labyrinth scrolls to the top edge of the tabs');
  let p=await getProfile(db);
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);
- assert.equal(p.highest,1,'entry into 1層 sets the reached-layer record');
- assert.equal(p.highestUnit,'layer','highest score is explicitly stored as a layer');
+ assert.equal(p.deepestReturnedLayer,0,'entering 1層 does not count as a completed return');
  assert.equal($('floorLabel').textContent,'1層1戦目','initial dungeon label is layer and fight');assert.equal(p.run.carry.filter(Boolean).length,0,'first outing has no carried items');
  assert.equal($('tab-prepare').hidden,true,'preparation tab disappears during battle');
  assert.equal($('tab-library').hidden,true,'grimoire tab disappears during battle');
@@ -251,13 +254,13 @@ try{
   if(fight<5)assert.equal($('floorLabel').textContent,'1層'+(fight+1)+'戦目'+(fight===4?' · 階層ボス':''),'boss is 1層5戦目');
  }
  assert.equal(p.run.stage,'checkpoint');
- assert.equal(p.highest,1,'defeating the first layer boss records 1層, not 5 battles');
+ assert.equal(p.deepestReturnedLayer,0,'boss victory does not count as a return until leaving');
  assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
  assert.equal($('enemyCombatant').dataset.defeated,'true','layer boss stays vanished during checkpoint');
  assert.equal($('enemyCombatant').dataset.dying,'false','completed death effect can clear its animation without resurrecting the boss');
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
- assert.match($('checkpointInfo').textContent,/次は2層/);
- assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\n1層踏破。\n次は2層。\n未確定報酬 [0-9]+個 \/ 経験値 [0-9]+。\n続行して敗北すると失われる。/,'each checkpoint sentence appears on its own line');
+ assert.doesNotMatch($('checkpointInfo').textContent,/次は2層/);
+ assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\n1層踏破。\n未確定報酬 [0-9]+個 \/ 経験値 [0-9]+。\n続行して敗北すると失われる。/,'each checkpoint sentence appears on its own line');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
  assert.ok(p.run.loot.length>=5&&p.run.loot.length<=35);
@@ -272,11 +275,10 @@ try{
  assert.equal($('tab-dungeon').hidden,true,'dungeon tab disappears after returning');
  const collectibleCount=Object.values(p.collection).reduce((a,b)=>a+b,0);
  assert.equal(collectibleCount,1,'collected treasure is tracked separately');
- assert.equal(p.inventory.length+collectibleCount,loot);
- assert.equal(p.highest,1);
- assert.equal(p.highestUnit,'layer');
+ assert.equal(p.inventory.length+collectibleCount+p.magicStones,loot);
+ assert.equal(p.deepestReturnedLayer,1);
  await doc.click(btn({view:'home'}));
- assert.match($('playerStats').innerHTML,/最深 1層/,'profile reports deepest layer instead of battle count');
+ assert.match($('playerStats').innerHTML,/最深:1層/,'profile reports deepest layer instead of battle count');
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
  assert.match($('collectionGrid').innerHTML,/失われた王冠/);
@@ -333,8 +335,7 @@ try{
  assert.equal(p.run.floor,6);
  assert.equal($('floorLabel').textContent,'2層1戦目','next layer begins after the fifth boss');
  assert.equal($('enemyCombatant').dataset.defeated,'false','fresh opponent appears only after starting next layer');
- assert.equal(p.highest,2,'entering the next layer updates deepest layer once');
- assert.equal(p.highestUnit,'layer');
+ assert.equal(p.deepestReturnedLayer,1,'descending into the next layer does not count as a return');
  assert.equal(p.run.enemy.level,2);
  assert.equal(p.run.hero.hp,hpAtCheckpoint,'continuation carries HP');
  assert.equal(p.run.loot.length,pendingLoot,'rewards remain unconfirmed');
@@ -352,7 +353,7 @@ try{
   assert.equal(el('tab-dungeon').attributes['aria-current'],'page','battle is under the dungeon tab');
   assert.equal(el('heroName').textContent,'暁の旅人','reloaded dungeon restores saved name');
   assert.equal(el('floorLabel').textContent,'2層1戦目','reloading preserves the layer and encounter number');
-  assert.equal((await getProfile(await openStore(env2.factory))).highest,2,'layer record is not converted twice on reload');
+  assert.equal((await getProfile(await openStore(env2.factory))).deepestReturnedLayer,1,'reload keeps only the deepest successful return');
   const deaths=[];
   const stage2=el('battleCeremony');
   stage2.dataset=new Proxy(stage2.dataset,{set(target,key,value){if(key==='event'&&value==='hero-death')deaths.push(value);target[key]=value;return true;}});
@@ -367,6 +368,7 @@ try{
   assert.equal(el('tab-library').hidden,false);
   assert.equal(el('tab-dungeon').hidden,true);
   assert.equal(defeated.returns,1,'previous rewards remain');
+   assert.equal(defeated.deepestReturnedLayer,1,'defeat at 2層 cannot increase the returned-layer record');
   assert.equal(defeated.inventory.length,loot-collectibleCount-1,'spent potion lost; two unused were refunded');
   assert.equal(defeated.carrySlots[0],null,'consumed potion is not re-equipped after defeat');
   assert.equal(defeated.carrySlots[1],savedBeforeAttack.carrySlots[1],'first unused potion returns to its saved slot');
