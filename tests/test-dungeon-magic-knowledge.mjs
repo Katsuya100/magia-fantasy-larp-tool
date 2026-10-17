@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {canDepartWithCircles,equippedCircleCount,circleSummary,attributeEffectGuide,
+ newCapturedCircle,savePreanalysis,isRevealed,revealOnUse,circleDetails,
+ normalizeAnalysisResult,spellEffect,ROLES} from '../assets/js/dungeon-magic-knowledge.mjs';
+const eq=n=>Array.from({length:5},(_,i)=>i<n?'id-'+i:null);
+for(let n=0;n<=5;n++)assert.equal(canDepartWithCircles(eq(n)),n>=3,'equipped count '+n);
+assert.equal(canDepartWithCircles(['a','b','c']),false,'five visible slots required');
+assert.equal(equippedCircleCount(['a',null,'b',null,'c']),3);
+const circle=newCapturedCircle('photo',new Blob(['JPEG']),42);
+assert.equal(circle.revealed,false);
+assert.equal(circle.analysis,null);
+const buffs=[{id:'buff_flame',name:'炎熱鼓舞'},{id:'debuff_flame',name:'火傷'}];
+const pending=savePreanalysis(circle,{attribute:'flame',role:'防御',power:512});
+assert.equal(isRevealed(pending),false);
+assert.match(circleSummary(pending,buffs),/🔥 flame/);
+assert.match(circleSummary(pending,buffs),/🛡️防御/);
+assert.match(circleSummary(pending,buffs),/炎熱鼓舞/);
+assert.match(circleSummary(pending,buffs,p=>Math.ceil(p/100)),/消費MP 6/);
+assert.doesNotMatch(circleSummary(pending,buffs,p=>Math.ceil(p/100)),/威力/);
+assert.equal(circleDetails(pending,buffs,p=>Math.ceil(p/100)).power,'未公開');
+assert.doesNotMatch(circleSummary(pending,buffs),/512/);
+const used=revealOnUse(pending);
+assert.equal(isRevealed(used),true);
+assert.match(circleSummary(used,buffs,p=>Math.ceil(p/100)),/威力 512/);
+assert.equal(circleDetails(used,buffs,p=>Math.ceil(p/100)).mp,'6');
+assert.equal(isRevealed({analysis:pending.analysis}),true,'legacy analyzed circles retain visible power');
+assert.match(spellEffect({...pending.analysis,role:'debuff'},buffs),/🕸️火傷/);
+assert.match(spellEffect({...pending.analysis,role:'attack'},buffs),/⚔️属性攻撃/);
+assert.match(spellEffect({...pending.analysis,role:'support'},buffs),/✚HP回復/);
+assert.equal(attributeEffectGuide(buffs).length,7);
+assert.deepEqual(ROLES,{attack:'⚔️攻撃',defense:'🛡️防御',support:'✚回復',debuff:'🕸️弱体'});
+assert.throws(()=>normalizeAnalysisResult({attribute:'invalid',role:'攻撃',power:1}),/不正/);
+assert.throws(()=>normalizeAnalysisResult({attribute:'flame',role:'攻撃',power:-1}),/不正/);
+assert.deepEqual(normalizeAnalysisResult({attribute:' flame ',role:'攻撃',power:'700'}),{attribute:'flame',role:'attack',power:700});
+console.log('PASS magic knowledge, 3-5 slots, hidden pre-use power, MP and icon-labeled effects');
