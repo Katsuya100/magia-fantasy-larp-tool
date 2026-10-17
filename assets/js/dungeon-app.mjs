@@ -1,17 +1,17 @@
-import * as G from './dungeon-core.mjs?v=20261017.33';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.33';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.33';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.33';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.33';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.33';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261017.33';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.33';
+import * as G from './dungeon-core.mjs?v=20261017.36';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.36';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.36';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.36';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.36';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.36';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261017.36';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.36';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261017.33';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.33';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.33';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.33';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.33';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261017.36';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.36';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.36';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.36';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.36';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const listView={
@@ -585,11 +585,11 @@ function renderLoadoutChoices(){
   const role=['attack','defense','support','debuff'].includes(filter)?filter:'all';
   const attribute=G.ATTRS.includes(filter)?filter:'all';
   const indexes=circleListIndexes(circles,{role,attribute,sort:listView.pickerSort});
-  $('loadoutOptions').innerHTML=indexes.length?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost,indexes)
+  $('loadoutOptions').innerHTML=indexes.length?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost,indexes,picker.index)
    :'<p class="collection-empty">条件に合う魔法陣はありません。</p>';
  }else{
   const indexes=itemListIndexes(profile.inventory,masters.items,{kind:listView.pickerFilter,sort:listView.pickerSort});
-  $('loadoutOptions').innerHTML=indexes.length?itemChoices(profile.inventory,carry,itemName,esc,indexes)
+  $('loadoutOptions').innerHTML=indexes.length?itemChoices(profile.inventory,carry,itemName,esc,indexes,picker.index)
    :'<p class="collection-empty">条件に合うアイテムはありません。</p>';
  }
 }
