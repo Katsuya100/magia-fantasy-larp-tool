@@ -33,7 +33,7 @@ xp_per_level,8,撃破経験値のレベル係数
 checkpoint_interval,5,帰還可能な戦闘間隔
 spell_slots,5,携帯魔法陣の固定数
 item_per_round,1,ラウンドあたりの無料使用上限
-level_max,99,レベル上限
+level_max,150,レベル上限
 enemy_heal_threshold,0.45,敵が回復を優先するHP比率
 enemy_attack_preference,0.65,敵が攻撃優先する確率
 mag_reference,10,MAG係数基準値

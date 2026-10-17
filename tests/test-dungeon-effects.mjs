@@ -76,12 +76,12 @@ assert.equal(G.status(chaos,'debuff_chaos'),undefined,'confusion consumed by cas
 const foe1=G.makeUnit(base,1,{flame:.3},[spell('attack','flame')]);
 const foe2=G.makeUnit(base,1,{flame:1.4},[spell('attack','flame')]);
 assert.ok(G.damage(a,foe1,spell('attack','flame'))<G.damage(a,foe2,spell('attack','flame')),'enemy-specific resistance');
-for(let lv=1;lv<=99;lv++){
+for(let lv=1;lv<=150;lv++){
  const row=level(lv);assert.ok(+row.carry_limit>=3&&+row.carry_limit<=15);
  if(lv>1)assert.ok(+row.hp_multiplier>=+level(lv-1).hp_multiplier);
  assert.ok(+row.xp_to_next>0);
 }
-for(let f=1;f<=495;f++){
+for(let f=1;f<=500;f++){
  const spec=floor(f);assert.ok(+spec.enemy_level>=1);
  if(+spec.boss===1)assert.ok(enemies.some(e=>e.id===spec.boss_enemy_id));
 }
@@ -112,4 +112,4 @@ assert.equal(mp.mp,24);
 const hpPotion=unit();hpPotion.hp=hpPotion.stats.hp-3;
 G.potion(hpPotion,{id:'heal_l',value:1000,bonus:null},items,buffs);
 assert.equal(hpPotion.hp,hpPotion.stats.hp,'healing clamps at max');
-console.log('PASS 7 elements x 4 sigils, 7 cleansers, debuff mechanics, 99 levels, 495 floors, CSV references and tunable rules');
+console.log('PASS 7 elements x 4 sigils, 7 cleansers, debuff mechanics, 150 levels, 500 fights, CSV references and tunable rules');

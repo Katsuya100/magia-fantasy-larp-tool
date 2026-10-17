@@ -6,6 +6,7 @@ import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from '.
 import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.27';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.27';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
+import {enemyForFight,layerForFight} from './dungeon-design.mjs?v=20261017.27';
 import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.27';
 import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.27';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.27';
@@ -290,7 +291,14 @@ async function ceremony(event,title,detail='',drops=0){
   playingEffects=false;
  }
 }
-function createEnemy(floor){const rowFloor=floorMaster(floor),level=Number(rowFloor.enemy_level);if(Number(rowFloor.boss)!==Number(isLayerBoss(floor)))throw Error('階層ボスの配置が不正');const pool=masters.enemies.filter(x=>Number(x.min_level)<=level&&Number(x.min_level)>=Number(rowFloor.minimum_enemy_level)&&x.boss_only!=='1');let row;if(Number(rowFloor.boss)===1){row=masters.enemies.find(x=>x.id===rowFloor.boss_enemy_id);if(!row||Number(row.min_level)>level)throw Error('ボスの設定が不正');}else row=G.weighted(pool);return {unit:G.fromEnemy(row,level),name:row.name};}
+function createEnemy(fight){
+ const spec=floorMaster(fight),level=Number(spec.enemy_level);
+ if(Number(spec.boss)!==Number(isLayerBoss(fight)))throw Error('階層ボスの配置が不正');
+ const row=enemyForFight(masters.enemies,fight);
+ if(Number(row.min_level)>level||(isLayerBoss(fight)&&row.boss_only!=='1'))throw Error('敵の設定が不正');
+ if(spec.boss_enemy_id&&row.id!==spec.boss_enemy_id)throw Error('ボスの設定が不正');
+ return {unit:G.fromEnemy(row,level),name:row.name};
+}
 function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor);
  // Keep the previous defeated opponent hidden while the next opponent is prepared.
  // The encounter ceremony reveals the replacement after renderRun().
@@ -324,7 +332,7 @@ if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Bo
  '未使用の携行品 '+unusedCount+'個は倉庫へ戻った。',
  '性能が判明した魔法陣は残る。'
 ]);show('result');return;}
-if(run.enemy.hp<=0){const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);if(isLayerBoss(run.floor)){run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
+if(run.enemy.hp<=0){const rewards=G.drops(masters.items,masters.collections,run.enemy.level,Math.random,{layer:layerForFight(run.floor),bossEnemyId:isLayerBoss(run.floor)?run.enemy.id:null});run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);if(isLayerBoss(run.floor)){run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
 // Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
 // between the loot overlay and the following encounter animation.
 const nextEntrance=ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');await persist();await nextEntrance;}

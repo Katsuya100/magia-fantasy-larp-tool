@@ -7,7 +7,7 @@ assert.equal(FIGHTS_PER_LAYER,5);
 for(const [fight,layer,round,boss] of [
  [1,1,1,false],[4,1,4,false],[5,1,5,true],
  [6,2,1,false],[9,2,4,false],[10,2,5,true],
- [11,3,1,false],[25,5,5,true],[495,99,5,true]
+ [11,3,1,false],[25,5,5,true],[495,99,5,true],[500,100,5,true],[505,101,5,true]
 ]){
  assert.equal(layerOfFight(fight),layer);
  assert.equal(encounterOfFight(fight),round);
@@ -22,7 +22,7 @@ assert.equal(encounterOfFight(0),0);
 assert.equal(encounterLabel(0),'未到達');
 assert.equal(layerOfFight(-1),0);
 const data=parseCsv(await readFile(new URL('../assets/data/dungeon-floors.csv',import.meta.url),'utf8'));
-assert.equal(data.length,495);
+assert.equal(data.length,500);
 for(const record of data){
  const fight=Number(record.floor);
  assert.equal(Number(record.boss),Number(isLayerBoss(fight)));
