@@ -1,5 +1,5 @@
 import {num,level,range} from './dungeon-tuning.mjs';
-import {rollCollection,bossUniqueCollection} from './dungeon-design.mjs';
+import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,CONSUMABLE_TIERS} from './dungeon-design.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
 export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -32,13 +32,15 @@ export function parseCsv(input){
 export function weighted(rows,r=Math.random){let sum=rows.reduce((n,x)=>n+Number(x.weight||0),0),v=r()*sum;if(!sum)throw Error('Empty drops');for(const row of rows){v-=Number(row.weight||0);if(v<0)return row;}return rows.at(-1);}
 export function dropCount(l,r=Math.random){const p=clamp(num('loot_chance_base')+num('loot_chance_per_level')*(l-1),num('loot_chance_base'),num('loot_chance_cap'));let n=num('loot_count_min');for(let i=0;i<num('loot_count_max')-num('loot_count_min');i++)if(r()<p)n++;return n;}
 export function drops(items,collections,l,r=Math.random,context={}){
+ const layer=context.layer??1;
  const rewards=Array.from({length:dropCount(l,r)},()=>{
   if(r()<num('consumable_drop_rate')){
-   const x=weighted(items,r);
+   const tier=rollConsumableTier(layer,r);
+   const x=weighted(eligibleConsumables(items,layer,tier),r);
    return {type:'use',id:x.id,value:roll(Number(x.min_value),Number(x.max_value),r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};
   }
   if(r()<num('magic_stone_drop_rate'))return {type:'stone',id:'magic_stone'};
-  return {type:'collection',id:rollCollection(collections,context.layer??1,r).id};
+  return {type:'collection',id:rollCollection(collections,layer,r).id};
  });
  if(context.bossEnemyId){
   const id=bossUniqueCollection(collections,context.bossEnemyId).id;
@@ -106,7 +108,16 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  return log;
 }
 export function fromEnemy(row,level){const b={hp:+row.hp,mag:+row.mag,def:+row.def,res:+row.res};const resists=Object.fromEntries(ATTRS.map(a=>[a,+row['resist_'+a]]));const spells=row.spells.split('|').map(s=>{const [role,attribute,power]=s.split(':');return {role,attribute,power:+power};});return makeUnit(b,level,resists,spells,row.id);}
-export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items)if(+i.min_value>+i.max_value)throw Error('Bad item roll');
+export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items){
+  if(+i.min_value>+i.max_value||!(Number(i.weight)>0))throw Error('Bad item roll');
+  if(i.kind==='clear'){
+   if(+i.min_layer<20)throw Error('Premature cleanser '+i.id);
+  }else if(!CONSUMABLE_TIERS.includes(i.tier)||+i.min_layer!==1){
+   throw Error('Bad consumable tier '+i.id);
+  }
+ }
+ for(const tier of CONSUMABLE_TIERS)
+  if(!items.some(x=>x.kind==='heal'&&x.tier===tier)||!items.some(x=>x.kind==='mana'&&x.tier===tier))throw Error('Missing consumable tier '+tier);
  for(const c of collections)if(!['common','uncommon','rare','epic','legendary'].includes(c.rarity)||!(Number(c.weight)>0))throw Error('Invalid collection');
  for(const b of enemies.filter(e=>e.boss_only==='1'))bossUniqueCollection(collections,b.id);
  return true;}
