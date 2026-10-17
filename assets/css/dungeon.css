@@ -510,7 +510,8 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 @keyframes scene-fade-out{from{opacity:1}to{opacity:0}}
 /* Short end screens swap without the delayed grid-height collapse. */
 .scene-stack > #checkpoint.panel:not([hidden]),
-.scene-stack > #result.panel:not([hidden]){
+.scene-stack > #result.panel:not([hidden]),
+.scene-stack > #returnShowcase.panel:not([hidden]){
  animation:terminal-fade-in .28s ease-out both;transform:none!important
 }
 @keyframes terminal-fade-in{from{opacity:0}to{opacity:1}}
