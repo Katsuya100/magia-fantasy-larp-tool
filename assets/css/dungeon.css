@@ -53,7 +53,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 
 /* The dungeon uses exactly five visual columns; higher item counts wrap into new rows. */
 .inner-nav{margin:-6px 0 17px;padding:7px 12px!important;font-size:12px!important}
-.battle-spells,.battle-items{grid-template-columns:repeat(5,minmax(0,1fr));margin:12px 0 7px}
+.battle-spells{grid-template-columns:repeat(5,minmax(0,1fr));margin:12px 0 7px}.battle-items{grid-template-columns:repeat(3,minmax(0,1fr));margin:12px 0 7px}
 .battle-spells .battle-tile,.battle-items .battle-tile{
  aspect-ratio:auto;min-height:190px;justify-content:flex-start;gap:7px;
  padding:24px 7px 10px!important;cursor:pointer
@@ -80,7 +80,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 }
 
 /* Stable square equipment slots: the item title and quantity never size the grid tracks. */
-#slotCards .loadout-grid,#gearCards .loadout-grid{grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-flow:row;align-items:start}
+#slotCards .loadout-grid{grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-flow:row;align-items:start}#gearCards .loadout-grid{grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-flow:row;align-items:start}
 #slotCards .loadout-tile,#gearCards .loadout-tile{
  width:100%;height:auto;min-width:0;min-height:0;aspect-ratio:1 / 1;
  contain:size;overflow:hidden;box-sizing:border-box;
@@ -302,3 +302,25 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 /* Fade the fallen enemy's name and HP together with its portrait. */
 #battleArena .enemy-unit[data-dying="true"] .unit-info{animation:duel-defeat 1.1s ease-in both}
 @media(prefers-reduced-motion:reduce){#battleArena .enemy-unit[data-dying="true"] .unit-info{animation:none!important}}
+
+/* Three wide columns for the five visible item slots (additional capacity wraps). */
+#gearCards .loadout-grid,.battle-items{grid-template-columns:repeat(3,minmax(0,1fr))}
+#gearCards .tile-title,.battle-items .tile-title{
+ display:block;max-width:100%;white-space:normal;text-overflow:clip;
+ overflow-wrap:anywhere;word-break:normal;overflow:visible;
+ font-size:clamp(11px,2.5vw,14px);line-height:1.35
+}
+#gearCards .tile-item-icon{font-size:clamp(29px,4.5vw,48px)}
+.battle-items .tile-item-icon,.battle-items .tile-empty-icon{min-height:42px}
+.battle-items .battle-tile{min-height:150px}
+#checkpointInfo,#resultText{
+ white-space:pre-line;line-height:1.9;overflow-wrap:anywhere;
+ max-width:52ch;margin-inline:auto
+}
+@media(max-width:630px){
+ #gearCards .loadout-grid,.battle-items{gap:7px}
+ #gearCards .loadout-tile{padding:14px 4px 5px!important}
+ #gearCards .tile-item-icon{font-size:clamp(28px,7vw,40px)}
+ #gearCards .tile-title,.battle-items .tile-title{font-size:clamp(11px,2.9vw,13px);line-height:1.3}
+ .battle-items .battle-tile{min-height:134px;padding:19px 6px 8px!important}
+}
