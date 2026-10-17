@@ -46,7 +46,7 @@ try{
  assert.equal($('tab-prepare').hidden,false,'preparation tab is still present before adventure');
  assert.equal($('tab-dungeon').hidden,true);
  assert.equal($('startAttack').disabled,true);
- assert.match($('playerStats').innerHTML,/持ち込み上限：3/);
+ assert.match($('playerStats').innerHTML,/携行品上限：3/);
  await doc.click(btn({view:'library'}));
  assert.equal($('library').hidden,false);
  assert.equal($('tab-library').attributes['aria-current'],'page','library is its own preparation tab');
@@ -257,6 +257,7 @@ try{
  assert.equal($('enemyCombatant').dataset.dying,'false','completed death effect can clear its animation without resurrecting the boss');
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
  assert.match($('checkpointInfo').textContent,/次は2層/);
+ assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\n1層踏破。\n次は2層。\n未確定報酬 [0-9]+個 \/ 経験値 [0-9]+。\n続行して敗北すると失われる。/,'each checkpoint sentence appears on its own line');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
  assert.ok(p.run.loot.length>=5&&p.run.loot.length<=35);
