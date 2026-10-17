@@ -115,7 +115,7 @@ try{
 
  assert.ok(circles.every(c=>c.revealed===false),'first-use power remains secret');
  assert.doesNotMatch($('libraryCards').innerHTML,/威力:5000|MP:[0-9]+/,'MP and power remain concealed before first cast');
- assert.match($('libraryCards').innerHTML,/MP:\? \/ 威力:\?/,'each card explicitly shows two unknown values');
+ assert.match($('libraryCards').innerHTML,/<span class="circle-card-mp">MP:\?<\/span><span class="circle-card-power">威力:\?<\/span>/,'MP and power start on separate unknown lines');
  assert.match($('libraryCards').innerHTML,/class="circle-card-symbols"/,'thumbnail has paired attribute and role icons');
  assert.doesNotMatch($('libraryCards').innerHTML,/class="circle-card-status"/,'attack spells do not invent a buff or debuff');
  await doc.click(btn({circleDetail:circles[0].id}));
@@ -222,7 +222,7 @@ try{
  assert.equal(circles[0].analysis.role,'attack');
  assert.equal(circles[0].analysis.power,5000);
  assert.equal(circles[0].revealed,true,'only after a successful cast is power revealed');
- assert.match($('battleSpells').innerHTML,/MP:6 \/ 威力:5000|MP:[0-9]+ \/ 威力:5000/,'used spell shows cost and power');
+ assert.match($('battleSpells').innerHTML,/<span class="circle-card-mp">MP:[0-9]+<\/span><span class="circle-card-power">威力:5000<\/span>/,'used spell shows MP and power on separate lines');
  p=await getProfile(db);
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
  assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
