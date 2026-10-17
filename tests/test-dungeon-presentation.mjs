@@ -198,9 +198,8 @@ for(const [rarity,mark] of [['common','○ コモン'],['uncommon','◇ アン�
  assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--rarity-ink:#[0-9a-f]{6};--rarity-glow:#[0-9a-f]{8}'),rarity+' has a distinct solid hue and visible glow');
 }
 assert.match(app,/\+\(found\?'<span class="relic-rarity">'/,'rarity names are only shown for discovered collectibles');
-assert.ok(app.includes(\`data-rarity="'+(found?rarity:'unknown')\`),'unfound relics still hide their rarity');
-const oldRarityStyles=css.slice(css.indexOf('/* Color-vision accessibility:'));
-assert.equal(oldRarityStyles,'','previous flat, no-glow frame redesign must be removed');
+assert.ok(app.includes(`data-rarity="'+(found?rarity:'unknown')`),'unfound relics still hide their rarity');
+assert.equal(css.includes('/* Color-vision accessibility:'),false,'previous flat, no-glow frame redesign must be removed');
 assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?box-shadow:0 0 0 9px var\(--rarity-halo\),[\s\S]*?0 0 32px var\(--rarity-glow\)/,'original luminous halo and bloom are restored');
 assert.match(css,/\.relic-card\.discovered \.relic-glyph\{[\s\S]*?text-shadow:0 0 20px var\(--rarity-glow\)/,'glyph keeps colorful glow');
 assert.doesNotMatch(css.slice(css.indexOf('/* Restore the collection')),/border-style\s*:|border-width\s*:|border:\s*\d+px/,'new rarity treatment does not modify frame patterns or widths');
