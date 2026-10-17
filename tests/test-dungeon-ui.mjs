@@ -128,6 +128,12 @@ try{
  prepared=await getProfile(db);
  assert.deepEqual(prepared.slots.slice(0,2),[circles[0].id,circles[1].id],'swap back');
  assert.match($('gearCounter').textContent,/最初の帰還後に解放/);
+ const ceremonies=[],chestDrops=[];
+ const stage=$('battleCeremony');
+ stage.dataset=new Proxy(stage.dataset,{set(target,key,value){if(key==='event'&&value!=='idle')ceremonies.push(value);target[key]=value;return true;}});
+ const chestElement=$('lootChests');
+ let chestMarkup=chestElement.innerHTML;
+ Object.defineProperty(chestElement,'innerHTML',{get(){return chestMarkup;},set(v){chestMarkup=v;const n=(v.match(/class="loot-chest"/g)||[]).length;if(n)chestDrops.push(n);}});
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
  let p=await getProfile(db);
@@ -137,12 +143,17 @@ try{
  assert.equal($('tab-dungeon').hidden,false,'dungeon tab replaces preparation tabs');
  assert.equal($('tab-dungeon').attributes['aria-current'],'page');
  assert.equal($('heroName').textContent,'暁の旅人','battle uses the saved adventurer name');
- assert.equal($('battleArena').dataset.role,'idle');
+ assert.equal($('heroCombatant').dataset.effect,'idle');
+ assert.equal($('enemyCombatant').dataset.effect,'idle');
+ assert.ok(ceremonies.includes('encounter'),'battle start has encounter ceremony');
  const animationRoles=[];
- $('battleArena').dataset=new Proxy($('battleArena').dataset,{set(target,key,value){
-  if(key==='role'&&value!=='idle')animationRoles.push(value);
-  target[key]=value;return true;
- }});
+ for(const side of ['hero','enemy']){
+  const fighter=$(side+'Combatant');
+  fighter.dataset=new Proxy(fighter.dataset,{set(target,key,value){
+   if(key==='effect'&&value!=='idle')animationRoles.push(side+':'+value);
+   target[key]=value;return true;
+  }});
+ }
  assert.equal(p.run.hero.spells[0],null);
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
  assert.doesNotMatch($('battleSpells').innerHTML,/魔法陣\s*0[1-9]/,'battle also has no generated circle name');
@@ -176,9 +187,16 @@ try{
  assert.equal(circles[0].analysis.power,5000);
  p=await getProfile(db);
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
- assert.ok(animationRoles.includes('attack'),'real attack triggers the clash animation');
- assert.equal($('battleArena').dataset.role,'idle','animation stage resets after resolution');
- assert.equal($('battleFxText').textContent,'','floating caption clears after each action');
+ assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
+ assert.ok(ceremonies.includes('enemy-death'),'enemy death ceremony played');
+ assert.ok(ceremonies.includes('loot'),'loot ceremony played');
+ assert.equal(chestDrops.at(-1),p.run.loot.length,'one chest per actual first-fight drop');
+ assert.equal($('heroCombatant').dataset.effect,'idle','fighter animation resets');
+ assert.equal($('enemyCombatant').dataset.effect,'idle','enemy animation resets');
+ assert.equal($('heroFxText').textContent,'','hero caption clears');
+ assert.equal($('enemyFxText').textContent,'','enemy caption clears');
+ assert.equal($('lootChests').innerHTML,'','treasure chests cleared after reveal');
+ assert.equal($('battleCeremony').hidden,true,'ceremony overlay closes');
  assert.equal($('battleSpells').attributes['aria-busy'],undefined,'buttons become available after playback');
  for(let fight=2;fight<=5;fight++){
   if(fight===5)Math.random=()=>.99;
@@ -191,6 +209,7 @@ try{
  assert.equal($('checkpoint').hidden,false);
  assert.ok(p.run.loot.length>=5&&p.run.loot.length<=35);
  const loot=p.run.loot.length;
+ assert.equal(chestDrops.reduce((n,x)=>n+x,0),loot,'every dropped reward had its own treasure chest');
  await $('returnHome').fire('click');
  await wait(()=>$('result').hidden===false,'return');
  p=await getProfile(db);
@@ -272,10 +291,14 @@ try{
   assert.equal(el('prepare').hidden,true,'active dungeon takes priority over first-view preparation');
   assert.equal(el('tab-dungeon').attributes['aria-current'],'page','battle is under the dungeon tab');
   assert.equal(el('heroName').textContent,'暁の旅人','reloaded dungeon restores saved name');
+  const deaths=[];
+  const stage2=el('battleCeremony');
+  stage2.dataset=new Proxy(stage2.dataset,{set(target,key,value){if(key==='event'&&value==='hero-death')deaths.push(value);target[key]=value;return true;}});
   assert.match(el('heroStats').innerHTML,/HP 1\//);
   assert.equal(el('nameDialog').open,false,'returning player has no rename prompt');
   await doc2.click(btn({cast:'-1'}));
   await wait(()=>el('result').hidden===false,'defeat');
+  assert.ok(deaths.includes('hero-death'),'player defeat plays death scene');
   const defeated=await getProfile(await openStore(env2.factory));
   assert.equal(defeated.run,null);
   assert.equal(el('tab-prepare').hidden,false,'defeat restores the pre-adventure tabs');
