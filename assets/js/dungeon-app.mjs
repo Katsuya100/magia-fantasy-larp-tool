@@ -1,16 +1,16 @@
-import * as G from './dungeon-core.mjs?v=20261017.28';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.28';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.28';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.28';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.28';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.28';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.28';
+import * as G from './dungeon-core.mjs?v=20261017.29';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.29';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.29';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.29';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.29';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.29';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.29';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight} from './dungeon-design.mjs?v=20261017.28';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.28';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.28';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.28';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.28';
+import {enemyForFight,layerForFight} from './dungeon-design.mjs?v=20261017.29';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.29';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.29';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.29';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.29';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const listView={
@@ -114,7 +114,21 @@ function scrollToDungeonTabs(){
 function imageUrl(blob){return circleImages.get(blob);}
 function battleImageUrl(blob){return circleImages.get(blob);}
 function statusText(unit){return unit.statuses.map(s=>{const row=masters.buffs.find(x=>x.id===s.id);const label=row?.name||(s.id.startsWith('resist_')?s.attribute+'耐性':'強化');return esc(label)+'('+s.turns+')';}).join(' / ');}
-function rowUnit(unit){const hp=Math.max(0,100*unit.hp/unit.stats.hp),mp=Math.max(0,100*unit.mp/unit.maxMp);return '<p>HP '+unit.hp+'/'+unit.stats.hp+'</p><div class="meter"><div class="fill" style="width:'+hp+'%"></div></div><p>MP '+unit.mp+'/'+unit.maxMp+'</p><div class="meter"><div class="fill mp" style="width:'+mp+'%"></div></div><small>MAG '+unit.stats.mag+' / DEF '+G.armor(unit)+' / RES '+unit.stats.res+'</small>'+(unit.statuses.length?'<p class="effects">'+statusText(unit)+'</p>':'');}
+function rowUnit(unit){
+ const hp=Math.max(0,100*unit.hp/unit.stats.hp),mp=Math.max(0,100*unit.mp/unit.maxMp);
+ // Identical fixed tracks on both sides keep HP, MP and every attribute aligned.
+ // Numeric attributes have separate columns so a wrapped RES value cannot push
+ // the opposing combatant's statistics down.
+ const vital=(label,current,max,percent,fillClass)=>'<div class="battle-vital"><span class="battle-vital-label">'+label+' '+current+'/'+max+'</span>'
+  +'<div class="meter"><div class="fill '+fillClass+'" style="width:'+percent+'%"></div></div></div>';
+ const attrs='<div class="combat-attributes">'
+  +[['MAG',unit.stats.mag],['DEF',G.armor(unit)],['RES',unit.stats.res]]
+   .map(([label,value])=>'<span class="combat-attribute"><span>'+label+'</span><strong>'+value+'</strong></span>').join('')
+  +'</div>';
+ const effects=unit.statuses.length?'<p class="effects" title="'+statusText(unit)+'">'+statusText(unit)+'</p>':'<p class="effects" aria-hidden="true"></p>';
+ return vital('HP',unit.hp,unit.stats.hp,hp,'')
+  +vital('MP',unit.mp,unit.maxMp,mp,'mp')+attrs+effects;
+}
 const roles={attack:'⚔️攻撃',defense:'🛡️防御',support:'✚回復',debuff:'🕸️弱体'};
 function circleLabel(a,revealed=true){return esc(circleSummary({analysis:a,revealed},masters.buffs,G.mpCost));}
 function itemName(item){return masters.items.find(x=>x.id===item.id)?.name||item.id;}

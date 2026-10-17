@@ -552,8 +552,7 @@ dialog[open]::backdrop{opacity:1}
  max-width:100%
 }
 #battleArena #enemyStats,#battleArena #heroStats{
- min-width:0;min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain;
- scrollbar-width:thin
+ min-width:0;min-height:0;flex:1;overflow:visible
 }
 #battleArena .effects{overflow-wrap:anywhere}
 @media(max-width:630px){
@@ -964,4 +963,97 @@ html,body{overflow-x:clip}
   padding:3px 4px;margin-bottom:7px;
   font-size:13px;line-height:1.4
  }
+}
+
+/* Combat presentation: consistent row origins and fixed fighter card sizes.
+   The portrait and the two-line name reserve equal space for both sides,
+   so long enemy names never displace HP/MP or the attributes below them. */
+#battleArena .unit{
+ height:280px;min-height:280px;max-height:280px;
+ padding:12px 10px;overflow:visible
+}
+#battleArena .unit .enemy-portrait,#battleArena .unit .hero-portrait{
+ box-sizing:border-box;width:100%;height:70px;flex:0 0 70px;
+ margin:0 0 3px;font-size:52px
+}
+#battleArena .unit-info{
+ width:100%;min-width:0;min-height:0;flex:1;
+ display:grid;grid-template-rows:38px minmax(0,1fr);gap:4px
+}
+#battleArena .unit-info h3{
+ margin:0;max-width:100%;min-width:0;height:38px;min-height:38px;
+ white-space:normal;overflow-wrap:anywhere;word-break:normal;
+ overflow:hidden;text-overflow:clip;
+ display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+ font-size:15px;line-height:1.25;text-align:center
+}
+#battleArena #enemyStats,#battleArena #heroStats{
+ width:100%;min-width:0;min-height:0;display:grid;
+ grid-template-rows:38px 38px 35px minmax(0,1fr);
+ gap:2px;overflow:visible;align-content:stretch
+}
+#battleArena .battle-vital{
+ min-width:0;display:grid;grid-template-rows:minmax(0,1fr) 8px;gap:2px
+}
+#battleArena .battle-vital-label{
+ display:block;min-width:0;font-size:clamp(13px,1.7vw,16px);
+ line-height:1.3;white-space:nowrap;font-variant-numeric:tabular-nums;
+ color:var(--pale)
+}
+#battleArena .combat-attributes{
+ min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ align-items:stretch;gap:2px
+}
+#battleArena .combat-attribute{
+ min-width:0;display:flex;flex-direction:column;align-items:center;
+ justify-content:center;gap:0;font-size:12px;line-height:1.16;
+ white-space:nowrap;color:var(--soft)
+}
+#battleArena .combat-attribute strong{
+ font-size:15px;font-variant-numeric:tabular-nums;color:var(--pale);
+ font-weight:700
+}
+#battleArena #enemyStats>.effects,#battleArena #heroStats>.effects{
+ min-width:0;min-height:0;margin:1px 0 0;
+ font-size:12px;line-height:1.2;color:var(--gold);
+ display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+ overflow:hidden;overflow-wrap:anywhere
+}
+@media(max-width:630px){
+ #battleArena .unit{
+  height:240px;min-height:240px;max-height:240px;padding:8px 6px
+ }
+ #battleArena .unit .enemy-portrait,#battleArena .unit .hero-portrait{
+  height:48px;flex-basis:48px;margin-bottom:2px;font-size:42px
+ }
+ #battleArena .unit-info{
+  grid-template-rows:38px minmax(0,1fr);gap:3px
+ }
+ #battleArena .unit-info h3{
+  height:38px;min-height:38px;font-size:14px;line-height:1.3
+ }
+ #battleArena #enemyStats,#battleArena #heroStats{
+  grid-template-rows:33px 33px 35px minmax(0,1fr);gap:2px
+ }
+ #battleArena .battle-vital-label{font-size:clamp(12px,3.2vw,14px);line-height:1.25}
+ #battleArena .combat-attribute{font-size:11px}
+ #battleArena .combat-attribute strong{font-size:14px}
+ #battleArena #enemyStats>.effects,#battleArena #heroStats>.effects{
+  font-size:12px;line-height:1.17
+ }
+}
+/* Do not grow a cast button to the height of the tallest spell's info area.
+   The photo and 発動 label remain adjacent; each spell frame may be taller
+   from its own effect badges, without stretching the cast button. */
+.battle-spells{align-items:start}
+.battle-spell-frame{align-self:start;height:auto}
+.battle-spell-frame .battle-tile{
+ flex:0 0 auto;height:auto;min-height:0;justify-content:flex-start;gap:5px
+}
+.battle-spells .tile-cooldown{
+ margin-top:4px;line-height:1.25;min-height:0
+}
+@media(max-width:630px){
+ .battle-spell-frame .battle-tile{min-height:0}
+ .battle-spells .tile-cooldown{margin-top:3px}
 }
