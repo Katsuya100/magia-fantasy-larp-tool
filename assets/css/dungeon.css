@@ -1073,7 +1073,7 @@ html,body{overflow-x:clip}
 #battleArena .hero-portrait::before{
  content:"";position:absolute;inset:-17px 0 -19px;z-index:-1;
  pointer-events:none;
- background:radial-gradient(ellipse 37% 51% at 50% 50%,
+ background:radial-gradient(ellipse 37% 51% at 50% 61%,
   var(--portrait-aura) 0%,transparent 100%)
 }
 /* Common is intentionally unlit. All rarer tiers keep their colored
@@ -1081,3 +1081,25 @@ html,body{overflow-x:clip}
 .relic-card.discovered[data-rarity="common"] .relic-art{box-shadow:none}
 .relic-card.discovered[data-rarity="common"] .relic-glyph,
 .relic-card.discovered[data-rarity="common"] .relic-rarity{text-shadow:none}
+
+/* Softer colored rarity aura: retain the solid frame and tier hue while
+   replacing the sharp 9px halo with a broad, diffuse light. */
+.relic-card.discovered:not([data-rarity="common"]) .relic-art{
+ box-shadow:0 0 22px 7px var(--rarity-halo),
+  0 0 46px 8px var(--rarity-glow),
+  inset 0 0 27px var(--rarity-halo)
+}
+.relic-card.discovered:not([data-rarity="common"]) .relic-glyph{
+ text-shadow:0 0 26px var(--rarity-glow)
+}
+.relic-card.discovered:not([data-rarity="common"]) .relic-rarity{
+ text-shadow:0 0 15px var(--rarity-glow)
+}
+/* Center every glyph by its visual ink rather than the font's uneven
+   baseline metrics; keep unknown/question-mark cards centered too. */
+.relic-art{display:grid;place-items:center}
+.relic-art .relic-glyph{
+ display:flex;align-items:center;justify-content:center;
+ width:100%;height:100%;margin:0;padding:0;
+ line-height:1;transform:translateY(-.035em);text-align:center
+}
