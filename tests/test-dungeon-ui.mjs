@@ -176,7 +176,20 @@ try{
  assert.match($('gearCounter').textContent,/最初の帰還後に解放/);
  const ceremonies=[],chestDrops=[],defeatedDuringLoot=[];
  const stage=$('battleCeremony');
- stage.dataset=new Proxy(stage.dataset,{set(target,key,value){if(key==='event'&&value!=='idle')ceremonies.push(value);if(key==='event'&&value==='loot')defeatedDuringLoot.push($('enemyCombatant').dataset.defeated);target[key]=value;return true;}});
+ let hiddenDuringDefeat=0;
+ let stageHidden=stage.hidden;
+ Object.defineProperty(stage,'hidden',{configurable:true,get(){return stageHidden;},set(value){
+  if(value&&stage.dataset.event==='enemy-death')hiddenDuringDefeat++;
+  stageHidden=value;
+ }});
+ stage.dataset=new Proxy(stage.dataset,{set(target,key,value){
+  if(key==='event'&&value!=='idle')ceremonies.push(value);
+  if(key==='event'&&value==='loot'){
+   assert.equal(stage.hidden,false,'reward overlay replaces a still-mounted death overlay');
+   defeatedDuringLoot.push($('enemyCombatant').dataset.defeated);
+  }
+  target[key]=value;return true;
+ }});
  const chestElement=$('lootChests');
  let chestMarkup=chestElement.innerHTML;
  Object.defineProperty(chestElement,'innerHTML',{get(){return chestMarkup;},set(v){chestMarkup=v;const n=(v.match(/class="loot-chest"/g)||[]).length;if(n)chestDrops.push(n);}});
@@ -240,6 +253,7 @@ try{
  assert.ok(ceremonies.includes('enemy-death'),'enemy death ceremony played');
  assert.ok(ceremonies.includes('loot'),'loot ceremony played');
  assert.ok(defeatedDuringLoot.every(x=>x==='true'),'slain foe stays invisible during every reward-drop sequence');
+ assert.equal(hiddenDuringDefeat,0,'death-to-reward handoff never exposes a neutral battle frame');
  assert.equal($('enemyCombatant').dataset.defeated,'false','next enemy replaces the defeated one after first fight');
  assert.equal(chestDrops.at(-1),p.run.loot.length,'one chest per actual first-fight drop');
  assert.equal($('heroCombatant').dataset.effect,'idle','fighter animation resets');

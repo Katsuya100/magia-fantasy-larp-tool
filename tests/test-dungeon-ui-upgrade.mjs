@@ -16,6 +16,18 @@ try{
  await wait(()=>$('libraryCards').innerHTML.includes('circle-1'));
  assert.match($('magicStoneBalance').textContent,/3個/);
  await env.document.click(button({view:'library'}));
+ // Panels must overlap while crossfading; no instant removal, root zoom, or black bars.
+ globalThis.window.matchMedia=()=>({matches:false});
+ await env.document.click(button({view:'home'}));
+ assert.equal($('library').hidden,false,'outgoing panel stays visible throughout the crossfade');
+ assert.equal($('home').hidden,false,'incoming panel appears before outgoing is hidden');
+ assert.equal($('library').dataset.exiting,'true');
+ assert.equal($('home').dataset.entering,'true');
+ await new Promise(resolve=>setTimeout(resolve,220));
+ assert.equal($('library').hidden,true,'outgoing panel disappears after transition');
+ assert.equal($('home').hidden,false);
+ await env.document.click(button({view:'library'}));
+ globalThis.window.matchMedia=undefined;
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,true,'upgrade requires a dialog');
  assert.match($('circleActionMessage').textContent,/10%/);
