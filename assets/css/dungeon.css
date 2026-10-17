@@ -824,3 +824,12 @@ html,body{overflow-x:clip}
 @media(prefers-reduced-motion:reduce){
  #battleArena .element-flare,#battleArena .element-trail{animation:none!important;opacity:0!important}
 }
+
+/* Accessible native list controls shared by grimoire, backpack picker and relics. */
+.list-controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin:14px 0 20px;padding:11px 13px;border:1px solid var(--border);background:#0d1422c2}
+.list-controls label{flex:1 1 145px;min-width:0;margin:0;font-size:12px;color:var(--gold);font-weight:650}
+.list-controls select{display:block;width:100%;min-width:0;min-height:40px;margin-top:4px;padding:7px 28px 7px 9px;border:1px solid var(--border);border-radius:3px;background:#1a2131;color:var(--pale);font:13px var(--serif);cursor:pointer}
+.list-controls select:focus-visible{outline:2px solid #9ae3db;outline-offset:2px}
+.picker-controls{margin:12px 0}
+.picker-controls label{flex-basis:155px}
+@media(max-width:630px){.list-controls{gap:7px;padding:9px}.list-controls label{flex-basis:125px;font-size:11px}.list-controls select{font-size:12px}}
