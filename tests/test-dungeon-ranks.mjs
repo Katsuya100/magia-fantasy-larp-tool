@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import {ADVENTURER_RANKS,rankAt,rankTitle,rankBadgeName,highestRankLayer,
+ unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+
+const names=['鉛','鉄','鋼','銅','銀','金','白金','ミスリル','アダマンタイト','オリハルコン'];
+assert.deepEqual(ADVENTURER_RANKS.map(r=>r.name),names);
+assert.deepEqual(ADVENTURER_RANKS.map(r=>r.layer),[10,20,30,40,50,60,70,80,90,100]);
+for(const {layer,name} of ADVENTURER_RANKS){
+ assert.equal(rankAt(layer)?.name,name);
+ assert.equal(rankTitle(layer),name+'級');
+ assert.equal(rankBadgeName(layer),name+'級冒険者章');
+}
+assert.equal(rankAt(110),null);
+assert.equal(rankTitle(0),'未取得');
+const p={adventurerRank:0,collection:{}};
+assert.equal(highestRankLayer({}),0,'legacy saves start unranked');
+assert.deepEqual(unlockedStartLayers(p),[1]);
+assert.equal(allowedStartLayer(p,11),1,'cannot jump to an unearned layer');
+assert.equal(allowedStartLayer(p,'bogus'),1);
+assert.equal(allowedStartLayer(p,0),1);
+const h={hp:80,stats:{hp:100},mp:40,maxMp:50};
+assert.deepEqual(rankBadgeDrop(50,h,p),{type:'rank',layer:10},'exact 80% on both resources is eligible');
+assert.equal(rankBadgeDrop(49,h,p),null,'not awarded for ordinary encounter');
+assert.equal(rankBadgeDrop(5,h,p),null,'not awarded for non-decade bosses');
+assert.equal(rankBadgeDrop(505,h,p),null,'endless bosses do not award new ranks');
+assert.equal(rankBadgeDrop(50,{...h,hp:79.999},p),null,'below 80% HP fails');
+assert.equal(rankBadgeDrop(50,{...h,mp:39.999},p),null,'below 80% MP fails');
+assert.equal(rankBadgeDrop(50,{...h,maxMp:0},p),null);
+assert.equal(rankBadgeDrop(50,{...h,stats:{hp:0}},p),null);
+assert.equal(rankBadgeDrop(50,h,p,[{type:'rank',layer:10}]),null,'cannot duplicate pending badge');
+assert.equal(rankBadgeDrop(50,h,p,[{type:'rank',layer:20}]),null,'pending higher grade includes lower grades');
+assert.equal(acquireAdventurerRank(p,5),false,'invalid grade cannot be granted');
+assert.equal(acquireAdventurerRank(p,10),true);
+assert.equal(highestRankLayer(p),10);
+assert.equal(acquireAdventurerRank(p,10),false,'same grade is unique');
+assert.equal(rankBadgeDrop(50,h,p),null,'owned badge does not re-drop');
+assert.deepEqual(unlockedStartLayers(p),[1,11]);
+assert.equal(allowedStartLayer(p,'11'),11);
+assert.equal(allowedStartLayer(p,21),1);
+assert.equal(acquireAdventurerRank(p,60),true,'higher grade can be gained without all lower badges');
+assert.equal(highestRankLayer(p),60);
+assert.deepEqual(unlockedStartLayers(p),[1,11,21,31,41,51,61],'a higher grade automatically unlocks every lower grade');
+assert.equal(allowedStartLayer(p,31),31);
+assert.equal(allowedStartLayer(p,71),1);
+assert.equal(rankBadgeDrop(100,h,p),null,'higher grade blocks lower drops');
+assert.deepEqual(p.collection,{},'badges are never added to the collection');
+assert.equal(acquireAdventurerRank(p,100),true);
+assert.deepEqual(unlockedStartLayers(p),[1,11,21,31,41,51,61,71,81,91,101]);
+assert.equal(allowedStartLayer(p,101),101,'orichalcum permits endless dungeon from floor 101');
+assert.equal(acquireAdventurerRank(p,20),false,'lower grade cannot downgrade an earned rank');
+assert.equal(highestRankLayer(p),100);
+console.log('PASS rank names, 80% thresholds, unique badge drops, save progression and all shortcut layers');

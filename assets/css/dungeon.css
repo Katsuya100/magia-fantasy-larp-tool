@@ -1334,3 +1334,12 @@ html,body{overflow-x:clip}
 .relic-card.locked .relic-symbol{filter:none}
 .relic-card.locked .relic-symbol{color:#aaa0b6;opacity:.52}
 
+
+/* Adventurer ranks are profile achievements; starting depth is picked before each run. */
+.adventurer-grade{margin:12px 0 3px;color:var(--soft);font-size:14px}
+.adventurer-grade strong{color:var(--gold);font-size:17px}
+.adventurer-badges{margin:2px 0 0;color:var(--soft);font-size:12px;line-height:1.6}
+.rank-start{display:grid;gap:6px;margin:20px 0 8px;max-width:420px}
+.rank-start label{font-weight:700;color:var(--gold);font-size:14px}
+.rank-start select{max-width:100%;min-height:43px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;color:var(--text);background:#181827}
+.rank-start p{margin:0;color:var(--soft);font-size:12px;line-height:1.5}
