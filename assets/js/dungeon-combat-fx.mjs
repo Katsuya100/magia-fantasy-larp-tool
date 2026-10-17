@@ -1,6 +1,6 @@
 // Visual playback follows the ordered snapshots emitted by dungeon-core.round.
 // Animations never alter combat math or determine turn outcomes.
-export const EFFECT_LABELS={attack:'攻撃',basic:'通常攻撃',defense:'防御',debuff:'弱体',support:'回復',buff:'強化',burn:'火傷',item:'道具'};
+export const EFFECT_LABELS={attack:'⚔️攻撃',basic:'⚔️通常攻撃',defense:'🛡️防御',debuff:'🕸️弱体',support:'✚回復',buff:'強化',burn:'火傷',item:'道具'};
 export const ELEMENT_GLYPHS={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪',gravity:'⬤',law:'⚖',chaos:'☄'};
 export function effectCaption(step){
  const tag=EFFECT_LABELS[step.role]||'術式';
