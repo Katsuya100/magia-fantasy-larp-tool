@@ -65,7 +65,7 @@ try{
   await env.document.click(btn({cast:'0'}));
   saved=await getProfile(db);
   assert.ok(saved.run,'casting magic does not fail or abort the expedition');
-  assert.ok(saved.run.hero.mp<saved.run.hero.maxMp,'casting costs MP normally');
+  assert.ok(saved.run.log.some(line=>line.startsWith('自分：ダメージ ')),'spell executes successfully despite normal post-victory MP recovery');
  }finally{env.restore();}
 
  // Existing players may already have a saved undefined/NaN MP from the faulty choice.
