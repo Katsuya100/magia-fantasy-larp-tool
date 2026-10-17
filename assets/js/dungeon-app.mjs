@@ -1,14 +1,16 @@
-import * as G from './dungeon-core.mjs?v=20261017.9';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.9';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.9';
-import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.9';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.9';
+import * as G from './dungeon-core.mjs?v=20261017.10';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.10';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,attributeEffectGuide} from './dungeon-magic-knowledge.mjs?v=20261017.10';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.10';
+import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.10';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.10';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.9';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.10';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
 let dungeonView='prepare',battleUrls=[];
 let busyAction=false,playingEffects=false;
+let photoAnalysisQueue=Promise.resolve(),photoAnalysisEpoch=0;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){
  const targets=['pageError','battleError','cameraError'];
@@ -52,7 +54,7 @@ function freeUrls(){for(const url of urls)URL.revokeObjectURL(url);urls=[];}
 function statusText(unit){return unit.statuses.map(s=>{const row=masters.buffs.find(x=>x.id===s.id);const label=row?.name||(s.id.startsWith('resist_')?s.attribute+'耐性':'強化');return esc(label)+'('+s.turns+')';}).join(' / ');}
 function rowUnit(unit){const hp=Math.max(0,100*unit.hp/unit.stats.hp),mp=Math.max(0,100*unit.mp/unit.maxMp);return '<p>HP '+unit.hp+'/'+unit.stats.hp+'</p><div class="meter"><div class="fill" style="width:'+hp+'%"></div></div><p>MP '+unit.mp+'/'+unit.maxMp+'</p><div class="meter"><div class="fill mp" style="width:'+mp+'%"></div></div><small>MAG '+unit.stats.mag+' / DEF '+G.armor(unit)+' / RES '+unit.stats.res+'</small>'+(unit.statuses.length?'<p class="effects">'+statusText(unit)+'</p>':'');}
 const roles={attack:'⚔ 攻撃',defense:'🛡 防御',support:'✚ 回復',debuff:'🕸 弱体'};
-function circleLabel(a){return esc(a.attribute+' / '+(roles[a.role]||a.role)+' / 威力 '+a.power);}
+function circleLabel(a,revealed=true){return esc(circleSummary({analysis:a,revealed},masters.buffs,G.mpCost));}
 function itemName(item){return masters.items.find(x=>x.id===item.id)?.name||item.id;}
 function render(){
  carry=prepareItems(carry,profile.inventory.length,G.capacity(profile.level));
@@ -77,12 +79,14 @@ function render(){
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
  }).join('');
- $('libraryCards').innerHTML=circles.map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><p>'+(c.analysis?circleLabel(c.analysis):'？？？ · 性能未判明')+'</p><div class="card-actions"><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
+ $('libraryCards').innerHTML=circles.map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><p>'+esc(circleSummary(c,masters.buffs,G.mpCost))+'</p><div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">効果を大きく見る ⤢</button><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run);
+ $('attributeEffects').innerHTML=attributeEffectGuide(masters.buffs).map(x=>'<li><b>'+esc(x.icon+' '+x.label)+'</b><span>強化：'+esc(x.buff)+' / 弱体：'+esc(x.debuff)+'</span></li>').join('');
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
  $('gearCounter').textContent='携行 '+pickedValues(carry).length+' / '+limit+' 個'+(unlocked?'':' · 最初の帰還後に解放');
- $('startAttack').disabled=!isFull(slots)||Boolean(profile.run);
+ $('startAttack').disabled=!canDepartWithCircles(slots)||Boolean(profile.run);
+ $('circleCounter').textContent='魔法陣 '+slots.filter(Boolean).length+' / 3〜5 個';
 }
 function renderRun(){
  const run=profile.run;if(!run)return;
@@ -95,12 +99,13 @@ function renderRun(){
  $('heroStats').innerHTML=rowUnit(hero);
  $('battleSpells').innerHTML=run.slotIds.map((id,i)=>{
   const c=circles.find(x=>x.id===id),s=hero.spells[i],waiting=hero.cooldowns[i]||0;
-  const disabled=Boolean(s&&!G.canCast(hero,i));
-  return '<button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(s?circleLabel(s):'性能未判明')+'" '+(disabled?'disabled':'')+'>'
+  const disabled=!id||Boolean(s&&!G.canCast(hero,i));
+  return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c?.analysis?circleLabel(c.analysis,isRevealed(c)):'未解析')+'" '+(disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +(c?.image?'<img alt="" src="'+battleImageUrl(c.image)+'">':'<span class="tile-empty-icon" aria-hidden="true">◎</span>')
-    +'<span class="tile-detail">'+(s?circleLabel(s):'？？？')+'</span>'
-    +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>';
+    +'<span class="tile-detail">'+(c?.analysis?circleLabel(c.analysis,isRevealed(c)):'未解析')+'</span>'
+    +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
+    +(c?'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">効果を拡大 ⤢</button>':'')+'</div>';
  }).join('');
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔ 通常攻撃</button>';
  const maxSlots=Math.max(5,run.carry.length);
@@ -267,6 +272,14 @@ async function capture(){
  await putCircle(db,circle);circles=newestCirclesFirst([...circles,circle]);
  note('');render();
 }
+function openMagicDetails(id){
+ const circle=circles.find(c=>c.id===id);if(!circle)return;
+ const d=circleDetails(circle,masters.buffs,G.mpCost);
+ $('magicDetailsImage').src=imageUrl(circle.image);
+ $('magicDetailsStats').innerHTML=[['属性',d.attribute],['役割',d.role],['効果',d.effect],['消費MP',d.mp],['威力',d.power]]
+  .map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(value)+'</dd>').join('');
+ if(!$('magicDetailsDialog').open)$('magicDetailsDialog').showModal();
+}
 function openLoadoutPicker(kind,index){
  if(profile.run)return;
  if(kind==='circle'){
@@ -278,7 +291,7 @@ function openLoadoutPicker(kind,index){
  const dialog=$('loadoutDialog');
  $('loadoutDialogTitle').textContent=kind==='circle'?'魔法陣を選ぶ':'持ち込みアイテムを選ぶ';
  $('loadoutOptions').innerHTML=kind==='circle'
-  ?circleChoices(circles,slots,imageUrl,esc)
+  ?circleChoices(circles,slots,imageUrl,esc,c=>circleSummary(c,masters.buffs,G.mpCost))
   :itemChoices(profile.inventory,carry,itemName,esc);
  $('clearLoadoutSlot').hidden=kind==='circle'?slots[index]===null:carry[index]===null;
  $('openGrimoireFromPicker').hidden=kind!=='circle';
@@ -322,6 +335,7 @@ function wire(){
  document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
  if(b.dataset.view){stopCamera();show(b.dataset.view);return;}
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
+ if(b.dataset.circleDetail){openMagicDetails(b.dataset.circleDetail);return;}
  if(b.dataset.remove){if(profile.run)return;await deleteCircle(db,b.dataset.remove);circles=circles.filter(c=>c.id!==b.dataset.remove);slots=slots.map(id=>id===b.dataset.remove?null:id);profile.slots=[...slots];await persist();render();return;}
  if(b.dataset.openSlot!==undefined){openLoadoutPicker('circle',Number(b.dataset.openSlot));return;}
  if(b.dataset.openItem!==undefined){openLoadoutPicker('item',Number(b.dataset.openItem));return;}
@@ -339,6 +353,7 @@ function wire(){
  });
  $('cancelNameDialog').addEventListener('click',()=>$('nameDialog').close());
  $('nameDialog').addEventListener('cancel',event=>{if(!profile.name)event.preventDefault();});
+ $('closeMagicDetails').addEventListener('click',()=>$('magicDetailsDialog').close());
  $('closeLoadoutDialog').addEventListener('click',closeLoadoutPicker);
  $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>exclusive(()=>chooseLoadout(null)));
