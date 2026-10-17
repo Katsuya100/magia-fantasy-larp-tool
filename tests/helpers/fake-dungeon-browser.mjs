@@ -48,7 +48,8 @@ export function fakeDungeonBrowser(config={}){
  let captureFrameSource='';
  Object.defineProperty(captureFrame,'src',{get(){return captureFrameSource;},set(s){captureFrameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>captureFrame.onload?.());}}});
  const video=document.getElementById('cameraVideo');video.videoWidth=960;video.videoHeight=720;
- let mediaOpened=0,mediaClosed=0;
+ let mediaOpened=0,mediaClosed=0,imageSerial=0;
+ const createdImageUrls=[],revokedImageUrls=[];
  const old={document:globalThis.document,window:globalThis.window,indexedDB:globalThis.indexedDB,fetch:globalThis.fetch,createObjectURL:URL.createObjectURL,revokeObjectURL:URL.revokeObjectURL,DataTransfer:globalThis.DataTransfer,navigator:globalThis.navigator};
  globalThis.document=document;
  globalThis.window={addEventListener(){}};
@@ -58,10 +59,10 @@ export function fakeDungeonBrowser(config={}){
   const body=await readFile(new URL('../../assets/data/'+file,import.meta.url),'utf8');
   return {ok:true,text:async()=>body};
  };
- URL.createObjectURL=()=>('blob:mock-'+Math.random());
- URL.revokeObjectURL=()=>{};
+ URL.createObjectURL=blob=>{const url='blob:mock-'+(++imageSerial);createdImageUrls.push({blob,url});return url;};
+ URL.revokeObjectURL=url=>{revokedImageUrls.push(url);};
  globalThis.DataTransfer=class{constructor(){this.files=[];this.items={add:file=>this.files.push(file)};}};
  Object.defineProperty(globalThis,'navigator',{value:{mediaDevices:{getUserMedia:async()=>{mediaOpened++;if(config.cameraFailure)throw Error('Permission denied');return {getTracks:()=>[{stop(){mediaClosed++;}}]};}}},configurable:true});
  function restore(){globalThis.document=old.document;globalThis.window=old.window;globalThis.indexedDB=old.indexedDB;globalThis.fetch=old.fetch;URL.createObjectURL=old.createObjectURL;URL.revokeObjectURL=old.revokeObjectURL;globalThis.DataTransfer=old.DataTransfer;Object.defineProperty(globalThis,'navigator',{value:old.navigator,configurable:true});}
- return {factory,document,dom,analyzerState,restore,get opened(){return mediaOpened;},get closed(){return mediaClosed;},get iframe(){return iframe;}};
+ return {factory,document,dom,analyzerState,restore,createdImageUrls,revokedImageUrls,get opened(){return mediaOpened;},get closed(){return mediaClosed;},get iframe(){return iframe;}};
 }
