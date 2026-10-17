@@ -5,11 +5,11 @@ export function spellGrid(slots,circles,imageUrl,escapeText,active=true){
  return '<div class="loadout-grid" role="group" aria-label="魔法陣の編成">'
   +slots.map((id,index)=>{
    const c=byId.get(id);
-   return '<button type="button" class="loadout-tile '+(c?'equipped':'empty')+'" data-open-slot="'+index+'" aria-label="魔法陣 '+(index+1)+'枠目 '+(c?'装備中':'未装備')+'" '+(active?'':'disabled')+'>'
+   return '<div class="prepare-spell-frame"><button type="button" class="loadout-tile '+(c?'equipped':'empty')+'" data-open-slot="'+index+'" aria-label="魔法陣 '+(index+1)+'枠目 '+(c?'装備中':'未装備')+'" '+(active?'':'disabled')+'>'
    +'<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span>'
    +(c?'<img alt="" src="'+imageUrl(c.image)+'">':'<span class="tile-empty-icon" aria-hidden="true">＋</span>')
    +(c?'':'<span class="tile-title">未装備</span>')
-   +'</button>';
+   +'</button>'+(c?'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">効果を拡大 ⤢</button>':'')+'</div>';
   }).join('')+'</div>';
 }
 export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,active=true){
@@ -25,11 +25,12 @@ export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,a
      +'</button>';
    }).join('')+'</div>';
 }
-export function circleChoices(circles,slots,imageUrl,escapeText){
+export function circleChoices(circles,slots,imageUrl,escapeText,summary){
  if(!circles.length)return '<p class="collection-empty">魔導書に魔法陣を登録してください。</p>';
- return circles.map((c,i)=>'<button type="button" class="picker-option" data-choose-circle="'+i+'" aria-label="魔法陣の候補 '+(i+1)+'">'
-  +'<img alt="" src="'+imageUrl(c.image)+'"><span class="picker-label"><small>'+(c.analysis?escapeText(c.analysis.attribute+' / '+c.analysis.role):'？？？ 性能未判明')+'</small></span>'
-  +(slots.includes(c.id)?'<span class="picker-equipped">編成中</span>':'')+'</button>').join('');
+ return circles.map((c,i)=>'<div class="picker-circle-wrap"><button type="button" class="picker-option" data-choose-circle="'+i+'" aria-label="魔法陣の候補 '+(i+1)+'">'
+  +'<img alt="" src="'+imageUrl(c.image)+'"><span class="picker-label"><small>'+escapeText(summary?summary(c):(c.analysis?c.analysis.attribute+' / '+c.analysis.role:'未解析'))+'</small></span>'
+  +(slots.includes(c.id)?'<span class="picker-equipped">編成中</span>':'')+'</button>'
+  +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">効果を大きく見る ⤢</button></div>').join('');
 }
 export function itemChoices(inventory,slots,itemName,escapeText){
  if(!inventory.length)return '<p class="collection-empty">持ち込みできるアイテムがありません。</p>';
