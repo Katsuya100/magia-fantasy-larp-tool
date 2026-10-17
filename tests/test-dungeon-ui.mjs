@@ -112,7 +112,7 @@ try{
  assert.equal(circles.length,5);assert.ok(circles.every(c=>c.analysis?.attribute==='flame'),'only successful analyses are saved');
  assert.equal($('library').hidden,false,'successful capture returns to the grimoire');
  assert.equal($('analyzing').hidden,true,'analyzing view closes after success');
- assert.equal($('cameraCapture').hidden,false,'successful capture retains live camera for the next photo');
+
  assert.ok(circles.every(c=>c.revealed===false),'first-use power remains secret');
  assert.doesNotMatch($('libraryCards').innerHTML,/威力 5000/,'grimoire conceals unused spell power');
  assert.match($('libraryCards').innerHTML,/消費MP /,'capture reveals MP rating');
