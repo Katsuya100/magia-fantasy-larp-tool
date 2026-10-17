@@ -227,6 +227,13 @@ try{
  assert.equal($('tab-dungeon').hidden,false,'dungeon tab replaces preparation tabs');
  assert.equal($('tab-dungeon').attributes['aria-current'],'page');
  assert.equal($('heroName').textContent,'暁の旅人','battle uses the saved adventurer name');
+ assert.equal(($('enemyStats').innerHTML.match(/class="battle-vital"/g)||[]).length,2,'enemy HP and MP render as fixed aligned rows');
+ assert.equal(($('heroStats').innerHTML.match(/class="battle-vital"/g)||[]).length,2,'hero HP and MP render as fixed aligned rows');
+ for(const side of ['enemy','hero']){
+  const attrs=$(side+'Stats').innerHTML;
+  assert.match(attrs,/class="combat-attributes"/,side+' attributes use the same three-column grid');
+  for(const label of ['MAG','DEF','RES'])assert.match(attrs,new RegExp('>'+label+'<'),side+' displays '+label+' without overflowing');
+ }
  assert.equal($('heroCombatant').dataset.effect,'idle');
  assert.equal($('enemyCombatant').dataset.effect,'idle');
  assert.ok(ceremonies.includes('encounter'),'battle start has encounter ceremony');

@@ -268,7 +268,7 @@ assert.match(css,/\.scene-stack > \.panel\[data-exiting="true"\]/,'outgoing pane
 assert.match(css,/\.scene-stack > \.panel\[data-entering="true"\]/,'incoming panel fades in');
 assert.doesNotMatch(css, /::view-transition-old\(root\)/,'never zoom a full-screen snapshot');
 assert.match(css,/#battleArena \.unit\{\s*box-sizing:border-box;height:280px/,'fighters do not stretch with status effects');
-assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{/,'statuses scroll within fixed cards');
+assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{/,'fighter stats share consistent fixed rows');
 assert.match(css,/@keyframes enemy-snap-slide/,'enemy only slides, never shrinks');
 assert.match(css,/@keyframes loot-ceremony-arrive/,'loot animation restarts without an empty death frame');
 assert.match(app,/if\(event!=='enemy-death'\)\{/,'death overlay remains during handoff');
@@ -347,4 +347,20 @@ for(const selector of ['.hero-edition,.eyebrow,.chapter,.subheading>span',
 }
 assert.match(css,/\.tabs button\{font-size:14px;min-height:68px/,'mobile navigation labels are readable');
 assert.match(css,/\.circle-card-mp,\.circle-card-power\{white-space:normal/,'narrow spell stats can wrap instead of shrinking');
+
+/* Regression: a 5-column cast button must not stretch to fill effect-summary
+   rows. Both combatant boxes and the HP/MP starts remain fixed and aligned. */
+assert.match(css,/\.battle-spells\{grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/,'five spell columns are unchanged');
+assert.match(css,/\.battle-spells\{align-items:start\}/,'spell frames start aligned without stretching');
+assert.match(css,/\.battle-spell-frame \.battle-tile\{\s*flex:0 0 auto;height:auto;min-height:0/,'cast button sizes to its own image and 発動 label');
+assert.match(css,/\.battle-spells \.tile-cooldown\{\s*margin-top:4px/,'cast label stays just below the image');
+assert.match(css,/#battleArena \.unit\{\s*height:280px;min-height:280px;max-height:280px/,'both combatants have fixed identical desktop height');
+assert.match(css,/#battleArena \.unit\{\s*height:240px;min-height:240px;max-height:240px/,'both combatants have fixed identical mobile height');
+assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:38px minmax\(0,1fr\)/,'both names reserve the exact same fixed row height');
+assert.match(css,/#battleArena \.unit-info h3\{[\s\S]*?white-space:normal;overflow-wrap:anywhere;[\s\S]*?-webkit-line-clamp:2/,'long names wrap over two lines instead of escaping the card');
+assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:38px 38px 35px minmax\(0,1fr\)/,'both sides align HP, MP and MAG/DEF/RES rows');
+assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*min-width:0;min-height:0;flex:1;overflow:visible/,'status area stops scrolling');
+assert.doesNotMatch(css,/#battleArena #enemyStats,#battleArena #heroStats\{[^}]*overflow-y:auto/,'no hidden per-combatant stats scrollbars');
+assert.match(css,/#battleArena \.combat-attributes\{\s*min-width:0;display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'MAG, DEF and RES are in separate columns');
+assert.match(app,/function rowUnit\(unit\)\{[\s\S]*?class="battle-vital"[\s\S]*?class="combat-attributes"[\s\S]*?class="combat-attribute"/,'fighter HP/MP and attributes use non-wrapping, compact markup');
 console.log('PASS camera circle guide, layer progression, 3-column items, readable story, terminology and fantasy layout');
