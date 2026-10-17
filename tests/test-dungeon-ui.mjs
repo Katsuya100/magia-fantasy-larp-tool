@@ -173,9 +173,9 @@ try{
  prepared=await getProfile(db);
  assert.deepEqual(prepared.slots.slice(0,2),[circles[0].id,circles[1].id],'swap back');
  assert.match($('gearCounter').textContent,/最初の帰還後に解放/);
- const ceremonies=[],chestDrops=[];
+ const ceremonies=[],chestDrops=[],defeatedDuringLoot=[];
  const stage=$('battleCeremony');
- stage.dataset=new Proxy(stage.dataset,{set(target,key,value){if(key==='event'&&value!=='idle')ceremonies.push(value);target[key]=value;return true;}});
+ stage.dataset=new Proxy(stage.dataset,{set(target,key,value){if(key==='event'&&value!=='idle')ceremonies.push(value);if(key==='event'&&value==='loot')defeatedDuringLoot.push($('enemyCombatant').dataset.defeated);target[key]=value;return true;}});
  const chestElement=$('lootChests');
  let chestMarkup=chestElement.innerHTML;
  Object.defineProperty(chestElement,'innerHTML',{get(){return chestMarkup;},set(v){chestMarkup=v;const n=(v.match(/class="loot-chest"/g)||[]).length;if(n)chestDrops.push(n);}});
@@ -232,6 +232,8 @@ try{
  assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
  assert.ok(ceremonies.includes('enemy-death'),'enemy death ceremony played');
  assert.ok(ceremonies.includes('loot'),'loot ceremony played');
+ assert.ok(defeatedDuringLoot.every(x=>x==='true'),'slain foe stays invisible during every reward-drop sequence');
+ assert.equal($('enemyCombatant').dataset.defeated,'false','next enemy replaces the defeated one after first fight');
  assert.equal(chestDrops.at(-1),p.run.loot.length,'one chest per actual first-fight drop');
  assert.equal($('heroCombatant').dataset.effect,'idle','fighter animation resets');
  assert.equal($('enemyCombatant').dataset.effect,'idle','enemy animation resets');
@@ -251,6 +253,8 @@ try{
  assert.equal(p.run.stage,'checkpoint');
  assert.equal(p.highest,1,'defeating the first layer boss records 1層, not 5 battles');
  assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
+ assert.equal($('enemyCombatant').dataset.defeated,'true','layer boss stays vanished during checkpoint');
+ assert.equal($('enemyCombatant').dataset.dying,'false','completed death effect can clear its animation without resurrecting the boss');
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
  assert.match($('checkpointInfo').textContent,/次は2層/);
  assert.equal($('deeper').textContent,'2層へ進む');
@@ -270,7 +274,8 @@ try{
  assert.equal(p.inventory.length+collectibleCount,loot);
  assert.equal(p.highest,1);
  assert.equal(p.highestUnit,'layer');
- assert.match($('playerStats').innerHTML,/最深 1層/);
+ await doc.click(btn({view:'home'}));
+ assert.match($('playerStats').innerHTML,/最深 1層/,'profile reports deepest layer instead of battle count');
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
  assert.match($('collectionGrid').innerHTML,/失われた王冠/);
@@ -326,6 +331,7 @@ try{
  p=await getProfile(db);
  assert.equal(p.run.floor,6);
  assert.equal($('floorLabel').textContent,'2層1戦目','next layer begins after the fifth boss');
+ assert.equal($('enemyCombatant').dataset.defeated,'false','fresh opponent appears only after starting next layer');
  assert.equal(p.highest,2,'entering the next layer updates deepest layer once');
  assert.equal(p.highestUnit,'layer');
  assert.equal(p.run.enemy.level,2);
