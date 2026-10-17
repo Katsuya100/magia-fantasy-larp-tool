@@ -15,7 +15,7 @@ button:not(.tabs button){border:1px solid #f5d38f;border-radius:3px;background:l
 .collection-progress{text-align:right;min-width:120px}.collection-progress strong{font:30px var(--roman);color:var(--gold)}.collection-progress small{font:10px var(--roman);color:var(--soft);display:block}.collection-track{width:135px;margin:8px 0 0 auto}.collection-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .relic-card{position:relative;min-width:0;min-height:222px;display:flex;flex-direction:column;align-items:center;padding:17px 12px;background:radial-gradient(circle at 50% 34%,#be9d7930,transparent 50%),linear-gradient(145deg,#302436,#101724);border:1px solid var(--border);text-align:center;overflow:hidden}
 .relic-card:before{content:"";position:absolute;inset:7px;border:1px solid #e5be802b;pointer-events:none}.relic-art{width:108px;height:108px;display:grid;place-items:center;border-radius:50%;margin:5px auto 12px;border:1px solid #e1c58b77;box-shadow:0 0 0 9px #dfc58f12,inset 0 0 34px #a27c5466;background:radial-gradient(circle,#6a53605a,#131d30)}.relic-glyph{font:66px var(--serif);color:var(--gold);line-height:1;text-shadow:0 0 20px #e6bb7e55}.relic-name{font-weight:700;font-size:14px;margin-bottom:3px;min-height:42px;display:grid;place-items:center}.relic-detail{font-size:11px;color:var(--soft);margin:0;line-height:1.45}.relic-count{position:absolute;right:8px;top:9px;border:1px solid #dcbd8370;border-radius:20px;padding:0 8px;background:#13111fc7;font:12px var(--roman);color:var(--gold)}.relic-card.locked{filter:saturate(.45);border-color:#70677a80;background:linear-gradient(#282630,#14141e)}.relic-card.locked .relic-art{border-color:#716b7a;box-shadow:0 0 0 8px #ffffff06;background:radial-gradient(circle,#2c2b3b,#0b0f1a)}.relic-card.locked .relic-glyph{font:50px var(--roman);color:#aaa0b6;opacity:.52;text-shadow:none}.relic-card.locked .relic-name{letter-spacing:.18em;color:#b3aabc}.relic-card[data-rarity="rare"] .relic-art{border-color:#9aa6ec;box-shadow:0 0 0 9px #728bd020,0 0 27px #728bd02e}.relic-card[data-rarity="epic"] .relic-art{border-color:#df95e9;box-shadow:0 0 0 9px #be70d520,0 0 28px #bd5fe94d}.relic-card[data-rarity="legendary"] .relic-art{border-color:#f7c879;box-shadow:0 0 0 9px #f7c87930,0 0 32px #f7be68a1}.collection-empty{text-align:center;color:var(--soft)}
-.arena{display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr);gap:12px;align-items:center}.unit{min-width:0;border:1px solid var(--border);padding:14px;background:linear-gradient(145deg,#191a29,#22202b)}.enemy-portrait,.hero-portrait{width:110px;height:100px;margin:auto;display:grid;place-items:center;color:var(--gold);font-size:67px;text-shadow:0 0 24px #d4a26a6b}.enemy-portrait{background:radial-gradient(circle,#9d40584d,transparent 69%)}.hero-portrait{background:radial-gradient(circle,#326f7866,transparent 69%)}.unit h3{font-size:15px;text-align:center;margin:0 0 9px;color:var(--gold)}.unit-info{width:100%}.unit-info p{font-size:12px;margin:6px 0 2px}.unit-info small{font-size:11px;color:var(--soft)}.versus{text-align:center;font:22px var(--roman);color:var(--gold)}.meter{height:8px;background:#0b101b;border:1px solid #89644b80;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,#357f61,#82e6ac)}.fill.mp{background:linear-gradient(90deg,#3268a1,#80d9ef)}.effects{font-size:11px;color:var(--gold)}.battle-info{font-size:12px;color:var(--gold)}.battle-history{margin-top:18px;padding:11px 14px;border:1px solid var(--border);color:var(--soft)}.battle-history summary{cursor:pointer}.log{font-size:12px;max-height:210px;overflow:auto;white-space:pre-wrap}.log p{margin:6px 0}
+.arena{display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr);gap:12px;align-items:center}.unit{min-width:0;border:1px solid var(--border);padding:14px;background:linear-gradient(145deg,#191a29,#22202b)}.enemy-portrait,.hero-portrait{width:110px;height:100px;margin:auto;display:grid;place-items:center;color:var(--gold);font-size:67px;text-shadow:0 0 24px #d4a26a6b}.enemy-portrait{background:radial-gradient(circle,#9d40584d,transparent 69%)}.hero-portrait{background:radial-gradient(circle,#326f7866,transparent 69%)}.unit h3{font-size:15px;text-align:center;margin:0 0 9px;color:var(--gold)}.unit-info{width:100%}.unit-info p{font-size:12px;margin:6px 0 2px}.unit-info small{font-size:11px;color:var(--soft)}.versus{text-align:center;font:22px var(--roman);color:var(--gold)}.meter{height:8px;background:#0b101b;border:1px solid #89644b80;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,#357f61,#82e6ac)}.fill.mp{background:linear-gradient(90deg,#3268a1,#80d9ef)}.effects{font-size:11px;color:var(--gold)}.battle-info{font-size:12px;color:var(--gold);margin:17px 0 -16px;line-height:1.55;overflow-wrap:anywhere}.battle-history{margin-top:18px;padding:11px 14px;border:1px solid var(--border);color:var(--soft)}.battle-history summary{cursor:pointer}.log{font-size:12px;max-height:210px;overflow:auto;white-space:pre-wrap}.log p{margin:6px 0}
 .checkpoint-panel,.analyzing-panel,.result-panel{text-align:center}.checkpoint-seal,.result-seal,.analyzing-sigil{font-size:100px;color:var(--gold);text-shadow:0 0 35px #cda55f66}.checkpoint-panel h2,.result-panel h2,.analyzing-panel h2{font-size:28px;color:var(--gold)}.checkpoint-actions{justify-content:center;margin-top:20px}#checkpointInfo,#resultText{color:var(--soft)}#analyzerFrame{width:1px;height:1px;opacity:0;position:absolute;pointer-events:none;border:0}
 .name-dialog{width:min(470px,calc(100vw - 26px));padding:0;color:var(--pale);border:1px solid #d5b279;background:linear-gradient(145deg,#2b1b2e,#101824);box-shadow:0 0 0 5px #cda46d1c,0 40px 130px #000e}.name-dialog::backdrop{background:#06060fc9;backdrop-filter:blur(5px)}.name-dialog-inner{text-align:center;padding:35px 28px 32px}.name-dialog h2{color:var(--gold);font-size:25px;margin:8px 0 25px}.name-dialog input{margin:7px auto 20px;text-align:center;font-size:18px}.name-dialog label{text-align:left}.dialog-sigil{font-size:55px;color:var(--gold);text-shadow:0 0 27px #d2a66b}.name-dialog .primary-action{width:100%}.name-error{min-height:18px;color:#f3aaa5;font-size:12px}.name-dialog #cancelNameDialog{margin-top:10px}
 footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter-spacing:.07em}footer span{color:var(--gold)}
@@ -428,9 +428,10 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  100%{opacity:0;transform:rotate(110deg) scale(.35)}
 }
 /* Camera jolt peaks at the same moment as the frozen hit keyframes. */
-#battle.battle-panel[data-shake="true"]:not([hidden]){
+#battleArena[data-shake="true"] .versus{
+ /* Shake only the VS badge, never the entire panel or screen. */
  animation:snappy-screen-shake .44s cubic-bezier(.22,.74,.28,1) both;
- transform-origin:50% 40%
+ transform-origin:50% 50%
 }
 @keyframes snappy-screen-shake{
  0%,39%{transform:none}
@@ -488,11 +489,17 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .scene-stack > .panel[data-exiting="true"]{
  z-index:2;pointer-events:none;animation:scene-fade-out .18s ease-out both!important
 }
-.scene-stack > .panel[data-entering="true"]:not(#checkpoint){
+.scene-stack > .panel[data-entering="true"]:not(#checkpoint):not(#result){
  z-index:1;animation:scene-fade-in .18s ease-out both!important
 }
 @keyframes scene-fade-in{from{opacity:0}to{opacity:1}}
 @keyframes scene-fade-out{from{opacity:1}to{opacity:0}}
+/* Short end screens swap without the delayed grid-height collapse. */
+.scene-stack > #checkpoint.panel:not([hidden]),
+.scene-stack > #result.panel:not([hidden]){
+ animation:terminal-fade-in .28s ease-out both;transform:none!important
+}
+@keyframes terminal-fade-in{from{opacity:0}to{opacity:1}}
 /* Dialog transitions use discrete display/overlay so close also fades in capable browsers. */
 dialog{
  opacity:0;transform:translateY(9px) scale(.985);
@@ -519,7 +526,7 @@ dialog[open]::backdrop{opacity:1}
 .delete-data-dialog-inner .buttons button{flex:1;font-size:13px}
 .delete-data-dialog-inner input{text-align:center;margin:10px 0}
 @media(prefers-reduced-motion:reduce){
- #battle.battle-panel[data-shake="true"]:not([hidden]),
+ #battleArena[data-shake="true"] .versus,
  #battleArena .unit,#battleArena .unit .combatant-burst,#battleArena .combatant-fx strong,
  #battleArena .battle-ceremony[data-event="encounter"],#battleArena .enemy-unit[data-entering="true"],
  #checkpoint.panel:not([hidden]),#checkpoint.panel:not([hidden]) .checkpoint-seal,
