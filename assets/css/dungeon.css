@@ -520,3 +520,8 @@ dialog[open]::backdrop{opacity:1}
  .panel:not([hidden]):not(#checkpoint){animation:none!important}
  dialog,dialog::backdrop{transition:none!important}
 }
+
+/* One sentence per line within magic-circle details and confirmation dialogs. */
+#magicDetailsStats dd,#upgradeHint,#upgradeFeedback,#circleActionMessage{
+ white-space:pre-line;
+}
