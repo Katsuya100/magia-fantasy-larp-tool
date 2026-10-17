@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {CONSUMABLE_TIERS,rollConsumableTier,eligibleConsumables,enemyForFight} from '../assets/js/dungeon-design.mjs';
+import {CONSUMABLE_TIERS,rollConsumableTier,eligibleConsumables,enemyForFight,targetClearLevel} from '../assets/js/dungeon-design.mjs';
 
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/'+name+'.csv',import.meta.url),'utf8'));
 const [items,enemies,collections,buffs,balance,levels,floors,playerBase]=await Promise.all([
@@ -67,7 +67,7 @@ assert.equal(notYet[0].id,'mana_s','cleansers unavailable at floor 19');
 for(const layer of [100,101,150]){
  const loot=G.drops(items,collections,150,()=>0,{layer});
  assert.equal(loot.length,7);
- assert.ok(loot.every(x=>x.type==='use'&&x.id==='heal_xl'&&x.value>=650&&x.value<=1000),'numeric rewards must be extreme at depth '+layer);
+ assert.ok(loot.every(x=>x.type==='use'&&x.id==='heal_xl'&&x.value>=G.rollPotionValue(items.find(i=>i.id==='heal_xl'),layer,()=>0)),'numeric rewards scale to the target level at depth '+layer);
 }
 const lateCleanser=G.drops(items,collections,150,scriptedRoll([1,1,1,1,1,1,0,.999,.5,.99]),{layer:101});
 assert.equal(lateCleanser[0].id,'clear_chaos','cleansing remains available in the endless dungeon');
@@ -82,6 +82,27 @@ for(let fight=96;fight<=500;fight++){
  assert.ok(G.fromEnemy(enemy,+enemy.min_level).spells.some(x=>x.role==='debuff'),
   'debuff enemy available from layer 20: '+fight);
 }
+// At every recommended level, even the weakest legal tier restores at least
+// 75% of the largest possible hero's HP/MP, with no dependence on a lucky roll.
+const maxBase={hp:110,mag:12,def:10,res:10};
+for(const layer of [1,2,5,10,19,20,25,40,50,60,75,80,90,99,100,101]){
+ const level=targetClearLevel(layer),hero=G.makeUnit(maxBase,level);
+ for(const item of items.filter(x=>x.kind==='heal'||x.kind==='mana')){
+  const full=item.kind==='heal'?hero.stats.hp:hero.maxMp;
+  for(const r of [0,.33,.66,.999999]){
+   const value=G.rollPotionValue(item,layer,()=>r);
+   assert.ok(Number.isSafeInteger(value)&&value>=Math.ceil(full*.75),
+    'recovery must cover at least 75% of the maximum recommended '+item.id+' layer '+layer);
+   const player=G.makeUnit(maxBase,level);
+   if(item.kind==='heal')player.hp=0;else player.mp=0;
+   const recovered=G.potion(player,{id:item.id,value,bonus:null},items,buffs);
+   assert.ok(recovered/full>=.75,
+    'actual recovery reaches three quarters for '+item.id+' at layer '+layer);
+  }
+ }
+}
+// Potions already stored on a profile keep their original fixed amounts.
+assert.equal(G.rollPotionValue(items.find(x=>x.id==='clear_flame'),100,()=>0),0);
 // Existing inventory instances use the fixed saved value regardless of revised catalog ranges.
 const user=G.makeUnit({hp:100,mag:10,def:7,res:7},100);
 user.hp-=40;
