@@ -44,7 +44,10 @@ try{
   assert.equal(Object.values(saved.collection).reduce((n,x)=>n+x,0),
    expectedCollections,'rank badge never appears in the collection ledger');
   assert.ok(!saved.inventory.some(item=>item.type==='rank'),'badge is not an inventory item');
-  assert.match($('resultText').textContent,/鉛級冒険者章を獲得/);
+  assert.equal($('returnShowcase').hidden,false);
+  if($('returnSceneTitle').textContent==='コレクション')await $('returnNext').fire('click');
+  assert.equal($('returnSceneTitle').textContent,'報酬');
+  assert.match($('returnRewards').innerHTML,/鉛級冒険者章/);
   await doc.click(btn({view:'home'}));
   assert.match($('playerStats').innerHTML,/冒険者等級：<strong>鉛級<\/strong>/);
   assert.match($('playerStats').innerHTML,/取得済み冒険者章：鉛級/);
