@@ -128,7 +128,9 @@ export function enemyScaling(level){
   mag:num('enemy_mag_scale_early')+(num('enemy_mag_scale_late')-num('enemy_mag_scale_early'))*t};
 }
 export function recoverVictoryMp(hero){
- const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*num('victory_mp_restore_rate'))));
+ const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1);
+ const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t;
+ const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*rate)));
  hero.mp+=gained;
  return gained;
 }
