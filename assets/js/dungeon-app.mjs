@@ -1,20 +1,20 @@
-import * as G from './dungeon-core.mjs?v=20261018.6';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.6';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.6';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.6';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.6';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.6';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.6';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.6';
+import * as G from './dungeon-core.mjs?v=20261018.7';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.7';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.7';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.7';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.7';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.7';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.7';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.7';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.6';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.6';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.6';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.6';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.6';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.6';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.7';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.7';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.7';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.7';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.7';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.7';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=1;
+let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
  libraryRole:'all',libraryAttribute:'all',librarySort:'newest',
  collectionDiscovery:'all',collectionRarity:'all',collectionSort:'default',
@@ -177,8 +177,8 @@ function render(){
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
  $('gearCounter').textContent=unlocked?'携行品 '+pickedValues(carry.slice(0,limit)).length+' / '+limit+' 個':'携行品：最初の帰還後に解放';
- selectedStartLayer=allowedStartLayer(profile,selectedStartLayer);
- $('startLayer').innerHTML=unlockedStartLayers(profile).map(layer=>'<option value="'+layer+'">'+(layer===1?'1層から':layer+'層の初戦から（'+rankTitle(layer-1)+'）')+'</option>').join('');
+ selectedStartLayer=selectedStartLayer===null?unlockedStartLayers(profile).at(-1):allowedStartLayer(profile,selectedStartLayer);
+ $('startLayer').innerHTML=unlockedStartLayers(profile).map(layer=>'<option value="'+layer+'">'+(layer===1?'1層から':layer+'層から（'+rankTitle(layer-1)+'）')+'</option>').join('');
  $('startLayer').value=String(selectedStartLayer);
  $('startLayer').disabled=Boolean(profile.run);
  $('startLayerHint').textContent=highestRankLayer(profile)?'取得済みの冒険者章に応じて開始階層を選択できます。':'10層ごとの冒険者章を獲得すると開始階層が増えます。';
@@ -390,7 +390,7 @@ async function takeTurn(index){
  if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
  if(circle?.analysis&&!isRevealed(circle)){Object.assign(circle,revealOnUse(circle));await putCircle(db,circle);}
  run.usedItems=0;await animateBattle(steps);
-if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='探索失敗';narrativeLines('resultText',[
+if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;selectedStartLayer=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='探索失敗';narrativeLines('resultText',[
  '未確定報酬 '+dropped+'個と経験値を喪失。',
  '未使用の携行品 '+unusedCount+'個は倉庫へ戻った。',
  '性能が判明した魔法陣は残る。'
@@ -430,7 +430,7 @@ async function useItem(index){
   await persist();renderRun();
  }catch(e){note(e.message);}
 }
-async function leave(mode='checkpoint'){const run=profile.run;if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;let potions=0,collection=0,stones=0,rankReward=null;profile.inventory.push(...run.carry.filter(Boolean));for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else if(item.type==='stone'){profile.magicStones++;stones++;}else if(item.type==='collection'){profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}else if(item.type==='rank'&&acquireAdventurerRank(profile,item.layer)){rankReward=rankBadgeName(item.layer);}}const before=profile.level;G.experience(profile,run.xp);recordReturnedLayer(profile,mode==='escape'?Math.floor((run.floor-1)/FIGHTS_PER_LAYER)*FIGHTS_PER_LAYER:run.floor);profile.returns++;profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent=mode==='escape'?'脱出成功！':'無事帰還！';narrativeLines('resultText',[
+async function leave(mode='checkpoint'){const run=profile.run;if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;let potions=0,collection=0,stones=0,rankReward=null;profile.inventory.push(...run.carry.filter(Boolean));for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else if(item.type==='stone'){profile.magicStones++;stones++;}else if(item.type==='collection'){profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}else if(item.type==='rank'&&acquireAdventurerRank(profile,item.layer)){rankReward=rankBadgeName(item.layer);}}const before=profile.level;G.experience(profile,run.xp);recordReturnedLayer(profile,mode==='escape'?Math.floor((run.floor-1)/FIGHTS_PER_LAYER)*FIGHTS_PER_LAYER:run.floor);profile.returns++;profile.run=null;selectedStartLayer=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent=mode==='escape'?'脱出成功！':'無事帰還！';narrativeLines('resultText',[
   ...(mode==='escape'?['脱出の巻物で経験値と戦利品を持ち帰った。']:[]),
  '消耗品 '+potions+'個・収集品 '+collection+'個・魔導石 '+stones+'個・経験値 '+run.xp+'を獲得。',
  'Lv.'+before+' → Lv.'+profile.level+'。',

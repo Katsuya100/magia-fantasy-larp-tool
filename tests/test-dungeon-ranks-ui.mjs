@@ -50,7 +50,8 @@ try{
   assert.match($('playerStats').innerHTML,/取得済み冒険者章：鉛級/);
   await doc.click(btn({view:'prepare'}));
   assert.match($('startLayer').innerHTML,/value="1">1層から<\/option>/,'dynamic first-floor label is concise');
-  assert.match($('startLayer').innerHTML,/value="11"/);
+  assert.match($('startLayer').innerHTML,/value="11">11層から（鉛級）<\/option>/,'鉛級の短縮表示に「初戦」は含めない');
+  assert.equal($('startLayer').value,'11','obtaining a new badge makes its highest unlocked layer the next default');
   assert.doesNotMatch($('startLayer').innerHTML,/value="21"/);
   $('startLayer').value='11';await $('startLayer').fire('change');
   await $('startAttack').fire('click');
@@ -68,11 +69,21 @@ try{
  try{
   await import('../assets/js/dungeon-app.mjs?integration=rank-gold');
   await wait(()=>$2('playerStats').innerHTML.includes('金級'),'higher rank renders');
+  assert.equal($2('startLayer').value,'61','fresh profile defaults to highest unlocked layer instead of layer 1');
   assert.deepEqual([...$2('startLayer').innerHTML.matchAll(/value="(\d+)"/g)].map(x=>Number(x[1])),
    [1,11,21,31,41,51,61],'gold auto-unlocks all lower entry floors');
+  assert.deepEqual([... $2('startLayer').innerHTML.matchAll(/<option value="(\d+)">([^<]+)<\/option>/g)]
+   .map(([,layer,label])=>[Number(layer),label]),[
+    [1,'1層から'],[11,'11層から（鉛級）'],[21,'21層から（鉄級）'],
+    [31,'31層から（鋼級）'],[41,'41層から（銅級）'],
+    [51,'51層から（銀級）'],[61,'61層から（金級）']
+   ],'all unlocked shortcut labels use 層から without 初戦');
   assert.match($2('playerStats').innerHTML,/鉛級・鉄級・鋼級・銅級・銀級・金級/);
   assert.doesNotMatch($2('collectionGrid').innerHTML,/冒険者章/);
   $2('startLayer').value='41';await $2('startLayer').fire('change');
+  await env2.document.click(btn({view:'home'}));
+  await env2.document.click(btn({view:'prepare'}));
+  assert.equal($2('startLayer').value,'41','manually selected lower start is kept while navigating preparation tabs');
   await $2('startAttack').fire('click');
   const next=await getProfile(db2);
   assert.equal(next.run.floor,201,'41層 enters at the first fight');
