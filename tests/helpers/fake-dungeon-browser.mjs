@@ -39,6 +39,8 @@ export function fakeDungeonBrowser(config={}){
   }[query]||null;}
  };
  const arena=document.getElementById('battleArena');arena.dataset={role:'idle',side:'none',attribute:'law'};
+ const stage=document.getElementById('battleCeremony');stage.hidden=true;stage.dataset.event='idle';
+ for(const id of ['heroCombatant','enemyCombatant'])document.getElementById(id).dataset={effect:'idle',attribute:'law',hit:'false'};
  const iframe=document.getElementById('analyzerFrame');iframe.contentDocument=analyzer;
  let frameSource='';
  Object.defineProperty(iframe,'src',{get(){return frameSource;},set(s){frameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>iframe.onload?.());}}});
