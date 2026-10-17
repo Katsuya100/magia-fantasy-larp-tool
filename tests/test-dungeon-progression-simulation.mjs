@@ -70,6 +70,7 @@ export function simulate(seed,{level=12,layers=3,spells='five',heals=3,manas=1}=
   stats.fightStats.push({fight,layer:layerForFight(fight),win,turns:turns+1,hpBefore,hpAfter:hero.hp,mpBefore,mpAfter:hero.mp});
   if(!win)break;
   stats.clear=fight;
+  if(fight%50===0&&fight<layers*5){hero.hp=hero.stats.hp;hero.mp=hero.maxMp;stats.restores=(stats.restores||0)+1;}
   hero.statuses=[];
   hero.cooldowns=hero.cooldowns.map(()=>0);
  }
@@ -77,11 +78,16 @@ export function simulate(seed,{level=12,layers=3,spells='five',heals=3,manas=1}=
  stats.hp=hero.hp;stats.mp=hero.mp;
  return stats;
 }
-const scenarios=[
- {name:'beginner L1, 1 layer',level:1,layers:1,spells:'beginner',heals:0,manas:0},
- {name:'L5, 2 layers',level:5,layers:2,spells:'three',heals:2,manas:1},
- {name:'L12, 3 layers, 5 circles',level:12,layers:3,spells:'five',heals:3,manas:1},
- {name:'L12, 3 layers, 3 circles',level:12,layers:3,spells:'three',heals:3,manas:1}
+// Player's target-level expectation: five fights, zero carried items.
+// Every tenth cleared layer may take the offered full HP/MP restoration.
+export const scenarios=[
+ {name:'expected L1, 1 layer, 3 circles, no items',level:1,layers:1,spells:'beginner',heals:0,manas:0},
+ {name:'expected L3, 2 layers, 3 circles, no items',level:3,layers:2,spells:'beginner',heals:0,manas:0},
+ {name:'expected L5, 3 layers, 3 circles, no items',level:5,layers:3,spells:'beginner',heals:0,manas:0},
+ {name:'L12, 3 layers, 3 circles, no items',level:12,layers:3,spells:'three',heals:0,manas:0},
+ {name:'L12, 3 layers, 5 circles, no items',level:12,layers:3,spells:'five',heals:0,manas:0},
+ {name:'expected L19, 10 layers, 5 circles, no items',level:19,layers:10,spells:'five',heals:0,manas:0},
+ {name:'L22, 11 layers, 5 circles, no items, decade heal',level:22,layers:11,spells:'five',heals:0,manas:0}
 ];
 export function summarize(config,samples=80){
  const runs=Array.from({length:samples},(_,i)=>simulate(17011+i*13,config));
@@ -92,10 +98,11 @@ export function summarize(config,samples=80){
   avgCleared:avg(runs.map(x=>x.clear)),
   avgTurns:avg(runs.map(x=>x.turns)),
   avgItems:avg(runs.map(x=>x.itemUses)),
+  avgRestores:avg(runs.map(x=>x.restores||0)),
   avgHp: wins.length?avg(wins.map(x=>x.hp)):null,
   lossByFight:Object.entries(runs.filter(x=>!x.win).reduce((a,x)=>{const f=x.clear+1;a[f]=(a[f]||0)+1;return a;},{}))};
 }
 for(const config of scenarios)console.log('PROGRESSION_SIM '+JSON.stringify(summarize(config)));
-assert.ok(scenarios.every(x=>x.layers>=1),'scenarios include full early-game five-fight chains');
+assert.ok(scenarios.every(x=>x.layers>=1&&x.heals===0&&x.manas===0),'scenarios include full early-game five-fight chains');
 assert.ok(SPELLS.beginner.length>=3&&SPELLS.five.length===5);
 console.log('PASS deterministic full-fight sequence, enemy AI, cooldowns, potions, and carry-over HP/MP');
