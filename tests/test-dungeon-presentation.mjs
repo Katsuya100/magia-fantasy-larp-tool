@@ -128,7 +128,7 @@ const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
 assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
-const currentRelease=page.match(/data-release="(\\d{8}\\.\\d+)"/)?.[1];
+const currentRelease=page.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 assert.ok(currentRelease,'HTML exposes current public release version');
 assert.ok(page.includes('dungeon.css?v='+currentRelease),'page CSS is cache-busted for current release');
 assert.ok(page.includes('dungeon-app.mjs?v='+currentRelease),'page JS is cache-busted for current release');
