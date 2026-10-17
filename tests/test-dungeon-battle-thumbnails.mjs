@@ -7,8 +7,11 @@ const button=dataset=>({dataset,disabled:false,closest(){return this;}});
 const imageUrls=markup=>[...markup.matchAll(/<img alt="" src="(blob:mock-\d+)"/g)].map(m=>m[1]);
 const wait=async(predicate,label)=>{const limit=Date.now()+9000;while(Date.now()<limit){if(await predicate())return;}throw Error('Timeout: '+label);};
 try{
- const db=await openStore(env.factory),profile=await getProfile(db);
- profile.name='写真の魔導士';profile.slots=['a','b','c',null,null];
+ const db=await openStore(env.factory);
+ // The app initializes balancing tables on load, so seed an explicit profile
+ // before importing it rather than calling getProfile() before configuration.
+ const profile={name:'写真の魔導士',level:1,xp:0,base:{hp:100,mag:30,def:15,res:15},
+  returns:0,attempts:0,inventory:[],collection:{},highest:0,run:null,slots:['a','b','c',null,null]};
  await saveProfile(db,profile);
  const photos=['a','b','c'].map((id,i)=>({id,registeredAt:i+1,image:new Blob([id],{type:'image/jpeg'}),analysis:{attribute:'flame',role:'attack',power:5000},revealed:false}));
  for(const photo of photos)await putCircle(db,photo);
