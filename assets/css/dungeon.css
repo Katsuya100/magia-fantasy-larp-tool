@@ -969,7 +969,7 @@ html,body{overflow-x:clip}
    The portrait and two-line name have separate space on both sides,
    so long enemy names never touch icons or displace HP/MP below them. */
 #battleArena .unit{
- height:280px;min-height:280px;max-height:280px;
+ height:270px;min-height:270px;max-height:270px;
  padding:12px 10px;overflow:visible
 }
 #battleArena .unit .enemy-portrait,#battleArena .unit .hero-portrait{
@@ -990,7 +990,7 @@ html,body{overflow-x:clip}
 }
 #battleArena #enemyStats,#battleArena #heroStats{
  width:100%;min-width:0;min-height:0;display:grid;
- grid-template-rows:38px 38px 35px minmax(0,1fr);
+ grid-template-rows:34px 34px 33px minmax(0,1fr);
  gap:2px;overflow:visible;align-content:stretch
 }
 #battleArena .battle-vital{
@@ -1022,7 +1022,7 @@ html,body{overflow-x:clip}
 }
 @media(max-width:630px){
  #battleArena .unit{
-  height:240px;min-height:240px;max-height:240px;padding:8px 6px
+  height:232px;min-height:232px;max-height:232px;padding:8px 6px
  }
  #battleArena .unit .enemy-portrait,#battleArena .unit .hero-portrait{
   height:44px;flex-basis:44px;margin-bottom:12px;font-size:36px
@@ -1034,7 +1034,7 @@ html,body{overflow-x:clip}
   height:38px;min-height:38px;font-size:14px;line-height:1.3
  }
  #battleArena #enemyStats,#battleArena #heroStats{
-  grid-template-rows:33px 33px 35px minmax(0,1fr);gap:2px
+  grid-template-rows:31px 31px 33px minmax(0,1fr);gap:2px
  }
  #battleArena .battle-vital-label{font-size:clamp(12px,3.2vw,14px);line-height:1.25}
  #battleArena .combat-attribute{font-size:11px}
@@ -1058,3 +1058,26 @@ html,body{overflow-x:clip}
  .battle-spell-frame .battle-tile{min-height:0}
  .battle-spells .tile-cooldown{margin-top:3px}
 }
+
+/* Let the portrait aura breathe vertically beyond the icon's short
+   layout track. Pseudo-elements are paint-only: the fixed fighter heights,
+   name-to-icon gap and matching stat positions never change. */
+#battleArena .enemy-portrait,
+#battleArena .hero-portrait{
+ background:none;
+ isolation:isolate
+}
+#battleArena .enemy-portrait{--portrait-aura:rgba(167,73,100,.53)}
+#battleArena .hero-portrait{--portrait-aura:rgba(57,143,159,.56)}
+#battleArena .enemy-portrait::before,
+#battleArena .hero-portrait::before{
+ content:"";position:absolute;inset:-17px 0 -19px;z-index:-1;
+ pointer-events:none;
+ background:radial-gradient(ellipse 37% 51% at 50% 50%,
+  var(--portrait-aura) 0%,transparent 100%)
+}
+/* Common is intentionally unlit. All rarer tiers keep their colored
+   halo, bloom, glyph glow and unchanged solid borders. */
+.relic-card.discovered[data-rarity="common"] .relic-art{box-shadow:none}
+.relic-card.discovered[data-rarity="common"] .relic-glyph,
+.relic-card.discovered[data-rarity="common"] .relic-rarity{text-shadow:none}
