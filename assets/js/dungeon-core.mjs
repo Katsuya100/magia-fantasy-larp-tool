@@ -34,7 +34,7 @@ export function weighted(rows,r=Math.random){let sum=rows.reduce((n,x)=>n+Number
 // 75% is guaranteed even for the highest possible starting HP/MAG roll.
 // Store the rolled value on each item so old inventory and later use remain stable.
 export function rollPotionValue(item,layer,r=Math.random){
- if(item.kind==='clear')return 0;
+ if(item.kind==='clear'||item.kind==='escape')return 0;
  if(item.kind!=='heal'&&item.kind!=='mana')throw Error('Unknown potion kind');
  const recommended=level(targetClearLevel(layer));
  const maximum=item.kind==='heal'
@@ -55,11 +55,12 @@ export function drops(items,collections,l,r=Math.random,context={}){
    return {type:'use',id:x.id,value:rollPotionValue(x,layer,r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};
   }
   if(r()<num('magic_stone_drop_rate'))return {type:'stone',id:'magic_stone'};
-  return {type:'collection',id:rollCollection(collections,layer,r).id};
+  return {type:'collection',id:rollCollection(collections,layer,r,context.bossEnemyId??null).id};
  });
- if(context.bossEnemyId){
+ if(context.bossEnemyId&&context.guaranteeBossLegendary){
   const id=bossUniqueCollection(collections,context.bossEnemyId).id;
-  const slot=rewards.findIndex(item=>item.type==='collection');
+  const existing=rewards.findIndex(item=>item.type==='collection'&&item.id===id);
+  const slot=existing>=0?existing:rewards.findIndex(item=>item.type==='collection');
   rewards[slot>=0?slot:rewards.length-1]={type:'collection',id};
  }
  return rewards;
@@ -140,9 +141,9 @@ export function fromEnemy(row,level){
  const b={hp:Math.max(1,Math.round(+row.hp*scale.hp)),mag:Math.max(1,Math.round(+row.mag*scale.mag)),def:+row.def,res:+row.res};const resists=Object.fromEntries(ATTRS.map(a=>[a,+row['resist_'+a]]));const spells=row.spells.split('|').map(s=>{const [role,attribute,power]=s.split(':');return {role,attribute,power:+power};});return makeUnit(b,level,resists,spells,row.id);}
 export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items){
   if(+i.min_value>+i.max_value||!(Number(i.weight)>0))throw Error('Bad item roll');
-  if(i.kind==='clear'){
-   if(+i.min_layer<20)throw Error('Premature cleanser '+i.id);
-  }else if(!CONSUMABLE_TIERS.includes(i.tier)||+i.min_layer!==1){
+  if(i.kind==='clear'||i.kind==='escape'){
+   if(+i.min_layer<20||i.tier)throw Error('Premature special consumable '+i.id);
+  }else if(!['heal','mana'].includes(i.kind)||!CONSUMABLE_TIERS.includes(i.tier)||+i.min_layer!==1){
    throw Error('Bad consumable tier '+i.id);
   }
  }

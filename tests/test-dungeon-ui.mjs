@@ -318,6 +318,7 @@ try{
  assert.equal(p.deepestReturnedLayer,0,'boss victory does not count as a return until leaving');
  assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
   assert.ok(p.run.loot.some(item=>item.id==='relic_boss_001'),'boss grants its dedicated legendary');
+   assert.equal(p.defeatedBosses.boss_l001,true,'first boss defeat is saved before returning');
  assert.ok(cinematicEvents.some(x=>x.event==='encounter'&&x.tier==='boss'),'fifth encounter plays layer-boss entrance');
  assert.ok(cinematicEvents.some(x=>x.event==='enemy-death'&&x.tier==='boss'),'fifth encounter plays layer-boss defeat');
  assert.equal($('enemyCombatant').dataset.defeated,'true','layer boss stays vanished during checkpoint');
@@ -424,6 +425,7 @@ try{
  for(let fight=1;fight<=5;fight++)await doc.click(btn({cast:'0'}));
  p=await getProfile(db);
  assert.equal(p.run.stage,'checkpoint');
+ assert.equal(p.run.loot.filter(item=>item.id==='relic_boss_001').length,0,'repeat boss has no second guaranteed legendary');
  const hpAtCheckpoint=p.run.hero.hp, pendingLoot=p.run.loot.length;
  await $('deeper').fire('click');
  p=await getProfile(db);

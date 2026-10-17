@@ -13,7 +13,7 @@ export function rollConsumableTier(layer,r=Math.random){
 }
 export function eligibleConsumables(items,layer,tier){
  return items.filter(row=>Number(row.min_layer||1)<=layer &&
-  (row.kind==='clear'||row.tier===tier));
+  (row.kind==='clear'||row.kind==='escape'||row.tier===tier));
 }
 export function targetClearLevel(layer){
  if(!Number.isSafeInteger(layer)||layer<1)throw Error('Invalid layer');
@@ -32,7 +32,7 @@ export function enemyForFight(enemies,fight,r=Math.random){
   return enemy;
  }
  // Post-100 regular fights can draw any of the 500 enemies.
- // The fifth encounter still picks a named boss with a guaranteed trophy.
+ // The fifth encounter still picks a named boss, with a first-defeat trophy.
  const pool=slot===5?enemies.filter(e=>e.boss_only==='1'):enemies;
  if(!pool.length)throw Error('Empty enemy pool');
  return pool[Math.min(pool.length-1,Math.floor(Math.max(0,r())*pool.length))];
@@ -47,9 +47,9 @@ export function rollRarity(layer,r=Math.random){
  for(let i=0;i<weights.length;i++){ticket-=weights[i];if(ticket<0)return RARITIES[i];}
  return RARITIES.at(-1);
 }
-export function rollCollection(collections,layer,r=Math.random){
+export function rollCollection(collections,layer,r=Math.random,bossEnemyId=null){
  const rarity=rollRarity(layer,r);
- const pool=collections.filter(x=>x.rarity===rarity&&!x.boss_enemy_id);
+ const pool=collections.filter(x=>x.rarity===rarity&&(!x.boss_enemy_id||x.boss_enemy_id===bossEnemyId));
  const total=pool.reduce((n,x)=>n+Number(x.weight),0);
  if(!total)throw Error('Missing random drop for '+rarity);
  let ticket=Math.min(1-Number.EPSILON,Math.max(0,r()))*total;
