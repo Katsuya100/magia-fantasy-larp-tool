@@ -182,7 +182,10 @@ try{
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
  let p=await getProfile(db);
- assert.equal(p.attempts,1);assert.equal(p.run.floor,1);assert.equal(p.run.carry.filter(Boolean).length,0,'first outing has no carried items');
+ assert.equal(p.attempts,1);assert.equal(p.run.floor,1);
+ assert.equal(p.highest,1,'entry into 1層 sets the reached-layer record');
+ assert.equal(p.highestUnit,'layer','highest score is explicitly stored as a layer');
+ assert.equal($('floorLabel').textContent,'1層1戦目','initial dungeon label is layer and fight');assert.equal(p.run.carry.filter(Boolean).length,0,'first outing has no carried items');
  assert.equal($('tab-prepare').hidden,true,'preparation tab disappears during battle');
  assert.equal($('tab-library').hidden,true,'grimoire tab disappears during battle');
  assert.equal($('tab-dungeon').hidden,false,'dungeon tab replaces preparation tabs');
@@ -225,6 +228,7 @@ try{
  assert.match($('battleSpells').innerHTML,/<span class="circle-card-mp">MP:[0-9]+<\/span><span class="circle-card-power">威力:5000<\/span>/,'used spell shows MP and power on separate lines');
  p=await getProfile(db);
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
+ assert.equal($('floorLabel').textContent,'1層2戦目');
  assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
  assert.ok(ceremonies.includes('enemy-death'),'enemy death ceremony played');
  assert.ok(ceremonies.includes('loot'),'loot ceremony played');
@@ -242,8 +246,14 @@ try{
   Math.random=()=>.01;
   p=await getProfile(db);
   if(fight<5)assert.equal(p.run.floor,fight+1);
+  if(fight<5)assert.equal($('floorLabel').textContent,'1層'+(fight+1)+'戦目'+(fight===4?' · 階層ボス':''),'boss is 1層5戦目');
  }
  assert.equal(p.run.stage,'checkpoint');
+ assert.equal(p.highest,1,'defeating the first layer boss records 1層, not 5 battles');
+ assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
+ assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
+ assert.match($('checkpointInfo').textContent,/次は2層/);
+ assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
  assert.ok(p.run.loot.length>=5&&p.run.loot.length<=35);
  const loot=p.run.loot.length;
@@ -258,7 +268,9 @@ try{
  const collectibleCount=Object.values(p.collection).reduce((a,b)=>a+b,0);
  assert.equal(collectibleCount,1,'collected treasure is tracked separately');
  assert.equal(p.inventory.length+collectibleCount,loot);
- assert.equal(p.highest,5);
+ assert.equal(p.highest,1);
+ assert.equal(p.highestUnit,'layer');
+ assert.match($('playerStats').innerHTML,/最深 1層/);
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
  assert.match($('collectionGrid').innerHTML,/失われた王冠/);
@@ -313,6 +325,9 @@ try{
  await $('deeper').fire('click');
  p=await getProfile(db);
  assert.equal(p.run.floor,6);
+ assert.equal($('floorLabel').textContent,'2層1戦目','next layer begins after the fifth boss');
+ assert.equal(p.highest,2,'entering the next layer updates deepest layer once');
+ assert.equal(p.highestUnit,'layer');
  assert.equal(p.run.enemy.level,2);
  assert.equal(p.run.hero.hp,hpAtCheckpoint,'continuation carries HP');
  assert.equal(p.run.loot.length,pendingLoot,'rewards remain unconfirmed');
@@ -329,6 +344,8 @@ try{
   assert.equal(el('prepare').hidden,true,'active dungeon takes priority over first-view preparation');
   assert.equal(el('tab-dungeon').attributes['aria-current'],'page','battle is under the dungeon tab');
   assert.equal(el('heroName').textContent,'暁の旅人','reloaded dungeon restores saved name');
+  assert.equal(el('floorLabel').textContent,'2層1戦目','reloading preserves the layer and encounter number');
+  assert.equal((await getProfile(await openStore(env2.factory))).highest,2,'layer record is not converted twice on reload');
   const deaths=[];
   const stage2=el('battleCeremony');
   stage2.dataset=new Proxy(stage2.dataset,{set(target,key,value){if(key==='event'&&value==='hero-death')deaths.push(value);target[key]=value;return true;}});
