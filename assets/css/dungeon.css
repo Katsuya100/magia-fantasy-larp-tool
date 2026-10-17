@@ -427,7 +427,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  100%{opacity:0;transform:rotate(110deg) scale(.35)}
 }
 /* Camera jolt peaks at the same moment as the frozen hit keyframes. */
-#battle.battle-panel[data-shake="true"]{
+#battle.battle-panel[data-shake="true"]:not([hidden]){
  animation:snappy-screen-shake .44s cubic-bezier(.22,.74,.28,1) both;
  transform-origin:50% 40%
 }
@@ -513,7 +513,7 @@ dialog[open]::backdrop{opacity:1}
 .delete-data-dialog-inner .buttons button{flex:1;font-size:13px}
 .delete-data-dialog-inner input{text-align:center;margin:10px 0}
 @media(prefers-reduced-motion:reduce){
- #battle.battle-panel[data-shake="true"],
+ #battle.battle-panel[data-shake="true"]:not([hidden]),
  #battleArena .unit,#battleArena .unit .combatant-burst,#battleArena .combatant-fx strong,
  #battleArena .battle-ceremony[data-event="encounter"],#battleArena .enemy-unit[data-entering="true"],
  #checkpoint.panel:not([hidden]),#checkpoint.panel:not([hidden]) .checkpoint-seal,
