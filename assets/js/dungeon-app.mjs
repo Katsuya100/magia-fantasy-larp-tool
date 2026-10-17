@@ -1,17 +1,17 @@
-import * as G from './dungeon-core.mjs?v=20261017.36';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.36';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.36';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.36';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.36';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.36';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261017.36';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.36';
+import * as G from './dungeon-core.mjs?v=20261017.37';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261017.37';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.37';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.37';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.37';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.37';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261017.37';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.37';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261017.36';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.36';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.36';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.36';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.36';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261017.37';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.37';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.37';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.37';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.37';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const listView={
@@ -276,6 +276,22 @@ async function ceremony(event,title,detail='',drops=0){
  playingEffects=true;
  const stage=$('battleCeremony');
  const entering=event==='encounter';
+ const run=profile.run;
+ const tier=(entering||event==='enemy-death')?bossCeremonyTier(run?.floor):'none';
+ const layer=Math.ceil((run?.floor||0)/5);
+ const arena=$('battleArena');
+ arena.dataset.bossCeremony=tier;
+ arena.dataset.ceremonyEvent=event;
+ stage.dataset.bossTier=tier;
+ if(tier!=='none'){
+  if(entering){
+   title=tier==='final'?'FINAL BOSS':tier==='milestone'?'強敵出現':'階層ボス出現';
+   detail=layer+'層 · '+(run?.enemyName||'')+' が現れた';
+  }else{
+   title=tier==='final'?'100層 完全制覇':tier==='milestone'?'強敵撃破':'階層ボス撃破';
+   detail=layer+'層 · '+(run?.enemyName||'')+' を討伐';
+  }
+ }
  if(entering){
   // Enemy data is already rendered; reveal the fresh opponent only when
   // the new encounter animation actually begins.
@@ -283,7 +299,7 @@ async function ceremony(event,title,detail='',drops=0){
   $('enemyCombatant').dataset.entering='true';
  }
  const side=event==='hero-death'?'hero':event==='enemy-death'?'enemy':null;
- const duration=effectDuration()?(event==='loot'?lootCeremonyDuration(drops):event==='encounter'?ENCOUNTER_EFFECT_MS:1120):0;
+ const duration=ceremonyDuration(event,run?.floor,{animated:effectDuration()>0,drops});
  stage.dataset.event=event;
  stage.setAttribute('style','--ceremony-duration:'+(duration/1000)+'s');
  $('ceremonyTitle').textContent=title;
@@ -300,6 +316,8 @@ async function ceremony(event,title,detail='',drops=0){
    stage.dataset.event='idle';
   }
   if(entering)$('enemyCombatant').dataset.entering='false';
+  arena.dataset.bossCeremony='none';
+  arena.dataset.ceremonyEvent='idle';
   if(event==='enemy-death')$('enemyCombatant').dataset.defeated='true';
   if(side)$(side+'Combatant').dataset.dying='false';
   if(event!=='enemy-death')$('lootChests').innerHTML='';
@@ -342,7 +360,7 @@ async function claimBonus(choice){
  else if(choice==='collection'){const item=bonusCollection(masters.collections,layer);run.loot.push({type:'collection',id:item.id});}
  else if(choice==='item'){
   const row=bonusConsumable(masters.items,layer);
-  const item={type:'use',id:row.id,value:G.roll(Number(row.min_value),Number(row.max_value)),bonus:row.bonus_buff_id&&Math.random()<Number(row.bonus_chance)?row.bonus_buff_id:null};
+  const item={type:'use',id:row.id,value:G.rollPotionValue(row,layer),bonus:row.bonus_buff_id&&Math.random()<Number(row.bonus_chance)?row.bonus_buff_id:null};
   const free=run.carry.findIndex(x=>!x);
   if(free>=0)run.carry[free]=item;else run.loot.push(item);
  }else return;

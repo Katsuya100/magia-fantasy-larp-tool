@@ -18,7 +18,7 @@ const base={hp:100,mag:10,def:7,res:7};
 assert.deepEqual(G.stats(base,1),base);assert.ok(G.stats(base,20).hp>G.stats(base,10).hp);
 assert.equal(G.dropCount(1,()=>0),7);assert.equal(G.dropCount(99,()=>.9999),1);
 const rewards=G.drops(items,collections,1,()=>0);assert.equal(rewards.length,7);
-assert.equal(rewards[0].type,'use');assert.equal(rewards[0].value,+items[0].min_value);
+assert.equal(rewards[0].type,'use');assert.equal(rewards[0].value,G.rollPotionValue(items[0],1,()=>0));
 let rolls=0;
 const stoneRewards=G.drops(items,collections,1,()=>++rolls<=6?1:rolls===7?0.99:0.01);
 assert.deepEqual(stoneRewards,[{type:'stone',id:'magic_stone'}],'non-consumable loot can produce a magic stone');

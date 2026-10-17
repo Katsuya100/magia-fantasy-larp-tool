@@ -937,6 +937,210 @@ html,body{overflow-x:clip}
 @media(prefers-reduced-motion:reduce){
  #battleArena .spell-projectile[data-effect="attack"]{animation:none!important;opacity:0!important}
 }
+
+/* Layer boss cinematics: all motion is confined to the arena's decorations,
+   portrait and VS badge. Never move the page, panel, or arena layout. */
+#battleArena[data-boss-ceremony="boss"]{--boss-color:#ffbc83;--boss-aura:#db755db3;--boss-jolt:5px}
+#battleArena[data-boss-ceremony="milestone"]{--boss-color:#ffe1a4;--boss-aura:#ad72e8e0;--boss-jolt:8px}
+#battleArena[data-boss-ceremony="final"]{--boss-color:#fff6c4;--boss-aura:#fbadf4ef;--boss-jolt:12px}
+#battleArena[data-boss-ceremony="boss"][data-ceremony-event="encounter"]{--boss-time:1.8s}
+#battleArena[data-boss-ceremony="boss"][data-ceremony-event="enemy-death"]{--boss-time:2.15s}
+#battleArena[data-boss-ceremony="milestone"][data-ceremony-event="encounter"]{--boss-time:2.65s}
+#battleArena[data-boss-ceremony="milestone"][data-ceremony-event="enemy-death"]{--boss-time:3.1s}
+#battleArena[data-boss-ceremony="final"][data-ceremony-event="encounter"]{--boss-time:3.8s}
+#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"]{--boss-time:4.5s}
+#battleArena .boss-ceremony-art{display:none;position:absolute;inset:0;overflow:hidden;pointer-events:none;isolation:isolate}
+#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"]) .boss-ceremony-art{display:block}
+#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"]){
+ padding:0 10px;justify-content:center;gap:12px;
+ background:radial-gradient(ellipse at center,#29192de8 0%,#090d1be8 70%,#0709128a 100%);
+ animation:boss-ceremony-veil var(--ceremony-duration,2s) ease-in-out both
+}
+#battleArena .battle-ceremony[data-boss-tier="milestone"]{
+ background:radial-gradient(ellipse at center,#3f254de8 0%,#100d26ec 70%,#050613ab 100%)
+}
+#battleArena .battle-ceremony[data-boss-tier="final"]{
+ background:radial-gradient(ellipse at center,#593251f2 0%,#170d2cf2 62%,#070915d9 100%)
+}
+#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>.ceremony-glyph,
+#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong,
+#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>span{position:relative;z-index:2}
+#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>.ceremony-glyph{
+ font-size:clamp(45px,8vw,90px);color:var(--boss-color,#f7d5a4);
+ text-shadow:0 0 16px var(--boss-color),0 0 40px var(--boss-aura);
+ animation:boss-emblem var(--ceremony-duration) cubic-bezier(.22,.78,.2,1) both
+}
+#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong{
+ font-size:clamp(19px,4vw,36px);letter-spacing:.08em;color:var(--boss-color);
+ text-shadow:0 0 10px #fff9dd,0 0 32px var(--boss-aura);
+ animation:boss-title-pulse var(--ceremony-duration) ease-in-out both
+}
+#battleArena .battle-ceremony[data-event="encounter"][data-boss-tier]:not([data-boss-tier="none"])>span,
+#battleArena .battle-ceremony[data-event="enemy-death"][data-boss-tier]:not([data-boss-tier="none"])>span{
+ display:block;max-width:95%;font-size:clamp(13px,2.6vw,19px);font-weight:700;
+ color:#fff0d9;text-shadow:0 2px 5px #000,0 0 12px var(--boss-aura);
+ animation:boss-title-pulse var(--ceremony-duration) ease-in-out both
+}
+#battleArena .boss-ceremony-art i{position:absolute;display:block;pointer-events:none}
+#battleArena .boss-vfx-flash{
+ inset:0;background:radial-gradient(ellipse at center,#fff1bf8c,transparent 57%);
+ animation:boss-cinematic-flash var(--ceremony-duration) ease-in-out both
+}
+#battleArena .boss-vfx-halo{
+ left:50%;top:50%;width:min(76%,330px);aspect-ratio:1;border-radius:50%;
+ background:radial-gradient(circle,#ffe5bd60,transparent 69%);
+ box-shadow:0 0 55px 18px var(--boss-aura);
+ animation:boss-cinematic-halo var(--ceremony-duration) ease-out both
+}
+#battleArena .boss-vfx-wheel{
+ left:50%;top:50%;width:min(62%,280px);aspect-ratio:1;border-radius:50%;
+ border:3px double var(--boss-color);outline:1px solid var(--boss-aura);outline-offset:11px;
+ box-shadow:0 0 22px var(--boss-aura),inset 0 0 35px var(--boss-aura);
+ animation:boss-cinematic-wheel var(--ceremony-duration) ease-in-out both
+}
+#battleArena .boss-vfx-ring{
+ left:50%;top:50%;width:min(82%,370px);aspect-ratio:1;border-radius:50%;
+ border:3px solid var(--boss-color);
+ box-shadow:0 0 22px 3px var(--boss-aura),inset 0 0 25px var(--boss-aura);
+ animation:boss-cinematic-ring var(--ceremony-duration) ease-out both
+}
+#battleArena .boss-vfx-ring-inner{width:min(53%,225px);border-style:dashed;animation-delay:.08s}
+#battleArena .boss-vfx-beam{
+ left:50%;top:50%;width:5px;height:76%;border-radius:40%;
+ background:linear-gradient(180deg,transparent,var(--boss-color) 49%,transparent);
+ box-shadow:0 0 20px 6px var(--boss-aura);
+ animation:boss-cinematic-beam var(--ceremony-duration) ease-in-out both
+}
+#battleArena .boss-vfx-beam-a{--beam-angle:0deg}
+#battleArena .boss-vfx-beam-b{--beam-angle:45deg}
+#battleArena .boss-vfx-beam-c{--beam-angle:90deg}
+#battleArena .boss-vfx-beam-d{--beam-angle:135deg}
+#battleArena .boss-vfx-sparks{
+ inset:0;background-image:
+ radial-gradient(circle at 17% 30%,var(--boss-color) 0 2px,transparent 4px),
+ radial-gradient(circle at 78% 24%,var(--boss-color) 0 3px,transparent 5px),
+ radial-gradient(circle at 83% 78%,var(--boss-color) 0 2px,transparent 4px),
+ radial-gradient(circle at 21% 81%,var(--boss-color) 0 3px,transparent 6px),
+ radial-gradient(circle at 40% 17%,var(--boss-color) 0 2px,transparent 5px),
+ radial-gradient(circle at 64% 89%,var(--boss-color) 0 2px,transparent 5px);
+ filter:drop-shadow(0 0 11px var(--boss-color));
+ animation:boss-cinematic-sparks var(--ceremony-duration) ease-in-out both
+}
+#battleArena .battle-ceremony[data-boss-tier="boss"] .boss-vfx-beam,
+#battleArena .battle-ceremony[data-boss-tier="boss"] .boss-vfx-ring-inner,
+#battleArena .battle-ceremony[data-boss-tier="boss"] .boss-vfx-sparks{display:none}
+#battleArena .battle-ceremony[data-boss-tier="milestone"] .boss-vfx-beam-c,
+#battleArena .battle-ceremony[data-boss-tier="milestone"] .boss-vfx-beam-d{display:none}
+#battleArena .battle-ceremony[data-boss-tier="final"] .boss-vfx-wheel{
+ border-width:5px;box-shadow:0 0 42px 9px var(--boss-aura),inset 0 0 42px var(--boss-aura)
+}
+#battleArena .battle-ceremony[data-boss-tier="final"] .boss-vfx-halo{
+ box-shadow:0 0 90px 25px var(--boss-aura),0 0 36px 13px #fff4da
+}
+#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .versus{
+ animation:boss-cinematic-shake var(--boss-time,2s) ease-in-out both
+}
+#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]{
+ animation:boss-cinematic-rise var(--boss-time,2s) cubic-bezier(.2,.8,.2,1) both
+}
+#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]{
+ animation:boss-cinematic-collapse var(--boss-time,2s) ease-in both
+}
+#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .enemy-portrait,
+#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .unit-info{
+ animation:boss-cinematic-dissolve var(--boss-time,2s) ease-in both
+}
+@keyframes boss-ceremony-veil{0%{opacity:0}13%,81%{opacity:1}100%{opacity:0}}
+@keyframes boss-emblem{
+ 0%{opacity:0;transform:rotate(-80deg) scale(.2)}
+ 22%{opacity:1;transform:rotate(18deg) scale(1.35)}
+ 48%,77%{opacity:1;transform:rotate(0) scale(1)}
+ 100%{opacity:0;transform:rotate(55deg) scale(1.5)}
+}
+@keyframes boss-title-pulse{
+ 0%,9%{opacity:0;transform:translateY(19px)}
+ 23%,78%{opacity:1;transform:none}
+ 100%{opacity:0;transform:translateY(-17px)}
+}
+@keyframes boss-cinematic-flash{0%,8%{opacity:0}20%{opacity:.55}34%{opacity:.05}63%{opacity:.31}78%{opacity:.07}100%{opacity:0}}
+@keyframes boss-cinematic-halo{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.15)}
+ 28%{opacity:.8;transform:translate(-50%,-50%) scale(1.12)}
+ 75%{opacity:.6;transform:translate(-50%,-50%) scale(1)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(1.9)}
+}
+@keyframes boss-cinematic-wheel{
+ 0%{opacity:0;transform:translate(-50%,-50%) rotate(-130deg) scale(.24)}
+ 27%,73%{opacity:.85}
+ 100%{opacity:0;transform:translate(-50%,-50%) rotate(120deg) scale(1.5)}
+}
+@keyframes boss-cinematic-ring{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.07)}
+ 25%{opacity:.9;transform:translate(-50%,-50%) scale(.86)}
+ 65%{opacity:.65;transform:translate(-50%,-50%) scale(1.1)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(1.65)}
+}
+@keyframes boss-cinematic-beam{
+ 0%,13%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.1)}
+ 26%{opacity:.7;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(1)}
+ 70%{opacity:.48}
+ 100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(1.3)}
+}
+@keyframes boss-cinematic-sparks{
+ 0%,9%{opacity:0;transform:scale(.55) rotate(-8deg)}
+ 30%,72%{opacity:1}
+ 100%{opacity:0;transform:scale(1.25) rotate(18deg)}
+}
+@keyframes boss-cinematic-shake{
+ 0%,9%,40%,59%,85%,100%{transform:none}
+ 16%{transform:translate(calc(var(--boss-jolt)*.6),-2px) rotate(.6deg)}
+ 20%{transform:translate(calc(var(--boss-jolt)*-1),3px) rotate(-.7deg)}
+ 24%{transform:translate(calc(var(--boss-jolt)*.7),-2px)}
+ 66%{transform:translate(calc(var(--boss-jolt)*-1),3px)}
+ 70%{transform:translate(calc(var(--boss-jolt)*.7),-2px)}
+ 74%{transform:none}
+}
+@keyframes boss-cinematic-rise{
+ 0%{opacity:0;transform:translateX(-35px) translateY(10px);filter:brightness(.3)}
+ 20%{opacity:1;transform:translateX(8px) translateY(-4px);filter:brightness(2)}
+ 27%,44%,68%{transform:translateX(0);filter:brightness(1.6)}
+ 32%,72%{transform:translateX(-5px);filter:brightness(2.15)}
+ 100%{opacity:1;transform:none;filter:none}
+}
+@keyframes boss-cinematic-collapse{
+ 0%{opacity:1;transform:none;filter:none}
+ 22%{transform:translateX(-5px);filter:brightness(2.1)}
+ 28%{transform:translateX(7px);filter:brightness(2.6)}
+ 36%,54%{transform:translateX(-3px);filter:brightness(1.8)}
+ 63%{opacity:1;transform:scale(1.05);filter:brightness(3)}
+ 90%{opacity:.17;transform:scale(.85) translateY(22px);filter:brightness(2)}
+ 100%{opacity:0;transform:scale(.65) translateY(40px);filter:brightness(0)}
+}
+@keyframes boss-cinematic-dissolve{
+ 0%,49%{opacity:1}
+ 70%{opacity:.6;filter:brightness(2)}
+ 100%{opacity:0;filter:blur(6px)}
+}
+@media(max-width:630px){
+ #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"]){padding:0 6px;gap:5px}
+ #battleArena .boss-vfx-ring{border-width:2px}
+ #battleArena .boss-vfx-beam{width:3px}
+}
+@media(prefers-reduced-motion:reduce){
+ #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"]),
+ #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>.ceremony-glyph,
+ #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong,
+ #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>span,
+ #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .versus,
+ #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"],
+ #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"],
+ #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .enemy-portrait,
+ #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .unit-info{
+  animation:none!important
+ }
+ #battleArena .boss-ceremony-art{display:none!important}
+}
+
 /* Restore the collection's original luminous art and unchanged solid frames.
    Hue and glow brightness distinguish tiers; text badges are secondary aids.
    No border-width, border-style or card-frame changes are needed here. */

@@ -1,3 +1,4 @@
+import {isLayerBoss,layerOfFight} from './dungeon-progress.mjs';
 // Visual playback follows the ordered snapshots emitted by dungeon-core.round.
 // Animations never alter combat math or determine turn outcomes.
 export const EFFECT_LABELS={attack:'⚔️攻撃',basic:'⚔️通常攻撃',defense:'🛡️防御',debuff:'🕸️弱体',support:'✚回復',buff:'強化',burn:'火傷',item:'道具'};
@@ -12,6 +13,26 @@ export function effectCaption(step){
 }
 export const COMBAT_EFFECT_MS=440;
 export const ENCOUNTER_EFFECT_MS=820;
+/* Only every fifth encounter is a layer boss; every tenth layer gains a
+   second VFX tier and the designed 100th-layer boss gets the finale. */
+export const BOSS_CEREMONY_MS=Object.freeze({
+ boss:Object.freeze({encounter:1800,'enemy-death':2150}),
+ milestone:Object.freeze({encounter:2650,'enemy-death':3100}),
+ final:Object.freeze({encounter:3800,'enemy-death':4500})
+});
+export function bossCeremonyTier(fight){
+ if(!isLayerBoss(fight))return 'none';
+ const layer=layerOfFight(fight);
+ return layer===100?'final':layer%10===0?'milestone':'boss';
+}
+export function ceremonyDuration(event,fight,{animated=true,drops=0}={}){
+ if(!animated)return 0;
+ if(event==='loot')return lootCeremonyDuration(drops);
+ const boss=BOSS_CEREMONY_MS[bossCeremonyTier(fight)];
+ if(boss?.[event])return boss[event];
+ return event==='encounter'?ENCOUNTER_EFFECT_MS:1120;
+}
+
 export function effectDuration(){
  // Keep reduced-motion users and headless test environments from waiting for animations.
  if(typeof window==='undefined'||typeof window.matchMedia!=='function')return 0;
