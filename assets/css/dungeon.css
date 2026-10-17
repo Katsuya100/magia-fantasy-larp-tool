@@ -1141,6 +1141,33 @@ html,body{overflow-x:clip}
  #battleArena .boss-ceremony-art{display:none!important}
 }
 
+/* Compact earned-loot sequence. */
+.return-panel{text-align:center;min-height:410px;overflow:hidden;padding-block:35px 45px}
+.return-glyph{font-size:64px;line-height:1;color:var(--gold);text-shadow:0 0 32px #efc987a0;animation:return-glimmer 2s ease-in-out infinite alternate}
+.return-panel h2{font-size:clamp(25px,4vw,38px);color:var(--gold);letter-spacing:.12em;margin:12px 0 26px}
+.return-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr));gap:13px;max-width:800px;max-height:55vh;overflow:auto;margin:0 auto 28px;padding:8px}
+.return-treasure,.return-reward{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:185px;padding:18px 12px;border:1px solid var(--border);background:radial-gradient(circle at 50% 24%,#b89a7133,transparent 55%),linear-gradient(145deg,#2d2236,#101925);box-shadow:inset 0 0 0 4px #eac38508,0 9px 24px #0005;animation:return-reveal .48s cubic-bezier(.18,.85,.2,1) both;animation-delay:var(--reveal-delay,0s)}
+.return-treasure strong,.return-reward strong{font-size:15px;overflow-wrap:anywhere;line-height:1.4}
+.return-treasure>span,.return-reward>span:last-child:not(.return-reward-symbol){font:18px var(--roman);color:var(--gold)}
+.return-treasure-art{width:92px;height:92px;display:grid;place-items:center;border-radius:50%;border:1px solid #d9b8798c;background:radial-gradient(circle,#745a583f,#172134);box-shadow:0 0 25px #d9b87924}
+.return-treasure-art .relic-symbol{width:75%;height:75%;display:block;fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;color:inherit}
+.return-treasure[data-rarity="rare"] .return-treasure-art{color:#b5b9ff;border-color:#9aa6ec;box-shadow:0 0 25px #728bd045}
+.return-treasure[data-rarity="epic"] .return-treasure-art{color:#e3abe7;border-color:#df95e9;box-shadow:0 0 25px #bd5fe955}
+.return-treasure[data-rarity="legendary"] .return-treasure-art{color:#ffe2a2;border-color:#f7c879;box-shadow:0 0 30px #f7be6877}
+.return-reward-symbol{font-size:59px;line-height:1.4;color:var(--gold);text-shadow:0 0 25px #d9b87990}
+.return-experience{max-width:590px;margin:32px auto 40px;min-height:165px}
+.return-xp-level{display:block;font:clamp(45px,8vw,83px) var(--roman);line-height:1.25;color:var(--gold);text-shadow:0 0 29px #eac38560}
+.return-xp-level-up{animation:return-level-bump .32s cubic-bezier(.15,1.2,.35,1) both}
+.return-xp-track{height:19px;margin:23px 0 12px;overflow:hidden;border:1px solid #d8b16d;background:#090e18;box-shadow:0 0 25px #edc27e25}
+.return-xp-fill{height:100%;width:0;background:linear-gradient(90deg,#b98745,#ffebad);box-shadow:0 0 20px #ffdf9ba9}
+.return-xp-gain{font:20px var(--roman);color:var(--pale)}
+.return-next{min-width:135px;margin:12px auto 0}
+@keyframes return-reveal{from{opacity:0;transform:translateY(20px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes return-level-bump{0%{transform:scale(1)}45%{transform:scale(1.3);text-shadow:0 0 45px #ffe1a5}100%{transform:scale(1)}}
+@keyframes return-glimmer{from{opacity:.7;transform:scale(.93)}to{opacity:1;transform:scale(1.06)}}
+@media(max-width:630px){.return-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.return-treasure,.return-reward{min-height:160px;padding:12px 6px}.return-treasure-art{width:72px;height:72px}.return-treasure strong,.return-reward strong{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.return-glyph,.return-treasure,.return-reward,.return-xp-level-up{animation:none!important}}
+
 /* Restore the collection's original luminous art and unchanged solid frames.
    Hue and glow brightness distinguish tiers; text badges are secondary aids.
    No border-width, border-style or card-frame changes are needed here. */
@@ -1344,29 +1371,3 @@ html,body{overflow-x:clip}
 .rank-start select{max-width:100%;min-height:43px;padding:8px 12px;box-shadow:inset 0 0 0 1px var(--border);border-radius:6px;color:var(--text);background:#181827}
 .rank-start p{margin:0;color:var(--soft);font-size:12px;line-height:1.5}
 
-/* Compact earned-loot sequence. */
-.return-panel{text-align:center;min-height:410px;overflow:hidden;padding-block:35px 45px}
-.return-glyph{font-size:64px;line-height:1;color:var(--gold);text-shadow:0 0 32px #efc987a0;animation:return-glimmer 2s ease-in-out infinite alternate}
-.return-panel h2{font-size:clamp(25px,4vw,38px);color:var(--gold);letter-spacing:.12em;margin:12px 0 26px}
-.return-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr));gap:13px;max-width:800px;max-height:55vh;overflow:auto;margin:0 auto 28px;padding:8px}
-.return-treasure,.return-reward{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:185px;padding:18px 12px;border:1px solid var(--border);background:radial-gradient(circle at 50% 24%,#b89a7133,transparent 55%),linear-gradient(145deg,#2d2236,#101925);box-shadow:inset 0 0 0 4px #eac38508,0 9px 24px #0005;animation:return-reveal .48s cubic-bezier(.18,.85,.2,1) both;animation-delay:var(--reveal-delay,0s)}
-.return-treasure strong,.return-reward strong{font-size:15px;overflow-wrap:anywhere;line-height:1.4}
-.return-treasure>span,.return-reward>span:last-child:not(.return-reward-symbol){font:18px var(--roman);color:var(--gold)}
-.return-treasure-art{width:92px;height:92px;display:grid;place-items:center;border-radius:50%;border:1px solid #d9b8798c;background:radial-gradient(circle,#745a583f,#172134);box-shadow:0 0 25px #d9b87924}
-.return-treasure-art .relic-symbol{width:75%;height:75%;display:block;fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;color:inherit}
-.return-treasure[data-rarity="rare"] .return-treasure-art{color:#b5b9ff;border-color:#9aa6ec;box-shadow:0 0 25px #728bd045}
-.return-treasure[data-rarity="epic"] .return-treasure-art{color:#e3abe7;border-color:#df95e9;box-shadow:0 0 25px #bd5fe955}
-.return-treasure[data-rarity="legendary"] .return-treasure-art{color:#ffe2a2;border-color:#f7c879;box-shadow:0 0 30px #f7be6877}
-.return-reward-symbol{font-size:59px;line-height:1.4;color:var(--gold);text-shadow:0 0 25px #d9b87990}
-.return-experience{max-width:590px;margin:32px auto 40px;min-height:165px}
-.return-xp-level{display:block;font:clamp(45px,8vw,83px) var(--roman);line-height:1.25;color:var(--gold);text-shadow:0 0 29px #eac38560}
-.return-xp-level-up{animation:return-level-bump .32s cubic-bezier(.15,1.2,.35,1) both}
-.return-xp-track{height:19px;margin:23px 0 12px;overflow:hidden;border:1px solid #d8b16d;background:#090e18;box-shadow:0 0 25px #edc27e25}
-.return-xp-fill{height:100%;width:0;background:linear-gradient(90deg,#b98745,#ffebad);box-shadow:0 0 20px #ffdf9ba9}
-.return-xp-gain{font:20px var(--roman);color:var(--pale)}
-.return-next{min-width:135px;margin:12px auto 0}
-@keyframes return-reveal{from{opacity:0;transform:translateY(20px) scale(.9)}to{opacity:1;transform:none}}
-@keyframes return-level-bump{0%{transform:scale(1)}45%{transform:scale(1.3);text-shadow:0 0 45px #ffe1a5}100%{transform:scale(1)}}
-@keyframes return-glimmer{from{opacity:.7;transform:scale(.93)}to{opacity:1;transform:scale(1.06)}}
-@media(max-width:630px){.return-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.return-treasure,.return-reward{min-height:160px;padding:12px 6px}.return-treasure-art{width:72px;height:72px}.return-treasure strong,.return-reward strong{font-size:13px}}
-@media(prefers-reduced-motion:reduce){.return-glyph,.return-treasure,.return-reward,.return-xp-level-up{animation:none!important}}
