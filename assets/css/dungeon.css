@@ -294,3 +294,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 /* Details and delete stay compact and beside each other in the grimoire. */
 .circle-grid .card-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;gap:7px}
 .circle-grid .card-actions button,.circle-grid .card-actions .magic-expand{min-width:0;width:100%;min-height:33px!important;margin:0!important;padding:6px 5px!important;font-size:12px!important}
+
+/* Keep the fallen enemy gone during reward drops and layer checkpoint.
+   Only enterFight() resets data-defeated for the next opponent. */
+#battleArena .enemy-unit[data-defeated="true"]{visibility:hidden;pointer-events:none}
