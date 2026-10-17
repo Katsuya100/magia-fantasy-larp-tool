@@ -128,15 +128,16 @@ const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
 assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
-assert.match(page,/data-release="20261017\.23"/);
-assert.match(page,/dungeon\.css\?v=20261017\.23/);
-assert.match(page,/dungeon-app\.mjs\?v=20261017\.23/);
+const currentRelease=page.match(/data-release="(\d{8}\.\d+)"/)?.[1];
+assert.ok(currentRelease,'HTML exposes current public release version');
+assert.ok(page.includes('dungeon.css?v='+currentRelease),'page CSS is cache-busted for current release');
+assert.ok(page.includes('dungeon-app.mjs?v='+currentRelease),'page JS is cache-busted for current release');
 const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.23','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+currentRelease,'stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
@@ -205,6 +206,41 @@ assert.match(css,/html,body\{overflow-x:clip\}/,'mobile viewport width remains c
 assert.match(css,/#battleArena\{overflow-x:clip;min-width:0;max-width:100%\}/,'enemy slides cannot expand the arena');
 assert.match(app,/scrollIntoView\?\.\(\{behavior:'instant',block:'start'\}\)/,'starting exploration cannot animate scrolling during the enemy entrance');
 assert.match(css,/@keyframes sanctuary-gentle-arrival/,'return shrine eases and fades in slowly');
+
+assert.match(css,/#battleArena\[data-shake="true"\] \.versus/,'attack camera jolt stays inside the arena');
+assert.doesNotMatch(css,/#battle\.battle-panel\[data-shake="true"\]/,'whole battle panel must never shake');
+assert.match(app,/\$\('battleArena'\)\.dataset\.shake/,'combat shake JS only targets arena');
+assert.doesNotMatch(app,/\$\('battle'\)\.dataset\.shake/,'battle scene is never transformed by attack shake');
+assert.match(app,/const terminalSwap=\['checkpoint','result'\]\.includes\(name\)/,'short end scenes do not crossfade against the tall battle panel');
+assert.match(css,/@keyframes terminal-fade-in\{from\{opacity:0\}to\{opacity:1\}\}/,'end screens fade opacity only');
+const deathOverlayFrames=css.match(/@keyframes ceremony-arrive\{([^\n]+)\}/)?.[1]||'';
+assert.ok(deathOverlayFrames&&!deathOverlayFrames.includes('transform:'),'fatal overlay must not shrink or enlarge during transition');
+assert.match(css,/\.scene-stack > #checkpoint\.panel:not\(\[hidden\]\)/,'checkpoint transition does not overlap the old battle');
+assert.match(css,/\.scene-stack > #result\.panel:not\(\[hidden\]\)/,'defeat and return transition does not overlap the old battle');
+const battleMarkup=page.match(/<section id="battle"[^>]*>([\s\S]*?)<\/section>/)?.[1]||'';
+assert.ok(battleMarkup.indexOf('id="battleInfo"')>battleMarkup.indexOf('id="battleArena"')&&
+ battleMarkup.indexOf('id="battleInfo"')<battleMarkup.indexOf('<h3>魔法陣</h3>'),'pending loot, XP and item usage appear above the magic-circle heading');
+assert.equal((battleMarkup.match(/id="battleInfo"/g)||[]).length,1,'combat status is displayed only once');
+for(const side of ['hero','enemy']){
+ const fighter=battleMarkup.match(new RegExp('<article id="'+side+'Combatant"[\\s\\S]*?<\\/article>'))?.[0]||'';
+ assert.match(fighter,/class="element-flare"/,side+' elemental flare present');
+ assert.match(fighter,/class="element-trail"/,side+' elemental trail present');
+}
+for(const attr of ['flame','bolt','aqua','storm','gravity','law','chaos']){
+ assert.match(css,new RegExp('data-attribute="'+attr+'"\\] \\.element-flare'),attr+' has its own attack animation shape');
+}
+for(const name of ['element-flame-rise','element-wave-crash','element-bolt-strike','element-vortex','element-gravity-crush','element-law-seal','element-chaos-burst','element-shield-raise','element-hex-bind','element-healing-cross']){
+ assert.match(css,new RegExp('@keyframes '+name+'\\{'),name+' animation has its own keyframes');
+}
+for(const role of ['attack','defense','support']){
+ assert.match(css,new RegExp('data-effect="'+role+'"\\] \\.element-flare|data-effect="'+role+'"\\]\\[data-attribute="flame"\\] \\.element-flare'),role+' effect is visually differentiated');
+}
+assert.match(css,/data-incoming="debuff"\] \.element-flare/,'debuff curses appear on their target');
+assert.match(css,/clip-path:polygon\(50% 0,95% 17%/,'defense effect uses recognizable shield silhouette');
+assert.match(css,/clip-path:polygon\(37% 0,63% 0,63% 36%/,'support effect uses recognizable healing cross');
+assert.match(app,/victim\.dataset\.incoming=step\.role/,'the opponent receives the debuff effect');
+assert.match(app,/target\.dataset\.incoming='none'/,'incoming effects are cleared between turns');
+
 assert.match(page,/id="dungeonScenes" class="scene-stack"/,'scene panels share a fixed origin');
 assert.match(css,/\.scene-stack > \.panel\[data-exiting="true"\]/,'outgoing panel fades over incoming panel');
 assert.match(css,/\.scene-stack > \.panel\[data-entering="true"\]/,'incoming panel fades in');

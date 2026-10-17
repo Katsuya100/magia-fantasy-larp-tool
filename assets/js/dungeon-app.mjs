@@ -1,14 +1,14 @@
-import * as G from './dungeon-core.mjs?v=20261017.23';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.23';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.23';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.23';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.23';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.23';
+import * as G from './dungeon-core.mjs?v=20261017.24';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.24';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.24';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.24';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.24';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.24';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.23';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.23';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.23';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.23';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.24';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.24';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.24';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.24';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const circleImages=createCircleImageUrls();
@@ -82,7 +82,11 @@ function show(requested){
  const name=resolvedView(requested);
  const before=sceneIds.find(id=>!$(id).hidden);
  const reduced=typeof window.matchMedia!=='function'||window.matchMedia('(prefers-reduced-motion: reduce)').matches;
- if(!before||before===name||reduced||!sceneIds.includes(name)){
+ // Never overlap the tall battle and compact checkpoint/result in one grid
+ // track: hiding the tall scene later would suddenly change viewport height.
+ const terminalSwap=['checkpoint','result'].includes(name)||['checkpoint','result'].includes(before);
+ if(terminalSwap&&before==='battle'&&before!==name)scrollToDungeonTabs();
+ if(!before||before===name||reduced||terminalSwap||!sceneIds.includes(name)){
   applyView(name);
   return;
  }
@@ -180,11 +184,12 @@ function renderRun(){
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');
 }
 function clearCombatEffects(){
- $('battle').dataset.shake='false';
+ $('battleArena').dataset.shake='false';
  for(const side of ['hero','enemy']){
   const target=$(side+'Combatant');
   target.dataset.effect='idle';
   target.dataset.hit='false';
+   target.dataset.incoming='none';
   $(side+'FxText').textContent='';
  }
 }
@@ -198,7 +203,7 @@ async function animateBattle(steps){
    clearCombatEffects();
    // Force a new CSS animation cycle even after consecutive turns with the same role.
    void $('battleArena').offsetWidth;
-   $('battle').dataset.shake=phase.some(step=>['attack','basic'].includes(step.role)&&step.amount>0)?'true':'false';
+   $('battleArena').dataset.shake=phase.some(step=>['attack','basic'].includes(step.role)&&step.amount>0)?'true':'false';
    for(const step of phase){
     const actor=$(step.side+'Combatant');
     actor.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
@@ -210,6 +215,7 @@ async function animateBattle(steps){
     const opponent=step.side==='hero'?'enemy':'hero';
     const victim=$(opponent+'Combatant');
     victim.dataset.hit='true';
+     victim.dataset.incoming=step.role;
     if(victim.dataset.effect==='idle')victim.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
    }
    const final=phase.at(-1);

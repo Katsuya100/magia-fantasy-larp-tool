@@ -211,8 +211,9 @@ try{
  assert.equal($('enemyCombatant').dataset.effect,'idle');
  assert.ok(ceremonies.includes('encounter'),'battle start has encounter ceremony');
  const combatShake=[];
-  const panel=$('battle');
-  panel.dataset=new Proxy(panel.dataset,{set(target,key,value){if(key==='shake')combatShake.push(value);target[key]=value;return true;}});
+  const arena=$('battleArena');
+  arena.dataset=new Proxy(arena.dataset,{set(target,key,value){if(key==='shake')combatShake.push(value);target[key]=value;return true;}});
+  assert.notEqual($('battle').dataset.shake,'true','the entire battle panel never shakes or changes viewport geometry');
   const animationRoles=[];
  for(const side of ['hero','enemy']){
   const fighter=$(side+'Combatant');
@@ -249,7 +250,7 @@ try{
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
  assert.equal($('floorLabel').textContent,'1層2戦目');
  assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
-  assert.ok(combatShake.includes('true'),'damaging attack triggers screen shake');
+  assert.ok(combatShake.includes('true'),'damaging attack triggers only the confined arena shake');
  assert.ok(ceremonies.includes('enemy-death'),'enemy death ceremony played');
  assert.ok(ceremonies.includes('loot'),'loot ceremony played');
  assert.ok(defeatedDuringLoot.every(x=>x==='true'),'slain foe stays invisible during every reward-drop sequence');
