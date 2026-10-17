@@ -17,17 +17,14 @@ export function encounterLabel(fight){
 export function battleHeading(fight){return encounterLabel(fight)+(isLayerBoss(fight)?' · 階層ボス':'');}
 export function clearedLayer(fight){return isLayerBoss(fight)?layerOfFight(fight):0;}
 export function nextLayer(fight){return layerOfFight(fight)+1;}
-// Old profiles stored the deepest *fight* under highest. Convert once, then
-// tag the unit so visiting/reloading never divides an already-converted layer.
-export function migrateHighestLayer(profile){
- if(profile.highestUnit==='layer')return false;
- profile.highest=layerOfFight(profile.highest);
- profile.highestUnit='layer';
- return true;
+// Only a successful return from a defeated layer boss establishes a record.
+// Legacy "highest" tracked *visits*, so it cannot safely be treated as a return.
+export function deepestReturnedLayer(profile){
+ const depth=Number(profile?.deepestReturnedLayer);
+ return Number.isSafeInteger(depth)&&depth>0?depth:0;
 }
-export function recordLayerVisit(profile,fight){
- migrateHighestLayer(profile);
- const reached=layerOfFight(fight);
- profile.highest=Math.max(Number(profile.highest)||0,reached);
- return profile.highest;
+export function recordReturnedLayer(profile,fight){
+ const completed=clearedLayer(fight);
+ if(completed)profile.deepestReturnedLayer=Math.max(deepestReturnedLayer(profile),completed);
+ return deepestReturnedLayer(profile);
 }

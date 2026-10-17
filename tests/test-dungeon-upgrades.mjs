@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {upgradeCircle} from '../assets/js/dungeon-upgrades.mjs';
+const original={id:'circle',analysis:{attribute:'flame',role:'attack',power:100},revealed:true};
+let upgraded=upgradeCircle(original);
+assert.equal(original.analysis.power,100,'original magic is not mutated');
+assert.deepEqual({power:upgraded.analysis.power,base:upgraded.basePower,level:upgraded.upgradeLevel},{power:110,base:100,level:1});
+for(let i=0;i<9;i++)upgraded=upgradeCircle(upgraded);
+assert.equal(upgraded.analysis.power,200,'ten upgrades add 100% of original, not compound interest');
+assert.equal(upgraded.basePower,100);
+assert.equal(upgraded.upgradeLevel,10);
+assert.equal(upgradeCircle({analysis:{power:33.3},upgradeLevel:0}).analysis.power,36.63,'fractional magic power has stable precision');
+assert.throws(()=>upgradeCircle({analysis:{power:0}}),/強化できない/);
+console.log('PASS non-compounding magical-circle power upgrades');

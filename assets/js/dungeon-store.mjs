@@ -47,7 +47,7 @@ export const saveProfile=(db,p)=>request(db,'settings','readwrite',s=>s.put(p,'p
 export async function getProfile(db){
   let p=await request(db,'settings','readonly',s=>s.get('profile'));
   if(!p){
-    p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,inventory:[],collection:{},highest:0,run:null};
+    p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,inventory:[],collection:{},deepestReturnedLayer:0,magicStones:0,run:null};
     await saveProfile(db,p);
   }
   return p;
