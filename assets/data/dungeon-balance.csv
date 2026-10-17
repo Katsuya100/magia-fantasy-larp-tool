@@ -42,3 +42,8 @@ status_tick_min_damage,1,火傷の継続最小ダメージ
 resistance_buff_duration,2,属性耐性強化の持続ラウンド
 debuff_min_duration,1,弱体の最短持続ラウンド
 debuff_max_duration,4,弱体の最長持続ラウンド
+enemy_hp_scale_early,0.80,序盤の敵最大HP倍率
+enemy_hp_scale_late,0.90,深層の敵最大HP倍率
+enemy_mag_scale_early,0.68,序盤の敵魔力倍率
+enemy_mag_scale_late,0.82,深層の敵魔力倍率
+victory_mp_restore,18,各戦闘勝利後に回復するMP量
