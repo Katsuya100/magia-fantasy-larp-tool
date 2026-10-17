@@ -32,6 +32,14 @@ export async function playCombatSequence(steps,paint,{duration=effectDuration(),
   if(duration>0)await wait(duration);
  }
 }
+// One visible chest represents exactly one actual drop, including identical items.
+export function treasureChestMarkup(count){
+ if(!Number.isSafeInteger(count)||count<0)throw Error('Invalid drop count');
+ return Array.from({length:count},(_,i)=>'<span class="loot-chest" style="--chest-delay:'+(i*0.035).toFixed(3)+'s" aria-hidden="true"><span class="loot-chest-lid"></span><span class="loot-chest-body"></span><span class="loot-chest-light"></span></span>').join('');
+}
+export function lootCeremonyDuration(count){
+ return 1200+Math.max(0,count-1)*35;
+}
 export async function playBattleCeremony(event,paint,{duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
  paint(event);
  if(duration>0)await wait(duration);
