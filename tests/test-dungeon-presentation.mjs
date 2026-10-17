@@ -393,4 +393,12 @@ assert.match(css,/background:radial-gradient\(ellipse 37% 51% at 50% 61%,/,'port
 assert.match(css,/\.relic-card\.discovered:not\(\[data-rarity="common"\]\) \.relic-art\{[\s\S]*?0 0 22px 7px var\(--rarity-halo\),[\s\S]*?0 0 46px 8px var\(--rarity-glow\)/,'rarer glows use soft diffuse halos rather than hard rings');
 assert.match(css,/\.relic-art \.relic-glyph\{[\s\S]*?display:flex;align-items:center;justify-content:center;[\s\S]*?transform:translateY\(-\.035em\)/,'collection symbols are centered independently of font baselines');
 assert.match(css,/\.relic-card\.discovered\[data-rarity="common"\] \.relic-art\{box-shadow:none\}/,'common remains without glow');
+
+const svgSource=await read('assets/js/dungeon-relic-symbols.mjs');
+assert.match(svgSource,/export const relicSymbols/,'collection icons are SVG');
+assert.match(svgSource,/viewBox="0 0 100 100"/,'same viewBox for all collection icons');
+assert.match(css,/\.relic-art \.relic-symbol\{\s*display:block;width:78%;height:78%;margin:auto/,'collection SVG centered in circular art');
+const appSource=await read('assets/js/dungeon-app.mjs');
+assert.match(appSource,/relicSymbolSvg\(i,found\)/,'collection uses SVG renderer');
+assert.doesNotMatch(appSource,/const relics=\[/,'old font glyphs removed');
 console.log('PASS camera circle guide, layer progression, 3-column items, readable story, terminology and fantasy layout');
