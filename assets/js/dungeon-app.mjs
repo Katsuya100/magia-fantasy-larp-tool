@@ -1,11 +1,11 @@
-import * as G from './dungeon-core.mjs?v=20261017.13';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.13';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleAttributeEffects} from './dungeon-magic-knowledge.mjs?v=20261017.13';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.13';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.13';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.13';
+import * as G from './dungeon-core.mjs?v=20261017.14';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.14';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.14';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.14';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.14';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.14';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.13';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.14';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
 let dungeonView='prepare',battleUrls=[];
@@ -92,7 +92,7 @@ function render(){
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
  }).join('');
- $('libraryCards').innerHTML=circles.map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><p>'+esc(circleSummary(c,masters.buffs,G.mpCost))+'</p>'+circleEffectBadges(c,masters.buffs,esc)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
+ $('libraryCards').innerHTML=circles.map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run,masters.buffs,G.mpCost);
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
@@ -115,9 +115,8 @@ function renderRun(){
   return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c?.analysis?circleLabel(c.analysis,isRevealed(c)):'未解析')+'" '+(disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +(c?.image?'<img alt="" src="'+battleImageUrl(c.image)+'">':'<span class="tile-empty-icon" aria-hidden="true">◎</span>')
-    +'<span class="tile-detail">'+(c?.analysis?circleLabel(c.analysis,isRevealed(c)):'未解析')+'</span>'
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
-    +(c?'<div class="circle-card-effects">'+circleEffectBadges(c,masters.buffs,esc)+'</div>'
+    +(c?circleEffectBadges(c,masters.buffs,esc,G.mpCost)
      +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button>':'')+'</div>';
  }).join('');
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
@@ -356,12 +355,10 @@ function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
  const d=circleDetails(circle,masters.buffs,G.mpCost);
  $('magicDetailsImage').src=imageUrl(circle.image);
- const attr=circleAttributeEffects(circle,masters.buffs);
- const rows=[['属性',d.attribute],['役割',d.role],['効果',d.effect],['消費MP',d.mp],['威力',d.power]];
- if(attr){
-  rows.push(['🛡️属性の強化',attr.buff],['🕸️属性の弱体',attr.debuff]);
-  rows.push(['発動条件','🛡️強化は防御、🕸️弱体は弱体魔法のときだけ発動']);
- }
+ const info=circleEffectDetails(circle,masters.buffs);
+ const rows=[['属性',d.attribute],['種別',d.role],['効果の詳細',info.effect]];
+ if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
+ rows.push(['MP',d.mp],['威力',d.power]);
  $('magicDetailsStats').innerHTML=rows.map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(value)+'</dd>').join('');
  if(!$('magicDetailsDialog').open)$('magicDetailsDialog').showModal();
 }
@@ -376,7 +373,7 @@ function openLoadoutPicker(kind,index){
  const dialog=$('loadoutDialog');
  $('loadoutDialogTitle').textContent=kind==='circle'?'魔法陣を選ぶ':'持ち込みアイテムを選ぶ';
  $('loadoutOptions').innerHTML=kind==='circle'
-  ?circleChoices(circles,slots,imageUrl,esc,c=>circleSummary(c,masters.buffs,G.mpCost),masters.buffs)
+  ?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost)
   :itemChoices(profile.inventory,carry,itemName,esc);
  $('clearLoadoutSlot').hidden=kind==='circle'?slots[index]===null:carry[index]===null;
  $('openGrimoireFromPicker').hidden=kind!=='circle';
