@@ -224,3 +224,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 @media(prefers-reduced-motion:reduce){#battleArena .loot-chest{animation:none!important;opacity:1}#battleArena .loot-chest-lid{animation:none!important;transform:rotate(-43deg) translateY(-4px)}#battleArena .loot-chest-light{animation:none!important;opacity:.4}}
 
 #battleArena .battle-ceremony[data-event="loot"]{animation-duration:var(--ceremony-duration,2.4s)}
+
+/* Both sides can be struck while lunging in the same simultaneous attack phase. */
+#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-left .78s ease-out both}
+#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-right .78s ease-out both}
