@@ -91,7 +91,7 @@ assert.ok(combatLog.some(x=>x.includes('生命の紅石：復活')));
 assert.ok(timeline.some(x=>x.role==='revive'&&x.hero.hp>0),'revival snapshot is visible to the animation');
 assert.equal(fatalHero.reviveUsed,true);
 const burnHero=G.makeUnit(base,1,{},[],'player'),burnEnemy=G.makeUnit(base,1,{},[],'enemy');
-burnHero.hp=1;burnHero.reviveArmed=true;
+burnHero.hp=2;burnHero.reviveArmed=true;burnEnemy.stats.mag=0;
 G.addStatus(burnHero,{id:'test-burning',kind:'debuff',effect:'burn',attribute:'flame',value:1,turns:2});
 const burnLog=G.round(burnHero,burnEnemy,-1,-1,buffs,()=>.5);
 assert.ok(burnLog.some(x=>x.includes('生命の紅石：復活')),'burn death also activates ruby');
