@@ -128,15 +128,15 @@ const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
 assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
-assert.match(page,/data-release="20261017\.22"/);
-assert.match(page,/dungeon\.css\?v=20261017\.22/);
-assert.match(page,/dungeon-app\.mjs\?v=20261017\.22/);
+assert.match(page,/data-release="20261017\.23"/);
+assert.match(page,/dungeon\.css\?v=20261017\.23/);
+assert.match(page,/dungeon-app\.mjs\?v=20261017\.23/);
 const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.22','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.23','stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
@@ -193,7 +193,17 @@ assert.match(app,/applyView\(name,before\)/,'tabs crossfade while preserving the
 assert.match(css,/@keyframes snappy-rush-hero/,'hero attacks have accelerated easing');
 assert.match(css,/@keyframes snappy-rush-enemy/,'enemy attacks have accelerated easing');
 assert.match(css,/@keyframes snappy-screen-shake/,'attacks shake the arena');
-assert.match(css,/@keyframes encounter-slide/,'encounter banner slides in, pauses and slides out');
+assert.match(css,/@keyframes encounter-slide/,'encounter banner fades in, pauses and fades out');
+const encounterKeyframes=css.match(/@keyframes encounter-slide\{([\s\S]*?)\n\}/)?.[1];
+assert.ok(encounterKeyframes&&!encounterKeyframes.includes('transform:'),'full-width encounter overlay cannot translate or scale the viewport');
+const lootKeyframes=css.match(/@keyframes loot-ceremony-arrive\{([\s\S]*?)\n\}/)?.[1];
+assert.ok(lootKeyframes&&!lootKeyframes.includes('transform:'),'loot overlay does not zoom before next encounter');
+assert.match(css,/@keyframes encounter-title-slide/,'only encounter text slides');
+assert.doesNotMatch(css,/@keyframes enemy-snap-entrance/,'old scaled enemy entrance is removed');
+assert.doesNotMatch(css,/@keyframes enemy-entrance/,'original scaled enemy entrance is removed');
+assert.match(css,/html,body\{overflow-x:clip\}/,'mobile viewport width remains clipped during animated overlays');
+assert.match(css,/#battleArena\{overflow-x:clip;min-width:0;max-width:100%\}/,'enemy slides cannot expand the arena');
+assert.match(app,/scrollIntoView\?\.\(\{behavior:'instant',block:'start'\}\)/,'starting exploration cannot animate scrolling during the enemy entrance');
 assert.match(css,/@keyframes sanctuary-gentle-arrival/,'return shrine eases and fades in slowly');
 assert.match(page,/id="dungeonScenes" class="scene-stack"/,'scene panels share a fixed origin');
 assert.match(css,/\.scene-stack > \.panel\[data-exiting="true"\]/,'outgoing panel fades over incoming panel');

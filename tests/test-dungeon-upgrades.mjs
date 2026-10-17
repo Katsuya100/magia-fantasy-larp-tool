@@ -18,6 +18,13 @@ assert.equal(reloaded.analysis.power,200,'profile upgrade metadata restores powe
 assert.equal(reloaded.basePower,100);
 assert.equal(reloaded.upgradeLevel,10);
 assert.equal(applySavedUpgrade(original,null),original,'legacy photo records work without upgrade metadata');
+const legacy={...original,basePower:33.3,upgradeLevel:1,
+ analysis:{...original.analysis,power:36.63}};
+const rounded=applySavedUpgrade(legacy,undefined);
+assert.equal(rounded.analysis.power,37,'old photo-record power is rounded up on load, without rewriting the Blob');
+assert.equal(legacy.analysis.power,36.63,'old photo record itself is not mutated');
+assert.equal(applySavedUpgrade({...legacy,analysis:{...legacy.analysis,power:39.96},upgradeLevel:2},undefined).analysis.power,40,'legacy second upgrade rounds up');
+assert.equal(applySavedUpgrade(legacy,{basePower:50,upgradeLevel:2}).analysis.power,60,'current profile metadata takes precedence over old circle upgrade');
 assert.equal(applySavedUpgrade(original,{basePower:-1,upgradeLevel:9}),original,'invalid saved upgrades are ignored');
 assert.throws(()=>upgradeCircle({analysis:{power:0}}),/強化できない/);
 console.log('PASS non-compounding magical-circle power upgrades');
