@@ -134,7 +134,13 @@ export const scenarios=[
  {name:'Lv12 / 1-3F / 3 circles / no items',level:12,fromLayer:1,toLayer:3,spells:'three'},
  {name:'Lv19 / 1-10F / 5 circles / no items',level:19,fromLayer:1,toLayer:10,spells:'five'},
  {name:'Lv37 / 10-20F / 5 circles / no items',level:37,fromLayer:10,toLayer:20,spells:'five'},
- {name:'Lv87 / 40-50F / 5 circles / no items',level:87,fromLayer:40,toLayer:50,spells:'five'},
+ {name:'Lv55 / 20-30F / 5 circles / no items / earned stones',level:55,fromLayer:20,toLayer:30,spells:'five',stones:'earned'},
+ {name:'Lv72 / 30-40F / 5 circles / no items / earned stones',level:72,fromLayer:30,toLayer:40,spells:'five',stones:'earned'},
+  {name:'Lv87 / 40-50F / 5 circles / no items',level:87,fromLayer:40,toLayer:50,spells:'five'},
+ {name:'Lv102 / 50-60F / 5 circles / no items / earned stones',level:102,fromLayer:50,toLayer:60,spells:'five',stones:'earned'},
+ {name:'Lv115 / 60-70F / 5 circles / no items / earned stones',level:115,fromLayer:60,toLayer:70,spells:'five',stones:'earned'},
+ {name:'Lv128 / 70-80F / 5 circles / no items / earned stones',level:128,fromLayer:70,toLayer:80,spells:'five',stones:'earned'},
+ {name:'Lv139 / 80-90F / 5 circles / no items / earned stones',level:139,fromLayer:80,toLayer:90,spells:'five',stones:'earned'},
  {name:'Lv150 / 90-100F / 5 circles / no items / no stones',level:150,fromLayer:90,toLayer:100,spells:'five',stones:'none'},
  {name:'Lv150 / 90-100F / 5 circles / no items / earned stones',level:150,fromLayer:90,toLayer:100,spells:'five',stones:'earned'}
 ];
@@ -153,6 +159,17 @@ export function summarize(config,samples=32){
   lossByFight:Object.entries(runs.filter(x=>!x.win).reduce((a,x)=>{const f=x.clear+1;a[f]=(a[f]||0)+1;return a;},{}))};
 }
 for(const config of scenarios)console.log('PROGRESSION_SIM '+JSON.stringify(summarize(config)));
+// Every planned band is checked using the level intended for its final boss.
+for(const config of scenarios.filter(x=>x.toLayer>=10)){
+ assert.equal(config.level,targetClearLevel(config.toLayer),'intended boss level '+config.toLayer);
+}
+const baseline=summarize(scenarios.find(x=>x.level===5));
+assert.ok(baseline.winRate>=70,'level 5 item-free party must have a reasonable chance through layer 3');
+const overleveled=summarize(scenarios.find(x=>x.level===12));
+assert.ok(overleveled.winRate>=95,'a level 12 party should reliably clear layer 3 without consumables');
+const endgame=summarize(scenarios.find(x=>x.level===150&&x.stones==='earned'));
+assert.ok(endgame.winRate>=70,'item-free level 150 party using earned stone upgrades should clear through layer 100');
+assert.ok(endgame.avgMpPercent<=25,'final stretch should be close in MP, not trivial');
 const ledger=stoneLedger(7293,10);
 console.log('MAGIC_STONE_LEDGER '+JSON.stringify({throughLayer:10,level:ledger.level,stones:ledger.stones,
  levels:ledger.levels,returns:ledger.returns}));
@@ -160,4 +177,8 @@ assert.ok(scenarios.every(x=>x.fromLayer<=x.toLayer),'scenarios cover consecutiv
 assert.equal(simulate(1,{level:1,fromLayer:1,toLayer:1,spells:'beginner'}).spentStones,0);
 assert.ok(upgradeSpells(SPELLS.five,10).spells.every((s,i)=>s.power>=SPELLS.five[i].power));
 assert.equal(stoneLedger(1,0).stones,0);
+assert.ok(ledger.stones>0,'stones are banked across completed checkpoints');
+assert.ok(ledger.levels.every(x=>x.to>x.from),'level ups require accumulated XP');
+assert.ok(ledger.levels.every((x,i)=>i===0||x.stones>=ledger.levels[i-1].stones),'stone bank is never debited before upgrades');
+assert.ok(ledger.returns.every((x,i)=>i===0||x.level>=ledger.returns[i-1].level),'return-only levels are monotonic');
 console.log('PASS seeded full combat with resource carryover, tenth-layer HP/MP recovery, saved reward ledger and permanent stone upgrades');
