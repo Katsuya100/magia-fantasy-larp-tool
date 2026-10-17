@@ -1,5 +1,5 @@
 import {num,level,range} from './dungeon-tuning.mjs';
-import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,CONSUMABLE_TIERS} from './dungeon-design.mjs';
+import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,CONSUMABLE_TIERS,targetClearLevel} from './dungeon-design.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
 export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -30,6 +30,21 @@ export function parseCsv(input){
  return records.map(cols=>{if(cols.length!==header.length)throw Error('CSV columns');return Object.fromEntries(header.map((name,i)=>[name,cols[i]]));});
 }
 export function weighted(rows,r=Math.random){let sum=rows.reduce((n,x)=>n+Number(x.weight||0),0),v=r()*sum;if(!sum)throw Error('Empty drops');for(const row of rows){v-=Number(row.weight||0);if(v<0)return row;}return rows.at(-1);}
+// New potions are rolled against the expected adventurer level at the drop layer.
+// 75% is guaranteed even for the highest possible starting HP/MAG roll.
+// Store the rolled value on each item so old inventory and later use remain stable.
+export function rollPotionValue(item,layer,r=Math.random){
+ if(item.kind==='clear')return 0;
+ if(item.kind!=='heal'&&item.kind!=='mana')throw Error('Unknown potion kind');
+ const recommended=level(targetClearLevel(layer));
+ const maximum=item.kind==='heal'
+  ?Math.round(range('hp')[1]*Number(recommended.hp_multiplier))
+  :num('mp_base')+num('mp_per_mag')*Math.round(range('mag')[1]*Number(recommended.mag_multiplier));
+ const minimum=Math.max(Number(item.min_value),Math.ceil(maximum*.75));
+ const tierCeiling={small:.88,medium:.96,large:1.06,extreme:1.18}[item.tier]||.88;
+ const upper=Math.max(minimum,Number(item.max_value),Math.ceil(maximum*tierCeiling));
+ return roll(minimum,upper,r);
+}
 export function dropCount(l,r=Math.random){const p=clamp(num('loot_chance_base')+num('loot_chance_per_level')*(l-1),num('loot_chance_base'),num('loot_chance_cap'));let n=num('loot_count_min');for(let i=0;i<num('loot_count_max')-num('loot_count_min');i++)if(r()<p)n++;return n;}
 export function drops(items,collections,l,r=Math.random,context={}){
  const layer=context.layer??1;
@@ -37,7 +52,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
   if(r()<num('consumable_drop_rate')){
    const tier=rollConsumableTier(layer,r);
    const x=weighted(eligibleConsumables(items,layer,tier),r);
-   return {type:'use',id:x.id,value:roll(Number(x.min_value),Number(x.max_value),r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};
+   return {type:'use',id:x.id,value:rollPotionValue(x,layer,r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};
   }
   if(r()<num('magic_stone_drop_rate'))return {type:'stone',id:'magic_stone'};
   return {type:'collection',id:rollCollection(collections,layer,r).id};
