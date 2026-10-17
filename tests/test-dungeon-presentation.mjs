@@ -363,4 +363,13 @@ assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*min-width
 assert.doesNotMatch(css,/#battleArena #enemyStats,#battleArena #heroStats\{[^}]*overflow-y:auto/,'no hidden per-combatant stats scrollbars');
 assert.match(css,/#battleArena \.combat-attributes\{\s*min-width:0;display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'MAG, DEF and RES are in separate columns');
 assert.match(app,/function rowUnit\(unit\)\{[\s\S]*?class="battle-vital"[\s\S]*?class="combat-attributes"[\s\S]*?class="combat-attribute"/,'fighter HP/MP and attributes use non-wrapping, compact markup');
+
+// Portraits are smaller within the SAME fixed-height cards; reserve a physical
+// margin between glowing glyphs and two-line names on both mobile and desktop.
+assert.match(css,/#battleArena \.unit \.enemy-portrait,#battleArena \.unit \.hero-portrait\{\s*box-sizing:border-box;width:100%;height:64px;flex:0 0 64px;[\s\S]*?margin:0 0 14px;font-size:46px/,'desktop combat portraits leave 14px between icon area and names');
+assert.match(css,/#battleArena \.unit \.enemy-portrait,#battleArena \.unit \.hero-portrait\{\s*height:44px;flex-basis:44px;margin-bottom:12px;font-size:36px/,'mobile combat portraits leave a 12px gap above names');
+assert.match(css,/#battleArena \.unit\{\s*height:280px;min-height:280px;max-height:280px/,'spacing does not increase desktop fighter box height');
+assert.match(css,/#battleArena \.unit\{\s*height:240px;min-height:240px;max-height:240px/,'spacing does not increase mobile fighter box height');
+assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:38px minmax\(0,1fr\)/,'left and right names reserve the same two-line row');
+assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:38px 38px 35px minmax\(0,1fr\)/,'HP/MP and attributes stay vertically aligned');
 console.log('PASS camera circle guide, layer progression, 3-column items, readable story, terminology and fantasy layout');
