@@ -1,13 +1,16 @@
 import {readFile} from 'node:fs/promises';
-const expectedCss=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
-const expectedJs=await readFile(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
-const expectedFx=await readFile(new URL('../assets/js/dungeon-combat-fx.mjs',import.meta.url),'utf8');
-// This checks the real public GitHub Pages website, not repository files or a CI build.
+// Require the actual GitHub Pages deployment to match this commit, not merely CI.
 const origin='https://katsuya100.github.io/magia-fantasy-larp-tool/';
-const version='20261017.18';
+const expectedHtml=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
+const version=expectedHtml.match(/data-release="(\d{8}\.\d+)"/)?.[1];
+if(!version)throw Error('Missing current release marker');
+const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs',
+ 'assets/js/dungeon-combat-fx.mjs','assets/js/dungeon-store.mjs',
+ 'assets/js/dungeon-upgrades.mjs'];
+const expected=new Map(await Promise.all(assets.map(async path=>[path,await readFile(new URL('../'+path,import.meta.url),'utf8')])));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function remote(path,tryNo){
- const url=origin+path+(path.includes('?')?'&':'?')+'smoke='+tryNo+'-'+Date.now();
+async function remote(path,attempt){
+ const url=origin+path+(path.includes('?')?'&':'?')+'smoke='+attempt+'-'+Date.now();
  const response=await fetch(url,{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(12000)});
  if(!response.ok)throw Error(path+' HTTP '+response.status);
  return response.text();
@@ -16,24 +19,21 @@ let last='';
 for(let attempt=1;attempt<=24;attempt++){
  try{
   const html=await remote('dungeon.html?release='+version,attempt);
-  if(!html.includes('data-release="'+version+'"'))throw Error('Old HTML is still served');
+  if(html!==expectedHtml)throw Error('Published HTML differs from this commit ('+version+')');
   const circlePart=html.match(/<div id="slotCards">([\s\S]*?)<\/div><\/div>/)?.[1]||'';
   const itemPart=html.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1]||'';
-  const nCircle=(circlePart.match(/data-open-slot=/g)||[]).length;
-  const nItem=(itemPart.match(/data-open-item=/g)||[]).length;
-  if(nCircle!==5||nItem!==5)throw Error('Published empty slots '+nCircle+'/'+nItem);
-  const css=await remote('assets/css/dungeon.css?v='+version,attempt);
-  if(css!==expectedCss)throw Error('Published CSS differs from the current repository revision');
-  const js=await remote('assets/js/dungeon-app.mjs?v='+version,attempt);
-  if(js!==expectedJs)throw Error('Published app JavaScript differs from the current repository revision');
-  const fx=await remote('assets/js/dungeon-combat-fx.mjs?v='+version,attempt);
-  if(fx!==expectedFx)throw Error('Published combat effects module differs from the current repository revision');
-  if(js.includes("note('魔法陣を保存した。性能は初回使用時に判明する。')"))throw Error('Old photo log remains in JS');
-  console.log('LIVE VERIFIED: GitHub Pages HTML, five empty slots, SVG/CSS and continuous-camera JS at '+origin);
+  if((circlePart.match(/data-open-slot=/g)||[]).length!==5||(itemPart.match(/data-open-item=/g)||[]).length!==5){
+   throw Error('Published starting slots differ');
+  }
+  for(const asset of assets){
+   const content=await remote(asset+'?v='+version,attempt);
+   if(content!==expected.get(asset))throw Error('Published asset is stale: '+asset);
+  }
+  console.log('LIVE VERIFIED: Pages HTML and all '+assets.length+' assets match release '+version+' at '+origin);
   process.exit(0);
  }catch(error){
   last=String(error?.message||error);
-  console.log('Waiting for Pages deployment '+attempt+'/24: '+last);
+  console.log('Waiting for published release '+version+' ('+attempt+'/24): '+last);
   if(attempt<24)await pause(12000);
  }
 }

@@ -1,14 +1,14 @@
-import * as G from './dungeon-core.mjs?v=20261017.20';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.20';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.20';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.20';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.20';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.20';
+import * as G from './dungeon-core.mjs?v=20261017.22';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.22';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.22';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.22';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.22';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.22';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.20';
-import {upgradeCircle} from './dungeon-upgrades.mjs?v=20261017.20';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.20';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.20';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.22';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.22';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.22';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.22';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const circleImages=createCircleImageUrls();
@@ -38,15 +38,19 @@ function returnToCameraScroll(){
  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(restore));
  else restore();
 }
-function applyView(name){
+const sceneIds=['home','library','prepare','collection','battle','checkpoint','analyzing','result'];
+let activeScene='prepare',sceneFadeTimer=null;
+function resolvedView(name){
  const exploring=Boolean(profile?.run);
- if(name==='dungeon'){
-  name=exploring?(activeAnalysis?'analyzing':profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare';
- }
- // The grimoire and preparation are top-level tabs only outside an expedition.
+ if(name==='dungeon')name=exploring?(activeAnalysis?'analyzing':profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare';
  if(exploring&&(name==='prepare'||name==='library'))name=profile.run.stage==='checkpoint'?'checkpoint':'battle';
+ return name;
+}
+function applyView(name,retained=null){
+ const exploring=Boolean(profile?.run);
+ activeScene=name;
  if(dungeonScenes.has(name))dungeonView=name;
- for(const id of ['home','library','prepare','collection','battle','checkpoint','analyzing','result'])$(id).hidden=id!==name;
+ for(const id of sceneIds)$(id).hidden=id!==name&&id!==retained;
  $('tab-prepare').hidden=exploring;
  $('tab-library').hidden=exploring;
  $('tab-dungeon').hidden=!exploring;
@@ -63,15 +67,35 @@ function applyView(name){
  if(['home','library','prepare','collection'].includes(name))render();
  if(name==='battle'&&profile?.run&&!playingEffects)renderRun();
 }
-function show(name){
- // Native View Transitions crossfade outgoing and incoming tab content.
- // Older browsers receive an equally short CSS entrance fade.
- const scenes=['home','library','prepare','collection','battle','checkpoint','analyzing','result'];
- const before=scenes.find(id=>!$(id).hidden);
- const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
- if(before&&before!==name&&!reduced&&typeof document.startViewTransition==='function'){
-  document.startViewTransition(()=>applyView(name));
- }else applyView(name);
+function show(requested){
+ // Crossfade just the scene stack. Root View Transitions resize the whole page
+ // when scenes differ in height, causing momentary zoom and black letterboxing.
+ if(sceneFadeTimer!==null){
+  clearTimeout(sceneFadeTimer);
+  sceneFadeTimer=null;
+  for(const id of sceneIds){
+   $(id).hidden=id!==activeScene;
+   delete $(id).dataset.entering;
+   delete $(id).dataset.exiting;
+  }
+ }
+ const name=resolvedView(requested);
+ const before=sceneIds.find(id=>!$(id).hidden);
+ const reduced=typeof window.matchMedia!=='function'||window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if(!before||before===name||reduced||!sceneIds.includes(name)){
+  applyView(name);
+  return;
+ }
+ // Keep both DOM panels painted in the same grid cell until fading finishes.
+ applyView(name,before);
+ $(before).dataset.exiting='true';
+ $(name).dataset.entering='true';
+ sceneFadeTimer=setTimeout(()=>{
+  $(before).hidden=true;
+  delete $(before).dataset.exiting;
+  delete $(name).dataset.entering;
+  sceneFadeTimer=null;
+ },180);
 }
 function scrollToDungeonTabs(){
  $('tab-dungeon').closest('nav')?.scrollIntoView?.({behavior:'smooth',block:'start'});
@@ -222,12 +246,16 @@ async function ceremony(event,title,detail='',drops=0){
  try{
   await playBattleCeremony(event,()=>{stage.hidden=false;},{duration});
  }finally{
-  stage.hidden=true;
-  stage.dataset.event='idle';
+  // Keep the defeated enemy's overlay mounted until loot takes over.
+  // Hiding it here briefly exposed a neutral battle frame between ceremonies.
+  if(event!=='enemy-death'){
+   stage.hidden=true;
+   stage.dataset.event='idle';
+  }
   if(entering)$('enemyCombatant').dataset.entering='false';
   if(event==='enemy-death')$('enemyCombatant').dataset.defeated='true';
   if(side)$(side+'Combatant').dataset.dying='false';
-  $('lootChests').innerHTML='';
+  if(event!=='enemy-death')$('lootChests').innerHTML='';
   playingEffects=false;
  }
 }
@@ -265,7 +293,10 @@ if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Bo
  '未使用の携行品 '+unusedCount+'個は倉庫へ戻った。',
  '性能が判明した魔法陣は残る。'
 ]);show('result');return;}
-if(run.enemy.hp<=0){const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);if(isLayerBoss(run.floor)){run.stage='checkpoint';renderCheckpoint();await persist();show('checkpoint');return;}run.floor++;enterFight();await persist();renderRun();await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}
+if(run.enemy.hp<=0){const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);if(isLayerBoss(run.floor)){run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
+// Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
+// between the loot overlay and the following encounter animation.
+const nextEntrance=ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');await persist();await nextEntrance;}
 await persist();renderRun();}
 async function useItem(index){
  const run=profile.run;if(playingEffects||!run||(run.usedItems||0)>=num('item_per_round'))return;
@@ -404,9 +435,11 @@ async function capture(){
  $('cameraError').hidden=true;$('cameraError').textContent='';
  await analyzeCapturedCircle(circle);
 }
+function oneSentencePerLine(value){return String(value).replace(/([。！？])\s*(?=\S)/gu,'$1\n');}
 function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
  $('magicDetailsDialog').dataset.circleId=id;
+ $('upgradeFeedback').textContent='';
  $('magicStoneStock').textContent='所持魔導石：'+profile.magicStones+'個 / 強化1回につき1個';
  $('upgradeCircle').hidden=Boolean(profile.run);
  $('upgradeCircle').disabled=Boolean(profile.run)||!isRevealed(circle)||profile.magicStones<1;
@@ -418,7 +451,7 @@ function openMagicDetails(id){
  if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
  rows.push(['MP',d.mp],['威力',d.power]);
  if(isRevealed(circle)&&circle.upgradeLevel)rows.push(['強化', '+'+(circle.upgradeLevel*10)+'%']);
- $('magicDetailsStats').innerHTML=rows.map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(value)+'</dd>').join('');
+ $('magicDetailsStats').innerHTML=rows.map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(oneSentencePerLine(value))+'</dd>').join('');
  if(!$('magicDetailsDialog').open)$('magicDetailsDialog').showModal();
 }
 function askCircleAction(type,id){
@@ -429,8 +462,8 @@ function askCircleAction(type,id){
  pendingCircleAction={type,id};
  $('circleActionTitle').textContent=type==='upgrade'?'魔法陣を強化しますか？':'魔法陣を削除しますか？';
  $('circleActionMessage').textContent=type==='upgrade'
-  ?'魔導石を1個消費して威力を初期値の10%分アップします。この強化は元に戻せません。'
-  :'登録した魔法陣は元に戻せません。削除してもよろしいですか？';
+  ?'魔導石を1個消費して威力を初期値の10%分アップします。\nこの強化は元に戻せません。'
+  :'登録した魔法陣は元に戻せません。\n削除してもよろしいですか？';
  $('confirmCircleAction').textContent=type==='upgrade'?'魔導石を使って強化':'削除する';
  if(!$('circleActionDialog').open)$('circleActionDialog').showModal();
 }
@@ -443,19 +476,26 @@ async function confirmCircleAction(){
   if(action.type==='upgrade'){
    if(!isRevealed(circle)||profile.magicStones<1)return;
    const enhanced=upgradeCircle(circle);
-   await putCircle(db,enhanced);
-   profile.magicStones--;
-   await persist();
+   // Persist only scalar metadata: rewriting a stored photo Blob can fail on mobile browsers.
+   const nextProfile={...profile,magicStones:profile.magicStones-1,
+    circleUpgrades:{...(profile.circleUpgrades||{}),[circle.id]:savedUpgrade(enhanced)}};
+   await saveProfile(db,nextProfile);
+   profile=nextProfile;
    Object.assign(circle,enhanced);
    render();
    openMagicDetails(circle.id);
-   $('upgradeFeedback').textContent='✦ 強化成功！ 威力 '+enhanced.analysis.power+' ✦';
+   $('upgradeFeedback').textContent='✦ 強化成功！\n威力 '+enhanced.analysis.power+' ✦';
    const dialog=$('magicDetailsDialog');
    dialog.dataset.enhancing='false';
    void dialog.offsetWidth;
    dialog.dataset.enhancing='true';
   }else if(action.type==='remove'){
    await deleteCircle(db,circle.id);
+   if(profile.circleUpgrades){
+    const upgrades={...profile.circleUpgrades};
+    delete upgrades[circle.id];
+    profile.circleUpgrades=upgrades;
+   }
    circleImages.release(circle.image);
    circles=circles.filter(c=>c.id!==circle.id);
    slots=slots.map(id=>id===circle.id?null:id);

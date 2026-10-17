@@ -1,25 +1,39 @@
 import assert from 'node:assert/strict';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {openStore,saveProfile,putCircle,getProfile,allCircles} from '../assets/js/dungeon-store.mjs';
-const env=fakeDungeonBrowser(),$=id=>env.document.getElementById(id);
+const env=fakeDungeonBrowser({storage:{rejectBlobRewrite:true}}),$=id=>env.document.getElementById(id);
 const button=dataset=>({disabled:false,dataset,closest(){return this;}});
 const wait=async test=>{const end=Date.now()+5000;while(Date.now()<end){if(await test())return;await new Promise(resolve=>setTimeout(resolve,20));}throw Error('timeout');};
 try{
  const db=await openStore(env.factory);
  await saveProfile(db,{
   name:'魔術師',level:1,xp:0,base:{hp:100,mag:10,def:7,res:7},returns:0,attempts:0,
-  inventory:[],collection:{},magicStones:2,deepestReturnedLayer:0,slots:[],run:null
+  inventory:[],collection:{},magicStones:3,deepestReturnedLayer:0,slots:[],run:null
  });
  await putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:100},revealed:true});
+ await assert.rejects(putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:110},revealed:true}),/Error preparing Blob\/File data/,'simulate mobile IndexedDB failure on a photo rewrite');
  await import('../assets/js/dungeon-app.mjs?integration=upgrade');
  await wait(()=>$('libraryCards').innerHTML.includes('circle-1'));
- assert.match($('magicStoneBalance').textContent,/2個/);
+ assert.match($('magicStoneBalance').textContent,/3個/);
  await env.document.click(button({view:'library'}));
+ // Panels must overlap while crossfading; no instant removal, root zoom, or black bars.
+ globalThis.window.matchMedia=()=>({matches:false});
+ await env.document.click(button({view:'home'}));
+ assert.equal($('library').hidden,false,'outgoing panel stays visible throughout the crossfade');
+ assert.equal($('home').hidden,false,'incoming panel appears before outgoing is hidden');
+ assert.equal($('library').dataset.exiting,'true');
+ assert.equal($('home').dataset.entering,'true');
+ await new Promise(resolve=>setTimeout(resolve,220));
+ assert.equal($('library').hidden,true,'outgoing panel disappears after transition');
+ assert.equal($('home').hidden,false);
+ await env.document.click(button({view:'library'}));
+ globalThis.window.matchMedia=undefined;
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,true,'upgrade requires a dialog');
  assert.match($('circleActionMessage').textContent,/10%/);
+ assert.match($('circleActionMessage').textContent,/。\nこの強化/,'confirmation sentences display on separate lines');
  await $('cancelCircleAction').fire('click');
- assert.equal((await getProfile(db)).magicStones,2,'cancel leaves stones untouched');
+ assert.equal((await getProfile(db)).magicStones,3,'cancel leaves stones untouched');
  assert.equal((await allCircles(db))[0].analysis.power,100,'cancel leaves power untouched');
  await env.document.click(button({upgrade:'circle-1'}));
  await $('confirmCircleAction').fire('click');
@@ -27,18 +41,33 @@ try{
  let saved=(await allCircles(db))[0];
  assert.equal(saved.analysis.power,110,'first stone boosts by 10% of initial 100');
  assert.equal(saved.upgradeLevel,1);
- assert.equal((await getProfile(db)).magicStones,1);
+ assert.equal((await getProfile(db)).magicStones,2);
+ assert.equal((await allCircles(db))[0].analysis.power,110,'read applies profile metadata without rewriting photo record');
+ assert.equal(env.factory.databases.get('magia-dungeon-v1').get('circles').get('circle-1').analysis.power,100,'photo record stays unmodified');
  assert.equal($('magicDetailsDialog').open,true,'enhancement opens full circle feedback');
  assert.equal($('magicDetailsDialog').dataset.enhancing,'true','ritual begins');
- assert.match($('upgradeFeedback').textContent,/強化成功/);
+ assert.match($('upgradeFeedback').textContent,/強化成功！\n威力 110/,'success message splits sentences across lines');
+ // The detail dialog stays open after enhancement; its own button must allow upgrade #2.
+ assert.equal($('upgradeCircle').disabled,false,'detail dialog permits repeated upgrades when stones remain');
+ await $('upgradeCircle').fire('click');
+ assert.equal($('circleActionDialog').open,true,'second upgrade opens confirmation from details');
+ await $('confirmCircleAction').fire('click');
+ saved=(await allCircles(db))[0];
+ assert.equal(saved.analysis.power,120,'second upgrade works despite Blob rewrite failure');
+ assert.equal(saved.basePower,100);
+ assert.equal((await getProfile(db)).magicStones,1);
+ assert.match($('magicStoneBalance').textContent,/1個/);
+ const reopened=await openStore(env.factory);
+ assert.equal((await allCircles(reopened))[0].analysis.power,120,'power survives reopening the database');
+ reopened.close();
  await $('closeMagicDetails').fire('click');
  await env.document.click(button({upgrade:'circle-1'}));
  await $('confirmCircleAction').fire('click');
  saved=(await allCircles(db))[0];
- assert.equal(saved.analysis.power,120,'repeated upgrades do not compound');
- assert.equal(saved.basePower,100);
+ assert.equal(saved.analysis.power,130,'third upgrade also succeeds');
  assert.equal((await getProfile(db)).magicStones,0);
  assert.match($('magicStoneBalance').textContent,/0個/);
+ await $('closeMagicDetails').fire('click');
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,false,'no stones means no upgrade');
  await env.document.click(button({remove:'circle-1'}));
@@ -48,6 +77,7 @@ try{
  await env.document.click(button({remove:'circle-1'}));
  await $('confirmCircleAction').fire('click');
  assert.equal((await allCircles(db)).length,0,'confirmed deletion removes photo');
+ assert.equal((await getProfile(db)).circleUpgrades['circle-1'],undefined,'deleting a circle also deletes its upgrade metadata');
  assert.equal($('circleActionDialog').open,false);
  // Full profile reset is separate from deleting a single magic circle.
  await putCircle(db,{id:'erase-me',image:new Blob(['persisted-photo']),analysis:{attribute:'law',role:'support',power:250},revealed:true});
