@@ -33,6 +33,8 @@ try{
  assert.equal($('collection').hidden,false);
  assert.equal($('tab-collection').attributes['aria-current'],'page');
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,12);
+ assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-rarity"/,'undiscovered items do not reveal rarity labels');
+ assert.equal($('magicStoneBalance').textContent,'✦ 魔導石：0個','initial stone balance displays no explanation');
  await doc.click(btn({view:'home'}));
  assert.equal($('home').hidden,false,'profile is accessible from the rightmost tab');
  await doc.click(btn({action:'rename'}));
@@ -333,6 +335,9 @@ try{
  assert.match($('collectionProgress').innerHTML,/1 \/ 12/);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,11);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,1);
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-rarity"/g)||[]).length,1,'one found relic shows exactly one rarity label');
+ assert.match($('collectionGrid').innerHTML,/<span class="relic-rarity">★ レジェンダリー<\/span>/,'discovered legendary shows color-independent rarity label');
+ assert.equal($('magicStoneBalance').textContent,'✦ 魔導石：'+p.magicStones+'個','stone balance remains concise as loot changes');
  $('collectionDiscoveryFilter').value='found';await $('collectionDiscoveryFilter').fire('change');
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,1,
   'collection discovery filter shows only found relics');

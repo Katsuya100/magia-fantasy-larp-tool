@@ -188,6 +188,23 @@ assert.match(css,/#magicDetailsStats dd,#upgradeHint,#upgradeFeedback,#circleAct
 assert.match(app,/oneSentencePerLine\(value\)/,'magic-circle effect descriptions split by sentence');
 assert.match(app,/circleUpgrades:\{\.\.\.\(profile\.circleUpgrades\|\|\{\}\)/,'upgrade metadata stored with profile');
 assert.match(page,/id="magicStoneBalance"/,'magic stone count appears in the grimoire');
+assert.match(page,/<p id="magicStoneBalance"[^>]*>✦ 魔導石：0個<\/p>/,'initial magic-stone count is concise');
+assert.doesNotMatch(page,/魔法陣の強化に使用/,'no redundant magic-stone explanation in static HTML');
+assert.match(app,/magicStoneBalance'\)\.textContent='✦ 魔導石：'\+profile\.magicStones\+'個'/,'all player balances render only the item count');
+assert.doesNotMatch(app,/個（魔法陣の強化に使用）/,'no redundant explanation in dynamic JS');
+for(const [rarity,mark] of [['common','○ コモン'],['uncommon','◇ アンコモン'],
+ ['rare','◆ レア'],['epic','✦ エピック'],['legendary','★ レジェンダリー']]){
+ assert.ok(app.includes(rarity+":'"+mark+"'"),rarity+' uses a readable, shape-distinct text label');
+ assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--relic-accent:#[0-9a-f]{6}'),rarity+' has an opaque rarity accent');
+}
+assert.match(app,/\+\(found\?'<span class="relic-rarity">'/,'rarity labels are shown only for discovered relics');
+assert.match(app,/data-rarity="'+\(found\?rarity:'unknown'\)/,'unfound relics still hide their rarity');
+assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?box-shadow:none/,'remove ambiguous glowing rings from rarity art');
+assert.match(css,/data-rarity="uncommon"\] \.relic-art\{border-style:dashed/,'uncommon uses dashed ring');
+assert.match(css,/data-rarity="rare"\] \.relic-art\{[\s\S]*?border:5px double/,'rare uses double ring');
+assert.match(css,/data-rarity="epic"\] \.relic-art\{[\s\S]*?border-style:dotted/,'epic uses dotted ring');
+assert.match(css,/data-rarity="legendary"\] \.relic-art\{[\s\S]*?border:5px solid/,'legendary uses bold solid ring');
+assert.match(css,/\.relic-card\.discovered \.relic-rarity\{[\s\S]*?font-size:14px/,'rarity text is legible');
 assert.match(page,/<h2>プロフィール<\/h2>/,'profile heading matches the tab');
 assert.match(css,/@keyframes circle-upgrade-aura/,'upgrades have a ritual animation');
 assert.match(page,/id="deleteSaveData"[^>]*data-action="delete-data"/,'profile has a full save deletion action');
