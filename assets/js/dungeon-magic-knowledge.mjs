@@ -46,8 +46,23 @@ export function circleDetails(circle,buffs=[],mpCost=()=>null){
  return {attribute:(at?.icon||'✦')+' '+(at?.label||a.attribute),role:ROLES[a.role]||a.role,
  effect:spellEffect(a,buffs),mp:Number.isFinite(mp)?String(mp):'--',power:isRevealed(circle)?String(a.power):'未公開'};
 }
+// Only the attribute belonging to this circle is shown on its own card.
+// Defense triggers its strengthening effect; debuff triggers its weakening effect.
+// Other roles show these as attribute reference information, not cast effects.
+export function circleAttributeEffects(circle,buffs=[]){
+ const a=circle?.analysis;
+ if(!a||!Object.hasOwn(ATTRIBUTES,a.attribute))return null;
+ const {attribute,role}=a;
+ const chaos=attribute==='chaos';
+ return {
+  buff:chaos?'ランダム強化':buffs.find(x=>x.id==='buff_'+attribute)?.name||'強化',
+  debuff:chaos?'ランダム弱体':buffs.find(x=>x.id==='debuff_'+attribute)?.name||'弱体',
+  buffActive:role==='defense',debuffActive:role==='debuff'
+ };
+}
 export function attributeEffectGuide(buffs=[]){
- return Object.entries(ATTRIBUTES).map(([attribute,{icon,label}])=>({attribute,icon,label,
- buff:buffs.find(x=>x.id==='buff_'+attribute)?.name||'ランダム強化',
- debuff:buffs.find(x=>x.id==='debuff_'+attribute)?.name||'ランダム弱体'}));
+ return Object.entries(ATTRIBUTES).map(([attribute,{icon,label}])=>{
+  const effects=circleAttributeEffects({analysis:{attribute}},buffs);
+  return {attribute,icon,label,buff:effects.buff,debuff:effects.debuff};
+ });
 }
