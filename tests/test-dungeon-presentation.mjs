@@ -6,9 +6,9 @@ assert.match(page,/自分だけの魔法陣で迷宮へ/);
 assert.match(home,/自分だけの魔法陣で迷宮へ/);
 assert.doesNotMatch(home,/五つの陣で深淵へ/);
 assert.doesNotMatch(page,/共鳴率/);
-assert.match(page,/紋様によって「攻撃・防御・回復・弱体」が決まります/);
-assert.match(page,/登録した時点では性能は分かりません。/);
-assert.match(page,/初めて使用すると性能が明らかになります。/);
+assert.match(page,/紋様によって「⚔️攻撃・🛡️防御・✚回復・🕸️弱体」が決まります/);
+assert.match(page,/解析が成功した魔法陣だけ登録します/);
+assert.match(page,/威力は初回使用まで伏せられます/);
 assert.match(page,/assets\/images\/sample\.png/);
 assert.ok((await stat(new URL('../assets/images/sample.png',import.meta.url))).size>100);
 assert.match(page,/<dialog id="nameDialog"/);
@@ -32,10 +32,13 @@ assert.deepEqual(tabOpenStates,[{id:'prepare',hidden:false},{id:'library',hidden
 assert.match(page,/<section id="prepare" class="panel loadout-panel">/,'preparation visible on initial HTML');
 assert.match(page,/<section id="home" class="panel adventurer-panel" hidden>/,'profile initially hidden');
 assert.match(page,/<h2>準備&amp;出発<\/h2>/);
-assert.match(page,/CHAPTER I · ADVENTURER/);
-assert.match(page,/CHAPTER II · RELIQUARY/);
-assert.match(page,/CHAPTER III · PREPARATION/);
-assert.match(page,/CHAPTER IV · GRIMOIRE/);
+// Chapter labels follow the visible left-to-right tab order.
+assert.match(page,/CHAPTER I · PREPARATION/);
+assert.match(page,/CHAPTER II · GRIMOIRE/);
+assert.match(page,/CHAPTER III · RELIQUARY/);
+assert.match(page,/CHAPTER IV · ADVENTURER/);
+const chapters=Object.fromEntries([...page.matchAll(/CHAPTER (I|II|III|IV) · ([A-Z]+)/g)].map(x=>[x[2],x[1]]));
+assert.deepEqual(chapters,{ADVENTURER:'IV',GRIMOIRE:'II',PREPARATION:'I',RELIQUARY:'III'});
 assert.match(page,/魔法陣の力を解明中/);
 
 
@@ -118,15 +121,15 @@ const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
 assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
-assert.match(page,/data-release="20261017\.9"/);
-assert.match(page,/dungeon\.css\?v=20261017\.9/);
-assert.match(page,/dungeon-app\.mjs\?v=20261017\.9/);
+assert.match(page,/data-release="20261017\.11"/);
+assert.match(page,/dungeon\.css\?v=20261017\.11/);
+assert.match(page,/dungeon-app\.mjs\?v=20261017\.11/);
 const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.9','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.11','stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
@@ -149,11 +152,14 @@ for(const event of ['encounter','hero-death','enemy-death']){
 assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 
-assert.match(app,/circles=newestCirclesFirst\(\[\.\.\.circles,circle\]\);[\s\S]*?note\(''\);render\(\)/);
+assert.match(app,/circles=newestCirclesFirst\(\[\.\.\.circles,circle\]\)/);
+assert.match(app,/await putCircle\(db,circle\)/);
+assert.match(app,/queuePhotoAnalysis\(circle\)/,'camera capture starts analysis');
+assert.match(app,/if\(!valid\(\)\)return;[\s\S]*?await putCircle\(db,circle\)/,'successful analysis required before saving');
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
 assert.match(app,/newestCirclesFirst\(await allCircles\(db\)\)/);
 assert.match(app,/newestCirclesFirst\(\[\.\.\.circles,circle\]\)/);
-assert.match(app,/registeredAt:nextCircleRegistration\(circles\)/);
+assert.match(app,/newCapturedCircle\(crypto\.randomUUID\(\),blob,nextCircleRegistration\(circles\)\)/);
 assert.doesNotMatch(picker,/displayName|c\.name/);
 assert.match(app,/openGrimoireFromPicker/);
 assert.match(app,/\$\('tab-prepare'\)\.hidden=exploring/);
@@ -163,4 +169,18 @@ assert.match(app,/syncCameraUi\(true\)/);
 assert.match(app,/syncCameraUi\(false\)/);
 assert.doesNotMatch(app,/\$\('circleName'\)/);
 assert.doesNotMatch(picker,/escapeText\(c\.name\)/);
-console.log('PASS dungeon hero copy, image rules, sample PNG, naming modal, sealed gallery and fantasy layout');
+assert.match(page,/id="magicDetailsDialog"/,'touch-to-enlarge magic detail dialog');
+assert.match(page,/id="captureAnalyzerFrame"/,'separate capture analysis');
+assert.match(page,/3〜5 SIGILS/);
+assert.match(page,/id="circleCounter"/);
+assert.match(app,/canDepartWithCircles\(slots\)/,'three to five spell loadout');
+assert.match(app,/revealOnUse\(circle\)/,'power reveals on actual cast');
+const knowledge=await read('assets/js/dungeon-magic-knowledge.mjs');
+const fx=await read('assets/js/dungeon-combat-fx.mjs');
+for(const [key,label] of [['attack','⚔️攻撃'],['defense','🛡️防御'],['support','✚回復'],['debuff','🕸️弱体']]){
+ assert.ok(knowledge.includes(key+":'"+label+"'"),'role icon displayed for '+key);
+ assert.ok(fx.includes(key+":'"+label+"'"),'combat effect uses icon for '+key);
+}
+assert.match(app,/🕸️弱体：/);
+assert.match(css,/\.magic-details-stats\{[^}]*font-size:/);
+console.log('PASS chapter I-II-III-IV, icon roles, preanalysis, magic details and fantasy layout');
