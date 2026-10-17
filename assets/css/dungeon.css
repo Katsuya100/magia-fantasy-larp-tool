@@ -298,3 +298,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 /* Keep the fallen enemy gone during reward drops and layer checkpoint.
    Only enterFight() resets data-defeated for the next opponent. */
 #battleArena .enemy-unit[data-defeated="true"]{visibility:hidden;pointer-events:none}
+
+/* Fade the fallen enemy's name and HP together with its portrait. */
+#battleArena .enemy-unit[data-dying="true"] .unit-info{animation:duel-defeat 1.1s ease-in both}
+@media(prefers-reduced-motion:reduce){#battleArena .enemy-unit[data-dying="true"] .unit-info{animation:none!important}}
