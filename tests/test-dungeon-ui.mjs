@@ -339,7 +339,7 @@ try{
  assert.match($('playerStats').innerHTML,/最深:1層/,'profile reports deepest layer instead of battle count');
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
- assert.match($('collectionGrid').innerHTML,/灰燼の洞窟の王印/);
+ assert.match($('collectionGrid').innerHTML,/赤角鬼王の霊石/);
  assert.match($('collectionProgress').innerHTML,/1 \/ 300/);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,299);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,1);

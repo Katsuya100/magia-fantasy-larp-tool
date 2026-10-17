@@ -42,6 +42,7 @@ export function collectionListIndexes(collections,owned={}, {discovery='all',rar
  ).sort((a,b)=>{
   const x=a.item,y=b.item,ax=found(x),by=found(y);
   let order=0;
+  if(sort==='default')order=(RARITY_ORDER[x.rarity]||99)-(RARITY_ORDER[y.rarity]||99);
   if(sort==='name')order=ax&&by?compareText(x.name,y.name):Number(by)-Number(ax);
   if(sort==='count')order=validNumber(owned[y.id])-validNumber(owned[x.id]);
   if(sort==='rare'||sort==='common'){
