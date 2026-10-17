@@ -26,12 +26,12 @@ export function spellGrid(slots,circles,imageUrl,escapeText,active=true,buffs=[]
   }).join('')+'</div>';
 }
 export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,active=true){
- return '<div class="loadout-grid" role="group" aria-label="持ち込みアイテム">'
+ return '<div class="loadout-grid" role="group" aria-label="携行品">'
   +slots.map((inventoryIndex,index)=>{
     const usable=unlocked&&index<capacity&&active;
     const value=Number.isInteger(inventoryIndex)?inventory[inventoryIndex]:null;
     const locked=index>=capacity||!unlocked;
-    return '<button type="button" class="loadout-tile '+(locked?'locked':value?'equipped':'empty')+'" data-open-item="'+index+'" aria-label="持ち込み '+(index+1)+'枠目 '+(locked?'未解放':value?escapeText(itemName(value)):'空き')+'" '+(usable?'':'disabled')+'>'
+    return '<button type="button" class="loadout-tile '+(locked?'locked':value?'equipped':'empty')+'" data-open-item="'+index+'" aria-label="携行品 '+(index+1)+'枠目 '+(locked?'未解放':value?escapeText(itemName(value)):'空き')+'" '+(usable?'':'disabled')+'>'
      +'<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span>'
      +'<span class="tile-item-icon" aria-hidden="true">'+(locked?'♙':value?itemSymbol(value):'＋')+'</span>'
      +'<span class="tile-title">'+(locked?'未解放':value?escapeText(itemName(value)):'空き')+'</span>'
@@ -47,7 +47,7 @@ export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[]
   +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">詳細</button></div>').join('');
 }
 export function itemChoices(inventory,slots,itemName,escapeText){
- if(!inventory.length)return '<p class="collection-empty">持ち込みできるアイテムがありません。</p>';
+ if(!inventory.length)return '<p class="collection-empty">携行品がありません。</p>';
  return inventory.map((item,index)=>'<button type="button" class="picker-option" data-choose-item="'+index+'">'
   +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
   +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
