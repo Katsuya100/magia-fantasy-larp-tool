@@ -53,7 +53,7 @@ try{
  assert.equal($('tab-library').attributes['aria-current'],'page','library is its own preparation tab');
  assert.equal($('tab-prepare').hidden,false);
  assert.equal(($('slotCards').innerHTML.match(/data-open-slot="/g)||[]).length,5,'five magic-circle tiles');
- assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,5,'five item tiles');
+ assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,0,'new players see no locked item tiles');
  assert.equal($('cameraPane').hidden,false,'viewfinder visible before camera starts');
  assert.equal($('cameraPlaceholder').hidden,false);
  assert.equal($('cameraCapture').hidden,true);

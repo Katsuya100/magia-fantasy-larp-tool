@@ -15,6 +15,10 @@ assert.match(page,/<dialog id="nameDialog"/);
 assert.match(page,/id="playerNameInput"[^>]+maxlength="20"/);
 assert.match(page,/id="nameForm"/);
 assert.match(page,/id="collectionGrid"[^>]+role="list"/);
+for(const id of ['libraryRoleFilter','libraryAttributeFilter','librarySort',
+ 'collectionDiscoveryFilter','collectionRarityFilter','collectionSort','pickerFilter','pickerSort']){
+ assert.match(page,new RegExp('id="'+id+'"'),'native filter and sort control '+id);
+}
 assert.match(page,/id="tab-collection" data-view="collection"/);
 assert.match(page,/id="tab-prepare" data-view="prepare" aria-current="page"[^>]*>.*?準備&amp;出発/s);
 assert.match(page,/id="tab-library" data-view="library"[^>]*>.*?魔導書/s);
@@ -127,7 +131,7 @@ const slots=page.match(/<div id="slotCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
-assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
+assert.equal((items.match(/data-open-item=/g)||[]).length,0,'new players do not see locked item slots in initial HTML');
 const currentRelease=page.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 assert.ok(currentRelease,'HTML exposes current public release version');
 assert.ok(page.includes('dungeon.css?v='+currentRelease),'page CSS is cache-busted for current release');

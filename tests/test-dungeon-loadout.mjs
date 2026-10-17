@@ -56,10 +56,11 @@ assert.doesNotMatch(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/�
 assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/<img alt="" src="blob:mock"/);
 const itemName=x=>x.id;
 const beforeReturn=itemGrid(prepareItems([],3,3),inventory,3,false,itemName,esc);
-assert.equal((beforeReturn.match(/data-open-item=/g)||[]).length,5);
-assert.equal((beforeReturn.match(/disabled/g)||[]).length,5,'first run items all locked');
+assert.equal((beforeReturn.match(/data-open-item=/g)||[]).length,0,'no locked item slots show before the first return');
+assert.doesNotMatch(beforeReturn,/未解放|class="loadout-tile locked"/,'locked item tiles do not render');
 const afterReturn=itemGrid(prepareItems([0,1,2],3,3),inventory,3,true,itemName,esc);
-assert.equal((afterReturn.match(/class="loadout-tile locked"/g)||[]).length,2);
+assert.equal((afterReturn.match(/data-open-item=/g)||[]).length,3,'only current level capacity visible after return');
+assert.equal((afterReturn.match(/class="loadout-tile locked"/g)||[]).length,0);
 assert.equal((afterReturn.match(/class="loadout-tile equipped"/g)||[]).length,3);
 const maxItemGrid=itemGrid(prepareItems([],3,15),inventory,15,true,itemName,esc);
 assert.equal((maxItemGrid.match(/data-open-item=/g)||[]).length,15,'later item slots become additional rows');

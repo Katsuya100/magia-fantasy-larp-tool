@@ -6,7 +6,8 @@ const version=expectedHtml.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 if(!version)throw Error('Missing current release marker');
 const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs',
  'assets/js/dungeon-combat-fx.mjs','assets/js/dungeon-store.mjs',
- 'assets/js/dungeon-upgrades.mjs'];
+ 'assets/js/dungeon-upgrades.mjs','assets/js/dungeon-preparation-ui.mjs',
+ 'assets/js/dungeon-list-view.mjs'];
 const expected=new Map(await Promise.all(assets.map(async path=>[path,await readFile(new URL('../'+path,import.meta.url),'utf8')])));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function remote(path,attempt){
@@ -22,7 +23,7 @@ for(let attempt=1;attempt<=24;attempt++){
   if(html!==expectedHtml)throw Error('Published HTML differs from this commit ('+version+')');
   const circlePart=html.match(/<div id="slotCards">([\s\S]*?)<\/div><\/div>/)?.[1]||'';
   const itemPart=html.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1]||'';
-  if((circlePart.match(/data-open-slot=/g)||[]).length!==5||(itemPart.match(/data-open-item=/g)||[]).length!==5){
+  if((circlePart.match(/data-open-slot=/g)||[]).length!==5||(itemPart.match(/data-open-item=/g)||[]).length!==0){
    throw Error('Published starting slots differ');
   }
   for(const asset of assets){
