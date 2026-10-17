@@ -11,8 +11,8 @@ export function circleEffectBadges(circle,buffs=[],escapeText=x=>String(x),mpCos
   +'<span class="circle-card-power">威力:'+escapeText(d.power)+'</span></span>'
   +'</div>';
 }
-export function itemSymbol(item){return item?.id==='escape_scroll'?'📜':item?.id?.startsWith('heal_')?'✚':item?.id?.startsWith('mana_')?'✧':'◈';}
-export function itemEffectText(item){return item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.value?'効果 '+item.value:'状態異常解除';}
+export function itemSymbol(item){return item?.id==='life_ruby'?'🔴':item?.id?.startsWith('elixir_')?'⚗':item?.id==='escape_scroll'?'📜':item?.id?.startsWith('heal_')?'✚':item?.id?.startsWith('mana_')?'✧':'◈';}
+export function itemEffectText(item){return item?.id==='life_ruby'?'死亡時に1回だけHP50%で復活':item?.id?.startsWith('elixir_')?'HP/MP各'+item.value+'%回復':item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.value?'効果 '+item.value:'状態異常解除';}
 export function spellGrid(slots,circles,imageUrl,escapeText,active=true,buffs=[],mpCost=()=>null){
  const byId=new Map(circles.map(circle=>[circle.id,circle]));
  return '<div class="loadout-grid" role="group" aria-label="魔法陣の編成">'
@@ -60,7 +60,7 @@ export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventor
   return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-item="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(itemName(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
    +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
-   +(item.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' ✦追加効果':'')+'</small></span>'
+   +(item.id==='life_ruby'||item.id?.startsWith('elixir_')||item.id==='escape_scroll'?itemEffectText(item):item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' ✦追加効果':'')+'</small></span>'
    +(selected?'<span class="picker-equipped" aria-hidden="true">✓ 選択中・'+(selectedSlot+1)+'枠</span>':'')+'</button>';
  }).join('');
 }

@@ -4,7 +4,7 @@ const compareText=(a,b)=>String(a??'').localeCompare(String(b??''),'ja');
 const validNumber=v=>Number.isFinite(Number(v))?Number(v):0;
 const circlePower=c=>c?.revealed===false||!c?.analysis?null:validNumber(c.analysis.power);
 export const itemKind=(item,masterItems=[])=>masterItems.find(row=>row.id===item?.id)?.kind||(
- item?.id?.startsWith('heal_')?'heal':item?.id?.startsWith('mana_')?'mana':item?.id?.startsWith('clear_')?'clear':'other');
+ item?.id==='life_ruby'?'revive':item?.id?.startsWith('elixir_')?'elixir':item?.id?.startsWith('heal_')?'heal':item?.id?.startsWith('mana_')?'mana':item?.id?.startsWith('clear_')?'clear':'other');
 export function circleListIndexes(circles,{role='all',attribute='all',sort='newest'}={}){
  return circles.map((circle,index)=>({circle,index})).filter(({circle})=>
   (role==='all'||circle.analysis?.role===role)&&(attribute==='all'||circle.analysis?.attribute===attribute)
@@ -29,6 +29,7 @@ export function itemListIndexes(inventory,masterItems=[],{kind='all',sort='defau
    masterItems.find(r=>r.id===b.item.id)?.name||b.item.id);
   if(sort==='kind')order=compareText(itemKind(a.item,masterItems),itemKind(b.item,masterItems));
   if(sort==='value')order=validNumber(b.item.value)-validNumber(a.item.value);
+   if(sort==='value-asc')order=validNumber(a.item.value)-validNumber(b.item.value);
   return order||a.index-b.index;
  }).map(row=>row.index);
 }
