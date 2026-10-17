@@ -1,15 +1,15 @@
-import * as G from './dungeon-core.mjs?v=20261017.26';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.26';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.26';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.26';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.26';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.26';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.26';
+import * as G from './dungeon-core.mjs?v=20261017.27';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.27';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.27';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.27';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.27';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.27';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.27';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.26';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.26';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.26';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.26';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.27';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.27';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.27';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.27';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const listView={
@@ -130,6 +130,9 @@ function render(){
  const obtained=masters.collections.filter(item=>Number(profile.collection[item.id]||0)>0).length;
  $('collectionProgress').innerHTML='<strong>'+obtained+' / '+masters.collections.length+'</strong><small>DISCOVERED</small><div class="collection-track"><div class="collection-fill" style="width:'+(100*obtained/masters.collections.length)+'%"></div></div>';
  const relics=['✥','◈','☷','✧','⬟','◉','⌘','ϟ','❖','⚿','☯','♛'];
+ // Shapes and readable names supplement color; unknown collection rarity stays hidden.
+ const rarityLabels={common:'○ コモン',uncommon:'◇ アンコモン',rare:'◆ レア',
+  epic:'✦ エピック',legendary:'★ レジェンダリー'};
  const collectionIndexes=collectionListIndexes(masters.collections,profile.collection,{
   discovery:listView.collectionDiscovery,rarity:listView.collectionRarity,sort:listView.collectionSort
  });
@@ -138,13 +141,14 @@ function render(){
   const count=Number(profile.collection[item.id]||0),found=count>0;
   const rarity=['common','uncommon','rare','epic','legendary'].includes(item.rarity)?item.rarity:'common';
   const mark=found?(relics[i%relics.length]):'?';
-  return '<article class="relic-card '+(found?'discovered':'locked')+'" data-rarity="'+(found?rarity:'unknown')+'" role="listitem" aria-label="'+(found?esc(item.name):'未発見の収集品')+'">'
+  return '<article class="relic-card '+(found?'discovered':'locked')+'" data-rarity="'+(found?rarity:'unknown')+'" role="listitem" aria-label="'+(found?esc(item.name)+'・'+rarityLabels[rarity]:'未発見の収集品')+'">'
    +(found?'<span class="relic-count">×'+count+'</span>':'')
    +'<div class="relic-art" aria-hidden="true"><span class="relic-glyph">'+mark+'</span></div>'
+   +(found?'<span class="relic-rarity">'+rarityLabels[rarity]+'</span>':'')
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
  }).join('')||'<p class="collection-empty">該当するコレクションはありません。</p>';
- $('magicStoneBalance').textContent='✦ 魔導石：'+profile.magicStones+'個（魔法陣の強化に使用）';
+ $('magicStoneBalance').textContent='✦ 魔導石：'+profile.magicStones+'個';
   const circleIndexes=circleListIndexes(circles,{
    role:listView.libraryRole,attribute:listView.libraryAttribute,sort:listView.librarySort
   });
