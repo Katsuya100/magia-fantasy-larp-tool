@@ -1,15 +1,15 @@
-import * as G from './dungeon-core.mjs?v=20261017.25';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.25';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.25';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.25';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.25';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.25';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.25';
+import * as G from './dungeon-core.mjs?v=20261017.26';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.26';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.26';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.26';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.26';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.26';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.26';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.25';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.25';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.25';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.25';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.26';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.26';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.26';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.26';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const listView={
@@ -203,6 +203,7 @@ function clearCombatEffects(){
   target.dataset.effect='idle';
   target.dataset.hit='false';
    target.dataset.incoming='none';
+  $(side+'Projectile').dataset.effect='idle';
   $(side+'FxText').textContent='';
  }
 }
@@ -221,6 +222,13 @@ async function animateBattle(steps){
     const actor=$(step.side+'Combatant');
     actor.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
     actor.dataset.effect=step.role;
+    // Magic attacks travel across the arena from their caster to their target.
+    // Each simultaneous fighter controls a separate projectile.
+    if(step.role==='attack'){
+     const projectile=$(step.side+'Projectile');
+     projectile.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
+     projectile.dataset.effect='attack';
+    }
     $(step.side+'FxText').textContent=effectCaption(step);
    }
    for(const step of phase){
