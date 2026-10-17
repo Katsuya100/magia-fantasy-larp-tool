@@ -267,3 +267,21 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .unit[data-dying="true"]{box-shadow:0 0 22px #f37d7d88;border-color:#cf5d76}
 @media(max-width:630px){.battle-spell-frame .magic-expand,.prepare-spell-frame .magic-expand{font-size:10px!important;min-height:39px;padding:4px 1px!important}}
 @media(prefers-reduced-motion:reduce){#battleArena .enemy-unit[data-entering="true"],#battleArena .unit[data-dying="true"] .enemy-portrait,#battleArena .unit[data-dying="true"] .hero-portrait{animation:none!important}}
+
+
+/* A magic circle's own thumbnail: attribute/type icons, applicable status, unknown cost/power. */
+.circle-card-info{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;width:100%;min-width:0;padding:7px 4px 5px;border:1px solid #b9986259;border-radius:5px;background:linear-gradient(145deg,#251f2e,#15202a);color:var(--pale);text-align:center;line-height:1.4}
+.circle-card-symbols{font-size:clamp(15px,2.5vw,24px);font-weight:700;letter-spacing:.01em;white-space:nowrap}
+.circle-card-status{display:block;max-width:100%;font-size:clamp(11px,1.35vw,15px);font-weight:650;overflow-wrap:anywhere;color:#f5dca9}
+.circle-card-stats{display:block;max-width:100%;font-size:clamp(10px,1.18vw,13px);line-height:1.4;overflow-wrap:anywhere;color:#d3dce3;font-variant-numeric:tabular-nums}
+.prepare-spell-frame .circle-card-info,.battle-spell-frame .circle-card-info{min-height:62px}
+.picker-circle-wrap .circle-card-info{margin:0}
+.circle-grid .card>.circle-card-info{margin-top:10px}
+.magic-details-stats dd{font-size:clamp(16px,2.7vw,19px);line-height:1.65;overflow-wrap:anywhere}
+@media(max-width:630px){
+ .loadout-grid{gap:5px}
+ .prepare-spell-frame .circle-card-info,.battle-spell-frame .circle-card-info{padding:5px 1px;min-height:64px;gap:3px}
+ .circle-card-symbols{font-size:clamp(12px,3vw,17px)}
+ .circle-card-status{font-size:clamp(10px,2.45vw,13px)}
+ .circle-card-stats{font-size:clamp(9px,2.2vw,12px)}
+}
