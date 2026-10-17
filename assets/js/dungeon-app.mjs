@@ -1,16 +1,22 @@
-import * as G from './dungeon-core.mjs?v=20261017.24';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.24';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.24';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.24';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.24';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.24';
+import * as G from './dungeon-core.mjs?v=20261017.25';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.25';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.25';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.25';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.25';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.25';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.25';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.24';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.24';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.24';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.24';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.25';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.25';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.25';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.25';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
+const listView={
+ libraryRole:'all',libraryAttribute:'all',librarySort:'newest',
+ collectionDiscovery:'all',collectionRarity:'all',collectionSort:'default',
+ pickerFilter:'all',pickerSort:'newest'
+};
 const circleImages=createCircleImageUrls();
 let dungeonView='prepare';
 let busyAction=false,playingEffects=false;
@@ -124,7 +130,11 @@ function render(){
  const obtained=masters.collections.filter(item=>Number(profile.collection[item.id]||0)>0).length;
  $('collectionProgress').innerHTML='<strong>'+obtained+' / '+masters.collections.length+'</strong><small>DISCOVERED</small><div class="collection-track"><div class="collection-fill" style="width:'+(100*obtained/masters.collections.length)+'%"></div></div>';
  const relics=['✥','◈','☷','✧','⬟','◉','⌘','ϟ','❖','⚿','☯','♛'];
- $('collectionGrid').innerHTML=masters.collections.map((item,i)=>{
+ const collectionIndexes=collectionListIndexes(masters.collections,profile.collection,{
+  discovery:listView.collectionDiscovery,rarity:listView.collectionRarity,sort:listView.collectionSort
+ });
+ $('collectionGrid').innerHTML=collectionIndexes.map(i=>{
+  const item=masters.collections[i];
   const count=Number(profile.collection[item.id]||0),found=count>0;
   const rarity=['common','uncommon','rare','epic','legendary'].includes(item.rarity)?item.rarity:'common';
   const mark=found?(relics[i%relics.length]):'?';
@@ -133,13 +143,16 @@ function render(){
    +'<div class="relic-art" aria-hidden="true"><span class="relic-glyph">'+mark+'</span></div>'
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
- }).join('');
+ }).join('')||'<p class="collection-empty">該当するコレクションはありません。</p>';
  $('magicStoneBalance').textContent='✦ 魔導石：'+profile.magicStones+'個（魔法陣の強化に使用）';
-  $('libraryCards').innerHTML=circles.map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
+  const circleIndexes=circleListIndexes(circles,{
+   role:listView.libraryRole,attribute:listView.libraryAttribute,sort:listView.librarySort
+  });
+  $('libraryCards').innerHTML=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run,masters.buffs,G.mpCost);
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
- $('gearCounter').textContent='携行品 '+pickedValues(carry).length+' / '+limit+' 個'+(unlocked?'':' · 最初の帰還後に解放');
+ $('gearCounter').textContent=unlocked?'携行品 '+pickedValues(carry.slice(0,limit)).length+' / '+limit+' 個':'携行品：最初の帰還後に解放';
  $('startAttack').disabled=!canDepartWithCircles(slots)||Boolean(profile.run);
  $('deleteSaveData').disabled=Boolean(profile.run);
  $('circleCounter').textContent='魔法陣 '+slots.filter(Boolean).length+' / 3〜5 個';
@@ -512,6 +525,21 @@ async function confirmCircleAction(){
   pendingCircleAction=null;
  }catch(e){note('魔法陣の処理に失敗しました：'+e.message);}
 }
+function renderLoadoutChoices(){
+ if(!picker)return;
+ if(picker.kind==='circle'){
+  const filter=listView.pickerFilter;
+  const role=['attack','defense','support','debuff'].includes(filter)?filter:'all';
+  const attribute=G.ATTRS.includes(filter)?filter:'all';
+  const indexes=circleListIndexes(circles,{role,attribute,sort:listView.pickerSort});
+  $('loadoutOptions').innerHTML=indexes.length?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost,indexes)
+   :'<p class="collection-empty">条件に合う魔法陣はありません。</p>';
+ }else{
+  const indexes=itemListIndexes(profile.inventory,masters.items,{kind:listView.pickerFilter,sort:listView.pickerSort});
+  $('loadoutOptions').innerHTML=indexes.length?itemChoices(profile.inventory,carry,itemName,esc,indexes)
+   :'<p class="collection-empty">条件に合うアイテムはありません。</p>';
+ }
+}
 function openLoadoutPicker(kind,index){
  if(profile.run)return;
  if(kind==='circle'){
@@ -522,9 +550,19 @@ function openLoadoutPicker(kind,index){
  picker={kind,index};
  const dialog=$('loadoutDialog');
  $('loadoutDialogTitle').textContent=kind==='circle'?'魔法陣を選ぶ':'携行品を選ぶ';
- $('loadoutOptions').innerHTML=kind==='circle'
-  ?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost)
-  :itemChoices(profile.inventory,carry,itemName,esc);
+ const filters=kind==='circle'
+  ?[['all','すべて'],['attack','⚔️攻撃'],['defense','🛡️防御'],['support','✚回復'],['debuff','🕸️弱体'],
+    ['flame','🔥炎'],['bolt','⚡雷'],['aqua','💧水'],['storm','🌪️風'],['gravity','🪨重力'],['law','⚖️秩序'],['chaos','🌀混沌']]
+  :[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['clear','状態異常解除']];
+ const sorts=kind==='circle'
+  ?[['newest','登録が新しい順'],['oldest','登録が古い順'],['role','役割順'],['attribute','属性順'],['power','判明済みの威力順']]
+  :[['default','所持品の順番'],['name','名前順'],['kind','種類順'],['value','効果量が大きい順']];
+ $('pickerFilter').innerHTML=filters.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
+ $('pickerSort').innerHTML=sorts.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
+ listView.pickerFilter='all';listView.pickerSort=kind==='circle'?'newest':'default';
+ $('pickerFilter').value=listView.pickerFilter;
+ $('pickerSort').value=listView.pickerSort;
+ renderLoadoutChoices();
  $('clearLoadoutSlot').hidden=kind==='circle'?slots[index]===null:carry[index]===null;
  $('openGrimoireFromPicker').hidden=kind!=='circle';
  if(!dialog.open)dialog.showModal();
@@ -595,6 +633,19 @@ function openNameDialog(required){
  $('playerNameInput').focus();
 }
 function wire(){
+ const listControls=[
+  ['libraryRoleFilter','libraryRole'],['libraryAttributeFilter','libraryAttribute'],['librarySort','librarySort'],
+  ['collectionDiscoveryFilter','collectionDiscovery'],['collectionRarityFilter','collectionRarity'],['collectionSort','collectionSort']
+ ];
+ for(const [id,key] of listControls){
+  $(id).addEventListener('change',()=>{
+   listView[key]=$(id).value||'all';
+   render();
+  });
+ }
+ for(const [id,key] of [['pickerFilter','pickerFilter'],['pickerSort','pickerSort']]){
+  $(id).addEventListener('change',()=>{listView[key]=$(id).value||'all';renderLoadoutChoices();});
+ }
  document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
  if(b.dataset.view){
   if(activeAnalysis?.type==='capture'){const request=activeAnalysis;activeAnalysis=null;photoAnalysisEpoch++;request.cancel?.();}
