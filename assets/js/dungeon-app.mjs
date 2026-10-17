@@ -329,7 +329,7 @@ function renderCheckpoint(){
  ]);
  $('deeper').textContent=(layer+1)+'層へ進む';
 const pending=isBonusLayer(layer)&&!run.bonusClaimed;
-$('bonusChoices').hidden=!pending;
+if($('bonusChoices'))$('bonusChoices').hidden=!pending;
 $('deeper').disabled=pending;
 $('returnHome').disabled=pending;
 }
