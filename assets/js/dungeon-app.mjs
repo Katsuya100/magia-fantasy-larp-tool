@@ -742,7 +742,7 @@ function wire(){
  $('loadoutDialog').addEventListener('close',()=>{picker=null;});
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
- for(const button of document.querySelectorAll('[data-bonus]'))button.addEventListener('click',()=>exclusive(()=>claimBonus(button.dataset.bonus)));
+ for(const choice of ['restore','collection','item'])$('bonus-'+choice).addEventListener('click',()=>exclusive(()=>claimBonus(choice)));
  $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
  $('cancelAnalyze').addEventListener('click',()=>{
   const request=activeAnalysis,capture=request?.type==='capture';
