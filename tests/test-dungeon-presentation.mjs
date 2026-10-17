@@ -374,7 +374,7 @@ assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:34px 34px 33px minmax\(0,1fr\)/,'HP/MP and attributes stay vertically aligned');
 
 /* Glow is drawn outside the short icon track, without changing layout. */
-assert.match(css,/#battleArena \.enemy-portrait,#battleArena \.hero-portrait\{\s*background:none;\s*isolation:isolate/,'remove the portrait-sized clipped radial backgrounds');
+assert.match(css,/#battleArena \.enemy-portrait,\s*#battleArena \.hero-portrait\{\s*background:none;\s*isolation:isolate/,'remove the portrait-sized clipped radial backgrounds');
 assert.match(css,/#battleArena \.enemy-portrait::before,[\s\S]*?#battleArena \.hero-portrait::before\{\s*content:"";position:absolute;inset:-17px 0 -19px;z-index:-1/,'enemy and hero glows extend vertically without enlarging their icons');
 assert.match(css,/background:radial-gradient\(ellipse 37% 51% at 50% 50%,\s*var\(--portrait-aura\)/,'portrait glow is a soft vertical ellipse');
 assert.match(css,/#battleArena \.enemy-portrait\{--portrait-aura:rgba\(167,73,100,\.53\)\}/,'enemy keeps rosy aura');
