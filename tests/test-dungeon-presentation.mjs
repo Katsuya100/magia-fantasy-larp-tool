@@ -198,7 +198,7 @@ for(const [rarity,mark] of [['common','○ コモン'],['uncommon','◇ アン�
  assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--relic-accent:#[0-9a-f]{6}'),rarity+' has an opaque rarity accent');
 }
 assert.match(app,/\+\(found\?'<span class="relic-rarity">'/,'rarity labels are shown only for discovered relics');
-assert.match(app,/data-rarity="'+\(found\?rarity:'unknown'\)/,'unfound relics still hide their rarity');
+assert.ok(app.includes(`data-rarity="'+(found?rarity:'unknown')`),'unfound relics still hide their rarity');
 assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?box-shadow:none/,'remove ambiguous glowing rings from rarity art');
 assert.match(css,/data-rarity="uncommon"\] \.relic-art\{border-style:dashed/,'uncommon uses dashed ring');
 assert.match(css,/data-rarity="rare"\] \.relic-art\{[\s\S]*?border:5px double/,'rare uses double ring');
