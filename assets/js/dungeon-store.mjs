@@ -1,4 +1,5 @@
 import {startingBase} from './dungeon-core.mjs';
+import {applySavedUpgrade} from './dungeon-upgrades.mjs';
 const DB_NAME='magia-dungeon-v1';
 const DB_VERSION=2;
 const STORES=['circles','settings'];
@@ -40,7 +41,14 @@ function request(db,store,mode,op){
     }catch(e){reject(e);}
   });
 }
-export const allCircles=db=>request(db,'circles','readonly',s=>s.getAll());
+export async function allCircles(db){
+ const [circles,profile]=await Promise.all([
+  request(db,'circles','readonly',s=>s.getAll()),
+  request(db,'settings','readonly',s=>s.get('profile'))
+ ]);
+ const upgrades=profile?.circleUpgrades||{};
+ return circles.map(circle=>applySavedUpgrade(circle,upgrades[circle.id]));
+}
 export const putCircle=(db,circle)=>request(db,'circles','readwrite',s=>s.put(circle));
 export const deleteCircle=(db,id)=>request(db,'circles','readwrite',s=>s.delete(id));
 // Atomically erase only this dungeon game's own IndexedDB data.
