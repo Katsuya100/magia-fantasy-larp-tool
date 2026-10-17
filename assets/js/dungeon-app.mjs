@@ -1,18 +1,19 @@
-import * as G from './dungeon-core.mjs?v=20261018.7';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.7';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.7';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.7';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.7';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.7';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.7';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.7';
+import * as G from './dungeon-core.mjs?v=20261018.8';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.8';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.8';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.8';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.8';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.8';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.8';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.8';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.7';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.7';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.7';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.7';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.7';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.7';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.8';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.8';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.8';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.8';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.8';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.8';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.8';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -116,7 +117,17 @@ function scrollToDungeonTabs(){
 }
 function imageUrl(blob){return circleImages.get(blob);}
 function battleImageUrl(blob){return circleImages.get(blob);}
-function statusText(unit){return unit.statuses.map(s=>{const row=masters.buffs.find(x=>x.id===s.id);const label=row?.name||(s.id.startsWith('resist_')?s.attribute+'耐性':'強化');return esc(label)+'('+s.turns+')';}).join(' / ');}
+function renderHeroName(hero){
+ const name=$('heroName'),displayName=profile.name?.trim()||'名もなき冒険者';
+ name.textContent=displayName+(hero.reviveArmed?' 🪽':'');
+ if(hero.reviveArmed){
+  name.setAttribute('title','生命の紅石：復活待機中');
+  name.setAttribute('aria-label',displayName+'・生命の紅石：復活待機中');
+ }else{
+  name.removeAttribute('title');
+  name.removeAttribute('aria-label');
+ }
+}
 function rowUnit(unit){
  const hp=Math.max(0,100*unit.hp/unit.stats.hp),mp=Math.max(0,100*unit.mp/unit.maxMp);
  // Identical fixed tracks on both sides keep HP, MP and every attribute aligned.
@@ -128,7 +139,7 @@ function rowUnit(unit){
   +[['MAG',unit.stats.mag],['DEF',G.armor(unit)],['RES',unit.stats.res]]
    .map(([label,value])=>'<span class="combat-attribute"><span>'+label+'</span><strong>'+value+'</strong></span>').join('')
   +'</div>';
- const effects=unit.statuses.length?'<p class="effects" title="'+statusText(unit)+'">'+statusText(unit)+'</p>':'<p class="effects" aria-hidden="true"></p>';
+ const effects=unit.statuses.length?'<p class="effects" aria-label="状態効果">'+statusBadges(unit.statuses,masters.buffs,esc)+'</p>':'<p class="effects" aria-hidden="true"></p>';
  return vital('HP',unit.hp,unit.stats.hp,hp,'')
   +vital('MP',unit.mp,unit.maxMp,mp,'mp')+attrs+effects;
 }
@@ -191,7 +202,7 @@ function renderRun(){
  const enemy=run.enemy,hero=run.hero;
  $('floorLabel').textContent=battleHeading(run.floor);
  $('enemyName').textContent=run.enemyName+' Lv.'+enemy.level;
- $('heroName').textContent=profile.name?.trim()||'名もなき冒険者';
+ renderHeroName(hero);
  $('enemyStats').innerHTML=rowUnit(enemy);
  $('heroStats').innerHTML=rowUnit(hero);
  $('battleSpells').innerHTML=run.slotIds.map((id,i)=>{
@@ -269,7 +280,8 @@ async function animateBattle(steps){
     if(victim.dataset.effect==='idle')victim.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
    }
    const final=phase.at(-1);
-   $('heroStats').innerHTML=rowUnit(final.hero);
+   renderHeroName(final.hero);
+    $('heroStats').innerHTML=rowUnit(final.hero);
    $('enemyStats').innerHTML=rowUnit(final.enemy);
   },{overlap:125,onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death',
    side==='hero'?'探索失敗':'討伐成功',
