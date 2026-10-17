@@ -2,6 +2,19 @@
 export const DESIGNED_LAYERS=100;
 export const RARITIES=['common','uncommon','rare','epic','legendary'];
 export const BASE_RARITY_WEIGHTS=[40,20,10,5,2];
+export const CONSUMABLE_TIERS=['small','medium','large','extreme'];
+export function rollConsumableTier(layer,r=Math.random){
+ const depth=Math.min(1,Math.max(0,(Number(layer)-1)/99));
+ if(depth===0)return 'small';
+ if(depth===1)return 'extreme';
+ let tier=0;
+ for(let i=0;i<3;i++)if(r()<depth)tier++;
+ return CONSUMABLE_TIERS[tier];
+}
+export function eligibleConsumables(items,layer,tier){
+ return items.filter(row=>Number(row.min_layer||1)<=layer &&
+  (row.kind==='clear'||row.tier===tier));
+}
 export function targetClearLevel(layer){
  if(!Number.isSafeInteger(layer)||layer<1)throw Error('Invalid layer');
  const x=Math.min(99,layer-1);
