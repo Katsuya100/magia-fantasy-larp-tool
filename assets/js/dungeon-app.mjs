@@ -1,5 +1,5 @@
 import * as G from './dungeon-core.mjs?v=20261017.9';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration} from './dungeon-combat-fx.mjs?v=20261017.9';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.9';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.9';
 import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.9';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.9';
@@ -158,20 +158,24 @@ async function animateBattle(steps){
   playingEffects=false;
  }
 }
-async function ceremony(event,title,detail=''){
+async function ceremony(event,title,detail='',drops=0){
  playingEffects=true;
  const stage=$('battleCeremony');
  const side=event==='hero-death'?'hero':event==='enemy-death'?'enemy':null;
+ const duration=effectDuration()?(event==='loot'?lootCeremonyDuration(drops):1120):0;
  stage.dataset.event=event;
+ stage.setAttribute('style','--ceremony-duration:'+(duration/1000)+'s');
  $('ceremonyTitle').textContent=title;
  $('ceremonyDetail').textContent=detail;
+ $('lootChests').innerHTML=event==='loot'?treasureChestMarkup(drops):'';
  if(side)$(side+'Combatant').dataset.effect='death';
  try{
-  await playBattleCeremony(event,()=>{stage.hidden=false;},{duration:effectDuration()?1120:0});
+  await playBattleCeremony(event,()=>{stage.hidden=false;},{duration});
  }finally{
   stage.hidden=true;
   stage.dataset.event='idle';
   if(side)$(side+'Combatant').dataset.effect='idle';
+  $('lootChests').innerHTML='';
   playingEffects=false;
  }
 }
@@ -182,7 +186,7 @@ function enemyChoice(enemy){const ids=G.available(enemy);if(!ids.length)return -
 async function takeTurn(index){const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;const spell=run.hero.spells[index];if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}run.usedItems=0;await animateBattle(steps);
 if(run.hero.hp<=0){await ceremony('hero-death','探索失敗',profile.name||'冒険者');}
 if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='探索失敗';$('resultText').textContent='未確定報酬 '+dropped+'個と経験値を喪失。未使用の携行品 '+unusedCount+'個は倉庫へ戻った。性能が判明した魔法陣は残る。';show('result');return;}
-if(run.enemy.hp<=0){await ceremony('enemy-death','討伐成功',run.enemyName);const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定');run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);profile.highest=Math.max(profile.highest,run.floor);if(run.floor%num('checkpoint_interval')===0){run.stage='checkpoint';$('checkpointInfo').textContent='第'+run.floor+'戦突破。未確定報酬 '+run.loot.length+'個 / 経験値 '+run.xp+'。続行して敗北すると失われる。';await persist();show('checkpoint');return;}run.floor++;enterFight();await persist();renderRun();await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}
+if(run.enemy.hp<=0){await ceremony('enemy-death','討伐成功',run.enemyName);const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);profile.highest=Math.max(profile.highest,run.floor);if(run.floor%num('checkpoint_interval')===0){run.stage='checkpoint';$('checkpointInfo').textContent='第'+run.floor+'戦突破。未確定報酬 '+run.loot.length+'個 / 経験値 '+run.xp+'。続行して敗北すると失われる。';await persist();show('checkpoint');return;}run.floor++;enterFight();await persist();renderRun();await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}
 await persist();renderRun();}
 async function useItem(index){
  const run=profile.run;if(playingEffects||!run||(run.usedItems||0)>=num('item_per_round'))return;
