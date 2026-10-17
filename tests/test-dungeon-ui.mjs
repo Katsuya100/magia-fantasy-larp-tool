@@ -53,7 +53,7 @@ try{
  assert.equal($('tab-library').attributes['aria-current'],'page','library is its own preparation tab');
  assert.equal($('tab-prepare').hidden,false);
  assert.equal(($('slotCards').innerHTML.match(/data-open-slot="/g)||[]).length,5,'five magic-circle tiles');
- assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,5,'five item tiles');
+ assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,0,'new players see no locked item tiles');
  assert.equal($('cameraPane').hidden,false,'viewfinder visible before camera starts');
  assert.equal($('cameraPlaceholder').hidden,false);
  assert.equal($('cameraCapture').hidden,true);
@@ -136,11 +136,29 @@ try{
  const libraryMarkup=$('libraryCards').innerHTML;
  const visualOrder=[...libraryMarkup.matchAll(/data-circle-id="([^"]+)"/g)].map(m=>m[1]);
  assert.deepEqual(visualOrder,photographedOrder,'newest first in photo library');
+ $('librarySort').value='oldest';await $('librarySort').fire('change');
+ assert.deepEqual([...$('libraryCards').innerHTML.matchAll(/data-circle-id="([^"]+)"/g)].map(x=>x[1]),
+  [...photographedOrder].reverse(),'library sort flips the visual order without changing saved circles');
+ $('libraryRoleFilter').value='defense';await $('libraryRoleFilter').fire('change');
+ assert.match($('libraryCards').innerHTML,/条件に合う魔法陣はありません/,'role filter hides nonmatches');
+ $('libraryRoleFilter').value='all';await $('libraryRoleFilter').fire('change');
+ $('libraryAttributeFilter').value='bolt';await $('libraryAttributeFilter').fire('change');
+ assert.match($('libraryCards').innerHTML,/条件に合う魔法陣はありません/,'attribute filter hides nonmatches');
+ $('libraryAttributeFilter').value='all';await $('libraryAttributeFilter').fire('change');
+ $('librarySort').value='newest';await $('librarySort').fire('change');
+ assert.deepEqual([...$('libraryCards').innerHTML.matchAll(/data-circle-id="([^"]+)"/g)].map(x=>x[1]),photographedOrder);
+ assert.equal((await allCircles(db)).length,5,'filters never delete or change registered photos');
  assert.equal(await circles[0].image.text(),'camera-capture');
  await doc.click(btn({view:'prepare'}));
  assert.equal($('tab-prepare').attributes['aria-current'],'page');
  await doc.click(btn({openSlot:'0'}));
  assert.equal($('openGrimoireFromPicker').hidden,false,'open grimoire button offered for circle selection');
+ $('pickerFilter').value='support';await $('pickerFilter').fire('change');
+ assert.match($('loadoutOptions').innerHTML,/条件に合う魔法陣はありません/,'picker role filter narrows spells');
+ $('pickerFilter').value='all';await $('pickerFilter').fire('change');
+ $('pickerSort').value='oldest';await $('pickerSort').fire('change');
+ assert.deepEqual([...$('loadoutOptions').innerHTML.matchAll(/data-choose-circle="(\d+)"/g)].map(x=>Number(x[1])),[4,3,2,1,0],
+  'picker sorting preserves the underlying circle indexes');
  await $('openGrimoireFromPicker').fire('click');
  assert.equal($('loadoutDialog').open,false);
  assert.equal($('library').hidden,false,'picker links directly to the grimoire');
@@ -304,6 +322,23 @@ try{
  assert.match($('collectionProgress').innerHTML,/1 \/ 12/);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,11);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,1);
+ $('collectionDiscoveryFilter').value='found';await $('collectionDiscoveryFilter').fire('change');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,1,
+  'collection discovery filter shows only found relics');
+ assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/);
+ $('collectionRarityFilter').value='legendary';await $('collectionRarityFilter').fire('change');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,
+  Number(p.collection.forgotten_crown)>0?1:0,'legendary filter displays only collected legendary items');
+ assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/,
+  'rarity filtering never discloses uncollected rarity');
+ $('collectionRarityFilter').value='all';await $('collectionRarityFilter').fire('change');
+ $('collectionDiscoveryFilter').value='missing';await $('collectionDiscoveryFilter').fire('change');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card locked"/g)||[]).length,11,
+  'undiscovered filter shows exactly the uncollected relics');
+ $('collectionDiscoveryFilter').value='all';await $('collectionDiscoveryFilter').fire('change');
+ $('collectionSort').value='count';await $('collectionSort').fire('change');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,1,
+  'collection sorting leaves the inventory unchanged');
  assert.doesNotMatch($('collectionGrid').innerHTML,/魔獣の牙/,'uncollected treasure stays secret');
  assert.ok(p.level>=2);
  await doc.click(btn({view:'prepare'}));
@@ -312,11 +347,21 @@ try{
   await doc.click(btn({openItem:String(i)}));
   assert.equal($('loadoutDialog').open,true,'item picker opens');
   assert.match($('loadoutOptions').innerHTML,/data-choose-item="/);
+  if(i===0){
+   $('pickerFilter').value='clear';await $('pickerFilter').fire('change');
+   assert.ok($('loadoutOptions').innerHTML.includes('条件に合うアイテムはありません')||$('loadoutOptions').innerHTML.includes('data-choose-item'),
+    'the item kind filter works on real inventory');
+   $('pickerFilter').value='all';await $('pickerFilter').fire('change');
+   $('pickerSort').value='value';await $('pickerSort').fire('change');
+   assert.equal(($('loadoutOptions').innerHTML.match(/data-choose-item=/g)||[]).length,p.inventory.length,
+    'sorting shows all inventory instances without losing IDs');
+  }
   await doc.click(btn({chooseItem:String(i)}));
  }
  assert.match($('gearCounter').textContent,/3 \/ 3/);
  assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,3);
- assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile locked"/g)||[]).length,2);
+ assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile locked"/g)||[]).length,0,'locked item slots are never rendered');
+ assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,3,'only the three level-unlocked slots are visible');
  await doc.click(btn({openItem:'0'}));
  await doc.click(btn({chooseItem:'1'}));
  assert.match($('gearCounter').textContent,/3 \/ 3/,'same item cannot be equipped twice');

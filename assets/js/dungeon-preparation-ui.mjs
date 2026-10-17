@@ -27,7 +27,7 @@ export function spellGrid(slots,circles,imageUrl,escapeText,active=true,buffs=[]
 }
 export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,active=true){
  return '<div class="loadout-grid" role="group" aria-label="携行品">'
-  +slots.map((inventoryIndex,index)=>{
+  +slots.slice(0,unlocked?capacity:0).map((inventoryIndex,index)=>{
     const usable=unlocked&&index<capacity&&active;
     const value=Number.isInteger(inventoryIndex)?inventory[inventoryIndex]:null;
     const locked=index>=capacity||!unlocked;
@@ -38,17 +38,17 @@ export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,a
      +'</button>';
    }).join('')+'</div>';
 }
-export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[],mpCost=()=>null){
+export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[],mpCost=()=>null,indexes=circles.map((_,i)=>i)){
  if(!circles.length)return '<p class="collection-empty">魔導書に魔法陣を登録してください。</p>';
- return circles.map((c,i)=>'<div class="picker-circle-wrap"><button type="button" class="picker-option" data-choose-circle="'+i+'" aria-label="魔法陣の候補 '+(i+1)+'">'
+ return indexes.map(i=>[circles[i],i]).map(([c,i])=>'<div class="picker-circle-wrap"><button type="button" class="picker-option" data-choose-circle="'+i+'" aria-label="魔法陣の候補 '+(i+1)+'">'
   +'<img alt="" src="'+imageUrl(c.image)+'">'
   +(slots.includes(c.id)?'<span class="picker-equipped">編成中</span>':'')+'</button>'
   +circleEffectBadges(c,buffs,escapeText,mpCost)
   +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">詳細</button></div>').join('');
 }
-export function itemChoices(inventory,slots,itemName,escapeText){
+export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventory.map((_,i)=>i)){
  if(!inventory.length)return '<p class="collection-empty">携行品がありません。</p>';
- return inventory.map((item,index)=>'<button type="button" class="picker-option" data-choose-item="'+index+'">'
+ return indexes.map(index=>[inventory[index],index]).map(([item,index])=>'<button type="button" class="picker-option" data-choose-item="'+index+'">'
   +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
   +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
   +(item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' ✦追加効果':'')+'</small></span>'
