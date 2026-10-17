@@ -32,24 +32,20 @@ export function spellEffect(a,buffs=[]){
  }
 }
 export function circleSummary(circle,buffs=[],mpCost=()=>null){
- const a=circle?.analysis;if(!a)return '？？？ · 未解析';
- const info=ATTRIBUTES[a.attribute],mp=mpCost(a.power);
- const fields=[(info?.icon||'✦')+' '+(info?.label||a.attribute),ROLES[a.role]||a.role,spellEffect(a,buffs)];
- if(Number.isFinite(mp))fields.push('消費MP '+mp);
- if(isRevealed(circle))fields.push('威力 '+a.power);
- return fields.join(' / ');
+ const d=circleCardInfo(circle,buffs,mpCost);
+ return [d.symbols,d.statusName,'MP:'+d.mp+' / 威力:'+d.power].filter(Boolean).join(' / ');
 }
 export function circleDetails(circle,buffs=[],mpCost=()=>null){
  const a=circle?.analysis;
- if(!a)return {attribute:'？？？',role:'未解析',effect:'未解析',mp:'--',power:'未公開'};
- const at=ATTRIBUTES[a.attribute],mp=mpCost(a.power);
+ if(!a)return {attribute:'？？？',role:'未解析',effect:'未解析',mp:'?',power:'?'};
+ const at=ATTRIBUTES[a.attribute],known=isRevealed(circle);
+ const mp=known?mpCost(a.power):null;
  return {attribute:(at?.icon||'✦')+' '+(at?.label||a.attribute),role:ROLES[a.role]||a.role,
- effect:spellEffect(a,buffs),mp:Number.isFinite(mp)?String(mp):'--',power:isRevealed(circle)?String(a.power):'未公開'};
+ effect:spellEffect(a,buffs),mp:known&&Number.isFinite(mp)?String(mp):'?',power:known?String(a.power):'?'};
 }
 // One effect per spell: never show an unrelated attribute's statuses on a thumbnail.
 // Status values scale with the spell's hidden power and/or the recipient's resistance.
 export const ROLE_ICONS={attack:'⚔️',defense:'🛡️',support:'✚',debuff:'🕸️'};
-const EFFECT_TITLES={attack:'属性攻撃',defense:'属性防御',support:'HP回復・弱体解除',debuff:'属性弱体'};
 const BUFF_DETAILS={
  flame:'与える攻撃ダメージが増加します。',
  bolt:'魔法の出力が高まり、与えるダメージや回復などを強化します。',
@@ -84,16 +80,15 @@ export function circleAttributeEffects(circle,buffs=[]){
 }
 export function circleCardInfo(circle,buffs=[],mpCost=()=>null){
  const a=circle?.analysis;
- if(!a)return {symbols:'？ / ？',effectName:'未解析',statusName:'',mp:'--',power:''};
- const at=ATTRIBUTES[a.attribute],effect=circleAttributeEffects(circle,buffs);
- const statusName=a.role==='defense'?effect?.buff:a.role==='debuff'?effect?.debuff:'';
- const mp=mpCost(a.power);
+ if(!a)return {symbols:'？ / ？',statusName:'',mp:'?',power:'?'};
+ const at=ATTRIBUTES[a.attribute],effects=circleAttributeEffects(circle,buffs);
+ const statusName=a.role==='defense'?effects?.buff:a.role==='debuff'?effects?.debuff:'';
+ const revealed=isRevealed(circle),mp=revealed?mpCost(a.power):null;
  return {
   symbols:(at?.icon||'✦')+' / '+(ROLE_ICONS[a.role]||'？'),
-  effectName:EFFECT_TITLES[a.role]||'未解析',
   statusName:statusName||'',
-  mp:Number.isFinite(mp)?String(mp):'--',
-  power:isRevealed(circle)?String(a.power):''
+  mp:revealed&&Number.isFinite(mp)?String(mp):'?',
+  power:revealed?String(a.power):'?'
  };
 }
 export function circleEffectDetails(circle,buffs=[]){
