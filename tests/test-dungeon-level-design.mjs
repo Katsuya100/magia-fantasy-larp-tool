@@ -91,9 +91,12 @@ for(let layer=1;layer<=100;layer++){
  }
  assert.equal(new Set(ids).size,5,'distinct enemy kinds at layer '+layer);
  const bossId=ids[4],trophy=bossUniqueCollection(collections,bossId);
- const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId});
+ const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,guaranteeBossLegendary:true});
  assert.ok(rewards.length>=1&&rewards.length<=7);
- assert.equal(rewards.filter(x=>x.id===trophy.id).length,1,'boss trophy guaranteed at layer '+layer);
+ assert.equal(rewards.filter(x=>x.id===trophy.id).length,1,'boss trophy guaranteed on first victory at layer '+layer);
+  const repeats=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId});
+  assert.equal(repeats.filter(x=>x.id===trophy.id).length,0,'repeat boss wins no longer guarantee the trophy at layer '+layer);
+  assert.equal(rollCollection(collections,layer,()=>.999,bossId).id,trophy.id,'repeat boss trophy can still roll by legendary rarity');
  const hero=G.makeUnit(base,expected,{},[attack]);
  const boss=G.fromEnemy(enemies.find(x=>x.id===bossId),expected);
  const outgoing=G.damage(hero,boss,attack,()=>.99),incoming=G.damage(boss,hero,boss.spells[0],()=>.99);

@@ -11,7 +11,7 @@ const [items,enemies,collections,buffs,balance,levels,floors,playerBase]=await P
 configure({balance,levels,floors,playerBase});
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
 assert.deepEqual(CONSUMABLE_TIERS,['small','medium','large','extreme']);
-assert.equal(items.length,15);
+assert.equal(items.length,16);
 for(const kind of ['heal','mana']){
  const rows=items.filter(item=>item.kind===kind);
  assert.equal(rows.length,4);
@@ -22,17 +22,20 @@ for(const kind of ['heal','mana']){
 }
 assert.deepEqual(items.filter(item=>item.kind==='clear').map(x=>x.attribute).sort(),[...G.ATTRS].sort());
 assert.ok(items.filter(x=>x.kind==='clear').every(x=>+x.min_layer===20));
+assert.equal(items.find(x=>x.id==='escape_scroll')?.kind,'escape');
+assert.equal(items.find(x=>x.id==='escape_scroll')?.min_layer,'20');
 const initial=eligibleConsumables(items,1,'small');
 assert.deepEqual(initial.map(x=>x.id),['heal_s','mana_s']);
 assert.deepEqual(eligibleConsumables(items,19,'small').map(x=>x.id),initial.map(x=>x.id));
 assert.equal(eligibleConsumables(items,19,'extreme').length,2);
-assert.equal(eligibleConsumables(items,20,'small').length,9);
-assert.equal(eligibleConsumables(items,100,'extreme').length,9);
+assert.equal(eligibleConsumables(items,20,'small').length,10);
+assert.equal(eligibleConsumables(items,100,'extreme').length,10);
 assert.deepEqual(eligibleConsumables(items,101,'extreme').map(x=>x.id),eligibleConsumables(items,100,'extreme').map(x=>x.id));
 for(const layer of [1,2,10,19,20,50,75,99,100,101,300]){
  const allowed=eligibleConsumables(items,layer,layer>=100?'extreme':'small');
  assert.ok(allowed.length>0);
- assert.ok(allowed.every(item=>item.kind!=='clear'||layer>=20));
+ assert.ok(allowed.every(item=>!['clear','escape'].includes(item.kind)||layer>=20));
+ assert.equal(allowed.some(item=>item.id==='escape_scroll'),layer>=20);
 }
 for(const n of [0,.01,.5,.999999]){
  assert.equal(rollConsumableTier(1,()=>n),'small');
@@ -58,10 +61,10 @@ function scriptedRoll(sequence){
 const early=G.drops(items,collections,1,()=>0,{layer:1});
 assert.equal(early.length,7);
 assert.ok(early.every(x=>x.type==='use'&&['heal_s','mana_s'].includes(x.id)));
-const firstCleanser=G.drops(items,collections,35,scriptedRoll([1,1,1,1,1,1,0,1,1,1,.999,.5,.99]),{layer:20});
+const firstCleanser=G.drops(items,collections,35,scriptedRoll([1,1,1,1,1,1,0,1,1,1,.999,.5,.965]),{layer:20});
 assert.equal(firstCleanser.length,1);
 assert.equal(firstCleanser[0].id,'clear_chaos','cleansers become eligible at floor 20');
-const notYet=G.drops(items,collections,35,scriptedRoll([1,1,1,1,1,1,0,1,1,1,.999,.5,.99]),{layer:19});
+const notYet=G.drops(items,collections,35,scriptedRoll([1,1,1,1,1,1,0,1,1,1,.999,.5,.965]),{layer:19});
 assert.equal(notYet.length,1);
 assert.equal(notYet[0].id,'mana_s','cleansers unavailable at floor 19');
 for(const layer of [100,101,150]){
@@ -69,7 +72,7 @@ for(const layer of [100,101,150]){
  assert.equal(loot.length,7);
  assert.ok(loot.every(x=>x.type==='use'&&x.id==='heal_xl'&&x.value>=G.rollPotionValue(items.find(i=>i.id==='heal_xl'),layer,()=>0)),'numeric rewards scale to the target level at depth '+layer);
 }
-const lateCleanser=G.drops(items,collections,150,scriptedRoll([1,1,1,1,1,1,0,.999,.5,.99]),{layer:101});
+const lateCleanser=G.drops(items,collections,150,scriptedRoll([1,1,1,1,1,1,0,.999,.5,.965]),{layer:101});
 assert.equal(lateCleanser[0].id,'clear_chaos','cleansing remains available in the endless dungeon');
 // Every early-layer fight uses the actual spawn table, not merely a CSV naming rule.
 for(let fight=1;fight<=95;fight++){
@@ -103,6 +106,8 @@ for(const layer of [1,2,5,10,19,20,25,40,50,60,75,80,90,99,100,101]){
 }
 // Potions already stored on a profile keep their original fixed amounts.
 assert.equal(G.rollPotionValue(items.find(x=>x.id==='clear_flame'),100,()=>0),0);
+assert.equal(G.rollPotionValue(items.find(x=>x.id==='escape_scroll'),100,()=>0),0);
+assert.ok(G.drops(items,collections,35,()=>0,{layer:19}).every(x=>x.id!=='escape_scroll'));
 // Existing inventory instances use the fixed saved value regardless of revised catalog ranges.
 const user=G.makeUnit({hp:100,mag:10,def:7,res:7},100);
 user.hp-=40;

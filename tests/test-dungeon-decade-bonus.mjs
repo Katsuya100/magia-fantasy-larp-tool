@@ -12,7 +12,7 @@ for(const layer of [10,20,30,50,80,100,110]){
   assert.ok(!collection.boss_enemy_id);
   const item=bonusConsumable(items,layer,r);
   assert.ok(Number(item.min_layer)<=layer);
-  if(layer>=100&&item.kind!=='clear')assert.equal(item.tier,'extreme');
+  if(layer>=100&&!['clear','escape'].includes(item.kind))assert.equal(item.tier,'extreme');
  }
 }
 assert.deepEqual(rarityWeights(20),rarityWeights(20));
