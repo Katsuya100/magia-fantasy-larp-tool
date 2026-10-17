@@ -45,6 +45,8 @@ try{
   assert.match($('pickerFilter').innerHTML,/value="elixir"/);
   assert.match($('pickerFilter').innerHTML,/value="revive"/);
   assert.match($('pickerSort').innerHTML,/value="value-asc"/);
+  assert.match($('pickerSort').innerHTML,/効果量が高い順/);
+  assert.doesNotMatch($('pickerSort').innerHTML,/効果量が大きい順/);
   $('pickerFilter').value='elixir';await $('pickerFilter').fire('change');
   $('pickerSort').value='value-asc';await $('pickerSort').fire('change');
   assert.deepEqual([...$('loadoutOptions').innerHTML.matchAll(/data-choose-item="(\d+)"/g)].map(x=>Number(x[1])),[2,0],'ascending values sort only the elixirs');

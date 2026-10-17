@@ -61,6 +61,6 @@ export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventor
    +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
    +(item.id==='life_ruby'||item.id?.startsWith('elixir_')||item.id==='escape_scroll'?itemEffectText(item):item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' ✦追加効果':'')+'</small></span>'
-   +(selected?'<span class="picker-equipped" aria-hidden="true">✓ 選択中・'+(selectedSlot+1)+'枠</span>':'')+'</button>';
+   +'</button>';
  }).join('');
 }

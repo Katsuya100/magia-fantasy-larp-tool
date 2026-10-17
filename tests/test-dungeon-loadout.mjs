@@ -79,6 +79,8 @@ assert.doesNotMatch(selectedSpells,/魔法陣0/,'selected spells do not reveal g
 const selectedItems=itemChoices(inventory,[0,null,2],itemName,esc,[2,1,0],2);
 assert.equal((selectedItems.match(/picker-option picker-selected/g)||[]).length,2,'only carried item instances glow');
 assert.equal((selectedItems.match(/picker-option picker-selected picker-current/g)||[]).length,1,'current carried item receives stronger glow');
+assert.doesNotMatch(selectedItems,/picker-equipped|✓ 選択中/,'equipped item choices keep their compact height without a layout-expanding badge');
+assert.match(selectedItems,/aria-pressed="true"/,'equipped items remain accessible and visibly highlighted');
 assert.match(selectedItems,/data-choose-item="2" aria-pressed="true"[^>]*選択中 3枠目/);
 assert.match(selectedItems,/data-choose-item="0" aria-pressed="true"[^>]*選択中 1枠目/);
 assert.equal((itemChoices(inventory,[],itemName,esc).match(/picker-selected/g)||[]).length,0,'unselected items never glow');
