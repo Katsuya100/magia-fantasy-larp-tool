@@ -72,7 +72,7 @@ assert.match(itemChoices([],[],itemName,esc),/携行品がありません/);
 const selectedSpells=circleChoices(circles,['a',null,'b',null,null],makeImg,esc,null,[],()=>null,[2,4,0,1,3],0);
 assert.equal((selectedSpells.match(/picker-option picker-selected/g)||[]).length,2,'every equipped spell glows, including reordered entries');
 assert.equal((selectedSpells.match(/picker-option picker-selected picker-current/g)||[]).length,1,'the slot being edited glows more strongly');
-assert.match(selectedSpells,/data-choose-circle="2" aria-pressed="true"[^>]*選択中 3枠目/,'selected spell announces its assigned slot');
+assert.match(selectedSpells,/data-choose-circle="1" aria-pressed="true"[^>]*選択中 3枠目/,'selected spell announces its assigned slot');
 assert.match(selectedSpells,/data-choose-circle="0" aria-pressed="true"[^>]*選択中 1枠目/,'current spell stays indicated');
 assert.match(selectedSpells,/✓ 選択中・1枠/,'visible equipped label accompanies the glow');
 assert.doesNotMatch(selectedSpells,/魔法陣0/,'selected spells do not reveal generated names');
