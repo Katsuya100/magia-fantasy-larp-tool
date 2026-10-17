@@ -481,12 +481,19 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  100%{opacity:1;transform:none}
 }
 /* Fast panel crossfade, with View Transitions when supported and CSS fallback. */
-:root::view-transition-old(root){animation:.18s cubic-bezier(.25,.75,.3,1) both scene-fade-out}
-:root::view-transition-new(root){animation:.18s cubic-bezier(.25,.75,.3,1) both scene-fade-in}
+/* Crossfade the old and new panels in one stable grid cell, not whole-page
+   view-transition screenshots that letterbox when different-height screens animate. */
+.scene-stack{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;isolation:isolate}
+.scene-stack > .panel{grid-area:1/1;min-width:0}
+.scene-stack > .panel[hidden]{display:none!important}
+.scene-stack > .panel[data-exiting="true"]{
+ z-index:2;pointer-events:none;animation:scene-fade-out .18s ease-out both!important
+}
+.scene-stack > .panel[data-entering="true"]:not(#checkpoint){
+ z-index:1;animation:scene-fade-in .18s ease-out both!important
+}
 @keyframes scene-fade-in{from{opacity:0}to{opacity:1}}
 @keyframes scene-fade-out{from{opacity:1}to{opacity:0}}
-.panel:not([hidden]):not(#checkpoint){animation:panel-quick-arrival .18s ease-out both}
-@keyframes panel-quick-arrival{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 /* Dialog transitions use discrete display/overlay so close also fades in capable browsers. */
 dialog{
  opacity:0;transform:translateY(9px) scale(.985);
@@ -524,4 +531,49 @@ dialog[open]::backdrop{opacity:1}
 /* One sentence per line within magic-circle details and confirmation dialogs. */
 #magicDetailsStats dd,#upgradeHint,#upgradeFeedback,#circleActionMessage{
  white-space:pre-line;
+}
+
+/* Keep both fighters exactly the same dimensions even when status lists grow. */
+#battleArena{align-items:stretch}
+#battleArena .unit{
+ box-sizing:border-box;height:280px;display:flex;flex-direction:column;
+ align-items:stretch;justify-content:flex-start;min-height:0
+}
+#battleArena .unit .enemy-portrait,#battleArena .unit .hero-portrait{flex:0 0 auto}
+#battleArena .unit-info{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column}
+#battleArena .unit-info h3{
+ flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ max-width:100%
+}
+#battleArena #enemyStats,#battleArena #heroStats{
+ min-width:0;min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain;
+ scrollbar-width:thin
+}
+#battleArena .effects{overflow-wrap:anywhere}
+@media(max-width:630px){
+ #battleArena .unit{height:240px}
+}
+/* Entering opponents slide without scaling the whole card or its content. */
+#battleArena .enemy-unit[data-entering="true"]{
+ animation:enemy-snap-slide .42s cubic-bezier(.12,.88,.19,1) both
+}
+@keyframes enemy-snap-slide{
+ 0%{opacity:0;transform:translateX(-48px);filter:brightness(.55)}
+ 70%{opacity:1;transform:translateX(3px);filter:brightness(1.3)}
+ 100%{opacity:1;transform:translateX(0);filter:none}
+}
+/* The death overlay remains mounted until the reward overlay starts.
+   Give reward a distinct animation name so its motion restarts on handoff. */
+#battleArena .battle-ceremony[data-event="loot"]{
+ animation-name:loot-ceremony-arrive;
+ animation-duration:var(--ceremony-duration,2.4s)
+}
+@keyframes loot-ceremony-arrive{
+ 0%{opacity:0;transform:scale(.88)}
+ 24%,76%{opacity:1;transform:scale(1)}
+ 100%{opacity:0;transform:scale(1.05)}
+}
+@media(prefers-reduced-motion:reduce){
+ #battleArena .enemy-unit[data-entering="true"]{animation:none!important}
+ .scene-stack > .panel[data-exiting="true"],.scene-stack > .panel[data-entering="true"]{animation:none!important}
 }

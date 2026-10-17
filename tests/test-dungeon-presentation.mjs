@@ -128,15 +128,15 @@ const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
 assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
-assert.match(page,/data-release="20261017\.21"/);
-assert.match(page,/dungeon\.css\?v=20261017\.21/);
-assert.match(page,/dungeon-app\.mjs\?v=20261017\.21/);
+assert.match(page,/data-release="20261017\.22"/);
+assert.match(page,/dungeon\.css\?v=20261017\.22/);
+assert.match(page,/dungeon-app\.mjs\?v=20261017\.22/);
 const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.21','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.22','stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
@@ -195,8 +195,16 @@ assert.match(css,/@keyframes snappy-rush-enemy/,'enemy attacks have accelerated 
 assert.match(css,/@keyframes snappy-screen-shake/,'attacks shake the arena');
 assert.match(css,/@keyframes encounter-slide/,'encounter banner slides in, pauses and slides out');
 assert.match(css,/@keyframes sanctuary-gentle-arrival/,'return shrine eases and fades in slowly');
-assert.match(css,/::view-transition-old\(root\)/,'outgoing tabs fade out');
-assert.match(css,/::view-transition-new\(root\)/,'incoming tabs fade in');
+assert.match(page,/id="dungeonScenes" class="scene-stack"/,'scene panels share a fixed origin');
+assert.match(css,/\.scene-stack > \.panel\[data-exiting="true"\]/,'outgoing panel fades over incoming panel');
+assert.match(css,/\.scene-stack > \.panel\[data-entering="true"\]/,'incoming panel fades in');
+assert.doesNotMatch(css, /::view-transition-old\(root\)/,'never zoom a full-screen snapshot');
+assert.match(css,/#battleArena \.unit\{\s*box-sizing:border-box;height:280px/,'fighters do not stretch with status effects');
+assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{/,'statuses scroll within fixed cards');
+assert.match(css,/@keyframes enemy-snap-slide/,'enemy only slides, never shrinks');
+assert.match(css,/@keyframes loot-ceremony-arrive/,'loot animation restarts without an empty death frame');
+assert.match(app,/if\(event!=='enemy-death'\)\{/,'death overlay remains during handoff');
+assert.doesNotMatch(app,/document\.startViewTransition/,'no root View Transition flicker');
 assert.match(css,/dialog\[open\]\{opacity:1/,'dialogs fade in and out');
 assert.doesNotMatch(page,/id="captureAnalyzerFrame"/,'photo analysis must not run in a hidden iframe');
 assert.match(page,/id="analyzerFrame" title="マギアサークル解析"/,'capture analysis uses visible screen');
