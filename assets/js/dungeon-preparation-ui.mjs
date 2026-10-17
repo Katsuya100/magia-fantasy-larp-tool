@@ -45,7 +45,7 @@ export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[]
  if(!circles.length)return '<p class="collection-empty">魔導書に魔法陣を登録してください。</p>';
  return indexes.map(i=>[circles[i],i]).map(([c,i])=>{
   const selectedSlot=slots.indexOf(c.id),selected=selectedSlot>=0,current=selected&&selectedSlot===editingSlot;
-  return '<div class="picker-circle-wrap"><button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-circle="'+i+'" aria-pressed="'+current+'" aria-label="魔法陣の候補 '+(i+1)+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
+  return '<div class="picker-circle-wrap"><button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-circle="'+i+'" aria-pressed="'+selected+'" aria-label="魔法陣の候補 '+(i+1)+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
    +'<img alt="" src="'+imageUrl(c.image)+'">'
    +(selected?'<span class="picker-equipped" aria-hidden="true">✓ 選択中・'+(selectedSlot+1)+'枠</span>':'')+'</button>'
    +circleEffectBadges(c,buffs,escapeText,mpCost)
@@ -56,7 +56,7 @@ export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventor
  if(!inventory.length)return '<p class="collection-empty">携行品がありません。</p>';
  return indexes.map(index=>[inventory[index],index]).map(([item,index])=>{
   const selectedSlot=slots.indexOf(index),selected=selectedSlot>=0,current=selected&&selectedSlot===editingSlot;
-  return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-item="'+index+'" aria-pressed="'+current+'" aria-label="'+escapeText(itemName(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
+  return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-item="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(itemName(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
    +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
    +(item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' ✦追加効果':'')+'</small></span>'
