@@ -169,6 +169,7 @@ try{
   await doc.click(btn({openSlot:String(i)}));
   assert.equal($('loadoutDialog').open,true,'opens the spell picker for each slot');
   assert.match($('loadoutOptions').innerHTML,/data-choose-circle="/);
+  if(i>0) assert.equal(($('loadoutOptions').innerHTML.match(/picker-option picker-selected/g)||[]).length,i,'previously equipped circles glow');
   assert.doesNotMatch($('loadoutOptions').innerHTML,/魔法陣\s*0[1-9]/,'selection dialog also hides generated names');
   if(i===0) assert.equal(($('loadoutOptions').innerHTML.match(/data-choose-circle="/g)||[]).length,5);
   await doc.click(btn({chooseCircle:String(i)}));
@@ -186,6 +187,8 @@ try{
  assert.doesNotMatch($('slotCards').innerHTML,/魔法陣\s*0[1-9]/,'equipped circles have no generated names');
  assert.equal(($('slotCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,5,'five filled spell slots');
  await doc.click(btn({openSlot:'0'}));
+ assert.equal(($('loadoutOptions').innerHTML.match(/picker-option picker-selected/g)||[]).length,5,'all equipped circles highlighted');
+ assert.equal(($('loadoutOptions').innerHTML.match(/picker-option picker-selected picker-current/g)||[]).length,1,'current slot stronger glow');
  await doc.click(btn({chooseCircle:'1'}));
  let prepared=await getProfile(db);
  assert.deepEqual(prepared.slots.slice(0,2),[circles[1].id,circles[0].id],'selecting an equipped spell swaps the slots');
@@ -371,6 +374,7 @@ try{
   await doc.click(btn({openItem:String(i)}));
   assert.equal($('loadoutDialog').open,true,'item picker opens');
   assert.match($('loadoutOptions').innerHTML,/data-choose-item="/);
+  if(i>0) assert.equal(($('loadoutOptions').innerHTML.match(/picker-option picker-selected/g)||[]).length,i,'previously equipped items glow');
   if(i===0){
    $('pickerFilter').value='clear';await $('pickerFilter').fire('change');
    assert.ok($('loadoutOptions').innerHTML.includes('条件に合うアイテムはありません')||$('loadoutOptions').innerHTML.includes('data-choose-item'),
