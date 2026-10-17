@@ -40,7 +40,7 @@ export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,a
 export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[],mpCost=()=>null){
  if(!circles.length)return '<p class="collection-empty">魔導書に魔法陣を登録してください。</p>';
  return circles.map((c,i)=>'<div class="picker-circle-wrap"><button type="button" class="picker-option" data-choose-circle="'+i+'" aria-label="魔法陣の候補 '+(i+1)+'">'
-  +'<img alt="" src="'+imageUrl(c.image)+'"><span class="picker-label"><small>'+escapeText(summary?summary(c):(c.analysis?c.analysis.attribute+' / '+c.analysis.role:'未解析'))+'</small></span>'
+  +'<img alt="" src="'+imageUrl(c.image)+'">'
   +(slots.includes(c.id)?'<span class="picker-equipped">編成中</span>':'')+'</button>'
   +circleEffectBadges(c,buffs,escapeText,mpCost)
   +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">詳細</button></div>').join('');
