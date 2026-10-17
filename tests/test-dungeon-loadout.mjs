@@ -67,5 +67,5 @@ assert.equal((circleChoices(circles,['a'],makeImg,esc).match(/data-choose-circle
 assert.doesNotMatch(circleChoices(circles,['a'],makeImg,esc),/魔法陣\s*0[1-9]|魔法陣0/,'picker shows no circle names');
 assert.equal((itemChoices(inventory,[0],itemName,esc).match(/data-choose-item=/g)||[]).length,3);
 assert.match(circleChoices([],[],makeImg,esc),/魔導書に魔法陣を登録/);
-assert.match(itemChoices([],[],itemName,esc),/アイテムがありません/);
+assert.match(itemChoices([],[],itemName,esc),/携行品がありません/);
 console.log('PASS indexed five-column spell/item slots, swap, upgrades, legacy data and picker markup');
