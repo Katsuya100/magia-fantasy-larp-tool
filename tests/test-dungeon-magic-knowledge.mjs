@@ -9,7 +9,7 @@ assert.equal(equippedCircleCount(['a',null,'b',null,'c']),3);
 const circle=newCapturedCircle('photo',new Blob(['JPEG']),42);
 assert.equal(circle.revealed,false);
 assert.equal(circle.analysis,null);
-const buffs=[{id:'buff_flame',name:'炎熱鼓舞'},{id:'debuff_flame',name:'火傷'}];
+const buffs=[{id:'buff_flame',name:'炎熱鼓舞',duration:2},{id:'debuff_flame',name:'火傷',duration:2}];
 const pending=savePreanalysis(circle,{attribute:'flame',role:'防御',power:512});
 assert.equal(isRevealed(pending),false);
 assert.match(circleSummary(pending,buffs),/🔥 \/ 🛡️/);
