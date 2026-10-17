@@ -20,9 +20,9 @@ for(let i=1;i<=3;i++){
  await putCircle(db,{id:'c'+i,image:new Blob(['image-'+i]),analysis:attack,revealed:true});
 }
 const hero=G.makeUnit(profile.base,1,{},[attack,attack,attack,null,null],'player');
-const enemy=G.fromEnemy(enemies.find(x=>x.id==='foe_l002_1'),3);
+const enemy=G.fromEnemy(enemies.find(x=>x.id==='foe_l002_2'),3);
 profile.run={
- floor:6,slotIds:[...profile.slots],hero,enemy,enemyName:'敵',
+ floor:7,slotIds:[...profile.slots],hero,enemy,enemyName:'敵',
  carry:[
   {type:'use',id:'escape_scroll',value:0,bonus:null,instanceId:'scroll-1'},
   {type:'use',id:'heal_s',value:30,bonus:null,instanceId:'heal-1'},
