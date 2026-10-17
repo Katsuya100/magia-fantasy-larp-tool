@@ -1,14 +1,14 @@
-import * as G from './dungeon-core.mjs?v=20261017.21';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.21';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.21';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.21';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.21';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.21';
+import * as G from './dungeon-core.mjs?v=20261017.22';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.22';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.22';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.22';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.22';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.22';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.21';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.21';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.21';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.21';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.22';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.22';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.22';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.22';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const circleImages=createCircleImageUrls();
@@ -38,15 +38,18 @@ function returnToCameraScroll(){
  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(restore));
  else restore();
 }
-function applyView(name){
+const sceneIds=['home','library','prepare','collection','battle','checkpoint','analyzing','result'];
+let activeScene='prepare',sceneFadeTimer=null;
+function resolvedView(name){
  const exploring=Boolean(profile?.run);
- if(name==='dungeon'){
-  name=exploring?(activeAnalysis?'analyzing':profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare';
- }
- // The grimoire and preparation are top-level tabs only outside an expedition.
+ if(name==='dungeon')name=exploring?(activeAnalysis?'analyzing':profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare';
  if(exploring&&(name==='prepare'||name==='library'))name=profile.run.stage==='checkpoint'?'checkpoint':'battle';
+ return name;
+}
+function applyView(name,retained=null){
+ activeScene=name;
  if(dungeonScenes.has(name))dungeonView=name;
- for(const id of ['home','library','prepare','collection','battle','checkpoint','analyzing','result'])$(id).hidden=id!==name;
+ for(const id of sceneIds)$(id).hidden=id!==name&&id!==retained;
  $('tab-prepare').hidden=exploring;
  $('tab-library').hidden=exploring;
  $('tab-dungeon').hidden=!exploring;
@@ -63,15 +66,35 @@ function applyView(name){
  if(['home','library','prepare','collection'].includes(name))render();
  if(name==='battle'&&profile?.run&&!playingEffects)renderRun();
 }
-function show(name){
- // Native View Transitions crossfade outgoing and incoming tab content.
- // Older browsers receive an equally short CSS entrance fade.
- const scenes=['home','library','prepare','collection','battle','checkpoint','analyzing','result'];
- const before=scenes.find(id=>!$(id).hidden);
- const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
- if(before&&before!==name&&!reduced&&typeof document.startViewTransition==='function'){
-  document.startViewTransition(()=>applyView(name));
- }else applyView(name);
+function show(requested){
+ // Crossfade just the scene stack. Root View Transitions resize the whole page
+ // when scenes differ in height, causing momentary zoom and black letterboxing.
+ if(sceneFadeTimer!==null){
+  clearTimeout(sceneFadeTimer);
+  sceneFadeTimer=null;
+  for(const id of sceneIds){
+   $(id).hidden=id!==activeScene;
+   delete $(id).dataset.entering;
+   delete $(id).dataset.exiting;
+  }
+ }
+ const name=resolvedView(requested);
+ const before=sceneIds.find(id=>!$(id).hidden);
+ const reduced=typeof window.matchMedia!=='function'||window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if(!before||before===name||reduced||!sceneIds.includes(name)){
+  applyView(name);
+  return;
+ }
+ // Keep both DOM panels painted in the same grid cell until fading finishes.
+ applyView(name,before);
+ $(before).dataset.exiting='true';
+ $(name).dataset.entering='true';
+ sceneFadeTimer=setTimeout(()=>{
+  $(before).hidden=true;
+  delete $(before).dataset.exiting;
+  delete $(name).dataset.entering;
+  sceneFadeTimer=null;
+ },180);
 }
 function scrollToDungeonTabs(){
  $('tab-dungeon').closest('nav')?.scrollIntoView?.({behavior:'smooth',block:'start'});
@@ -222,12 +245,16 @@ async function ceremony(event,title,detail='',drops=0){
  try{
   await playBattleCeremony(event,()=>{stage.hidden=false;},{duration});
  }finally{
-  stage.hidden=true;
-  stage.dataset.event='idle';
+  // Keep the defeated enemy's overlay mounted until loot takes over.
+  // Hiding it here briefly exposed a neutral battle frame between ceremonies.
+  if(event!=='enemy-death'){
+   stage.hidden=true;
+   stage.dataset.event='idle';
+  }
   if(entering)$('enemyCombatant').dataset.entering='false';
   if(event==='enemy-death')$('enemyCombatant').dataset.defeated='true';
   if(side)$(side+'Combatant').dataset.dying='false';
-  $('lootChests').innerHTML='';
+  if(event!=='enemy-death')$('lootChests').innerHTML='';
   playingEffects=false;
  }
 }
