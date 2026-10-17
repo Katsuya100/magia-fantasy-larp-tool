@@ -376,7 +376,7 @@ assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100
 /* Glow is drawn outside the short icon track, without changing layout. */
 assert.match(css,/#battleArena \.enemy-portrait,\s*#battleArena \.hero-portrait\{\s*background:none;\s*isolation:isolate/,'remove the portrait-sized clipped radial backgrounds');
 assert.match(css,/#battleArena \.enemy-portrait::before,[\s\S]*?#battleArena \.hero-portrait::before\{\s*content:"";position:absolute;inset:-17px 0 -19px;z-index:-1/,'enemy and hero glows extend vertically without enlarging their icons');
-assert.match(css,/background:radial-gradient\(ellipse 37% 51% at 50% 50%,\s*var\(--portrait-aura\)/,'portrait glow is a soft vertical ellipse');
+assert.match(css,/background:radial-gradient\(ellipse 37% 51% at 50% 61%,\s*var\(--portrait-aura\)/,'portrait glow is a soft vertical ellipse');
 assert.match(css,/#battleArena \.enemy-portrait\{--portrait-aura:rgba\(167,73,100,\.53\)\}/,'enemy keeps rosy aura');
 assert.match(css,/#battleArena \.hero-portrait\{--portrait-aura:rgba\(57,143,159,\.56\)\}/,'hero keeps cool aura');
 assert.match(css,/#battleArena \.unit\{\s*height:270px;min-height:270px;max-height:270px/,'desktop frames remain equal fixed height, slightly shorter');
@@ -388,4 +388,9 @@ for(const rarity of ['uncommon','rare','epic','legendary']){
  assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--rarity-glow:#[0-9a-f]{8}'),rarity+' keeps its colorful glow');
 }
 assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?0 0 32px var\(--rarity-glow\)/,'rarer halo remains intact');
+
+assert.match(css,/background:radial-gradient\(ellipse 37% 51% at 50% 61%,/,'portrait glow is visually centered below the icon instead of above it');
+assert.match(css,/\.relic-card\.discovered:not\(\[data-rarity="common"\]\) \.relic-art\{[\s\S]*?0 0 22px 7px var\(--rarity-halo\),[\s\S]*?0 0 46px 8px var\(--rarity-glow\)/,'rarer glows use soft diffuse halos rather than hard rings');
+assert.match(css,/\.relic-art \.relic-glyph\{[\s\S]*?display:flex;align-items:center;justify-content:center;[\s\S]*?transform:translateY\(-\.035em\)/,'collection symbols are centered independently of font baselines');
+assert.match(css,/\.relic-card\.discovered\[data-rarity="common"\] \.relic-art\{box-shadow:none\}/,'common remains without glow');
 console.log('PASS camera circle guide, layer progression, 3-column items, readable story, terminology and fantasy layout');
