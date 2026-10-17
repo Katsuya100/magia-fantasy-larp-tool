@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {canDepartWithCircles,equippedCircleCount,circleSummary,attributeEffectGuide,
+import {canDepartWithCircles,equippedCircleCount,circleSummary,attributeEffectGuide,circleCardInfo,circleEffectDetails,
  newCapturedCircle,savePreanalysis,isRevealed,revealOnUse,circleDetails,
  normalizeAnalysisResult,spellEffect,ROLES} from '../assets/js/dungeon-magic-knowledge.mjs';
 const eq=n=>Array.from({length:5},(_,i)=>i<n?'id-'+i:null);
@@ -12,17 +12,37 @@ assert.equal(circle.analysis,null);
 const buffs=[{id:'buff_flame',name:'炎熱鼓舞'},{id:'debuff_flame',name:'火傷'}];
 const pending=savePreanalysis(circle,{attribute:'flame',role:'防御',power:512});
 assert.equal(isRevealed(pending),false);
-assert.match(circleSummary(pending,buffs),/🔥 flame/);
-assert.match(circleSummary(pending,buffs),/🛡️防御/);
+assert.match(circleSummary(pending,buffs),/🔥 \/ 🛡️/);
 assert.match(circleSummary(pending,buffs),/炎熱鼓舞/);
-assert.match(circleSummary(pending,buffs,p=>Math.ceil(p/100)),/消費MP 6/);
-assert.doesNotMatch(circleSummary(pending,buffs,p=>Math.ceil(p/100)),/威力/);
-assert.equal(circleDetails(pending,buffs,p=>Math.ceil(p/100)).power,'未公開');
-assert.doesNotMatch(circleSummary(pending,buffs),/512/);
+assert.match(circleSummary(pending,buffs,p=>Math.ceil(p/100)),/MP:\? \/ 威力:\?/);
+assert.deepEqual(circleCardInfo(pending,buffs,p=>Math.ceil(p/100)),
+ {symbols:'🔥 / 🛡️',statusName:'炎熱鼓舞',mp:'?',power:'?'},'all pre-use values are hidden');
+assert.equal(circleDetails(pending,buffs,p=>Math.ceil(p/100)).mp,'?');
+assert.equal(circleDetails(pending,buffs,p=>Math.ceil(p/100)).power,'?');
+assert.doesNotMatch(circleSummary(pending,buffs),/512|\b6\b/);
 const used=revealOnUse(pending);
 assert.equal(isRevealed(used),true);
-assert.match(circleSummary(used,buffs,p=>Math.ceil(p/100)),/威力 512/);
+assert.match(circleSummary(used,buffs,p=>Math.ceil(p/100)),/MP:6 \/ 威力:512/);
+assert.deepEqual(circleCardInfo(used,buffs,p=>Math.ceil(p/100)),
+ {symbols:'🔥 / 🛡️',statusName:'炎熱鼓舞',mp:'6',power:'512'});
 assert.equal(circleDetails(used,buffs,p=>Math.ceil(p/100)).mp,'6');
+assert.equal(circleDetails(used,buffs,p=>Math.ceil(p/100)).power,'512');
+const attack=savePreanalysis(circle,{attribute:'bolt',role:'attack',power:512});
+const support=savePreanalysis(circle,{attribute:'aqua',role:'support',power:512});
+const debuff=savePreanalysis(circle,{attribute:'flame',role:'debuff',power:512});
+assert.equal(circleCardInfo(attack,buffs).statusName,'','attack has no invented buff');
+assert.equal(circleCardInfo(support,buffs).statusName,'','heal has no invented buff');
+assert.equal(circleCardInfo(debuff,buffs).statusName,'火傷');
+assert.equal(circleCardInfo(debuff,buffs).symbols,'🔥 / 🕸️');
+assert.match(circleEffectDetails(pending,buffs).effect,/耐性/);
+assert.match(circleEffectDetails(pending,buffs).statusDescription,/攻撃ダメージが増加/);
+assert.match(circleEffectDetails(pending,buffs).duration,/2ターン/);
+assert.match(circleEffectDetails(debuff,buffs).statusDescription,/継続ダメージ/);
+assert.match(circleEffectDetails(debuff,buffs).duration,/耐性/);
+assert.equal(circleEffectDetails(attack,buffs).statusName,'');
+assert.equal(circleEffectDetails(support,buffs).statusName,'');
+const chaos=savePreanalysis(circle,{attribute:'chaos',role:'debuff',power:512});
+assert.equal(circleCardInfo(chaos,buffs).statusName,'ランダム弱体');
 assert.equal(isRevealed({analysis:pending.analysis}),true,'legacy analyzed circles retain visible power');
 assert.match(spellEffect({...pending.analysis,role:'debuff'},buffs),/🕸️火傷/);
 assert.match(spellEffect({...pending.analysis,role:'attack'},buffs),/⚔️属性攻撃/);
