@@ -6,7 +6,7 @@ export const ATTRIBUTES={
  storm:{icon:'🌪️',label:'storm'},gravity:{icon:'🪨',label:'gravity'},
  law:{icon:'⚖️',label:'law'},chaos:{icon:'🌀',label:'chaos'}
 };
-export const ROLES={attack:'攻撃',defense:'防御',support:'回復',debuff:'弱体'};
+export const ROLES={attack:'⚔️攻撃',defense:'🛡️防御',support:'✚回復',debuff:'🕸️弱体'};
 export const equippedCircleCount=ids=>ids.filter(Boolean).length;
 export const canDepartWithCircles=ids=>Array.isArray(ids)&&ids.length===5&&equippedCircleCount(ids)>=3&&equippedCircleCount(ids)<=5;
 export const isRevealed=circle=>Boolean(circle?.analysis)&&circle.revealed!==false;
@@ -24,10 +24,10 @@ export function spellEffect(a,buffs=[]){
  if(!a)return '未解析';
  const {role,attribute}=a,match=id=>buffs.find(b=>b.id===id)?.name;
  switch(role){
- case 'attack':return '属性攻撃';
- case 'defense':return attribute==='chaos'?'属性耐性＋ランダム強化':'属性耐性＋'+(match('buff_'+attribute)||'強化');
- case 'support':return 'HP回復＋'+(ATTRIBUTES[attribute]?.label||attribute)+'の弱体解除';
- case 'debuff':return attribute==='chaos'?'ランダム弱体':(match('debuff_'+attribute)||'弱体');
+ case 'attack':return '⚔️属性攻撃';
+ case 'defense':return attribute==='chaos'?'🛡️属性耐性＋ランダム強化':'🛡️属性耐性＋'+(match('buff_'+attribute)||'強化');
+ case 'support':return '✚HP回復＋'+(ATTRIBUTES[attribute]?.label||attribute)+'の🕸️弱体解除';
+ case 'debuff':return '🕸️'+(attribute==='chaos'?'ランダム弱体':(match('debuff_'+attribute)||'弱体'));
  default:return '未解析';
  }
 }
