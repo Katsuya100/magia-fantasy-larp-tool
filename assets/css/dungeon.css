@@ -924,57 +924,40 @@ html,body{overflow-x:clip}
 @media(prefers-reduced-motion:reduce){
  #battleArena .spell-projectile[data-effect="attack"]{animation:none!important;opacity:0!important}
 }
-
-/* Color-vision accessibility: distinguish rarity by readable text and stroke
-   patterns, not adjacent yellow/green or blue/purple glow alone.
-   No rare-tier glow: use sharp opaque borders and high-contrast labels. */
-.relic-card.discovered{
- --relic-accent:#d4dce6;
- border:2px solid var(--relic-accent);
- background:linear-gradient(155deg,#28313b,#121a25)
+/* Restore the collection's original luminous art and unchanged solid frames.
+   Hue and glow brightness distinguish tiers; text badges are secondary aids.
+   No border-width, border-style or card-frame changes are needed here. */
+.relic-card.discovered[data-rarity="common"]{
+ --rarity-ink:#e2e6ec;--rarity-glow:#aebfc983;--rarity-halo:#d5e6f52a
 }
-.relic-card.discovered:before{border-color:#ffffff20}
+.relic-card.discovered[data-rarity="uncommon"]{
+ --rarity-ink:#63f2ce;--rarity-glow:#1bc8a7a3;--rarity-halo:#49e6c02d
+}
+.relic-card.discovered[data-rarity="rare"]{
+ --rarity-ink:#7dc3ff;--rarity-glow:#318debb3;--rarity-halo:#66b9ff34
+}
+.relic-card.discovered[data-rarity="epic"]{
+ --rarity-ink:#ff8eb6;--rarity-glow:#fa478daf;--rarity-halo:#ff80a238
+}
+.relic-card.discovered[data-rarity="legendary"]{
+ --rarity-ink:#ffd27c;--rarity-glow:#ff9b39c4;--rarity-halo:#ffc96640
+}
 .relic-card.discovered .relic-art{
- border:3px solid var(--relic-accent);
- box-shadow:none;
- background:radial-gradient(circle,#334656,#15202c)
+ border-color:var(--rarity-ink);
+ box-shadow:0 0 0 9px var(--rarity-halo),
+  0 0 32px var(--rarity-glow),
+  inset 0 0 34px var(--rarity-halo);
+ background:radial-gradient(circle,#6a53605a,#131d30)
 }
 .relic-card.discovered .relic-glyph{
- color:var(--relic-accent);
- text-shadow:none
+ color:var(--rarity-ink);
+ text-shadow:0 0 20px var(--rarity-glow)
 }
 .relic-card.discovered .relic-rarity{
  display:block;max-width:100%;margin:0 auto 9px;padding:3px 7px;
- border:1px solid #071521;background:var(--relic-accent);
- color:#101521;font-size:14px;line-height:1.35;font-weight:800;
+ color:var(--rarity-ink);font-size:14px;line-height:1.35;font-weight:800;
+ text-shadow:0 0 9px var(--rarity-glow);
  overflow-wrap:anywhere
-}
-.relic-card.discovered[data-rarity="common"]{--relic-accent:#d4dce6}
-.relic-card.discovered[data-rarity="common"] .relic-art{border-style:solid}
-.relic-card.discovered[data-rarity="uncommon"]{--relic-accent:#78e5c3}
-.relic-card.discovered[data-rarity="uncommon"] .relic-art{border-style:dashed}
-.relic-card.discovered[data-rarity="rare"]{--relic-accent:#92c5ff}
-.relic-card.discovered[data-rarity="rare"] .relic-art{
- border:5px double var(--relic-accent);
- box-shadow:none
-}
-.relic-card.discovered[data-rarity="epic"]{--relic-accent:#ffa1b6}
-.relic-card.discovered[data-rarity="epic"] .relic-art{
- border-style:dotted;
- box-shadow:none
-}
-.relic-card.discovered[data-rarity="legendary"]{
- --relic-accent:#ffe099;
- border-width:3px;
- background:linear-gradient(155deg,#322d27,#171b23)
-}
-.relic-card.discovered[data-rarity="legendary"] .relic-art{
- border:5px solid var(--relic-accent);
- box-shadow:none
-}
-.relic-card.discovered[data-rarity="legendary"]:after{
- content:"★";position:absolute;left:7px;top:4px;
- font-size:17px;color:var(--relic-accent)
 }
 @media(max-width:630px){
  .relic-card.discovered .relic-rarity{

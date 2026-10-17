@@ -194,17 +194,19 @@ assert.match(app,/magicStoneBalance'\)\.textContent='✦ 魔導石：'\+profile\
 assert.doesNotMatch(app,/個（魔法陣の強化に使用）/,'no redundant explanation in dynamic JS');
 for(const [rarity,mark] of [['common','○ コモン'],['uncommon','◇ アンコモン'],
  ['rare','◆ レア'],['epic','✦ エピック'],['legendary','★ レジェンダリー']]){
- assert.ok(app.includes(rarity+":'"+mark+"'"),rarity+' uses a readable, shape-distinct text label');
- assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--relic-accent:#[0-9a-f]{6}'),rarity+' has an opaque rarity accent');
+ assert.ok(app.includes(rarity+":'"+mark+"'"),rarity+' retains its legible rarity text');
+ assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--rarity-ink:#[0-9a-f]{6};--rarity-glow:#[0-9a-f]{8}'),rarity+' has a distinct solid hue and visible glow');
 }
-assert.match(app,/\+\(found\?'<span class="relic-rarity">'/,'rarity labels are shown only for discovered relics');
-assert.ok(app.includes(`data-rarity="'+(found?rarity:'unknown')`),'unfound relics still hide their rarity');
-assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?box-shadow:none/,'remove ambiguous glowing rings from rarity art');
-assert.match(css,/data-rarity="uncommon"\] \.relic-art\{border-style:dashed/,'uncommon uses dashed ring');
-assert.match(css,/data-rarity="rare"\] \.relic-art\{[\s\S]*?border:5px double/,'rare uses double ring');
-assert.match(css,/data-rarity="epic"\] \.relic-art\{[\s\S]*?border-style:dotted/,'epic uses dotted ring');
-assert.match(css,/data-rarity="legendary"\] \.relic-art\{[\s\S]*?border:5px solid/,'legendary uses bold solid ring');
-assert.match(css,/\.relic-card\.discovered \.relic-rarity\{[\s\S]*?font-size:14px/,'rarity text is legible');
+assert.match(app,/\+\(found\?'<span class="relic-rarity">'/,'rarity names are only shown for discovered collectibles');
+assert.ok(app.includes(\`data-rarity="'+(found?rarity:'unknown')\`),'unfound relics still hide their rarity');
+const oldRarityStyles=css.slice(css.indexOf('/* Color-vision accessibility:'));
+assert.equal(oldRarityStyles,'','previous flat, no-glow frame redesign must be removed');
+assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?box-shadow:0 0 0 9px var\(--rarity-halo\),[\s\S]*?0 0 32px var\(--rarity-glow\)/,'original luminous halo and bloom are restored');
+assert.match(css,/\.relic-card\.discovered \.relic-glyph\{[\s\S]*?text-shadow:0 0 20px var\(--rarity-glow\)/,'glyph keeps colorful glow');
+assert.doesNotMatch(css.slice(css.indexOf('/* Restore the collection')),/border-style\s*:|border-width\s*:|border:\s*\d+px/,'new rarity treatment does not modify frame patterns or widths');
+assert.match(css,/\.relic-card\{[^}]*border:1px solid var\(--border\)/,'the original outer card frame is unchanged');
+assert.match(css,/\.relic-art\{[^}]*border:1px solid #e1c58b77/,'the original circular frame thickness stays unchanged');
+assert.match(css,/\.relic-card\.discovered \.relic-rarity\{[\s\S]*?font-size:14px/,'rarity labels remain readable');
 assert.match(page,/<h2>プロフィール<\/h2>/,'profile heading matches the tab');
 assert.match(css,/@keyframes circle-upgrade-aura/,'upgrades have a ritual animation');
 assert.match(page,/id="deleteSaveData"[^>]*data-action="delete-data"/,'profile has a full save deletion action');
