@@ -73,6 +73,7 @@ export function simulate(seed,{level=12,layers=3,spells='five',heals=3,manas=1}=
   if(fight%50===0&&fight<layers*5){hero.hp=hero.stats.hp;hero.mp=hero.maxMp;stats.restores=(stats.restores||0)+1;}
   hero.statuses=[];
   hero.cooldowns=hero.cooldowns.map(()=>0);
+  G.recoverVictoryMp(hero);
  }
  stats.win=stats.clear===layers*5;
  stats.hp=hero.hp;stats.mp=hero.mp;
