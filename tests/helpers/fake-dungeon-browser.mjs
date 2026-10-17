@@ -42,8 +42,11 @@ export function fakeDungeonBrowser(config={}){
  const stage=document.getElementById('battleCeremony');stage.hidden=true;stage.dataset.event='idle';
  for(const id of ['heroCombatant','enemyCombatant'])document.getElementById(id).dataset={effect:'idle',attribute:'law',hit:'false'};
  const iframe=document.getElementById('analyzerFrame');iframe.contentDocument=analyzer;
+ const captureFrame=document.getElementById('captureAnalyzerFrame');captureFrame.contentDocument=analyzer;
  let frameSource='';
  Object.defineProperty(iframe,'src',{get(){return frameSource;},set(s){frameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>iframe.onload?.());}}});
+ let captureFrameSource='';
+ Object.defineProperty(captureFrame,'src',{get(){return captureFrameSource;},set(s){captureFrameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>captureFrame.onload?.());}}});
  const video=document.getElementById('cameraVideo');video.videoWidth=960;video.videoHeight=720;
  let mediaOpened=0,mediaClosed=0;
  const old={document:globalThis.document,window:globalThis.window,indexedDB:globalThis.indexedDB,fetch:globalThis.fetch,createObjectURL:URL.createObjectURL,revokeObjectURL:URL.revokeObjectURL,DataTransfer:globalThis.DataTransfer,navigator:globalThis.navigator};
