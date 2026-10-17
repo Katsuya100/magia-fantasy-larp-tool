@@ -8,7 +8,7 @@ import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.2';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.2';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.2';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.2';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.2';
 import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.2';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.2';
 import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.2';
@@ -413,7 +413,7 @@ async function useItem(index){
   await persist();renderRun();
  }catch(e){note(e.message);}
 }
-async function leave(mode='checkpoint'){const run=profile.run;if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;let potions=0,collection=0,stones=0;profile.inventory.push(...run.carry.filter(Boolean));for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else if(item.type==='stone'){profile.magicStones++;stones++;}else if(item.type==='collection'){profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}}const before=profile.level;G.experience(profile,run.xp);recordReturnedLayer(profile,mode==='escape'?run.floor-1:run.floor);profile.returns++;profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent=mode==='escape'?'脱出成功！':'無事帰還！';narrativeLines('resultText',[
+async function leave(mode='checkpoint'){const run=profile.run;if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;let potions=0,collection=0,stones=0;profile.inventory.push(...run.carry.filter(Boolean));for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else if(item.type==='stone'){profile.magicStones++;stones++;}else if(item.type==='collection'){profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}}const before=profile.level;G.experience(profile,run.xp);recordReturnedLayer(profile,mode==='escape'?Math.floor((run.floor-1)/FIGHTS_PER_LAYER)*FIGHTS_PER_LAYER:run.floor);profile.returns++;profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent=mode==='escape'?'脱出成功！':'無事帰還！';narrativeLines('resultText',[
   ...(mode==='escape'?['脱出の巻物で経験値と戦利品を持ち帰った。']:[]),
  '消耗品 '+potions+'個・収集品 '+collection+'個・魔導石 '+stones+'個・経験値 '+run.xp+'を獲得。',
  'Lv.'+before+' → Lv.'+profile.level+'。',
