@@ -300,4 +300,33 @@ assert.match(app,/battleHeading\(run.floor\)/,'encounter heading reflects layer 
 assert.match(app,/deepestReturnedLayer\(profile\)/,'profile records successful returns only');
 assert.match(app,/dataset\.defeated='true'/,'defeated enemy stays invisible');
 assert.match(css,/#battleArena \.enemy-unit\[data-defeated="true"\]\{visibility:hidden/);
+
+assert.doesNotMatch(page,/魔法陣は3〜5個で出発できます。空き枠はそのままでOK。/,'unnecessary equipment help is removed');
+assert.match(page,/class="spell-flight" aria-hidden="true"/,'projectiles stay in a decorative arena overlay');
+for(const side of ['hero','enemy']){
+ assert.match(page,new RegExp('id="'+side+'Projectile"[^>]*data-side="'+side+'"'),'both casters have independent projectile layers');
+}
+assert.match(app,/if\(step\.role==='attack'\)\{[\s\S]*?projectile\.dataset\.attribute=[\s\S]*?projectile\.dataset\.effect='attack'/,'only magic attacks launch attribute-matched projectiles');
+assert.match(app,/\$\(side\+'Projectile'\)\.dataset\.effect='idle'/,'projectile animation resets after combat phases');
+assert.match(css,/#battleArena \.spell-projectile\[data-side="hero"\]/,'hero projectile starts on right');
+assert.match(css,/#battleArena \.spell-projectile\[data-effect="attack"\]/,'attack projectiles trigger flight animation');
+const flightFrames=css.match(/@keyframes spell-projectile-flight\{([\s\S]*?)\n\}/)?.[1]||'';
+assert.match(flightFrames,/left:var\(--flight-from\)/,'magic launches from the attacker');
+assert.match(flightFrames,/left:var\(--flight-to\)/,'magic travels to the opponent');
+assert.match(css,/#battleArena \.spell-flight\{[\s\S]*?overflow:hidden;pointer-events:none/,'visual effects are clipped to the arena');
+for(const attr of ['flame','bolt','aqua','storm','gravity','law','chaos']){
+ for(const layer of ['element-flare','element-trail']){
+  assert.ok(css.includes('spell-projectile[data-effect="attack"][data-attribute="'+attr+'"] .'+layer),
+   attr+' projectile preserves the distinct '+layer+' visuals');
+  assert.ok(!css.includes('.unit[data-effect="attack"][data-attribute="'+attr+'"] .'+layer),
+   attr+' effect is no longer fixed to the caster card');
+ }
+}
+assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\s*#battleArena \.spell-projectile/,'reduced motion disables flight');
+for(const selector of ['.hero-edition,.eyebrow,.chapter,.subheading>span',
+ '.stat-cell small','.relic-detail,.relic-name','.list-controls label']){
+ assert.ok(css.includes(selector),'readability overrides for '+selector);
+}
+assert.match(css,/\.tabs button\{font-size:14px;min-height:68px/,'mobile navigation labels are readable');
+assert.match(css,/\.circle-card-mp,\.circle-card-power\{white-space:normal/,'narrow spell stats can wrap instead of shrinking');
 console.log('PASS camera circle guide, layer progression, 3-column items, readable story, terminology and fantasy layout');
