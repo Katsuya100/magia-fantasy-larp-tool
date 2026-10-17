@@ -40,7 +40,7 @@ export function fakeDungeonBrowser(config={}){
  };
  const arena=document.getElementById('battleArena');arena.dataset={role:'idle',side:'none',attribute:'law'};
  const stage=document.getElementById('battleCeremony');stage.hidden=true;stage.dataset.event='idle';
- for(const id of ['heroCombatant','enemyCombatant'])document.getElementById(id).dataset={effect:'idle',attribute:'law',hit:'false'};
+ for(const id of ['heroCombatant','enemyCombatant'])document.getElementById(id).dataset={effect:'idle',attribute:'law',hit:'false',defeated:'false'};
  const iframe=document.getElementById('analyzerFrame');iframe.contentDocument=analyzer;
  const captureFrame=document.getElementById('captureAnalyzerFrame');captureFrame.contentDocument=analyzer;
  let frameSource='';
