@@ -1341,5 +1341,5 @@ html,body{overflow-x:clip}
 .adventurer-badges{margin:2px 0 0;color:var(--soft);font-size:12px;line-height:1.6}
 .rank-start{display:grid;gap:6px;margin:20px 0 8px;max-width:420px}
 .rank-start label{font-weight:700;color:var(--gold);font-size:14px}
-.rank-start select{max-width:100%;min-height:43px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;color:var(--text);background:#181827}
+.rank-start select{max-width:100%;min-height:43px;padding:8px 12px;box-shadow:inset 0 0 0 1px var(--border);border-radius:6px;color:var(--text);background:#181827}
 .rank-start p{margin:0;color:var(--soft);font-size:12px;line-height:1.5}
