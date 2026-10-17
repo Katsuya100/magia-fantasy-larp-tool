@@ -197,7 +197,7 @@ try{
  prepared=await getProfile(db);
  assert.deepEqual(prepared.slots.slice(0,2),[circles[0].id,circles[1].id],'swap back');
  assert.match($('gearCounter').textContent,/最初の帰還後に解放/);
- const ceremonies=[],chestDrops=[],defeatedDuringLoot=[];
+ const ceremonies=[],chestDrops=[],defeatedDuringLoot=[],cinematicEvents=[];
  const stage=$('battleCeremony');
  let hiddenDuringDefeat=0;
  let stageHidden=stage.hidden;
@@ -206,7 +206,7 @@ try{
   stageHidden=value;
  }});
  stage.dataset=new Proxy(stage.dataset,{set(target,key,value){
-  if(key==='event'&&value!=='idle')ceremonies.push(value);
+  if(key==='event'&&value!=='idle'){ceremonies.push(value);cinematicEvents.push({event:value,tier:target.bossTier});}
   if(key==='event'&&value==='loot'){
    assert.equal(stage.hidden,false,'reward overlay replaces a still-mounted death overlay');
    defeatedDuringLoot.push($('enemyCombatant').dataset.defeated);
@@ -240,6 +240,7 @@ try{
  assert.equal($('heroCombatant').dataset.effect,'idle');
  assert.equal($('enemyCombatant').dataset.effect,'idle');
  assert.ok(ceremonies.includes('encounter'),'battle start has encounter ceremony');
+ assert.deepEqual(cinematicEvents[0],{event:'encounter',tier:'none'},'ordinary encounter never receives boss VFX');
  const combatShake=[];
   const arena=$('battleArena');
   arena.dataset=new Proxy(arena.dataset,{set(target,key,value){if(key==='shake')combatShake.push(value);target[key]=value;return true;}});
@@ -317,6 +318,8 @@ try{
  assert.equal(p.deepestReturnedLayer,0,'boss victory does not count as a return until leaving');
  assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
   assert.ok(p.run.loot.some(item=>item.id==='relic_boss_001'),'boss grants its dedicated legendary');
+ assert.ok(cinematicEvents.some(x=>x.event==='encounter'&&x.tier==='boss'),'fifth encounter plays layer-boss entrance');
+ assert.ok(cinematicEvents.some(x=>x.event==='enemy-death'&&x.tier==='boss'),'fifth encounter plays layer-boss defeat');
  assert.equal($('enemyCombatant').dataset.defeated,'true','layer boss stays vanished during checkpoint');
  assert.equal($('enemyCombatant').dataset.dying,'false','completed death effect can clear its animation without resurrecting the boss');
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
