@@ -12,6 +12,7 @@ import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,r
 import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.8';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.8';
 import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.8';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.8';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.8';
 import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.8';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -26,6 +27,7 @@ const circleImages=createCircleImageUrls();
 let dungeonView='prepare';
 let busyAction=false,playingEffects=false;
 let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null;
+let returnFlow=null,returnAnimationToken=0;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){
  const targets=['pageError','battleError','cameraError'];
@@ -36,7 +38,7 @@ function note(message){
 }
 async function persist(){await saveProfile(db,profile);}
 async function load(){db=await openStore();const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};for(const [key,file] of Object.entries(files)){const res=await fetch('assets/data/'+file);if(!res.ok)throw Error(file+' の取得に失敗');masters[key]=G.parseCsv(await res.text());}configure(masters);G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);profile=await getProfile(db);G.repairInvalidMp(profile.run?.hero);profile.adventurerRank=highestRankLayer(profile);profile.defeatedBosses??={};for(const relic of masters.collections)if(relic.boss_enemy_id&&Number(profile.collection?.[relic.id]||0)>0)profile.defeatedBosses[relic.boss_enemy_id]=true;profile.magicStones=Math.max(0,Number(profile.magicStones)||0);profile.deepestReturnedLayer=deepestReturnedLayer(profile);circles=newestCirclesFirst(await allCircles(db));slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));ensureItemInstances(profile);if(!profile.run)profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=profile.run?prepareItems([],profile.inventory.length,G.capacity(profile.level)):restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();wire();render();if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}show(profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');if(!profile.name)openNameDialog(true);}
-const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result']);
+const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result','returnShowcase']);
 function rememberCameraScroll(){
  cameraReturnScroll=typeof window.scrollY==='number'?window.scrollY:(window.pageYOffset||0);
 }
@@ -49,7 +51,7 @@ function returnToCameraScroll(){
  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(restore));
  else restore();
 }
-const sceneIds=['home','library','prepare','collection','battle','checkpoint','analyzing','result'];
+const sceneIds=['home','library','prepare','collection','battle','checkpoint','analyzing','result','returnShowcase'];
 let activeScene='prepare',sceneFadeTimer=null;
 function resolvedView(name){
  const exploring=Boolean(profile?.run);
@@ -68,7 +70,7 @@ function applyView(name,retained=null){
  const selected=exploring?(dungeonScenes.has(name)?'dungeon':name):(
   name==='library'||name==='analyzing'&&activeAnalysis?.type==='capture'?'library':
   name==='collection'?'collection':
-  name==='home'?'home':'prepare'
+  name==='home'||name==='returnShowcase'?'home':'prepare'
  );
  for(const tab of ['prepare','library','dungeon','collection','home']){
   const b=$('tab-'+tab);
@@ -95,7 +97,7 @@ function show(requested){
  const reduced=typeof window.matchMedia!=='function'||window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  // Never overlap the tall battle and compact checkpoint/result in one grid
  // track: hiding the tall scene later would suddenly change viewport height.
- const terminalSwap=['checkpoint','result'].includes(name)||['checkpoint','result'].includes(before);
+ const terminalSwap=['checkpoint','result','returnShowcase'].includes(name)||['checkpoint','result','returnShowcase'].includes(before);
  if(terminalSwap&&before==='battle'&&before!==name)scrollToDungeonTabs();
  if(!before||before===name||reduced||terminalSwap||!sceneIds.includes(name)){
   applyView(name);
@@ -385,7 +387,7 @@ async function claimBonus(choice){
   const row=bonusConsumable(masters.items,layer);
   const item={type:'use',id:row.id,value:G.rollPotionValue(row,layer),bonus:row.bonus_buff_id&&Math.random()<Number(row.bonus_chance)?row.bonus_buff_id:null};
   const free=run.carry.findIndex(x=>!x);
-  if(free>=0)run.carry[free]=item;else run.loot.push(item);
+  if(free>=0)run.carry[free]={...item,returnBonus:true};else run.loot.push(item);
  }else return;
  run.bonusClaimed=true;await persist();renderCheckpoint();renderRun();show('checkpoint');
 }
@@ -442,13 +444,127 @@ async function useItem(index){
   await persist();renderRun();
  }catch(e){note(e.message);}
 }
-async function leave(mode='checkpoint'){const run=profile.run;if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;let potions=0,collection=0,stones=0,rankReward=null;profile.inventory.push(...run.carry.filter(Boolean));for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else if(item.type==='stone'){profile.magicStones++;stones++;}else if(item.type==='collection'){profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}else if(item.type==='rank'&&acquireAdventurerRank(profile,item.layer)){rankReward=rankBadgeName(item.layer);}}const before=profile.level;G.experience(profile,run.xp);recordReturnedLayer(profile,mode==='escape'?Math.floor((run.floor-1)/FIGHTS_PER_LAYER)*FIGHTS_PER_LAYER:run.floor);profile.returns++;profile.run=null;selectedStartLayer=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent=mode==='escape'?'脱出成功！':'無事帰還！';narrativeLines('resultText',[
-  ...(mode==='escape'?['脱出の巻物で経験値と戦利品を持ち帰った。']:[]),
- '消耗品 '+potions+'個・収集品 '+collection+'個・魔導石 '+stones+'個・経験値 '+run.xp+'を獲得。',
- 'Lv.'+before+' → Lv.'+profile.level+'。',
- ...(rankReward?[rankReward+'を獲得！ 次回以降の開始階層が解放。']:[]),
- '次回の携行品上限 '+G.capacity(profile.level)+'個。'
-]);show('result');}
+function paintReturnXp(elapsed){
+ if(!returnFlow)return;
+ const frame=returnXpFrame(returnFlow.before,returnFlow.gained,elapsed,G.nextXp,num('level_max'));
+ const label=$('returnLevel'),next='Lv.'+frame.level;
+ if(label.textContent!==next){
+  const levelUp=label.textContent!==''&&frame.level>Number(label.textContent.replace('Lv.',''));
+  label.textContent=next;
+  label.className='return-xp-level';
+  if(levelUp){void label.offsetWidth;label.className='return-xp-level return-xp-level-up';}
+ }
+ $('returnXpFill').setAttribute('style','width:'+frame.percent+'%');
+ $('returnXpTrack').setAttribute('aria-valuenow',String(Math.round(frame.percent)));
+}
+function renderReturnStep(){
+ if(!returnFlow)return;
+ ++returnAnimationToken;
+ const kind=returnFlow.steps[returnFlow.step];
+ $('returnCollections').hidden=kind!=='collections';
+ $('returnRewards').hidden=kind!=='rewards';
+ $('returnExperience').hidden=kind!=='xp';
+ $('returnSceneTitle').textContent={collections:'コレクション',rewards:'報酬',xp:'EXP'}[kind];
+ $('returnNext').textContent=returnFlow.step===returnFlow.steps.length-1?'完了':'次へ';
+ $('returnNext').disabled=false;
+ if(kind==='collections'){
+  $('returnCollections').innerHTML=returnFlow.collections.map(({id,count},i)=>{
+   const index=masters.collections.findIndex(row=>row.id===id),row=masters.collections[index];
+   if(!row)return '';
+   return '<article class="return-treasure" data-rarity="'+esc(row.rarity)+'" style="--reveal-delay:'+(Math.min(i,12)*.07)+'s">'
+    +'<div class="return-treasure-art" aria-hidden="true">'+relicSymbolSvg(index,true)+'</div>'
+    +'<strong>'+esc(row.name)+'</strong>'+(count>1?'<span>×'+count+'</span>':'')+'</article>';
+  }).join('');
+ }else if(kind==='rewards'){
+  $('returnRewards').innerHTML=returnFlow.rewards.map((reward,i)=>{
+   let symbol,name,count=reward.count;
+   if(reward.type==='use'){symbol=itemSymbol(reward.item);name=itemName(reward.item);}
+   else if(reward.type==='stone'){symbol='✦';name='魔導石';}
+   else{symbol='✧';name=reward.name;}
+   return '<article class="return-reward" style="--reveal-delay:'+(Math.min(i,12)*.07)+'s">'
+    +'<span class="return-reward-symbol" aria-hidden="true">'+symbol+'</span>'
+    +'<strong>'+esc(name)+'</strong>'+(count>1?'<span>×'+count+'</span>':'')+'</article>';
+  }).join('');
+ }else{
+  $('returnLevel').textContent='';
+  $('returnXpGain').textContent='+'+returnFlow.gained+' EXP';
+  paintReturnXp(0);
+  const reduced=typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced||typeof requestAnimationFrame!=='function'){
+   paintReturnXp(RETURN_XP_DURATION_MS);
+   return;
+  }
+  $('returnNext').disabled=true;
+  const token=returnAnimationToken;
+  let started=null;
+  const tick=timestamp=>{
+   if(token!==returnAnimationToken||!returnFlow||activeScene!=='returnShowcase')return;
+   if(started===null)started=timestamp;
+   const elapsed=Math.min(RETURN_XP_DURATION_MS,Math.max(0,timestamp-started));
+   paintReturnXp(elapsed);
+   if(elapsed<RETURN_XP_DURATION_MS)requestAnimationFrame(tick);
+   else $('returnNext').disabled=false;
+  };
+  requestAnimationFrame(tick);
+ }
+}
+function advanceReturnStep(){
+ if(!returnFlow||$('returnNext').disabled)return;
+ if(++returnFlow.step<returnFlow.steps.length){renderReturnStep();return;}
+ ++returnAnimationToken;
+ returnFlow=null;
+ show('home');
+}
+async function leave(mode='checkpoint'){
+ const run=profile.run;
+ if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;
+ const found=new Map(),items=new Map(),badges=[];
+ let stones=0;
+ const registerItem=item=>{
+  const key=JSON.stringify([item.id,item.value,item.bonus]);
+  const existing=items.get(key);
+  if(existing)existing.count++;
+  else items.set(key,{type:'use',item,count:1});
+ };
+ // A checkpoint bonus enters the carry slots directly, not the loot ledger.
+ for(const item of run.carry.filter(item=>item?.returnBonus))registerItem(item);
+ profile.inventory.push(...run.carry.filter(Boolean).map(item=>{
+  if(!item.returnBonus)return item;
+  const {returnBonus,...saved}=item;
+  return saved;
+ }));
+ for(const item of run.loot){
+  if(item.type==='use'){
+   profile.inventory.push(item);
+   registerItem(item);
+  }else if(item.type==='stone'){
+   profile.magicStones++;
+   stones++;
+  }else if(item.type==='collection'){
+   profile.collection[item.id]=(profile.collection[item.id]||0)+1;
+   found.set(item.id,(found.get(item.id)||0)+1);
+  }else if(item.type==='rank'&&acquireAdventurerRank(profile,item.layer)){
+   badges.push({type:'rank',name:rankBadgeName(item.layer),count:1});
+  }
+ }
+ const before={level:profile.level,xp:profile.xp};
+ G.experience(profile,run.xp);
+ recordReturnedLayer(profile,mode==='escape'?Math.floor((run.floor-1)/FIGHTS_PER_LAYER)*FIGHTS_PER_LAYER:run.floor);
+ profile.returns++;
+ profile.run=null;
+ selectedStartLayer=null;
+ ensureItemInstances(profile);
+ profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
+ carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
+ await persist();
+ render();
+ const rewards=[...items.values(),...(stones?[{type:'stone',count:stones}]:[]),...badges];
+ const steps=[...(found.size?['collections']:[]),...(rewards.length?['rewards']:[]),...(run.xp>0?['xp']:[])];
+ if(!steps.length){show('home');return;}
+ returnFlow={steps,step:0,collections:[...found].map(([id,count])=>({id,count})),rewards,before,gained:run.xp};
+ renderReturnStep();
+ show('returnShowcase');
+}
 async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
 async function parseCircleImage(circle,frame,valid,request=null){
  return new Promise((resolve,reject)=>{
@@ -762,7 +878,8 @@ function wire(){
  if(b.dataset.view){
   if(activeAnalysis?.type==='capture'){const request=activeAnalysis;activeAnalysis=null;photoAnalysisEpoch++;request.cancel?.();}
   cameraReturnScroll=null;
-  stopCamera();show(b.dataset.view);return;
+  if(returnFlow){returnFlow=null;++returnAnimationToken;}
+   stopCamera();show(b.dataset.view);return;
  }
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
  if(b.dataset.action==='delete-data'){openDeleteDataDialog();return;}
@@ -802,6 +919,7 @@ function wire(){
  $('loadoutDialog').addEventListener('close',()=>{picker=null;});
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
+  $('returnNext').addEventListener('click',advanceReturnStep);
  for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)));
  $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
  $('cancelAnalyze').addEventListener('click',()=>{

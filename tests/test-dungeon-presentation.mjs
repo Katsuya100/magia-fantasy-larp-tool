@@ -236,7 +236,7 @@ assert.match(css,/#battleArena\[data-shake="true"\] \.versus/,'attack camera jol
 assert.doesNotMatch(css,/#battle\.battle-panel\[data-shake="true"\]/,'whole battle panel must never shake');
 assert.match(app,/\$\('battleArena'\)\.dataset\.shake/,'combat shake JS only targets arena');
 assert.doesNotMatch(app,/\$\('battle'\)\.dataset\.shake/,'battle scene is never transformed by attack shake');
-assert.match(app,/const terminalSwap=\['checkpoint','result'\]\.includes\(name\)/,'short end scenes do not crossfade against the tall battle panel');
+assert.ok(app.includes("const terminalSwap=['checkpoint','result','returnShowcase'].includes(name)"),'short end scenes do not crossfade against the tall battle panel');
 assert.match(css,/@keyframes terminal-fade-in\{from\{opacity:0\}to\{opacity:1\}\}/,'end screens fade opacity only');
 const deathOverlayFrames=css.match(/@keyframes ceremony-arrive\{([^\n]+)\}/)?.[1]||'';
 assert.ok(deathOverlayFrames&&!deathOverlayFrames.includes('transform:'),'fatal overlay must not shrink or enlarge during transition');

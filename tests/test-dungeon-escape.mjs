@@ -53,9 +53,18 @@ try{
  assert.deepEqual(saved.inventory.map(x=>x.id).sort(),['heal_s','mana_s'],'unused supplies and acquired consumables return, scroll is spent');
  assert.equal(saved.magicStones,1,'undelivered magic stone is banked');
  assert.equal(saved.collection.relic_boss_001,1,'undelivered relic is banked');
- assert.equal($('result').hidden,false,'escape displays the return result');
- assert.match($('resultTitle').textContent,/脱出成功/);
- assert.match($('resultText').textContent,/経験値/);
+ assert.equal($('returnShowcase').hidden,false,'escape displays earned loot');
+ assert.equal($('result').hidden,true,'escape no longer uses the old result');
+ assert.equal($('returnSceneTitle').textContent,'コレクション');
+ assert.match($('returnCollections').innerHTML,/赤角鬼王の霊石/);
+ await $('returnNext').fire('click');
+ assert.equal($('returnSceneTitle').textContent,'報酬');
+ assert.match($('returnRewards').innerHTML,/魔導石/);
+ await $('returnNext').fire('click');
+ assert.equal($('returnSceneTitle').textContent,'EXP');
+ assert.equal($('returnLevel').textContent,'Lv.2');
+ await $('returnNext').fire('click');
+ assert.equal($('home').hidden,false);
  assert.equal($('tab-dungeon').hidden,true);
  console.log('PASS escape scroll ends battle, preserves pending XP and all loot, consumes scroll and records completed depth');
 }finally{

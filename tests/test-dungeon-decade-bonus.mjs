@@ -18,7 +18,7 @@ for(const layer of [10,20,30,50,80,100,110]){
 assert.deepEqual(rarityWeights(20),rarityWeights(20));
 const app=readFileSync('assets/js/dungeon-app.mjs','utf8');
 const html=readFileSync('dungeon.html','utf8');
-assert.match(app,/run\.carry\[free\]=item/);
+assert.match(app,/run\.carry\[free\]=\{\.\.\.item,returnBonus:true\}/,'checkpoint item is tagged as a new reward');
 assert.match(app,/run\.bonusClaimed=true/);
 assert.match(app,/run\.bonusClaimed=false/);
 for(const choice of ['restore','collection','item'])assert.ok(html.includes('data-bonus="'+choice+'"'));
