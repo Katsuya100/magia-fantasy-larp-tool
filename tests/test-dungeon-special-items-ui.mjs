@@ -106,16 +106,21 @@ try{
  try{
   await import('../assets/js/dungeon-app.mjs?integration=special-ruby-battle');
   await wait(()=>$3('battleItems').innerHTML.includes('生命の紅石'),'life ruby ready');
+   assert.equal($3('heroName').textContent,'生命の紅石確認','wing is absent before arming the ruby');
   await doc3.click(btn({use:'0'}));
   let after=await getProfile(db3);
   assert.equal(after.run.hero.reviveArmed,true,'ruby is armed');
   assert.equal(after.run.carry[0],null);
   assert.match($3('battleInfo').textContent,/復活待機中/);
+   assert.equal($3('heroName').textContent,'生命の紅石確認 🪽','armed life ruby adds a wing next to the adventurer name');
+   assert.equal($3('heroName').attributes['aria-label'],'生命の紅石確認・生命の紅石：復活待機中');
   await doc3.click(btn({cast:'-1'}));
   after=await getProfile(db3);
   assert.ok(after.run,'ruby prevents losing the expedition at first lethal hit');
   assert.equal(after.run.hero.reviveUsed,true);
   assert.equal(after.run.hero.reviveArmed,false);
+   assert.equal($3('heroName').textContent,'生命の紅石確認','wing disappears after revival');
+   assert.equal($3('heroName').attributes['aria-label'],undefined,'no stale aria announcement');
   assert.ok(after.run.hero.hp>0);
   assert.match(after.run.log.join(' '),/生命の紅石：復活/);
   await doc3.click(btn({use:'1'}));
