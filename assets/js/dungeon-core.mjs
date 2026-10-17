@@ -13,7 +13,7 @@ const growthKeys=['hp','mag','def','res'];
 export const startingBase=(r=Math.random)=>Object.fromEntries(growthKeys.map(k=>[k,roll(...range(k),r)]));
 export function stats(base,level){const record=levelRow(level);return Object.fromEntries(growthKeys.map(k=>[k,Math.round(base[k]*Number(record[k+'_multiplier']))]));}
 export function makeUnit(base,level,resists={},spells=[],id='unit'){
- const s=stats(base,level);return {id,level,base,stats:s,hp:s.hp,maxMp:num('mp_base')+num('mp_per_mag')*s.mag,mp:num('mp_base')+num('mp_per_mag')*s.mag,spells:spells.map(x=>x?({...x}):null),cooldowns:spells.map(()=>0),statuses:[],resists:Object.fromEntries(ATTRS.map(a=>[a,Number(resists[a]??num('base_resistance'))]))};
+ const s=stats(base,level);return {id,level,base,stats:s,hp:s.hp,maxMp:num('mp_base')+num('mp_per_mag')*s.mag,mp:num('mp_base')+num('mp_per_mag')*s.mag,spells:spells.map(x=>x?({...x}):null),cooldowns:spells.map(()=>0),statuses:[],reviveArmed:false,reviveUsed:false,resists:Object.fromEntries(ATTRS.map(a=>[a,Number(resists[a]??num('base_resistance'))]))};
 }
 export function parseCsv(input){
  const records=[];let row=[],cell='',quoted=false;
@@ -34,7 +34,8 @@ export function weighted(rows,r=Math.random){let sum=rows.reduce((n,x)=>n+Number
 // 75% is guaranteed even for the highest possible starting HP/MAG roll.
 // Store the rolled value on each item so old inventory and later use remain stable.
 export function rollPotionValue(item,layer,r=Math.random){
- if(item.kind==='clear'||item.kind==='escape')return 0;
+ if(['clear','escape','revive'].includes(item.kind))return 0;
+ if(item.kind==='elixir')return Number(item.min_value);
  if(item.kind!=='heal'&&item.kind!=='mana')throw Error('Unknown potion kind');
  const recommended=level(targetClearLevel(layer));
  const maximum=item.kind==='heal'
@@ -77,11 +78,27 @@ export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debu
 export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=mpCost(s.power)&&!u.cooldowns[i]&&!u.statuses.some(x=>x.effect==='seal'&&x.sealedRole===s.role));}
 export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
 export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=mpCost(sp.power);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
-export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.id);if(!row)throw Error('Unknown potion');let amount=0;if(row.kind==='heal'){amount=Math.min(u.stats.hp-u.hp,item.value);u.hp+=amount;}else if(row.kind==='mana'){amount=Math.min(u.maxMp-u.mp,item.value);u.mp+=amount;}else if(row.kind==='clear')u.statuses=u.statuses.filter(s=>s.kind!=='debuff'||s.attribute!==row.attribute);else throw Error('Potion kind');if(item.bonus){const b=buffs.find(x=>x.id===item.bonus);if(b)addStatus(u,{id:b.id,kind:'buff',attribute:row.attribute||'law',effect:b.effect,value:Number(b.value),turns:Number(b.duration)||2});}return amount;}
+export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.id);if(!row)throw Error('Unknown potion');let amount=0;if(row.kind==='heal'){amount=Math.min(u.stats.hp-u.hp,item.value);u.hp+=amount;}else if(row.kind==='mana'){amount=Math.min(u.maxMp-u.mp,item.value);u.mp+=amount;}else if(row.kind==='elixir'){
+ const rate=clamp(Number(item.value||0)/100,0,1);
+ const hp=Math.max(0,Math.min(u.stats.hp-u.hp,Math.ceil(u.stats.hp*rate)));
+ const mp=Math.max(0,Math.min(u.maxMp-u.mp,Math.ceil(u.maxMp*rate)));
+ u.hp+=hp;u.mp+=mp;amount=hp+mp;
+ }else if(row.kind==='clear')u.statuses=u.statuses.filter(s=>s.kind!=='debuff'||s.attribute!==row.attribute);
+ else if(row.kind==='revive'){
+  if(u.reviveArmed||u.reviveUsed||u.hp<=0)throw Error('生命の紅石はこの戦闘ですでに使用済みです');
+  u.reviveArmed=true;
+ }else throw Error('Potion kind');if(item.bonus){const b=buffs.find(x=>x.id===item.bonus);if(b)addStatus(u,{id:b.id,kind:'buff',attribute:row.attribute||'law',effect:b.effect,value:Number(b.value),turns:Number(b.duration)||2});}return amount;}
 export function cast(src,tgt,spell,buffs,r=Math.random){const a=spell.attribute,B=effectivePower(src,spell),q=strength(src,spell);if(!ATTRS.includes(a)||!ROLES.includes(spell.role))throw Error('Bad magic');if(spell.role==='attack'){const d=damage(src,tgt,spell,r);tgt.hp=Math.max(0,tgt.hp-d);return 'ダメージ '+d;}
  if(spell.role==='support'){const heal=Math.max(0,Math.min(src.stats.hp-src.hp,Math.round(B*factor(src,'heal')*factor(src,'output'))));src.hp+=heal;src.statuses=src.statuses.filter(x=>x.kind!=='debuff'||x.attribute!==a);return 'HP '+heal+'回復・'+a+'解除';}
  if(spell.role==='defense'){addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(num('defense_resistance_gain')*q,0,num('defense_resistance_cap')),turns:num('resistance_buff_duration')});const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:Number(row.duration)});return a+'耐性と強化';}
  const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);if(row){const law=status(tgt,'buff_law');const protection=law?Math.max(0,1-law.value):1;const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:clamp(Math.round(Number(row.duration)*power),num('debuff_min_duration'),num('debuff_max_duration')),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});}return a+'弱体付与';}
+// One fatal hit can trigger an armed life ruby; it cannot trigger again this fight.
+export function reviveOnFatal(unit){
+ if(unit.hp>0||!unit.reviveArmed||unit.reviveUsed)return 0;
+ unit.reviveArmed=false;unit.reviveUsed=true;
+ unit.hp=Math.max(1,Math.ceil(unit.stats.hp*.5));
+ return unit.hp;
+}
 // Optional onStep is a read-only timeline of resolved actions; combat rules are unchanged.
 export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onStep){
  const ps=prepare(player,pickPlayer,r),es=prepare(enemy,pickEnemy,r);
@@ -103,7 +120,13 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
    }else message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
    log.push(message);
    const amount=role==='support'?a.u.hp-oldHp:oldHp-a.t.hp;
+   const revived=reviveOnFatal(a.t);
    publish(a,role,a.sp.attribute,message,amount);
+   if(revived){
+    const revival='生命の紅石：復活！ HP '+revived;
+    log.push(revival);
+    publish({side:a.side==='hero'?'enemy':'hero'},'revive','law',revival,revived);
+   }
   }
  }
  for(const a of actions){
@@ -112,9 +135,16 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
     const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*num('burn_hp_rate')*s.value));
     const oldHp=a.u.hp;
     a.u.hp=Math.max(0,a.u.hp-d);
+    const amount=oldHp-a.u.hp;
+    const revived=reviveOnFatal(a.u);
     const message=a.name+'：火傷 '+d;
     log.push(message);
-    publish(a,'burn',s.attribute,message,oldHp-a.u.hp);
+    publish(a,'burn',s.attribute,message,amount);
+    if(revived){
+     const revival='生命の紅石：復活！ HP '+revived;
+     log.push(revival);
+     publish(a,'revive','law',revival,revived);
+    }
    }
    s.turns--;
   }
@@ -141,8 +171,10 @@ export function fromEnemy(row,level){
  const b={hp:Math.max(1,Math.round(+row.hp*scale.hp)),mag:Math.max(1,Math.round(+row.mag*scale.mag)),def:+row.def,res:+row.res};const resists=Object.fromEntries(ATTRS.map(a=>[a,+row['resist_'+a]]));const spells=row.spells.split('|').map(s=>{const [role,attribute,power]=s.split(':');return {role,attribute,power:+power};});return makeUnit(b,level,resists,spells,row.id);}
 export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items){
   if(+i.min_value>+i.max_value||!(Number(i.weight)>0))throw Error('Bad item roll');
-  if(i.kind==='clear'||i.kind==='escape'){
-   if(+i.min_layer<20||i.tier)throw Error('Premature special consumable '+i.id);
+  if(['clear','escape','revive'].includes(i.kind)){
+   if(+i.min_layer<(i.kind==='revive'?50:20)||i.tier||+i.min_value||+i.max_value)throw Error('Invalid special consumable '+i.id);
+  }else if(i.kind==='elixir'){
+   if(!({small:30,medium:55,large:80}[i.tier]===Number(i.min_layer))||i.min_value!==i.max_value||!({small:35,medium:65,large:100}[i.tier]===Number(i.min_value)))throw Error('Invalid elixir '+i.id);
   }else if(!['heal','mana'].includes(i.kind)||!CONSUMABLE_TIERS.includes(i.tier)||+i.min_layer!==1){
    throw Error('Bad consumable tier '+i.id);
   }

@@ -1,18 +1,18 @@
-import * as G from './dungeon-core.mjs?v=20261018.3';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.3';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.3';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.3';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.3';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.3';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.3';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.3';
+import * as G from './dungeon-core.mjs?v=20261018.4';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.4';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.4';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.4';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.4';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.4';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.4';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.4';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.3';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.3';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.3';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.3';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.3';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.3';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.4';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.4';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.4';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.4';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.4';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.4';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=1;
 const listView={
@@ -20,6 +20,7 @@ const listView={
  collectionDiscovery:'all',collectionRarity:'all',collectionSort:'default',
  pickerFilter:'all',pickerSort:'newest'
 };
+const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'default'}};
 const circleImages=createCircleImageUrls();
 let dungeonView='prepare';
 let busyAction=false,playingEffects=false;
@@ -221,7 +222,7 @@ function renderRun(){
    +'<span class="tile-title">'+esc(itemName(item))+'</span>'
    +'<span class="tile-detail">'+itemEffectText(item)+(item.bonus?' ✦':'')+'</span></button>';
  }).join('');
- $('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム '+(run.usedItems||0)+'/'+num('item_per_round');
+ $('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム '+(run.usedItems||0)+'/'+num('item_per_round')+(hero.reviveArmed?' / 🔴生命の紅石：復活待機中':hero.reviveUsed?' / 🔴生命の紅石：発動済み':'');
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');
 }
 function clearCombatEffects(){
@@ -341,6 +342,7 @@ function createEnemy(fight){
  return {unit:G.fromEnemy(row,level),name:row.name};
 }
 function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor);
+ run.hero.reviveArmed=false;run.hero.reviveUsed=false;
  // Keep the previous defeated opponent hidden while the next opponent is prepared.
  // The encounter ceremony reveals the replacement after renderRun().
  run.enemy=unit;run.enemyName=name;run.usedItems=0;run.stage='battle';run.log.push(encounterLabel(run.floor)+(isLayerBoss(run.floor)?'・階層ボス':'')+'：'+name+'が現れた');}
@@ -415,9 +417,12 @@ async function useItem(index){
    await leave('escape');
    return;
   }
+  if(row?.kind==='revive'&&(run.hero.reviveArmed||run.hero.reviveUsed)){
+   note('生命の紅石はこの戦闘ですでに使用済みです');return;
+  }
   const n=G.potion(run.hero,item,masters.items,masters.buffs);
   run.carry[index]=null;
-  run.log.push(itemName(item)+'を使用 '+(n?'('+n+')':''));
+  run.log.push(itemName(item)+(row?.kind==='revive'?'を使用・復活待機中':'を使用 '+(n?'('+n+')':'')));
   run.usedItems=(run.usedItems||0)+1;
   const snapshot=u=>({...u,statuses:u.statuses.map(s=>({...s})),cooldowns:[...u.cooldowns]});
   const step=(role,amount)=>({role,side:'hero',attribute:row?.attribute||'law',amount,hero:snapshot(run.hero),enemy:snapshot(run.enemy)});
@@ -623,14 +628,14 @@ async function confirmCircleAction(){
 function renderLoadoutChoices(){
  if(!picker)return;
  if(picker.kind==='circle'){
-  const filter=listView.pickerFilter;
+  const filter=pickerView.circle.filter;
   const role=['attack','defense','support','debuff'].includes(filter)?filter:'all';
   const attribute=G.ATTRS.includes(filter)?filter:'all';
-  const indexes=circleListIndexes(circles,{role,attribute,sort:listView.pickerSort});
+  const indexes=circleListIndexes(circles,{role,attribute,sort:pickerView.circle.sort});
   $('loadoutOptions').innerHTML=indexes.length?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost,indexes,picker.index)
    :'<p class="collection-empty">条件に合う魔法陣はありません。</p>';
  }else{
-  const indexes=itemListIndexes(profile.inventory,masters.items,{kind:listView.pickerFilter,sort:listView.pickerSort});
+  const indexes=itemListIndexes(profile.inventory,masters.items,{kind:pickerView.item.filter,sort:pickerView.item.sort});
   $('loadoutOptions').innerHTML=indexes.length?itemChoices(profile.inventory,carry,itemName,esc,indexes,picker.index)
    :'<p class="collection-empty">条件に合うアイテムはありません。</p>';
  }
@@ -648,15 +653,14 @@ function openLoadoutPicker(kind,index){
  const filters=kind==='circle'
   ?[['all','すべて'],['attack','⚔️攻撃'],['defense','🛡️防御'],['support','✚回復'],['debuff','🕸️弱体'],
     ['flame','🔥炎'],['bolt','⚡雷'],['aqua','💧水'],['storm','🌪️風'],['gravity','🪨重力'],['law','⚖️秩序'],['chaos','🌀混沌']]
-  :[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['clear','状態異常解除'],['escape','脱出']];
+  :[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['elixir','HP/MP回復'],['clear','状態異常解除'],['escape','脱出'],['revive','復活']];
  const sorts=kind==='circle'
   ?[['newest','登録が新しい順'],['oldest','登録が古い順'],['role','役割順'],['attribute','属性順'],['power','判明済みの威力順']]
-  :[['default','所持品の順番'],['name','名前順'],['kind','種類順'],['value','効果量が大きい順']];
+  :[['default','所持品の順番'],['name','名前順'],['kind','種類順'],['value','効果量が大きい順'],['value-asc','効果量が低い順']];
  $('pickerFilter').innerHTML=filters.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
  $('pickerSort').innerHTML=sorts.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
- listView.pickerFilter='all';listView.pickerSort=kind==='circle'?'newest':'default';
- $('pickerFilter').value=listView.pickerFilter;
- $('pickerSort').value=listView.pickerSort;
+ $('pickerFilter').value=pickerView[kind].filter;
+ $('pickerSort').value=pickerView[kind].sort;
  renderLoadoutChoices();
  $('clearLoadoutSlot').hidden=kind==='circle'?slots[index]===null:carry[index]===null;
  $('openGrimoireFromPicker').hidden=kind!=='circle';
@@ -740,7 +744,7 @@ function wire(){
  }
  $('startLayer').addEventListener('change',()=>{selectedStartLayer=allowedStartLayer(profile,$('startLayer').value);$('startLayer').value=String(selectedStartLayer);});
  for(const [id,key] of [['pickerFilter','pickerFilter'],['pickerSort','pickerSort']]){
-  $(id).addEventListener('change',()=>{listView[key]=$(id).value||'all';renderLoadoutChoices();});
+  $(id).addEventListener('change',()=>{if(!picker)return;pickerView[picker.kind][key==='pickerFilter'?'filter':'sort']=$(id).value;renderLoadoutChoices();});
  }
  document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
  if(b.dataset.view){
