@@ -35,13 +35,14 @@ try{
   assert.ok(saved.run.loot.some(item=>item.type==='rank'&&item.layer===10),'badge appears as a loot drop');
   assert.match($('checkpointInfo').textContent,/鉛級冒険者章を発見/);
   assert.ok(!saved.run.loot.some(item=>item.type==='collection'&&item.id?.includes('adventurer')),'badge is not a collectible');
+  const expectedCollections=saved.run.loot.filter(item=>item.type==='collection').length;
   await $('bonus-restore').fire('click');
   await $('returnHome').fire('click');
   saved=await getProfile(db);
   assert.equal(saved.adventurerRank,10,'rank is saved on successful return');
   assert.equal(saved.run,null);
   assert.equal(Object.values(saved.collection).reduce((n,x)=>n+x,0),
-   saved.collection&&Object.values(saved.collection).reduce((n,x)=>n+x,0),'collection remains the ordinary loot ledger');
+   expectedCollections,'rank badge never appears in the collection ledger');
   assert.ok(!saved.inventory.some(item=>item.type==='rank'),'badge is not an inventory item');
   assert.match($('resultText').textContent,/鉛級冒険者章を獲得/);
   await doc.click(btn({view:'home'}));
