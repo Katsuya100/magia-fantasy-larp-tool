@@ -129,7 +129,7 @@ const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.11','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.14','stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
@@ -182,6 +182,17 @@ for(const [key,label] of [['attack','⚔️攻撃'],['defense','🛡️防御'],
  assert.ok(knowledge.includes(key+":'"+label+"'"),'role icon displayed for '+key);
  assert.ok(fx.includes(key+":'"+label+"'"),'combat effect uses icon for '+key);
 }
-assert.match(app,/🕸️弱体：/);
+assert.doesNotMatch(page,/id="attributeEffects"/,'remove global attribute effect legend');
+assert.doesNotMatch(page,/7属性の強化・🕸️弱体効果/,'effect names belong to their individual circles');
+assert.match(app,/circleEffectBadges\(c,masters\.buffs,esc,G\.mpCost\)/);
+assert.match(app,/circleEffectDetails\(circle,masters\.buffs\)/);
+assert.match(app,/\['追加効果の詳細',info\.statusDescription\]/);
+assert.match(css,/\.circle-card-info\{[^}]*display:flex/);
+assert.match(css,/\.circle-card-stats\{[^}]*font-size:/);
+const thumbnails=await read('assets/js/dungeon-preparation-ui.mjs');
+assert.match(thumbnails,/class="circle-card-symbols"/);
+assert.match(thumbnails,/class="circle-card-status"/);
+assert.match(thumbnails,/MP:'\+escapeText\(d\.mp\)\+' \/ 威力:/);
+assert.doesNotMatch(thumbnails,/効果を大きく見る|効果を拡大/);
 assert.match(css,/\.magic-details-stats\{[^}]*font-size:/);
 console.log('PASS chapter I-II-III-IV, icon roles, preanalysis, magic details and fantasy layout');
