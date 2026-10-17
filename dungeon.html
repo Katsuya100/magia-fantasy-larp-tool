@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.7">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.8">
 </head>
 <body>
   <div class="ambient-stars" aria-hidden="true"></div>
@@ -200,7 +200,19 @@
 
     <section id="result" class="panel result-panel" hidden>
       <p class="chapter">EXPEDITION RECORD</p><div class="result-seal" aria-hidden="true">✧</div>
-      <h2 id="resultTitle"></h2><div id="resultText"></div><button type="button" data-view="home">プロフィールへ戻る</button>
+      <h2 id="resultTitle"></h2><div id="resultText"></div><button type="button" data-view="home">戻る</button>
+    </section>
+    <section id="returnShowcase" class="panel return-panel" hidden>
+      <div class="return-glyph" aria-hidden="true">✦</div>
+      <h2 id="returnSceneTitle"></h2>
+      <div id="returnCollections" class="return-grid" role="list" aria-label="獲得コレクション" hidden></div>
+      <div id="returnRewards" class="return-grid" role="list" aria-label="獲得報酬" hidden></div>
+      <div id="returnExperience" class="return-experience" hidden>
+        <strong id="returnLevel" class="return-xp-level"></strong>
+        <div id="returnXpTrack" class="return-xp-track" role="progressbar" aria-label="経験値" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="returnXpFill" class="return-xp-fill"></div></div>
+        <strong id="returnXpGain" class="return-xp-gain"></strong>
+      </div>
+      <button type="button" id="returnNext" class="return-next">次へ</button>
     </section>
     </div>
 
@@ -244,6 +256,6 @@
     </dialog>
     <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.2</span></footer>
   </main>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.7"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.8"></script>
 </body>
 </html>
