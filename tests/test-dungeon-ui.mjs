@@ -114,8 +114,17 @@ try{
  assert.equal($('analyzing').hidden,true,'analyzing view closes after success');
 
  assert.ok(circles.every(c=>c.revealed===false),'first-use power remains secret');
- assert.doesNotMatch($('libraryCards').innerHTML,/威力 5000/,'grimoire conceals unused spell power');
- assert.match($('libraryCards').innerHTML,/消費MP /,'capture reveals MP rating');
+ assert.doesNotMatch($('libraryCards').innerHTML,/威力:5000|MP:[0-9]+/,'MP and power remain concealed before first cast');
+ assert.match($('libraryCards').innerHTML,/MP:\? \/ 威力:\?/,'each card explicitly shows two unknown values');
+ assert.match($('libraryCards').innerHTML,/class="circle-card-symbols"/,'thumbnail has paired attribute and role icons');
+ assert.doesNotMatch($('libraryCards').innerHTML,/class="circle-card-status"/,'attack spells do not invent a buff or debuff');
+ await doc.click(btn({circleDetail:circles[0].id}));
+ assert.equal($('magicDetailsDialog').open,true,'detail opens from individual thumbnail');
+ assert.match($('magicDetailsStats').innerHTML,/効果の詳細/);
+ assert.match($('magicDetailsStats').innerHTML,/敵にflame属性/);
+ assert.match($('magicDetailsStats').innerHTML,/<dt>MP<\/dt><dd>\?<\/dd>/);
+ assert.match($('magicDetailsStats').innerHTML,/<dt>威力<\/dt><dd>\?<\/dd>/);
+ await $('closeMagicDetails').fire('click');
  assert.ok(circles.every(c=>!Object.hasOwn(c,'name')),'photo registration does not ask for or save custom names');
  assert.doesNotMatch($('libraryCards').innerHTML,/魔法陣\s*0[1-9]/,'circles must not receive generated names');
  assert.doesNotMatch($('libraryCards').innerHTML,/<b>[^<]*魔法陣/,'no circle heading');
@@ -213,6 +222,7 @@ try{
  assert.equal(circles[0].analysis.role,'attack');
  assert.equal(circles[0].analysis.power,5000);
  assert.equal(circles[0].revealed,true,'only after a successful cast is power revealed');
+ assert.match($('battleSpells').innerHTML,/MP:6 \/ 威力:5000|MP:[0-9]+ \/ 威力:5000/,'used spell shows cost and power');
  p=await getProfile(db);
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
  assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
