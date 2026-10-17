@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {effectCaption,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration} from '../assets/js/dungeon-combat-fx.mjs';
+import {effectCaption,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,treasureChestMarkup,lootCeremonyDuration} from '../assets/js/dungeon-combat-fx.mjs';
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase,buffs]=await Promise.all(['balance','levels','floors','player-base','buffs'].map(csv));
 configure({balance,levels,floors,playerBase});
@@ -64,4 +64,14 @@ await playBattleCeremony('loot',event=>ceremonyOrder.push(event),{duration:1,wai
 assert.deepEqual(ceremonyOrder,['loot','finished']);
 assert.equal(simultaneousPhases([]).length,0);
 assert.deepEqual(simultaneousPhases([{side:'enemy',role:'attack'}]).length,1);
-console.log('PASS concurrent hero/enemy effects, ordered role phases, encounter ceremonies and reduced motion');
+for(const count of [0,1,2,3,5,10,35]){
+ const html=treasureChestMarkup(count);
+ assert.equal((html.match(/class="loot-chest"/g)||[]).length,count,'one opening treasure chest per dropped reward');
+ assert.equal((html.match(/class="loot-chest-lid"/g)||[]).length,count,'each chest has its own opening lid');
+ assert.equal((html.match(/class="loot-chest-light"/g)||[]).length,count,'each chest reveals treasure light');
+ assert.ok(lootCeremonyDuration(count)>=1200);
+}
+assert.throws(()=>treasureChestMarkup(-1),/Invalid drop count/);
+assert.throws(()=>treasureChestMarkup(1.5),/Invalid drop count/);
+assert.ok(lootCeremonyDuration(35)>lootCeremonyDuration(3),'large drop quantities have time to finish opening');
+console.log('PASS concurrent elemental fighter phases, ordered actions, encounter/death/loot and exact number of flying treasure chests');
