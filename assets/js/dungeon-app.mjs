@@ -1,18 +1,18 @@
-import * as G from './dungeon-core.mjs?v=20261018.4';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.4';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.4';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.4';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.4';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.4';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.4';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.4';
+import * as G from './dungeon-core.mjs?v=20261018.5';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.5';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.5';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.5';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.5';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.5';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.5';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.5';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.4';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.4';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.4';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.4';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.4';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.4';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.5';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.5';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.5';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.5';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.5';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.5';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=1;
 const listView={
@@ -178,7 +178,7 @@ function render(){
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
  $('gearCounter').textContent=unlocked?'携行品 '+pickedValues(carry.slice(0,limit)).length+' / '+limit+' 個':'携行品：最初の帰還後に解放';
  selectedStartLayer=allowedStartLayer(profile,selectedStartLayer);
- $('startLayer').innerHTML=unlockedStartLayers(profile).map(layer=>'<option value="'+layer+'">'+layer+'層の初戦から'+(layer===1?'':'（'+rankTitle(layer-1)+'）')+'</option>').join('');
+ $('startLayer').innerHTML=unlockedStartLayers(profile).map(layer=>'<option value="'+layer+'">'+(layer===1?'1層から':layer+'層の初戦から（'+rankTitle(layer-1)+'）')+'</option>').join('');
  $('startLayer').value=String(selectedStartLayer);
  $('startLayer').disabled=Boolean(profile.run);
  $('startLayerHint').textContent=highestRankLayer(profile)?'取得済みの冒険者章に応じて開始階層を選択できます。':'10層ごとの冒険者章を獲得すると開始階層が増えます。';
@@ -656,7 +656,7 @@ function openLoadoutPicker(kind,index){
   :[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['elixir','HP/MP回復'],['clear','状態異常解除'],['escape','脱出'],['revive','復活']];
  const sorts=kind==='circle'
   ?[['newest','登録が新しい順'],['oldest','登録が古い順'],['role','役割順'],['attribute','属性順'],['power','判明済みの威力順']]
-  :[['default','所持品の順番'],['name','名前順'],['kind','種類順'],['value','効果量が大きい順'],['value-asc','効果量が低い順']];
+  :[['default','所持品の順番'],['name','名前順'],['kind','種類順'],['value','効果量が高い順'],['value-asc','効果量が低い順']];
  $('pickerFilter').innerHTML=filters.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
  $('pickerSort').innerHTML=sorts.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
  $('pickerFilter').value=pickerView[kind].filter;

@@ -136,6 +136,8 @@ const currentRelease=page.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 assert.ok(currentRelease,'HTML exposes current public release version');
 assert.ok(page.includes('dungeon.css?v='+currentRelease),'page CSS is cache-busted for current release');
 assert.ok(page.includes('dungeon-app.mjs?v='+currentRelease),'page JS is cache-busted for current release');
+assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is concise');
+assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!important;/,'selected choice border does not change the button box size');
 const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');

@@ -49,7 +49,7 @@ try{
   assert.match($('playerStats').innerHTML,/冒険者等級：<strong>鉛級<\/strong>/);
   assert.match($('playerStats').innerHTML,/取得済み冒険者章：鉛級/);
   await doc.click(btn({view:'prepare'}));
-  assert.match($('startLayer').innerHTML,/value="1"/);
+  assert.match($('startLayer').innerHTML,/value="1">1層から<\/option>/,'dynamic first-floor label is concise');
   assert.match($('startLayer').innerHTML,/value="11"/);
   assert.doesNotMatch($('startLayer').innerHTML,/value="21"/);
   $('startLayer').value='11';await $('startLayer').fire('change');
