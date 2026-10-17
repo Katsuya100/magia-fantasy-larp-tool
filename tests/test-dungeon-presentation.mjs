@@ -146,9 +146,8 @@ assert.ok(app.includes('await playCombatSequence(steps,phase=>'));
 assert.ok(app.includes('for(const step of phase)'),'both fighters are painted within one phase');
 assert.ok(app.includes("treasureChestMarkup(drops)"),'drop count controls number of chests');
 assert.ok(app.includes("rewards.length+'個 · 未確定',rewards.length"));
-for(const event of ['encounter','hero-death','enemy-death']){
- assert.ok(app.includes("await ceremony('"+event+"'"),'ceremony '+event);
-}
+assert.ok(app.includes("await ceremony('encounter'"),'battle begins with an encounter');
+assert.ok(app.includes("onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death'"),'fatal ceremony overlaps the last attack');
 assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 
