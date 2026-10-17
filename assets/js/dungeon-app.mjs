@@ -10,7 +10,7 @@ const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
 let dungeonView='prepare',battleUrls=[];
 let busyAction=false,playingEffects=false;
-let photoAnalysisQueue=Promise.resolve(),photoAnalysisEpoch=0,lastCaptureRegistration=0;
+let photoAnalysisEpoch=0,lastCaptureRegistration=0;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){
  const targets=['pageError','battleError','cameraError'];
@@ -35,7 +35,7 @@ function show(name){
  $('tab-library').hidden=exploring;
  $('tab-dungeon').hidden=!exploring;
  const selected=exploring?(dungeonScenes.has(name)?'dungeon':name):(
-  name==='library'?'library':
+  name==='library'||name==='analyzing'&&activeAnalysis?.type==='capture'?'library':
   name==='collection'?'collection':
   name==='home'?'home':'prepare'
  );
@@ -193,8 +193,7 @@ async function ceremony(event,title,detail='',drops=0){
 function createEnemy(floor){const rowFloor=floorMaster(floor),level=Number(rowFloor.enemy_level);const pool=masters.enemies.filter(x=>Number(x.min_level)<=level&&Number(x.min_level)>=Number(rowFloor.minimum_enemy_level)&&x.boss_only!=='1');let row;if(Number(rowFloor.boss)===1){row=masters.enemies.find(x=>x.id===rowFloor.boss_enemy_id);if(!row||Number(row.min_level)>level)throw Error('ボスの設定が不正');}else row=G.weighted(pool);return {unit:G.fromEnemy(row,level),name:row.name};}
 function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor);run.enemy=unit;run.enemyName=name;run.usedItems=0;run.stage='battle';run.log.push('第'+run.floor+'戦：'+name+'が現れた');}
 async function begin(){if(profile.run||!canDepartWithCircles(slots)){note('魔法陣を3〜5個編成してください');return;}
- photoAnalysisEpoch++;
- $('captureAnalyzerFrame').src='about:blank';const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,usedItems:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
+ photoAnalysisEpoch++;const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,usedItems:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
 function enemyChoice(enemy){const ids=G.available(enemy);if(!ids.length)return -1;const heal=ids.find(i=>enemy.spells[i].role==='support');if(enemy.hp<enemy.stats.hp*num('enemy_heal_threshold')&&heal!==undefined)return heal;const offense=ids.filter(i=>enemy.spells[i].role==='attack');return offense.length&&Math.random()<num('enemy_attack_preference')?offense[Math.floor(Math.random()*offense.length)]:ids[Math.floor(Math.random()*ids.length)];}
 async function takeTurn(index){
  const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;
@@ -254,28 +253,32 @@ async function parseCircleImage(circle,frame,valid){
   frame.src='magia-circle.html';
  });
 }
-function queuePhotoAnalysis(circle){
- const epoch=photoAnalysisEpoch;
- // Serialize a single hidden analyzer so repeated camera taps do not overwrite its input.
- photoAnalysisQueue=photoAnalysisQueue.catch(()=>{}).then(async()=>{
-  const valid=()=>epoch===photoAnalysisEpoch&&!profile.run;
+async function analyzeCapturedCircle(circle){
+ // Reveal the real analyzer for each photo. The live camera remains active
+ // in the grimoire, so another photo can be taken immediately after returning.
+ const request={id:circle.id,type:'capture',epoch:photoAnalysisEpoch};
+ activeAnalysis=request;
+ show('analyzing');
+ note('');
+ const valid=()=>activeAnalysis===request&&!profile.run&&request.epoch===photoAnalysisEpoch;
+ try{
+  const result=await parseCircleImage(circle,$('analyzerFrame'),valid);
   if(!valid())return;
-  try{
-   const result=await parseCircleImage(circle,$('captureAnalyzerFrame'),valid);
-   if(!valid())return;
-   // Only successful analyses are allowed into IndexedDB or the grimoire.
-   Object.assign(circle,savePreanalysis(circle,result));
-   await putCircle(db,circle);
-   if(!valid())return;
-   circles=newestCirclesFirst([...circles,circle]);
-   if(!$('library').hidden)render();
-  }catch(e){
-   // Failed/cancelled photographs remain transient: no putCircle, no saved entry.
-   if(!valid())return;
-   $('cameraError').hidden=false;
-   $('cameraError').textContent='撮影した魔法陣を解析できませんでした。写真は保存していません。もう一度撮影してください。';
-  }
- });
+  const analyzed=savePreanalysis(circle,result);
+  // No record is written until all analysis values have been validated.
+  await putCircle(db,analyzed);
+  if(!valid())return;
+  circles=newestCirclesFirst([...circles,analyzed]);
+  activeAnalysis=null;
+  show('library');
+  render();
+ }catch(e){
+  if(!valid())return;
+  activeAnalysis=null;
+  show('library');
+  $('cameraError').textContent='魔法陣を解明できませんでした。写真は保存していません。もう一度撮影してください。';
+  $('cameraError').hidden=false;
+ }
 }
 async function analyzeUnknown(index){
  const run=profile.run,circle=circles.find(x=>x.id===run?.slotIds[index]);
@@ -332,7 +335,7 @@ async function capture(){
  const circle=newCapturedCircle(crypto.randomUUID(),blob,lastCaptureRegistration);
  // Do not save until the analysis succeeded. Photo stays in memory while queued.
  $('cameraError').hidden=true;$('cameraError').textContent='';
- queuePhotoAnalysis(circle);
+ await analyzeCapturedCircle(circle);
 }
 function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
@@ -395,7 +398,10 @@ function openNameDialog(required){
 }
 function wire(){
  document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
- if(b.dataset.view){stopCamera();show(b.dataset.view);return;}
+ if(b.dataset.view){
+  if(activeAnalysis?.type==='capture'){activeAnalysis=null;photoAnalysisEpoch++;$('analyzerFrame').onload=null;$('analyzerFrame').src='about:blank';}
+  stopCamera();show(b.dataset.view);return;
+ }
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
  if(b.dataset.circleDetail){openMagicDetails(b.dataset.circleDetail);return;}
  if(b.dataset.remove){if(profile.run)return;await deleteCircle(db,b.dataset.remove);circles=circles.filter(c=>c.id!==b.dataset.remove);slots=slots.map(id=>id===b.dataset.remove?null:id);profile.slots=[...slots];await persist();render();return;}
@@ -423,7 +429,16 @@ function wire(){
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
  $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
- $('cancelAnalyze').addEventListener('click',()=>{activeAnalysis=null;$('analyzerFrame').src='about:blank';note('');renderRun();show('battle');});
+ $('cancelAnalyze').addEventListener('click',()=>{
+  const capture=activeAnalysis?.type==='capture';
+  activeAnalysis=null;
+  if(capture)photoAnalysisEpoch++;
+  $('analyzerFrame').onload=null;
+  $('analyzerFrame').src='about:blank';
+  note('');
+  if(capture)show('library');
+  else {renderRun();show('battle');}
+ });
  window.addEventListener('beforeunload',()=>{stopCamera();freeUrls();releaseBattleUrls();});
 }
 load().catch(e=>{console.error(e);note('起動できません：'+e.message);});
