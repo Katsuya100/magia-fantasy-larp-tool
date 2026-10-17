@@ -1,16 +1,16 @@
-import * as G from './dungeon-core.mjs?v=20261017.12';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.12';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleAttributeEffects} from './dungeon-magic-knowledge.mjs?v=20261017.12';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.12';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.12';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.12';
+import * as G from './dungeon-core.mjs?v=20261017.13';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.13';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleAttributeEffects} from './dungeon-magic-knowledge.mjs?v=20261017.13';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.13';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.13';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.13';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.12';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.13';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
 let dungeonView='prepare',battleUrls=[];
 let busyAction=false,playingEffects=false;
-let photoAnalysisEpoch=0,lastCaptureRegistration=0;
+let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){
  const targets=['pageError','battleError','cameraError'];
@@ -22,6 +22,18 @@ function note(message){
 async function persist(){await saveProfile(db,profile);}
 async function load(){db=await openStore();const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};for(const [key,file] of Object.entries(files)){const res=await fetch('assets/data/'+file);if(!res.ok)throw Error(file+' の取得に失敗');masters[key]=G.parseCsv(await res.text());}configure(masters);G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);profile=await getProfile(db);circles=newestCirclesFirst(await allCircles(db));slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));ensureItemInstances(profile);if(!profile.run)profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=profile.run?prepareItems([],profile.inventory.length,G.capacity(profile.level)):restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();wire();render();if(profile.run){if(profile.run.stage==='checkpoint'){$('checkpointInfo').textContent='未確定報酬 '+profile.run.loot.length+'個 / 経験値 '+profile.run.xp;}else renderRun();}show(profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');if(!profile.name)openNameDialog(true);}
 const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result']);
+function rememberCameraScroll(){
+ cameraReturnScroll=typeof window.scrollY==='number'?window.scrollY:(window.pageYOffset||0);
+}
+function returnToCameraScroll(){
+ if(cameraReturnScroll===null)return;
+ const top=cameraReturnScroll;
+ cameraReturnScroll=null;
+ // Restore after the grimoire section is visible and its card layout has been rebuilt.
+ const restore=()=>window.scrollTo?.(0,top);
+ if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(restore));
+ else restore();
+}
 function show(name){
  const exploring=Boolean(profile?.run);
  if(name==='dungeon'){
@@ -80,7 +92,7 @@ function render(){
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
  }).join('');
- $('libraryCards').innerHTML=circles.map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><p>'+esc(circleSummary(c,masters.buffs,G.mpCost))+'</p>'+circleEffectBadges(c,masters.buffs,esc)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">効果を大きく見る ⤢</button><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
+ $('libraryCards').innerHTML=circles.map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'"><p>'+esc(circleSummary(c,masters.buffs,G.mpCost))+'</p>'+circleEffectBadges(c,masters.buffs,esc)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button class="subtle" data-remove="'+c.id+'" '+(profile.run?'disabled':'')+'>削除</button></div></article>').join('')||'<p class="collection-empty">魔導書はまだ白紙。</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run,masters.buffs,G.mpCost);
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
@@ -106,7 +118,7 @@ function renderRun(){
     +'<span class="tile-detail">'+(c?.analysis?circleLabel(c.analysis,isRevealed(c)):'未解析')+'</span>'
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
     +(c?'<div class="circle-card-effects">'+circleEffectBadges(c,masters.buffs,esc)+'</div>'
-     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">効果を拡大 ⤢</button>':'')+'</div>';
+     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button>':'')+'</div>';
  }).join('');
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
  const maxSlots=Math.max(5,run.carry.length);
@@ -259,6 +271,7 @@ async function analyzeCapturedCircle(circle){
  // in the grimoire, so another photo can be taken immediately after returning.
  const request={id:circle.id,type:'capture',epoch:photoAnalysisEpoch};
  activeAnalysis=request;
+ rememberCameraScroll();
  show('analyzing');
  note('');
  const valid=()=>activeAnalysis===request&&!profile.run&&request.epoch===photoAnalysisEpoch;
@@ -272,11 +285,12 @@ async function analyzeCapturedCircle(circle){
   circles=newestCirclesFirst([...circles,analyzed]);
   activeAnalysis=null;
   show('library');
-  render();
+  returnToCameraScroll();
  }catch(e){
   if(!valid())return;
   activeAnalysis=null;
   show('library');
+  returnToCameraScroll();
   $('cameraError').textContent='魔法陣を解明できませんでした。写真は保存していません。もう一度撮影してください。';
   $('cameraError').hidden=false;
  }
@@ -406,6 +420,7 @@ function wire(){
  document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
  if(b.dataset.view){
   if(activeAnalysis?.type==='capture'){const request=activeAnalysis;activeAnalysis=null;photoAnalysisEpoch++;request.cancel?.();}
+  cameraReturnScroll=null;
   stopCamera();show(b.dataset.view);return;
  }
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
@@ -443,7 +458,7 @@ function wire(){
   $('analyzerFrame').onload=null;
   $('analyzerFrame').src='about:blank';
   note('');
-  if(capture)show('library');
+  if(capture){show('library');returnToCameraScroll();}
   else {renderRun();show('battle');}
  });
  window.addEventListener('beforeunload',()=>{stopCamera();freeUrls();releaseBattleUrls();});
