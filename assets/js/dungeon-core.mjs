@@ -129,7 +129,8 @@ export function enemyScaling(level){
 }
 export function recoverVictoryMp(hero){
  const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1);
- const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t;
+ const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
+  num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12);
  const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*rate)));
  hero.mp+=gained;
  return gained;
