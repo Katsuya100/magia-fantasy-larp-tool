@@ -602,14 +602,14 @@ html,body{overflow-x:clip}
 }
 #battleArena .unit[data-incoming="debuff"] .combatant-fx{opacity:1}
 /* FLAME — dancing flame tongues and rising embers. */
-#battleArena .unit[data-effect="attack"][data-attribute="flame"] .element-flare{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="flame"] .element-flare{
  width:94px;height:110px;margin:-60px -47px;
  background:radial-gradient(ellipse at 52% 76%,#fff8b7 0 10%,#ffc843 26%,#fd5e2e 52%,#a4213f 77%,transparent 85%);
  clip-path:polygon(50% 0,64% 30%,78% 8%,76% 44%,96% 38%,89% 79%,63% 100%,24% 98%,5% 76%,22% 42%,18% 17%,40% 40%);
  filter:drop-shadow(0 0 16px #fd6e25);
  animation:element-flame-rise .44s ease-out both
 }
-#battleArena .unit[data-effect="attack"][data-attribute="flame"] .element-trail{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="flame"] .element-trail{
  width:112px;height:92px;margin:-46px -56px;
  background:radial-gradient(circle at 12% 63%,#ffeab0 0 3px,transparent 5px),
  radial-gradient(circle at 37% 12%,#ff8c27 0 4px,transparent 6px),
@@ -628,13 +628,13 @@ html,body{overflow-x:clip}
  100%{opacity:0;transform:translateY(-50px) scale(1.45)}
 }
 /* AQUA — curling water ring and loose droplets. */
-#battleArena .unit[data-effect="attack"][data-attribute="aqua"] .element-flare{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="aqua"] .element-flare{
  width:112px;height:74px;margin:-37px -56px;border:7px solid #8df2f9;
  border-left-color:transparent;border-top-color:#e3ffffaf;border-radius:55% 48% 55% 52%;
  box-shadow:0 0 16px #36c7eabb,inset 0 -8px 20px #4aaedd78;
  animation:element-wave-crash .44s ease-out both
 }
-#battleArena .unit[data-effect="attack"][data-attribute="aqua"] .element-trail{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="aqua"] .element-trail{
  width:114px;height:90px;margin:-45px -57px;
  background:radial-gradient(circle at 14% 21%,#e5ffff 0 5px,transparent 7px),
  radial-gradient(circle at 69% 10%,#89ecfc 0 6px,transparent 8px),
@@ -653,14 +653,14 @@ html,body{overflow-x:clip}
  100%{opacity:0;transform:translateY(-27px) scale(1.4)}
 }
 /* BOLT — hard-edged double lightning fork with staccato flashes. */
-#battleArena .unit[data-effect="attack"][data-attribute="bolt"] .element-flare{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="bolt"] .element-flare{
  width:64px;height:117px;margin:-62px -32px;
  background:linear-gradient(90deg,#ffae26 0,#fffde5 43%,#ffdf42 83%,#ff9b17);
  clip-path:polygon(55% 0,8% 48%,46% 48%,18% 100%,97% 35%,59% 38%,92% 0);
  filter:drop-shadow(0 0 13px #ffe586);
  animation:element-bolt-strike .44s steps(3,end) both
 }
-#battleArena .unit[data-effect="attack"][data-attribute="bolt"] .element-trail{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="bolt"] .element-trail{
  width:38px;height:88px;margin:-44px -19px;background:linear-gradient(90deg,#fff,#ffeb61 55%,#fff);
  clip-path:polygon(58% 0,8% 50%,42% 47%,20% 100%,95% 39%,64% 40%,89% 0);
  filter:drop-shadow(0 0 10px #ffe858);
@@ -679,12 +679,12 @@ html,body{overflow-x:clip}
  100%{opacity:0;transform:translate(44px,0) scale(.5)}
 }
 /* STORM — whirling bands of wind. */
-#battleArena .unit[data-effect="attack"][data-attribute="storm"] .element-flare{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="storm"] .element-flare{
  width:110px;height:76px;margin:-38px -55px;border:7px double #b5fbd9;
  border-top-color:transparent;border-radius:50%;box-shadow:0 0 22px #91f8d288;
  animation:element-vortex .44s ease-out both
 }
-#battleArena .unit[data-effect="attack"][data-attribute="storm"] .element-trail{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="storm"] .element-trail{
  width:72px;height:72px;margin:-36px;border:4px dashed #e1fff0;border-radius:50%;
  animation:element-vortex .44s linear reverse both
 }
@@ -694,12 +694,12 @@ html,body{overflow-x:clip}
  100%{opacity:0;transform:rotate(215deg) scale(.55)}
 }
 /* GRAVITY — dense dark singularity collapsing inward. */
-#battleArena .unit[data-effect="attack"][data-attribute="gravity"] .element-flare{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="gravity"] .element-flare{
  width:98px;height:98px;margin:-49px;border-radius:50%;
  background:radial-gradient(circle,#171029 0 22%,#7954ba 37%,#24153d 55%,#c6b0fb 69%,transparent 72%);
  box-shadow:0 0 23px #a486f099;animation:element-gravity-crush .44s ease-in both
 }
-#battleArena .unit[data-effect="attack"][data-attribute="gravity"] .element-trail{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="gravity"] .element-trail{
  width:118px;height:50px;margin:-25px -59px;border:4px solid #b99af5ba;border-radius:50%;
  animation:element-gravity-orbit .44s ease-in both
 }
@@ -715,13 +715,13 @@ html,body{overflow-x:clip}
  100%{opacity:0;transform:rotate(300deg) scale(.15)}
 }
 /* LAW — geometric radiant seal. */
-#battleArena .unit[data-effect="attack"][data-attribute="law"] .element-flare{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="law"] .element-flare{
  width:98px;height:98px;margin:-49px;
  background:conic-gradient(from 22deg,transparent 0 11%,#fff7ca 12% 14%,transparent 15% 23%,#ffd67c 24% 26%,transparent 27% 38%,#fff7ca 39% 41%,transparent 42% 100%);
  border:3px solid #ffdb99;border-radius:9px;box-shadow:0 0 18px #ffe3a3a0;
  animation:element-law-seal .44s ease-out both
 }
-#battleArena .unit[data-effect="attack"][data-attribute="law"] .element-trail{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="law"] .element-trail{
  width:68px;height:68px;margin:-34px;border:3px solid #fff4cd;
  animation:element-law-seal .44s ease-out reverse both
 }
@@ -731,13 +731,13 @@ html,body{overflow-x:clip}
  100%{opacity:0;transform:rotate(90deg) scale(.72)}
 }
 /* CHAOS — jagged magenta and prismatic fragments. */
-#battleArena .unit[data-effect="attack"][data-attribute="chaos"] .element-flare{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="chaos"] .element-flare{
  width:108px;height:108px;margin:-54px;
  background:conic-gradient(from 35deg,#ff78bd,transparent 14%,#8c86ff 30%,transparent 47%,#fdc777 61%,transparent 76%,#f3a2e5 90%,#ff78bd);
  clip-path:polygon(50% 0,63% 30%,97% 17%,75% 51%,100% 78%,62% 74%,46% 100%,33% 71%,0 84%,22% 45%,5% 17%,40% 29%);
  animation:element-chaos-burst .44s ease-out both
 }
-#battleArena .unit[data-effect="attack"][data-attribute="chaos"] .element-trail{
+#battleArena .spell-projectile[data-effect="attack"][data-attribute="chaos"] .element-trail{
  width:90px;height:90px;margin:-45px;
  background:radial-gradient(circle at 12% 19%,#feccf8 0 5px,transparent 7px),
  radial-gradient(circle at 85% 18%,#8adeff 0 5px,transparent 7px),
@@ -833,3 +833,94 @@ html,body{overflow-x:clip}
 .picker-controls{margin:12px 0}
 .picker-controls label{flex-basis:155px}
 @media(max-width:630px){.list-controls{gap:7px;padding:9px}.list-controls label{flex-basis:125px;font-size:11px}.list-controls select{font-size:12px}}
+
+/* Readability: raise formerly 9–12px text while preserving five equipment
+   columns and allowing labels to wrap instead of shrinking their glyphs. */
+.hero-edition,.eyebrow,.chapter,.subheading>span{font-size:14px;letter-spacing:.09em}
+.back-link,.adventure-record,.level-line span,.collection-progress small,
+.portrait-bottom,footer,.card p,.card button,.inventory-row button,
+.gear-counter,.relic-count,.notice,.inline-error,.battle-info,
+.battle-history,.battle-history .log,.unit-info p,.unit-info small,
+.effects,.tile-title,.picker-label,.picker-label small,.picker-equipped,
+.battle-spells .tile-cooldown,.battle-items .tile-detail,
+.battle-spells .tile-detail,.camera-actions,.regulation-sample figcaption,
+.circle-card-status,.circle-card-stats,.name-error,.battle-basic .basic-attack{
+ font-size:14px
+}
+.card-actions button,.character-name-row button,.inner-nav,
+.prepare-spell-frame .magic-expand,.battle-spell-frame .magic-expand,
+.picker-circle-wrap .magic-expand{font-size:14px!important}
+.relic-detail,.relic-name{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.stat-cell small{font-size:14px;letter-spacing:0}
+.tile-index{font-size:13px;letter-spacing:0}
+.tile-title{white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+.loadout-tile{font-size:14px!important}
+.list-controls label{font-size:14px}
+.list-controls select{font-size:15px;min-height:44px}
+.circle-card-stats{font-size:clamp(12px,1.5vw,15px)}
+.circle-card-mp,.circle-card-power{font-size:inherit;letter-spacing:-.035em}
+.circle-card-status{font-size:14px}
+#battleArena .combatant-fx strong{font-size:14px}
+#battleArena .battle-ceremony span{font-size:14px}
+#battleArena .battle-ceremony[data-event="encounter"] strong{font-size:17px}
+#battleArena .unit h3{font-size:16px}
+@media(max-width:630px){
+ .tabs button{font-size:14px;min-height:68px;line-height:1.3;overflow-wrap:anywhere}
+ .subheading>span{font-size:13px}
+ .relic-name,.relic-detail{font-size:14px}
+ .relic-count{font-size:13px;padding:1px 5px}
+ .relic-card{min-height:205px;padding:11px 6px}
+ #battleArena .unit h3{font-size:14px}
+ #battleArena .unit-info small{font-size:13px}
+ #battleArena .unit-info p,#battleArena .effects{font-size:14px}
+ #battleArena .combatant-fx strong{font-size:13px}
+ .tile-index{font-size:12px}
+ .tile-title,.battle-spells .tile-title,.battle-items .tile-title{font-size:13px;white-space:normal;overflow-wrap:anywhere}
+ .battle-spells .tile-detail,.battle-items .tile-detail,.battle-spells .tile-cooldown{font-size:12px}
+ .prepare-spell-frame .magic-expand,.battle-spell-frame .magic-expand{font-size:13px!important;min-height:44px}
+ .circle-card-stats,.circle-card-mp,.circle-card-power{font-size:clamp(11px,3vw,13px);letter-spacing:-.04em}
+ .circle-card-status{font-size:13px}
+ .circle-card-info{padding:7px 2px;overflow-wrap:anywhere}
+ .circle-card-mp,.circle-card-power{white-space:normal;overflow-wrap:anywhere}
+ .picker-label,.picker-label small{font-size:14px}
+ .list-controls label{font-size:14px}
+ .list-controls select{font-size:15px}
+ .battle-spells .battle-tile,.battle-items .battle-tile{min-height:144px}
+}
+/* Magic attack travels from the center of its caster's card to the target
+   center. Uses only an absolutely positioned arena layer, never a scene-wide
+   transform or a document viewport animation. */
+#battleArena .spell-flight{
+ position:absolute;inset:0;z-index:6;overflow:hidden;pointer-events:none
+}
+#battleArena .spell-projectile{
+ position:absolute;top:33%;left:var(--flight-from);width:0;height:0;
+ opacity:0;pointer-events:none;--flight-from:calc(25% - 23.5px);
+ --flight-to:calc(75% + 23.5px)
+}
+#battleArena .spell-projectile[data-side="hero"]{
+ --flight-from:calc(75% + 23.5px);--flight-to:calc(25% - 23.5px)
+}
+#battleArena .spell-projectile[data-effect="attack"]{
+ animation:spell-projectile-flight .44s cubic-bezier(.22,.65,.27,1) both
+}
+#battleArena .spell-projectile .element-flare,
+#battleArena .spell-projectile .element-trail{top:0;left:0}
+@keyframes spell-projectile-flight{
+ 0%{left:var(--flight-from);opacity:0;transform:translateY(10px) scale(.5)}
+ 16%{opacity:1}
+ 73%{left:var(--flight-to);opacity:1;transform:translateY(-6px) scale(1)}
+ 86%{opacity:1;transform:translateY(-5px) scale(1.2)}
+ 100%{left:var(--flight-to);opacity:0;transform:translateY(-5px) scale(.75)}
+}
+@media(max-width:630px){
+ #battleArena .spell-projectile{
+  --flight-from:calc(25% - 11.25px);--flight-to:calc(75% + 11.25px)
+ }
+ #battleArena .spell-projectile[data-side="hero"]{
+  --flight-from:calc(75% + 11.25px);--flight-to:calc(25% - 11.25px)
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ #battleArena .spell-projectile[data-effect="attack"]{animation:none!important;opacity:0!important}
+}
