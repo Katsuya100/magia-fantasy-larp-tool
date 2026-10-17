@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {layerOfFight,encounterOfFight,isLayerBoss,encounterLabel,battleHeading,
- clearedLayer,nextLayer,migrateHighestLayer,recordLayerVisit,FIGHTS_PER_LAYER} from '../assets/js/dungeon-progress.mjs';
+ clearedLayer,nextLayer,deepestReturnedLayer,recordReturnedLayer,FIGHTS_PER_LAYER} from '../assets/js/dungeon-progress.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 assert.equal(FIGHTS_PER_LAYER,5);
 for(const [fight,layer,round,boss] of [
@@ -9,9 +9,9 @@ for(const [fight,layer,round,boss] of [
  [6,2,1,false],[9,2,4,false],[10,2,5,true],
  [11,3,1,false],[25,5,5,true],[495,99,5,true]
 ]){
- assert.equal(layerOfFight(fight),layer,'layer at fight '+fight);
- assert.equal(encounterOfFight(fight),round,'within-layer fight '+fight);
- assert.equal(isLayerBoss(fight),boss,'only every fifth is a layer boss');
+ assert.equal(layerOfFight(fight),layer);
+ assert.equal(encounterOfFight(fight),round);
+ assert.equal(isLayerBoss(fight),boss);
  assert.equal(encounterLabel(fight),layer+'層'+round+'戦目');
  assert.equal(battleHeading(fight),layer+'層'+round+'戦目'+(boss?' · 階層ボス':''));
  assert.equal(clearedLayer(fight),boss?layer:0);
@@ -25,26 +25,16 @@ const data=parseCsv(await readFile(new URL('../assets/data/dungeon-floors.csv',i
 assert.equal(data.length,495);
 for(const record of data){
  const fight=Number(record.floor);
- assert.equal(Number(record.boss),Number(isLayerBoss(fight)),'CSV boss selection matches fifth fight at '+fight);
- assert.equal(Boolean(record.boss_enemy_id),isLayerBoss(fight),'every layer boss specifies its unique enemy');
+ assert.equal(Number(record.boss),Number(isLayerBoss(fight)));
+ assert.equal(Boolean(record.boss_enemy_id),isLayerBoss(fight));
 }
-const legacy={highest:5};
-assert.equal(migrateHighestLayer(legacy),true);
-assert.deepEqual(legacy,{highest:1,highestUnit:'layer'},'previous highest 5戦 becomes 1層');
-assert.equal(migrateHighestLayer(legacy),false);
-assert.equal(legacy.highest,1,'already converted score does not shrink on reload');
-assert.equal(recordLayerVisit(legacy,6),2,'visiting 2層 immediately updates deepest layer');
-assert.equal(recordLayerVisit(legacy,5),2,'older fights never reduce the record');
-assert.equal(migrateHighestLayer(legacy),false);
-assert.equal(recordLayerVisit(legacy,10),2,'clearing 2層 boss remains at 2層');
-assert.equal(recordLayerVisit(legacy,11),3,'next encounter reaches 3層');
-for(const [old,converted] of [[0,0],[1,1],[4,1],[6,2],[10,2],[11,3],[495,99]]){
- const profile={highest:old};
- migrateHighestLayer(profile);
- assert.equal(profile.highest,converted,'legacy fight highscore converted to layer');
-}
-const legacyActive={highest:5,run:{floor:11,stage:'battle'}};
-migrateHighestLayer(legacyActive);
-recordLayerVisit(legacyActive,legacyActive.run.floor);
-assert.equal(legacyActive.highest,3,'resumed legacy save promotes the actual currently visited layer');
-console.log('PASS n層n戦目 progression, every fifth encounter is a layer boss, 495 CSV rows and one-time save migration');
+const fresh={returns:0,highest:2,run:null};
+assert.equal(deepestReturnedLayer(fresh),0,'a previously visited layer is not a return');
+assert.equal(recordReturnedLayer(fresh,1),0,'entering floor one does not count');
+assert.equal(recordReturnedLayer(fresh,4),0,'winning a non-boss does not count');
+assert.equal(recordReturnedLayer(fresh,5),1,'first successful return counts layer one');
+assert.equal(recordReturnedLayer(fresh,6),1,'descending to next layer never raises the record');
+assert.equal(recordReturnedLayer(fresh,10),2,'return after beating second layer boss counts two');
+assert.equal(recordReturnedLayer(fresh,5),2,'later shallow returns do not reduce it');
+assert.equal(deepestReturnedLayer({highest:495,returns:7}),0,'unverifiable legacy visit record is ignored');
+console.log('PASS layer progression and deepest successfully returned layer');

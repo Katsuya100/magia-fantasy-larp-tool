@@ -329,7 +329,46 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
    It is an overlay above the live preview, never drawn into the saved canvas. */
 .camera-viewfinder .viewfinder-circle-guide{
  position:absolute;inset:7%;z-index:2;pointer-events:none;box-sizing:border-box;
- border:2px solid rgba(250,221,163,.75);border-radius:50%;
+ border:2px dashed rgba(250,221,163,.75);border-radius:50%;
  box-shadow:0 0 0 1px rgba(12,10,18,.40),0 0 18px rgba(248,201,125,.18),
  inset 0 0 18px rgba(251,212,150,.06);
+}
+
+/* Magic stones, confirmation and ritual feedback. */
+.magic-stone-balance{margin:18px 0 4px;color:var(--gold);font-weight:700;font-size:14px}
+.circle-grid .card-actions .upgrade-action{grid-column:1/-1}
+.magic-upgrade-controls{border-top:1px solid var(--border);margin-top:16px;padding-top:14px;text-align:center}
+.magic-upgrade-controls p{color:var(--gold);font-size:13px;line-height:1.5}
+.magic-upgrade-controls button{width:100%;max-width:350px}
+.magic-upgrade-controls button:disabled,.circle-grid .upgrade-action:disabled{opacity:.5;cursor:not-allowed}
+#upgradeFeedback{min-height:1.5em;font-weight:700}
+.circle-action-dialog{width:min(92vw,440px);color:var(--pale)}
+.circle-action-inner{padding:clamp(20px,5vw,35px);text-align:center}
+.circle-action-inner h2{color:var(--gold);font-size:22px}
+.circle-action-inner p{color:var(--pale);line-height:1.8}
+.circle-action-inner .buttons{justify-content:center;margin-top:20px}
+.magic-details-content{position:relative}
+.magic-details-dialog[data-enhancing="true"] .magic-details-content:after{
+ content:"✦ 強化成功 ✦";position:sticky;bottom:10px;left:10%;display:block;
+ width:80%;margin:0 auto;text-align:center;padding:15px 8px;z-index:2;
+ font-weight:900;font-size:21px;letter-spacing:.1em;color:#fff2c9;
+ background:radial-gradient(ellipse,#b28047e8,#5f325dcc 68%,transparent);
+ border:1px solid #fff0b6;border-radius:12px;pointer-events:none;
+ animation:circle-upgrade-aura 1.8s ease-out both
+}
+.magic-details-dialog[data-enhancing="true"] #magicDetailsImage{
+ animation:circle-upgrade-glow 1.8s ease-out
+}
+@keyframes circle-upgrade-aura{
+ 0%{opacity:0;transform:scale(.45) rotate(-8deg);filter:brightness(3)}
+ 25%{opacity:1;transform:scale(1.06) rotate(0);filter:brightness(1.5)}
+ 65%{opacity:1;transform:scale(1);filter:brightness(1)}
+ 100%{opacity:0;transform:scale(1.15)}
+}
+@keyframes circle-upgrade-glow{
+ 0%,100%{filter:none}35%{filter:drop-shadow(0 0 22px #fbe08a) brightness(1.5)}
+}
+@media(prefers-reduced-motion:reduce){
+ .magic-details-dialog[data-enhancing="true"] .magic-details-content:after,
+ .magic-details-dialog[data-enhancing="true"] #magicDetailsImage{animation:none}
 }

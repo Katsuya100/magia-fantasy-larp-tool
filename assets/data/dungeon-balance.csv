@@ -27,6 +27,7 @@ loot_chance_base,0.18,ドロップ個数抽選の基礎確率
 loot_chance_per_level,0.012,レベルあたりの増分
 loot_chance_cap,0.82,ドロップ個数確率上限
 consumable_drop_rate,0.62,消耗品抽選割合
+magic_stone_drop_rate,0.20,消耗品以外の報酬から魔導石が出る確率
 xp_base,35,撃破経験値固定値
 xp_per_level,8,撃破経験値のレベル係数
 checkpoint_interval,5,帰還可能な戦闘間隔

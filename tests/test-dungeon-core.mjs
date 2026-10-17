@@ -19,6 +19,9 @@ assert.deepEqual(G.stats(base,1),base);assert.ok(G.stats(base,20).hp>G.stats(bas
 assert.equal(G.dropCount(1,()=>0),7);assert.equal(G.dropCount(99,()=>.9999),1);
 const rewards=G.drops(items,collections,1,()=>0);assert.equal(rewards.length,7);
 assert.equal(rewards[0].type,'use');assert.equal(rewards[0].value,+items[0].min_value);
+let rolls=0;
+const stoneRewards=G.drops(items,collections,1,()=>++rolls<=6?1:rolls===7?0.99:0.01);
+assert.deepEqual(stoneRewards,[{type:'stone',id:'magic_stone'}],'non-consumable loot can produce a magic stone');
 assert.equal(G.basePower(300),35);assert.ok(G.mpCost(300)>0);
 const sp={role:'attack',attribute:'flame',power:300};
 const a=G.makeUnit(base,1,{},[sp], 'a'),b=G.makeUnit(base,1,{},[sp], 'b');
@@ -28,6 +31,8 @@ const fire={role:'debuff',attribute:'flame',power:300};
 const hp=b.hp;G.cast(a,b,fire,buffs);assert.equal(b.hp,hp);assert.ok(b.statuses.some(s=>s.id==='debuff_flame'));
 G.cast(b,a,{role:'defense',attribute:'flame',power:300},buffs);
 assert.ok(G.resist(b,'flame')<1);
+const armored=G.makeUnit(base,1);G.addStatus(armored,{id:'buff_gravity',kind:'buff',effect:'def',value:9.799999999999997,turns:2});
+assert.equal(G.armor(armored),17,'fractional DEF always rounds up');
 const oldHp=b.hp;G.cast(b,a,{role:'support',attribute:'flame',power:300},buffs);
 assert.ok(b.hp>=oldHp);assert.equal(b.statuses.find(s=>s.id==='debuff_flame'),undefined);
 const item={id:'heal_s',value:27,bonus:'buff_aqua'};b.hp=10;assert.equal(G.potion(b,item,items,buffs),27);assert.ok(G.status(b,'buff_aqua'));

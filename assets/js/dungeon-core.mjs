@@ -30,7 +30,7 @@ export function parseCsv(input){
 }
 export function weighted(rows,r=Math.random){let sum=rows.reduce((n,x)=>n+Number(x.weight||0),0),v=r()*sum;if(!sum)throw Error('Empty drops');for(const row of rows){v-=Number(row.weight||0);if(v<0)return row;}return rows.at(-1);}
 export function dropCount(l,r=Math.random){const p=clamp(num('loot_chance_base')+num('loot_chance_per_level')*(l-1),num('loot_chance_base'),num('loot_chance_cap'));let n=num('loot_count_min');for(let i=0;i<num('loot_count_max')-num('loot_count_min');i++)if(r()<p)n++;return n;}
-export function drops(items,collections,l,r=Math.random){return Array.from({length:dropCount(l,r)},()=>{if(r()<num('consumable_drop_rate')){const x=weighted(items,r);return {type:'use',id:x.id,value:roll(Number(x.min_value),Number(x.max_value),r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};}return {type:'collection',id:weighted(collections,r).id};});}
+export function drops(items,collections,l,r=Math.random){return Array.from({length:dropCount(l,r)},()=>{if(r()<num('consumable_drop_rate')){const x=weighted(items,r);return {type:'use',id:x.id,value:roll(Number(x.min_value),Number(x.max_value),r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};}if(r()<num('magic_stone_drop_rate'))return {type:'stone',id:'magic_stone'};return {type:'collection',id:weighted(collections,r).id};});}
 export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}return p.level;}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
@@ -38,7 +38,7 @@ export const status=(actor,id)=>actor.statuses.find(s=>s.id===id);
 export function addStatus(actor,s){const old=status(actor,s.id);if(old&&s.id==='debuff_chaos'){Object.assign(old,s);return;}if(old){old.turns=Math.max(old.turns,s.turns);if(Math.abs(s.value)>Math.abs(old.value))old.value=s.value;return;}actor.statuses.push(s);}
 export function resist(actor,attr){let r=actor.resists[attr]??1;const buff=status(actor,'resist_'+attr);const soak=status(actor,'debuff_aqua');if(buff)r*=1-buff.value*(soak?Math.max(0,1-soak.value):1);return clamp(r,num('status_min_resistance'),num('status_max_resistance'));}
 export function factor(actor,effect){return clamp(actor.statuses.filter(x=>x.effect===effect).reduce((n,x)=>n*(1+x.value),1),num('modifier_min'),num('modifier_max'));}
-export const armor=actor=>Math.max(0,actor.stats.def+actor.statuses.filter(x=>x.effect==='def').reduce((n,x)=>n+x.value,0));
+export const armor=actor=>Math.ceil(Math.max(0,actor.stats.def+actor.statuses.filter(x=>x.effect==='def').reduce((n,x)=>n+x.value,0)));
 export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debuff_storm');if(dizzy&&r()<clamp(dizzy.value,0,num('dizzy_max_rate')))return 0;return Math.max(0,Math.round(effectivePower(src,spell)*resist(tgt,spell.attribute)*factor(src,'attack')*factor(src,'output')*factor(tgt,'incoming')*num('def_divisor')/(num('def_divisor')+armor(tgt))));}
 export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=mpCost(s.power)&&!u.cooldowns[i]&&!u.statuses.some(x=>x.effect==='seal'&&x.sealedRole===s.role));}
 export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
