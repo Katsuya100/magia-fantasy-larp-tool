@@ -1,10 +1,10 @@
-import * as G from './dungeon-core.mjs?v=20261017.8';
-import {playCombatSequence,effectCaption} from './dungeon-combat-fx.mjs?v=20261017.8';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.8';
-import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.8';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.8';
+import * as G from './dungeon-core.mjs?v=20261017.9';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration} from './dungeon-combat-fx.mjs?v=20261017.9';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.9';
+import {spellGrid,itemGrid,circleChoices,itemChoices} from './dungeon-preparation-ui.mjs?v=20261017.9';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.9';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.8';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.9';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
 let dungeonView='prepare',battleUrls=[];
@@ -116,39 +116,73 @@ function renderRun(){
  $('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム '+(run.usedItems||0)+'/'+num('item_per_round');
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(x)+'</p>').join('');
 }
+function clearCombatEffects(){
+ for(const side of ['hero','enemy']){
+  const target=$(side+'Combatant');
+  target.dataset.effect='idle';
+  target.dataset.hit='false';
+  $(side+'FxText').textContent='';
+ }
+}
 async function animateBattle(steps){
  if(!steps.length)return;
  playingEffects=true;
  $('battleSpells').setAttribute('aria-busy','true');
  $('battleItems').setAttribute('aria-busy','true');
  try{
-  await playCombatSequence(steps,step=>{
-   const arena=$('battleArena');
-   // Reset the phase between steps to retrigger CSS animations when the role repeats.
-   arena.dataset.role='idle';
-   arena.dataset.side=step.side;
-   arena.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
-   arena.dataset.role=step.role;
-   $('battleFxText').textContent=effectCaption(step);
-   $('heroStats').innerHTML=rowUnit(step.hero);
-   $('enemyStats').innerHTML=rowUnit(step.enemy);
+  await playCombatSequence(steps,phase=>{
+   clearCombatEffects();
+   // Force a new CSS animation cycle even after consecutive turns with the same role.
+   void $('battleArena').offsetWidth;
+   for(const step of phase){
+    const actor=$(step.side+'Combatant');
+    actor.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
+    actor.dataset.effect=step.role;
+    $(step.side+'FxText').textContent=effectCaption(step);
+   }
+   for(const step of phase){
+    if(!['attack','basic','debuff'].includes(step.role))continue;
+    const opponent=step.side==='hero'?'enemy':'hero';
+    const victim=$(opponent+'Combatant');
+    victim.dataset.hit='true';
+    if(victim.dataset.effect==='idle')victim.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
+   }
+   const final=phase.at(-1);
+   $('heroStats').innerHTML=rowUnit(final.hero);
+   $('enemyStats').innerHTML=rowUnit(final.enemy);
   });
  }finally{
-  $('battleArena').dataset.role='idle';
-  $('battleArena').dataset.side='none';
-  $('battleFxText').textContent='';
+  clearCombatEffects();
   $('battleSpells').removeAttribute('aria-busy');
   $('battleItems').removeAttribute('aria-busy');
   playingEffects=false;
  }
 }
+async function ceremony(event,title,detail=''){
+ playingEffects=true;
+ const stage=$('battleCeremony');
+ const side=event==='hero-death'?'hero':event==='enemy-death'?'enemy':null;
+ stage.dataset.event=event;
+ $('ceremonyTitle').textContent=title;
+ $('ceremonyDetail').textContent=detail;
+ if(side)$(side+'Combatant').dataset.effect='death';
+ try{
+  await playBattleCeremony(event,()=>{stage.hidden=false;},{duration:effectDuration()?1120:0});
+ }finally{
+  stage.hidden=true;
+  stage.dataset.event='idle';
+  if(side)$(side+'Combatant').dataset.effect='idle';
+  playingEffects=false;
+ }
+}
 function createEnemy(floor){const rowFloor=floorMaster(floor),level=Number(rowFloor.enemy_level);const pool=masters.enemies.filter(x=>Number(x.min_level)<=level&&Number(x.min_level)>=Number(rowFloor.minimum_enemy_level)&&x.boss_only!=='1');let row;if(Number(rowFloor.boss)===1){row=masters.enemies.find(x=>x.id===rowFloor.boss_enemy_id);if(!row||Number(row.min_level)>level)throw Error('ボスの設定が不正');}else row=G.weighted(pool);return {unit:G.fromEnemy(row,level),name:row.name};}
 function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor);run.enemy=unit;run.enemyName=name;run.usedItems=0;run.stage='battle';run.log.push('第'+run.floor+'戦：'+name+'が現れた');}
-async function begin(){if(profile.run||!isFull(slots)){note('5つの魔法陣を編成してください');return;}const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,usedItems:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');}
+async function begin(){if(profile.run||!isFull(slots)){note('5つの魔法陣を編成してください');return;}const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,usedItems:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}
 function enemyChoice(enemy){const ids=G.available(enemy);if(!ids.length)return -1;const heal=ids.find(i=>enemy.spells[i].role==='support');if(enemy.hp<enemy.stats.hp*num('enemy_heal_threshold')&&heal!==undefined)return heal;const offense=ids.filter(i=>enemy.spells[i].role==='attack');return offense.length&&Math.random()<num('enemy_attack_preference')?offense[Math.floor(Math.random()*offense.length)]:ids[Math.floor(Math.random()*ids.length)];}
 async function takeTurn(index){const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;const spell=run.hero.spells[index];if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}run.usedItems=0;await animateBattle(steps);
+if(run.hero.hp<=0){await ceremony('hero-death','探索失敗',profile.name||'冒険者');}
 if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='探索失敗';$('resultText').textContent='未確定報酬 '+dropped+'個と経験値を喪失。未使用の携行品 '+unusedCount+'個は倉庫へ戻った。性能が判明した魔法陣は残る。';show('result');return;}
-if(run.enemy.hp<=0){const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);profile.highest=Math.max(profile.highest,run.floor);if(run.floor%num('checkpoint_interval')===0){run.stage='checkpoint';$('checkpointInfo').textContent='第'+run.floor+'戦突破。未確定報酬 '+run.loot.length+'個 / 経験値 '+run.xp+'。続行して敗北すると失われる。';await persist();show('checkpoint');return;}run.floor++;enterFight();}
+if(run.enemy.hp<=0){await ceremony('enemy-death','討伐成功',run.enemyName);const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定');run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);profile.highest=Math.max(profile.highest,run.floor);if(run.floor%num('checkpoint_interval')===0){run.stage='checkpoint';$('checkpointInfo').textContent='第'+run.floor+'戦突破。未確定報酬 '+run.loot.length+'個 / 経験値 '+run.xp+'。続行して敗北すると失われる。';await persist();show('checkpoint');return;}run.floor++;enterFight();await persist();renderRun();await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}
 await persist();renderRun();}
 async function useItem(index){
  const run=profile.run;if(playingEffects||!run||(run.usedItems||0)>=num('item_per_round'))return;
@@ -307,7 +341,7 @@ function wire(){
  $('loadoutDialog').addEventListener('close',()=>{picker=null;});
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
- $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');}));
+ $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
  $('cancelAnalyze').addEventListener('click',()=>{activeAnalysis=null;$('analyzerFrame').src='about:blank';note('');renderRun();show('battle');});
  window.addEventListener('beforeunload',()=>{stopCamera();freeUrls();releaseBattleUrls();});
 }
