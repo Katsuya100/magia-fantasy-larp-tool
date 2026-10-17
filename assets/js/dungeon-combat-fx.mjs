@@ -26,11 +26,30 @@ export function simultaneousPhases(steps){
  }
  return phases;
 }
-export async function playCombatSequence(steps,paint,{duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
+export function fatalSide(phase){
+ const last=phase.at(-1);
+ if(!last)return null;
+ if(last.hero?.hp<=0)return 'hero';
+ if(last.enemy?.hp<=0)return 'enemy';
+ return null;
+}
+// Start the death effect before the fatal attack animation ends.
+export async function playCombatSequence(steps,paint,{
+ duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
+ onFatal=null,overlap=260
+}={}){
+ let death=null;
  for(const phase of simultaneousPhases(steps)){
   paint(phase);
-  if(duration>0)await wait(duration);
+  const fatal=onFatal&&!death?fatalSide(phase):null;
+  if(fatal){
+   const lead=Math.max(0,duration-overlap);
+   if(lead>0)await wait(lead);
+   death=Promise.resolve(onFatal(fatal,phase));
+   if(duration-lead>0)await wait(duration-lead);
+  }else if(duration>0)await wait(duration);
  }
+ if(death)await death;
 }
 // One visible chest represents exactly one actual drop, including identical items.
 export function treasureChestMarkup(count){
