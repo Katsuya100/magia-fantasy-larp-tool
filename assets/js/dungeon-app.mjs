@@ -47,6 +47,7 @@ function resolvedView(name){
  return name;
 }
 function applyView(name,retained=null){
+ const exploring=Boolean(profile?.run);
  activeScene=name;
  if(dungeonScenes.has(name))dungeonView=name;
  for(const id of sceneIds)$(id).hidden=id!==name&&id!==retained;
