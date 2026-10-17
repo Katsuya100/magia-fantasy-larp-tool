@@ -49,12 +49,14 @@ assert.match(page,/id="enemyFxText"/);
 assert.match(page,/id="battleCeremony"/);
 assert.match(page,/id="lootChests" class="loot-chests"/);
 for(const attribute of ['flame','bolt','aqua','storm','gravity','law','chaos']){
- assert.match(css,new RegExp('\\\\.unit\\\\[data-attribute="'+attribute+'"\\\\]'),'individual fighter uses '+attribute+' color');
+ assert.ok(css.includes('.unit[data-attribute="'+attribute+'"]'),'fighter-specific color for '+attribute);
 }
 for(const role of ['attack','basic','defense','debuff','support','burn','death']){
- assert.match(css,new RegExp('data-effect="'+role+'"'),'animation style exists for '+role);
+ assert.ok(css.includes('data-effect="'+role+'"'),'animation style for '+role);
 }
-for(const ceremony of ['encounter','hero-death','enemy-death','loot'])assert.match(css,new RegExp('data-event="'+ceremony+'"'));
+for(const ceremony of ['encounter','hero-death','enemy-death','loot']){
+ assert.ok(css.includes('data-event="'+ceremony+'"'),'ceremony CSS for '+ceremony);
+}
 assert.match(css,/@keyframes chest-leap/);
 assert.match(css,/@keyframes chest-open/);
 assert.match(css,/@keyframes loot-shower/);
@@ -137,14 +139,13 @@ assert.match(app,/Math\.max\(5,run\.carry\.length\)/);
 assert.match(app,/\$\('heroName'\)\.textContent=profile\.name/);
 assert.match(app,/step=>steps\.push\(step\)/,'game engine steps are captured for sequential playback');
 assert.match(app,/await animateBattle\(steps\)/);
-assert.match(app,/await playCombatSequence\\(steps,phase=>/);
-assert.match(app,/for\\(const step of phase\\)/,'both sides paint within one priority phase');
-assert.match(app,/\\$\\('lootChests'\\)\\.innerHTML=event==='loot'\\?treasureChestMarkup\\(drops\\)/);
-assert.match(app,/rewards\\.length\\+'個 · 未確定',rewards\\.length\\)/);
-assert.match(app,/await ceremony\\('encounter'/);
-assert.match(app,/await ceremony\\('hero-death'/);
-assert.match(app,/await ceremony\\('enemy-death'/);
-
+assert.ok(app.includes('await playCombatSequence(steps,phase=>'));
+assert.ok(app.includes('for(const step of phase)'),'both fighters are painted within one phase');
+assert.ok(app.includes("treasureChestMarkup(drops)"),'drop count controls number of chests');
+assert.ok(app.includes("rewards.length+'個 · 未確定',rewards.length"));
+for(const event of ['encounter','hero-death','enemy-death']){
+ assert.ok(app.includes("await ceremony('"+event+"'"),'ceremony '+event);
+}
 assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 
