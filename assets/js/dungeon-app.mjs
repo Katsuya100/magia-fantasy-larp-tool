@@ -224,7 +224,7 @@ async function useItem(index){
 }
 async function leave(){const run=profile.run;if(!run||run.stage!=='checkpoint')return;let potions=0,collection=0;profile.inventory.push(...run.carry.filter(Boolean));for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else{profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}}const before=profile.level;G.experience(profile,run.xp);profile.returns++;profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='無事帰還！';$('resultText').textContent='消耗品 '+potions+'個・収集品 '+collection+'個・経験値 '+run.xp+'を獲得。Lv.'+before+' → Lv.'+profile.level+'。次回の持ち込み上限 '+G.capacity(profile.level)+'個。';show('result');}
 async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
-async function parseCircleImage(circle,frame,valid){
+async function parseCircleImage(circle,frame,valid,request=null){
  return new Promise((resolve,reject)=>{
   let settled=false;
   const finish=(error,result)=>{
@@ -232,6 +232,7 @@ async function parseCircleImage(circle,frame,valid){
    settled=true;frame.onload=null;frame.src='about:blank';
    if(error)reject(error);else resolve(result);
   };
+  if(request)request.cancel=()=>finish(Error('解析が中断されました'));
   frame.onload=async()=>{
    try{
     const doc=frame.contentDocument;
@@ -262,7 +263,7 @@ async function analyzeCapturedCircle(circle){
  note('');
  const valid=()=>activeAnalysis===request&&!profile.run&&request.epoch===photoAnalysisEpoch;
  try{
-  const result=await parseCircleImage(circle,$('analyzerFrame'),valid);
+  const result=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
   if(!valid())return;
   const analyzed=savePreanalysis(circle,result);
   // No record is written until all analysis values have been validated.
@@ -288,7 +289,7 @@ async function analyzeUnknown(index){
  const valid=()=>activeAnalysis===request&&profile.run===run;
  (async()=>{
   try{
-   const analysis=await parseCircleImage(circle,$('analyzerFrame'),valid);
+   const analysis=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
    if(!valid())return;
    Object.assign(circle,savePreanalysis(circle,analysis));
    await putCircle(db,circle);
@@ -399,7 +400,7 @@ function openNameDialog(required){
 function wire(){
  document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
  if(b.dataset.view){
-  if(activeAnalysis?.type==='capture'){activeAnalysis=null;photoAnalysisEpoch++;$('analyzerFrame').onload=null;$('analyzerFrame').src='about:blank';}
+  if(activeAnalysis?.type==='capture'){const request=activeAnalysis;activeAnalysis=null;photoAnalysisEpoch++;request.cancel?.();}
   stopCamera();show(b.dataset.view);return;
  }
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
@@ -430,8 +431,9 @@ function wire(){
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
  $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
  $('cancelAnalyze').addEventListener('click',()=>{
-  const capture=activeAnalysis?.type==='capture';
+  const request=activeAnalysis,capture=request?.type==='capture';
   activeAnalysis=null;
+  request?.cancel?.();
   if(capture)photoAnalysisEpoch++;
   $('analyzerFrame').onload=null;
   $('analyzerFrame').src='about:blank';
