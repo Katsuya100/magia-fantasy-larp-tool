@@ -1,17 +1,16 @@
-import * as G from './dungeon-core.mjs?v=20261017.33';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.33';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.33';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.33';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.33';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.33';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261017.33';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.33';
+import * as G from './dungeon-core.mjs?v=20261017.34';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.34';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.34';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.34';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.34';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261017.34';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.34';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight} from './dungeon-design.mjs?v=20261017.33';
-import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.33';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.33';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.33';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.33';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261017.34';
+import {isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261017.34';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261017.34';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261017.34';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.34';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
 const listView={
@@ -145,7 +144,7 @@ function render(){
  +'<p class="adventure-record">携行品上限：'+G.capacity(profile.level)+'個 ｜ 帰還 '+profile.returns+' ｜ 最深:'+(deepestReturnedLayer(profile)?deepestReturnedLayer(profile)+'層':'-')+'</p>';
  const obtained=masters.collections.filter(item=>Number(profile.collection[item.id]||0)>0).length;
  $('collectionProgress').innerHTML='<strong>'+obtained+' / '+masters.collections.length+'</strong><small>DISCOVERED</small><div class="collection-track"><div class="collection-fill" style="width:'+(100*obtained/masters.collections.length)+'%"></div></div>';
- // Collection symbols are rendered as centered SVG paths.
+ const relics=['✥','◈','☷','✧','⬟','◉','⌘','ϟ','❖','⚿','☯','♛'];
  // Shapes and readable names supplement color; unknown collection rarity stays hidden.
  const rarityLabels={common:'○ コモン',uncommon:'◇ アンコモン',rare:'◆ レア',
   epic:'✦ エピック',legendary:'★ レジェンダリー'};
@@ -156,10 +155,10 @@ function render(){
   const item=masters.collections[i];
   const count=Number(profile.collection[item.id]||0),found=count>0;
   const rarity=['common','uncommon','rare','epic','legendary'].includes(item.rarity)?item.rarity:'common';
-  const mark=relicSymbolSvg(i,found);
+  const mark=found?(relics[i%relics.length]):'?';
   return '<article class="relic-card '+(found?'discovered':'locked')+'" data-rarity="'+(found?rarity:'unknown')+'" role="listitem" aria-label="'+(found?esc(item.name)+'・'+rarityLabels[rarity]:'未発見の収集品')+'">'
    +(found?'<span class="relic-count">×'+count+'</span>':'')
-   +'<div class="relic-art" aria-hidden="true">'+mark+'</div>'
+   +'<div class="relic-art" aria-hidden="true"><span class="relic-glyph">'+mark+'</span></div>'
    +(found?'<span class="relic-rarity">'+rarityLabels[rarity]+'</span>':'')
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
@@ -329,6 +328,24 @@ function renderCheckpoint(){
   '続行して敗北すると失われる。'
  ]);
  $('deeper').textContent=(layer+1)+'層へ進む';
+const pending=isBonusLayer(layer)&&!run.bonusClaimed;
+$('bonusChoices').hidden=!pending;
+$('deeper').disabled=pending;
+$('returnHome').disabled=pending;
+}
+async function claimBonus(choice){
+ const run=profile.run;
+ if(!run||run.stage!=='checkpoint'||run.bonusClaimed||!isBonusLayer(clearedLayer(run.floor)))return;
+ const layer=clearedLayer(run.floor);
+ if(choice==='restore'){run.hero.hp=run.hero.stats.hp;run.hero.mp=run.hero.stats.mp;}
+ else if(choice==='collection'){const item=bonusCollection(masters.collections,layer);run.loot.push({type:'collection',id:item.id});}
+ else if(choice==='item'){
+  const row=bonusConsumable(masters.items,layer);
+  const item={type:'use',id:row.id,value:G.roll(Number(row.min_value),Number(row.max_value)),bonus:row.bonus_buff_id&&Math.random()<Number(row.bonus_chance)?row.bonus_buff_id:null};
+  const free=run.carry.findIndex(x=>!x);
+  if(free>=0)run.carry[free]=item;else run.loot.push(item);
+ }else return;
+ run.bonusClaimed=true;await persist();renderCheckpoint();renderRun();show('checkpoint');
 }
 async function begin(){if(profile.run||!canDepartWithCircles(slots)){note('魔法陣を3〜5個編成してください');return;}
  photoAnalysisEpoch++;const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,usedItems:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');scrollToDungeonTabs();await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
@@ -725,7 +742,8 @@ function wire(){
  $('loadoutDialog').addEventListener('close',()=>{picker=null;});
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
- $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;enterFight();await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
+ for(const button of document.querySelectorAll('[data-bonus]'))button.addEventListener('click',()=>exclusive(()=>claimBonus(button.dataset.bonus)));
+ $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
  $('cancelAnalyze').addEventListener('click',()=>{
   const request=activeAnalysis,capture=request?.type==='capture';
   activeAnalysis=null;

@@ -61,3 +61,7 @@ export function bossUniqueCollection(collections,id){
  if(found.length!==1)throw Error('Expected one boss legendary for '+id);
  return found[0];
 }
+
+export const isBonusLayer=layer=>Number.isInteger(layer)&&layer>0&&layer%10===0;
+export function bonusCollection(collections,layer,r=Math.random){const weights=rarityWeights(layer===10?20:layer).slice(2);let ticket=r()*weights.reduce((a,b)=>a+b,0);let rarity='legendary';for(let i=0;i<weights.length;i++){ticket-=weights[i];if(ticket<0){rarity=RARITIES[i+2];break;}}const pool=collections.filter(x=>x.rarity===rarity&&!x.boss_enemy_id);let v=r()*pool.reduce((n,x)=>n+Number(x.weight),0);for(const x of pool){v-=Number(x.weight);if(v<0)return x;}return pool.at(-1);}
+export function bonusConsumable(items,layer,r=Math.random){const pool=eligibleConsumables(items,layer,rollConsumableTier(layer,r));let v=r()*pool.reduce((n,x)=>n+Number(x.weight),0);for(const x of pool){v-=Number(x.weight);if(v<0)return x;}return pool.at(-1);}
