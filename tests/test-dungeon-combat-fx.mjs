@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {effectCaption,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,COMBAT_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration} from '../assets/js/dungeon-combat-fx.mjs';
+import {effectCaption,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,COMBAT_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase,buffs]=await Promise.all(['balance','levels','floors','player-base','buffs'].map(csv));
 configure({balance,levels,floors,playerBase});
@@ -82,4 +82,34 @@ for(const count of [0,1,2,3,5,10,35]){
 assert.throws(()=>treasureChestMarkup(-1),/Invalid drop count/);
 assert.throws(()=>treasureChestMarkup(1.5),/Invalid drop count/);
 assert.ok(lootCeremonyDuration(35)>lootCeremonyDuration(3),'large drop quantities have time to finish opening');
+
+// Cinematics apply only to the fifth encounter of a layer, never to normal mobs.
+for(const [fight,tier] of [[1,'none'],[4,'none'],[5,'boss'],[6,'none'],
+ [45,'boss'],[50,'milestone'],[55,'boss'],[95,'boss'],[100,'milestone'],
+ [250,'milestone'],[495,'boss'],[500,'final'],[505,'boss'],[550,'milestone']]){
+ assert.equal(bossCeremonyTier(fight),tier,'correct boss cinematic tier on fight '+fight);
+}
+assert.equal(bossCeremonyTier(undefined),'none');
+for(const event of ['encounter','enemy-death']){
+ const normal=ceremonyDuration(event,1),boss=ceremonyDuration(event,5);
+ const decade=ceremonyDuration(event,50),final=ceremonyDuration(event,500);
+ assert.equal(normal,event==='encounter'?ENCOUNTER_EFFECT_MS:1120);
+ assert.ok(normal<boss&&boss<decade&&decade<final,'ceremony length escalates '+event);
+ assert.equal(boss,BOSS_CEREMONY_MS.boss[event]);
+ assert.equal(decade,BOSS_CEREMONY_MS.milestone[event]);
+ assert.equal(final,BOSS_CEREMONY_MS.final[event]);
+ for(const fight of [1,5,50,500])assert.equal(ceremonyDuration(event,fight,{animated:false}),0,'reduced motion has no delay');
+}
+assert.equal(ceremonyDuration('loot',500,{drops:7}),lootCeremonyDuration(7),'loot retains original animation time');
+assert.equal(ceremonyDuration('hero-death',500),1120,'player defeat remains unchanged');
+const cinematicCss=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+const cinematicPage=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
+for(const name of ['boss-vfx-flash','boss-vfx-wheel','boss-vfx-ring','boss-vfx-beam','boss-vfx-sparks'])
+ assert.match(cinematicPage,new RegExp('class="[^"]*'+name),'boss ceremony artwork exists: '+name);
+for(const tier of ['boss','milestone','final'])
+ assert.ok(cinematicCss.includes('[data-boss-tier="'+tier+'"]'),'tier styling exists: '+tier);
+assert.match(cinematicCss,/boss-cinematic-shake/,'boss quake is visible');
+assert.match(cinematicCss,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.versus/,'quake only moves arena badge');
+assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.boss-ceremony-art\{display:none!important\}/,'boss VFX respect reduced motion');
+
 console.log('PASS concurrent elemental fighter phases, ordered actions, encounter/death/loot and exact number of flying treasure chests');
