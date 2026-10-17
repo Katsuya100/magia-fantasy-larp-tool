@@ -43,6 +43,20 @@ function request(db,store,mode,op){
 export const allCircles=db=>request(db,'circles','readonly',s=>s.getAll());
 export const putCircle=(db,circle)=>request(db,'circles','readwrite',s=>s.put(circle));
 export const deleteCircle=(db,id)=>request(db,'circles','readwrite',s=>s.delete(id));
+// Atomically erase only this dungeon game's own IndexedDB data.
+// Keeping both stores in one transaction prevents a partially erased profile.
+export function clearDungeonData(db){
+ validateDatabase(db);
+ return new Promise((resolve,reject)=>{
+  try{
+   const transaction=db.transaction(STORES,'readwrite');
+   transaction.oncomplete=()=>resolve();
+   transaction.onerror=()=>reject(transaction.error||Error('保存データの削除に失敗しました。'));
+   transaction.onabort=()=>reject(transaction.error||Error('保存データの削除が中断されました。'));
+   for(const name of STORES)transaction.objectStore(name).clear();
+  }catch(error){reject(error);}
+ });
+}
 export const saveProfile=(db,p)=>request(db,'settings','readwrite',s=>s.put(p,'profile'));
 export async function getProfile(db){
   let p=await request(db,'settings','readonly',s=>s.get('profile'));

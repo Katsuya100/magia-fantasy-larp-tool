@@ -10,10 +10,12 @@ export function effectCaption(step){
  if(step.role==='support'||step.role==='item')return symbol+' '+tag+(n?' +'+n:'');
  return symbol+' '+tag;
 }
+export const COMBAT_EFFECT_MS=440;
+export const ENCOUNTER_EFFECT_MS=820;
 export function effectDuration(){
  // Keep reduced-motion users and headless test environments from waiting for animations.
  if(typeof window==='undefined'||typeof window.matchMedia!=='function')return 0;
- return window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:780;
+ return window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:COMBAT_EFFECT_MS;
 }
 // Resolve order is fixed by the combat core. The two sides animate together
 // if they acted in the same priority phase, without skipping later phases.
@@ -36,7 +38,7 @@ export function fatalSide(phase){
 // Start the death effect before the fatal attack animation ends.
 export async function playCombatSequence(steps,paint,{
  duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
- onFatal=null,overlap=260
+ onFatal=null,overlap=125
 }={}){
  let death=null;
  for(const phase of simultaneousPhases(steps)){

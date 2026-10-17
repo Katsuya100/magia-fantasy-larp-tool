@@ -17,15 +17,26 @@ export function fakeIndexedDB({onOpen='success'}={}){
      createObjectStore(id,options){maps.set(id,new Map());keys.set(id,options?.keyPath||null);return {};},
      close(){db.closed=true;},
      transaction(id,mode){
-      if(!maps.has(id))throw Error('Missing object store '+id);
+      const names=Array.isArray(id)?id:[id];
+      if(!names.length||names.some(name=>!maps.has(name)))throw Error('Missing object store '+id);
       const tx={error:null,oncomplete:null,onabort:null,onerror:null};
+      let pending=0,failed=false,complete=false;
       tx.objectStore=store=>{
+       if(!names.includes(store))throw Error('Store not in transaction '+store);
        const table=maps.get(store),keyPath=keys.get(store);
        const request=(action)=>{
         const req={result:undefined,error:null,onsuccess:null,onerror:null};
+        pending++;
         setImmediate(()=>{
-         try{req.result=action();req.onsuccess?.({target:req});tx.oncomplete?.();}
-         catch(e){req.error=e;req.onerror?.();tx.error=e;tx.onerror?.();}
+         if(failed)return;
+         try{
+          req.result=action();req.onsuccess?.({target:req});
+          pending--;
+          if(!pending&&!complete){
+           complete=true;
+           setImmediate(()=>tx.oncomplete?.());
+          }
+         }catch(e){failed=true;req.error=e;req.onerror?.();tx.error=e;tx.onerror?.();}
         });
         return req;
        };
@@ -33,7 +44,8 @@ export function fakeIndexedDB({onOpen='success'}={}){
         get:key=>request(()=>structuredClone(table.get(key))),
         getAll:()=>request(()=>structuredClone([...table.values()])),
         put:(value,key)=>request(()=>{const id=key??value[keyPath];if(id===undefined)throw Error('Missing key');table.set(id,structuredClone(value));return id;}),
-        delete:key=>request(()=>{table.delete(key);return undefined;})
+        delete:key=>request(()=>{table.delete(key);return undefined;}),
+        clear:()=>request(()=>{table.clear();})
        };
       };
       return tx;
