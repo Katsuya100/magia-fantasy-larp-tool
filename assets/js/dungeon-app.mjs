@@ -186,9 +186,19 @@ async function ceremony(event,title,detail='',drops=0){
 }
 function createEnemy(floor){const rowFloor=floorMaster(floor),level=Number(rowFloor.enemy_level);const pool=masters.enemies.filter(x=>Number(x.min_level)<=level&&Number(x.min_level)>=Number(rowFloor.minimum_enemy_level)&&x.boss_only!=='1');let row;if(Number(rowFloor.boss)===1){row=masters.enemies.find(x=>x.id===rowFloor.boss_enemy_id);if(!row||Number(row.min_level)>level)throw Error('ボスの設定が不正');}else row=G.weighted(pool);return {unit:G.fromEnemy(row,level),name:row.name};}
 function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor);run.enemy=unit;run.enemyName=name;run.usedItems=0;run.stage='battle';run.log.push('第'+run.floor+'戦：'+name+'が現れた');}
-async function begin(){if(profile.run||!isFull(slots)){note('5つの魔法陣を編成してください');return;}const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,usedItems:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
+async function begin(){if(profile.run||!canDepartWithCircles(slots)){note('魔法陣を3〜5個編成してください');return;}
+ photoAnalysisEpoch++;
+ $('captureAnalyzerFrame').src='about:blank';const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,usedItems:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
 function enemyChoice(enemy){const ids=G.available(enemy);if(!ids.length)return -1;const heal=ids.find(i=>enemy.spells[i].role==='support');if(enemy.hp<enemy.stats.hp*num('enemy_heal_threshold')&&heal!==undefined)return heal;const offense=ids.filter(i=>enemy.spells[i].role==='attack');return offense.length&&Math.random()<num('enemy_attack_preference')?offense[Math.floor(Math.random()*offense.length)]:ids[Math.floor(Math.random()*ids.length)];}
-async function takeTurn(index){const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;const spell=run.hero.spells[index];if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}run.usedItems=0;await animateBattle(steps);
+async function takeTurn(index){
+ const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;
+ if(index>=0&&!run.slotIds[index])return;
+ const circle=index>=0?circles.find(c=>c.id===run.slotIds[index]):null;
+ if(circle?.analysis&&!run.hero.spells[index])run.hero.spells[index]={...circle.analysis};
+ const spell=index>=0?run.hero.spells[index]:null;
+ if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
+ if(circle?.analysis&&!isRevealed(circle)){Object.assign(circle,revealOnUse(circle));await putCircle(db,circle);}
+ run.usedItems=0;await animateBattle(steps);
 if(run.hero.hp<=0){await ceremony('hero-death','探索失敗',profile.name||'冒険者');}
 if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='探索失敗';$('resultText').textContent='未確定報酬 '+dropped+'個と経験値を喪失。未使用の携行品 '+unusedCount+'個は倉庫へ戻った。性能が判明した魔法陣は残る。';show('result');return;}
 if(run.enemy.hp<=0){await ceremony('enemy-death','討伐成功',run.enemyName);const rewards=G.drops(masters.items,masters.collections,run.enemy.level);run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);profile.highest=Math.max(profile.highest,run.floor);if(run.floor%num('checkpoint_interval')===0){run.stage='checkpoint';$('checkpointInfo').textContent='第'+run.floor+'戦突破。未確定報酬 '+run.loot.length+'個 / 経験値 '+run.xp+'。続行して敗北すると失われる。';await persist();show('checkpoint');return;}run.floor++;enterFight();await persist();renderRun();await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}
@@ -210,34 +220,79 @@ async function useItem(index){
 }
 async function leave(){const run=profile.run;if(!run||run.stage!=='checkpoint')return;let potions=0,collection=0;profile.inventory.push(...run.carry.filter(Boolean));for(const item of run.loot){if(item.type==='use'){profile.inventory.push(item);potions++;}else{profile.collection[item.id]=(profile.collection[item.id]||0)+1;collection++;}}const before=profile.level;G.experience(profile,run.xp);profile.returns++;profile.run=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='無事帰還！';$('resultText').textContent='消耗品 '+potions+'個・収集品 '+collection+'個・経験値 '+run.xp+'を獲得。Lv.'+before+' → Lv.'+profile.level+'。次回の持ち込み上限 '+G.capacity(profile.level)+'個。';show('result');}
 async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
-async function analyzeUnknown(index){
- const circle=circles.find(x=>x.id===profile.run.slotIds[index]);if(!circle){note('魔法陣が見つからない');return;}
- const request={id:circle.id,index};activeAnalysis=request;show('analyzing');note('');
- const frame=$('analyzerFrame');
- frame.onload=async()=>{
+async function parseCircleImage(circle,frame,valid){
+ return new Promise((resolve,reject)=>{
+  let settled=false;
+  const finish=(error,result)=>{
+   if(settled)return;
+   settled=true;frame.onload=null;frame.src='about:blank';
+   if(error)reject(error);else resolve(result);
+  };
+  frame.onload=async()=>{
+   try{
+    const doc=frame.contentDocument;
+    const input=await waitUntil(()=>{const el=doc?.getElementById('fileInput');return el&&!el.disabled?el:null;},valid);
+    const transfer=new DataTransfer();
+    transfer.items.add(new File([circle.image],'circle.jpg',{type:circle.image.type||'image/jpeg'}));
+    input.files=transfer.files;
+    input.dispatchEvent(new Event('change',{bubbles:true}));
+    const analyze=await waitUntil(()=>{const el=doc?.getElementById('analyzeButton');return el&&!el.disabled?el:null;},valid);
+    analyze.click();
+    await waitUntil(()=>!doc.getElementById('altarSection')?.hidden,valid);
+    finish(null,normalizeAnalysisResult({
+     attribute:doc.querySelector('#attributeResult .altar-value')?.textContent?.trim(),
+     role:doc.querySelector('#shapeResult .altar-value')?.textContent?.trim(),
+     power:doc.querySelector('#powerResult .altar-value')?.textContent?.trim()
+    }));
+   }catch(e){finish(e);}
+  };
+  frame.src='magia-circle.html';
+ });
+}
+function queuePhotoAnalysis(circle){
+ const epoch=photoAnalysisEpoch;
+ // Serialize a single hidden analyzer so repeated camera taps do not overwrite its input.
+ photoAnalysisQueue=photoAnalysisQueue.catch(()=>{}).then(async()=>{
+  const valid=()=>epoch===photoAnalysisEpoch&&!profile.run;
+  if(!valid())return;
   try{
-   const valid=()=>activeAnalysis===request;
-   const doc=frame.contentDocument;
-   const input=await waitUntil(()=>{const el=doc?.getElementById('fileInput');return el&&!el.disabled?el:null;},valid);
-   const transfer=new DataTransfer();transfer.items.add(new File([circle.image],'circle.jpg',{type:circle.image.type||'image/jpeg'}));
-   input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
-   const analyze=await waitUntil(()=>{const el=doc.getElementById('analyzeButton');return el&&!el.disabled?el:null;},valid);
-   analyze.click();
-   await waitUntil(()=>!doc.getElementById('altarSection')?.hidden,valid);
-   const attribute=doc.querySelector('#attributeResult .altar-value')?.textContent?.trim();
-   const japaneseRole=doc.querySelector('#shapeResult .altar-value')?.textContent?.trim();
-   const power=Number(doc.querySelector('#powerResult .altar-value')?.textContent?.trim());
-   const role=({'攻撃':'attack','防御':'defense','回復':'support','弱体':'debuff'})[japaneseRole];
-   if(!G.ATTRS.includes(attribute)||!G.ROLES.includes(role)||!Number.isFinite(power)||power<=0)throw Error('有効な相・紋・威力を取得できませんでした');
-   circle.analysis={attribute,role,power};
+   const result=await parseCircleImage(circle,$('captureAnalyzerFrame'),valid);
+   if(!valid())return;
+   // Only successful analyses are allowed into IndexedDB or the grimoire.
+   Object.assign(circle,savePreanalysis(circle,result));
    await putCircle(db,circle);
    if(!valid())return;
-   profile.run.hero.spells[index]={...circle.analysis};await persist();
-   activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('');
-   show('battle');await takeTurn(index);
-  }catch(e){if(activeAnalysis!==request)return;activeAnalysis=null;frame.onload=null;frame.src='about:blank';note('解明できませんでした：'+e.message);renderRun();show('battle');}
- };
- frame.src='magia-circle.html';
+   circles=newestCirclesFirst([...circles,circle]);
+   if(!$('library').hidden)render();
+  }catch(e){
+   // Failed/cancelled photographs remain transient: no putCircle, no saved entry.
+   if(!valid())return;
+   $('cameraError').hidden=false;
+   $('cameraError').textContent='撮影した魔法陣を解析できませんでした。写真は保存していません。もう一度撮影してください。';
+  }
+ });
+}
+async function analyzeUnknown(index){
+ const run=profile.run,circle=circles.find(x=>x.id===run?.slotIds[index]);
+ if(!circle){note('魔法陣が見つからない');return;}
+ const request={id:circle.id,index};
+ activeAnalysis=request;show('analyzing');note('');
+ const valid=()=>activeAnalysis===request&&profile.run===run;
+ (async()=>{
+  try{
+   const analysis=await parseCircleImage(circle,$('analyzerFrame'),valid);
+   if(!valid())return;
+   Object.assign(circle,savePreanalysis(circle,analysis));
+   await putCircle(db,circle);
+   if(!valid())return;
+   run.hero.spells[index]={...analysis};await persist();
+   activeAnalysis=null;note('');show('battle');await takeTurn(index);
+  }catch(e){
+   if(!valid())return;
+   activeAnalysis=null;note('解明できませんでした：'+e.message);
+   renderRun();show('battle');
+  }
+ })();
 }
 function syncCameraUi(active){
  $('cameraPlaceholder').hidden=active;
@@ -268,9 +323,10 @@ async function capture(){
  canvas.getContext('2d').drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,canvas.width,canvas.height);
  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));
  if(!blob){note('撮影画像を作成できません');return;}
- const circle={id:crypto.randomUUID(),registeredAt:nextCircleRegistration(circles),image:blob,analysis:null};
- await putCircle(db,circle);circles=newestCirclesFirst([...circles,circle]);
- note('');render();
+ const circle=newCapturedCircle(crypto.randomUUID(),blob,nextCircleRegistration(circles));
+ // Do not save until the analysis succeeded. Photo stays in memory while queued.
+ $('cameraError').hidden=true;$('cameraError').textContent='';
+ queuePhotoAnalysis(circle);
 }
 function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
