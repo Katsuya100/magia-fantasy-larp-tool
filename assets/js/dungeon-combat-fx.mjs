@@ -15,9 +15,24 @@ export function effectDuration(){
  if(typeof window==='undefined'||typeof window.matchMedia!=='function')return 0;
  return window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:780;
 }
-export async function playCombatSequence(steps,paint,{duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
+// Resolve order is fixed by the combat core. The two sides animate together
+// if they acted in the same priority phase, without skipping later phases.
+export function simultaneousPhases(steps){
+ const phases=[];
  for(const step of steps){
-  paint(step);
+  const last=phases.at(-1);
+  if(last&&last[0].role===step.role&&last.every(s=>s.side!==step.side))last.push(step);
+  else phases.push([step]);
+ }
+ return phases;
+}
+export async function playCombatSequence(steps,paint,{duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
+ for(const phase of simultaneousPhases(steps)){
+  paint(phase);
   if(duration>0)await wait(duration);
  }
+}
+export async function playBattleCeremony(event,paint,{duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
+ paint(event);
+ if(duration>0)await wait(duration);
 }
