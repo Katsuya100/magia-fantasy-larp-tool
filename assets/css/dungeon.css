@@ -1372,3 +1372,30 @@ html,body{overflow-x:clip}
 .rank-start select{max-width:100%;min-height:43px;padding:8px 12px;box-shadow:inset 0 0 0 1px var(--border);border-radius:6px;color:var(--text);background:#181827}
 .rank-start p{margin:0;color:var(--soft);font-size:12px;line-height:1.5}
 
+/* Attribute icons with ↑/↓ for buffs/debuffs and a tiny turn count.
+   Horizontal scrolling keeps both combatants at their fixed height. */
+#battleArena #enemyStats>.effects,#battleArena #heroStats>.effects{
+ display:flex;align-items:center;align-content:center;gap:3px;
+ min-width:0;min-height:0;overflow-x:auto;overflow-y:hidden;
+ white-space:nowrap;overscroll-behavior-x:contain;scrollbar-width:none
+}
+#battleArena .effects::-webkit-scrollbar{display:none}
+#battleArena .status-badge{
+ box-sizing:border-box;flex:none;display:inline-flex;align-items:center;justify-content:center;
+ height:24px;min-width:36px;gap:1px;padding:1px 3px;border-radius:5px;
+ border:1px solid #83cba180;background:#1b3a32;color:#d9ffe6;
+ line-height:1;white-space:nowrap
+}
+#battleArena .status-badge.status-debuff{
+ border-color:#d98c9c99;background:#41252f;color:#ffe0e7
+}
+#battleArena .status-badge.status-resist{min-width:48px}
+#battleArena .status-glyph{font-size:16px}
+#battleArena .status-badge.status-resist .status-glyph{font-size:13px;letter-spacing:-3px;padding-right:3px}
+#battleArena .status-arrow{font-size:10px;font-weight:800}
+#battleArena .status-turns{font-size:9px;opacity:.9;font-variant-numeric:tabular-nums}
+@media(max-width:630px){
+ #battleArena .status-badge{height:22px;min-width:34px;padding:1px 2px}
+ #battleArena .status-badge.status-resist{min-width:46px}
+ #battleArena .status-glyph{font-size:15px}
+}
