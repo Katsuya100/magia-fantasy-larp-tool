@@ -5,7 +5,7 @@ const oldRandom=Math.random;Math.random=()=>.01;
 const env=fakeDungeonBrowser(),doc=env.document,$=id=>doc.getElementById(id);
 const button=dataset=>({dataset,disabled:false,closest(){return this;}});
 const imageUrls=markup=>[...markup.matchAll(/<img alt="" src="(blob:mock-\d+)"/g)].map(m=>m[1]);
-const wait=async(predicate,label)=>{const limit=Date.now()+9000;while(Date.now()<limit){if(await predicate())return;}throw Error('Timeout: '+label);};
+const wait=async(predicate,label)=>{const limit=Date.now()+9000;while(Date.now()<limit){if(await predicate())return;await new Promise(resolve=>setTimeout(resolve,25));}throw Error('Timeout: '+label);};
 try{
  const db=await openStore(env.factory);
  // The app initializes balancing tables on load, so seed an explicit profile
