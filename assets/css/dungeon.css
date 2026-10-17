@@ -222,3 +222,5 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .battle-ceremony[data-event="loot"]{gap:4px}
 @media(max-width:630px){#battleArena .loot-chests{width:98%;gap:2px;max-height:none}#battleArena .loot-chest{width:22px;height:20px}#battleArena .loot-chest-lid,#battleArena .loot-chest-body{border-width:1px}}
 @media(prefers-reduced-motion:reduce){#battleArena .loot-chest{animation:none!important;opacity:1}#battleArena .loot-chest-lid{animation:none!important;transform:rotate(-43deg) translateY(-4px)}#battleArena .loot-chest-light{animation:none!important;opacity:.4}}
+
+#battleArena .battle-ceremony[data-event="loot"]{animation-duration:var(--ceremony-duration,2.4s)}
