@@ -42,7 +42,24 @@ assert.match(page,/魔法陣の力を解明中/);
 assert.match(page,/id="heroName"/,'name in duel is populated from saved profile');
 assert.doesNotMatch(page,/<h3>冒険者<\/h3>/,'no generic name hard-coded inside the duel');
 assert.match(page,/id="battleArena" class="arena" data-role="idle"/,'duel stage has animation state');
-assert.match(page,/id="battleFxText" class="fx-caption"/,'visual event label stays within battle arena');
+assert.match(page,/id="heroCombatant" class="unit hero-unit"/);
+assert.match(page,/id="enemyCombatant" class="unit enemy-unit"/);
+assert.match(page,/id="heroFxText"/);
+assert.match(page,/id="enemyFxText"/);
+assert.match(page,/id="battleCeremony"/);
+assert.match(page,/id="lootChests" class="loot-chests"/);
+for(const attribute of ['flame','bolt','aqua','storm','gravity','law','chaos']){
+ assert.match(css,new RegExp('\\\\.unit\\\\[data-attribute="'+attribute+'"\\\\]'),'individual fighter uses '+attribute+' color');
+}
+for(const role of ['attack','basic','defense','debuff','support','burn','death']){
+ assert.match(css,new RegExp('data-effect="'+role+'"'),'animation style exists for '+role);
+}
+for(const ceremony of ['encounter','hero-death','enemy-death','loot'])assert.match(css,new RegExp('data-event="'+ceremony+'"'));
+assert.match(css,/@keyframes chest-leap/);
+assert.match(css,/@keyframes chest-open/);
+assert.match(css,/@keyframes loot-shower/);
+assert.match(css,/@media\\(prefers-reduced-motion:reduce\\)/);
+
 assert.match(css,/@keyframes fx-rush-left/);
 assert.match(css,/@keyframes fx-rush-right/);
 assert.match(css,/@keyframes fx-guard/);
@@ -99,15 +116,15 @@ const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
 assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
-assert.match(page,/data-release="20261017\.8"/);
-assert.match(page,/dungeon\.css\?v=20261017\.8/);
-assert.match(page,/dungeon-app\.mjs\?v=20261017\.8/);
+assert.match(page,/data-release="20261017\.9"/);
+assert.match(page,/dungeon\.css\?v=20261017\.9/);
+assert.match(page,/dungeon-app\.mjs\?v=20261017\.9/);
 const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.8','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.9','stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
@@ -120,7 +137,14 @@ assert.match(app,/Math\.max\(5,run\.carry\.length\)/);
 assert.match(app,/\$\('heroName'\)\.textContent=profile\.name/);
 assert.match(app,/step=>steps\.push\(step\)/,'game engine steps are captured for sequential playback');
 assert.match(app,/await animateBattle\(steps\)/);
-assert.match(app,/await playCombatSequence\(steps,step=>/);
+assert.match(app,/await playCombatSequence\\(steps,phase=>/);
+assert.match(app,/for\\(const step of phase\\)/,'both sides paint within one priority phase');
+assert.match(app,/\\$\\('lootChests'\\)\\.innerHTML=event==='loot'\\?treasureChestMarkup\\(drops\\)/);
+assert.match(app,/rewards\\.length\\+'個 · 未確定',rewards\\.length\\)/);
+assert.match(app,/await ceremony\\('encounter'/);
+assert.match(app,/await ceremony\\('hero-death'/);
+assert.match(app,/await ceremony\\('enemy-death'/);
+
 assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 
