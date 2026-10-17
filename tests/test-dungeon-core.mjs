@@ -11,7 +11,7 @@ const [enemies,items,collections,buffs,balance,levels,floors,playerBase]=await P
 configure({balance,levels,floors,playerBase});
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
 assert.equal(G.capacity(1),3);assert.equal(G.capacity(5),4);assert.equal(G.capacity(49),15);
-assert.equal(G.nextXp(1),100);assert.equal(floor(5).boss,'1');
+assert.equal(G.nextXp(1),108);assert.equal(floor(5).boss,'1');
 assert.deepEqual(G.startingBase(()=>0),{hp:90,mag:8,def:5,res:5});
 assert.deepEqual(G.startingBase(()=>.99999),{hp:110,mag:12,def:10,res:10});
 const base={hp:100,mag:10,def:7,res:7};

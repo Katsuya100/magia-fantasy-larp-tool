@@ -32,7 +32,7 @@ try{
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
  assert.equal($('tab-collection').attributes['aria-current'],'page');
- assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,12);
+ assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,300);
  assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-rarity"/,'undiscovered items do not reveal rarity labels');
  assert.equal($('magicStoneBalance').textContent,'✦ 魔導石：0個','initial stone balance displays no explanation');
  await doc.click(btn({view:'home'}));
@@ -306,6 +306,7 @@ try{
  assert.equal(p.run.stage,'checkpoint');
  assert.equal(p.deepestReturnedLayer,0,'boss victory does not count as a return until leaving');
  assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
+  assert.ok(p.run.loot.some(item=>item.id==='relic_boss_001'),'boss grants its dedicated legendary');
  assert.equal($('enemyCombatant').dataset.defeated,'true','layer boss stays vanished during checkpoint');
  assert.equal($('enemyCombatant').dataset.dying,'false','completed death effect can clear its animation without resurrecting the boss');
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
@@ -331,9 +332,9 @@ try{
  assert.match($('playerStats').innerHTML,/最深:1層/,'profile reports deepest layer instead of battle count');
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
- assert.match($('collectionGrid').innerHTML,/失われた王冠/);
- assert.match($('collectionProgress').innerHTML,/1 \/ 12/);
- assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,11);
+ assert.match($('collectionGrid').innerHTML,/灰燼の洞窟の王印/);
+ assert.match($('collectionProgress').innerHTML,/1 \/ 300/);
+ assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,299);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,1);
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-rarity"/g)||[]).length,1,'one found relic shows exactly one rarity label');
  assert.match($('collectionGrid').innerHTML,/<span class="relic-rarity">★ レジェンダリー<\/span>/,'discovered legendary shows color-independent rarity label');
@@ -344,12 +345,12 @@ try{
  assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/);
  $('collectionRarityFilter').value='legendary';await $('collectionRarityFilter').fire('change');
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,
-  Number(p.collection.forgotten_crown)>0?1:0,'legendary filter displays only collected legendary items');
+  Number(p.collection.relic_boss_001)>0?1:0,'legendary filter displays only collected legendary items');
  assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/,
   'rarity filtering never discloses uncollected rarity');
  $('collectionRarityFilter').value='all';await $('collectionRarityFilter').fire('change');
  $('collectionDiscoveryFilter').value='missing';await $('collectionDiscoveryFilter').fire('change');
- assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card locked"/g)||[]).length,11,
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card locked"/g)||[]).length,299,
   'undiscovered filter shows exactly the uncollected relics');
  $('collectionDiscoveryFilter').value='all';await $('collectionDiscoveryFilter').fire('change');
  $('collectionSort').value='count';await $('collectionSort').fire('change');
@@ -416,7 +417,7 @@ try{
  assert.equal($('floorLabel').textContent,'2層1戦目','next layer begins after the fifth boss');
  assert.equal($('enemyCombatant').dataset.defeated,'false','fresh opponent appears only after starting next layer');
  assert.equal(p.deepestReturnedLayer,1,'descending into the next layer does not count as a return');
- assert.equal(p.run.enemy.level,2);
+ assert.equal(p.run.enemy.level,3);
  assert.equal(p.run.hero.hp,hpAtCheckpoint,'continuation carries HP');
  assert.equal(p.run.loot.length,pendingLoot,'rewards remain unconfirmed');
  // Verify the photo+analysis persists through the second attack.
@@ -454,7 +455,7 @@ try{
   assert.equal(defeated.carrySlots[1],savedBeforeAttack.carrySlots[1],'first unused potion returns to its saved slot');
   assert.equal(defeated.carrySlots[2],savedBeforeAttack.carrySlots[2],'second unused potion returns to its saved slot');
   assert.equal(defeated.name,'暁の旅人','player name persists across reload');
-  assert.equal(defeated.collection.forgotten_crown,1,'collection survives defeat');
+  assert.equal(defeated.collection.relic_boss_001,1,'boss collection survives defeat');
   assert.equal(newestCirclesFirst(await allCircles(await openStore(env2.factory)))[0].analysis.power,5000);
  }finally{env2.restore();}
  const env3=fakeDungeonBrowser({factory:env.factory}),doc3=env3.document,el3=id=>doc3.getElementById(id);
