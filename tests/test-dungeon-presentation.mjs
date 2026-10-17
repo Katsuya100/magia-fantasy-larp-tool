@@ -87,6 +87,7 @@ assert.match(page,/<div class="camera-viewfinder"[^>]*>[\s\S]*?id="cameraPlaceho
 assert.match(page,/<span class="viewfinder-circle-guide" aria-hidden="true"><\/span>/,'large guide overlays the live camera');
 assert.match(css,/\.camera-viewfinder \.viewfinder-circle-guide\{[^}]*inset:7%;z-index:2;pointer-events:none/,'guide has 86% diameter, never blocks taps');
 assert.match(css,/viewfinder-circle-guide\{[^}]*border-radius:50%/,'guide is circular');
+assert.match(css,/viewfinder-circle-guide\{[^}]*border:2px dashed/,'camera ring is dashed');
 assert.doesNotMatch(page,/<canvas[^>]*>[^<]*viewfinder-circle-guide/,'guide does not paint onto captured image');
 assert.match(page,/id="cameraCapture" hidden/);
 assert.match(page,/id="cameraStop"[^>]* hidden/);
@@ -127,15 +128,15 @@ const items=page.match(/<div id="gearCards">([\s\S]*?)<\/div><\/div>/)?.[1];
 assert.ok(slots&&items,'static first-view grids exist before JS starts');
 assert.equal((slots.match(/data-open-slot=/g)||[]).length,5,'five spell placeholders are shipped in HTML');
 assert.equal((items.match(/data-open-item=/g)||[]).length,5,'five item placeholders are shipped in HTML');
-assert.match(page,/data-release="20261017\.18"/);
-assert.match(page,/dungeon\.css\?v=20261017\.18/);
-assert.match(page,/dungeon-app\.mjs\?v=20261017\.18/);
+assert.match(page,/data-release="20261017\.19"/);
+assert.match(page,/dungeon\.css\?v=20261017\.19/);
+assert.match(page,/dungeon-app\.mjs\?v=20261017\.19/);
 const app=await read('assets/js/dungeon-app.mjs');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.18','stale entry module '+specifier[1]);
+ assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v=20261017.19','stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
@@ -174,6 +175,11 @@ assert.match(app,/syncCameraUi\(false\)/);
 assert.doesNotMatch(app,/\$\('circleName'\)/);
 assert.doesNotMatch(picker,/escapeText\(c\.name\)/);
 assert.match(page,/id="magicDetailsDialog"/,'touch-to-enlarge magic detail dialog');
+assert.match(page,/id="circleActionDialog"/,'delete and enhancement need confirmation');
+assert.match(page,/id="upgradeCircle"/,'magic-circle detail can be upgraded');
+assert.match(page,/id="magicStoneBalance"/,'magic stone count appears in the grimoire');
+assert.match(page,/<h2>プロフィール<\/h2>/,'profile heading matches the tab');
+assert.match(css,/@keyframes circle-upgrade-aura/,'upgrades have a ritual animation');
 assert.doesNotMatch(page,/id="captureAnalyzerFrame"/,'photo analysis must not run in a hidden iframe');
 assert.match(page,/id="analyzerFrame" title="マギアサークル解析"/,'capture analysis uses visible screen');
 assert.match(app,/show\('analyzing'\)/,'captures visibly transition to analysis');
@@ -215,7 +221,7 @@ assert.match(css,/#checkpointInfo,#resultText\{[^}]*white-space:pre-line/,'story
 assert.match(app,/narrativeLines\('checkpointInfo'/);
 assert.match(app,/narrativeLines\('resultText'/);
 assert.match(app,/battleHeading\(run.floor\)/,'encounter heading reflects layer and battle');
-assert.match(app,/最深 '\+profile\.highest\+'層/,'profile records layers');
+assert.match(app,/deepestReturnedLayer\(profile\)/,'profile records successful returns only');
 assert.match(app,/dataset\.defeated='true'/,'defeated enemy stays invisible');
 assert.match(css,/#battleArena \.enemy-unit\[data-defeated="true"\]\{visibility:hidden/);
 console.log('PASS camera circle guide, layer progression, 3-column items, readable story, terminology and fantasy layout');
