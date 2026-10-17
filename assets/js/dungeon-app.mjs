@@ -1,14 +1,16 @@
-import * as G from './dungeon-core.mjs?v=20261017.14';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.14';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.14';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.14';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.14';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.14';
+import * as G from './dungeon-core.mjs?v=20261017.15';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,treasureChestMarkup,lootCeremonyDuration} from './dungeon-combat-fx.mjs?v=20261017.15';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261017.15';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261017.15';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges} from './dungeon-preparation-ui.mjs?v=20261017.15';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261017.15';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.14';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile} from './dungeon-store.mjs?v=20261017.15';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261017.15';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,urls=[],picker=null;
-let dungeonView='prepare',battleUrls=[];
+let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null;
+const circleImages=createCircleImageUrls();
+let dungeonView='prepare';
 let busyAction=false,playingEffects=false;
 let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
@@ -59,10 +61,8 @@ function show(name){
  if(['home','library','prepare','collection'].includes(name))render();
  if(name==='battle'&&profile?.run&&!playingEffects)renderRun();
 }
-function imageUrl(blob){const url=URL.createObjectURL(blob);urls.push(url);return url;}
-function battleImageUrl(blob){const url=URL.createObjectURL(blob);battleUrls.push(url);return url;}
-function releaseBattleUrls(){for(const url of battleUrls)URL.revokeObjectURL(url);battleUrls=[];}
-function freeUrls(){for(const url of urls)URL.revokeObjectURL(url);urls=[];}
+function imageUrl(blob){return circleImages.get(blob);}
+function battleImageUrl(blob){return circleImages.get(blob);}
 function statusText(unit){return unit.statuses.map(s=>{const row=masters.buffs.find(x=>x.id===s.id);const label=row?.name||(s.id.startsWith('resist_')?s.attribute+'耐性':'強化');return esc(label)+'('+s.turns+')';}).join(' / ');}
 function rowUnit(unit){const hp=Math.max(0,100*unit.hp/unit.stats.hp),mp=Math.max(0,100*unit.mp/unit.maxMp);return '<p>HP '+unit.hp+'/'+unit.stats.hp+'</p><div class="meter"><div class="fill" style="width:'+hp+'%"></div></div><p>MP '+unit.mp+'/'+unit.maxMp+'</p><div class="meter"><div class="fill mp" style="width:'+mp+'%"></div></div><small>MAG '+unit.stats.mag+' / DEF '+G.armor(unit)+' / RES '+unit.stats.res+'</small>'+(unit.statuses.length?'<p class="effects">'+statusText(unit)+'</p>':'');}
 const roles={attack:'⚔️攻撃',defense:'🛡️防御',support:'✚回復',debuff:'🕸️弱体'};
@@ -72,7 +72,6 @@ function roleText(text){return String(text).replace(/通常攻撃|攻撃|防御|
 function render(){
  carry=prepareItems(carry,profile.inventory.length,G.capacity(profile.level));
 
- freeUrls();
  const s=G.stats(profile.base,profile.level),experienceNeeded=G.nextXp(profile.level),xpProgress=Math.min(100,100*profile.xp/experienceNeeded);
  const name=esc(profile.name||'名もなき冒険者');
  $('playerStats').innerHTML='<div class="character-name-row"><h3 class="character-name">'+name+'</h3><button class="subtle" data-action="rename">名前変更</button></div>'
@@ -102,7 +101,6 @@ function render(){
 }
 function renderRun(){
  const run=profile.run;if(!run)return;
- releaseBattleUrls();
  const enemy=run.enemy,hero=run.hero;
  $('floorLabel').textContent='第'+run.floor+'戦'+(run.floor%num('checkpoint_interval')===0?' / 階層の番人':'');
  $('enemyName').textContent=run.enemyName+' Lv.'+enemy.level;
@@ -111,13 +109,20 @@ function renderRun(){
  $('heroStats').innerHTML=rowUnit(hero);
  $('battleSpells').innerHTML=run.slotIds.map((id,i)=>{
   const c=circles.find(x=>x.id===id),s=hero.spells[i],waiting=hero.cooldowns[i]||0;
-  const disabled=!id||Boolean(s&&!G.canCast(hero,i));
-  return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c?.analysis?circleLabel(c.analysis,isRevealed(c)):'未解析')+'" '+(disabled?'disabled':'')+'>'
+  // Empty slots must not look castable; a missing saved photo is an explicit error.
+  if(!id)return '<div class="battle-spell-frame"><div class="loadout-tile battle-tile battle-spell-tile empty" aria-label="魔法陣の編成枠 '+(i+1)+' 未装備">'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
-    +(c?.image?'<img alt="" src="'+battleImageUrl(c.image)+'">':'<span class="tile-empty-icon" aria-hidden="true">◎</span>')
+    +'<span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">未装備</span></div></div>';
+  if(!c?.image)return '<div class="battle-spell-frame"><div class="loadout-tile battle-tile battle-spell-tile unavailable" aria-label="魔法陣の編成枠 '+(i+1)+' 画像が見つかりません">'
+    +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
+    +'<span class="tile-empty-icon" aria-hidden="true">！</span><span class="tile-title">画像なし</span></div></div>';
+  const disabled=Boolean(s&&!G.canCast(hero,i));
+  return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleLabel(c.analysis,isRevealed(c)):'未解析')+'" '+(disabled?'disabled':'')+'>'
+    +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
+    +'<img alt="" src="'+battleImageUrl(c.image)+'">'
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
-    +(c?circleEffectBadges(c,masters.buffs,esc,G.mpCost)
-     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button>':'')+'</div>';
+    +circleEffectBadges(c,masters.buffs,esc,G.mpCost)
+    +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button></div>';
  }).join('');
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
  const maxSlots=Math.max(5,run.carry.length);
@@ -422,7 +427,7 @@ function wire(){
  }
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
  if(b.dataset.circleDetail){openMagicDetails(b.dataset.circleDetail);return;}
- if(b.dataset.remove){if(profile.run)return;await deleteCircle(db,b.dataset.remove);circles=circles.filter(c=>c.id!==b.dataset.remove);slots=slots.map(id=>id===b.dataset.remove?null:id);profile.slots=[...slots];await persist();render();return;}
+ if(b.dataset.remove){if(profile.run)return;const removedCircle=circles.find(c=>c.id===b.dataset.remove);await deleteCircle(db,b.dataset.remove);if(removedCircle)circleImages.release(removedCircle.image);circles=circles.filter(c=>c.id!==b.dataset.remove);slots=slots.map(id=>id===b.dataset.remove?null:id);profile.slots=[...slots];await persist();render();return;}
  if(b.dataset.openSlot!==undefined){openLoadoutPicker('circle',Number(b.dataset.openSlot));return;}
  if(b.dataset.openItem!==undefined){openLoadoutPicker('item',Number(b.dataset.openItem));return;}
  if(b.dataset.chooseCircle!==undefined){await exclusive(()=>chooseLoadout(Number(b.dataset.chooseCircle)));return;}
@@ -458,6 +463,6 @@ function wire(){
   if(capture){show('library');returnToCameraScroll();}
   else {renderRun();show('battle');}
  });
- window.addEventListener('beforeunload',()=>{stopCamera();freeUrls();releaseBattleUrls();});
+ window.addEventListener('beforeunload',()=>{stopCamera();circleImages.releaseAll();});
 }
 load().catch(e=>{console.error(e);note('起動できません：'+e.message);});
