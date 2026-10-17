@@ -592,3 +592,235 @@ html,body{overflow-x:clip}
 @media(prefers-reduced-motion:reduce){
  #battleArena .battle-ceremony[data-event="encounter"] strong{animation:none!important}
 }
+
+
+/* Dedicated 440ms elemental magic VFX. Decorative layers only: no combat
+   math changes, no page/scene/panel transforms, no horizontal overflow. */
+#battleArena .element-flare,#battleArena .element-trail{
+ position:absolute;left:50%;top:41%;opacity:0;pointer-events:none;
+ z-index:5;will-change:transform,opacity
+}
+#battleArena .unit[data-incoming="debuff"] .combatant-fx{opacity:1}
+/* FLAME — dancing flame tongues and rising embers. */
+#battleArena .unit[data-effect="attack"][data-attribute="flame"] .element-flare{
+ width:94px;height:110px;margin:-60px -47px;
+ background:radial-gradient(ellipse at 52% 76%,#fff8b7 0 10%,#ffc843 26%,#fd5e2e 52%,#a4213f 77%,transparent 85%);
+ clip-path:polygon(50% 0,64% 30%,78% 8%,76% 44%,96% 38%,89% 79%,63% 100%,24% 98%,5% 76%,22% 42%,18% 17%,40% 40%);
+ filter:drop-shadow(0 0 16px #fd6e25);
+ animation:element-flame-rise .44s ease-out both
+}
+#battleArena .unit[data-effect="attack"][data-attribute="flame"] .element-trail{
+ width:112px;height:92px;margin:-46px -56px;
+ background:radial-gradient(circle at 12% 63%,#ffeab0 0 3px,transparent 5px),
+ radial-gradient(circle at 37% 12%,#ff8c27 0 4px,transparent 6px),
+ radial-gradient(circle at 75% 23%,#fff4c9 0 4px,transparent 6px),
+ radial-gradient(circle at 93% 82%,#ff7748 0 4px,transparent 6px);
+ animation:element-embers-rise .44s ease-out both
+}
+@keyframes element-flame-rise{
+ 0%{opacity:0;transform:translateY(22px) scale(.25) rotate(-9deg)}
+ 38%,57%{opacity:1;transform:translateY(-7px) scale(1.13,.93) rotate(5deg)}
+ 100%{opacity:0;transform:translateY(-40px) scale(.6,1.35) rotate(-4deg)}
+}
+@keyframes element-embers-rise{
+ 0%{opacity:0;transform:translateY(18px) scale(.5)}
+ 45%{opacity:1;transform:translateY(-8px)}
+ 100%{opacity:0;transform:translateY(-50px) scale(1.45)}
+}
+/* AQUA — curling water ring and loose droplets. */
+#battleArena .unit[data-effect="attack"][data-attribute="aqua"] .element-flare{
+ width:112px;height:74px;margin:-37px -56px;border:7px solid #8df2f9;
+ border-left-color:transparent;border-top-color:#e3ffffaf;border-radius:55% 48% 55% 52%;
+ box-shadow:0 0 16px #36c7eabb,inset 0 -8px 20px #4aaedd78;
+ animation:element-wave-crash .44s ease-out both
+}
+#battleArena .unit[data-effect="attack"][data-attribute="aqua"] .element-trail{
+ width:114px;height:90px;margin:-45px -57px;
+ background:radial-gradient(circle at 14% 21%,#e5ffff 0 5px,transparent 7px),
+ radial-gradient(circle at 69% 10%,#89ecfc 0 6px,transparent 8px),
+ radial-gradient(circle at 91% 63%,#cdfbff 0 4px,transparent 7px),
+ radial-gradient(circle at 32% 81%,#69d5fa 0 5px,transparent 7px);
+ animation:element-water-splash .44s ease-out both
+}
+@keyframes element-wave-crash{
+ 0%{opacity:0;transform:rotate(-40deg) scale(.35,.55)}
+ 46%{opacity:1;transform:rotate(-12deg) scale(1.08,1.13)}
+ 100%{opacity:0;transform:rotate(9deg) scale(1.55,.8)}
+}
+@keyframes element-water-splash{
+ 0%{opacity:0;transform:translateY(12px) scale(.35)}
+ 43%{opacity:1;transform:translateY(-7px) scale(1.05)}
+ 100%{opacity:0;transform:translateY(-27px) scale(1.4)}
+}
+/* BOLT — hard-edged double lightning fork with staccato flashes. */
+#battleArena .unit[data-effect="attack"][data-attribute="bolt"] .element-flare{
+ width:64px;height:117px;margin:-62px -32px;
+ background:linear-gradient(90deg,#ffae26 0,#fffde5 43%,#ffdf42 83%,#ff9b17);
+ clip-path:polygon(55% 0,8% 48%,46% 48%,18% 100%,97% 35%,59% 38%,92% 0);
+ filter:drop-shadow(0 0 13px #ffe586);
+ animation:element-bolt-strike .44s steps(3,end) both
+}
+#battleArena .unit[data-effect="attack"][data-attribute="bolt"] .element-trail{
+ width:38px;height:88px;margin:-44px -19px;background:linear-gradient(90deg,#fff,#ffeb61 55%,#fff);
+ clip-path:polygon(58% 0,8% 50%,42% 47%,20% 100%,95% 39%,64% 40%,89% 0);
+ filter:drop-shadow(0 0 10px #ffe858);
+ animation:element-bolt-fork .44s steps(4,end) both
+}
+@keyframes element-bolt-strike{
+ 0%,16%{opacity:0;transform:translate(-19px,-19px) rotate(19deg) scale(.6)}
+ 23%,45%{opacity:1;transform:rotate(12deg) scale(1.1)}
+ 50%{opacity:.1}
+ 60%,76%{opacity:1;transform:translate(9px,2px) rotate(-13deg)}
+ 100%{opacity:0;transform:translate(20px,7px) scale(.8)}
+}
+@keyframes element-bolt-fork{
+ 0%,29%{opacity:0;transform:translate(30px,-18px) rotate(-24deg)}
+ 33%,69%{opacity:1;transform:translate(21px,-13px) rotate(-24deg) scale(1.13)}
+ 100%{opacity:0;transform:translate(44px,0) scale(.5)}
+}
+/* STORM — whirling bands of wind. */
+#battleArena .unit[data-effect="attack"][data-attribute="storm"] .element-flare{
+ width:110px;height:76px;margin:-38px -55px;border:7px double #b5fbd9;
+ border-top-color:transparent;border-radius:50%;box-shadow:0 0 22px #91f8d288;
+ animation:element-vortex .44s ease-out both
+}
+#battleArena .unit[data-effect="attack"][data-attribute="storm"] .element-trail{
+ width:72px;height:72px;margin:-36px;border:4px dashed #e1fff0;border-radius:50%;
+ animation:element-vortex .44s linear reverse both
+}
+@keyframes element-vortex{
+ 0%{opacity:0;transform:rotate(-110deg) scale(.25)}
+ 51%{opacity:1;transform:rotate(65deg) scale(1.17)}
+ 100%{opacity:0;transform:rotate(215deg) scale(.55)}
+}
+/* GRAVITY — dense dark singularity collapsing inward. */
+#battleArena .unit[data-effect="attack"][data-attribute="gravity"] .element-flare{
+ width:98px;height:98px;margin:-49px;border-radius:50%;
+ background:radial-gradient(circle,#171029 0 22%,#7954ba 37%,#24153d 55%,#c6b0fb 69%,transparent 72%);
+ box-shadow:0 0 23px #a486f099;animation:element-gravity-crush .44s ease-in both
+}
+#battleArena .unit[data-effect="attack"][data-attribute="gravity"] .element-trail{
+ width:118px;height:50px;margin:-25px -59px;border:4px solid #b99af5ba;border-radius:50%;
+ animation:element-gravity-orbit .44s ease-in both
+}
+@keyframes element-gravity-crush{
+ 0%{opacity:0;transform:scale(1.6)}
+ 30%,65%{opacity:1}
+ 86%{opacity:1;transform:scale(.24)}
+ 100%{opacity:0;transform:scale(.1)}
+}
+@keyframes element-gravity-orbit{
+ 0%{opacity:0;transform:rotate(40deg) scale(1.3)}
+ 45%{opacity:1;transform:rotate(170deg) scale(.85)}
+ 100%{opacity:0;transform:rotate(300deg) scale(.15)}
+}
+/* LAW — geometric radiant seal. */
+#battleArena .unit[data-effect="attack"][data-attribute="law"] .element-flare{
+ width:98px;height:98px;margin:-49px;
+ background:conic-gradient(from 22deg,transparent 0 11%,#fff7ca 12% 14%,transparent 15% 23%,#ffd67c 24% 26%,transparent 27% 38%,#fff7ca 39% 41%,transparent 42% 100%);
+ border:3px solid #ffdb99;border-radius:9px;box-shadow:0 0 18px #ffe3a3a0;
+ animation:element-law-seal .44s ease-out both
+}
+#battleArena .unit[data-effect="attack"][data-attribute="law"] .element-trail{
+ width:68px;height:68px;margin:-34px;border:3px solid #fff4cd;
+ animation:element-law-seal .44s ease-out reverse both
+}
+@keyframes element-law-seal{
+ 0%{opacity:0;transform:rotate(-27deg) scale(.4)}
+ 54%{opacity:1;transform:rotate(45deg) scale(1.08)}
+ 100%{opacity:0;transform:rotate(90deg) scale(.72)}
+}
+/* CHAOS — jagged magenta and prismatic fragments. */
+#battleArena .unit[data-effect="attack"][data-attribute="chaos"] .element-flare{
+ width:108px;height:108px;margin:-54px;
+ background:conic-gradient(from 35deg,#ff78bd,transparent 14%,#8c86ff 30%,transparent 47%,#fdc777 61%,transparent 76%,#f3a2e5 90%,#ff78bd);
+ clip-path:polygon(50% 0,63% 30%,97% 17%,75% 51%,100% 78%,62% 74%,46% 100%,33% 71%,0 84%,22% 45%,5% 17%,40% 29%);
+ animation:element-chaos-burst .44s ease-out both
+}
+#battleArena .unit[data-effect="attack"][data-attribute="chaos"] .element-trail{
+ width:90px;height:90px;margin:-45px;
+ background:radial-gradient(circle at 12% 19%,#feccf8 0 5px,transparent 7px),
+ radial-gradient(circle at 85% 18%,#8adeff 0 5px,transparent 7px),
+ radial-gradient(circle at 23% 83%,#ffad6e 0 5px,transparent 7px),
+ radial-gradient(circle at 83% 74%,#d0b8ff 0 5px,transparent 7px);
+ animation:element-chaos-burst .44s ease-out reverse both
+}
+@keyframes element-chaos-burst{
+ 0%{opacity:0;transform:rotate(-52deg) scale(.15)}
+ 46%{opacity:1;transform:rotate(22deg) scale(1.2)}
+ 100%{opacity:0;transform:rotate(120deg) scale(.42)}
+}
+/* DEFENSE — a solid blue-gold shield materializes before the hero. */
+#battleArena .unit[data-effect="defense"] .element-flare{
+ width:90px;height:105px;margin:-53px -45px;
+ background:linear-gradient(145deg,#fff1bf,#74b6f4 43%,#365c9f 75%,#edd291);
+ clip-path:polygon(50% 0,95% 17%,90% 63%,75% 83%,50% 100%,24% 82%,10% 62%,5% 17%);
+ box-shadow:0 0 20px #8fdaf9;animation:element-shield-raise .44s ease-out both
+}
+#battleArena .unit[data-effect="defense"] .element-trail{
+ width:116px;height:116px;margin:-58px;border:3px solid #b5eaff;
+ border-radius:50%;box-shadow:0 0 26px #9cd6fa, inset 0 0 16px #5fa5e8;
+ animation:element-shield-ward .44s ease-out both
+}
+@keyframes element-shield-raise{
+ 0%{opacity:0;transform:translateY(30px) scale(.35)}
+ 40%,68%{opacity:.92;transform:translateY(-3px) scale(1)}
+ 100%{opacity:0;transform:translateY(-6px) scale(1.13)}
+}
+@keyframes element-shield-ward{
+ 0%{opacity:0;transform:scale(.4)}
+ 45%{opacity:1;transform:scale(1.05)}
+ 100%{opacity:0;transform:scale(1.34)}
+}
+/* DEBUFF — violet hex sigils lock onto the affected opponent. */
+#battleArena .unit[data-incoming="debuff"] .element-flare{
+ width:98px;height:98px;margin:-49px;
+ background:conic-gradient(from 0deg,#50184f,#b264df,#17102c,#d773ee,#431747,#50184f);
+ clip-path:polygon(50% 0,60% 32%,84% 13%,69% 42%,100% 50%,69% 58%,84% 87%,60% 69%,50% 100%,40% 69%,16% 87%,31% 58%,0 50%,31% 42%,16% 13%,40% 32%);
+ filter:drop-shadow(0 0 16px #d47ef6);
+ animation:element-hex-bind .44s ease-out both
+}
+#battleArena .unit[data-incoming="debuff"] .element-trail{
+ width:112px;height:112px;margin:-56px;border:4px dashed #b65ded;
+ border-radius:34%;box-shadow:inset 0 0 17px #8b2eaf,0 0 18px #932bc3;
+ animation:element-hex-chain .44s ease-out both
+}
+@keyframes element-hex-bind{
+ 0%{opacity:0;transform:rotate(-95deg) scale(1.7)}
+ 45%,65%{opacity:1;transform:rotate(-10deg) scale(.86)}
+ 100%{opacity:0;transform:rotate(5deg) scale(.48)}
+}
+@keyframes element-hex-chain{
+ 0%{opacity:0;transform:rotate(70deg) scale(1.35)}
+ 54%{opacity:1;transform:rotate(-15deg) scale(.82)}
+ 100%{opacity:0;transform:rotate(-40deg) scale(.44)}
+}
+/* SUPPORT — luminous healing cross with upward motes. */
+#battleArena .unit[data-effect="support"] .element-flare{
+ width:94px;height:94px;margin:-47px;
+ background:linear-gradient(145deg,#fffbea 14%,#9effd4 43%,#54c8a0 80%);
+ clip-path:polygon(37% 0,63% 0,63% 36%,100% 36%,100% 63%,63% 63%,63% 100%,37% 100%,37% 63%,0 63%,0 36%,37% 36%);
+ filter:drop-shadow(0 0 21px #7affe4);
+ animation:element-healing-cross .44s ease-out both
+}
+#battleArena .unit[data-effect="support"] .element-trail{
+ width:112px;height:104px;margin:-52px -56px;
+ background:radial-gradient(circle at 8% 58%,#c5ffe5 0 5px,transparent 7px),
+ radial-gradient(circle at 75% 8%,#fdffe4 0 4px,transparent 7px),
+ radial-gradient(circle at 90% 71%,#9efbd5 0 6px,transparent 8px),
+ radial-gradient(circle at 26% 18%,#b0fffb 0 4px,transparent 6px);
+ animation:element-heal-motes .44s ease-out both
+}
+@keyframes element-healing-cross{
+ 0%{opacity:0;transform:translateY(20px) scale(.3)}
+ 45%,68%{opacity:1;transform:translateY(-5px) scale(1.02)}
+ 100%{opacity:0;transform:translateY(-26px) scale(1.18)}
+}
+@keyframes element-heal-motes{
+ 0%{opacity:0;transform:translateY(15px) scale(.4)}
+ 48%{opacity:1;transform:translateY(-10px) scale(1)}
+ 100%{opacity:0;transform:translateY(-47px) scale(1.2)}
+}
+@media(prefers-reduced-motion:reduce){
+ #battleArena .element-flare,#battleArena .element-trail{animation:none!important;opacity:0!important}
+}
