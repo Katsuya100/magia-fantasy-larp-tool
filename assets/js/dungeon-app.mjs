@@ -1,20 +1,20 @@
-import * as G from './dungeon-core.mjs?v=20261018.8';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.8';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.8';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.8';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.8';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.8';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.8';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.8';
+import * as G from './dungeon-core.mjs?v=20261018.9';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.9';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.9';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.9';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.9';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.9';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.9';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.9';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.8';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.8';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.8';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.8';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.8';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.8';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.8';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.8';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.9';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.9';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.9';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.9';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.9';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.9';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.9';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.9';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -152,10 +152,10 @@ function roleText(text){return String(text).replace(/通常攻撃|攻撃|防御|
 function render(){
  carry=prepareItems(carry,profile.inventory.length,G.capacity(profile.level));
 
- const s=G.stats(profile.base,profile.level),experienceNeeded=G.nextXp(profile.level),xpProgress=Math.min(100,100*profile.xp/experienceNeeded);
+ const s=G.stats(profile.base,profile.level),atLevelCap=profile.level>=num('level_max'),experienceNeeded=atLevelCap?0:G.nextXp(profile.level),xpProgress=atLevelCap?100:Math.min(100,100*profile.xp/experienceNeeded);
  const name=esc(profile.name||'名もなき冒険者');
  $('playerStats').innerHTML='<div class="character-name-row"><h3 class="character-name">'+name+'</h3><button class="subtle" data-action="rename">名前変更</button></div>'
- +'<div class="level-line"><strong>Lv.'+profile.level+'</strong><span>EXP '+profile.xp+' / '+experienceNeeded+'</span></div><div class="xp-track" role="progressbar" aria-label="経験値" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(xpProgress)+'"><div class="xp-fill" style="width:'+xpProgress+'%"></div></div>'
+ +'<div class="level-line"><strong>Lv.'+profile.level+'</strong><span>'+(atLevelCap?'EXP MAX':'EXP '+profile.xp+' / '+experienceNeeded)+'</span></div><div class="xp-track" role="progressbar" aria-label="経験値" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(xpProgress)+'"><div class="xp-fill" style="width:'+xpProgress+'%"></div></div>'
  +'<div class="stat-grid">'+['hp','mag','def','res'].map(k=>'<div class="stat-cell"><small>'+k.toUpperCase()+'</small><strong>'+s[k]+'</strong></div>').join('')+'</div>'
  +'<p class="adventure-record">携行品上限：'+G.capacity(profile.level)+'個 ｜ 帰還 '+profile.returns+' ｜ 最深:'+(deepestReturnedLayer(profile)?deepestReturnedLayer(profile)+'層':'-')+'</p>'
   +'<p class="adventurer-grade">冒険者等級：<strong>'+rankTitle(highestRankLayer(profile))+'</strong></p>'
@@ -415,7 +415,7 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
   if(bossEnemyId){profile.defeatedBosses??={};profile.defeatedBosses[bossEnemyId]=true;}
   const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot);
   if(badge)rewards.push(badge);
-  run.loot.push(...rewards);run.xp+=num('xp_base')+num('xp_per_level')*run.enemy.level;run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero);if(isLayerBoss(run.floor)){run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
+  run.loot.push(...rewards);run.xp+=G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor));run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero);if(isLayerBoss(run.floor)){run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
 // Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
 // between the loot overlay and the following encounter animation.
 const nextEntrance=ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');await persist();await nextEntrance;}

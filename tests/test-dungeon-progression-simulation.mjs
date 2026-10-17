@@ -52,7 +52,7 @@ export function stoneLedger(seed,throughLayer){
    const enemyLevel=Number(data.floors[fight-1].enemy_level);
    const drops=G.drops(data.items,data.collections,enemyLevel,r,{layer,bossEnemyId:i===4?foe.id:null});
    unconfirmedStones+=drops.filter(x=>x.type==='stone').length;
-   unconfirmedXp+=num('xp_base')+num('xp_per_level')*enemyLevel;
+   unconfirmedXp+=G.fightExperience(enemyLevel,progress.level,layer);
   }
   // Boss return: only now are stones and experience banked.
   bank+=unconfirmedStones;
