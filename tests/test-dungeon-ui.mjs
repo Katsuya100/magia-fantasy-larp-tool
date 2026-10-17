@@ -65,8 +65,24 @@ try{
  assert.equal($('cameraStop').hidden,false);
  await $('cameraStart').fire('click');
  assert.equal(env.opened,1,'opening an already running camera reuses its media stream');
+ const analysisPane=$('analyzing'),visitedAnalysis=[];
+ let analysisHidden=analysisPane.hidden;
+ Object.defineProperty(analysisPane,'hidden',{get(){return analysisHidden;},set(hidden){analysisHidden=hidden;visitedAnalysis.push(hidden);}});
+ // Cancel a photograph before the analyzer has loaded: it must not be saved.
+ const cancelledCapture=$('cameraCapture').fire('click');
+ await Promise.resolve();await Promise.resolve();await Promise.resolve();
+ assert.equal($('analyzing').hidden,false,'camera capture immediately opens the visible analysis screen');
+ assert.equal($('tab-library').attributes['aria-current'],'page','grimoire stays the active tab while solving');
+ await $('cancelAnalyze').fire('click');
+ await cancelledCapture;
+ assert.equal($('library').hidden,false,'cancel returns to the grimoire');
+ assert.equal((await allCircles(await openStore(env.factory))).length,0,'cancelled photo is not saved');
+ assert.equal($('cameraCapture').hidden,false,'camera stays available after cancellation');
  env.analyzerState.attribute='invalid';
  await $('cameraCapture').fire('click');
+ assert.equal($('analyzing').hidden,true,'failed analysis closes the full-screen analysis view');
+ assert.equal($('library').hidden,false,'failed analysis returns to the grimoire');
+ assert.ok(visitedAnalysis.includes(false),'photo analysis opens the visible screen');
  await wait(()=>$('cameraError').textContent.includes('保存していません'),'failed capture rejected');
  assert.equal((await allCircles(await openStore(env.factory))).length,0,'failed camera analysis must not save a photo');
  env.analyzerState.attribute='flame';
@@ -94,6 +110,9 @@ try{
  await wait(async()=>(await allCircles(db)).length===5,'five analyzed photographs saved');
  let circles=newestCirclesFirst(await allCircles(db));
  assert.equal(circles.length,5);assert.ok(circles.every(c=>c.analysis?.attribute==='flame'),'only successful analyses are saved');
+ assert.equal($('library').hidden,false,'successful capture returns to the grimoire');
+ assert.equal($('analyzing').hidden,true,'analyzing view closes after success');
+ assert.equal($('cameraCapture').hidden,false,'successful capture retains live camera for the next photo');
  assert.ok(circles.every(c=>c.revealed===false),'first-use power remains secret');
  assert.doesNotMatch($('libraryCards').innerHTML,/威力 5000/,'grimoire conceals unused spell power');
  assert.match($('libraryCards').innerHTML,/消費MP /,'capture reveals MP rating');
