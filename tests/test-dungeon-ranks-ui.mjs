@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {ADVENTURER_RANKS} from '../assets/js/dungeon-ranks.mjs';
+import {ADVENTURER_RANKS,rankMetalPalette} from '../assets/js/dungeon-ranks.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,getProfile,putCircle,saveProfile} from '../assets/js/dungeon-store.mjs';
@@ -16,6 +16,10 @@ const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'u
 assert.match(css,/\.adventurer-grade strong>span\{[^}]*linear-gradient\(/,'rank titles use a metallic text gradient');
 for(const rank of ADVENTURER_RANKS){
  assert.ok(css.includes('.adventurer-grade strong[data-rank="'+rank.layer+'"]'),'missing unique metallic palette for '+rank.name);
+ const source=css.match(new RegExp('\\.adventurer-grade strong\\[data-rank="'+rank.layer+'"\\]\\{([^}]+)\\}'))?.[1]||'';
+ const palette=rankMetalPalette(rank.layer);
+ for(const [key,value] of Object.entries(palette))assert.ok(source.includes('--rank-'+key+':'+value),
+  'rank '+rank.layer+' '+key+' matches Canvas palette');
 }
 const originalRandom=Math.random;
 try{
