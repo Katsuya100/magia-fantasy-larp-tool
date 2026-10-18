@@ -68,13 +68,17 @@ assert.deepEqual(Object.fromEntries(['common','uncommon','rare','epic','legendar
  {common:104,uncommon:52,rare:26,epic:103,legendary:15});
 assert.equal(bossTrophies.filter(x=>x.rarity==='epic').length,90,'non-decade boss trophies are epic');
 assert.equal(bossTrophies.filter(x=>x.rarity==='legendary').length,10,'every tenth-layer trophy stays legendary');
-assert.deepEqual(rarityWeights(1),[40,20,10,5,2]);
-const histogram=Object.fromEntries(['common','uncommon','rare','epic','legendary'].map(r=>[r,0]));
-for(let i=0;i<7700;i++)histogram[rollRarity(1,()=>(i+.5)/7700)]++;
-assert.deepEqual(histogram,{common:4000,uncommon:2000,rare:1000,epic:500,legendary:200});
 const first=rarityWeights(1),last=rarityWeights(100),sum=a=>a.reduce((x,y)=>x+y,0);
+assert.deepEqual(first.slice(0,4),[40,20,10,5]);
+assert.equal(first[4],75/99,'legendary weight gives an exact 1% of the total');
+for(const layer of [1,2,10,20,50,75,99,100,101,500]){
+ const weights=rarityWeights(layer);
+ assert.ok(Math.abs(weights[4]/sum(weights)-.01)<1e-12,'legendary collection roll is 1% at layer '+layer);
+ const samples=10000,draws=Object.fromEntries(['common','uncommon','rare','epic','legendary'].map(r=>[r,0]));
+ for(let i=0;i<samples;i++)draws[rollRarity(layer,()=>(i+.5)/samples)]++;
+ assert.equal(draws.legendary,100,'exactly 100 out of 10,000 evenly spaced draws are legendary at layer '+layer);
+}
 assert.ok((last[2]+last[3]+last[4])/sum(last)>(first[2]+first[3]+first[4])/sum(first));
-assert.ok(last[4]/sum(last)>.025&&last[4]/sum(last)<.06,'legendary remains a rare random drop');
 assert.deepEqual(rarityWeights(100),rarityWeights(500),'deep bonuses cap at 100');
 assert.equal(rollCollection(collections,100,()=>.999).rarity,'legendary');
 assert.ok(!rollCollection(collections,100,()=>.999).boss_enemy_id,'boss unique items cannot roll at random');

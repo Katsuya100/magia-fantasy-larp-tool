@@ -1,7 +1,9 @@
 // Shared dungeon level design: 100 five-fight layers, then endless mixed encounters.
 export const DESIGNED_LAYERS=100;
 export const RARITIES=['common','uncommon','rare','epic','legendary'];
-export const BASE_RARITY_WEIGHTS=[40,20,10,5,2];
+// Relative weights of the four non-legendary rarities.
+// Legendary stays at exactly 1% of each ordinary collection rarity roll.
+export const BASE_RARITY_WEIGHTS=[40,20,10,5];
 export const CONSUMABLE_TIERS=['small','medium','large','extreme'];
 export function rollConsumableTier(layer,r=Math.random){
  const depth=Math.min(1,Math.max(0,(Number(layer)-1)/99));
@@ -55,7 +57,9 @@ export function enemyForFight(enemies,fight,r=Math.random){
 }
 export function rarityWeights(layer){
  const d=Math.min(1,Math.max(0,(Number(layer)-1)/99));
- return BASE_RARITY_WEIGHTS.map((n,i)=>n*[1-.6*d,1-.3*d,1+1.2*d,1+1.7*d,1+.7*d][i]);
+ const ordinary=BASE_RARITY_WEIGHTS.map((n,i)=>n*[1-.6*d,1-.3*d,1+1.2*d,1+1.7*d][i]);
+ // 1 part legendary to 99 parts all other rarities, regardless of depth.
+ return [...ordinary,ordinary.reduce((sum,weight)=>sum+weight,0)/99];
 }
 export function rollRarity(layer,r=Math.random){
  const weights=rarityWeights(layer),total=weights.reduce((a,b)=>a+b,0);
@@ -82,5 +86,16 @@ export function bossUniqueCollection(collections,id){
 }
 
 export const isBonusLayer=layer=>Number.isInteger(layer)&&layer>0&&layer%10===0;
-export function bonusCollection(collections,layer,r=Math.random){const weights=rarityWeights(layer===10?20:layer).slice(2);let ticket=r()*weights.reduce((a,b)=>a+b,0);let rarity='legendary';for(let i=0;i<weights.length;i++){ticket-=weights[i];if(ticket<0){rarity=RARITIES[i+2];break;}}const pool=collections.filter(x=>x.rarity===rarity&&!x.boss_enemy_id);let v=r()*pool.reduce((n,x)=>n+Number(x.weight),0);for(const x of pool){v-=Number(x.weight);if(v<0)return x;}return pool.at(-1);}
+export function bonusCollection(collections,layer,r=Math.random){
+ // Decade bonus rolls are rare+ only, but legendary is still exactly 1%.
+ const [rare,epic]=rarityWeights(layer===10?20:layer).slice(2,4);
+ const weights=[rare,epic,(rare+epic)/99];
+ let ticket=Math.min(1-Number.EPSILON,Math.max(0,r()))*weights.reduce((a,b)=>a+b,0);
+ let rarity='legendary';
+ for(let i=0;i<weights.length;i++){ticket-=weights[i];if(ticket<0){rarity=RARITIES[i+2];break;}}
+ const pool=collections.filter(x=>x.rarity===rarity&&!x.boss_enemy_id);
+ let v=Math.min(1-Number.EPSILON,Math.max(0,r()))*pool.reduce((n,x)=>n+Number(x.weight),0);
+ for(const x of pool){v-=Number(x.weight);if(v<0)return x;}
+ return pool.at(-1);
+}
 export function bonusConsumable(items,layer,r=Math.random){const pool=eligibleConsumables(items,layer,rollConsumableTier(layer,r));let v=r()*pool.reduce((n,x)=>n+Number(x.weight),0);for(const x of pool){v-=Number(x.weight);if(v<0)return x;}return pool.at(-1);}
