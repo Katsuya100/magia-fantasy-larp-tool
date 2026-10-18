@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.27">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.28">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,12 +19,12 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.27" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.28" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261018.27" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261018.28" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -81,11 +81,14 @@
         </div>
         <div id="playerStats" class="stats-sheet"></div>
       </div>
+      <div class="profile-support" aria-label="冒険者の記録を共有・作者を応援">
+        <button type="button" id="openAdventurerShare" class="profile-action"><span class="profile-action-icon" aria-hidden="true">↗</span><span>冒険者カードをシェア</span></button>
+        <a class="profile-action" href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer"><span class="profile-action-icon" aria-hidden="true">♡</span><span>作者を応援</span></a>
+      </div>
       <div class="profile-data-actions">
         <p>この端末に保存されている冒険のデータを管理します。</p>
         <button type="button" id="deleteSaveData" class="danger" data-action="delete-data">冒険データをすべて削除</button>
       </div>
-      <div class="profile-support"><a href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer">作者を応援 ↗</a><button type="button" id="openAdventurerShare">冒険者カードをシェア ↗</button></div>
     </section>
 
     <section id="library" class="panel grimoire-panel" hidden>
@@ -101,7 +104,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.27" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.28" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -288,7 +291,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.27</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.28</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -296,7 +299,7 @@
       <h2 id="tutorialTitle">魔法陣の描き方</h2>
       <p id="tutorialHint">紙に描く順番を見てみよう。</p>
       <figure class="tutorial-animation">
-        <img id="tutorialAnimation" src="assets/images/dungeon-circle-tutorial.gif?v=20261018.27" alt="外円、内円、英語の呪文、中央の紋様の順で完成する魔法陣" width="320" height="360">
+        <img id="tutorialAnimation" src="assets/images/dungeon-circle-tutorial.gif?v=20261018.28" alt="外円、内円、英語の呪文、中央の紋様の順で完成する魔法陣" width="320" height="360">
         <figcaption>外円 → 内円 → 英語の呪文 → 紋様</figcaption>
       </figure>
       <p class="tutorial-rules">円は閉じて、呪文は二つの円の間に。明るい場所で全体を撮影しよう。</p>
@@ -305,6 +308,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.27"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.28"></script>
 </body>
 </html>
