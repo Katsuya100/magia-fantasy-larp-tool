@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {GRID_COLUMNS,normalizeSlots,prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from '../assets/js/dungeon-loadout.mjs';
-import {spellGrid,itemGrid,circleChoices,itemChoices,itemEffectIcons} from '../assets/js/dungeon-preparation-ui.mjs';
+import {spellGrid,itemGrid,circleChoices,itemChoices,itemEffectIcons,itemBonusEffect,itemEffectText} from '../assets/js/dungeon-preparation-ui.mjs';
 assert.equal(itemEffectIcons({id:'heal_s',value:24}),'❤️+24');
 assert.equal(itemEffectIcons({id:'mana_s',value:12}),'💠+12');
 assert.equal(itemEffectIcons({id:'elixir_s',value:35}),'❤️💠35%');
@@ -11,6 +11,10 @@ assert.equal(itemEffectIcons({id:'life_ruby',value:0}),'🪽50%');
 assert.equal(itemEffectIcons({id:'heal_s',value:24,bonus:'buff_flame'}),'❤️+24 ⚔️↑');
 assert.equal(itemEffectIcons({id:'mana_s',value:12,bonus:'buff_storm'}),'💠+12 🛡️↑');
 assert.equal(itemEffectIcons({id:'clear_aqua',value:0,bonus:'resist_aqua'}),'🧼💧 💧🛡️↑');
+assert.deepEqual(itemBonusEffect({bonus:'buff_law'}),{icons:'🕸️🛡️↑',text:'弱体耐性上昇'});
+assert.equal(itemEffectIcons({id:'heal_s',value:24,bonus:'buff_law'}),'❤️+24 🕸️🛡️↑');
+assert.match(itemEffectText({id:'heal_s',value:24,bonus:'buff_law'}),/追加効果：弱体耐性上昇/);
+assert.equal(itemBonusEffect({bonus:'resist_law'}).icons,'⚖️🛡️↑','attribute resistance icons stay unchanged');
 const esc=s=>String(s).replace(/[&<>"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]));
 assert.equal(GRID_COLUMNS,5);
 const ids=['a','b','c','d','e','f'];

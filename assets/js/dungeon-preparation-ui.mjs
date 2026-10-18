@@ -16,7 +16,7 @@ const elementIcons={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪️',gravity:
 const bonusEffects={
  attack:['⚔️↑','攻撃上昇'],output:['✨↑','威力上昇'],
  heal:['✚↑','回復量上昇'],incoming:['🛡️↑','被ダメージ軽減'],
- def:['🛡️↑','防御上昇'],resistance:['🛡️↑','耐性上昇'],
+ def:['🛡️↑','防御上昇'],resistance:['🕸️🛡️↑','弱体耐性上昇'],
  resist:['🛡️↑','属性耐性上昇']
 };
 export function itemBonusEffect(item){
