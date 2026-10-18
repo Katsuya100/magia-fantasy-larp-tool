@@ -64,14 +64,18 @@ for(let layer=1;layer<=100;layer++){
 // All five monsters share a dominant element; the second element adds variety.
 const layerNames=layer=>enemies.slice((layer-1)*5,layer*5).map(x=>x.name);
 for(const [layer,expected] of [
- [8,['ウナギ','毒ナマズ','イール','キャットフィッシュ','毒鰭のウナギ王']],
+ [8,['鰻','毒ナマズ','イール','キャットフィッシュ','毒鰭の鰻王']],
  [13,['火ネズミ','鬼火','火スライム','赤トロール','炎角の牛魔王']],
  [24,['海賊乗組員','幽霊スケルトン','海賊狙撃手','霧ゴブリン兵','幽霊船長']],
  [38,['ライトニングバード','雷ウルフ','サンダーウルフ','雷カラス','落雷の王獣']],
  [48,['アイスゴーレム','氷石ゴーレム','フロストビースト','吹雪ドライアド','氷河の巨神']],
- [63,['アビスイール','青ウナギ','ジャイアントキャットフィッシュ','深淵毒ナマズ','絶海の竜ウナギ']],
+ [63,['アビスイール','青鰻','黒潮の長龍','深淵毒ナマズ','絶海の鰻龍']],
  [99,['世界樹の根竜','終末の木霊','腐朽の神獣','黒葉の守護兵','世界樹の終末竜']]
 ])assert.deepEqual(layerNames(layer),expected,'coherent faction in layer '+layer);
+assert.ok([...layerNames(8),...layerNames(63)].every(name=>!name.includes('竜')),
+ 'eel-and-dragon-themed layer names must use 龍, never 竜');
+assert.ok(layerNames(63).some(name=>name.includes('長龍')),
+ 'deep sea layer includes an original long-dragon variant');
 for(let layer=1;layer<=100;layer++){
  const party=enemies.slice((layer-1)*5,layer*5);
  const spells=party.map(row=>row.spells.split('|').map(value=>{
