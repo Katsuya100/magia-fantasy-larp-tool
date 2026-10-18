@@ -1104,8 +1104,16 @@
         return length + Math.hypot(next[0] - point[0], next[1] - point[1]);
       }, 0);
       const circularity = perimeter > 0 ? 4 * Math.PI * area / (perimeter * perimeter) : 0;
+      // Straight polygon edges can have high circularity (a hexagon is ~.91).
+      // Reject faces whose perimeter is predominantly long straight hull edges.
+      const straightPerimeter = poly.reduce((length, point, index) => {
+        const next = poly[(index + 1) % poly.length];
+        const edgeLength = Math.hypot(next[0] - point[0], next[1] - point[1]);
+        return length + (edgeLength > Math.sqrt(area) * .22 ? edgeLength : 0);
+      }, 0);
+      const straightShare = perimeter ? straightPerimeter / perimeter : 1;
       totalFaceArea += area;
-      if (poly.length >= 8 && acute <= 1 && circularity >= .74) roundedFaceArea += area;
+      if (poly.length >= 8 && acute <= 1 && circularity >= .795 && straightShare < .3) roundedFaceArea += area;
       faceCount++;
       if (acute >= 2) pointedFaces++;
     }
