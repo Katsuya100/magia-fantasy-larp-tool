@@ -552,6 +552,10 @@ dialog[open]::backdrop{opacity:1}
 .profile-data-actions{margin-top:26px;padding-top:18px;border-top:1px solid var(--border);text-align:right}
 .profile-data-actions p{font-size:12px;color:var(--soft);margin:0 0 10px}
 .profile-data-actions .danger{font-size:13px}
+.save-persistence{margin:0 0 18px;padding:14px 15px;background:#0c1423a8;border:1px solid var(--border);text-align:left}
+.profile-data-actions .save-persistence-status{font-size:13px;color:var(--pale);margin:0 0 10px}
+.profile-data-actions .save-persistence-note{font-size:11px;color:var(--soft);margin:10px 0 0}
+#enablePersistentSave{font-size:12px;padding:9px 13px}
 .delete-data-dialog{width:min(92vw,530px)}
 .delete-data-dialog-inner{padding:clamp(21px,4vw,32px)}
 .delete-data-dialog-inner h2{font-size:clamp(19px,4vw,24px);margin:0 0 12px}
