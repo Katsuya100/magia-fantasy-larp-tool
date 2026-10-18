@@ -1386,10 +1386,39 @@ html,body{overflow-x:clip}
 .relic-card.locked .relic-symbol{color:#aaa0b6;opacity:.52}
 
 
-/* Adventurer ranks are profile achievements; starting depth is picked before each run. */
-.adventurer-grade{margin:12px 0 3px;color:var(--soft);font-size:14px}
-.adventurer-grade strong{color:var(--gold);font-size:17px}
-.adventurer-badges{margin:2px 0 0;color:var(--soft);font-size:12px;line-height:1.6}
+/* Adventurer rank is a single metallic insignia; the earned badge list stays hidden. */
+.adventurer-grade{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:14px 0 3px;color:var(--soft);font-size:14px}
+.adventurer-grade strong{
+ --rank-light:#cfc3ce;--rank-mid:#87778b;--rank-deep:#332a3b;--rank-glow:#87778b45;
+ position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;
+ min-height:36px;padding:5px 16px;border:1px solid var(--rank-mid);border-radius:9px;
+ background:radial-gradient(circle at 15% 0%,#ffffff30,transparent 58%),linear-gradient(135deg,var(--rank-deep),#151422 48%,var(--rank-deep));
+ box-shadow:inset 0 1px 0 #ffffff3b,0 0 16px var(--rank-glow);
+ font-size:19px;font-weight:800;letter-spacing:.08em;line-height:1.3;white-space:nowrap
+}
+.adventurer-grade strong::before{
+ content:"";position:absolute;inset:2px;border-radius:6px;pointer-events:none;
+ background:linear-gradient(155deg,#ffffff24,transparent 38%,#ffffff0a 70%,transparent)
+}
+.adventurer-grade strong>span{
+ position:relative;color:var(--rank-light);
+ background:linear-gradient(110deg,var(--rank-mid),var(--rank-light) 31%,#fffdf3 49%,var(--rank-light) 68%,var(--rank-mid));
+ -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+ filter:drop-shadow(0 1px 1px var(--rank-deep))
+}
+.adventurer-grade strong[data-rank="0"]{--rank-light:#d1c6d1;--rank-mid:#8c7f94;--rank-deep:#342b3b;--rank-glow:#8c7f9430}
+.adventurer-grade strong[data-rank="10"]{--rank-light:#ddd7de;--rank-mid:#918995;--rank-deep:#38343f;--rank-glow:#a59ba650}
+.adventurer-grade strong[data-rank="20"]{--rank-light:#f0edea;--rank-mid:#929fab;--rank-deep:#2d3744;--rank-glow:#9cacb35c}
+.adventurer-grade strong[data-rank="30"]{--rank-light:#e7f5ff;--rank-mid:#83abc0;--rank-deep:#243b50;--rank-glow:#8cbed773}
+.adventurer-grade strong[data-rank="40"]{--rank-light:#ffe0ae;--rank-mid:#c47848;--rank-deep:#663826;--rank-glow:#dd854d7a}
+.adventurer-grade strong[data-rank="50"]{--rank-light:#f8ffff;--rank-mid:#a4c4d5;--rank-deep:#385267;--rank-glow:#b4d9ec83}
+.adventurer-grade strong[data-rank="60"]{--rank-light:#fff1b1;--rank-mid:#e8b64d;--rank-deep:#5b3715;--rank-glow:#f6c65a91}
+.adventurer-grade strong[data-rank="70"]{--rank-light:#ffffff;--rank-mid:#d3e6f1;--rank-deep:#53647e;--rank-glow:#dceefca6}
+.adventurer-grade strong[data-rank="80"]{--rank-light:#d3ffff;--rank-mid:#62dce8;--rank-deep:#194a62;--rank-glow:#67e8fac1}
+.adventurer-grade strong[data-rank="90"]{--rank-light:#f4e3ff;--rank-mid:#aa8bff;--rank-deep:#34245d;--rank-glow:#a182f5b0}
+.adventurer-grade strong[data-rank="100"]{--rank-light:#fff2bc;--rank-mid:#f0bf75;--rank-deep:#6c355a;--rank-glow:#ffbc88c7}
+.adventurer-grade strong[data-rank="90"]>span{background-image:linear-gradient(110deg,#a28df9,#ebd2ff 34%,#ffffff 52%,#baa4ff 72%,#8ddce9)}
+.adventurer-grade strong[data-rank="100"]>span{background-image:linear-gradient(105deg,#ffd7ba,#fff4b2 25%,#fffefa 48%,#c6e7ff 68%,#f9b7ef 88%,#ffd680)}
 .rank-start{display:grid;gap:6px;margin:20px 0 8px;max-width:420px}
 .rank-start label{font-weight:700;color:var(--gold);font-size:14px}
 .rank-start select{max-width:100%;min-height:43px;padding:8px 12px;box-shadow:inset 0 0 0 1px var(--border);border-radius:6px;color:var(--text);background:#181827}
