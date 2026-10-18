@@ -26,8 +26,8 @@ loot_count_max,5,最大ドロップ数（まれに5個）
 loot_chance_base,0.16,1体のドロップ個数を決める基礎確率
 loot_chance_per_level,0,階層進行によるドロップ数の増分なし
 loot_chance_cap,0.16,ドロップ個数確率上限
-consumable_drop_rate,0.62,消耗品抽選割合
-magic_stone_drop_rate,0.20,消耗品以外の報酬から魔導石が出る確率
+consumable_drop_rate,0.40,消耗品抽選割合（全体の戦利品数減少に合わせ調整）
+magic_stone_drop_rate,0.62,消耗品以外の報酬から魔導石が出る確率（強化用魔導石の供給維持）
 xp_base,35,撃破経験値固定値
 xp_per_level,8,撃破経験値のレベル係数
 checkpoint_interval,5,帰還可能な戦闘間隔

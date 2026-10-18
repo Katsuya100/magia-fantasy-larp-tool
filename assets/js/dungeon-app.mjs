@@ -156,29 +156,13 @@ function show(requested){
  // Never overlap the tall battle and compact checkpoint/result in one grid
  // track: hiding the tall scene later would suddenly change viewport height.
  const terminalSwap=['checkpoint','result','returnShowcase'].includes(name)||['checkpoint','result','returnShowcase'].includes(before);
- const preserveScroll=before!==name&&['battle','checkpoint','returnShowcase'].includes(before)
-  &&['checkpoint','returnShowcase','home'].includes(name);
- // Remember the viewport and the tall scene's height before hiding it.
- // Otherwise the browser may clamp scrollY as the result screen becomes shorter.
- const stack=$('dungeonScenes');
- if(preserveScroll){
-  const oldHeight=Math.max(stack.offsetHeight||0,Number.parseFloat(stack.style?.minHeight)||0);
-  if(oldHeight>0)stack.style.minHeight=oldHeight+'px';
- }else if(name==='prepare'&&!profile?.run&&!returnFlow&&stack.style)stack.style.minHeight='';
- const savedY=preserveScroll?(window.scrollY??window.pageYOffset??0):null;
- const restoreScroll=()=>{
-  if(savedY===null)return;
-  window.scrollTo?.(0,savedY);
-  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>window.scrollTo?.(0,savedY));
- };
+ if(terminalSwap&&before!==name&&(before==='battle'||name==='returnShowcase'))scrollToDungeonTabs();
  if(!before||before===name||reduced||terminalSwap||!sceneIds.includes(name)){
   applyView(name);
-  restoreScroll();
   return;
  }
  // Keep both DOM panels painted in the same grid cell until fading finishes.
  applyView(name,before);
- restoreScroll();
  $(before).dataset.exiting='true';
  $(name).dataset.entering='true';
  sceneFadeTimer=setTimeout(()=>{
@@ -190,6 +174,13 @@ function show(requested){
 }
 function scrollToDungeonTabs(){
  $('tab-dungeon').closest('nav')?.scrollIntoView?.({behavior:'instant',block:'start'});
+}
+function restoreContinuedBattleScroll(top){
+ if(!Number.isFinite(top)||top<0)return;
+ const restore=()=>window.scrollTo?.(0,top);
+ // Restore after the new fight has been painted, including viewport height.
+ if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(restore));
+ else restore();
 }
 function imageUrl(blob){return circleImages.get(blob);}
 function battleImageUrl(blob){return circleImages.get(blob);}
@@ -510,7 +501,7 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
   if(bossEnemyId){profile.defeatedBosses??={};profile.defeatedBosses[bossEnemyId]=true;}
   const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot);
   if(badge)rewards.push(badge);
-  run.loot.push(...rewards);run.xp+=G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor));run.log.push(rewards.length?'撃破！ '+rewards.length+'個を入手（未確定）':'撃破！ 今回の戦利品はなし');await ceremony('loot',rewards.length?'戦利品の発見':'戦利品なし',rewards.length?rewards.length+'個 · 未確定':'次の戦いへ',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero);if(isLayerBoss(run.floor)){run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
+  run.loot.push(...rewards);run.xp+=G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor));run.log.push(rewards.length?'撃破！ '+rewards.length+'個を入手（未確定）':'撃破！ 今回の戦利品はなし');await ceremony('loot',rewards.length?'戦利品の発見':'戦利品なし',rewards.length?rewards.length+'個 · 未確定':'次の戦いへ',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero);if(isLayerBoss(run.floor)){run.checkpointBattleScrollY=window.scrollY??window.pageYOffset??0;run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
 // Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
 // between the loot overlay and the following encounter animation.
 const nextEntrance=ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');await persist();await nextEntrance;}
@@ -1039,7 +1030,7 @@ function wire(){
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
   $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
  for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)));
- $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
+ $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;const previousScroll=run.checkpointBattleScrollY;delete run.checkpointBattleScrollY;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');restoreContinuedBattleScroll(previousScroll);await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
  $('cancelAnalyze').addEventListener('click',()=>{
   const request=activeAnalysis,capture=request?.type==='capture';
   activeAnalysis=null;

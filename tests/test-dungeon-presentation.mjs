@@ -151,8 +151,9 @@ assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-la
 assert.match(css,/\.battle-info\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'battle ledger presents three equal-width cards');
 assert.match(css,/@media\(max-width:630px\)\{\s*\.battle-info\{gap:5px/,'battle counters remain compact on phones');
 assert.match(css,/\.battle-stat\[data-kind="item"\] \.battle-stat-value\{font-family:var\(--serif\)/,'携行品 uses a readable kanji font');
-assert.match(app,/window\.scrollTo\?\.\(0,savedY\)/,'terminal scenes restore the current scroll position');
-assert.doesNotMatch(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'terminal scenes no longer scroll to dungeon tabs');
+assert.match(app,/run\.checkpointBattleScrollY=window\.scrollY/,'boss victory captures the battle scroll before showing checkpoint');
+assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing deeper restores the original battle scroll');
+assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
 
 assert.match(css,/#gearCards \.loadout-tile,#battleItems \.battle-item-tile\{[^}]*aspect-ratio:1\s*\/\s*1/,'prepared and battle item tiles are both square');
 assert.match(css,/#gearCards \.tile-item-effect,#battleItems \.tile-item-effect\{[^}]*position:static/,'item effects sit directly beneath item names, never pinned at the bottom');

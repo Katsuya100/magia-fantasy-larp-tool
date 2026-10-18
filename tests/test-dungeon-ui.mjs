@@ -223,17 +223,15 @@ try{
  let chestMarkup=chestElement.innerHTML;
  Object.defineProperty(chestElement,'innerHTML',{get(){return chestMarkup;},set(v){chestMarkup=v;const n=(v.match(/class="loot-chest"/g)||[]).length;if(n)chestDrops.push(n);}});
  const tabScrolls=[];
- $('tab-dungeon').closest=()=>({scrollIntoView:opts=>tabScrolls.push(opts)});
+ $('tab-dungeon').closest=()=>({scrollIntoView:opts=>{tabScrolls.push(opts);window.scrollY=96;}});
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
  assert.deepEqual(tabScrolls,[{behavior:'instant',block:'start'}],'entering the labyrinth scrolls to the top edge of the tabs');
- // Simulate a scrolled battle view; boss victory, rewards and completion must
- // not force the viewport to the dungeon tabs or top of the page.
+ // Simulate actual navigation scrolling: a boss checkpoint scrolls to the
+ // tabs, but continuing must restore the scroll position of the boss battle.
  window.scrollY=428;
  const restoredScroll=[];
  window.scrollTo=(_,top)=>{restoredScroll.push(top);window.scrollY=top;};
- $('dungeonScenes').offsetHeight=1240;
- $('dungeonScenes').style={minHeight:''};
  let p=await getProfile(db);
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);
  assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="loot"/,'battle HUD shows earned loot as a card');
@@ -347,9 +345,9 @@ try{
  assert.equal(p.deepestReturnedLayer,0,'boss victory does not count as a return until leaving');
  assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
  assert.equal(p.run.enemy.id,'boss_l001','the fifth fight remains the fixed layer boss');
- assert.equal(tabScrolls.length,1,'boss checkpoint does not auto-scroll to the dungeon navigation');
- assert.equal(window.scrollY,428,'boss checkpoint preserves the existing scroll position');
- assert.equal($('dungeonScenes').style.minHeight,'1240px','short checkpoint scene retains the previous page extent');
+ assert.equal(p.run.checkpointBattleScrollY,428,'the boss battle saves its exact vertical scroll position');
+ assert.equal(tabScrolls.length,2,'the boss checkpoint retains its previous navigation behavior');
+ assert.equal(window.scrollY,96,'the checkpoint may scroll to the navigation');
   assert.ok(p.run.loot.some(item=>item.id==='relic_boss_001'),'boss grants its dedicated epic trophy on the first victory');
    assert.equal(p.defeatedBosses.boss_l001,true,'first boss defeat is saved before returning');
  assert.ok(cinematicEvents.some(x=>x.event==='encounter'&&x.tier==='boss'),'fifth encounter plays layer-boss entrance');
@@ -366,8 +364,7 @@ try{
  assert.equal(chestDrops.reduce((n,x)=>n+x,0),loot,'every dropped reward had its own treasure chest');
  await $('returnHome').fire('click');
  await wait(()=>$('returnShowcase').hidden===false,'return');
- assert.equal(tabScrolls.length,1,'return rewards do not automatically scroll back');
- assert.equal(window.scrollY,428,'return rewards keep the saved scroll offset');
+ assert.equal(tabScrolls.length,3,'return reward navigation is unchanged');
  assert.equal($('result').hidden,true,'successful return no longer uses the old result screen');
  assert.equal($('tab-dungeon').hidden,false,'reward ceremony retains the dungeon tab');
  assert.equal($('tab-prepare').hidden,true,'prepare tab stays hidden until completion');
@@ -403,9 +400,7 @@ try{
  assert.equal($('returnNext').textContent,'完了');
  await $('returnNext').fire('click');
  assert.equal($('home').hidden,false,'sequence ends at the profile');
- assert.equal(tabScrolls.length,1,'completion never forces a scroll to the navigation');
- assert.equal(window.scrollY,428,'the profile transition retains the original viewport');
- assert.ok(restoredScroll.length>=3&&restoredScroll.every(top=>top===428),'the same position is restored across boss, rewards, and completion');
+ assert.equal(restoredScroll.length,0,'return completion does not run the continue-battle scroll restoration');
  p=await getProfile(db);
  assert.equal(p.returns,1);assert.equal(p.run,null);
  assert.equal($('tab-prepare').hidden,false,'return restores preparation');
@@ -510,8 +505,18 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
  assert.equal(p.run.stage,'checkpoint');
  assert.equal(p.run.loot.filter(item=>item.id==='relic_boss_001').length,0,'repeat boss has no second guaranteed trophy');
  const hpAtCheckpoint=p.run.hero.hp, pendingLoot=p.run.loot.length;
+ assert.ok(Number.isFinite(p.run.checkpointBattleScrollY),'checkpoint stores where the battle was viewed');
+ // The player may scroll the checkpoint to reach the continue button.
+ // That should not overwrite the scroll position saved from the boss fight.
+ const oldBattleScroll=577;
+ p.run.checkpointBattleScrollY=oldBattleScroll;
+ await saveProfile(db,p);
+ window.scrollY=75;
  await $('deeper').fire('click');
  p=await getProfile(db);
+ assert.equal(window.scrollY,oldBattleScroll,'continuing restores the exact prior battle scroll position');
+ assert.ok(restoredScroll.includes(oldBattleScroll),'continued battle actively restores the viewport');
+ assert.equal(p.run.checkpointBattleScrollY,undefined,'completed checkpoint no longer holds an outdated scroll position');
  assert.equal(p.run.floor,6);
  assert.equal(p.run.layerEnemyOrder.layer,2,'continuing to the next layer reshuffles the new regular opponents');
  assert.equal(p.run.enemy.id,p.run.layerEnemyOrder.ids[0],'next layer uses its own shuffled order');
