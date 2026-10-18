@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.32">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.33">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,12 +19,12 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.32" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.33" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261018.32" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261018.33" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -109,7 +109,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.32" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.33" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -297,23 +297,24 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.32</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.33</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
-      <div class="tutorial-top"><span>MAGIA CIRCLE</span><button type="button" id="tutorialSkip" class="subtle">スキップ</button></div>
-      <h2 id="tutorialTitle">魔法陣の描き方</h2>
-      <p id="tutorialHint">紙に描く順番を見てみよう。</p>
+      <div class="tutorial-top"><span id="tutorialCounter" aria-live="polite">1 / 4</span><button type="button" id="tutorialSkip" class="subtle">スキップ</button></div>
+      <h2 id="tutorialTitle">外円を描く</h2>
+      <p id="tutorialHint">紙に大きな円を描こう。</p>
       <figure class="tutorial-animation">
-        <img id="tutorialAnimation" src="assets/images/dungeon-circle-tutorial.gif?v=20261018.32" alt="外円、内円、英語の呪文、中央の紋様の順で完成する魔法陣" width="320" height="360">
-        <figcaption>外円 → 内円 → 英語の呪文 → 紋様</figcaption>
+        <img id="tutorialAnimation" src="assets/images/tutorial-outer.gif?v=20261018.33" alt="外円を描くアニメーション" width="320" height="320">
       </figure>
-      <p class="tutorial-rules">円は閉じて、呪文は二つの円の間に。明るい場所で全体を撮影しよう。</p>
+      <p id="tutorialDetails">線をつないで閉じよう。</p>
+      <p id="tutorialFreedom" hidden></p>
       <div class="tutorial-actions">
-        <button type="button" id="tutorialContinue" class="primary-action tutorial-next">魔導書へ <span aria-hidden="true">⟶</span></button>
+        <button type="button" id="tutorialPrevious" class="subtle" hidden>戻る</button>
+        <button type="button" id="tutorialContinue" class="primary-action tutorial-next">次へ</button>
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.32"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.33"></script>
 </body>
 </html>
