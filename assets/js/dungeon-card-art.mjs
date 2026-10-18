@@ -55,7 +55,7 @@ export function circleOutlinePixels({width,height,data},attribute){
  }
  return out;
 }
-// Gaussian-softened glow over the card, with a slightly softer crisp contour on top.
+// Gaussian-softened glow only: avoid reintroducing jagged Sobel pixels with a hard core.
 export function paintCircleArt(ctx,artwork){
  if(!artwork?.image||typeof document==='undefined')return false;
  try{
@@ -69,8 +69,8 @@ export function paintCircleArt(ctx,artwork){
   result.data.set(pixels);
   sctx.clearRect(0,0,size,size);
   sctx.putImageData(result,0,0);
-  // Blur a separate glow mask *before* the additive passes. Keep the original
-  // contour for the final detail layer so letters and circle lines remain legible.
+  // Blur a separate mask *before* the additive passes, so no raw jagged
+  // Sobel pixels are ever composited directly onto the adventurer card.
   const glowBase=document.createElement('canvas');
   glowBase.width=size;glowBase.height=size;
   const gctx=glowBase.getContext('2d');
@@ -87,10 +87,9 @@ export function paintCircleArt(ctx,artwork){
   ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
   ctx.filter='blur(9px)';ctx.globalAlpha=.82;
   ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='blur(3px)';ctx.globalAlpha=.76;
+  // A brighter near glow replaces the previous unblurred sharp core.
+  ctx.filter='blur(2px)';ctx.globalAlpha=.98;
   ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='none';ctx.globalAlpha=.88;
-  ctx.drawImage(source,cx-diameter/2,cy-diameter/2,diameter,diameter);
   ctx.restore();
   return true;
  }catch(error){
