@@ -1,25 +1,25 @@
-import * as G from './dungeon-core.mjs?v=20261019.1';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261019.1';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261019.1';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261019.1';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261019.1';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261019.1';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261019.1';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261019.1';
+import * as G from './dungeon-core.mjs?v=20261019.2';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261019.2';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261019.2';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261019.2';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261019.2';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261019.2';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261019.2';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261019.2';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261019.1';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261019.1';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261019.1';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261019.1';
-import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261019.1';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261019.1';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261019.1';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261019.1';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261019.1';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261019.1';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261019.1';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261019.1';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261019.1';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261019.2';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261019.2';
+import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261019.2';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261019.2';
+import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261019.2';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261019.2';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261019.2';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261019.2';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261019.2';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261019.2';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261019.2';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261019.2';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261019.2';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -108,6 +108,12 @@ async function load(){
  profile.deepestReturnedLayer=deepestReturnedLayer(profile);
  startupStage('魔導書の頁を並べている…');
  circles=newestCirclesFirst(await allCircles(db));
+ // Restore original MP cost for expeditions saved before this change.
+ const activeSpells=profile.run?.hero?.spells;
+ if(Array.isArray(activeSpells))for(const [index,id] of (profile.run.slotIds||[]).entries()){
+  const circle=circles.find(c=>c.id===id);
+  if(activeSpells[index]&&circle?.basePower>0)activeSpells[index].basePower=circle.basePower;
+ }
  slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));
  ensureItemInstances(profile);
  if(!profile.run)profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
@@ -240,7 +246,7 @@ function rowUnit(unit){
   +vital('MP',unit.mp,unit.maxMp,mp,'mp')+attrs+effects;
 }
 const roles={attack:'⚔️攻撃',defense:'🛡️防御',support:'✚回復',debuff:'🕸️弱体'};
-function circleLabel(a,revealed=true){return esc(circleSummary({analysis:a,revealed},masters.buffs,G.mpCost));}
+function circleLabel(circle){return esc(circleSummary(circle,masters.buffs,G.mpCost));}
 function itemName(item){return masters.items.find(x=>x.id===item.id)?.name||item.id;}
 function roleText(text){return String(text).replace(/通常攻撃|攻撃|防御|弱体|回復/g,word=>({'通常攻撃':'⚔️通常攻撃',攻撃:'⚔️攻撃',防御:'🛡️防御',弱体:'🕸️弱体',回復:'✚回復'})[word]);}
 function render(){
@@ -320,7 +326,7 @@ function renderRun(){
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +'<span class="tile-empty-icon" aria-hidden="true">！</span><span class="tile-title">画像なし</span></div></div>';
   const disabled=Boolean(s&&!G.canCast(hero,i));
-  return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleLabel(c.analysis,isRevealed(c)):'未解析')+'" '+(disabled?'disabled':'')+'>'
+  return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleLabel(c):'未解析')+'" '+(disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +'<img alt="" src="'+battleImageUrl(c.image)+'">'
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
@@ -505,13 +511,13 @@ async function claimBonus(choice){
 }
 async function begin(){if(profile.run||!canDepartWithCircles(slots)){note('魔法陣を3〜5個編成してください');return;}
  const startLayer=allowedStartLayer(profile,selectedStartLayer);
- photoAnalysisEpoch++;const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{const a=circles.find(c=>c.id===id)?.analysis;return a?{...a}:null;}),'player');profile.slots=[...slots];profile.run={floor:(startLayer-1)*FIGHTS_PER_LAYER+1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');scrollToDungeonTabs();await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
+ photoAnalysisEpoch++;const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{return combatSpell(circles.find(c=>c.id===id));}),'player');profile.slots=[...slots];profile.run={floor:(startLayer-1)*FIGHTS_PER_LAYER+1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');scrollToDungeonTabs();await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
 function enemyChoice(enemy){const ids=G.available(enemy);if(!ids.length)return -1;const heal=ids.find(i=>enemy.spells[i].role==='support');if(enemy.hp<enemy.stats.hp*num('enemy_heal_threshold')&&heal!==undefined)return heal;const offense=ids.filter(i=>enemy.spells[i].role==='attack');return offense.length&&Math.random()<num('enemy_attack_preference')?offense[Math.floor(Math.random()*offense.length)]:ids[Math.floor(Math.random()*ids.length)];}
 async function takeTurn(index){
  const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;
  if(index>=0&&!run.slotIds[index])return;
  const circle=index>=0?circles.find(c=>c.id===run.slotIds[index]):null;
- if(circle?.analysis&&!run.hero.spells[index])run.hero.spells[index]={...circle.analysis};
+ if(circle?.analysis&&!run.hero.spells[index])run.hero.spells[index]=combatSpell(circle);
  const spell=index>=0?run.hero.spells[index]:null;
  if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
  if(circle?.analysis&&!isRevealed(circle)){Object.assign(circle,revealOnUse(circle));await putCircle(db,circle);}
@@ -875,7 +881,7 @@ async function analyzeUnknown(index){
    Object.assign(circle,savePreanalysis(circle,analysis));
    await putCircle(db,circle);
    if(!valid())return;
-   run.hero.spells[index]={...analysis};await persist();
+   run.hero.spells[index]=combatSpell(circle);await persist();
    activeAnalysis=null;note('');show('battle');await takeTurn(index);
   }catch(e){
    if(!valid())return;

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
+import {mpCost} from '../assets/js/dungeon-core.mjs';
 import {openStore,saveProfile,putCircle,getProfile,allCircles} from '../assets/js/dungeon-store.mjs';
 const env=fakeDungeonBrowser({storage:{rejectBlobRewrite:true}}),$=id=>env.document.getElementById(id);
 const button=dataset=>({disabled:false,dataset,closest(){return this;}});
@@ -46,6 +47,8 @@ try{
  assert.equal(env.factory.databases.get('magia-dungeon-v1').get('circles').get('circle-1').analysis.power,100,'photo record stays unmodified');
  assert.equal($('magicDetailsDialog').open,true,'enhancement opens full circle feedback');
  assert.equal($('magicDetailsDialog').dataset.enhancing,'true','ritual begins');
+ const originalMpMarkup='<dt>MP</dt><dd>'+mpCost(100)+'</dd>';
+ assert.ok($('magicDetailsStats').innerHTML.includes(originalMpMarkup),'upgraded detail still shows the original MP cost');
  assert.match($('upgradeFeedback').textContent,/強化成功！\n威力 110/,'success message splits sentences across lines');
  // The detail dialog stays open after enhancement; its own button must allow upgrade #2.
  assert.equal($('upgradeCircle').disabled,false,'detail dialog permits repeated upgrades when stones remain');
@@ -55,6 +58,7 @@ try{
  saved=(await allCircles(db))[0];
  assert.equal(saved.analysis.power,120,'second upgrade works despite Blob rewrite failure');
  assert.equal(saved.basePower,100);
+ assert.ok($('magicDetailsStats').innerHTML.includes(originalMpMarkup),'repeat upgrades do not change MP display');
  assert.equal((await getProfile(db)).magicStones,1);
  assert.match($('magicStoneBalance').textContent,/1個/);
  const reopened=await openStore(env.factory);

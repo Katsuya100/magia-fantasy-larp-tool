@@ -1,5 +1,5 @@
 import {GRID_COLUMNS} from './dungeon-loadout.mjs';
-import {circleCardInfo} from './dungeon-magic-knowledge.mjs';
+import {circleCardInfo} from './dungeon-magic-knowledge.mjs?v=20261019.2';
 // Compact summaries are shared by grimoire, preparation and battle.
 // Named buff/debuff effects appear only in the details dialog.
 export function circleEffectBadges(circle,buffs=[],escapeText=x=>String(x),mpCost=()=>null){
