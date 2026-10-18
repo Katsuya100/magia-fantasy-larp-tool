@@ -15,7 +15,7 @@ import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.25';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.25';
 import {highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.25';
 import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.25';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.26';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.25';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.25';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
