@@ -239,7 +239,8 @@ try{
  assert.doesNotMatch($('battleInfo').innerHTML,/data-kind="item"/,'removed item usage card is absent');
  assert.equal(($('battleInfo').innerHTML.match(/class="battle-stat"/g)||[]).length,2,'only loot and EXP cards');
  assert.match($('battleInfo').innerHTML,/<strong class="battle-stat-value">0<\/strong>/,'initial rewards start at zero');
- assert.match($('battleInfo').innerHTML,/>未確定 · 持ち帰り待ち</,'unbanked loot remains clearly provisional');
+ assert.equal(($('battleInfo').innerHTML.match(/>帰還時に確定</g)||[]).length,2,'both reward cards use the settlement label');
+ assert.doesNotMatch($('battleInfo').innerHTML,/未確定 · 持ち帰り待ち/,'outdated provisional label is removed');
  assert.doesNotMatch($('battleInfo').innerHTML,/未確定報酬 [0-9]+個 \/ 未確定経験値/,'the cramped slash-separated sentence is removed');
  const firstLayerOrder=[...p.run.layerEnemyOrder.ids];
  assert.equal(p.run.layerEnemyOrder.layer,1,'the first four opponents receive a saved per-layer order');
@@ -354,7 +355,13 @@ try{
  assert.equal($('enemyCombatant').dataset.dying,'false','completed death effect can clear its animation without resurrecting the boss');
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
  assert.doesNotMatch($('checkpointInfo').textContent,/次は2層/);
- assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\n1層踏破。\n未確定報酬 [0-9]+個 \/ 経験値 [0-9]+。/,'checkpoint text stays concise');
+ assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！/,'boss clear announcement stays visible');
+ assert.match($('checkpointInfo').textContent,/1層踏破。/,'layer clear announcement stays visible');
+ assert.doesNotMatch($('checkpointInfo').textContent,/未確定報酬|経験値 [0-9]+。/,'duplicated reward sentence is gone');
+ assert.equal(($('checkpointLedger').innerHTML.match(/class="battle-stat"/g)||[]).length,2,'the sanctuary has exactly two reward cards');
+ assert.equal(($('checkpointLedger').innerHTML.match(/>帰還時に確定</g)||[]).length,2,'sanctuary cards have uniform labels');
+ assert.ok($('checkpointLedger').innerHTML.includes('<strong class="battle-stat-value">'+p.run.loot.length+'</strong>'),'sanctuary loot matches saved loot');
+ assert.ok($('checkpointLedger').innerHTML.includes('<strong class="battle-stat-value">+'+p.run.xp+'</strong>'),'sanctuary EXP matches saved EXP');
  assert.doesNotMatch($('checkpointInfo').textContent,/続行して敗北すると失われる/,'warning is removed');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
