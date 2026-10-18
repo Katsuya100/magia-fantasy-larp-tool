@@ -76,5 +76,5 @@ try{
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 assert.match(html,/id="tutorialOverlay"[\s\S]*?id="tutorialCanvas"/);
 assert.match(html,/id="tutorialReplay"/);
-assert.match(html,/assets\/images\/sample\.png\?v=20261018\.25/);
+assert.match(html,/assets\/images\/sample\.png\?v=20261018\.26/);
 console.log('PASS first-circle tutorial: sample, gated pen gestures, unlock, skip and replay');
