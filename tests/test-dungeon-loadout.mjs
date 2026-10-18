@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import {GRID_COLUMNS,normalizeSlots,prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from '../assets/js/dungeon-loadout.mjs';
-import {spellGrid,itemGrid,circleChoices,itemChoices} from '../assets/js/dungeon-preparation-ui.mjs';
+import {spellGrid,itemGrid,circleChoices,itemChoices,itemEffectIcons} from '../assets/js/dungeon-preparation-ui.mjs';
+assert.equal(itemEffectIcons({id:'heal_s',value:24}),'❤️+24');
+assert.equal(itemEffectIcons({id:'mana_s',value:12}),'💠+12');
+assert.equal(itemEffectIcons({id:'elixir_s',value:35}),'❤️💠35%');
+assert.equal(itemEffectIcons({id:'clear_flame',value:0}),'🧼🔥');
+assert.equal(itemEffectIcons({id:'clear_law',value:0}),'🧼🔒');
+assert.equal(itemEffectIcons({id:'escape_scroll',value:0}),'↩️');
+assert.equal(itemEffectIcons({id:'life_ruby',value:0}),'🪽50%');
 const esc=s=>String(s).replace(/[&<>"]/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]));
 assert.equal(GRID_COLUMNS,5);
 const ids=['a','b','c','d','e','f'];

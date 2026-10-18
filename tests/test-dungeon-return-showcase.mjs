@@ -86,6 +86,8 @@ try{
   assert.ok(displayedRewards.indexOf('魔導石')<displayedRewards.indexOf(newItem.name),'magic stones are always the first reward');
   assert.ok(displayedRewards.indexOf(newItem.name)<displayedRewards.indexOf(oldItem.name),'first-ever item precedes previously acquired item');
   assert.equal((displayedRewards.match(/class="return-new"/g)||[]).length,1,'only first-ever item receives NEW');
+  assert.match(displayedRewards,/class="return-reward-effect"[^>]*>❤️\+10<\/span>/,'returned HP potions show the same concise numeric effect as battle slots');
+  assert.doesNotMatch(displayedRewards,/>効果 10</,'reward item cards have no explanatory sentence');
   const saved=await getProfile(history.db);
   assert.ok(saved.obtainedItemIds.includes(newItem.id),'the first-ever item is recorded persistently');
  }finally{historyEnv.restore();}
