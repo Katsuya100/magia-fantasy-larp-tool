@@ -18,8 +18,6 @@ assert.match(page,/<div class="startup-bar" role="progressbar"/,'startup include
 assert.match(page,/<a id="startupRetry"[^>]*hidden>/,'startup error offers an explicit retry');
 assert.match(css,/\.startup-mask\{[^}]*position:fixed;inset:0;z-index:9999/,'startup mask covers the page');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\.startup-bar span\{animation:none/,'startup animation respects reduced-motion preference');
-assert.match(app,/finishStartup\(\);\s*if\(!profile\.name\)openNameDialog\(true\)/,'startup mask closes before first-player name dialog appears');
-assert.match(app,/load\(\)\.catch\(failStartup\)/,'startup errors remain visible inside the loading overlay');
 assert.match(page,/id="playerNameInput"[^>]+maxlength="20"/);
 assert.match(page,/id="nameForm"/);
 assert.match(page,/id="collectionGrid"[^>]+role="list"/);
@@ -158,6 +156,8 @@ assert.doesNotMatch(page,/<option value="default">レアリティ順<\/option>/,
 assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is concise');
 assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!important;/,'selected choice border does not change the button box size');
 const app=await read('assets/js/dungeon-app.mjs');
+assert.match(app,/finishStartup\(\);\s*if\(!profile\.name\)openNameDialog\(true\)/,'startup mask closes before first-player name dialog appears');
+assert.match(app,/load\(\)\.catch\(failStartup\)/,'startup errors remain visible inside the loading overlay');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
