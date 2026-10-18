@@ -82,6 +82,8 @@ const specialGrid=itemGrid([0,1,2],specialItems,3,true,itemName,esc);
 for(const icons of ['❤️💠35%','🪽50%','↩️'])assert.ok(specialGrid.includes(icons),'special prepared item keeps compact effect '+icons);
 assert.doesNotMatch(specialGrid,/>HP\/MP各35%回復</,'the preparation tiles do not show long descriptions');
 assert.equal((circleChoices(circles,['a'],makeImg,esc).match(/data-choose-circle=/g)||[]).length,5);
+assert.equal((circleChoices(circles,['a'],makeImg,esc).match(/data-circle-detail=/g)||[]).length,5,'each square choice keeps one compact details action');
+assert.doesNotMatch(circleChoices(circles,['a'],makeImg,esc),/class="circle-card-info"/,'the circle chooser is image-first without repeated stat labels');
 assert.doesNotMatch(circleChoices(circles,['a'],makeImg,esc),/魔法陣\s*0[1-9]|魔法陣0/,'picker shows no circle names');
 assert.equal((itemChoices(inventory,[0],itemName,esc).match(/data-choose-item=/g)||[]).length,3);
 assert.match(circleChoices([],[],makeImg,esc),/魔導書に魔法陣を登録/);

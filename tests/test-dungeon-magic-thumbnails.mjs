@@ -40,7 +40,8 @@ assert.equal((grid.match(/class="circle-card-status"/g)||[]).length,3,'only defe
 assert.equal((grid.match(/class="circle-card-mp">MP:\?<\/span><span class="circle-card-power">威力:\?<\/span>/g)||[]).length,5);
 assert.equal((grid.match(/class="loadout-tile equipped"/g)||[]).length,5,'preserve five original equipment tiles');
 const picker=circleChoices(roster,ids,()=>'/img.png',escapeText,null,buffs,mpCost);
-assert.equal((picker.match(/class="circle-card-info"/g)||[]).length,5,'picker uses the same compact card structure');
-assert.equal((picker.match(/class="circle-card-mp">MP:\?<\/span><span class="circle-card-power">威力:\?<\/span>/g)||[]).length,5);
+assert.equal((picker.match(/class="circle-card-info"/g)||[]).length,0,'picker hides stats to give the image more space');
+assert.equal((picker.match(/data-circle-detail=/g)||[]).length,5,'the full effect details remain accessible for every circle');
+assert.equal((picker.match(/class="picker-option/g)||[]).length,5,'five distinct square choices remain selectable');
 assert.doesNotMatch(picker,/class="picker-label"/,'no duplicate summary row');
 console.log('PASS spell thumbnails: role and attribute icons, only actual statuses, MP/power unknown until used');
