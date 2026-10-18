@@ -370,8 +370,10 @@ try{
  assert.doesNotMatch($('checkpointInfo').textContent,/続行して敗北すると失われる/,'warning is removed');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
- assert.ok(p.run.loot.length>=1&&p.run.loot.length<=25,'one layer has sparse drops and a guaranteed first-clear boss trophy');
+ assert.ok(p.run.loot.length>=1&&p.run.loot.length<=46,'one layer has independent category drops and a guaranteed first-clear boss trophy');
  const loot=p.run.loot.length;
+ const collectionCount=p.run.loot.filter(item=>item.type==='collection').length;
+ const distinctCollected=new Set(p.run.loot.filter(item=>item.type==='collection').map(item=>item.id)).size;
  assert.equal(chestDrops.reduce((n,x)=>n+x,0),loot,'every dropped reward had its own treasure chest');
  await $('returnHome').fire('click');
  await wait(()=>$('returnShowcase').hidden===false,'return');
@@ -418,7 +420,7 @@ try{
  assert.equal($('tab-library').hidden,false,'return restores the grimoire');
  assert.equal($('tab-dungeon').hidden,true,'dungeon tab disappears after returning');
  const collectibleCount=Object.values(p.collection).reduce((a,b)=>a+b,0);
- assert.equal(collectibleCount,1,'collected treasure is tracked separately');
+ assert.equal(collectibleCount,collectionCount,'all collected treasure is tracked separately');
  assert.equal(p.inventory.length+collectibleCount+p.magicStones,loot);
  assert.equal(p.deepestReturnedLayer,1);
  await doc.click(btn({view:'home'}));
@@ -426,15 +428,15 @@ try{
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
  assert.match($('collectionGrid').innerHTML,/赤角鬼王の霊石/);
- assert.match($('collectionProgress').innerHTML,/1 \/ 300/);
- assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,299);
- assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,1);
- assert.equal(($('collectionGrid').innerHTML.match(/class="relic-rarity"/g)||[]).length,1,'one found relic shows exactly one rarity label');
+ assert.match($('collectionProgress').innerHTML,new RegExp(distinctCollected+' \\/ 300'),'all distinct collected relics count toward discovery');
+ assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,300-distinctCollected);
+ assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,distinctCollected);
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-rarity"/g)||[]).length,distinctCollected,'each discovered relic has one rarity label');
  assert.match($('collectionGrid').innerHTML,/<span class="relic-rarity">✦ エピック<\/span>/,'discovered normal boss trophy shows epic rarity');
  assert.equal($('magicStoneBalance').textContent,'✦ 魔導石：'+p.magicStones+'個','stone balance remains concise as loot changes');
  $('collectionDiscoveryFilter').value='found';await $('collectionDiscoveryFilter').fire('change');
- assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,1,
-  'collection discovery filter shows only found relics');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,distinctCollected,
+  'collection discovery filter shows all found relics');
  assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/);
  $('collectionRarityFilter').value='epic';await $('collectionRarityFilter').fire('change');
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,1,
@@ -446,13 +448,13 @@ try{
   'rarity filtering never discloses uncollected rarity');
  $('collectionRarityFilter').value='all';await $('collectionRarityFilter').fire('change');
  $('collectionDiscoveryFilter').value='missing';await $('collectionDiscoveryFilter').fire('change');
- assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card locked"/g)||[]).length,299,
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card locked"/g)||[]).length,300-distinctCollected,
   'undiscovered filter shows exactly the uncollected relics');
  $('collectionDiscoveryFilter').value='all';await $('collectionDiscoveryFilter').fire('change');
  $('collectionSort').value='count';await $('collectionSort').fire('change');
- assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,1,
-  'collection sorting leaves the inventory unchanged');
- assert.doesNotMatch($('collectionGrid').innerHTML,/魔獣の牙/,'uncollected treasure stays secret');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,distinctCollected,
+  'collection sorting leaves all discovered relics unchanged');
+ assert.doesNotMatch($('collectionGrid').innerHTML,/失われた王冠/,'uncollected treasure stays secret');
  assert.ok(p.level>=2);
  await doc.click(btn({view:'prepare'}));
  assert.equal($('tab-prepare').attributes['aria-current'],'page');
@@ -568,7 +570,7 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   assert.equal(el('tab-dungeon').hidden,true);
   assert.equal(defeated.returns,1,'previous rewards remain');
    assert.equal(defeated.deepestReturnedLayer,1,'defeat at 2層 cannot increase the returned-layer record');
-  assert.equal(defeated.inventory.length,loot-collectibleCount-1,'spent potion lost; two unused were refunded');
+  assert.equal(defeated.inventory.length,loot-collectibleCount-defeated.magicStones-1,'stone and collection rewards are not inventory items; spent potion is lost and unused potions are refunded');
   assert.equal(defeated.carrySlots[0],null,'consumed potion is not re-equipped after defeat');
   assert.equal(defeated.carrySlots[1],savedBeforeAttack.carrySlots[1],'first unused potion returns to its saved slot');
   assert.equal(defeated.carrySlots[2],savedBeforeAttack.carrySlots[2],'second unused potion returns to its saved slot');

@@ -16,35 +16,62 @@ assert.deepEqual(G.startingBase(()=>0),{hp:90,mag:8,def:5,res:5});
 assert.deepEqual(G.startingBase(()=>.99999),{hp:110,mag:12,def:10,res:10});
 const base={hp:100,mag:10,def:7,res:7};
 assert.deepEqual(G.stats(base,1),base);assert.ok(G.stats(base,20).hp>G.stats(base,10).hp);
-assert.equal(G.dropCount(1,()=>0),5);assert.equal(G.dropCount(99,()=>.9999),0);
+assert.deepEqual(G.dropCounts(1,()=>0),{collection:5,stone:1,use:3});
+assert.deepEqual(G.dropCounts(100,()=>.9999),{collection:0,stone:0,use:0});
+assert.equal(G.dropCount(1,()=>0),9);
+assert.equal(G.dropCount(99,()=>.9999),0);
 assert.equal(G.drops(items,collections,1,()=>.9999).length,0,'ordinary foes can leave no treasure');
-const rewards=G.drops(items,collections,1,()=>0);assert.equal(rewards.length,5);
+const rewards=G.drops(items,collections,1,()=>0);
+assert.equal(rewards.length,9,'all three category rolls can succeed together');
+assert.deepEqual({use:rewards.filter(x=>x.type==='use').length,stone:rewards.filter(x=>x.type==='stone').length,
+ collection:rewards.filter(x=>x.type==='collection').length},{use:3,stone:1,collection:5});
 assert.equal(rewards[0].type,'use');assert.equal(rewards[0].value,G.rollPotionValue(items[0],1,()=>0));
 let rolls=0;
-const stoneRewards=G.drops(items,collections,1,()=>{rolls++;return rolls<=5?(rolls===1?0:1):rolls===6?.99:.01;});
-assert.deepEqual(stoneRewards,[{type:'stone',id:'magic_stone'}],'non-consumable loot can produce a magic stone');
+const stoneRewards=G.drops(items,collections,1,()=>++rolls===6?0:1);
+assert.deepEqual(stoneRewards,[{type:'stone',id:'magic_stone'}],'stone drops independently of collections and consumables');
 assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'boss_l010',guaranteeBossCollection:true}),
  [{type:'collection',id:'relic_boss_010'}],'first defeat always awards its legendary boss trophy despite zero ordinary drops');
 assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'boss_l010'}),[],
  'repeated bosses have no guaranteed trophy');
+const withBoss=G.drops(items,collections,19,()=>0,{layer:10,bossEnemyId:'boss_l010',guaranteeBossCollection:true});
+assert.equal(withBoss.filter(x=>x.type==='use').length,3,'boss trophy cannot replace consumable rewards');
+assert.equal(withBoss.filter(x=>x.type==='stone').length,1,'boss trophy cannot replace magic stones');
+assert.equal(withBoss.filter(x=>x.type==='collection').length,5,'boss trophy replaces a regular collection slot');
+assert.equal(withBoss.filter(x=>x.id==='relic_boss_010').length,1);
 const rng=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
-const random=rng(20261018);let total=0,typical=0,lucky=0,zeroFights=0,fiveFights=0;
-for(let simulation=0;simulation<25000;simulation++){
- let layerDrops=0;
+// Fixed-seed probability check: five independent encounters make one layer.
+const trials=40000,random=rng(20261018);
+const sums={collection:0,stone:0,use:0},normal={collection:0,stone:0,use:0};
+const lucky={collection:0,stone:0,use:0};
+let zeroFights=0;
+for(let simulation=0;simulation<trials;simulation++){
+ const layer={collection:0,stone:0,use:0};
  for(let fight=0;fight<5;fight++){
-  const count=G.dropCount(1,random);
-  if(count===0)zeroFights++;
-  if(count===5)fiveFights++;
-  layerDrops+=fight===4?Math.max(1,count):count;
+  const counts=G.dropCounts(1,random);
+  if(Object.values(counts).every(x=>x===0))zeroFights++;
+  for(const type of Object.keys(layer))layer[type]+=counts[type];
  }
- total+=layerDrops;
- if(layerDrops>=3&&layerDrops<=5)typical++;
- if(layerDrops>=8)lucky++;
+ // For a first-clear boss, the trophy replaces a random collection, or
+ // provides a collection if none was rolled in the fifth fight.
+ // The probability of that exception is low; simulated base counts are
+ // slightly conservative for collection rewards.
+ for(const type of Object.keys(layer))sums[type]+=layer[type];
+ if(layer.collection>=8&&layer.collection<=10)normal.collection++;
+ if(layer.stone>=1&&layer.stone<=2)normal.stone++;
+ if(layer.use>=3&&layer.use<=5)normal.use++;
+ if(layer.collection>=15)lucky.collection++;
+ if(layer.stone>=3)lucky.stone++;
+ if(layer.use>=8)lucky.use++;
 }
-assert.ok(total/25000>=3&&total/25000<=5,'five encounters average around three to five rewards including a first-clear trophy');
-assert.ok(typical/25000>.5,'a layer most commonly grants three to five rewards');
-assert.ok(lucky>0,'a lucky layer can yield eight or more rewards');
-assert.ok(zeroFights>0&&fiveFights>0,'both empty drops and rare five-drop enemies occur');
+const means=Object.fromEntries(Object.entries(sums).map(([type,total])=>[type,total/trials]));
+assert.ok(means.collection>=8.8&&means.collection<=9.2,'collections average about nine per layer');
+assert.ok(means.stone>=1.4&&means.stone<=1.6,'stones average one to two per layer');
+assert.ok(means.use>=3.9&&means.use<=4.2,'consumables average three to five per layer');
+assert.ok(normal.collection/trials>.45&&normal.stone/trials>.64&&normal.use/trials>.59,
+ 'the most common category yields match the intended layer ranges');
+assert.ok(lucky.collection>0&&lucky.stone>0&&lucky.use>0,
+ 'lucky layers can yield 15 collections, 3 stones, or 8 consumables');
+assert.ok(zeroFights>0,'individual enemies can still have no rewards at all');
 assert.equal(G.basePower(300),35);assert.ok(G.mpCost(300)>0);
 const sp={role:'attack',attribute:'flame',power:300};
 const a=G.makeUnit(base,1,{},[sp], 'a'),b=G.makeUnit(base,1,{},[sp], 'b');

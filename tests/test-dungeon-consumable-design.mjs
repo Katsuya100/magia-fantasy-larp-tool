@@ -59,20 +59,23 @@ function scriptedRoll(sequence){
  return ()=>{if(index>=sequence.length)throw Error('Not enough random values');return sequence[index++];};
 }
 const early=G.drops(items,collections,1,()=>0,{layer:1});
-assert.equal(early.length,5);
-assert.ok(early.every(x=>x.type==='use'&&['heal_s','mana_s'].includes(x.id)));
-const firstCleanser=G.drops(items,collections,35,scriptedRoll([0,1,1,1,1,0,1,1,1,.965,.5,.965]),{layer:20});
+assert.equal(early.length,9);
+assert.equal(early.filter(x=>x.type==='use').length,3);
+assert.ok(early.filter(x=>x.type==='use').every(x=>['heal_s','mana_s'].includes(x.id)));
+const firstCleanser=G.drops(items,collections,35,scriptedRoll([1,1,1,1,1,1,0,1,1,1,1,1,.965,.5,.965]),{layer:20});
 assert.equal(firstCleanser.length,1);
 assert.equal(firstCleanser[0].id,'clear_chaos','cleansers become eligible at floor 20');
-const notYet=G.drops(items,collections,35,scriptedRoll([0,1,1,1,1,0,1,1,1,.965,.5,.965]),{layer:19});
+const notYet=G.drops(items,collections,35,scriptedRoll([1,1,1,1,1,1,0,1,1,1,1,1,.965,.5,.965]),{layer:19});
 assert.equal(notYet.length,1);
 assert.equal(notYet[0].id,'mana_s','cleansers unavailable at floor 19');
 for(const layer of [100,101,150]){
  const loot=G.drops(items,collections,150,()=>0,{layer});
- assert.equal(loot.length,5);
- assert.ok(loot.every(x=>x.type==='use'&&x.id==='heal_xl'&&x.value>=G.rollPotionValue(items.find(i=>i.id==='heal_xl'),layer,()=>0)),'numeric rewards scale to the target level at depth '+layer);
+ assert.equal(loot.length,9);
+ const potions=loot.filter(x=>x.type==='use');
+ assert.equal(potions.length,3);
+ assert.ok(potions.every(x=>x.id==='heal_xl'&&x.value>=G.rollPotionValue(items.find(i=>i.id==='heal_xl'),layer,()=>0)),'numeric rewards scale to the target level at depth '+layer);
 }
-const lateCleanser=G.drops(items,collections,150,scriptedRoll([0,1,1,1,1,0,.86,.5,.965]),{layer:101});
+const lateCleanser=G.drops(items,collections,150,scriptedRoll([1,1,1,1,1,1,0,1,1,.86,.5,.965]),{layer:101});
 assert.equal(lateCleanser[0].id,'clear_chaos','cleansing remains available in the endless dungeon');
 // Every early-layer fight uses the actual spawn table, not merely a CSV naming rule.
 for(let fight=1;fight<=95;fight++){
