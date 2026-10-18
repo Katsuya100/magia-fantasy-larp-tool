@@ -10,9 +10,9 @@ import {configure} from '../assets/js/dungeon-tuning.mjs';
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const supportLink='https://ofuse.me/2429ddee';
 const profileMarkup=html.slice(html.indexOf('<section id="home"'),html.indexOf('<section id="library"'));
-assert.ok(profileMarkup.includes('class="profile-support"'),'support link is in the profile screen');
-assert.ok(profileMarkup.indexOf('class="profile-support"')>profileMarkup.indexOf('id="deleteSaveData"'),'support link is at the profile bottom');
-assert.match(profileMarkup,/href="https:\/\/ofuse\.me\/2429ddee" target="_blank" rel="noopener noreferrer">作者を応援/);
+assert.ok(profileMarkup.includes('class="profile-support" aria-label='),'support actions are in the profile screen');
+assert.ok(profileMarkup.indexOf('class="profile-support"')<profileMarkup.indexOf('id="deleteSaveData"'),'support and share precede data deletion');
+assert.ok(profileMarkup.includes('href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer"'),'public OFUSE link stays in the profile');
 assert.equal((html.match(/href="https:\/\/ofuse\.me\/2429ddee"/g)||[]).length,2,'only profile and modal link to OFUSE');
 assert.ok(html.includes('id="supportPromptClose"'),'optional support prompt is dismissible');
 
