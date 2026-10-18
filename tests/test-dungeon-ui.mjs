@@ -500,6 +500,8 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
  p=await getProfile(db);
  assert.equal(p.run.carry.filter(Boolean).length,2,'one free item per round');
  // An entire second 5-fight block must offer a choice, and continued runs retain HP.
+ const oldBattleScroll=577;
+ window.scrollY=oldBattleScroll;
  for(let fight=1;fight<=5;fight++)await doc.click(btn({cast:'0'}));
  p=await getProfile(db);
  assert.equal(p.run.stage,'checkpoint');
@@ -508,9 +510,7 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
  assert.ok(Number.isFinite(p.run.checkpointBattleScrollY),'checkpoint stores where the battle was viewed');
  // The player may scroll the checkpoint to reach the continue button.
  // That should not overwrite the scroll position saved from the boss fight.
- const oldBattleScroll=577;
- p.run.checkpointBattleScrollY=oldBattleScroll;
- await saveProfile(db,p);
+ assert.equal(p.run.checkpointBattleScrollY,oldBattleScroll,'saved checkpoint retains the actual boss-fight offset');
  window.scrollY=75;
  await $('deeper').fire('click');
  p=await getProfile(db);
