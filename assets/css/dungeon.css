@@ -1569,3 +1569,6 @@ html,body{overflow-x:clip}
 .tutorial-replay{display:block;margin:0 0 11px auto;font-size:12px!important;padding:8px 12px!important}
 @keyframes tutorial-point{0%,100%{transform:translate(-50%,-45%)}50%{transform:translate(-50%,-62%)}}
 @media(max-width:420px){.tutorial-sheet{padding:15px 13px}.tutorial-example{grid-template-columns:115px 1fr;gap:9px}.tutorial-example ol{font-size:11px;line-height:1.65}.tutorial-pad{width:min(100%,290px)}}
+
+/* Match the two-card battle ledger in the sanctuary. */
+#checkpointLedger{max-width:750px;margin:16px auto 4px}
