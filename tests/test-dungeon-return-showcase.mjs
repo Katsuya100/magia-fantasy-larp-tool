@@ -44,8 +44,12 @@ try{
   assert.ok($('returnRewards').innerHTML.includes(items.find(row=>row.id===earned.id).name));
   const saved=await getProfile(db);
   assert.equal(saved.inventory.some(item=>item.returnBonus),false,'temporary bonus marker never enters saved inventory');
+  assert.equal(saved.pendingReturn?.steps[0],'rewards','rewards stay saved until completion');
+  assert.equal($('tab-dungeon').hidden,false,'item-only showcase keeps the dungeon tab');
+  assert.equal($('tab-prepare').hidden,true);
   await $('returnNext').fire('click');
   assert.equal($('home').hidden,false);
+  assert.equal((await getProfile(db)).pendingReturn,null,'only 完了 clears saved rewards');
  }finally{env.restore();}
 
  const none=await create(0,true),env2=fakeDungeonBrowser({factory:none.factory}),$2=id=>env2.document.getElementById(id);
@@ -90,6 +94,9 @@ try{
   assert.doesNotMatch(displayedRewards,/>効果 10</,'reward item cards have no explanatory sentence');
   const saved=await getProfile(history.db);
   assert.ok(saved.obtainedItemIds.includes(newItem.id),'the first-ever item is recorded persistently');
+  assert.equal(saved.pendingReturn?.step,1,'the current reward step is stored');
+  await $h('returnNext').fire('click');
+  assert.equal((await getProfile(history.db)).pendingReturn,null,'history case completes reward ceremony');
  }finally{historyEnv.restore();}
  // Even when the player uses up every copy, previously acquired items never become NEW again.
  const repeatProfile=await getProfile(history.db);
@@ -115,6 +122,24 @@ try{
   assert.equal($3('returnNext').textContent,'完了');
   assert.equal($3('returnCollections').hidden,true);
   assert.equal($3('returnRewards').hidden,true);
+  assert.equal($3('tab-dungeon').hidden,false);
+  assert.equal((await getProfile(xpOnly.db)).pendingReturn?.step,0,'XP ceremony is saved even with no item rewards');
  }finally{env3.restore();}
- console.log('PASS return bonus reward, NEW sorting and persistence, empty-stage skipping, XP-only return and completion');
+ const replay=fakeDungeonBrowser({factory:xpOnly.factory}),$4=id=>replay.document.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=return-xp-reload');
+  await wait(()=>$4('returnShowcase').hidden===false&&$4('returnSceneTitle').textContent==='EXP');
+  assert.equal($4('returnSceneTitle').textContent,'EXP','reload resumes the unfinished EXP scene');
+  assert.equal($4('tab-prepare').hidden,true);
+  assert.equal($4('tab-dungeon').hidden,false);
+  assert.equal($4('home').hidden,true);
+  await replay.document.click({disabled:false,dataset:{view:'collection'},closest(){return this;}});
+  await replay.document.click({disabled:false,dataset:{view:'dungeon'},closest(){return this;}});
+  assert.equal($4('returnNext').textContent,'完了');
+  await $4('returnNext').fire('click');
+  assert.equal($4('home').hidden,false,'only 完了 returns to the profile after reload');
+  assert.equal($4('tab-dungeon').hidden,true);
+  assert.equal((await getProfile(xpOnly.db)).pendingReturn,null);
+ }finally{replay.restore();}
+ console.log('PASS return bonus reward, NEW sorting, sticky dungeon tabs, reload-resumable stages, empty-stage skipping and completion');
 }finally{Math.random=originalRandom;}

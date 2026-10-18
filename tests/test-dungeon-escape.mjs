@@ -57,6 +57,8 @@ try{
  assert.equal($('returnShowcase').hidden,false,'escape displays earned loot');
  assert.equal($('result').hidden,true,'escape no longer uses the old result');
  assert.equal($('returnSceneTitle').textContent,'コレクション報酬');
+ assert.equal($('tab-dungeon').hidden,false,'escape rewards retain the dungeon tab');
+ assert.equal($('tab-prepare').hidden,true,'escape rewards do not reopen preparation yet');
  assert.match($('returnCollections').innerHTML,/赤角鬼王の霊石/);
  await $('returnNext').fire('click');
  assert.equal($('returnSceneTitle').textContent,'アイテム報酬');
