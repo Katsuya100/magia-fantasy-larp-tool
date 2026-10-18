@@ -10,7 +10,7 @@ const data=adventurerShareData(profile);
 assert.deepEqual(data,{rank:'鉛級',level:21,deepest:10});
 const text=adventurerShareText(data);
 assert.equal(text,'マギアサークル-ダンジョンアタック\n冒険者等級：鉛級\nLv.21\n最深帰還：10層');
-assert.ok(!text.includes(profile.name),'never share the player's name');
+assert.ok(!text.includes(profile.name),"never share the player name");
 const url=new URL(adventurerXUrl(data));
 assert.equal(url.hostname,'x.com');
 assert.equal(url.pathname,'/intent/tweet');
