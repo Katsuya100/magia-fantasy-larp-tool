@@ -1260,7 +1260,7 @@
     // A lone regular polygon may have a nearly circular convex hull, yet its
     // repeated broad corners distinguish it from a genuinely rounded motif.
     const polygonalFace = enclosedFaces.faceCount === 1
-      && broadBendRuns >= 4 && broadAngleRatio > .13;
+      && broadBendRuns >= 4 && broadAngleRatio > .13 && radialVariation < .06;
     const roundedAreaShare = polygonalFace ? 0 : enclosedFaces.roundedAreaShare;
     const repeatedLobes = radialVariation > .055 && broadAngleRatio < .14
       ? Math.max(0, radialLobes - 3) : 0;
