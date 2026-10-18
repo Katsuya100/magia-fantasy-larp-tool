@@ -118,3 +118,7 @@ GloVe取得は開発用Nodeだけで行い、固定ZIPの50次元entryをHTTP Ra
 - `test-results/`: 今回実行した計測やE2Eログ（Git対象外）。`.tmp/`: 大きな元データ等（Git対象外）。
 
 本プロジェクトのライセンスは [LICENSE](LICENSE)、第三者ライブラリ・モデル・辞書の条件は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。GloVeコードのApache-2.0と、今回配布する学習済みベクトルのPDDL 1.0を区別しています。OCR変換weightの対応、SCOWL生成版、頻度/人名データの上流条件、GeoNamesミラーの変換履歴は追加確認事項として明記しています。
+
+### ダンジョンアタックの Google Drive 自動バックアップ（開発中）
+
+Google Identity Servicesでユーザー自身のGoogle Drive `appDataFolder` に写真・プロフィール・魔法陣を保存します。初回認証後、**接続が有効な間**はIndexedDBの変更を検出し、デバウンスして自動アップロードします。ローカルが初期状態のときなど、安全に判定できる場合はクラウドから自動復元します。双方に別のセーブがある場合は上書きを停止します。設定と制限は [Google Drive連携ガイド](docs/DUNGEON-GOOGLE-DRIVE-SYNC.md) を参照。
