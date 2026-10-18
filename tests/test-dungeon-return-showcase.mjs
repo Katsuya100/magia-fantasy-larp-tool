@@ -128,7 +128,7 @@ try{
  const replay=fakeDungeonBrowser({factory:xpOnly.factory}),$4=id=>replay.document.getElementById(id);
  try{
   await import('../assets/js/dungeon-app.mjs?integration=return-xp-reload');
-  await wait(()=>$4('returnShowcase').hidden===false);
+  await wait(()=>$4('returnShowcase').hidden===false&&$4('returnSceneTitle').textContent==='EXP');
   assert.equal($4('returnSceneTitle').textContent,'EXP','reload resumes the unfinished EXP scene');
   assert.equal($4('tab-prepare').hidden,true);
   assert.equal($4('tab-dungeon').hidden,false);
