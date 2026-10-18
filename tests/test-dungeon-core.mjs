@@ -103,6 +103,17 @@ const mpAfter=heroMp.mp;
 assert.ok(G.recoverVictoryMp(heroMp)>0&&heroMp.mp>mpAfter,'MP recovery persists across sequential wins');
 heroMp.mp=heroMp.maxMp;
 assert.equal(G.recoverVictoryMp(heroMp),0,'recovery never overflows max MP');
+const victoryMpRate=level=>{
+ const unit=G.makeUnit(base,level);
+ unit.mp=0;
+ return G.recoverVictoryMp(unit)/unit.maxMp;
+};
+assert.ok(victoryMpRate(1)>=.13&&victoryMpRate(1)<=.145,'beginner victory MP recovery remains generous');
+assert.ok(victoryMpRate(30)>.075&&victoryMpRate(30)<.08,'early recovery remains suitable for initial layers');
+assert.ok(victoryMpRate(75)<.056,'mid-depth MP recovery is meaningfully reduced');
+assert.ok(victoryMpRate(150)>=.024&&victoryMpRate(150)<=.027,'deepest battles retain the playtested minimum recovery');
+assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75)&&victoryMpRate(75)>victoryMpRate(150),
+ 'victory MP recovery decreases with level');
 const weak=G.enemyScaling(1),deep=G.enemyScaling(150);
 assert.ok(weak.hp<1&&weak.mag<1&&deep.hp<1&&deep.mag<1,'enemy tuning softens all levels');
 assert.ok(weak.hp<deep.hp&&weak.mag<deep.mag,'late bosses remain relatively tougher');
