@@ -1,24 +1,25 @@
-import * as G from './dungeon-core.mjs?v=20261018.29';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.29';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.29';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.29';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.29';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.29';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.29';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.29';
+import * as G from './dungeon-core.mjs?v=20261018.30';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.30';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.30';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.30';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.30';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.30';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.30';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.30';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.29';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.29';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.29';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.29';
-import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261018.29';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.29';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.29';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.29';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.29';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.29';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.29';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.29';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.30';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.30';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.30';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.30';
+import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261018.30';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.30';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.30';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.30';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.30';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.30';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.30';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.30';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261018.30';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -277,7 +278,7 @@ function render(){
   const circleIndexes=circleListIndexes(circles,{
    role:listView.libraryRole,attribute:listView.libraryAttribute,sort:listView.librarySort
   });
-  $('libraryCards').innerHTML=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'"><img alt="魔法陣" src="'+imageUrl(c.image)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
+  $('libraryCards').innerHTML=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'" data-favorite="'+(profile.favoriteCircleId===c.id)+'"><img alt="魔法陣" role="button" tabindex="0" aria-label="長押しでお気に入りを切り替え" aria-pressed="'+(profile.favoriteCircleId===c.id)+'" src="'+imageUrl(c.image)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run,masters.buffs,G.mpCost);
  const unlocked=profile.returns>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
@@ -633,35 +634,55 @@ function showSupportPrompt(prompt,mode='milestone'){
  const generation=++shareImageGeneration;
  shareImageFile=null;
  const data=adventurerShareData(profile),canvas=$('adventurerShareCanvas');
+ const selected=selectCardCircle(circles,profile.favoriteCircleId,slots);
  $('supportPromptTitle').textContent=prompt.title;
  $('supportPromptMessage').textContent=prompt.message;
  $('supportOptionalNote').hidden=mode==='share';
  $('supportXLink').href=adventurerXUrl(data);
  $('supportShareHelp').textContent='Xの投稿には本文が入ります。画像は保存して添付できます。';
  $('supportNativeShare').hidden=true;
- $('supportSaveImage').disabled=false;
- try{
+ const draw=artwork=>{
+  if(generation!==shareImageGeneration)return;
+  try{
+   paintAdventurerCard(canvas,data,artwork);
+   canvas.hidden=false;
+   $('supportSaveImage').disabled=false;
+   if(typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&typeof File!=='undefined'){
+    canvas.toBlob(blob=>{
+     if(generation!==shareImageGeneration||!blob)return;
+     try{
+      const file=new File([blob],'magia-adventurer-card.png',{type:'image/png'});
+      if(navigator.canShare({files:[file]})){
+       shareImageFile=file;
+       $('supportNativeShare').hidden=false;
+      }
+     }catch(error){console.warn('画像共有には対応していません',error);}
+    },'image/png');
+   }
+  }catch(error){
+   console.warn('冒険者カードの生成に失敗',error);
+   canvas.hidden=true;
+   $('supportSaveImage').disabled=true;
+   $('supportShareHelp').textContent='画像を生成できませんでした。Xには本文のみ共有できます。';
+  }
+ };
+ if(selected?.image&&typeof Image==='function'){
+  // The modal must open synchronously. Keep saving disabled until photo decoding.
   paintAdventurerCard(canvas,data);
   canvas.hidden=false;
-  if(typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&typeof File!=='undefined'){
-   canvas.toBlob(blob=>{
-    if(generation!==shareImageGeneration||!blob)return;
-    try{
-     const file=new File([blob],'magia-adventurer-card.png',{type:'image/png'});
-     if(navigator.canShare({files:[file]})){
-      shareImageFile=file;
-      $('supportNativeShare').hidden=false;
-     }
-    }catch(error){console.warn('画像共有には対応していません',error);}
-   },'image/png');
-  }
- }catch(error){
-  console.warn('冒険者カードの生成に失敗',error);
-  canvas.hidden=true;
   $('supportSaveImage').disabled=true;
-  $('supportShareHelp').textContent='画像を生成できませんでした。Xには本文のみ共有できます。';
+  $('supportPromptDialog').showModal();
+  const image=new Image();
+  image.onload=()=>{
+   if(generation!==shareImageGeneration||!$('supportPromptDialog').open)return;
+   draw({image,attribute:selected.analysis?.attribute});
+  };
+  image.onerror=()=>draw(null);
+  image.src=imageUrl(selected.image);
+ }else{
+  draw(null);
+  $('supportPromptDialog').showModal();
  }
- $('supportPromptDialog').showModal();
 }
 function openAdventurerShare(){
  showSupportPrompt({title:'冒険者カード',message:'冒険者等級・レベル・最深帰還をシェア'},'share');
@@ -946,6 +967,7 @@ async function confirmCircleAction(){
     profile.circleUpgrades=upgrades;
    }
    circleImages.release(circle.image);
+   if(profile.favoriteCircleId===circle.id)profile.favoriteCircleId=null;
    circles=circles.filter(c=>c.id!==circle.id);
    slots=slots.map(id=>id===circle.id?null:id);
    profile.slots=[...slots];
@@ -1061,7 +1083,48 @@ function openNameDialog(required){
  if(!dialog.open)dialog.showModal();
  $('playerNameInput').focus();
 }
+async function toggleFavoriteCircle(id){
+ if(profile.run||!circles.some(circle=>circle.id===id))return;
+ const next={...profile,favoriteCircleId:profile.favoriteCircleId===id?null:id};
+ await saveProfile(db,next);
+ profile=next;
+ render();
+}
+function wireFavoriteHold(){
+ const grid=$('libraryCards');
+ let held=null;
+ const cancel=()=>{if(held)clearTimeout(held.timer);held=null;};
+ grid.addEventListener('pointerdown',event=>{
+  if((event.button!==undefined&&event.button!==0)||event.target.closest('button'))return;
+  const card=event.target.closest('[data-circle-id]');
+  if(!card||profile.run)return;
+  cancel();
+  const press={id:card.dataset.circleId,x:event.clientX??0,y:event.clientY??0,timer:null};
+  press.timer=setTimeout(()=>{
+   if(held!==press)return;
+   held=null;
+   void exclusive(()=>toggleFavoriteCircle(press.id)).catch(error=>note('お気に入りの保存に失敗しました：'+error.message));
+  },550);
+  held=press;
+ });
+ grid.addEventListener('pointermove',event=>{
+  if(held&&Math.hypot((event.clientX??0)-held.x,(event.clientY??0)-held.y)>12)cancel();
+ });
+ for(const kind of ['pointerup','pointercancel','pointerleave'])grid.addEventListener(kind,cancel);
+ grid.addEventListener('contextmenu',event=>{
+  if(event.target.closest('[data-circle-id]'))event.preventDefault();
+ });
+ grid.addEventListener('keydown',event=>{
+  if(event.key!=='Enter'&&event.key!==' ')return;
+  if(!event.target.matches?.('.card img'))return;
+  const id=event.target.closest('[data-circle-id]')?.dataset.circleId;
+  if(!id)return;
+  event.preventDefault();
+  void exclusive(()=>toggleFavoriteCircle(id)).catch(error=>note('お気に入りの保存に失敗しました：'+error.message));
+ });
+}
 function wire(){
+ wireFavoriteHold();
  tutorial=initCircleTutorial(document,async toCamera=>{
   profile.tutorialDone=true;
   try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}

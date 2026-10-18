@@ -1,5 +1,6 @@
 import {highestRankLayer,rankTitle,rankMetalPalette} from './dungeon-ranks.mjs';
 import {deepestReturnedLayer} from './dungeon-progress.mjs';
+import {paintCircleArt} from './dungeon-card-art.mjs?v=20261018.30';
 
 export const DUNGEON_SHARE_URL='https://katsuya100.github.io/magia-fantasy-larp-tool/dungeon.html';
 export function adventurerShareData(profile){
@@ -26,7 +27,7 @@ export function adventurerXUrl(data){
 
 // Pure browser Canvas rendering. Nothing is uploaded: only three progress values
 // are included, and the player name is intentionally excluded.
-export function paintAdventurerCard(canvas,data){
+export function paintAdventurerCard(canvas,data,artwork=null){
  if(!canvas?.getContext)throw Error('画像を作成できませんでした。');
  const ctx=canvas.getContext('2d');
  if(!ctx)throw Error('画像を作成できませんでした。');
@@ -69,7 +70,8 @@ export function paintAdventurerCard(canvas,data){
  ctx.fillStyle='#fbebcb';ctx.font='700 58px Georgia, sans-serif';ctx.fillText('Lv.'+data.level,83,483,280);
  ctx.font='700 58px sans-serif';ctx.fillText(data.deepest?data.deepest+'層':'未到達',361,483,320);
  ctx.strokeStyle='#a8845566';ctx.beginPath();ctx.moveTo(335,393);ctx.lineTo(335,490);ctx.stroke();
- // A geometric magic-circle seal, drawn locally without remote images or fonts.
+ // Prefer extracted photo contours; retain the geometric seal as the fallback.
+ if(!paintCircleArt(ctx,artwork)){
  const cx=917,cy=335;
  for(const [radius,alpha] of [[184,.68],[161,.46],[117,.55],[93,.36]]){
   ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);
@@ -89,6 +91,7 @@ export function paintAdventurerCard(canvas,data){
   if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
  }ctx.closePath();ctx.strokeStyle='#d2ab73aa';ctx.lineWidth=2;ctx.stroke();
  ctx.fillStyle='#f9dd9b';ctx.font='116px Georgia, serif';ctx.textAlign='center';ctx.fillText('✦',cx,cy+43);
+ }
  ctx.textAlign='start';
  ctx.strokeStyle='#ae8b5866';ctx.beginPath();ctx.moveTo(82,548);ctx.lineTo(1116,548);ctx.stroke();
  ctx.fillStyle='#c6b4a4';ctx.font='20px Georgia, serif';ctx.fillText('ADVENTURER CARD',82,594);

@@ -1591,3 +1591,10 @@ html,body{overflow-x:clip}
 .return-rank-symbol{display:grid;place-items:center;min-height:62px;line-height:normal}
 .return-rank-symbol .adventurer-grade{margin:0;display:flex;justify-content:center;max-width:100%}
 .return-rank-symbol .adventurer-grade strong{min-height:39px;max-width:100%;padding:6px clamp(7px,1.4vw,12px);font-size:clamp(13px,2.4vw,19px);letter-spacing:.02em}
+
+/* One favorite spell, chosen by holding a grimoire photo. */
+.circle-grid .card img{cursor:pointer;touch-action:pan-y;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.circle-grid .card img:focus-visible{outline:3px solid #f5d58a;outline-offset:3px}
+.circle-grid .card[data-favorite="true"]{border-color:#f5d58a;box-shadow:0 0 0 1px #cbaa69,0 0 22px #ffcf6c33}
+.circle-grid .card[data-favorite="true"]::before{content:"★";z-index:2;top:7px;right:15px;color:#ffdc83;font-size:22px;text-shadow:0 0 10px #ffd786}
+.favorite-hint{margin:0;color:var(--soft);font-size:11px;text-align:right}
