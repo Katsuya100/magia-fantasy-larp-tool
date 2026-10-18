@@ -105,7 +105,7 @@ try{
  const f3=fakeIndexedDB(),{db:db3,profile:p3}=await ready(f3,'生命の紅石確認');
  const savedHero=G.makeUnit(p3.base,1,{},[attack,attack,attack,null,null],'player');savedHero.hp=1;
  const foe=G.fromEnemy(enemies.find(x=>x.id==='foe_l001_1'),1);
- foe.hp=300;foe.stats.hp=300;foe.stats.mag=1000;foe.spells=[];foe.cooldowns=[];
+ foe.hp=600;foe.stats.hp=600;foe.stats.mag=10;foe.spells=[];foe.cooldowns=[];
  p3.run={floor:1,slotIds:p3.slots,hero:savedHero,enemy:foe,enemyName:foe.id,
  carry:[{type:'use',id:'life_ruby',value:0,bonus:null},{type:'use',id:'life_ruby',value:0,bonus:null},null,null,null],
  loot:[],xp:0,usedItems:0,log:[],stage:'battle'};
