@@ -48,7 +48,7 @@ const profileHtml=html.slice(html.indexOf('<section id="home"'),html.indexOf('<s
 assert.ok(profileHtml.indexOf('id="openAdventurerShare"')<profileHtml.indexOf('id="deleteSaveData"'),'share and support appear above delete');
 assert.ok(profileHtml.indexOf('id="openAdventurerShare"')<profileHtml.indexOf('href="https://ofuse.me/2429ddee"'),'share is ordered before support');
 assert.ok(profileHtml.indexOf('href="https://ofuse.me/2429ddee"')<profileHtml.indexOf('id="deleteSaveData"'),'donation is also above delete');
-assert.ok(profileHtml.includes('class="profile-support"'),'share and OFUSE share a two-column action group');
+assert.ok(profileHtml.includes('class="profile-support" aria-label='),'share and OFUSE share a two-column action group');
 assert.equal((profileHtml.match(/class="profile-action"/g)||[]).length,2,'both actions have equivalent button styling');
 assert.equal((html.match(/id="openAdventurerShare"/g)||[]).length,1);
 assert.ok(html.includes('id="supportXLink"')&&html.includes('id="supportDonateLink"'),'same milestone modal exposes both equal-weight links');
