@@ -40,10 +40,10 @@ export function paintCircleArt(ctx,artwork){
   result.data.set(pixels);
   sctx.clearRect(0,0,size,size);
   sctx.putImageData(result,0,0);
-  // Roughly 15% larger, shifted up to stay clear of the footer and labels.
-  const cx=917,cy=330,diameter=420;
+  // Let the outline visually reach the decorative rim without covering the card text.
+  const cx=920,cy=328,diameter=468;
   ctx.save();
-  ctx.beginPath();ctx.arc(cx,cy,205,0,Math.PI*2);ctx.clip();
+  ctx.beginPath();ctx.arc(cx,cy,229,0,Math.PI*2);ctx.clip();
   ctx.globalCompositeOperation='lighter';
   ctx.filter='blur(19px)';ctx.globalAlpha=.85;
   ctx.drawImage(source,cx-diameter/2,cy-diameter/2,diameter,diameter);

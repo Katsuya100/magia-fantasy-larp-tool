@@ -53,9 +53,9 @@ try{
  if(originalDocument===undefined)delete globalThis.document;
  else globalThis.document=originalDocument;
 }
-assert.deepEqual(clipCircles[0].slice(0,3),[917,330,205],'larger crop stays within card artwork area');
+assert.deepEqual(clipCircles[0].slice(0,3),[920,328,229],'artwork slightly overlaps the decorative frame');
 assert.equal(drawCalls.length,3,'two blurred layers and one crisp contour retained');
-assert.ok(drawCalls.every(args=>args[3]===420&&args[4]===420),'all artwork layers use enlarged 420px diameter');
+assert.ok(drawCalls.every(args=>args[3]===468&&args[4]===468),'all artwork layers use enlarged 468px diameter');
 assert.deepEqual(saveCalls,['save','restore'],'glow compositing state restored');
 
 const factory=fakeIndexedDB(),db=await openStore(factory),profile=await getProfile(db);
