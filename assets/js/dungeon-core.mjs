@@ -79,7 +79,9 @@ export function drops(items,collections,l,r=Math.random,context={}){
   const existing=rewards.findIndex(item=>item.type==='collection'&&item.id===id);
   const slot=existing>=0?existing:rewards.findIndex(item=>item.type==='collection');
   // Even an otherwise empty boss drop always contains its first-clear trophy.
+  // Replace one random reward if five were rolled; avoid adding a sixth.
   if(slot>=0)rewards[slot]={type:'collection',id};
+  else if(rewards.length)rewards[rewards.length-1]={type:'collection',id};
   else rewards.push({type:'collection',id});
  }
  return rewards;
