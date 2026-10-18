@@ -69,7 +69,7 @@ const script=await readFile(new URL('../assets/js/dungeon-tutorial.mjs',import.m
 assert.match(html,/id="tutorialFigure" class="tutorial-animation" hidden/);
 assert.match(html,/id="tutorialAnimation" alt="" width="320" height="320"/);
 assert.match(html,/id="tutorialReplay"/);
-assert.match(html,/data-release="20261018\.39"/);
+assert.match(html,/data-release="20261018\.40"/);
 assert.match(script,/gif\.src='assets\/images\/'/);
 assert.doesNotMatch(html,/id="tutorialCanvas"|id="tutorialPad"/);
 assert.doesNotMatch(script,/pointerdown|pointermove|setPointerCapture/);

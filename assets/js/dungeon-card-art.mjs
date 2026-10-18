@@ -55,7 +55,7 @@ export function circleOutlinePixels({width,height,data},attribute){
  }
  return out;
 }
-// Additive screen glow over the card, with an unblurred contour on top.
+// Gaussian-softened glow over the card, with a slightly softer crisp contour on top.
 export function paintCircleArt(ctx,artwork){
  if(!artwork?.image||typeof document==='undefined')return false;
  try{
@@ -69,16 +69,27 @@ export function paintCircleArt(ctx,artwork){
   result.data.set(pixels);
   sctx.clearRect(0,0,size,size);
   sctx.putImageData(result,0,0);
+  // Blur a separate glow mask *before* the additive passes. Keep the original
+  // contour for the final detail layer so letters and circle lines remain legible.
+  const glowBase=document.createElement('canvas');
+  glowBase.width=size;glowBase.height=size;
+  const gctx=glowBase.getContext('2d');
+  if(!gctx)return false;
+  gctx.filter='blur(3px)';
+  gctx.drawImage(source,0,0);
+  gctx.filter='none';
   // Let the outline visually reach the decorative rim without covering the card text.
   const cx=920,cy=328,diameter=468;
   ctx.save();
   ctx.beginPath();ctx.arc(cx,cy,229,0,Math.PI*2);ctx.clip();
   ctx.globalCompositeOperation='lighter';
-  ctx.filter='blur(19px)';ctx.globalAlpha=.85;
-  ctx.drawImage(source,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='blur(6px)';ctx.globalAlpha=.95;
-  ctx.drawImage(source,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='none';ctx.globalAlpha=1;
+  ctx.filter='blur(22px)';ctx.globalAlpha=.72;
+  ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
+  ctx.filter='blur(9px)';ctx.globalAlpha=.82;
+  ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
+  ctx.filter='blur(3px)';ctx.globalAlpha=.76;
+  ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
+  ctx.filter='none';ctx.globalAlpha=.88;
   ctx.drawImage(source,cx-diameter/2,cy-diameter/2,diameter,diameter);
   ctx.restore();
   return true;
