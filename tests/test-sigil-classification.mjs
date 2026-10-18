@@ -81,8 +81,8 @@ const fixtures = [
 
 const failures = [];
 for (const {name,expected,svg,stroke=7} of fixtures) {
-  const svg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="white"/><g fill="none" stroke="#111" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round">${svg}</g></svg>`);
-  const image = await sharp(svg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const svgBuffer = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="white"/><g fill="none" stroke="#111" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round">${svg}</g></svg>`);
+  const image = await sharp(svgBuffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const metrics = analyzeSigilMetricsJs(image.data, size, size, paths);
   const [top, second] = Object.entries(metrics.scores).sort((left, right) => right[1] - left[1]);
   const percentage = Math.round(top[1] * 1000) / 10;
