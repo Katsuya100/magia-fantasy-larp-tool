@@ -7,7 +7,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
-const [balance,levels,floors,playerBase,enemies,items]=await Promise.all(['balance','levels','floors','player-base','enemies','consumables'].map(csv));
+const [balance,levels,floors,playerBase,enemies,items,collections]=await Promise.all(['balance','levels','floors','player-base','enemies','consumables','collections'].map(csv));
 configure({balance,levels,floors,playerBase});
 const wait=async(check)=>{
  const end=Date.now()+9000;
@@ -37,7 +37,7 @@ try{
   assert.equal(earned.returnBonus,true,'direct carry bonus is tagged only for this expedition');
   await $('returnHome').fire('click');
   assert.equal($('returnShowcase').hidden,false);
-  assert.equal($('returnSceneTitle').textContent,'報酬','no collection or EXP sequence');
+  assert.equal($('returnSceneTitle').textContent,'アイテム報酬','no collection or EXP sequence');
   assert.equal($('returnCollections').hidden,true);
   assert.equal($('returnExperience').hidden,true);
   assert.equal($('returnNext').textContent,'完了');
@@ -57,6 +57,53 @@ try{
   assert.equal($2('home').hidden,false);
  }finally{env2.restore();}
 
+ // NEW is based on the complete acquisition history, not current inventory.
+ const history=await create(0,true),initial=await getProfile(history.db);
+ const [oldItem,newItem]=items.slice(0,2),[oldCollection,newCollection]=collections.slice(0,2);
+ initial.obtainedItemIds=[oldItem.id];
+ initial.collection[oldCollection.id]=1;
+ initial.run.loot=[
+  {type:'use',id:oldItem.id,value:10,bonus:null},
+  {type:'use',id:newItem.id,value:10,bonus:null},
+  {type:'collection',id:oldCollection.id},
+  {type:'collection',id:newCollection.id},
+  {type:'stone'}
+ ];
+ const repeatRun=structuredClone(initial.run);
+ await saveProfile(history.db,initial);
+ const historyEnv=fakeDungeonBrowser({factory:history.factory}),$h=id=>historyEnv.document.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=return-new-sorting');
+  await wait(()=>$h('checkpoint').hidden===false);
+  await $h('returnHome').fire('click');
+  assert.equal($h('returnSceneTitle').textContent,'コレクション報酬');
+  const displayedCollections=$h('returnCollections').innerHTML;
+  assert.ok(displayedCollections.indexOf(newCollection.name)<displayedCollections.indexOf(oldCollection.name),'first-ever collections come before already known ones');
+  assert.equal((displayedCollections.match(/class="return-new"/g)||[]).length,1,'only first-ever collection receives NEW');
+  await $h('returnNext').fire('click');
+  assert.equal($h('returnSceneTitle').textContent,'アイテム報酬');
+  const displayedRewards=$h('returnRewards').innerHTML;
+  assert.ok(displayedRewards.indexOf('魔導石')<displayedRewards.indexOf(newItem.name),'magic stones are always the first reward');
+  assert.ok(displayedRewards.indexOf(newItem.name)<displayedRewards.indexOf(oldItem.name),'first-ever item precedes previously acquired item');
+  assert.equal((displayedRewards.match(/class="return-new"/g)||[]).length,1,'only first-ever item receives NEW');
+  const saved=await getProfile(history.db);
+  assert.ok(saved.obtainedItemIds.includes(newItem.id),'the first-ever item is recorded persistently');
+ }finally{historyEnv.restore();}
+ // Even when the player uses up every copy, previously acquired items never become NEW again.
+ const repeatProfile=await getProfile(history.db);
+ repeatProfile.inventory=[];
+ repeatProfile.run={...repeatRun,loot:[{type:'use',id:newItem.id,value:11,bonus:null},{type:'collection',id:newCollection.id}]};
+ await saveProfile(history.db,repeatProfile);
+ const repeated=fakeDungeonBrowser({factory:history.factory}),$r=id=>repeated.document.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=return-history-repeat');
+  await wait(()=>$r('checkpoint').hidden===false);
+  await $r('returnHome').fire('click');
+  assert.doesNotMatch($r('returnCollections').innerHTML,/class="return-new"/,'repeat collection does not get NEW');
+  await $r('returnNext').fire('click');
+  assert.doesNotMatch($r('returnRewards').innerHTML,/class="return-new"/,'used-up, previously acquired item does not get NEW');
+ }finally{repeated.restore();}
+ 
  const xpOnly=await create(45,true),env3=fakeDungeonBrowser({factory:xpOnly.factory}),$3=id=>env3.document.getElementById(id);
  try{
   await import('../assets/js/dungeon-app.mjs?integration=return-xp-only');
@@ -67,5 +114,5 @@ try{
   assert.equal($3('returnCollections').hidden,true);
   assert.equal($3('returnRewards').hidden,true);
  }finally{env3.restore();}
- console.log('PASS return bonus reward, empty-stage skipping, XP-only return and completion');
+ console.log('PASS return bonus reward, NEW sorting and persistence, empty-stage skipping, XP-only return and completion');
 }finally{Math.random=originalRandom;}
