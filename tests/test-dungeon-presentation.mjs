@@ -249,12 +249,14 @@ assert.match(page,/<p id="magicStoneBalance"[^>]*>✦ 魔導石：0個<\/p>/,'in
 assert.doesNotMatch(page,/魔法陣の強化に使用/,'no redundant magic-stone explanation in static HTML');
 assert.match(app,/magicStoneBalance'\)\.textContent='✦ 魔導石：'\+profile\.magicStones\+'個'/,'all player balances render only the item count');
 assert.doesNotMatch(app,/個（魔法陣の強化に使用）/,'no redundant explanation in dynamic JS');
-for(const [rarity,mark] of [['common','○ コモン'],['uncommon','◇ アンコモン'],
- ['rare','◆ レア'],['epic','✦ エピック'],['legendary','★ レジェンダリー']]){
- assert.ok(app.includes(rarity+":'"+mark+"'"),rarity+' retains its legible rarity text');
- assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--rarity-ink:#[0-9a-f]{6};--rarity-glow:#[0-9a-f]{8}'),rarity+' has a distinct solid hue and visible glow');
+for(const [rarity,name] of [['common','コモン'],['uncommon','アンコモン'],
+ ['rare','レア'],['epic','エピック'],['legendary','レジェンダリー']]){
+ assert.ok(app.includes(rarity+":'"+name+"'"),rarity+' keeps a readable accessibility name');
+ assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--rarity-ink:#[0-9a-f]{6};--rarity-glow:#[0-9a-f]{8}'),rarity+' keeps its colored rarity aura');
 }
-assert.match(app,/\+\(found\?'<span class="relic-rarity">'/,'rarity names are only shown for discovered collectibles');
+assert.match(app,/collectionRarityMarks\(rarity\)/,'collection rarity is displayed as asterisks instead of names');
+assert.match(app,/\+\(found\?'<span class="relic-rarity" aria-hidden="true">'/,'stars only appear for discovered collectibles');
+assert.match(page,/<select id="collectionRarityFilter"><option value="all">すべて<\/option><option value="common">コモン<\/option><option value="uncommon">アンコモン<\/option><option value="rare">レア<\/option><option value="epic">エピック<\/option><option value="legendary">レジェンダリー<\/option><\/select>/,'rarity dropdown options remain unchanged');
 assert.ok(app.includes(`data-rarity="'+(found?rarity:'unknown')`),'unfound relics still hide their rarity');
 assert.equal(css.includes('/* Color-vision accessibility:'),false,'previous flat, no-glow frame redesign must be removed');
 assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?box-shadow:0 0 0 9px var\(--rarity-halo\),[\s\S]*?0 0 32px var\(--rarity-glow\)/,'original luminous halo and bloom are restored');
