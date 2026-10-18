@@ -229,6 +229,10 @@ try{
  assert.deepEqual(tabScrolls,[{behavior:'instant',block:'start'}],'entering the labyrinth scrolls to the top edge of the tabs');
  let p=await getProfile(db);
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);
+ const firstLayerOrder=[...p.run.layerEnemyOrder.ids];
+ assert.equal(p.run.layerEnemyOrder.layer,1,'the first four opponents receive a saved per-layer order');
+ assert.equal(new Set(firstLayerOrder).size,4,'each regular foe appears once per layer');
+ assert.equal(p.run.enemy.id,firstLayerOrder[0],'first fight uses shuffled opponent #1');
  assert.equal(p.deepestReturnedLayer,0,'entering 1層 does not count as a completed return');
  assert.equal($('floorLabel').textContent,'1層1戦目','initial dungeon label is layer and fight');assert.equal(p.run.carry.filter(Boolean).length,0,'first outing has no carried items');
  assert.equal($('tab-prepare').hidden,true,'preparation tab disappears during battle');
@@ -293,6 +297,8 @@ try{
  assert.match($('battleSpells').innerHTML,/<span class="circle-card-mp">MP:[0-9]+<\/span><span class="circle-card-power">威力:5000<\/span>/,'used spell shows MP and power on separate lines');
  p=await getProfile(db);
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
+ assert.deepEqual(p.run.layerEnemyOrder.ids,firstLayerOrder,'the shuffled order is persisted as fights progress');
+ assert.equal(p.run.enemy.id,firstLayerOrder[1],'second fight uses shuffled opponent #2');
  assert.equal($('floorLabel').textContent,'1層2戦目');
  assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
  assert.ok(projectileEvents.some(event=>event.side==='hero'&&event.attribute==='flame'),'flame attack launches from hero toward enemy');
@@ -318,11 +324,13 @@ try{
   Math.random=()=>.01;
   p=await getProfile(db);
   if(fight<5)assert.equal(p.run.floor,fight+1);
+  if(fight<4)assert.equal(p.run.enemy.id,firstLayerOrder[fight],'regular fights respect the saved shuffled order');
   if(fight<5)assert.equal($('floorLabel').textContent,'1層'+(fight+1)+'戦目'+(fight===4?' · 階層ボス':''),'boss is 1層5戦目');
  }
  assert.equal(p.run.stage,'checkpoint');
  assert.equal(p.deepestReturnedLayer,0,'boss victory does not count as a return until leaving');
  assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
+ assert.equal(p.run.enemy.id,'boss_l001','the fifth fight remains the fixed layer boss');
   assert.ok(p.run.loot.some(item=>item.id==='relic_boss_001'),'boss grants its dedicated epic trophy on the first victory');
    assert.equal(p.defeatedBosses.boss_l001,true,'first boss defeat is saved before returning');
  assert.ok(cinematicEvents.some(x=>x.event==='encounter'&&x.tier==='boss'),'fifth encounter plays layer-boss entrance');
@@ -480,6 +488,8 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
  await $('deeper').fire('click');
  p=await getProfile(db);
  assert.equal(p.run.floor,6);
+ assert.equal(p.run.layerEnemyOrder.layer,2,'continuing to the next layer reshuffles the new regular opponents');
+ assert.equal(p.run.enemy.id,p.run.layerEnemyOrder.ids[0],'next layer uses its own shuffled order');
  assert.equal($('floorLabel').textContent,'2層1戦目','next layer begins after the fifth boss');
  assert.equal($('enemyCombatant').dataset.defeated,'false','fresh opponent appears only after starting next layer');
  assert.equal(p.deepestReturnedLayer,1,'descending into the next layer does not count as a return');

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,floor,level,num} from '../assets/js/dungeon-tuning.mjs';
-import {targetClearLevel,enemyForFight,rarityWeights,rollRarity,rollCollection,bossUniqueCollection} from '../assets/js/dungeon-design.mjs';
+import {targetClearLevel,enemyForFight,shuffledLayerEnemyIds,rarityWeights,rollRarity,rollCollection,bossUniqueCollection} from '../assets/js/dungeon-design.mjs';
 
 const get=async file=>G.parseCsv(await readFile(new URL('../assets/data/'+file,import.meta.url),'utf8'));
 const [enemies,items,collections,buffs,balance,levels,floors,playerBase]=await Promise.all(
@@ -79,6 +79,21 @@ assert.deepEqual(rarityWeights(100),rarityWeights(500),'deep bonuses cap at 100'
 assert.equal(rollCollection(collections,100,()=>.999).rarity,'legendary');
 assert.ok(!rollCollection(collections,100,()=>.999).boss_enemy_id,'boss unique items cannot roll at random');
 
+// The four regular monsters of each designed layer form a true shuffled
+// permutation; the separate fifth battle is the fixed boss.
+for(const layer of [1,2,10,50,100]){
+ const prefix='foe_l'+String(layer).padStart(3,'0')+'_';
+ const canonical=Array.from({length:4},(_,i)=>prefix+(i+1));
+ const low=shuffledLayerEnemyIds(enemies,layer,()=>0);
+ const high=shuffledLayerEnemyIds(enemies,layer,()=>.999999);
+ assert.deepEqual([...low].sort(),canonical,'all four regular foes appear exactly once in layer '+layer);
+ assert.notDeepEqual(low,high,'enemy order varies between expeditions in layer '+layer);
+ assert.deepEqual(high,canonical,'high RNG draw retains original order');
+ assert.deepEqual(shuffledLayerEnemyIds(enemies,layer,()=>0,2).slice(0,2),canonical.slice(0,2),
+  'legacy in-progress run keeps enemies it already fought');
+}
+assert.throws(()=>shuffledLayerEnemyIds(enemies,0),/Invalid designed layer/);
+assert.throws(()=>shuffledLayerEnemyIds(enemies,1,()=>0,5),/Invalid completed encounters/);
 assert.equal(targetClearLevel(1),1);
 assert.equal(targetClearLevel(2),3);
 assert.equal(targetClearLevel(3),5);
