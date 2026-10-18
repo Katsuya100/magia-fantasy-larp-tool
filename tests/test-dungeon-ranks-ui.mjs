@@ -41,7 +41,16 @@ try{
   assert.match($('playerStats').innerHTML,/<strong data-rank="0"><span>未取得<\/span><\/strong>/);
   await doc.click(btn({cast:'-1'}));
   await wait(async()=> (await getProfile(db)).run?.stage==='checkpoint','boss defeated');
+  await wait(()=>$('milestoneChoiceDialog').open,'10-layer boss victory immediately opens a two-action choice');
+  assert.equal($('milestoneChoiceTitle').textContent,'10層のボス撃破！');
+  assert.equal($('supportPromptDialog').open,false,'boss victory does not automatically show the adventurer card');
   let saved=await getProfile(db);
+  assert.equal(saved.run.lastMilestoneChoiceLayer,10,'milestone display is recorded before returning');
+  await $('milestoneShare').fire('click');
+  assert.equal($('milestoneChoiceDialog').open,false,'choosing to share closes the two-choice dialog');
+  assert.equal($('supportPromptDialog').open,true,'adventurer card opens only after share was chosen');
+  await $('supportPromptClose').fire('click');
+  assert.equal($('supportPromptDialog').open,false,'card can be dismissed normally');
   assert.equal(saved.adventurerRank,0,'badge is pending until returning');
   assert.ok(saved.run.loot.some(item=>item.type==='rank'&&item.layer===10),'badge appears as a loot drop');
   assert.match($('checkpointInfo').textContent,/鉛級冒険者章を発見/);
@@ -49,6 +58,7 @@ try{
   const expectedCollections=saved.run.loot.filter(item=>item.type==='collection').length;
   await $('bonus-restore').fire('click');
   await $('returnHome').fire('click');
+  assert.equal($('milestoneChoiceDialog').open,false,'return will not repeat the boss milestone choices');
   saved=await getProfile(db);
   assert.equal(saved.adventurerRank,10,'rank is saved on successful return');
   assert.equal(saved.run,null);
