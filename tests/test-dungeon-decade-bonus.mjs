@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
-import {isBonusLayer,bonusCollection,bonusConsumable,rarityWeights} from '../assets/js/dungeon-design.mjs';
+import {isBonusLayer,bonusCollection,bonusConsumable,rarityWeights,legendaryDropRate} from '../assets/js/dungeon-design.mjs';
 const collections=parseCsv(readFileSync('assets/data/dungeon-collections.csv','utf8'));
 const items=parseCsv(readFileSync('assets/data/dungeon-consumables.csv','utf8'));
 for(let layer=1;layer<=110;layer++)assert.equal(isBonusLayer(layer),layer%10===0);
@@ -15,15 +15,15 @@ for(const layer of [10,20,30,50,80,100,110]){
   if(layer>=100&&!['clear','escape','elixir','revive'].includes(item.kind))assert.equal(item.tier,'extreme');
  }
 }
-// Optional decade reward is a rare+ roll, with 1% legendary rather
-// than accidentally inheriting a higher conditional legendary rate.
+// Optional decade choices track depth, but the fixed boss trophy remains separate.
 for(const layer of [10,20,50,100,110]){
  let legendary=0;
  for(let i=0;i<10000;i++){
   const draws=[(i+.5)/10000,.5];
   if(bonusCollection(collections,layer,()=>draws.shift()).rarity==='legendary')legendary++;
  }
- assert.equal(legendary,100,'decade optional collection uses exactly 1% legendary at layer '+layer);
+ assert.ok(Math.abs(legendary-10000*legendaryDropRate(layer))<=1,
+  'decade optional collection follows legendary depth odds at layer '+layer);
 }
 assert.deepEqual(rarityWeights(20),rarityWeights(20));
 const app=readFileSync('assets/js/dungeon-app.mjs','utf8');

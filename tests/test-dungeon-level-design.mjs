@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,floor,level,num} from '../assets/js/dungeon-tuning.mjs';
-import {targetClearLevel,enemyForFight,shuffledLayerEnemyIds,rarityWeights,rollRarity,rollCollection,bossUniqueCollection} from '../assets/js/dungeon-design.mjs';
+import {targetClearLevel,enemyForFight,shuffledLayerEnemyIds,legendaryDropRate,rarityWeights,rollRarity,rollCollection,bossUniqueCollection} from '../assets/js/dungeon-design.mjs';
 
 const get=async file=>G.parseCsv(await readFile(new URL('../assets/data/'+file,import.meta.url),'utf8'));
 const [enemies,items,collections,buffs,balance,levels,floors,playerBase]=await Promise.all(
@@ -70,13 +70,18 @@ assert.equal(bossTrophies.filter(x=>x.rarity==='epic').length,90,'non-decade bos
 assert.equal(bossTrophies.filter(x=>x.rarity==='legendary').length,10,'every tenth-layer trophy stays legendary');
 const first=rarityWeights(1),last=rarityWeights(100),sum=a=>a.reduce((x,y)=>x+y,0);
 assert.deepEqual(first.slice(0,4),[40,20,10,5]);
-assert.equal(first[4],75/99,'legendary weight gives an exact 1% of the total');
+assert.equal(legendaryDropRate(1),.0002,'layer 1 legendary starts at 0.02%');
+assert.equal(legendaryDropRate(100),.1,'layer 100 legendary reaches 10%');
+assert.equal(legendaryDropRate(500),.1,'endless layers remain at 10%');
+let previous=-1;
 for(const layer of [1,2,10,20,50,75,99,100,101,500]){
- const weights=rarityWeights(layer);
- assert.ok(Math.abs(weights[4]/sum(weights)-.01)<1e-12,'legendary collection roll is 1% at layer '+layer);
- const samples=10000,draws=Object.fromEntries(['common','uncommon','rare','epic','legendary'].map(r=>[r,0]));
- for(let i=0;i<samples;i++)draws[rollRarity(layer,()=>(i+.5)/samples)]++;
- assert.equal(draws.legendary,100,'exactly 100 out of 10,000 evenly spaced draws are legendary at layer '+layer);
+ const weights=rarityWeights(layer),rate=legendaryDropRate(layer);
+ assert.ok(rate>=previous,'legendary chance never drops as depth increases');
+ assert.ok(Math.abs(weights[4]/sum(weights)-rate)<1e-12,'legendary rarity roll matches the authored rate at layer '+layer);
+ const samples=100000;let found=0;
+ for(let i=0;i<samples;i++)if(rollRarity(layer,()=>(i+.5)/samples)==='legendary')found++;
+ assert.ok(Math.abs(found-samples*rate)<=1,'legendary outcomes track the expected rate at layer '+layer);
+ previous=rate;
 }
 assert.ok((last[2]+last[3]+last[4])/sum(last)>(first[2]+first[3]+first[4])/sum(first));
 assert.deepEqual(rarityWeights(100),rarityWeights(500),'deep bonuses cap at 100');
@@ -122,12 +127,14 @@ for(let layer=1;layer<=100;layer++){
  const bossId=ids[4],trophy=bossUniqueCollection(collections,bossId);
  assert.equal(trophy.rarity,layer%10===0?'legendary':'epic','boss trophy rarity for layer '+layer);
  const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,guaranteeBossCollection:true});
- assert.ok(rewards.length>=1&&rewards.length<=7);
+ assert.ok(rewards.length>=1&&rewards.length<=5);
  assert.equal(rewards.filter(x=>x.id===trophy.id).length,1,'boss trophy guaranteed on first victory at layer '+layer);
   const repeats=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId});
   assert.equal(repeats.filter(x=>x.id===trophy.id).length,0,'repeat boss wins no longer guarantee the trophy at layer '+layer);
   // The optional repeat drop rolls in the trophy's actual rarity bucket.
-  const picks=[trophy.rarity==='legendary'?.999:.93,.999];
+  const weights=rarityWeights(layer),totalWeight=weights.reduce((sum,n)=>sum+n,0);
+  const epicTicket=(weights[0]+weights[1]+weights[2]+weights[3]/2)/totalWeight;
+  const picks=[trophy.rarity==='legendary'?.999:epicTicket,.999];
   assert.equal(rollCollection(collections,layer,()=>picks.shift(),bossId).id,trophy.id,
    'repeat boss trophy can still roll by its rarity at layer '+layer);
   assert.equal(rollCollection(collections,layer,()=>.999).boss_enemy_id,'',

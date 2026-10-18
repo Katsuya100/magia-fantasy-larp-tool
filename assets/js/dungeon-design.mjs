@@ -2,7 +2,7 @@
 export const DESIGNED_LAYERS=100;
 export const RARITIES=['common','uncommon','rare','epic','legendary'];
 // Relative weights of the four non-legendary rarities.
-// Legendary stays at exactly 1% of each ordinary collection rarity roll.
+// Legendary is nearly impossible at layer 1, increasing to 10% at layer 100+.
 export const BASE_RARITY_WEIGHTS=[40,20,10,5];
 export const CONSUMABLE_TIERS=['small','medium','large','extreme'];
 export function rollConsumableTier(layer,r=Math.random){
@@ -55,11 +55,16 @@ export function enemyForFight(enemies,fight,r=Math.random){
  if(!pool.length)throw Error('Empty enemy pool');
  return pool[Math.min(pool.length-1,Math.floor(Math.max(0,r())*pool.length))];
 }
+export function legendaryDropRate(layer){
+ const depth=Math.min(1,Math.max(0,(Number(layer)-1)/99));
+ // 0.02% on layer 1; reaches 10% on layer 100 and stays there thereafter.
+ return .0002+(.1-.0002)*depth*depth;
+}
 export function rarityWeights(layer){
  const d=Math.min(1,Math.max(0,(Number(layer)-1)/99));
  const ordinary=BASE_RARITY_WEIGHTS.map((n,i)=>n*[1-.6*d,1-.3*d,1+1.2*d,1+1.7*d][i]);
- // 1 part legendary to 99 parts all other rarities, regardless of depth.
- return [...ordinary,ordinary.reduce((sum,weight)=>sum+weight,0)/99];
+ const rate=legendaryDropRate(layer),total=ordinary.reduce((sum,weight)=>sum+weight,0);
+ return [...ordinary,total*rate/(1-rate)];
 }
 export function rollRarity(layer,r=Math.random){
  const weights=rarityWeights(layer),total=weights.reduce((a,b)=>a+b,0);
@@ -87,9 +92,10 @@ export function bossUniqueCollection(collections,id){
 
 export const isBonusLayer=layer=>Number.isInteger(layer)&&layer>0&&layer%10===0;
 export function bonusCollection(collections,layer,r=Math.random){
- // Decade bonus rolls are rare+ only, but legendary is still exactly 1%.
- const [rare,epic]=rarityWeights(layer===10?20:layer).slice(2,4);
- const weights=[rare,epic,(rare+epic)/99];
+ // Decade bonus is rare+ with the same depth-scaled legendary rate.
+ const [rare,epic]=rarityWeights(layer).slice(2,4);
+ const rate=legendaryDropRate(layer);
+ const weights=[rare,epic,(rare+epic)*rate/(1-rate)];
  let ticket=Math.min(1-Number.EPSILON,Math.max(0,r()))*weights.reduce((a,b)=>a+b,0);
  let rarity='legendary';
  for(let i=0;i<weights.length;i++){ticket-=weights[i];if(ticket<0){rarity=RARITIES[i+2];break;}}

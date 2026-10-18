@@ -1489,3 +1489,17 @@ html,body{overflow-x:clip}
  .battle-stat-value{font-size:clamp(23px,7vw,29px)}
  .battle-stat small{font-size:9px}
 }
+
+/* Compact, legible three-column battle ledger, including on small phones. */
+.battle-info{gap:8px;margin:14px 0 0}
+.battle-stat{min-height:91px;gap:5px;padding:11px 5px}
+.battle-stat-label{font-size:clamp(11px,1.65vw,13px)}
+.battle-stat-value{font-size:clamp(25px,3.7vw,33px)}
+.battle-stat small{font-size:10px}
+@media(max-width:630px){
+ .battle-info{gap:5px;margin:11px 0 0}
+ .battle-stat{min-height:77px;padding:8px 2px;gap:2px}
+ .battle-stat-label{font-size:11px;white-space:nowrap}
+ .battle-stat-value{font-size:clamp(23px,6.7vw,29px)}
+ .battle-stat small{font-size:9px}
+}
