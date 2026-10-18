@@ -1,0 +1,101 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {supportPromptForReturn} from '../assets/js/dungeon-support.mjs';
+import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
+import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
+import {openStore,getProfile,saveProfile} from '../assets/js/dungeon-store.mjs';
+import * as G from '../assets/js/dungeon-core.mjs';
+import {configure} from '../assets/js/dungeon-tuning.mjs';
+
+const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
+const supportLink='https://ofuse.me/2429ddee';
+const profileMarkup=html.slice(html.indexOf('<section id="home"'),html.indexOf('<section id="library"'));
+assert.ok(profileMarkup.includes('class="profile-support"'),'support link is in the profile screen');
+assert.ok(profileMarkup.indexOf('class="profile-support"')>profileMarkup.indexOf('id="deleteSaveData"'),'support link is at the profile bottom');
+assert.match(profileMarkup,/href="https:\/\/ofuse\.me\/2429ddee" target="_blank" rel="noopener noreferrer">作者を応援/);
+assert.equal((html.match(/href="https:\/\/ofuse\.me\/2429ddee"/g)||[]).length,2,'only profile and modal link to OFUSE');
+assert.ok(html.includes('id="supportPromptClose"'),'optional support prompt is dismissible');
+
+assert.equal(supportPromptForReturn(0,9,0),null,'ordinary progress cannot trigger a prompt');
+assert.equal(supportPromptForReturn(10,10,0),null,'repeating a milestone does not trigger a prompt');
+assert.equal(supportPromptForReturn(20,19,0),null,'lower returns cannot trigger a prompt');
+assert.deepEqual(supportPromptForReturn(9,10,0),{title:'10層の踏破記録を更新！',message:'新しい探索の節目に到達しました。'});
+assert.deepEqual(supportPromptForReturn(19,21,0),{title:'20層の踏破記録を更新！',message:'新しい探索の節目に到達しました。'});
+assert.deepEqual(supportPromptForReturn(9,10,10),{title:'新しい冒険者章を獲得！',message:'11層から探索できるようになりました。'},'simultaneous milestone and badge produce only one prompt');
+
+const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
+const [balance,levels,floors,playerBase,enemies]=await Promise.all(['balance','levels','floors','player-base','enemies'].map(csv));
+configure({balance,levels,floors,playerBase});
+const attack={role:'attack',attribute:'flame',power:5000};
+const wait=async check=>{
+ const deadline=Date.now()+9000;
+ while(!check()&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,25));
+ assert.ok(check(),'test game loaded');
+};
+async function fixture(depth,fight,loot=[]){
+ const factory=fakeIndexedDB(),db=await openStore(factory),p=await getProfile(db);
+ p.name='支援UIテスト';p.level=30;p.returns=1;p.deepestReturnedLayer=depth;
+ p.slots=['a','b','c',null,null];
+ p.run={floor:fight,slotIds:[...p.slots],hero:G.makeUnit(p.base,30,{},[attack,attack,attack,null,null],'player'),
+  enemy:G.fromEnemy(enemies.find(e=>e.id==='boss_l010'),19),enemyName:'階層ボス',
+  carry:[],loot,xp:0,usedItems:0,bonusClaimed:true,log:[],stage:'checkpoint'};
+ await saveProfile(db,p);
+ return {factory,db};
+}
+// A regular five-fight checkpoint returns to the profile without a donation prompt.
+const normal=await fixture(8,45),env1=fakeDungeonBrowser({factory:normal.factory}),$1=id=>env1.document.getElementById(id);
+try{
+ await import('../assets/js/dungeon-app.mjs?integration=support-normal');
+ await wait(()=>$1('checkpoint').hidden===false);
+ await $1('returnHome').fire('click');
+ assert.equal($1('home').hidden,false);
+ assert.equal($1('supportPromptDialog').open,false,'ordinary return has no prompt');
+ await env1.document.click({disabled:false,dataset:{view:'home'},closest(){return this;}});
+ assert.equal($1('supportPromptDialog').open,false,'manually opening the profile has no prompt');
+}finally{env1.restore();}
+
+// A newly confirmed ten-layer boundary prompts only when already on the profile.
+const milestone=await fixture(9,50),env2=fakeDungeonBrowser({factory:milestone.factory}),$2=id=>env2.document.getElementById(id);
+try{
+ await import('../assets/js/dungeon-app.mjs?integration=support-milestone');
+ await wait(()=>$2('checkpoint').hidden===false);
+ assert.equal($2('supportPromptDialog').open,false,'no prompt during combat or checkpoints');
+ await $2('returnHome').fire('click');
+ assert.equal($2('home').hidden,false);
+ assert.equal($2('supportPromptDialog').open,true);
+ assert.equal($2('supportPromptTitle').textContent,'10層の踏破記録を更新！');
+ await $2('supportPromptClose').fire('click');
+ assert.equal($2('supportPromptDialog').open,false,'prompt can be closed without payment');
+ await env2.document.click({disabled:false,dataset:{view:'collection'},closest(){return this;}});
+ await env2.document.click({disabled:false,dataset:{view:'home'},closest(){return this;}});
+ assert.equal($2('supportPromptDialog').open,false,'returning to the profile tab does not repeat the prompt');
+}finally{env2.restore();}
+
+// A newly obtained rank presents the optional dialog AFTER the reward showcase,
+// including a page reload while the showcase is pending.
+const badge=await fixture(10,50,[{type:'rank',layer:10}]);
+const env3=fakeDungeonBrowser({factory:badge.factory}),$3=id=>env3.document.getElementById(id);
+try{
+ await import('../assets/js/dungeon-app.mjs?integration=support-badge-before-reload');
+ await wait(()=>$3('checkpoint').hidden===false);
+ await $3('returnHome').fire('click');
+ assert.equal($3('returnShowcase').hidden,false,'rank reward screen is shown first');
+ assert.equal($3('supportPromptDialog').open,false,'the prompt cannot interrupt rewards');
+ assert.ok((await getProfile(badge.db)).pendingReturn.supportPrompt,'pending prompt survives the save');
+}finally{env3.restore();}
+const env4=fakeDungeonBrowser({factory:badge.factory}),$4=id=>env4.document.getElementById(id);
+try{
+ await import('../assets/js/dungeon-app.mjs?integration=support-badge-after-reload');
+ await wait(()=>$4('returnShowcase').hidden===false);
+ assert.equal($4('supportPromptDialog').open,false,'reload does not show the prompt prematurely');
+ await $4('returnNext').fire('click');
+ assert.equal($4('home').hidden,false);
+ assert.equal($4('supportPromptDialog').open,true);
+ assert.equal($4('supportPromptTitle').textContent,'新しい冒険者章を獲得！');
+ assert.equal($4('supportPromptMessage').textContent,'11層から探索できるようになりました。');
+ assert.equal((await getProfile(badge.db)).pendingReturn,null,'reward state clears before optional prompt');
+ await $4('supportPromptClose').fire('click');
+ assert.equal($4('supportPromptDialog').open,false);
+}finally{env4.restore();}
+
+console.log('PASS profile-only OFUSE link, single optional milestone/rank prompts, reload and no-pressure dismissal');
