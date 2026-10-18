@@ -1453,3 +1453,42 @@ html,body{overflow-x:clip}
 @keyframes dungeon-startup-sweep{from{transform:translateX(-110%)}to{transform:translateX(275%)}}
 @media(max-width:630px){.startup-card{padding:24px 17px 20px}.startup-detail{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.startup-bar span{animation:none;width:100%;background:linear-gradient(90deg,#638b99,#ebcc8b)}}
+
+/* Arcane ledger: three equal, responsive counters instead of a slash-separated line. */
+.battle-info{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;
+ margin:18px 0 1px;color:var(--pale);line-height:1.3
+}
+.battle-stat{
+ position:relative;isolation:isolate;min-width:0;min-height:108px;overflow:hidden;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+ padding:12px 5px 10px;border:1px solid var(--border);text-align:center;
+ background:radial-gradient(ellipse at 50% 0%,#b796633b,transparent 75%),linear-gradient(150deg,#27212f,#0b1824);
+ box-shadow:inset 0 0 0 3px #d6ac6f0d,0 8px 25px #0005
+}
+.battle-stat:before{content:"";position:absolute;inset:5px;border:1px solid #f1d3a316;pointer-events:none}
+.battle-stat[data-kind="xp"]{background:radial-gradient(ellipse at 50% 0%,#ad9a5140,transparent 75%),linear-gradient(150deg,#2b2335,#0d1524)}
+.battle-stat[data-kind="item"]{background:radial-gradient(ellipse at 50% 0%,#448e8e36,transparent 75%),linear-gradient(150deg,#202934,#0d1524)}
+.battle-stat-label{
+ display:block;font-size:clamp(10px,1.55vw,12px);font-weight:700;
+ letter-spacing:.04em;white-space:nowrap;color:var(--gold)
+}
+.battle-stat-label>span{font-size:1.25em}
+.battle-stat-value{
+ display:block;font:700 clamp(24px,4vw,35px)/1.15 var(--roman);
+ color:#ffe5aa;text-shadow:0 0 20px #e9c37d57;font-variant-numeric:tabular-nums
+}
+.battle-stat[data-kind="item"] .battle-stat-value{color:#c1e7dd;text-shadow:0 0 17px #93cbbd40}
+.battle-stat-max{font-size:.52em;color:var(--soft);letter-spacing:0}
+.battle-stat small{font-size:clamp(9px,1.35vw,11px);font-weight:500;color:var(--soft);line-height:1.35}
+.battle-revival{
+ grid-column:1/-1;padding:7px 12px;border:1px solid #d6b87f7a;
+ color:var(--gold);font-size:12px;text-align:center;background:#302132b8
+}
+@media(max-width:630px){
+ .battle-info{gap:5px;margin:14px 0 1px}
+ .battle-stat{min-height:90px;padding:9px 2px 8px;gap:4px}
+ .battle-stat-label{font-size:10px;letter-spacing:0}
+ .battle-stat-value{font-size:clamp(23px,7vw,29px)}
+ .battle-stat small{font-size:9px}
+}

@@ -229,6 +229,12 @@ try{
  assert.deepEqual(tabScrolls,[{behavior:'instant',block:'start'}],'entering the labyrinth scrolls to the top edge of the tabs');
  let p=await getProfile(db);
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);
+ assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="loot"/,'battle HUD shows earned loot as a card');
+ assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="xp"/,'battle HUD shows provisional EXP as a card');
+ assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="item"/,'battle HUD shows free item usage as a card');
+ assert.match($('battleInfo').innerHTML,/<strong class="battle-stat-value">0<\/strong>/,'initial rewards start at zero');
+ assert.match($('battleInfo').innerHTML,/>未確定 · 持ち帰り待ち</,'unbanked loot remains clearly provisional');
+ assert.doesNotMatch($('battleInfo').innerHTML,/未確定報酬 [0-9]+個 \/ 未確定経験値/,'the cramped slash-separated sentence is removed');
  const firstLayerOrder=[...p.run.layerEnemyOrder.ids];
  assert.equal(p.run.layerEnemyOrder.layer,1,'the first four opponents receive a saved per-layer order');
  assert.equal(new Set(firstLayerOrder).size,4,'each regular foe appears once per layer');
@@ -472,6 +478,7 @@ assert.doesNotMatch($('gearCards').innerHTML,/class="tile-detail item-effect-ico
  assert.equal(p.run.carry[0],null,'consumed item leaves a blank slot');
  assert.equal(p.run.carry[1].instanceId,savedBeforeAttack.carrySlots[1],'other slots keep their identities');
  assert.equal(p.run.usedItems,1);
+ assert.match($('battleInfo').innerHTML,/道具行使<\/span>[\s\S]*?battle-stat-value">1<span class="battle-stat-max"> \/ 1<\/span>/,'item usage counter updates after using an item');
  assert.equal(($('battleItems').innerHTML.match(/data-use="/g)||[]).length,2,'item grid keeps usable tiles');
 assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,2,'combat uses the same centered stat class as preparation');
  assert.equal(($('battleItems').innerHTML.match(/data-open-item="/g)||[]).length,0,'battle items are not preparation slots');

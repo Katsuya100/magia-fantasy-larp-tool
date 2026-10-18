@@ -114,7 +114,7 @@ try{
   let after=await getProfile(db3);
   assert.equal(after.run.hero.reviveArmed,true,'ruby is armed');
   assert.equal(after.run.carry[0],null);
-  assert.match($3('battleInfo').textContent,/復活待機中/);
+  assert.match($3('battleInfo').innerHTML,/生命の紅石 · 復活待機中/,'revival status stays visible beneath the battle counters');
    assert.equal($3('heroName').textContent,'生命の紅石確認 🪽','armed life ruby adds a wing next to the adventurer name');
    assert.match($3('battleItems').innerHTML,/class="loadout-tile battle-tile battle-item-tile equipped no-effect" data-use="1" disabled/,'second ruby becomes gray when revival is already armed');
    assert.equal($3('heroName').attributes['aria-label'],'生命の紅石確認・生命の紅石：復活待機中');
