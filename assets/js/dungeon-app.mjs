@@ -15,6 +15,7 @@ import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.25';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.25';
 import {highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.25';
 import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.25';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.26';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.25';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -597,6 +598,12 @@ function renderReturnStep(){
   requestAnimationFrame(tick);
  }
 }
+function showSupportPrompt(prompt){
+ if(!prompt||activeScene!=='home')return;
+ $('supportPromptTitle').textContent=prompt.title;
+ $('supportPromptMessage').textContent=prompt.message;
+ $('supportPromptDialog').showModal();
+}
 async function advanceReturnStep(){
  if(!returnFlow||$('returnNext').disabled)return;
  if(++returnFlow.step<returnFlow.steps.length){
@@ -605,10 +612,12 @@ async function advanceReturnStep(){
   return;
  }
  ++returnAnimationToken;
+ const supportPrompt=returnFlow.supportPrompt||null;
  profile.pendingReturn=null;
  await persist();
  returnFlow=null;
  show('home');
+ showSupportPrompt(supportPrompt);
 }
 async function leave(mode='checkpoint'){
  const run=profile.run;
@@ -648,7 +657,9 @@ async function leave(mode='checkpoint'){
  }
  const before={level:profile.level,xp:profile.xp};
  G.experience(profile,run.xp);
+ const previousDepth=deepestReturnedLayer(profile);
  recordReturnedLayer(profile,mode==='escape'?Math.floor((run.floor-1)/FIGHTS_PER_LAYER)*FIGHTS_PER_LAYER:run.floor);
+ const supportPrompt=supportPromptForReturn(previousDepth,deepestReturnedLayer(profile),badges.length?highestRankLayer(profile):0);
  profile.returns++;
  profile.obtainedItemIds=[...new Set([...knownItems,...[...items.values()].map(({item})=>item.id)])];
  profile.run=null;
@@ -663,9 +674,10 @@ async function leave(mode='checkpoint'){
   await persist();
   render();
   show('home');
+  showSupportPrompt(supportPrompt);
   return;
  }
- returnFlow={steps,step:0,collections:[...found.values()].sort((a,b)=>Number(b.isNew)-Number(a.isNew)),rewards,before,gained:run.xp};
+ returnFlow={steps,step:0,collections:[...found.values()].sort((a,b)=>Number(b.isNew)-Number(a.isNew)),rewards,before,gained:run.xp,supportPrompt};
  profile.pendingReturn=returnFlow;
  await persist();
  render();
@@ -1036,6 +1048,8 @@ function wire(){
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
   $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
+  $('supportPromptClose').addEventListener('click',()=>$('supportPromptDialog').close());
+  $('supportPromptDialog').querySelector?.('a')?.addEventListener('click',()=>$('supportPromptDialog').close());
  for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)));
  $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;const previousScroll=run.checkpointBattleScrollY;delete run.checkpointBattleScrollY;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');restoreContinuedBattleScroll(previousScroll);await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
  $('cancelAnalyze').addEventListener('click',()=>{
