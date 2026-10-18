@@ -23,9 +23,11 @@ export function fightExperience(enemyLevel,playerLevel,layer){
 }
 // Identical defense-duration formula for hero and enemy; use upgraded raw spell.power.
 export function defenseDuration(spell){
- const base=num('defense_duration_base'),cap=num('defense_duration_cap'),step=num('defense_duration_power_step');
+ const step=num('defense_duration_power_step');
+ if(step<=0)return num('resistance_buff_duration'); // Retain existing duration overrides and tests.
+ const base=num('defense_duration_base'),cap=num('defense_duration_cap');
  const power=Math.max(0,Number(spell?.power)||0);
- return clamp(base+(step>0?Math.floor(power/step):0),1,cap);
+ return clamp(base+Math.floor(power/step),1,cap);
 }
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
 export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
