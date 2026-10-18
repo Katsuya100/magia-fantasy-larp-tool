@@ -51,7 +51,8 @@ assert.ok(profileHtml.indexOf('href="https://ofuse.me/2429ddee"')<profileHtml.in
 assert.ok(profileHtml.includes('class="profile-support" aria-label='),'share and OFUSE share a two-column action group');
 assert.equal((profileHtml.match(/class="profile-action"/g)||[]).length,2,'both actions have equivalent button styling');
 assert.equal((html.match(/id="openAdventurerShare"/g)||[]).length,1);
-assert.ok(html.includes('id="supportXLink"')&&html.includes('id="supportDonateLink"'),'same milestone modal exposes both equal-weight links');
+assert.ok(html.includes('id="supportXLink"'),'card dialog retains X sharing');
+assert.ok(!html.includes('id="supportDonateLink"')&&!html.includes('id="supportOptionalNote"'),'card dialog omits donation link and optional donation note');
 assert.ok(html.includes('id="adventurerShareCanvas"'),'card is previewed inside the shared modal');
 assert.ok(!html.includes('id="tab-share"'),'no new navigation screen');
 
@@ -73,7 +74,7 @@ try{
  await $('openAdventurerShare').fire('click');
  assert.equal($('supportPromptDialog').open,true,'profile opens the same milestone modal');
  assert.equal($('supportPromptTitle').textContent,'冒険者カード');
- assert.equal($('supportOptionalNote').hidden,true,'ordinary share dialog does not mention donation pressure');
+ assert.ok(!html.includes('id="supportDonateLink"'),'ordinary card dialog contains no donation action');
  assert.equal($('adventurerShareCanvas').hidden,false);
  assert.equal($('adventurerShareCanvas').width,1200);
  const openUrl=new URL($('supportXLink').href);
