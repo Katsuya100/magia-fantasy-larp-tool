@@ -1126,6 +1126,67 @@
     };
   }
 
+
+  // Count independent long, straight ink components well INSIDE the circle.
+  // Outer/inner circular guide rings can dominate radial silhouette sampling;
+  // the open linework inside those rings remains a better debuff cue.
+  // This is only consulted if there are no enclosed inner shapes, so polygon,
+  // shield, star and rounded support classification is left unchanged.
+  function countOpenLinearStrokes(gray, width, height, cx, cy, radius) {
+    const insetRadius = radius * .8;
+    const insetSquared = insetRadius ** 2;
+    const xMin = Math.max(0, Math.floor(cx - insetRadius));
+    const xMax = Math.min(width - 1, Math.ceil(cx + insetRadius));
+    const yMin = Math.max(0, Math.floor(cy - insetRadius));
+    const yMax = Math.min(height - 1, Math.ceil(cy + insetRadius));
+    const visited = new Uint8Array(width * height);
+    const queue = new Int32Array(width * height);
+    const minPixels = Math.max(12, Math.round(radius * .16));
+    const inside = (x, y) =>
+      x >= xMin && x <= xMax && y >= yMin && y <= yMax &&
+      (x - cx) ** 2 + (y - cy) ** 2 < insetSquared;
+    const isInk = (x, y) => inside(x, y) && gray[y * width + x] < 150;
+    let straightStrokes = 0;
+    const offsets = [-1, 0, 1];
+    for (let y = yMin; y <= yMax; y++) for (let x = xMin; x <= xMax; x++) {
+      const seed = y * width + x;
+      if (visited[seed] || !isInk(x, y)) continue;
+      visited[seed] = 1;
+      queue[0] = seed;
+      let head = 0, tail = 1;
+      let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+      let minRadius = Infinity, maxRadius = 0;
+      while (head < tail) {
+        const pos = queue[head++];
+        const py = Math.floor(pos / width), px = pos - py * width;
+        sx += px; sy += py;
+        sxx += px * px; syy += py * py; sxy += px * py;
+        const distance = Math.hypot(px - cx, py - cy);
+        minRadius = Math.min(minRadius, distance);
+        maxRadius = Math.max(maxRadius, distance);
+        for (const dy of offsets) for (const dx of offsets) {
+          if (!dx && !dy) continue;
+          const nx = px + dx, ny = py + dy;
+          if (!isInk(nx, ny)) continue;
+          const next = ny * width + nx;
+          if (visited[next]) continue;
+          visited[next] = 1;
+          queue[tail++] = next;
+        }
+      }
+      if (tail < minPixels || maxRadius - minRadius < radius * .14) continue;
+      const meanX = sx / tail, meanY = sy / tail;
+      const xx = sxx / tail - meanX ** 2;
+      const yy = syy / tail - meanY ** 2;
+      const xy = sxy / tail - meanX * meanY;
+      const discriminant = Math.sqrt(Math.max(0, (xx - yy) ** 2 + 4 * xy ** 2));
+      const longAxis = (xx + yy + discriminant) / 2;
+      const shortAxis = Math.max(0, (xx + yy - discriminant) / 2);
+      if ((longAxis + 1) / (shortAxis + 1) >= 8) straightStrokes++;
+    }
+    return straightStrokes;
+  }
+
   function analyzeSigilMetricsJs(buffer, width, height, paths) {
     const image = makeGrayImage(buffer, width, height);
     if (!paths?.inner) {
@@ -1279,11 +1340,22 @@
         + roundedAreaShare * 14 * closedContourWeight,
       debuff: missingRayRatio ** 2 * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
     };
+    // Only divert an open *main* glyph made from several straight strokes.
+    // Single open curved outlines are not enough; complete enclosed shapes
+    // bypass this override entirely.
+    const openLinearStrokes = enclosedFaces.faceCount === 0
+      ? countOpenLinearStrokes(image.gray, image.width, image.height, cx, cy, radius) : 0;
+    if (openLinearStrokes >= 3) {
+      raw.attack *= .12;
+      raw.defense *= .15;
+      raw.support *= .15;
+      raw.debuff += 6;
+    }
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
     const scores = { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
     return {
       scores,
-      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, radialLobes, ...enclosedFaces, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
+      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, radialLobes, ...enclosedFaces, openLinearStrokes, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
       // Angular contour changes are a proxy for wobble in the drawn lines.
       lineStraightness: clamp(1 - roughness * 6),
     };
