@@ -87,6 +87,15 @@ for(let layer=1;layer<=100;layer++){
  }
 }
 
+// Preserve a mix of counters throughout the 100-layer level curve.
+const affinityCounts=Object.fromEntries(G.ATTRS.map(attribute=>[attribute,0]));
+for(let layer=1;layer<=100;layer++){
+ const primary=enemies[(layer-1)*5].spells.split('|')[0].split(':')[1];
+ affinityCounts[primary]++;
+}
+assert.ok(Object.values(affinityCounts).every(count=>count>=8&&count<=20),
+ 'each element remains meaningfully represented across the dungeon');
+
 assert.equal(levels.length,150);
 assert.equal(floors.length,500);
 assert.equal(num('level_max'),150);
