@@ -53,10 +53,10 @@ try{
 }finally{env.restore();}
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const script=await readFile(new URL('../assets/js/dungeon-tutorial.mjs',import.meta.url),'utf8');
-assert.match(html,/id="tutorialAnimation" src="assets\/images\/tutorial-outer\.gif\?v=20261018\.35"/);
+assert.match(html,/id="tutorialAnimation" src="assets\/images\/tutorial-outer\.gif\?v=20261018\.36"/);
 assert.match(html,/id="tutorialReplay"/);
-assert.match(html,/data-release="20261018\\.36"/);
-assert.match(script,/gif\\.src='assets\\/images\\/'/);
+assert.match(html,/data-release="20261018\.36"/);
+assert.match(script,/gif\.src='assets\/images\/'/);
 assert.doesNotMatch(html,/id="tutorialCanvas"|id="tutorialPad"/);
 assert.doesNotMatch(script,/pointerdown|pointermove|setPointerCapture/);
 for(const step of CIRCLE_TUTORIAL_STEPS){
