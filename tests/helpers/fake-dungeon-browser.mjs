@@ -6,7 +6,7 @@ export function fakeDungeonBrowser(config={}){
   const handlers=new Map();
   const element={id,hidden:['library','prepare','collection','battle','checkpoint','analyzing','result','cameraCanvas','cameraVideo','cameraCapture','cameraStop','pageError','battleError','cameraError','notice','tutorialOverlay','tutorialExample','tutorialPad','tutorialRetry','tutorialFinger'].includes(id),disabled:false,open:false,attributes:{},innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
    addEventListener(name,fn){handlers.set(name,fn);},
-   fire(name){return handlers.get(name)?.({target:element,preventDefault(){this.defaultPrevented=true;}});},
+   fire(name,data={}){return handlers.get(name)?.({target:element,preventDefault(){this.defaultPrevented=true;},...data});},
    setAttribute(name,value){this.attributes[name]=String(value);},
    removeAttribute(name){delete this.attributes[name];},
    showModal(){this.open=true;},close(){this.open=false;},
@@ -15,7 +15,8 @@ export function fakeDungeonBrowser(config={}){
    closest(){return element;},
    focus(){},
    play:async()=>{},
-   getContext:()=>({drawImage(...args){element.drawImageArgs=args;}}),
+   getContext:()=>({drawImage(...args){element.drawImageArgs=args;},clearRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}}),
+    getBoundingClientRect:()=>({left:0,top:0,width:320,height:320}),setPointerCapture(){},releasePointerCapture(){},
    toBlob:callback=>callback(new Blob(['camera-capture'],{type:'image/jpeg'}))
   };
   return element;
