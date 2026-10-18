@@ -16,6 +16,7 @@ const p=await getProfile(db);
 assert.equal(p.level,1);
 assert.ok(p.base.hp>=90&&p.base.hp<=110);
 assert.equal(p.run,null);
+assert.deepEqual(p.obtainedItemIds,[],'new profiles begin without acquired item types');
 p.returns=2;p.inventory=[{id:'heal_s',value:27,bonus:'buff_aqua'}];p.run={floor:3,hp:42,loot:[]};
 await saveProfile(db,p);
 const reread=await getProfile(db);

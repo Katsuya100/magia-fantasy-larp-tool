@@ -334,10 +334,10 @@ try{
  await $('returnHome').fire('click');
  await wait(()=>$('returnShowcase').hidden===false,'return');
  assert.equal($('result').hidden,true,'successful return no longer uses the old result screen');
- assert.equal($('returnSceneTitle').textContent,'コレクション');
+ assert.equal($('returnSceneTitle').textContent,'コレクション報酬');
  assert.match($('returnCollections').innerHTML,/赤角鬼王の霊石/);
  await $('returnNext').fire('click');
- assert.equal($('returnSceneTitle').textContent,'報酬');
+ assert.equal($('returnSceneTitle').textContent,'アイテム報酬');
  assert.ok($('returnRewards').innerHTML.length>0);
  await $('returnNext').fire('click');
  assert.equal($('returnSceneTitle').textContent,'EXP');
