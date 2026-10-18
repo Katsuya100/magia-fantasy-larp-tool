@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.24">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.25">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,12 +19,12 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.24" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.25" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261018.24" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261018.25" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -100,7 +100,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.24" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.25" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -173,7 +173,7 @@
 
     <section id="battle" class="panel battle-panel" hidden>
       <p id="battleError" class="inline-error" hidden role="alert"></p>
-      <div class="section-heading"><div><p class="chapter">THE DESCENT · ENCOUNTER</p><h2 id="floorLabel"></h2></div><span class="section-mark" aria-hidden="true">⚔</span></div>
+      <div class="section-heading"><div><p class="chapter">THE DESCENT · ENCOUNTER</p><h2 id="floorLabel"></h2><p id="battleEncounterLabel" class="battle-encounter-label"></p></div><span class="section-mark" aria-hidden="true">⚔</span></div>
       <div id="battleArena" class="arena" data-role="idle" data-side="none" data-attribute="law">
         <div class="spell-flight" aria-hidden="true">
           <div id="enemyProjectile" class="spell-projectile" data-side="enemy" data-effect="idle" data-attribute="law"><span class="element-flare"></span><span class="element-trail"></span></div>
@@ -269,7 +269,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.24</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.25</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -277,7 +277,7 @@
       <h2 id="tutorialTitle">魔法陣の作り方</h2>
       <p id="tutorialHint">サンプルを見て、順番に描いてみよう。</p>
       <div id="tutorialExample" class="tutorial-example">
-        <img src="assets/images/sample.png?v=20261018.24" alt="外円と内円、その間に英語の呪文、内円の中に紋様を描いたお手本">
+        <img src="assets/images/sample.png?v=20261018.25" alt="外円と内円、その間に英語の呪文、内円の中に紋様を描いたお手本">
         <ol><li>外円と内円を閉じる</li><li>円の間に英語の呪文</li><li>中心に紋様を描く</li><li>1つずつ明るい場所で撮影</li></ol>
       </div>
       <div id="tutorialPad" class="tutorial-pad" data-step="1" hidden>
@@ -297,6 +297,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.24"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.25"></script>
 </body>
 </html>

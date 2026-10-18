@@ -67,7 +67,8 @@ try{
   await $('startAttack').fire('click');
   saved=await getProfile(db);
   assert.equal(saved.run.floor,51,'鉛級 shortcuts to layer 11 first encounter');
-  assert.equal($('floorLabel').textContent,'11層1戦目');
+  assert.equal($('floorLabel').textContent,'11層 獣牙の山道');
+  assert.equal($('battleEncounterLabel').textContent,'1戦目');
  }finally{env.restore();}
  // Starting higher must not manufacture lower collection entries.
  const factory2=fakeIndexedDB(),db2=await openStore(factory2),p2=await getProfile(db2);
@@ -98,7 +99,8 @@ try{
   await $2('startAttack').fire('click');
   const next=await getProfile(db2);
   assert.equal(next.run.floor,201,'41層 enters at the first fight');
-  assert.equal($2('floorLabel').textContent,'41層1戦目');
+  assert.equal($2('floorLabel').textContent,'41層 巨斧の闘技場');
+  assert.equal($2('battleEncounterLabel').textContent,'1戦目');
   assert.deepEqual(next.collection,{},'no badge is stored in the collection');
  }finally{env2.restore();}
  // Post-victory MP recovery must not retroactively qualify a low-MP win.

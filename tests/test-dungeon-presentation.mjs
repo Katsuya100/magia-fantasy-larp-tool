@@ -45,6 +45,10 @@ assert.deepEqual(tabOpenStates,[{id:'prepare',hidden:false},{id:'library',hidden
 assert.match(page,/<section id="prepare" class="panel loadout-panel">/,'preparation visible on initial HTML');
 assert.match(page,/<section id="home" class="panel adventurer-panel" hidden>/,'profile initially hidden');
 assert.match(page,/<h2>準備&amp;出発<\/h2>/);
+assert.match(page,/<h2 id="floorLabel"><\/h2><p id="battleEncounterLabel" class="battle-encounter-label"><\/p>/,
+ 'battle heading separates layer name and smaller encounter line');
+assert.match(css,/\.battle-encounter-label\{[^}]*font-size:clamp\(13px,1\.8vw,16px\)/,
+ 'encounter count uses smaller typography than layer heading');
 // Chapter labels follow the visible left-to-right tab order.
 assert.match(page,/CHAPTER I · PREPARATION/);
 assert.match(page,/CHAPTER II · GRIMOIRE/);
@@ -149,7 +153,7 @@ assert.match(css,/\.return-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,
 assert.match(css,/\.return-grid\{[^}]*max-height:min\(40dvh,320px\)/,'return list scrolls internally to keep the action in view');
 assert.match(css,/@media\(max-width:630px\)\{\.return-panel[^}]+\}\.return-glyph[^}]+\}\.return-panel h2[^}]+\}\.return-grid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/,'mobile maintains three columns');
 assert.match(css,/\.return-treasure \.return-new,\.return-reward \.return-new\{/,'first-acquisition badges have a distinct style');
-assert.match(page,/v2026\.10\.18\.24/,'visible version confirms the refreshed public release');
+assert.match(page,/v2026\.10\.18\.25/,'visible version confirms the refreshed public release');
 assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の戦利品・経験値"/,'battle counters use a dedicated accessible grouped status');
 assert.match(page,/<div id="checkpointLedger" class="battle-info" role="group" aria-label="帰還の祭壇の戦利品・経験値"/,'sanctuary reuses the same reward card class');
 const rewardSource=await read('assets/js/dungeon-app.mjs');
