@@ -1060,7 +1060,7 @@
       }
       return poly;
     }
-    let faceCount = 0, pointedFaces = 0;
+    let faceCount = 0, pointedFaces = 0, totalFaceArea = 0, roundedFaceArea = 0;
     for (let y = yMin; y <= yMax; y++) for (let x = xMin; x <= xMax; x++) {
       const start = y * width + x;
       if (visited[start] || !isWhite(x, y)) continue;
@@ -1096,6 +1096,16 @@
           : Math.PI;
         if (angle < Math.PI * 98 / 180) acute++;
       }
+      // Count large, smoothly enclosed faces by their area, rather than
+      // letting a few sharp corners in a small decoration dominate healing.
+      // At least 8 convex-hull vertices excludes straight-edged shields.
+      const perimeter = poly.reduce((length, point, index) => {
+        const next = poly[(index + 1) % poly.length];
+        return length + Math.hypot(next[0] - point[0], next[1] - point[1]);
+      }, 0);
+      const circularity = perimeter > 0 ? 4 * Math.PI * area / (perimeter * perimeter) : 0;
+      totalFaceArea += area;
+      if (poly.length >= 8 && acute <= 1 && circularity >= .74) roundedFaceArea += area;
       faceCount++;
       if (acute >= 2) pointedFaces++;
     }
@@ -1103,6 +1113,7 @@
     // strokes, not a single angular shield. Saturate to limit false boosts.
     return {
       faceCount, pointedFaces,
+      roundedAreaShare: totalFaceArea ? roundedFaceArea / totalFaceArea : 0,
       attackBoost: Math.min(3.2, Math.max(0, pointedFaces - 1) * .55),
     };
   }
@@ -1245,12 +1256,14 @@
       : 0;
     const raw = {
       attack: Math.max(0, (Math.max(0, sharpTipCount - 1) * .85 + sharpAngleRatio * .65 + sharpCornerScore + repeatedLobes * .75) * closedContourWeight
-        + enclosedFaces.attackBoost * clamp((radialVariation - .035) / .06)),
+        + enclosedFaces.attackBoost * clamp((radialVariation - .035) / .06))
+        * Math.max(.2, 1 - enclosedFaces.roundedAreaShare),
       defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5
         + shieldSilhouette) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
       support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 2.4)
         / (1 + broadBendRuns * .3 * (1 - mean)) * closedContourWeight
-        * Math.max(.35, 1 - sharpTipCount * .12),
+        * Math.max(.35, 1 - sharpTipCount * .12)
+        + enclosedFaces.roundedAreaShare * 14 * closedContourWeight,
       debuff: missingRayRatio ** 2 * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
     };
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
