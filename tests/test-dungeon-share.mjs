@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from '../assets/js/dungeon-share.mjs';
+import {rankMetalPalette} from '../assets/js/dungeon-ranks.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,getProfile,saveProfile} from '../assets/js/dungeon-store.mjs';
@@ -12,7 +13,7 @@ configure({balance,levels,floors,playerBase});
 
 const profile={name:'秘密の冒険者名',level:21,adventurerRank:10,deepestReturnedLayer:10};
 const data=adventurerShareData(profile);
-assert.deepEqual(data,{rank:'鉛級',level:21,deepest:10});
+assert.deepEqual(data,{rank:'鉛級',rankLayer:10,level:21,deepest:10});
 const text=adventurerShareText(data);
 assert.equal(text,'マギアサークル-ダンジョンアタック\n冒険者等級：鉛級\nLv.21\n最深帰還：10層');
 assert.ok(!text.includes(profile.name),"never share the player name");
@@ -21,7 +22,7 @@ assert.equal(url.hostname,'x.com');
 assert.equal(url.pathname,'/intent/tweet');
 assert.equal(url.searchParams.get('text'),text);
 assert.equal(url.searchParams.get('url'),DUNGEON_SHARE_URL);
-assert.deepEqual(adventurerShareData({level:0}),{rank:'未取得',level:1,deepest:0});
+assert.deepEqual(adventurerShareData({level:0}),{rank:'未取得',rankLayer:0,level:1,deepest:0});
 assert.match(adventurerShareText(adventurerShareData({})),/最深帰還：未到達/);
 
 const drawTexts=[],stops=[],drawOps=[];
@@ -38,11 +39,17 @@ assert.ok(drawTexts.includes('鉛級')&&drawTexts.includes('Lv.21')&&drawTexts.i
 assert.ok(!drawTexts.includes(profile.name),'Canvas excludes identifying character name');
 assert.ok(drawOps.some(([kind])=>kind==='strokeRect'),'card has decorative border');
 assert.ok(stops.length>=4,'card has gradients');
+assert.ok(stops.some(([,color])=>color===rankMetalPalette(10).light),'card text uses same metallic gradient as profile');
+assert.ok(stops.some(([,color])=>color===rankMetalPalette(10).deep),'card plate uses profile rank metal');
+assert.equal(rankMetalPalette(100).mid,'#f0bf75','highest rank keeps special metallic tone');
 
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const profileHtml=html.slice(html.indexOf('<section id="home"'),html.indexOf('<section id="library"'));
-assert.ok(profileHtml.indexOf('id="openAdventurerShare"')>profileHtml.indexOf('id="deleteSaveData"'),'share is only at profile bottom');
-assert.ok(profileHtml.includes('class="profile-support"'),'share and OFUSE sit in one discreet group');
+assert.ok(profileHtml.indexOf('id="openAdventurerShare"')<profileHtml.indexOf('id="deleteSaveData"'),'share and support appear above delete');
+assert.ok(profileHtml.indexOf('id="openAdventurerShare"')<profileHtml.indexOf('href="https://ofuse.me/2429ddee"'),'share is ordered before support');
+assert.ok(profileHtml.indexOf('href="https://ofuse.me/2429ddee"')<profileHtml.indexOf('id="deleteSaveData"'),'donation is also above delete');
+assert.ok(profileHtml.includes('class="profile-support"'),'share and OFUSE share a two-column action group');
+assert.equal((profileHtml.match(/class="profile-action"/g)||[]).length,2,'both actions have equivalent button styling');
 assert.equal((html.match(/id="openAdventurerShare"/g)||[]).length,1);
 assert.ok(html.includes('id="supportXLink"')&&html.includes('id="supportDonateLink"'),'same milestone modal exposes both equal-weight links');
 assert.ok(html.includes('id="adventurerShareCanvas"'),'card is previewed inside the shared modal');
