@@ -15,6 +15,7 @@ import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.22';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.22';
 import {highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.22';
 import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.22';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.23';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -27,7 +28,7 @@ const circleImages=createCircleImageUrls();
 let dungeonView='prepare';
 let busyAction=false,playingEffects=false;
 let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null;
-let returnFlow=null,returnAnimationToken=0;
+let returnFlow=null,returnAnimationToken=0,tutorial=null;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){
  const targets=['pageError','battleError','cameraError'];
@@ -94,6 +95,7 @@ async function load(){
  show(returnFlow?'returnShowcase':profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');
  finishStartup();
  if(!profile.name)openNameDialog(true);
+ else if(!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run)tutorial.open();
 }
 const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result','returnShowcase']);
 function rememberCameraScroll(){
@@ -962,6 +964,12 @@ function openNameDialog(required){
  $('playerNameInput').focus();
 }
 function wire(){
+ tutorial=initCircleTutorial(document,async toCamera=>{
+  profile.tutorialDone=true;
+  try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}
+  if(toCamera){show('library');$('cameraStart').focus();}
+ });
+ $('tutorialReplay').addEventListener('click',()=>{if(!profile.run&&!activeAnalysis)tutorial.open();});
  const listControls=[
   ['libraryRoleFilter','libraryRole'],['libraryAttributeFilter','libraryAttribute'],['librarySort','librarySort'],
   ['collectionDiscoveryFilter','collectionDiscovery'],['collectionRarityFilter','collectionRarity'],['collectionSort','collectionSort']
@@ -1001,7 +1009,9 @@ function wire(){
    if(busyAction)return;
    const name=$('playerNameInput').value.trim();
    if(!name||name.length>20){$('nameError').textContent='1〜20文字で入力してください';return;}
+   const firstLesson=!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run;
    await exclusive(async()=>{profile.name=name;await persist();$('nameDialog').close();render();});
+   if(firstLesson)tutorial.open();
  });
  $('cancelNameDialog').addEventListener('click',()=>$('nameDialog').close());
  $('nameDialog').addEventListener('cancel',event=>{if(!profile.name)event.preventDefault();});
