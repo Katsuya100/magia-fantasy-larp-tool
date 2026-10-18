@@ -48,7 +48,11 @@ export function deserializeDungeonSnapshot(text){
 }
 export function isPristineDungeonSnapshot(snapshot){
  const p=snapshot.profile;
- return !p.name&&!p.attempts&&!p.returns&&!p.run&&!p.tutorialDone
+ // A fresh installation asks for a name before the player can connect Google.
+ // The name and tutorial flag alone must not prevent automatic cloud recovery.
+ return !p.attempts&&!p.returns&&!p.run&&!p.pendingReturn
+  &&Number(p.level||1)===1&&!p.xp&&!p.magicStones
+  &&!p.deepestReturnedLayer&&!p.adventurerRank
   &&(!p.inventory||p.inventory.length===0)&&!snapshot.circles.length
   &&!Object.values(p.collection||{}).some(Boolean);
 }

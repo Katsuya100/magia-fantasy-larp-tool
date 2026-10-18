@@ -24,6 +24,7 @@ assert.equal(decoded.circles[0].image.type,'image/png');
 assert.deepEqual(new Uint8Array(await decoded.circles[0].image.arrayBuffer()),new Uint8Array(await photo.arrayBuffer()));
 assert.equal(await snapshotHash(encoded,webcrypto),await snapshotHash(encoded,webcrypto));
 assert.equal(isPristineDungeonSnapshot(original),false);
+assert.equal(isPristineDungeonSnapshot({profile:{name:'新規冒険者',tutorialDone:true,level:1,attempts:0,returns:0,run:null},circles:[]}),true,'a new device can recover after the mandatory name dialog');
 assert.equal(isPristineDungeonSnapshot({profile:{name:'',attempts:0,returns:0,run:null},circles:[]}),true);
 await assert.rejects(serializeDungeonSnapshot({profile:null,circles:[]}),/形式/);
 assert.throws(()=>deserializeDungeonSnapshot('{"format":"unsupported","profile":{},"circles":[]}'),/未対応/);

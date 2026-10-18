@@ -289,15 +289,16 @@
     </dialog>
     <dialog id="deleteDataDialog" class="name-dialog delete-data-dialog" aria-labelledby="deleteDataTitle">
       <div class="delete-data-dialog-inner">
-        <h2 id="deleteDataTitle">すべての冒険データを削除しますか？</h2>
+        <h2 id="deleteDataTitle">この端末の冒険データを削除しますか？</h2>
         <p>冒険者プロフィール・レベル・実績・魔導石・所持品・登録済み魔法陣の画像・進行中の探索を、この端末から完全に削除します。</p>
+        <p>Google Drive側のバックアップは削除されません。端末データの削除後、自動復元は停止します。</p>
         <p><strong>この操作は取り消せません。</strong> 続行する場合は「削除」と入力してください。</p>
         <label for="deleteDataPhrase">確認のため「削除」と入力</label>
         <input type="text" id="deleteDataPhrase" autocomplete="off" spellcheck="false" placeholder="削除" aria-describedby="deleteDataError">
         <p id="deleteDataError" class="name-error" role="alert"></p>
         <div class="buttons">
           <button type="button" id="cancelDeleteData" class="subtle">キャンセル</button>
-          <button type="button" id="confirmDeleteData" class="danger" disabled>データを完全に削除</button>
+          <button type="button" id="confirmDeleteData" class="danger" disabled>端末内データを削除</button>
         </div>
       </div>
     </dialog>
