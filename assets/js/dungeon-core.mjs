@@ -73,7 +73,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
   if(r()<num('magic_stone_drop_rate'))return {type:'stone',id:'magic_stone'};
   return {type:'collection',id:rollCollection(collections,layer,r,context.bossEnemyId??null).id};
  });
- if(context.bossEnemyId&&context.guaranteeBossLegendary){
+ if(context.bossEnemyId&&context.guaranteeBossCollection){
   const id=bossUniqueCollection(collections,context.bossEnemyId).id;
   const existing=rewards.findIndex(item=>item.type==='collection'&&item.id===id);
   const slot=existing>=0?existing:rewards.findIndex(item=>item.type==='collection');
