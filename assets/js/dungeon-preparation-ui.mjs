@@ -48,7 +48,7 @@ export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[]
   const selectedSlot=slots.indexOf(c.id),selected=selectedSlot>=0,current=selected&&selectedSlot===editingSlot;
   return '<div class="picker-circle-wrap"><button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-circle="'+i+'" aria-pressed="'+selected+'" aria-label="魔法陣の候補 '+(i+1)+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
    +'<img alt="" src="'+imageUrl(c.image)+'">'
-   +(selected?'<span class="picker-equipped" aria-hidden="true">✓ 選択中・'+(selectedSlot+1)+'枠</span>':'')+'</button>'
+   +'</button>'
    +circleEffectBadges(c,buffs,escapeText,mpCost)
    +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">詳細</button></div>';
  }).join('');
