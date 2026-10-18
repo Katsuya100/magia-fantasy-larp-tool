@@ -84,7 +84,8 @@ try{
  try{
   await import('../assets/js/dungeon-app.mjs?integration=special-elixir-battle');
   await wait(()=>$2('battleItems').innerHTML.includes('エリクシール小'),'elixir battle ready');
-  assert.match($2('battleItems').innerHTML,/HP\/MP各35%回復/);
+  assert.match($2('battleItems').innerHTML,/❤️💠35%/,'elixir displays icon and percent rather than a sentence');
+  assert.doesNotMatch($2('battleItems').innerHTML,/>HP\/MP各35%回復</,'long effect text is not visible');
   await doc2.click(btn({use:'0'}));
   const after=await getProfile(db2);
   assert.equal(after.run.hero.hp,1+Math.ceil(after.run.hero.stats.hp*.35));

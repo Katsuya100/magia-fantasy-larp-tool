@@ -13,6 +13,22 @@ export function circleEffectBadges(circle,buffs=[],escapeText=x=>String(x),mpCos
 }
 export function itemSymbol(item){return item?.id==='life_ruby'?'🔴':item?.id?.startsWith('elixir_')?'⚗':item?.id==='escape_scroll'?'📜':item?.id?.startsWith('heal_')?'✚':item?.id?.startsWith('mana_')?'✧':'◈';}
 export function itemEffectText(item){return item?.id==='life_ruby'?'死亡時に1回だけHP50%で復活':item?.id?.startsWith('elixir_')?'HP/MP各'+item.value+'%回復':item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.value?'効果 '+item.value:'状態異常解除';}
+// Short visible effect shared by the battle item slot and the return reward card.
+// Absolute HP/MP potions use raw recovery values; elixirs and revival use percent.
+export function itemEffectIcons(item){
+ const id=item?.id||'',numeric=Number(item?.value);
+ const value=Number.isFinite(numeric)&&numeric>=0?String(numeric):'?';
+ if(id.startsWith('heal_'))return '❤️+'+value;
+ if(id.startsWith('mana_'))return '💠+'+value;
+ if(id.startsWith('elixir_'))return '❤️💠'+value+'%';
+ if(id.startsWith('clear_')){
+  const elements={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪️',gravity:'🪨',law:'🔒',chaos:'🌀'};
+  return '🧼'+(elements[id.slice(6)]||'');
+ }
+ if(id==='life_ruby')return '🪽50%';
+ if(id==='escape_scroll')return '↩️';
+ return '◈'+value;
+}
 export function spellGrid(slots,circles,imageUrl,escapeText,active=true,buffs=[],mpCost=()=>null){
  const byId=new Map(circles.map(circle=>[circle.id,circle]));
  return '<div class="loadout-grid" role="group" aria-label="魔法陣の編成">'

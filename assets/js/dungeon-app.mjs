@@ -1,25 +1,25 @@
-import * as G from './dungeon-core.mjs?v=20261018.11';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.11';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.11';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.11';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText} from './dungeon-preparation-ui.mjs?v=20261018.11';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.11';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.11';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.11';
+import * as G from './dungeon-core.mjs?v=20261018.12';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.12';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.12';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.12';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.12';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.12';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.12';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.12';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.11';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.11';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.11';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.11';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.11';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.11';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.11';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.11';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.12';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.12';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.12';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.12';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.12';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.12';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.12';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.12';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
  libraryRole:'all',libraryAttribute:'all',librarySort:'newest',
- collectionDiscovery:'all',collectionRarity:'all',collectionSort:'default',
+ collectionDiscovery:'all',collectionRarity:'all',collectionSort:'common',
  pickerFilter:'all',pickerSort:'newest'
 };
 const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'default'}};
@@ -233,7 +233,7 @@ function renderRun(){
    +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
    +'<span class="tile-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="tile-title">'+esc(itemName(item))+'</span>'
-   +'<span class="tile-detail">'+itemEffectText(item)+(item.bonus?' ✦':'')+'</span></button>';
+   +'<span class="tile-detail item-effect-icons" aria-label="'+esc(itemEffectText(item))+'">'+itemEffectIcons(item)+(item.bonus?' ✦':'')+'</span></button>';
  }).join('');
  $('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム '+(run.usedItems||0)+'/'+num('item_per_round')+(hero.reviveArmed?' / 🔴生命の紅石：復活待機中':hero.reviveUsed?' / 🔴生命の紅石：発動済み':'');
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');
@@ -485,7 +485,9 @@ function renderReturnStep(){
    return '<article class="return-reward" style="--reveal-delay:'+(Math.min(i,12)*.07)+'s">'
     +(reward.isNew?'<span class="return-new">NEW</span>':'')
     +'<span class="return-reward-symbol" aria-hidden="true">'+symbol+'</span>'
-    +'<strong>'+esc(name)+'</strong>'+(count>1?'<span class="return-count">×'+count+'</span>':'')+'</article>';
+    +'<strong>'+esc(name)+'</strong>'
+    +(reward.type==='use'?'<span class="return-reward-effect" aria-label="'+esc(itemEffectText(reward.item))+'">'+itemEffectIcons(reward.item)+(reward.item.bonus?' ✦':'')+'</span>':'')
+    +(count>1?'<span class="return-count">×'+count+'</span>':'')+'</article>';
   }).join('');
  }else{
   $('returnLevel').textContent='';

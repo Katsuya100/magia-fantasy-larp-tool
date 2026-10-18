@@ -42,7 +42,8 @@ try{
  const end=Date.now()+9000;
  while(!$('battleItems').innerHTML.includes('脱出の巻物')&&Date.now()<end)await new Promise(r=>setTimeout(r,25));
  assert.match($('battleItems').innerHTML,/脱出の巻物/);
- assert.match($('battleItems').innerHTML,/経験値・戦利品を持ち帰って脱出/);
+ assert.match($('battleItems').innerHTML,/↩️/,'escape scroll has an icon-only battle effect');
+ assert.doesNotMatch($('battleItems').innerHTML,/>経験値・戦利品を持ち帰って脱出</,'no long visible escape-scroll explanation');
  await doc.click({disabled:false,dataset:{use:'0'},closest(){return this;}});
  const saved=await getProfile(db);
  assert.equal(saved.run,null,'scroll exits immediately from battle');

@@ -78,6 +78,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .battle-items .tile-item-icon{width:100%;min-height:90px;display:grid;place-items:center}
 .battle-items .tile-empty-icon{min-height:90px;display:grid;place-items:center}
 .battle-items .battle-tile{min-height:168px}
+.battle-items .item-effect-icons{font-size:clamp(13px,2.4vw,17px);font-weight:700;color:var(--gold);line-height:1.25;white-space:nowrap;min-height:0}
 .battle-basic{display:flex;justify-content:flex-end;margin:9px 0 16px}
 .battle-basic .basic-attack{font-size:13px!important}
 .battle-spells button:disabled,.battle-items button:disabled{opacity:.46}
@@ -1156,6 +1157,7 @@ html,body{overflow-x:clip}
 .return-treasure[data-rarity="epic"] .return-treasure-art{color:#e3abe7;border-color:#df95e9;box-shadow:0 0 25px #bd5fe955}
 .return-treasure[data-rarity="legendary"] .return-treasure-art{color:#ffe2a2;border-color:#f7c879;box-shadow:0 0 30px #f7be6877}
 .return-reward-symbol{font-size:45px;line-height:1.3;color:var(--gold);text-shadow:0 0 25px #d9b87990}
+.return-reward-effect{font-size:clamp(12px,2.2vw,16px);font-weight:700;color:var(--gold);line-height:1.3;white-space:nowrap}
 .return-experience{max-width:590px;margin:32px auto 40px;min-height:165px}
 .return-xp-level{display:block;font:clamp(45px,8vw,83px) var(--roman);line-height:1.25;color:var(--gold);text-shadow:0 0 29px #eac38560}
 .return-xp-level-up{animation:return-level-bump .32s cubic-bezier(.15,1.2,.35,1) both}

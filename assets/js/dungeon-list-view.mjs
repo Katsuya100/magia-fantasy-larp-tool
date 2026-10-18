@@ -34,7 +34,7 @@ export function itemListIndexes(inventory,masterItems=[],{kind='all',sort='defau
  }).map(row=>row.index);
 }
 export const RARITY_ORDER={common:1,uncommon:2,rare:3,epic:4,legendary:5};
-export function collectionListIndexes(collections,owned={}, {discovery='all',rarity='all',sort='default'}={}){
+export function collectionListIndexes(collections,owned={}, {discovery='all',rarity='all',sort='common'}={}){
  const found=row=>validNumber(owned[row.id])>0;
  return collections.map((item,index)=>({item,index})).filter(({item})=>
   (discovery==='all'||(discovery==='found' ? found(item):!found(item)))&&
@@ -43,7 +43,6 @@ export function collectionListIndexes(collections,owned={}, {discovery='all',rar
  ).sort((a,b)=>{
   const x=a.item,y=b.item,ax=found(x),by=found(y);
   let order=0;
-  if(sort==='default')order=(RARITY_ORDER[x.rarity]||99)-(RARITY_ORDER[y.rarity]||99);
   if(sort==='name')order=ax&&by?compareText(x.name,y.name):Number(by)-Number(ax);
   if(sort==='count')order=validNumber(owned[y.id])-validNumber(owned[x.id]);
   if(sort==='rare'||sort==='common'){
