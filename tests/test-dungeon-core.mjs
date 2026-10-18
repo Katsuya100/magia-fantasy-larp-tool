@@ -109,8 +109,8 @@ const victoryMpRate=level=>{
  return G.recoverVictoryMp(unit)/unit.maxMp;
 };
 assert.ok(victoryMpRate(1)>=.13&&victoryMpRate(1)<=.145,'beginner victory MP recovery remains generous');
-assert.ok(victoryMpRate(30)<.075,'middle-level MP recovery starts tapering earlier');
-assert.ok(victoryMpRate(75)<.055,'mid-depth MP recovery is meaningfully reduced');
+assert.ok(victoryMpRate(30)>.075&&victoryMpRate(30)<.08,'early recovery remains suitable for initial layers');
+assert.ok(victoryMpRate(75)<.056,'mid-depth MP recovery is meaningfully reduced');
 assert.ok(victoryMpRate(150)>=.024&&victoryMpRate(150)<=.027,'deepest battles retain the playtested minimum recovery');
 assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75)&&victoryMpRate(75)>victoryMpRate(150),
  'victory MP recovery decreases with level');

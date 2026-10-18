@@ -225,9 +225,11 @@ export function repairInvalidMp(hero){
  return true;
 }
 export function recoverVictoryMp(hero){
- const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1)**.8;
+ const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1);
+ const middle=clamp((Number(hero.level)-40)/Math.max(1,num('level_max')-40),0,1);
  const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
-  num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12);
+  num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12)-
+  num('victory_mp_middle_taper')*middle*(1-middle);
  const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*rate)));
  hero.mp+=gained;
  return gained;
