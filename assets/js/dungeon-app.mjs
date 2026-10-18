@@ -599,7 +599,7 @@ function renderReturnStep(){
  }
 }
 function showSupportPrompt(prompt){
- if(!prompt||activeScene!=='home')return;
+ if(!prompt)return;
  $('supportPromptTitle').textContent=prompt.title;
  $('supportPromptMessage').textContent=prompt.message;
  $('supportPromptDialog').showModal();
