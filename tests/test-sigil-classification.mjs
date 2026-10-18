@@ -60,6 +60,7 @@ const fixtures = [
 ];
 
 let passed = 0;
+const failures = [];
 for (const {name, role, shape} of fixtures) {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><g fill="none" stroke="#111" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">' + shape + '</g></svg>');
   const image = await sharp(svg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -69,9 +70,9 @@ for (const {name, role, shape} of fixtures) {
     features: {mean: features.mean, radialVariation: features.radialVariation,
       broadAngleRatio: features.broadAngleRatio, sharpTipCount: features.sharpTipCount,
       missingRayRatio: features.missingRayRatio, broadBendRuns: features.broadBendRuns} }));
-  assert.equal(ranked[0][0], role, name + ': wrong sigil');
-  assert.ok(ranked[0][1] >= .35, name + ': low confidence');
-  assert.ok(ranked[0][1] - ranked[1][1] >= .02, name + ': ambiguous top category');
-  passed++;
+  if (ranked[0][0] !== role || ranked[0][1] < .35 || ranked[0][1] - ranked[1][1] < .02) {
+    failures.push(name + ': expected ' + role + ', got ' + ranked[0][0] + ', margin=' + (ranked[0][1] - ranked[1][1]).toFixed(3));
+  } else passed++;
 }
-console.log('PASS sigil classifier: ' + passed + '/' + fixtures.length + ' standard/edge-case shapes');
+console.log('SIGIL RESULT ' + passed + '/' + fixtures.length + ' passing');
+assert.deepEqual(failures, [], failures.join('\n'));
