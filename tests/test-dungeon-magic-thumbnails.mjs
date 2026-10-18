@@ -20,14 +20,16 @@ for(const [circle,symbols,effect] of [
 ]){
  const html=circleEffectBadges(circle,buffs,escapeText,mpCost);
  assert.ok(html.includes('class="circle-card-symbols">'+symbols+'</span>'),'paired icons on thumbnail');
- assert.equal((html.match(/class="circle-card-status"/g)||[]).length,effect?1:0,'only actual buff/debuff names appear');
- if(effect)assert.ok(html.includes('>'+effect+'</span>'));
+ assert.doesNotMatch(html,/class="circle-card-status"/,'effect-name row is absent');
+ if(effect)assert.ok(!html.includes('>'+effect+'</span>'),'named effects appear only in details');
  assert.match(html,/<span class="circle-card-mp">MP:\?<\/span><span class="circle-card-power">威力:\?<\/span>/,'unknown MP and power always use separate rows');
  assert.doesNotMatch(html,/512|MP:6|属性攻撃|属性防御|属性弱体/,'no extra effect heading or secret numbers');
 }
 const activated=circleEffectBadges({...defense,revealed:true},buffs,escapeText,mpCost);
 assert.match(activated,/<span class="circle-card-mp">MP:6<\/span><span class="circle-card-power">威力:512<\/span>/);
-assert.equal(circleCardInfo(debuff,buffs,mpCost).statusName,'火傷');
+assert.deepEqual(circleCardInfo(debuff,buffs,mpCost),{symbols:'🔥 / 🕸️',mp:'?',power:'?'});
+assert.equal(circleEffectDetails(debuff,buffs).statusName,'火傷');
+assert.equal(circleEffectDetails(defense,buffs).statusName,'炎熱鼓舞');
 assert.match(circleEffectDetails(debuff,buffs).statusDescription,/継続ダメージ/);
 assert.match(circleEffectDetails(defense,buffs).statusDescription,/攻撃ダメージ/);
 assert.match(circleEffectDetails(defense,buffs).duration,/2ターン/);
@@ -36,7 +38,7 @@ assert.equal(circleEffectDetails(support,buffs).statusName,'');
 const roster=[defense,debuff,attack,support,chaos],ids=roster.map(c=>c.id);
 const grid=spellGrid(ids,roster,()=>'/img.png',escapeText,true,buffs,mpCost);
 assert.equal((grid.match(/class="circle-card-info"/g)||[]).length,5,'each spell carries its own details');
-assert.equal((grid.match(/class="circle-card-status"/g)||[]).length,3,'only defense/debuff have named status effects');
+assert.doesNotMatch(grid,/circle-card-status|炎熱鼓舞|火傷|混乱|ランダム弱体/,'no named effects outside details');
 assert.equal((grid.match(/class="circle-card-mp">MP:\?<\/span><span class="circle-card-power">威力:\?<\/span>/g)||[]).length,5);
 assert.equal((grid.match(/class="loadout-tile equipped"/g)||[]).length,5,'preserve five original equipment tiles');
 const picker=circleChoices(roster,ids,()=>'/img.png',escapeText,null,buffs,mpCost);
@@ -44,4 +46,4 @@ assert.equal((picker.match(/class="circle-card-info"/g)||[]).length,0,'picker hi
 assert.equal((picker.match(/data-circle-detail=/g)||[]).length,5,'the full effect details remain accessible for every circle');
 assert.equal((picker.match(/class="picker-option/g)||[]).length,5,'five distinct square choices remain selectable');
 assert.doesNotMatch(picker,/class="picker-label"/,'no duplicate summary row');
-console.log('PASS spell thumbnails: role and attribute icons, only actual statuses, MP/power unknown until used');
+console.log('PASS compact spell thumbnails and named effects in details only');

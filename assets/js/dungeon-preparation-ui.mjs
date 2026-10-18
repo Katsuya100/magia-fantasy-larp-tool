@@ -1,12 +1,11 @@
 import {GRID_COLUMNS} from './dungeon-loadout.mjs';
 import {circleCardInfo} from './dungeon-magic-knowledge.mjs';
-// The same three-line layout is used beneath each individual circle thumbnail.
-// Only defense and debuff spells get an additional status-name line.
+// Compact summaries are shared by grimoire, preparation and battle.
+// Named buff/debuff effects appear only in the details dialog.
 export function circleEffectBadges(circle,buffs=[],escapeText=x=>String(x),mpCost=()=>null){
  const d=circleCardInfo(circle,buffs,mpCost);
  return '<div class="circle-card-info">'
   +'<span class="circle-card-symbols">'+escapeText(d.symbols)+'</span>'
-  +(d.statusName?'<span class="circle-card-status">'+escapeText(d.statusName)+'</span>':'')
   +'<span class="circle-card-stats"><span class="circle-card-mp">MP:'+escapeText(d.mp)+'</span>'
   +'<span class="circle-card-power">威力:'+escapeText(d.power)+'</span></span>'
   +'</div>';

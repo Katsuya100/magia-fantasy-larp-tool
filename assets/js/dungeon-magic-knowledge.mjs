@@ -33,7 +33,7 @@ export function spellEffect(a,buffs=[]){
 }
 export function circleSummary(circle,buffs=[],mpCost=()=>null){
  const d=circleCardInfo(circle,buffs,mpCost);
- return [d.symbols,d.statusName,'MP:'+d.mp+' / 威力:'+d.power].filter(Boolean).join(' / ');
+ return [d.symbols,'MP:'+d.mp+' / 威力:'+d.power].filter(Boolean).join(' / ');
 }
 export function circleDetails(circle,buffs=[],mpCost=()=>null){
  const a=circle?.analysis;
@@ -80,13 +80,11 @@ export function circleAttributeEffects(circle,buffs=[]){
 }
 export function circleCardInfo(circle,buffs=[],mpCost=()=>null){
  const a=circle?.analysis;
- if(!a)return {symbols:'？ / ？',statusName:'',mp:'?',power:'?'};
- const at=ATTRIBUTES[a.attribute],effects=circleAttributeEffects(circle,buffs);
- const statusName=a.role==='defense'?effects?.buff:a.role==='debuff'?effects?.debuff:'';
+ if(!a)return {symbols:'？ / ？',mp:'?',power:'?'};
+ const at=ATTRIBUTES[a.attribute];
  const revealed=isRevealed(circle),mp=revealed?mpCost(a.power):null;
  return {
   symbols:(at?.icon||'✦')+' / '+(ROLE_ICONS[a.role]||'？'),
-  statusName:statusName||'',
   mp:revealed&&Number.isFinite(mp)?String(mp):'?',
   power:revealed?String(a.power):'?'
  };
