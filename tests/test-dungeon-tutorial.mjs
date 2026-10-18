@@ -31,7 +31,7 @@ try{
 }
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const script=await readFile(new URL('../assets/js/dungeon-tutorial.mjs',import.meta.url),'utf8');
-assert.match(html,/id="tutorialAnimation" src="assets\/images\/dungeon-circle-tutorial\.gif\?v=20261018\.27"/);
+assert.match(html,/id="tutorialAnimation" src="assets\/images\/dungeon-circle-tutorial\.gif\?v=20261018\.28"/);
 assert.match(html,/外円 → 内円 → 英語の呪文 → 紋様/);
 assert.match(html,/id="tutorialReplay"/);
 assert.doesNotMatch(html,/id="tutorialCanvas"|id="tutorialPad"/,'touch drawing is removed');
