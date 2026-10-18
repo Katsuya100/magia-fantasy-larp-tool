@@ -37,7 +37,7 @@ export function createDungeonDrive(token,fetchImpl=globalThis.fetch){
    body:JSON.stringify(id?{mimeType:'application/json'}:{name:FILE_NAME,mimeType:'application/json',parents:['appDataFolder']})
   });
   const session=init.headers.get('Location');
-  if(!session||!session.startsWith('https://'))throw Error('Google Driveのアップロード先を取得できませんでした。');
+  if(!session||new URL(session).origin!=='https://www.googleapis.com')throw Error('Google Driveのアップロード先を取得できませんでした。');
   const done=await request(session,{method:'PUT',headers:{'Content-Type':'application/json'},body:bytes});
   const file=await done.json();
   if(!file?.id||!file.modifiedTime)throw Error('保存完了の確認ができませんでした。');

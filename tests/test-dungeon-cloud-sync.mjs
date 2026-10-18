@@ -43,7 +43,7 @@ assert.equal(changes,4);
 assert.equal((await getCloudSyncState(db)).blocked,true,'intentional deletion cannot auto-resurrect cloud save');
 stop();
 
-const file={id:'1',modifiedTime:'t2'};
+const file={id:'1',name:'magia-dungeon-save-v1.json',modifiedTime:'t2'};
 const meta={fileId:'1',modifiedTime:'t1',hash:'same'};
 assert.equal(decideCloudSync({file:null,meta:null,hash:'h',pristine:true}),'upload');
 assert.equal(decideCloudSync({file,meta:null,hash:'h',pristine:true}),'download');

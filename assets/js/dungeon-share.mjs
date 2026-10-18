@@ -1,6 +1,6 @@
 import {highestRankLayer,rankTitle,rankMetalPalette} from './dungeon-ranks.mjs';
 import {deepestReturnedLayer} from './dungeon-progress.mjs';
-import {paintCircleArt} from './dungeon-card-art.mjs?v=20261018.34';
+import {paintCircleArt} from './dungeon-card-art.mjs?v=20261018.35';
 
 export const DUNGEON_SHARE_URL='https://katsuya100.github.io/magia-fantasy-larp-tool/dungeon.html';
 export function adventurerShareData(profile){
