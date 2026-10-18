@@ -12,6 +12,8 @@ const base={hp:100,mag:10,def:7,res:7};
 const styles=[
  {id:'none',attr:'flame',once:false,stones:0},
  {id:'flame',attr:'flame',once:false,stones:0},
+ {id:'flame+5',attr:'flame',once:false,stones:5},
+ {id:'flame+10',attr:'flame',once:false,stones:10},
  {id:'flame-once',attr:'flame',once:true,stones:0},
  {id:'storm-once',attr:'storm',once:true,stones:0},
  {id:'flame-once+5',attr:'flame',once:true,stones:5},
