@@ -31,6 +31,33 @@ assert.deepEqual([...pixels.slice(edgeIndex,edgeIndex+3)],[0x71,0xdc,0xff],'colo
 assert.equal(pixels[(4*width+1)*4+3],0,'flat photo background removed');
 
 
+// A photographed page may have a sharp cast-shadow border. Only ink contours
+// should survive: exposure normalization must discard the shadow boundary.
+const sw=64,sh=64,photo=new Uint8ClampedArray(sw*sh*4);
+for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){
+ const i=(y*sw+x)*4;
+ const ink=(y>=12&&y<=52&&((x>=18&&x<=20)||(x>=47&&x<=49)));
+ const value=ink?28:(x<32?165:230);
+ photo[i]=photo[i+1]=photo[i+2]=value;photo[i+3]=255;
+}
+const cleaned=circleOutlinePixels({width:sw,height:sh,data:photo},'flame');
+const alpha=(x,y)=>cleaned[(y*sw+x)*4+3];
+assert.ok(Math.max(alpha(17,32),alpha(18,32),alpha(20,32),alpha(21,32))>100,
+ 'dark spell lines under the cast shadow remain visible');
+assert.ok(Math.max(alpha(46,32),alpha(47,32),alpha(49,32),alpha(50,32))>100,
+ 'dark spell lines on the lit paper remain visible');
+assert.equal(Math.max(...[30,31,32,33,34].map(x=>alpha(x,32))),0,
+ 'sharp cast-shadow outline is suppressed before Sobel');
+const plain=new Uint8ClampedArray(sw*sh*4);
+for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){
+ const i=(y*sw+x)*4;
+ const value=165+Math.round(65*x/(sw-1));
+ plain[i]=plain[i+1]=plain[i+2]=value;plain[i+3]=255;
+}
+const gradient=circleOutlinePixels({width:sw,height:sh,data:plain},'aqua');
+assert.equal(gradient[(32*sw+32)*4+3],0,'gradual lighting variation stays transparent');
+
+
 const drawCalls=[],clipCircles=[],saveCalls=[];
 const originalDocument=globalThis.document;
 try{

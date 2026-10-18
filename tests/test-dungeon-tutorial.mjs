@@ -41,7 +41,7 @@ try{
 }finally{env.restore();}
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const script=await readFile(new URL('../assets/js/dungeon-tutorial.mjs',import.meta.url),'utf8');
-assert.match(html,/id="tutorialAnimation" src="assets\/images\/tutorial-outer\.gif\?v=20261018\.33"/);
+assert.match(html,/id="tutorialAnimation" src="assets\/images\/tutorial-outer\.gif\?v=20261018\.34"/);
 assert.match(html,/id="tutorialReplay"/);
 assert.doesNotMatch(html,/id="tutorialCanvas"|id="tutorialPad"/);
 assert.doesNotMatch(script,/pointerdown|pointermove|setPointerCapture/);
