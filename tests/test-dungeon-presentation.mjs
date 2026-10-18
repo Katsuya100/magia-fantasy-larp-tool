@@ -168,7 +168,7 @@ assert.doesNotMatch(app,/魔法陣を保存した。性能は初回使用時に�
 assert.doesNotMatch(app,/鑑定/);
 assert.doesNotMatch(picker,/鑑定/);
 assert.match(app,/battleImageUrl\(c\.image\)/);
-assert.match(app,/Math\.max\(5,run\.carry\.length\)/);
+assert.match(app,/Math\.max\(G\.capacity\(profile\.level\),run\.carry\.findLastIndex\(Boolean\)\+1\)/,'combat item slots follow equipped capacity and retain occupied legacy slots');
 assert.match(app,/renderHeroName\(hero\)/,'life ruby readiness appears beside the player name');
 assert.match(app,/collectionSort:'common'/,'collection sorting defaults to ascending rarity');
 assert.match(app,/itemEffectIcons\(item\)/,'battle slots use compact item-effect icons');
