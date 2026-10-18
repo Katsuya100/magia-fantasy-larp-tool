@@ -83,6 +83,16 @@ assert.ok(lucky.collection>0&&lucky.stone>0&&lucky.use>0,
 assert.ok(zeroFights>0,'individual enemies can still have no rewards at all');
 assert.equal(G.basePower(300),35);assert.ok(G.mpCost(300)>0);
 const sp={role:'attack',attribute:'flame',power:300};
+const enhancedSpell={...sp,power:200,basePower:100};
+const originalMpCost=G.mpCost(100);
+assert.ok(G.mpCost(200)>originalMpCost,'upgraded power would otherwise increase MP cost');
+assert.equal(G.spellMpCost(enhancedSpell),originalMpCost,'enhanced spell costs its original MP');
+assert.equal(G.spellMpCost(sp),G.mpCost(300),'ordinary and enemy spells retain normal costs');
+const enhancedCaster=G.makeUnit(base,1,{},[enhancedSpell]);
+enhancedCaster.mp=originalMpCost;
+assert.equal(G.canCast(enhancedCaster,0),true,'exact original MP suffices for upgraded spells');
+assert.equal(G.prepare(enhancedCaster,0).power,200,'upgraded effect power is preserved');
+assert.equal(enhancedCaster.mp,0,'casting deducts only the original MP cost');
 const a=G.makeUnit(base,1,{},[sp], 'a'),b=G.makeUnit(base,1,{},[sp], 'b');
 assert.equal(G.damage(a,b,sp),G.damage(b,a,sp));
 const originalHp=b.hp;G.cast(a,b,sp,buffs);assert.ok(b.hp<originalHp);assert.equal(b.statuses.length,0);

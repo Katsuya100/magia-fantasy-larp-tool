@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {upgradeCircle,savedUpgrade,applySavedUpgrade,strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
+import {upgradeCircle,savedUpgrade,applySavedUpgrade,strengthenedPower,combatSpell} from '../assets/js/dungeon-upgrades.mjs';
 const original={id:'circle',analysis:{attribute:'flame',role:'attack',power:100},revealed:true};
 let upgraded=upgradeCircle(original);
 assert.equal(original.analysis.power,100,'original magic is not mutated');
@@ -8,6 +8,9 @@ for(let i=0;i<9;i++)upgraded=upgradeCircle(upgraded);
 assert.equal(upgraded.analysis.power,200,'ten upgrades add 100% of original, not compound interest');
 assert.equal(upgraded.basePower,100);
 assert.equal(upgraded.upgradeLevel,10);
+assert.deepEqual(combatSpell(upgraded),{...upgraded.analysis,basePower:100},'battle keeps increased power and original MP basis');
+assert.equal(combatSpell(original).basePower,100,'ordinary spell uses its original power');
+assert.equal(combatSpell({...original,analysis:null}),null,'unknown circle remains unavailable');
 assert.equal(upgradeCircle({analysis:{power:33.3},upgradeLevel:0}).analysis.power,37,'fractional upgraded power rounds upward');
 assert.equal(upgradeCircle({analysis:{power:33.3},basePower:33.3,upgradeLevel:1}).analysis.power,40,'subsequent upgrade rounds upward independently without compounding');
 assert.equal(strengthenedPower(100,1),110,'floating-point representation cannot accidentally add 1');
@@ -17,6 +20,7 @@ const reloaded=applySavedUpgrade({...original,image:new Blob(['photo'])},persist
 assert.equal(reloaded.analysis.power,200,'profile upgrade metadata restores power after reloading the image');
 assert.equal(reloaded.basePower,100);
 assert.equal(reloaded.upgradeLevel,10);
+assert.equal(combatSpell(reloaded).basePower,100,'loaded upgrade retains original casting MP');
 assert.equal(applySavedUpgrade(original,null),original,'legacy photo records work without upgrade metadata');
 const legacy={...original,basePower:33.3,upgradeLevel:1,
  analysis:{...original.analysis,power:36.63}};

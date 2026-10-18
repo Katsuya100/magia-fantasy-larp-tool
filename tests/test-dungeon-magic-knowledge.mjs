@@ -27,6 +27,11 @@ assert.deepEqual(circleCardInfo(used,buffs,p=>Math.ceil(p/100)),
  {symbols:'🔥 / 🛡️',mp:'6',power:'512'});
 assert.equal(circleDetails(used,buffs,p=>Math.ceil(p/100)).mp,'6');
 assert.equal(circleDetails(used,buffs,p=>Math.ceil(p/100)).power,'512');
+const enhanced={...used,basePower:512,analysis:{...used.analysis,power:1024}};
+assert.match(circleSummary(enhanced,buffs,p=>Math.ceil(p/100)),/MP:6 \/ 威力:1024/,'summary keeps original MP while power increases');
+assert.equal(circleCardInfo(enhanced,buffs,p=>Math.ceil(p/100)).mp,'6','card MP is unchanged after enhancement');
+assert.equal(circleDetails(enhanced,buffs,p=>Math.ceil(p/100)).mp,'6','details MP is unchanged after enhancement');
+assert.equal(circleDetails(enhanced,buffs,p=>Math.ceil(p/100)).power,'1024');
 const attack=savePreanalysis(circle,{attribute:'bolt',role:'attack',power:512});
 const support=savePreanalysis(circle,{attribute:'aqua',role:'support',power:512});
 const debuff=savePreanalysis(circle,{attribute:'flame',role:'debuff',power:512});
