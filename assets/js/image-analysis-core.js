@@ -1112,16 +1112,20 @@
     const broadCornerScore = measuredCorners ? broadCorners / measuredCorners * cornerCountFactor : 0;
     const sharpCornerScore = measuredCorners ? sharpCorners / measuredCorners * cornerCountFactor : 0;
     const radialVariation = Math.sqrt(variance);
-    // Score the contour's measured interior angles: sharp points, broad bends,
-    // and repeated rounded arcs are separate signals. Open, straight runs only
-    // contribute to debuff when the contour has actual gaps.
+    // Rounded outlines should score as recovery, but merely drawing a large
+    // closed symbol must not overpower broad-corner shields or pointed attacks.
+    // A shield has strong radial variation with broad bends; an oval does not.
     const closedContourWeight = closedness ** 4;
+    const shieldSilhouette = broadBendRuns > 0 && sharpTipCount <= 2
+      ? Math.max(0, radialVariation - .05) * 8
+      : 0;
     const raw = {
-      attack: Math.max(0, (Math.max(0, sharpTipCount - 2) * .7 + sharpAngleRatio * .5 + sharpCornerScore) * closedContourWeight),
-      defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5) * closedContourWeight
-        * Math.max(0, 1 - sharpTipCount / 8),
-      support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 6.2)
-        / (1 + broadBendRuns * .3 * (1 - mean)) * closedContourWeight,
+      attack: Math.max(0, (Math.max(0, sharpTipCount - 2) * .85 + sharpAngleRatio * .65 + sharpCornerScore) * closedContourWeight),
+      defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5
+        + shieldSilhouette) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
+      support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 2.4)
+        / (1 + broadBendRuns * .3 * (1 - mean)) * closedContourWeight
+        * Math.max(.35, 1 - sharpTipCount * .12),
       debuff: missingRayRatio * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
     };
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
