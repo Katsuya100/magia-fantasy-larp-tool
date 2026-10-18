@@ -1106,6 +1106,7 @@
     // Count pronounced, separated radial lobes independently of point angles.
     // A rounded circle/oval has no such repeating protrusions.
     let radialLobes = 0;
+    let firstLobe = -1;
     let lastLobe = -samples;
     for (let index = 0; index < samples; index += 1) {
       if (index - lastLobe < 20) continue;
@@ -1114,9 +1115,11 @@
       const shoulder = (at(-12) + at(12)) / 2;
       if (contour[index] >= localMaximum - .002 && contour[index] - shoulder > .018) {
         radialLobes++;
+        if (firstLobe < 0) firstLobe = index;
         lastLobe = index;
       }
     }
+    if (radialLobes > 1 && firstLobe + samples - lastLobe < 20) radialLobes--;
     const angularity = clamp(turns / 24 + contourRoughness * 2);
     const lineDensity = clamp(dark * 6 + contourRoughness * 1.4);
     const missingRayRatio = radii.filter(value => value === 0).length / samples;
@@ -1137,7 +1140,7 @@
       ? Math.max(0, radialVariation - .05) * 8
       : 0;
     const raw = {
-      attack: Math.max(0, (Math.max(0, sharpTipCount - 1) * .85 + sharpAngleRatio * .65 + sharpCornerScore + repeatedLobes * .55) * closedContourWeight),
+      attack: Math.max(0, (Math.max(0, sharpTipCount - 1) * .85 + sharpAngleRatio * .65 + sharpCornerScore + repeatedLobes * .75) * closedContourWeight),
       defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5
         + shieldSilhouette) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
       support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 2.4)
