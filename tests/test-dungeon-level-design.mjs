@@ -29,6 +29,9 @@ for(const id of ['fang','slime_core','bone','copper_sigil','obsidian','moon_scal
  assert.ok(collections.some(item=>item.id===id),'preserve original collectible ID '+id);
 assert.deepEqual(enemies.slice(0,4).map(x=>x.name),['スライム','コウモリ','ネズミ','ゴブリン']);
 assert.ok(enemies.slice(0,95).every(x=>x.name.length<=13),'early monster names stay approachable');
+// Snake-themed names are intentionally rethemed to eels and catfish.
+assert.ok(enemies.every(enemy=>!/(ヘビ|蛇|コブラ|バジリスク|サーペント|ヒドラ)/.test(enemy.name)),
+ 'no old snake-themed enemy names remain');
 const earlySpecies=new Set(enemies.slice(0,95).filter(x=>x.boss_only==='0').map(x=>x.name));
 const variantPrefixes=['赤','青','黒','白','金','銀','岩','霧','砂','氷','炎','雷',
  '毒','影','森','闇','鉄','翡翠','灼熱','吹雪','雷光','幽霊','深淵','星屑'];
@@ -61,12 +64,12 @@ for(let layer=1;layer<=100;layer++){
 // All five monsters share a dominant element; the second element adds variety.
 const layerNames=layer=>enemies.slice((layer-1)*5,layer*5).map(x=>x.name);
 for(const [layer,expected] of [
- [8,['大蛇','毒ヘビ','バジリスク','コブラ','毒牙の蛇王']],
+ [8,['ウナギ','毒ナマズ','イール','キャットフィッシュ','毒鰭のウナギ王']],
  [13,['火ネズミ','鬼火','火スライム','赤トロール','炎角の牛魔王']],
  [24,['海賊乗組員','幽霊スケルトン','海賊狙撃手','霧ゴブリン兵','幽霊船長']],
  [38,['ライトニングバード','雷ウルフ','サンダーウルフ','雷カラス','落雷の王獣']],
  [48,['アイスゴーレム','氷石ゴーレム','フロストビースト','吹雪ドライアド','氷河の巨神']],
- [63,['ヒドラ','青大蛇','サーペント','深淵毒ヘビ','絶海の竜蛇']],
+ [63,['アビスイール','青ウナギ','ジャイアントキャットフィッシュ','深淵毒ナマズ','絶海の竜ウナギ']],
  [99,['世界樹の根竜','終末の木霊','腐朽の神獣','黒葉の守護兵','世界樹の終末竜']]
 ])assert.deepEqual(layerNames(layer),expected,'coherent faction in layer '+layer);
 for(let layer=1;layer<=100;layer++){
