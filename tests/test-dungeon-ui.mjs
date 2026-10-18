@@ -227,11 +227,21 @@ try{
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
  assert.deepEqual(tabScrolls,[{behavior:'instant',block:'start'}],'entering the labyrinth scrolls to the top edge of the tabs');
+ // Simulate a scrolled battle view; boss victory, rewards and completion must
+ // not force the viewport to the dungeon tabs or top of the page.
+ window.scrollY=428;
+ const restoredScroll=[];
+ window.scrollTo=(_,top)=>{restoredScroll.push(top);window.scrollY=top;};
+ $('dungeonScenes').offsetHeight=1240;
+ $('dungeonScenes').style={minHeight:''};
  let p=await getProfile(db);
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);
  assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="loot"/,'battle HUD shows earned loot as a card');
  assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="xp"/,'battle HUD shows provisional EXP as a card');
  assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="item"/,'battle HUD shows free item usage as a card');
+ assert.match($('battleInfo').innerHTML,/⚗<\/span> 携行品/,'item status is labeled 携行品');
+ assert.match($('battleInfo').innerHTML,/>未<\/strong>/,'the carried-item action initially shows 未');
+ assert.doesNotMatch($('battleInfo').innerHTML,/この戦闘|道具行使|battle-stat-max/,'remove unnecessary item counter text');
  assert.match($('battleInfo').innerHTML,/<strong class="battle-stat-value">0<\/strong>/,'initial rewards start at zero');
  assert.match($('battleInfo').innerHTML,/>未確定 · 持ち帰り待ち</,'unbanked loot remains clearly provisional');
  assert.doesNotMatch($('battleInfo').innerHTML,/未確定報酬 [0-9]+個 \/ 未確定経験値/,'the cramped slash-separated sentence is removed');
@@ -337,6 +347,9 @@ try{
  assert.equal(p.deepestReturnedLayer,0,'boss victory does not count as a return until leaving');
  assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
  assert.equal(p.run.enemy.id,'boss_l001','the fifth fight remains the fixed layer boss');
+ assert.equal(tabScrolls.length,1,'boss checkpoint does not auto-scroll to the dungeon navigation');
+ assert.equal(window.scrollY,428,'boss checkpoint preserves the existing scroll position');
+ assert.equal($('dungeonScenes').style.minHeight,'1240px','short checkpoint scene retains the previous page extent');
   assert.ok(p.run.loot.some(item=>item.id==='relic_boss_001'),'boss grants its dedicated epic trophy on the first victory');
    assert.equal(p.defeatedBosses.boss_l001,true,'first boss defeat is saved before returning');
  assert.ok(cinematicEvents.some(x=>x.event==='encounter'&&x.tier==='boss'),'fifth encounter plays layer-boss entrance');
@@ -348,11 +361,13 @@ try{
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\n1層踏破。\n未確定報酬 [0-9]+個 \/ 経験値 [0-9]+。\n続行して敗北すると失われる。/,'each checkpoint sentence appears on its own line');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
- assert.ok(p.run.loot.length>=5&&p.run.loot.length<=35);
+ assert.ok(p.run.loot.length>=1&&p.run.loot.length<=25,'one layer has sparse drops and a guaranteed first-clear boss trophy');
  const loot=p.run.loot.length;
  assert.equal(chestDrops.reduce((n,x)=>n+x,0),loot,'every dropped reward had its own treasure chest');
  await $('returnHome').fire('click');
  await wait(()=>$('returnShowcase').hidden===false,'return');
+ assert.equal(tabScrolls.length,1,'return rewards do not automatically scroll back');
+ assert.equal(window.scrollY,428,'return rewards keep the saved scroll offset');
  assert.equal($('result').hidden,true,'successful return no longer uses the old result screen');
  assert.equal($('tab-dungeon').hidden,false,'reward ceremony retains the dungeon tab');
  assert.equal($('tab-prepare').hidden,true,'prepare tab stays hidden until completion');
@@ -388,6 +403,9 @@ try{
  assert.equal($('returnNext').textContent,'完了');
  await $('returnNext').fire('click');
  assert.equal($('home').hidden,false,'sequence ends at the profile');
+ assert.equal(tabScrolls.length,1,'completion never forces a scroll to the navigation');
+ assert.equal(window.scrollY,428,'the profile transition retains the original viewport');
+ assert.ok(restoredScroll.length>=3&&restoredScroll.every(top=>top===428),'the same position is restored across boss, rewards, and completion');
  p=await getProfile(db);
  assert.equal(p.returns,1);assert.equal(p.run,null);
  assert.equal($('tab-prepare').hidden,false,'return restores preparation');
@@ -478,7 +496,7 @@ assert.doesNotMatch($('gearCards').innerHTML,/class="tile-detail item-effect-ico
  assert.equal(p.run.carry[0],null,'consumed item leaves a blank slot');
  assert.equal(p.run.carry[1].instanceId,savedBeforeAttack.carrySlots[1],'other slots keep their identities');
  assert.equal(p.run.usedItems,1);
- assert.match($('battleInfo').innerHTML,/道具行使<\/span>[\s\S]*?battle-stat-value">1<span class="battle-stat-max"> \/ 1<\/span>/,'item usage counter updates after using an item');
+ assert.match($('battleInfo').innerHTML,/携行品<\/span>[\s\S]*?battle-stat-value">済<\/strong>/,'item status changes to 済 after the free use');
  assert.equal(($('battleItems').innerHTML.match(/data-use="/g)||[]).length,2,'item grid keeps usable tiles');
 assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,2,'combat uses the same centered stat class as preparation');
  assert.equal(($('battleItems').innerHTML.match(/data-open-item="/g)||[]).length,0,'battle items are not preparation slots');

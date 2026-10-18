@@ -1,20 +1,20 @@
-import * as G from './dungeon-core.mjs?v=20261018.19';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.19';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.19';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.19';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.19';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.19';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.19';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.19';
+import * as G from './dungeon-core.mjs?v=20261018.20';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.20';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.20';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.20';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.20';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.20';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.20';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.20';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.19';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.19';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.19';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.19';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.19';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.19';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.19';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.19';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.20';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.20';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.20';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.20';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.20';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.20';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.20';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.20';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -156,13 +156,29 @@ function show(requested){
  // Never overlap the tall battle and compact checkpoint/result in one grid
  // track: hiding the tall scene later would suddenly change viewport height.
  const terminalSwap=['checkpoint','result','returnShowcase'].includes(name)||['checkpoint','result','returnShowcase'].includes(before);
- if(terminalSwap&&before!==name&&(before==='battle'||name==='returnShowcase'))scrollToDungeonTabs();
+ const preserveScroll=before!==name&&['battle','checkpoint','returnShowcase'].includes(before)
+  &&['checkpoint','returnShowcase','home'].includes(name);
+ // Remember the viewport and the tall scene's height before hiding it.
+ // Otherwise the browser may clamp scrollY as the result screen becomes shorter.
+ const stack=$('dungeonScenes');
+ if(preserveScroll){
+  const oldHeight=Math.max(stack.offsetHeight||0,Number.parseFloat(stack.style?.minHeight)||0);
+  if(oldHeight>0)stack.style.minHeight=oldHeight+'px';
+ }else if(name==='prepare'&&!profile?.run&&!returnFlow&&stack.style)stack.style.minHeight='';
+ const savedY=preserveScroll?(window.scrollY??window.pageYOffset??0):null;
+ const restoreScroll=()=>{
+  if(savedY===null)return;
+  window.scrollTo?.(0,savedY);
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>window.scrollTo?.(0,savedY));
+ };
  if(!before||before===name||reduced||terminalSwap||!sceneIds.includes(name)){
   applyView(name);
+  restoreScroll();
   return;
  }
  // Keep both DOM panels painted in the same grid cell until fading finishes.
  applyView(name,before);
+ restoreScroll();
  $(before).dataset.exiting='true';
  $(name).dataset.entering='true';
  sceneFadeTimer=setTimeout(()=>{
@@ -305,9 +321,8 @@ function renderRun(){
    +'<strong class="battle-stat-value">+'+run.xp+'</strong>'
    +'<small>帰還時に確定</small></div>'
   +'<div class="battle-stat" data-kind="item">'
-   +'<span class="battle-stat-label"><span aria-hidden="true">⚗</span> 道具行使</span>'
-   +'<strong class="battle-stat-value">'+(run.usedItems||0)+'<span class="battle-stat-max"> / '+num('item_per_round')+'</span></strong>'
-   +'<small>この戦闘の使用回数</small></div>'
+   +'<span class="battle-stat-label"><span aria-hidden="true">⚗</span> 携行品</span>'
+   +'<strong class="battle-stat-value">'+((run.usedItems||0)>=num('item_per_round')?'済':'未')+'</strong></div>'
   +(hero.reviveArmed?'<div class="battle-revival">🪽 生命の紅石 · 復活待機中</div>':hero.reviveUsed?'<div class="battle-revival">🪽 生命の紅石 · 発動済み</div>':'');
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');
 }
@@ -495,7 +510,7 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
   if(bossEnemyId){profile.defeatedBosses??={};profile.defeatedBosses[bossEnemyId]=true;}
   const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot);
   if(badge)rewards.push(badge);
-  run.loot.push(...rewards);run.xp+=G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor));run.log.push('撃破！ '+rewards.length+'個を入手（未確定）');await ceremony('loot','戦利品の発見',rewards.length+'個 · 未確定',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero);if(isLayerBoss(run.floor)){run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
+  run.loot.push(...rewards);run.xp+=G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor));run.log.push(rewards.length?'撃破！ '+rewards.length+'個を入手（未確定）':'撃破！ 今回の戦利品はなし');await ceremony('loot',rewards.length?'戦利品の発見':'戦利品なし',rewards.length?rewards.length+'個 · 未確定':'次の戦いへ',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero);if(isLayerBoss(run.floor)){run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
 // Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
 // between the loot overlay and the following encounter animation.
 const nextEntrance=ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');await persist();await nextEntrance;}
