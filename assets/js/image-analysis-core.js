@@ -1244,7 +1244,8 @@
       ? Math.max(0, radialVariation - .05) * 8
       : 0;
     const raw = {
-      attack: Math.max(0, (Math.max(0, sharpTipCount - 1) * .85 + sharpAngleRatio * .65 + sharpCornerScore + repeatedLobes * .75) * closedContourWeight + enclosedFaces.attackBoost),
+      attack: Math.max(0, (Math.max(0, sharpTipCount - 1) * .85 + sharpAngleRatio * .65 + sharpCornerScore + repeatedLobes * .75) * closedContourWeight
+        + enclosedFaces.attackBoost * clamp((radialVariation - .035) / .06)),
       defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5
         + shieldSilhouette) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
       support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 2.4)
