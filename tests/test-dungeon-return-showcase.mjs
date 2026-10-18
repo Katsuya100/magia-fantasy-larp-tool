@@ -89,6 +89,7 @@ try{
   assert.equal($h('returnSceneTitle').textContent,'アイテム報酬');
   const displayedRewards=$h('returnRewards').innerHTML;
   assert.ok(displayedRewards.indexOf('鉛級冒険者章')<displayedRewards.indexOf('魔導石'),'badge comes first');
+  assert.match(displayedRewards, /class="return-reward-symbol return-rank-symbol"[^>]*><span class="adventurer-grade"><strong data-rank="10"><span>鉛級<\/span><\/strong>/,'legacy saved rank reward uses the profile metallic badge styling');
   assert.ok(displayedRewards.indexOf('魔導石')<displayedRewards.indexOf(newItem.name),'magic stones precede regular items');
   assert.ok(displayedRewards.indexOf(newItem.name)<displayedRewards.indexOf(oldItem.name),'first-ever item precedes previously acquired item');
   assert.equal((displayedRewards.match(/class="return-new"/g)||[]).length,3,'badge, magic stone, and first-ever item receive NEW');
