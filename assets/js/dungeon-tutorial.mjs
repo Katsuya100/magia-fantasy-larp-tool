@@ -1,9 +1,10 @@
-// Four short GIF demonstrations. The real circle is drawn on paper.
+// Five simple pages: paper and pen preparation, then four GIF demonstrations.
 export const CIRCLE_TUTORIAL_STEPS=[
- {title:'外円を書く',hint:'紙に大きな円を書く。',detail:'線をつないで閉じる。',image:'tutorial-outer.gif'},
- {title:'内円を書く',hint:'外円の内側に、小さな円を書く。',detail:'内円も閉じた線にする。',image:'tutorial-inner.gif'},
- {title:'呪文を書く',hint:'内円と外円の間に英語の呪文を書く。',detail:'相は呪文の意味で決まる：🔥炎・⚡雷・💧水・🌪風・🪨重力・⚖秩序・🌀混沌。',freedom:'サンプルどおりでなくてOK。英単語は自由に書いていい。',image:'tutorial-spell.gif'},
- {title:'紋を書く',hint:'内円の中に紋を書く。',detail:'紋の種別は形で決まる：⚔️攻撃・🛡️防御・✚回復・🕸️弱体。',freedom:'サンプルどおりでなくてOK。紋は自由に描いていい。',image:'tutorial-sigil.gif'}
+ {title:'準備しましょう',hint:'最初にお手元に紙とペンをご用意ください。',detail:'ペンは、できれば太めの油性ペンをお使いください。',image:null},
+ {title:'外円を書きましょう',hint:'紙に大きな円を書いてください。',detail:'線をつないで閉じてください。',image:'tutorial-outer.gif'},
+ {title:'内円を書きましょう',hint:'外円の内側に、小さな円を書いてください。',detail:'内円も閉じた線にしてください。',image:'tutorial-inner.gif'},
+ {title:'呪文を書きましょう',hint:'内円と外円の間に英語の呪文を書いてください。',detail:'相は呪文の意味によって決まります：🔥炎・⚡雷・💧水・🌪風・🪨重力・⚖秩序・🌀混沌。',freedom:'サンプルに合わせる必要はありません。英単語は自由に書いてください。',image:'tutorial-spell.gif'},
+ {title:'紋を書きましょう',hint:'内円の中に紋を書いてください。',detail:'紋の種別は形によって決まります：⚔️攻撃・🛡️防御・✚回復・🕸️弱体。',freedom:'サンプルに合わせる必要はありません。紋は自由に描いてください。',image:'tutorial-sigil.gif'}
 ];
 export function initCircleTutorial(doc,onFinish){
  const $=id=>doc.getElementById(id);
@@ -17,8 +18,11 @@ export function initCircleTutorial(doc,onFinish){
   $('tutorialDetails').textContent=info.detail;
   freedom.textContent=info.freedom||'';
   freedom.hidden=!info.freedom;
-  gif.src='assets/images/'+info.image+'?v=20261018.36';
-  gif.alt=info.title+'アニメーション';
+  $('tutorialFigure').hidden=!info.image;
+  if(info.image){
+   gif.src='assets/images/'+info.image+'?v=20261018.37';
+   gif.alt=info.title+'アニメーション';
+  }else gif.alt='';
   back.hidden=step===0;
   next.textContent=step===CIRCLE_TUTORIAL_STEPS.length-1?'魔導書へ':'次へ';
  }

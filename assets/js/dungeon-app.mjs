@@ -18,7 +18,7 @@ import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartL
 import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.36';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.36';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.36';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.36';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.37';
 import {selectCardCircle} from './dungeon-card-art.mjs?v=20261018.36';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
