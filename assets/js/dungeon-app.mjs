@@ -1,23 +1,23 @@
-import * as G from './dungeon-core.mjs?v=20261018.27';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.27';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.27';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.27';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.27';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.27';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.27';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.27';
+import * as G from './dungeon-core.mjs?v=20261018.28';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.28';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.28';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.28';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.28';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.28';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.28';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.28';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.27';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.27';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.27';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.27';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.27';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.27';
-import {highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.27';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.27';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.27';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.27';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.27';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.28';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.28';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.28';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.28';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.28';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.28';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.28';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.28';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.28';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.28';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.28';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -569,9 +569,13 @@ function renderReturnStep(){
    if(reward.type==='use'){symbol=itemSymbol(reward.item);name=itemName(reward.item);}
    else if(reward.type==='stone'){symbol='✦';name='魔導石';}
    else{symbol='✧';name=reward.name;}
+   const rankLayer=reward.type==='rank'?(Number(reward.layer)||ADVENTURER_RANKS.find(rank=>rankBadgeName(rank.layer)===reward.name)?.layer||0):0;
+   const symbolMarkup=reward.type==='rank'
+    ?'<span class="return-reward-symbol return-rank-symbol" aria-hidden="true"><span class="adventurer-grade"><strong data-rank="'+rankLayer+'"><span>'+esc(rankTitle(rankLayer))+'</span></strong></span></span>'
+    :'<span class="return-reward-symbol" aria-hidden="true">'+symbol+'</span>';
    return '<article class="return-reward" style="--reveal-delay:'+(Math.min(i,12)*.07)+'s">'
     +(reward.isNew||reward.type==='rank'||reward.type==='stone'?'<span class="return-new">NEW</span>':'')
-    +'<span class="return-reward-symbol" aria-hidden="true">'+symbol+'</span>'
+    +symbolMarkup
     +'<strong>'+esc(name)+'</strong>'
     +(reward.type==='use'?'<span class="return-reward-effect" aria-label="'+esc(itemEffectText(reward.item))+'">'+itemEffectIcons(reward.item)+(reward.item.bonus?' ✦':'')+'</span>':'')
     +(count>1?'<span class="return-count">×'+count+'</span>':'')+'</article>';
@@ -707,7 +711,7 @@ async function leave(mode='checkpoint'){
    if(existing)existing.count++;
    else found.set(item.id,{id:item.id,count:1,isNew:oldCount===0});
   }else if(item.type==='rank'&&acquireAdventurerRank(profile,item.layer)){
-   badges.push({type:'rank',name:rankBadgeName(item.layer),count:1});
+   badges.push({type:'rank',layer:item.layer,name:rankBadgeName(item.layer),count:1});
   }
  }
  const before={level:profile.level,xp:profile.xp};
