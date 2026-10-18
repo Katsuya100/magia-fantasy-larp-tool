@@ -55,10 +55,10 @@ try{
  assert.equal(saved.collection.relic_boss_001,1,'undelivered relic is banked');
  assert.equal($('returnShowcase').hidden,false,'escape displays earned loot');
  assert.equal($('result').hidden,true,'escape no longer uses the old result');
- assert.equal($('returnSceneTitle').textContent,'コレクション');
+ assert.equal($('returnSceneTitle').textContent,'コレクション報酬');
  assert.match($('returnCollections').innerHTML,/赤角鬼王の霊石/);
  await $('returnNext').fire('click');
- assert.equal($('returnSceneTitle').textContent,'報酬');
+ assert.equal($('returnSceneTitle').textContent,'アイテム報酬');
  assert.match($('returnRewards').innerHTML,/魔導石/);
  await $('returnNext').fire('click');
  assert.equal($('returnSceneTitle').textContent,'EXP');
