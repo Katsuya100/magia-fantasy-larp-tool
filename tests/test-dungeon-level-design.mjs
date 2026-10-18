@@ -56,6 +56,37 @@ for(let layer=1;layer<=100;layer++){
  assert.ok(trophy?.description.includes(boss.name),'named boss and trophy lore stay consistent');
 }
 
+// A layer should feel like the named boss's domain without changing
+// the existing five-encounter format, power budget, or 100 boss identities.
+// All five monsters share a dominant element; the second element adds variety.
+const layerNames=layer=>enemies.slice((layer-1)*5,layer*5).map(x=>x.name);
+for(const [layer,expected] of [
+ [8,['大蛇','毒ヘビ','バジリスク','コブラ','毒牙の蛇王']],
+ [13,['火ネズミ','鬼火','火スライム','赤トロール','炎角の牛魔王']],
+ [24,['海賊乗組員','幽霊スケルトン','海賊狙撃手','霧ゴブリン兵','幽霊船長']],
+ [38,['ライトニングバード','雷ウルフ','サンダーウルフ','雷カラス','落雷の王獣']],
+ [48,['アイスゴーレム','氷石ゴーレム','フロストビースト','吹雪ドライアド','氷河の巨神']],
+ [63,['ヒドラ','青大蛇','サーペント','深淵毒ヘビ','絶海の竜蛇']],
+ [99,['世界樹の根竜','終末の木霊','腐朽の神獣','黒葉の守護兵','世界樹の終末竜']]
+])assert.deepEqual(layerNames(layer),expected,'coherent faction in layer '+layer);
+for(let layer=1;layer<=100;layer++){
+ const party=enemies.slice((layer-1)*5,layer*5);
+ const spells=party.map(row=>row.spells.split('|').map(value=>{
+  const [role,attribute,power]=value.split(':');
+  return {role,attribute,power:Number(power)};
+ }));
+ const dominant=spells[4][0].attribute;
+ for(let slot=0;slot<5;slot++){
+  assert.equal(spells[slot].length,5,'five spells for layer '+layer);
+  assert.equal(spells[slot].filter(spell=>spell.attribute===dominant).length,3,
+   'one shared primary element per layer '+layer);
+  assert.ok(spells[slot].every(spell=>spell.attribute===dominant||
+   spell.attribute===spells[slot][2].attribute),'no off-theme spells in layer '+layer);
+  assert.equal(Number(party[slot]['resist_'+dominant]),slot===4?1.25:0.8,
+   'elemental resistance follows theme while keeping boss/normal tuning '+layer);
+ }
+}
+
 assert.equal(levels.length,150);
 assert.equal(floors.length,500);
 assert.equal(num('level_max'),150);
