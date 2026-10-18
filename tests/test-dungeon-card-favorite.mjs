@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {selectCardCircle,circleOutlinePixels,ATTRIBUTE_GLOW} from '../assets/js/dungeon-card-art.mjs';
+import {selectCardCircle,circleOutlinePixels,ATTRIBUTE_GLOW,paintCircleArt} from '../assets/js/dungeon-card-art.mjs';
 import {openStore,getProfile,saveProfile,putCircle} from '../assets/js/dungeon-store.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
@@ -29,6 +29,34 @@ const edgeIndex=(4*width+4)*4;
 assert.ok(pixels[edgeIndex+3]>0,'strong boundary survives extraction');
 assert.deepEqual([...pixels.slice(edgeIndex,edgeIndex+3)],[0x71,0xdc,0xff],'colorized to aqua');
 assert.equal(pixels[(4*width+1)*4+3],0,'flat photo background removed');
+
+
+const drawCalls=[],clipCircles=[],saveCalls=[];
+const originalDocument=globalThis.document;
+try{
+ globalThis.document={createElement(tag){
+  assert.equal(tag,'canvas');
+  return {getContext:()=>({
+   drawImage(){},
+   getImageData:()=>({width:256,height:256,data:new Uint8ClampedArray(256*256*4)}),
+   createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)}),
+   clearRect(){},putImageData(){}
+  })};
+ }};
+ const ctx={
+  save(){saveCalls.push('save');},restore(){saveCalls.push('restore');},
+  beginPath(){},arc(...args){clipCircles.push(args);},clip(){},
+  drawImage(...args){drawCalls.push(args);}
+ };
+ assert.equal(paintCircleArt(ctx,{image:{},attribute:'aqua'}),true);
+}finally{
+ if(originalDocument===undefined)delete globalThis.document;
+ else globalThis.document=originalDocument;
+}
+assert.deepEqual(clipCircles[0].slice(0,3),[917,330,205],'larger crop stays within card artwork area');
+assert.equal(drawCalls.length,3,'two blurred layers and one crisp contour retained');
+assert.ok(drawCalls.every(args=>args[3]===420&&args[4]===420),'all artwork layers use enlarged 420px diameter');
+assert.deepEqual(saveCalls,['save','restore'],'glow compositing state restored');
 
 const factory=fakeIndexedDB(),db=await openStore(factory),profile=await getProfile(db);
 Object.assign(profile,{name:'試験',tutorialDone:true,slots:['a',null,null,null,null]});
