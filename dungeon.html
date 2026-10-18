@@ -89,6 +89,7 @@
 
     <section id="library" class="panel grimoire-panel" hidden>
       <div class="section-heading"><div><p class="chapter">CHAPTER II · GRIMOIRE</p><h2>魔導書</h2></div><span class="section-mark" aria-hidden="true">◎</span></div>
+      <button type="button" id="tutorialReplay" class="subtle tutorial-replay">◎ 描き方を練習</button>
       <details class="regulations">
         <summary>魔法陣の描き方・登録規則 <span aria-hidden="true">⌄</span></summary>
         <ol>
@@ -269,6 +270,32 @@
     </dialog>
     <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.22</span></footer>
   </main>
+  <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
+    <div class="tutorial-sheet">
+      <div class="tutorial-top"><span id="tutorialCount">1 / 6</span><button type="button" id="tutorialSkip" class="subtle">スキップ</button></div>
+      <h2 id="tutorialTitle">魔法陣の作り方</h2>
+      <p id="tutorialHint">サンプルを見て、順番に描いてみよう。</p>
+      <div id="tutorialExample" class="tutorial-example">
+        <img src="assets/images/sample.png?v=20261018.22" alt="外円と内円、その間に英語の呪文、内円の中に紋様を描いたお手本">
+        <ol><li>外円と内円を閉じる</li><li>円の間に英語の呪文</li><li>中心に紋様を描く</li><li>1つずつ明るい場所で撮影</li></ol>
+      </div>
+      <div id="tutorialPad" class="tutorial-pad" data-step="1" hidden>
+        <svg viewBox="0 0 320 320" aria-hidden="true" class="tutorial-guides">
+          <circle class="tutorial-outer" cx="160" cy="160" r="116" />
+          <circle class="tutorial-inner" cx="160" cy="160" r="66" />
+          <text class="tutorial-letters" x="160" y="55" text-anchor="middle">FIRE</text>
+          <path class="tutorial-symbol" d="M160 108 L143 159 L174 153 L154 209 L184 145 L154 150 Z" />
+        </svg>
+        <canvas id="tutorialCanvas" width="320" height="320" aria-label="ここを指またはマウスでなぞって魔法陣を描く"></canvas>
+        <span id="tutorialFinger" class="tutorial-finger" aria-hidden="true">👆</span>
+      </div>
+      <p id="tutorialFeedback" role="status" aria-live="polite" class="tutorial-feedback"></p>
+      <div class="tutorial-actions">
+        <button type="button" id="tutorialRetry" class="subtle" hidden>書き直す</button>
+        <button type="button" id="tutorialContinue" class="primary-action tutorial-next">描いてみる</button>
+      </div>
+    </div>
+  </div>
   <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.22"></script>
 </body>
 </html>
