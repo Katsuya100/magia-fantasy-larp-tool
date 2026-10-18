@@ -81,6 +81,17 @@ const fixtures = [
     shape: '<circle cx="256" cy="256" r="150"/><path d="M256 125 L256 387 M125 256 L387 256"/>'},
   {name: 'support: circle with smaller crossing lines', role: 'support',
     shape: '<circle cx="256" cy="256" r="150"/><path d="M256 172 L256 340 M172 256 L340 256"/>'},
+
+  {name: 'support: hand-drawn rounded cloud', role: 'support',
+    shape: '<path d="M256 124 C290 104 324 143 350 164 C401 185 389 260 361 284 C364 347 299 390 256 362 C208 397 151 368 153 309 C120 288 119 235 148 215 C143 167 206 133 256 124 Z"/>'},
+  {name: 'support: uneven smooth bubble', role: 'support',
+    shape: '<path d="M270 120 C336 110 386 162 385 213 C403 272 374 324 320 336 C298 387 208 390 180 337 C130 338 114 280 142 253 C125 213 148 152 199 146 Q239 108 270 120 Z"/>'},
+  {name: 'support: circle arcs crossed by long lines', role: 'support',
+    shape: '<circle cx="256" cy="256" r="155"/><circle cx="256" cy="256" r="83"/><path d="M112 139 L395 382 M392 141 L126 379 M171 256 L341 256"/>'},
+  {name: 'support: three round seals and a small star', role: 'support',
+    shape: '<circle cx="256" cy="256" r="163"/><circle cx="290" cy="196" r="62"/><circle cx="198" cy="318" r="58"/><circle cx="333" cy="322" r="34"/><g transform="translate(290 196) scale(.26) translate(-256 -256)">' + star(5,150,70) + '</g>'},
+  {name: 'support: circle ornament with small star and dotted loops', role: 'support',
+    shape: '<circle cx="256" cy="256" r="162"/><circle cx="240" cy="206" r="67"/><circle cx="190" cy="318" r="46"/><circle cx="320" cy="317" r="43"/><g transform="translate(240 206) scale(.19) translate(-256 -256)">' + pentagram(156) + '</g>'},
 ];
 
 let passed = 0;
@@ -91,7 +102,7 @@ for (const {name, role, shape, stroke = 7, expectPointedFaces = false} of fixtur
   const { scores, features } = analyzeSigilMetricsJs(image.data, size, size, paths);
   const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   console.log(JSON.stringify({ name, expected: role, predicted: ranked[0][0], scores,
-    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, mean: features.mean, radialVariation: features.radialVariation,
+    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
       broadAngleRatio: features.broadAngleRatio, sharpTipCount: features.sharpTipCount,
       missingRayRatio: features.missingRayRatio, broadBendRuns: features.broadBendRuns} }));
   if (ranked[0][0] !== role || ranked[0][1] < .35 || ranked[0][1] - ranked[1][1] < .02 ||
