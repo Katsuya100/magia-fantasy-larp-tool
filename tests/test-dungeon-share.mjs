@@ -56,6 +56,23 @@ assert.ok(!html.includes('id="supportDonateLink"')&&!html.includes('id="supportO
 assert.ok(html.includes('id="adventurerShareCanvas"'),'card is previewed inside the shared modal');
 assert.ok(!html.includes('id="tab-share"'),'no new navigation screen');
 
+const modalHtml=html.slice(html.indexOf('<dialog id="supportPromptDialog"'),html.indexOf('<dialog id="deleteDataDialog"'));
+const shareRow=modalHtml.match(/<div class="support-prompt-actions">([\s\S]*?)<\/div>/)?.[1]||'';
+const xAction=shareRow.match(/<a id="supportXLink" class="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
+const imageAction=shareRow.match(/<button type="button" id="supportNativeShare" class="([^"]+)" hidden>([\s\S]*?)<\/button>/);
+assert.ok(xAction&&imageAction,'X and image share actions are in the same row');
+assert.ok(shareRow.indexOf('id="supportXLink"')<shareRow.indexOf('id="supportNativeShare"'),'image share is immediately right of X');
+assert.equal(xAction[1],imageAction[1],'X and image share use matching button design');
+assert.ok(xAction[2].startsWith('Xでシェア '),'X sharing label is unchanged');
+assert.ok(imageAction[2].startsWith('画像付きでシェア '),'image sharing label is explicit');
+assert.match(xAction[2],/class="share-mark"[^>]*aria-hidden="true"[^>]*>[\s\S]*<\/svg>$/,'X button ends with share icon');
+assert.match(imageAction[2],/class="share-mark"[^>]*aria-hidden="true"[^>]*>[\s\S]*<\/svg>$/,'image button ends with the same share icon');
+const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+assert.match(css,/\.support-prompt-actions \.support-share-action\{/,'share actions have one shared style');
+assert.match(css,/\.support-prompt-actions \.support-share-action\[hidden\]\{display:none\}/,'native share stays hidden on unsupported browsers');
+assert.ok(!modalHtml.slice(modalHtml.indexOf('<div class="support-card-tools">')).includes('id="supportNativeShare"'),'image share no longer lives among save/close controls');
+
+
 const factory=fakeIndexedDB(),db=await openStore(factory),p=await getProfile(db);
 Object.assign(p,profile,{tutorialDone:true});
 await saveProfile(db,p);
