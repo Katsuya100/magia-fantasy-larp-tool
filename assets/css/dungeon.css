@@ -1538,20 +1538,20 @@ html,body{overflow-x:clip}
 }
 
 
-/* A short sample animation replaces inaccurate phone drawing practice. */
+/* Four simple animated drawing steps. */
 .tutorial-overlay{position:fixed;z-index:3000;inset:0;overflow-y:auto;display:grid;place-items:center;padding:14px;background:#070810ed;backdrop-filter:grayscale(1) blur(4px)}
 .tutorial-sheet{width:min(440px,100%);margin:auto;padding:20px;border:1px solid #e9c98a;background:linear-gradient(145deg,#2b2231,#111c26);box-shadow:0 20px 80px #000c;text-align:center}
 .tutorial-top{display:flex;align-items:center;justify-content:space-between;color:var(--soft);font-size:11px;letter-spacing:.09em}
 .tutorial-top button{font-size:12px;padding:6px 11px}
 .tutorial-sheet h2{margin:10px 0 3px;font-size:24px;color:var(--gold)}
-.tutorial-sheet p{margin:0;color:var(--pale);font-size:13px}
-.tutorial-animation{width:min(100%,320px);margin:15px auto 8px}
-.tutorial-animation img{display:block;width:100%;height:auto;aspect-ratio:8/9;object-fit:contain;border:1px solid #e1bf8166;background:#17151d}
-.tutorial-animation figcaption{margin:7px auto;color:var(--gold);font-size:12px}
-.tutorial-sheet .tutorial-rules{margin:9px 0 15px;line-height:1.7}
-.tutorial-actions{display:flex;justify-content:center}
-.tutorial-actions .tutorial-next{width:100%;min-width:0;max-width:280px;position:relative}
-.tutorial-next:after{content:"👆";position:absolute;right:-10px;bottom:-14px;pointer-events:none;font-size:25px}
+.tutorial-sheet p{margin:0;color:var(--pale);font-size:13px;line-height:1.65}
+.tutorial-animation{width:min(100%,320px);margin:13px auto 10px}
+.tutorial-animation img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain;border:1px solid #e1bf8166;background:#ead9bb}
+.tutorial-sheet #tutorialDetails{margin:8px 0;color:var(--gold)}
+.tutorial-sheet #tutorialFreedom{margin:6px 0 12px}
+.tutorial-actions{display:flex;justify-content:center;gap:10px;margin-top:14px}
+.tutorial-actions .tutorial-next{width:100%;min-width:0;max-width:260px}
+.tutorial-actions #tutorialPrevious{min-width:70px}
 .tutorial-replay{display:block;margin:0 0 11px auto;font-size:12px!important;padding:8px 12px!important}
 @media(max-width:420px){.tutorial-sheet{padding:14px}.tutorial-animation{width:min(100%,275px)}}
 

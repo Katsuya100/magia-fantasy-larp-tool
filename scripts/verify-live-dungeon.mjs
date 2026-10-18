@@ -11,7 +11,8 @@ const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs',
  'assets/js/dungeon-card-art.mjs','assets/js/dungeon-preparation-ui.mjs',
  'assets/js/dungeon-list-view.mjs','assets/data/dungeon-enemies.csv'];
 const expected=new Map(await Promise.all(assets.map(async path=>[path,await readFile(new URL('../'+path,import.meta.url),'utf8')])));
-const expectedGif=await readFile(new URL('../assets/images/dungeon-circle-tutorial.gif',import.meta.url));
+const tutorialGifs=['tutorial-outer.gif','tutorial-inner.gif','tutorial-spell.gif','tutorial-sigil.gif'];
+const expectedGifs=new Map(await Promise.all(tutorialGifs.map(async name=>[name,await readFile(new URL('../assets/images/'+name,import.meta.url))])));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function remote(path,attempt){
  const url=origin+path+(path.includes('?')?'&':'?')+'smoke='+attempt+'-'+Date.now();
@@ -33,11 +34,13 @@ for(let attempt=1;attempt<=24;attempt++){
    const content=await remote(asset+'?v='+version,attempt);
    if(content!==expected.get(asset))throw Error('Published asset is stale: '+asset);
   }
-  const gifResponse=await fetch(origin+'assets/images/dungeon-circle-tutorial.gif?v='+version+'&smoke='+attempt+'-'+Date.now(),{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(12000)});
-  if(!gifResponse.ok)throw Error('Published tutorial GIF HTTP '+gifResponse.status);
-  const publishedGif=Buffer.from(await gifResponse.arrayBuffer());
-  if(publishedGif.subarray(0,3).toString()!=='GIF'||!publishedGif.equals(expectedGif))throw Error('Published tutorial GIF differs from the committed sample animation');
-  console.log('LIVE VERIFIED: Pages HTML and all '+assets.length+' assets plus sample GIF match release '+version+' at '+origin);
+  for(const name of tutorialGifs){
+   const gifResponse=await fetch(origin+'assets/images/'+name+'?v='+version+'&smoke='+attempt+'-'+Date.now(),{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(12000)});
+   if(!gifResponse.ok)throw Error('Published '+name+' HTTP '+gifResponse.status);
+   const published=Buffer.from(await gifResponse.arrayBuffer());
+   if(published.subarray(0,6).toString()!=='GIF89a'||!published.equals(expectedGifs.get(name)))throw Error('Published tutorial GIF differs: '+name);
+  }
+  console.log('LIVE VERIFIED: Pages HTML, assets and four tutorial GIFs match '+version+' at '+origin);
   process.exit(0);
  }catch(error){
   last=String(error?.message||error);
