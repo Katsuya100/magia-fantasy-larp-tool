@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {CIRCLE_TUTORIAL_STEPS,initCircleTutorial} from '../assets/js/dungeon-tutorial.mjs';
@@ -59,9 +60,18 @@ assert.match(html,/data-release="20261018\.36"/);
 assert.match(script,/gif\.src='assets\/images\/'/);
 assert.doesNotMatch(html,/id="tutorialCanvas"|id="tutorialPad"/);
 assert.doesNotMatch(script,/pointerdown|pointermove|setPointerCapture/);
+const expectedGifHashes={
+ 'tutorial-outer.gif':'1e71d4a08a97f48d001bcec3f07246db3a0f562715c5c1232b9b6e97a83698d6',
+ 'tutorial-inner.gif':'54537c9826ae035968633a2b1dcad0008f19a846735b5c1b17b0db8e4d08969f',
+ 'tutorial-spell.gif':'765cf80bb40a6db906d86ef5b0383a88d87618d8d7a45af5f17978fc84e990f5',
+ 'tutorial-sigil.gif':'0bab6edb58785ed21cfb73448ea363907eaebce164d5654069e22b6339b9685a'
+};
 for(const step of CIRCLE_TUTORIAL_STEPS){
  const b=await readFile(new URL('../assets/images/'+step.image,import.meta.url));
  assert.equal(b.subarray(0,6).toString('ascii'),'GIF89a');
+ assert.equal(b.readUInt16LE(6),640,step.image+' width');
+ assert.equal(b.readUInt16LE(8),640,step.image+' height');
+ assert.equal(createHash('sha256').update(b).digest('hex'),expectedGifHashes[step.image],step.image+' must be the supplied optimized animation');
  let frames=0;for(let i=0;i<b.length-2;i++)if(b[i]===33&&b[i+1]===249&&b[i+2]===4)frames++;
  assert.ok(frames>=2,step.image+' must animate');
 }
