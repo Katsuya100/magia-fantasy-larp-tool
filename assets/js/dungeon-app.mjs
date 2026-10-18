@@ -1,22 +1,23 @@
-import * as G from './dungeon-core.mjs?v=20261018.26';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.26';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.26';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.26';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.26';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.26';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.26';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.26';
+import * as G from './dungeon-core.mjs?v=20261018.27';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.27';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.27';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.27';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.27';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.27';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.27';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.27';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.26';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.26';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.26';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.26';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.26';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.26';
-import {highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.26';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.26';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.26';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.26';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.27';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.27';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.27';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.27';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.27';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.27';
+import {highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.27';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.27';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.27';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.27';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.27';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -598,11 +599,65 @@ function renderReturnStep(){
   requestAnimationFrame(tick);
  }
 }
-function showSupportPrompt(prompt){
+let shareImageFile=null,shareImageGeneration=0;
+function showSupportPrompt(prompt,mode='milestone'){
  if(!prompt||activeScene!=='home')return;
+ const generation=++shareImageGeneration;
+ shareImageFile=null;
+ const data=adventurerShareData(profile),canvas=$('adventurerShareCanvas');
  $('supportPromptTitle').textContent=prompt.title;
  $('supportPromptMessage').textContent=prompt.message;
+ $('supportOptionalNote').hidden=mode==='share';
+ $('supportXLink').href=adventurerXUrl(data);
+ $('supportShareHelp').textContent='Xの投稿には本文が入ります。画像は保存して添付できます。';
+ $('supportNativeShare').hidden=true;
+ $('supportSaveImage').disabled=false;
+ try{
+  paintAdventurerCard(canvas,data);
+  canvas.hidden=false;
+  if(typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&typeof File!=='undefined'){
+   canvas.toBlob(blob=>{
+    if(generation!==shareImageGeneration||!blob)return;
+    try{
+     const file=new File([blob],'magia-adventurer-card.png',{type:'image/png'});
+     if(navigator.canShare({files:[file]})){
+      shareImageFile=file;
+      $('supportNativeShare').hidden=false;
+     }
+    }catch(error){console.warn('画像共有には対応していません',error);}
+   },'image/png');
+  }
+ }catch(error){
+  console.warn('冒険者カードの生成に失敗',error);
+  canvas.hidden=true;
+  $('supportSaveImage').disabled=true;
+  $('supportShareHelp').textContent='画像を生成できませんでした。Xには本文のみ共有できます。';
+ }
  $('supportPromptDialog').showModal();
+}
+function openAdventurerShare(){
+ showSupportPrompt({title:'冒険者カード',message:'冒険者等級・レベル・最深帰還をシェア'},'share');
+}
+function downloadAdventurerCard(){
+ const canvas=$('adventurerShareCanvas');
+ if(canvas.hidden)return;
+ try{
+  const anchor=document.createElement('a');
+  anchor.href=canvas.toDataURL('image/png');
+  anchor.download='magia-adventurer-card.png';
+  anchor.click();
+ }catch(error){
+  $('supportShareHelp').textContent='画像を保存できませんでした。別のブラウザでお試しください。';
+ }
+}
+async function shareAdventurerCardImage(){
+ if(!shareImageFile||typeof navigator.share!=='function')return;
+ try{
+  await navigator.share({files:[shareImageFile],title:'冒険者カード',
+   text:adventurerShareText(adventurerShareData(profile))+'\n'+DUNGEON_SHARE_URL});
+ }catch(error){
+  if(error?.name!=='AbortError')$('supportShareHelp').textContent='画像を共有できませんでした。保存して添付してください。';
+ }
 }
 async function advanceReturnStep(){
  if(!returnFlow||$('returnNext').disabled)return;
@@ -1048,8 +1103,12 @@ function wire(){
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
   $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
+  $('openAdventurerShare').addEventListener('click',openAdventurerShare);
   $('supportPromptClose').addEventListener('click',()=>$('supportPromptDialog').close());
-  $('supportPromptDialog').querySelector?.('a')?.addEventListener('click',()=>$('supportPromptDialog').close());
+  $('supportDonateLink').addEventListener('click',()=>$('supportPromptDialog').close());
+  $('supportXLink').addEventListener('click',()=>$('supportPromptDialog').close());
+  $('supportSaveImage').addEventListener('click',downloadAdventurerCard);
+  $('supportNativeShare').addEventListener('click',shareAdventurerCardImage);
  for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)));
  $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;const previousScroll=run.checkpointBattleScrollY;delete run.checkpointBattleScrollY;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');restoreContinuedBattleScroll(previousScroll);await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
  $('cancelAnalyze').addEventListener('click',()=>{
