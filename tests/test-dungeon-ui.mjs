@@ -10,6 +10,9 @@ try{
  await import('../assets/js/dungeon-app.mjs?integration=first');
  await wait(()=>$('playerStats').innerHTML.includes('Lv.1'),'first launch');
  assert.equal($('prepare').hidden,false,'first view is preparation and departure');
+ assert.equal($('startupMask').hidden,true,'startup dialog closes after all data and save loading');
+ assert.equal($('dungeonApp').attributes['inert'],undefined,'game is interactive after initialization');
+ assert.equal($('dungeonApp').attributes['aria-busy'],'false','loading announcement clears after initialization');
  assert.equal($('home').hidden,true,'profile opens only when selected');
  assert.equal($('tab-prepare').attributes['aria-current'],'page','preparation tab initially selected');
  assert.equal($('tab-prepare').hidden,false);
@@ -534,6 +537,10 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   await import('../assets/js/dungeon-app.mjs?integration=storage-error');
   await wait(()=>noStorage.document.getElementById('pageError').textContent.includes('起動できません'),'unavailable storage');
   assert.match(noStorage.document.getElementById('pageError').textContent,/保存領域/);
+  assert.equal(noStorage.document.getElementById('startupMask').hidden,false,'startup failure remains visible instead of a half-loaded game');
+  assert.equal(noStorage.document.getElementById('startupMask').dataset.state,'error');
+  assert.equal(noStorage.document.getElementById('startupRetry').hidden,false,'a failed startup offers a retry');
+  assert.equal(noStorage.document.getElementById('dungeonApp').attributes['aria-busy'],undefined,'a failed startup never unlocks the game');
  }finally{noStorage.restore();}
  const cameraDenied=fakeDungeonBrowser({cameraFailure:true});
  try{
