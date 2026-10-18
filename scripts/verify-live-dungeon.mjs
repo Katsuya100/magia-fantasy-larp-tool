@@ -8,7 +8,7 @@ const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs',
  'assets/js/dungeon-tutorial.mjs',
  'assets/js/dungeon-combat-fx.mjs','assets/js/dungeon-store.mjs',
  'assets/js/dungeon-upgrades.mjs','assets/js/dungeon-preparation-ui.mjs',
- 'assets/js/dungeon-list-view.mjs'];
+ 'assets/js/dungeon-list-view.mjs','assets/data/dungeon-enemies.csv'];
 const expected=new Map(await Promise.all(assets.map(async path=>[path,await readFile(new URL('../'+path,import.meta.url),'utf8')])));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function remote(path,attempt){
