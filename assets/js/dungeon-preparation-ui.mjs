@@ -48,10 +48,11 @@ export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,a
     const usable=unlocked&&index<capacity&&active;
     const value=Number.isInteger(inventoryIndex)?inventory[inventoryIndex]:null;
     const locked=index>=capacity||!unlocked;
-    return '<button type="button" class="loadout-tile '+(locked?'locked':value?'equipped':'empty')+'" data-open-item="'+index+'" aria-label="携行品 '+(index+1)+'枠目 '+(locked?'未解放':value?escapeText(itemName(value)):'空き')+'" '+(usable?'':'disabled')+'>'
+    return '<button type="button" class="loadout-tile '+(locked?'locked':value?'equipped':'empty')+'" data-open-item="'+index+'" aria-label="携行品 '+(index+1)+'枠目 '+(locked?'未解放':value?escapeText(itemName(value))+'・'+escapeText(itemEffectText(value)):'空き')+'" '+(usable?'':'disabled')+'>'
      +'<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span>'
      +'<span class="tile-item-icon" aria-hidden="true">'+(locked?'♙':value?itemSymbol(value):'＋')+'</span>'
      +'<span class="tile-title">'+(locked?'未解放':value?escapeText(itemName(value)):'空き')+'</span>'
+     +(value?'<span class="tile-item-effect item-effect-icons" aria-hidden="true">'+itemEffectIcons(value)+(value.bonus?' ✦':'')+'</span>':'')
      +'</button>';
    }).join('')+'</div>';
 }

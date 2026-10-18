@@ -408,6 +408,8 @@ try{
  }
  assert.match($('gearCounter').textContent,/3 \/ 3/);
  assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,3);
+ assert.equal(($('gearCards').innerHTML.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,3,'equipped items show a compact numerical or icon-only effect in preparation');
+ assert.doesNotMatch($('gearCards').innerHTML,/>効果 [0-9]+</,'preparation does not display lengthy effect phrases');
  assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile locked"/g)||[]).length,0,'locked item slots are never rendered');
  assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,3,'only the three level-unlocked slots are visible');
  await doc.click(btn({openItem:'0'}));
