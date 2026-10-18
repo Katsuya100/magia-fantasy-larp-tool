@@ -69,7 +69,9 @@ const script=await readFile(new URL('../assets/js/dungeon-tutorial.mjs',import.m
 assert.match(html,/id="tutorialFigure" class="tutorial-animation" hidden/);
 assert.match(html,/id="tutorialAnimation" alt="" width="320" height="320"/);
 assert.match(html,/id="tutorialReplay"/);
-assert.match(html,/data-release="20261018\.42"/);
+const release=html.match(/data-release="(\d{8}\.\d+)"/)?.[1];
+assert.ok(release,'tutorial HTML contains a release version');
+assert.ok(html.includes('dungeon-app.mjs?v='+release),'tutorial HTML loads the current app');
 assert.match(script,/gif\.src='assets\/images\/'/);
 assert.doesNotMatch(html,/id="tutorialCanvas"|id="tutorialPad"/);
 assert.doesNotMatch(script,/pointerdown|pointermove|setPointerCapture/);
