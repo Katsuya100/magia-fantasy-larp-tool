@@ -51,6 +51,11 @@ const openLetter = {
   Y: '<path d="M160 137 L256 248 L348 137 M256 248 L256 379"/>',
   Z: '<path d="M154 151 L361 151 L151 364 L360 364"/>',
 };
+const openRing = (radius, gapDegrees) => {
+  const start = -90 + gapDegrees / 2, end = 270 - gapDegrees / 2;
+  return '<path d="M' + point(start, radius) + ' A' + radius + ' ' + radius +
+    ' 0 1 1 ' + point(end, radius) + '"/>';
+};
 const radialGap = Array.from({length: 9}, (_, index) => {
   const angle = index * 40 - 90;
   return '<path d="M' + point(angle, 45) + ' L' + point(angle, 165) + '"/>';
@@ -65,6 +70,12 @@ const fixtures = [
     name: 'debuff: unclosed straight-letter ' + letter, role: 'debuff', shape,
   })),
   {name: 'debuff: nine separated radial strokes', role: 'debuff', shape: radialGap},
+  {name: 'debuff: nine rays with a partial scan-rim circle', role: 'debuff',
+    shape: radialGap + openRing(191, 25)},
+  {name: 'debuff: nine rays with a narrow-gap scan-rim arc', role: 'debuff',
+    shape: radialGap + openRing(191, 14)},
+  {name: 'support: smooth interrupted circle without spokes', role: 'support',
+    shape: openRing(150, 10)},
   {name: 'debuff: thin unclosed X', role: 'debuff', shape: openLetter.X, stroke: 3},
   {name: 'support: an open X inside a complete circle stays support',
     role: 'support', shape: '<circle cx="256" cy="256" r="150"/>' + openLetter.X},
