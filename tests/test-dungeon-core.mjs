@@ -16,12 +16,35 @@ assert.deepEqual(G.startingBase(()=>0),{hp:90,mag:8,def:5,res:5});
 assert.deepEqual(G.startingBase(()=>.99999),{hp:110,mag:12,def:10,res:10});
 const base={hp:100,mag:10,def:7,res:7};
 assert.deepEqual(G.stats(base,1),base);assert.ok(G.stats(base,20).hp>G.stats(base,10).hp);
-assert.equal(G.dropCount(1,()=>0),7);assert.equal(G.dropCount(99,()=>.9999),1);
-const rewards=G.drops(items,collections,1,()=>0);assert.equal(rewards.length,7);
+assert.equal(G.dropCount(1,()=>0),5);assert.equal(G.dropCount(99,()=>.9999),0);
+assert.equal(G.drops(items,collections,1,()=>.9999).length,0,'ordinary foes can leave no treasure');
+const rewards=G.drops(items,collections,1,()=>0);assert.equal(rewards.length,5);
 assert.equal(rewards[0].type,'use');assert.equal(rewards[0].value,G.rollPotionValue(items[0],1,()=>0));
 let rolls=0;
-const stoneRewards=G.drops(items,collections,1,()=>++rolls<=6?1:rolls===7?0.99:0.01);
+const stoneRewards=G.drops(items,collections,1,()=>{rolls++;return rolls<=5?(rolls===1?0:1):rolls===6?.99:.01;});
 assert.deepEqual(stoneRewards,[{type:'stone',id:'magic_stone'}],'non-consumable loot can produce a magic stone');
+assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'boss_l010',guaranteeBossCollection:true}),
+ [{type:'collection',id:'relic_boss_010'}],'first defeat always awards its legendary boss trophy despite zero ordinary drops');
+assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'boss_l010'}),[],
+ 'repeated bosses have no guaranteed trophy');
+const rng=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+const random=rng(20261018);let total=0,typical=0,lucky=0,zeroFights=0,fiveFights=0;
+for(let simulation=0;simulation<25000;simulation++){
+ let layerDrops=0;
+ for(let fight=0;fight<5;fight++){
+  const count=G.dropCount(1,random);
+  if(count===0)zeroFights++;
+  if(count===5)fiveFights++;
+  layerDrops+=fight===4?Math.max(1,count):count;
+ }
+ total+=layerDrops;
+ if(layerDrops>=3&&layerDrops<=5)typical++;
+ if(layerDrops>=8)lucky++;
+}
+assert.ok(total/25000>=3&&total/25000<=5,'five encounters average around three to five rewards including a first-clear trophy');
+assert.ok(typical/25000>.5,'a layer most commonly grants three to five rewards');
+assert.ok(lucky>0,'a lucky layer can yield eight or more rewards');
+assert.ok(zeroFights>0&&fiveFights>0,'both empty drops and rare five-drop enemies occur');
 assert.equal(G.basePower(300),35);assert.ok(G.mpCost(300)>0);
 const sp={role:'attack',attribute:'flame',power:300};
 const a=G.makeUnit(base,1,{},[sp], 'a'),b=G.makeUnit(base,1,{},[sp], 'b');

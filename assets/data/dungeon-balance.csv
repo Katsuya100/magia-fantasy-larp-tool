@@ -21,11 +21,11 @@ burn_hp_rate,0.045,火傷ダメージの最大HP割合
 dizzy_max_rate,0.65,目眩の命中率減少上限
 shock_cooldown_extra,1,感電によるクールダウン延長
 spell_cooldown,2,魔法陣クールダウン初期値
-loot_count_min,1,最低ドロップ数
-loot_count_max,7,最大ドロップ数
-loot_chance_base,0.18,ドロップ個数抽選の基礎確率
-loot_chance_per_level,0.012,レベルあたりの増分
-loot_chance_cap,0.82,ドロップ個数確率上限
+loot_count_min,0,最低ドロップ数（0個もあり）
+loot_count_max,5,最大ドロップ数（まれに5個）
+loot_chance_base,0.16,1体のドロップ個数を決める基礎確率
+loot_chance_per_level,0,階層進行によるドロップ数の増分なし
+loot_chance_cap,0.16,ドロップ個数確率上限
 consumable_drop_rate,0.62,消耗品抽選割合
 magic_stone_drop_rate,0.20,消耗品以外の報酬から魔導石が出る確率
 xp_base,35,撃破経験値固定値
