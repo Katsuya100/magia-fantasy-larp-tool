@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.26">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.27">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,12 +19,12 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.26" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.27" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261018.26" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261018.27" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -85,7 +85,7 @@
         <p>この端末に保存されている冒険のデータを管理します。</p>
         <button type="button" id="deleteSaveData" class="danger" data-action="delete-data">冒険データをすべて削除</button>
       </div>
-      <div class="profile-support"><a href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer">作者を応援 ↗</a></div>
+      <div class="profile-support"><a href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer">作者を応援 ↗</a><button type="button" id="openAdventurerShare">冒険者カードをシェア ↗</button></div>
     </section>
 
     <section id="library" class="panel grimoire-panel" hidden>
@@ -101,7 +101,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.26" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.27" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -260,10 +260,17 @@
       <div class="support-prompt-inner">
         <h2 id="supportPromptTitle"></h2>
         <p id="supportPromptMessage"></p>
-        <p>応援は任意です。</p>
+        <p id="supportOptionalNote">応援は任意です。</p>
+        <canvas id="adventurerShareCanvas" width="1200" height="675" role="img" aria-label="冒険者等級・レベル・最深帰還のカード"></canvas>
+        <p id="supportShareHelp" class="support-share-help">Xの投稿には本文が入ります。画像は保存して添付できます。</p>
         <div class="support-prompt-actions">
+          <a id="supportDonateLink" href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer">作者を応援 ↗</a>
+          <a id="supportXLink" href="#" target="_blank" rel="noopener noreferrer">Xでシェア ↗</a>
+        </div>
+        <div class="support-card-tools">
+          <button type="button" id="supportNativeShare" hidden>画像を共有</button>
+          <button type="button" id="supportSaveImage">画像を保存</button>
           <button type="button" id="supportPromptClose" class="subtle">閉じる</button>
-          <a href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer">作者を応援 ↗</a>
         </div>
       </div>
     </dialog>
@@ -281,7 +288,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.26</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.27</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -289,7 +296,7 @@
       <h2 id="tutorialTitle">魔法陣の作り方</h2>
       <p id="tutorialHint">サンプルを見て、順番に描いてみよう。</p>
       <div id="tutorialExample" class="tutorial-example">
-        <img src="assets/images/sample.png?v=20261018.26" alt="外円と内円、その間に英語の呪文、内円の中に紋様を描いたお手本">
+        <img src="assets/images/sample.png?v=20261018.27" alt="外円と内円、その間に英語の呪文、内円の中に紋様を描いたお手本">
         <ol><li>外円と内円を閉じる</li><li>円の間に英語の呪文</li><li>中心に紋様を描く</li><li>1つずつ明るい場所で撮影</li></ol>
       </div>
       <div id="tutorialPad" class="tutorial-pad" data-step="1" hidden>
@@ -309,6 +316,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.26"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.27"></script>
 </body>
 </html>
