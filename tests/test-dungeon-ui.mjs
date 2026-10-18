@@ -408,6 +408,8 @@ try{
  }
  assert.match($('gearCounter').textContent,/3 \/ 3/);
  assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,3);
+ assert.equal(($('gearCards').innerHTML.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,3,'equipped items show a compact numerical or icon-only effect in preparation');
+ assert.doesNotMatch($('gearCards').innerHTML,/>効果 [0-9]+</,'preparation does not display lengthy effect phrases');
  assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile locked"/g)||[]).length,0,'locked item slots are never rendered');
  assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,3,'only the three level-unlocked slots are visible');
  await doc.click(btn({openItem:'0'}));
@@ -423,6 +425,8 @@ try{
  assert.equal(p.attempts,2);assert.equal(p.run.carry.filter(Boolean).length,3);
  assert.equal($('tab-dungeon').hidden,false,'second adventure switches to dungeon tab');
  const before=p.run.hero.hp;
+ assert.ok(p.run.carry[0].bonus,'this run has a valid bonus effect on the HP potion');
+ assert.doesNotMatch($('battleItems').innerHTML,/class="loadout-tile battle-tile battle-item-tile equipped no-effect" data-use="0"/,'bonus effects keep a potion useful at full HP');
  await doc.click(btn({use:'0'}));
  p=await getProfile(db);
  assert.equal(p.run.hero.hp,before,'free potion does not cost a battle turn');

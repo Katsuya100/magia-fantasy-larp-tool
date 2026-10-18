@@ -93,6 +93,22 @@ export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debu
 export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=mpCost(s.power)&&!u.cooldowns[i]&&!u.statuses.some(x=>x.effect==='seal'&&x.sealedRole===s.role));}
 export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
 export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=mpCost(sp.power);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
+// Whether a carried item currently has a usable primary effect (or bonus).
+// Escape scrolls are always usable; revival can only be armed once per fight.
+export function canUseBattleItem(hero,item,items,buffs=[]){
+ if(!hero||!item)return false;
+ const row=items.find(x=>x.id===item.id);
+ if(!row)return false;
+ if(row.kind==='escape')return true;
+ if(row.kind==='revive')return hero.hp>0&&!hero.reviveArmed&&!hero.reviveUsed;
+ const hasBonus=Boolean(item.bonus&&buffs.some(b=>b.id===item.bonus));
+ const strength=Number(item.value)>0;
+ if(row.kind==='heal')return (strength&&hero.hp<hero.stats.hp)||hasBonus;
+ if(row.kind==='mana')return (strength&&hero.mp<hero.maxMp)||hasBonus;
+ if(row.kind==='elixir')return (strength&&(hero.hp<hero.stats.hp||hero.mp<hero.maxMp))||hasBonus;
+ if(row.kind==='clear')return hero.statuses.some(s=>s.kind==='debuff'&&s.attribute===row.attribute)||hasBonus;
+ return false;
+}
 export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.id);if(!row)throw Error('Unknown potion');let amount=0;if(row.kind==='heal'){amount=Math.min(u.stats.hp-u.hp,item.value);u.hp+=amount;}else if(row.kind==='mana'){amount=Math.min(u.maxMp-u.mp,item.value);u.mp+=amount;}else if(row.kind==='elixir'){
  const rate=clamp(Number(item.value||0)/100,0,1);
  const hp=Math.max(0,Math.min(u.stats.hp-u.hp,Math.ceil(u.stats.hp*rate)));

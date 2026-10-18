@@ -69,8 +69,18 @@ const afterReturn=itemGrid(prepareItems([0,1,2],3,3),inventory,3,true,itemName,e
 assert.equal((afterReturn.match(/data-open-item=/g)||[]).length,3,'only current level capacity visible after return');
 assert.equal((afterReturn.match(/class="loadout-tile locked"/g)||[]).length,0);
 assert.equal((afterReturn.match(/class="loadout-tile equipped"/g)||[]).length,3);
+assert.equal((afterReturn.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,3,'every prepared item displays its effect');
+assert.match(afterReturn,/<span class="tile-item-effect item-effect-icons" aria-hidden="true">❤️\+24<\/span>/,'HP restoration value is visible inside a prepared tile');
+assert.match(afterReturn,/<span class="tile-item-effect item-effect-icons" aria-hidden="true">💠\+12<\/span>/,'MP restoration value is visible inside a prepared tile');
+assert.match(afterReturn,/<span class="tile-item-effect item-effect-icons" aria-hidden="true">🧼🔥<\/span>/,'cleansing effect uses a compact icon');
+assert.match(afterReturn,/aria-label="携行品 1枠目 heal_s・効果 24"/,'screen readers also receive the numerical effect');
 const maxItemGrid=itemGrid(prepareItems([],3,15),inventory,15,true,itemName,esc);
 assert.equal((maxItemGrid.match(/data-open-item=/g)||[]).length,15,'later item slots become additional rows');
+assert.doesNotMatch(maxItemGrid,/tile-item-effect/,'empty slots never show phantom effect values');
+const specialItems=[{id:'elixir_s',value:35},{id:'life_ruby',value:0},{id:'escape_scroll',value:0}];
+const specialGrid=itemGrid([0,1,2],specialItems,3,true,itemName,esc);
+for(const icons of ['❤️💠35%','🪽50%','↩️'])assert.ok(specialGrid.includes(icons),'special prepared item keeps compact effect '+icons);
+assert.doesNotMatch(specialGrid,/>HP\/MP各35%回復</,'the preparation tiles do not show long descriptions');
 assert.equal((circleChoices(circles,['a'],makeImg,esc).match(/data-choose-circle=/g)||[]).length,5);
 assert.doesNotMatch(circleChoices(circles,['a'],makeImg,esc),/魔法陣\s*0[1-9]|魔法陣0/,'picker shows no circle names');
 assert.equal((itemChoices(inventory,[0],itemName,esc).match(/data-choose-item=/g)||[]).length,3);

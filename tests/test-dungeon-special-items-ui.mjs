@@ -85,6 +85,7 @@ try{
   await import('../assets/js/dungeon-app.mjs?integration=special-elixir-battle');
   await wait(()=>$2('battleItems').innerHTML.includes('エリクシール小'),'elixir battle ready');
   assert.match($2('battleItems').innerHTML,/❤️💠35%/,'elixir displays icon and percent rather than a sentence');
+  assert.doesNotMatch($2('battleItems').innerHTML,/equipped no-effect" data-use="0"/,'elixir remains enabled when HP and MP are low');
   assert.doesNotMatch($2('battleItems').innerHTML,/>HP\/MP各35%回復</,'long effect text is not visible');
   await doc2.click(btn({use:'0'}));
   const after=await getProfile(db2);
@@ -114,6 +115,7 @@ try{
   assert.equal(after.run.carry[0],null);
   assert.match($3('battleInfo').textContent,/復活待機中/);
    assert.equal($3('heroName').textContent,'生命の紅石確認 🪽','armed life ruby adds a wing next to the adventurer name');
+   assert.match($3('battleItems').innerHTML,/class="loadout-tile battle-tile battle-item-tile equipped no-effect" data-use="1" disabled/,'second ruby becomes gray when revival is already armed');
    assert.equal($3('heroName').attributes['aria-label'],'生命の紅石確認・生命の紅石：復活待機中');
   await doc3.click(btn({cast:'-1'}));
   after=await getProfile(db3);
@@ -133,5 +135,42 @@ try{
   assert.equal($3('result').hidden,false);
   assert.equal(after.inventory.filter(item=>item.id==='life_ruby').length,1,'unused second ruby returns to inventory');
  }finally{env3.restore();}
- console.log('PASS special consumable UI, all session filters, ascending value, simultaneous HP/MP healing and one-shot fatal revival');
+ // 4. Ineffective items gray out and cannot be wasted, but active effects stay selectable.
+ const f4=fakeIndexedDB(),{db:db4,profile:p4}=await ready(f4,'無効アイテムの確認');
+ const fullHero=G.makeUnit(p4.base,1,{},[attack,attack,attack,null,null],'player');
+ const fullEnemy=G.fromEnemy(enemies.find(x=>x.id==='foe_l001_1'),1);
+ p4.run={floor:1,slotIds:p4.slots,hero:fullHero,enemy:fullEnemy,enemyName:fullEnemy.id,
+  carry:[
+   {type:'use',id:'heal_s',value:25,bonus:null},
+   {type:'use',id:'mana_s',value:20,bonus:null},
+   {type:'use',id:'elixir_s',value:35,bonus:null},
+   {type:'use',id:'clear_flame',value:0,bonus:null},
+   {type:'use',id:'escape_scroll',value:0,bonus:null}
+  ],loot:[],xp:0,usedItems:0,log:[],stage:'battle'};
+ await saveProfile(db4,p4);
+ const env4=fakeDungeonBrowser({factory:f4}),doc4=env4.document,$4=id=>doc4.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=ineffective-battle-items');
+  await wait(()=>$4('battleItems').innerHTML.includes('脱出の巻物'),'full-resource item battle ready');
+  for(let i=0;i<4;i++)assert.match($4('battleItems').innerHTML,
+   new RegExp('class="loadout-tile battle-tile battle-item-tile equipped no-effect" data-use="'+i+'" disabled'),
+   'no-effect item in slot '+i+' is grayed out and disabled');
+  assert.match($4('battleItems').innerHTML,/class="loadout-tile battle-tile battle-item-tile equipped" data-use="4"[^>]*>/,'escape scroll remains usable at full resources');
+  await doc4.click(btn({use:'0'}));
+  const saved=await getProfile(db4);
+  assert.equal(saved.run.carry.filter(Boolean).length,5,'disabled HP potion cannot be wasted');
+  assert.equal(saved.run.usedItems,0,'no-effect click does not consume item allowance');
+ }finally{env4.restore();}
+ const active=await getProfile(db4);
+ active.run.hero.hp-=15;
+ active.run.hero.mp-=15;
+ active.run.hero.statuses=[{id:'debuff_flame',kind:'debuff',attribute:'flame',effect:'burn',value:.1,turns:2}];
+ await saveProfile(db4,active);
+ const env5=fakeDungeonBrowser({factory:f4}),$5=id=>env5.document.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=effective-battle-items');
+  await wait(()=>$5('battleItems').innerHTML.includes('脱出の巻物'),'damaged item battle ready');
+  assert.doesNotMatch($5('battleItems').innerHTML,/equipped no-effect/,'HP, MP, elixir and cleanser become usable once needed');
+ }finally{env5.restore();}
+ console.log('PASS special consumable UI, filters, elixir, revival, and ineffective item graying and blocking');
 }finally{Math.random=originalRandom;}

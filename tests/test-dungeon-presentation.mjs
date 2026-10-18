@@ -140,7 +140,8 @@ assert.match(css,/\.return-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,
 assert.match(css,/\.return-grid\{[^}]*max-height:min\(40dvh,320px\)/,'return list scrolls internally to keep the action in view');
 assert.match(css,/@media\(max-width:630px\)\{\.return-panel[^}]+\}\.return-glyph[^}]+\}\.return-panel h2[^}]+\}\.return-grid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/,'mobile maintains three columns');
 assert.match(css,/\.return-treasure \.return-new,\.return-reward \.return-new\{/,'first-acquisition badges have a distinct style');
-assert.match(page,/v2026\.10\.18\.12/,'visible version confirms the refreshed public release');
+assert.match(page,/v2026\.10\.18\.13/,'visible version confirms the refreshed public release');
+assert.match(css,/#gearCards \.tile-item-effect\{[^}]*position:absolute;bottom:4px/,'prepared items keep effects visible at the bottom of a square slot');
 assert.match(page,/<select id="collectionSort"><option value="common">レア度が低い順<\/option>/,'ascending rarity is the first and default collection option');
 assert.doesNotMatch(page,/<option value="default">レアリティ順<\/option>/,'redundant rarity-order option is removed');
 assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is concise');
@@ -155,6 +156,7 @@ for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
 assert.match(picker,/from '\.\/dungeon-loadout\.mjs'/);
+assert.match(picker,/itemEffectIcons\(value\)/,'preparation item tiles share battle/reward effect formatting');
 assert.doesNotMatch(picker,/picker-equipped|✓ 選択中/,'circle picker no longer renders a selected badge');
 assert.match(picker,/aria-pressed="'\+selected/,'selected circles remain accessible');
 assert.match(css,/\.picker-option\.picker-current\{/,'the focused slot keeps its stronger glowing frame');
