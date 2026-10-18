@@ -3,6 +3,12 @@ import {selectCardCircle,circleOutlinePixels,ATTRIBUTE_GLOW} from '../assets/js/
 import {openStore,getProfile,saveProfile,putCircle} from '../assets/js/dungeon-store.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
+import {readFile} from 'node:fs/promises';
+import * as G from '../assets/js/dungeon-core.mjs';
+import {configure} from '../assets/js/dungeon-tuning.mjs';
+const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
+const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','floors','player-base'].map(csv));
+configure({balance,levels,floors,playerBase});
 
 const a={id:'a',image:new Blob(['a']),registeredAt:1,analysis:{attribute:'flame',role:'attack',power:100},revealed:false};
 const b={id:'b',image:new Blob(['b']),registeredAt:2,analysis:{attribute:'aqua',role:'attack',power:200},revealed:false};
