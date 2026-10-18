@@ -325,26 +325,39 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  overflow-wrap:anywhere;word-break:normal;overflow:visible;
  font-size:clamp(11px,2.5vw,14px);line-height:1.35
 }
-#gearCards .tile-item-icon{font-size:clamp(29px,4.5vw,48px)}
-/* A compact, always-visible effect indicator inside each prepared item tile. */
-#gearCards .loadout-tile.equipped{padding-bottom:22px!important;gap:3px}
-#gearCards .loadout-tile.equipped .tile-item-icon{font-size:clamp(24px,4vw,38px)}
-#gearCards .tile-item-effect{position:absolute;bottom:4px;left:1px;right:1px;display:block;line-height:1.2;font-size:clamp(11px,2.4vw,15px);font-weight:700;letter-spacing:-.03em;color:var(--gold);white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}
-.battle-items .tile-item-icon,.battle-items .tile-empty-icon{min-height:42px}
-.battle-items .battle-tile{min-height:150px}
+/* One square-card layout for preparation and combat: icon, name, then effect.
+   Effects belong to the same centered content group, never the lower edge. */
+#gearCards .loadout-tile,#battleItems .battle-item-tile{
+ box-sizing:border-box;width:100%;height:auto;min-height:0;aspect-ratio:1 / 1;contain:size;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+ padding:15px 4px 7px!important
+}
+#gearCards .tile-item-icon,#battleItems .tile-item-icon,
+#gearCards .tile-empty-icon,#battleItems .tile-empty-icon{
+ display:grid;place-items:center;flex:0 0 auto;width:auto;min-height:0;
+ font-size:clamp(25px,4vw,38px);line-height:1.12
+}
+#gearCards .tile-title,#battleItems .tile-title{
+ display:block;flex:0 0 auto;width:100%;max-width:100%;text-align:center;
+ font-size:clamp(11px,2.5vw,14px);line-height:1.2;white-space:normal;
+ overflow-wrap:anywhere;overflow:hidden;text-overflow:clip
+}
+#gearCards .tile-item-effect,#battleItems .tile-item-effect{
+ position:static;display:block;flex:0 0 auto;max-width:100%;margin-top:2px;
+ font-size:clamp(11px,2.3vw,15px);line-height:1.2;font-weight:700;
+ color:var(--gold);letter-spacing:-.03em;white-space:nowrap;text-align:center;
+ font-variant-numeric:tabular-nums
+}
 #checkpointInfo,#resultText{
  white-space:pre-line;line-height:1.9;overflow-wrap:anywhere;
  max-width:52ch;margin-inline:auto
 }
 @media(max-width:630px){
  #gearCards .loadout-grid,.battle-items{gap:7px}
- #gearCards .loadout-tile{padding:14px 4px 5px!important}
- #gearCards .tile-item-icon{font-size:clamp(28px,7vw,40px)}
- #gearCards .tile-title,.battle-items .tile-title{font-size:clamp(11px,2.9vw,13px);line-height:1.3}
- #gearCards .loadout-tile.equipped{padding:12px 3px 19px!important;gap:2px}
- #gearCards .loadout-tile.equipped .tile-item-icon{font-size:clamp(22px,6vw,29px)}
- #gearCards .tile-item-effect{bottom:3px;font-size:clamp(11px,2.8vw,13px)}
- .battle-items .battle-tile{min-height:134px;padding:19px 6px 8px!important}
+ #gearCards .loadout-tile,#battleItems .battle-item-tile{padding:12px 3px 6px!important;gap:2px}
+ #gearCards .tile-item-icon,#battleItems .tile-item-icon{font-size:clamp(24px,6.4vw,29px)}
+ #gearCards .tile-title,#battleItems .tile-title{font-size:clamp(10px,2.85vw,13px)}
+ #gearCards .tile-item-effect,#battleItems .tile-item-effect{font-size:clamp(11px,2.7vw,13px);margin-top:1px}
 }
 
 /* Permanent capture framing guide only: 86% diameter, with 7% breathing room.

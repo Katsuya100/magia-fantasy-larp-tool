@@ -269,7 +269,7 @@ try{
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
  assert.doesNotMatch($('battleSpells').innerHTML,/魔法陣\s*0[1-9]/,'battle also has no generated circle name');
  assert.equal(($('battleSpells').innerHTML.match(/<img alt="" src="blob:/g)||[]).length,5,'all five spells have photo thumbnails');
- assert.equal(($('battleItems').innerHTML.match(/class="loadout-tile battle-tile battle-item-tile empty"/g)||[]).length,5,'five empty battle item slots');
+ assert.equal(($('battleItems').innerHTML.match(/class="loadout-tile battle-tile battle-item-tile empty"/g)||[]).length,3,'the initial battle shows the same three unlocked item slots as preparation');
  assert.match($('battleBasic').innerHTML,/data-cast="-1"/,'basic attack remains available');
  await doc.click(btn({view:'collection'}));
  assert.equal($('battle').hidden,true,'collection is another top-level tab');
@@ -409,6 +409,7 @@ try{
  assert.match($('gearCounter').textContent,/3 \/ 3/);
  assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,3);
  assert.equal(($('gearCards').innerHTML.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,3,'equipped items show a compact numerical or icon-only effect in preparation');
+assert.doesNotMatch($('gearCards').innerHTML,/class="tile-detail item-effect-icons"/,'preparation uses the same effect class as combat');
  assert.doesNotMatch($('gearCards').innerHTML,/>効果 [0-9]+</,'preparation does not display lengthy effect phrases');
  assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile locked"/g)||[]).length,0,'locked item slots are never rendered');
  assert.equal(($('gearCards').innerHTML.match(/data-open-item="/g)||[]).length,3,'only the three level-unlocked slots are visible');
@@ -436,8 +437,9 @@ try{
  assert.equal(p.run.carry[1].instanceId,savedBeforeAttack.carrySlots[1],'other slots keep their identities');
  assert.equal(p.run.usedItems,1);
  assert.equal(($('battleItems').innerHTML.match(/data-use="/g)||[]).length,2,'item grid keeps usable tiles');
+assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,2,'combat uses the same centered stat class as preparation');
  assert.equal(($('battleItems').innerHTML.match(/data-open-item="/g)||[]).length,0,'battle items are not preparation slots');
- assert.equal(($('battleItems').innerHTML.match(/battle-item-tile empty/g)||[]).length,3,'remaining item slots stay visible');
+ assert.equal(($('battleItems').innerHTML.match(/battle-item-tile empty/g)||[]).length,1,'the unused position stays visible in a three-slot grid');
  await doc.click(btn({use:'0'}));
  p=await getProfile(db);
  assert.equal(p.run.carry.filter(Boolean).length,2,'one free item per round');
