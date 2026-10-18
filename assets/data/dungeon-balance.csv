@@ -38,7 +38,7 @@ enemy_attack_preference,0.65,敵が攻撃優先する確率
 mag_reference,10,MAG係数基準値
 base_resistance,1,プレイヤーの基礎属性被ダメージ倍率
 status_tick_min_damage,1,火傷の継続最小ダメージ
-resistance_buff_duration,2,属性耐性強化の持続ラウンド
+resistance_buff_duration,4,属性耐性強化の持続ラウンド
 debuff_min_duration,1,弱体の最短持続ラウンド
 debuff_max_duration,4,弱体の最長持続ラウンド
 enemy_hp_scale_early,0.84,序盤の敵最大HP倍率

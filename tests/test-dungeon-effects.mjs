@@ -27,6 +27,31 @@ for(const a of G.ATTRS){
  assert.ok(G.resist(src,a)<1,'attribute resistance '+a);
  assert.ok(src.statuses.some(s=>s.kind==='buff'&&s.id!=='resist_'+a),'element buff '+a);
 }
+
+ // Defense resolves before the attack phase. It protects the casting round
+ // and the next three rounds, then expires before the fifth attack.
+ assert.equal(num('resistance_buff_duration'),4);
+ for(const row of buffs.filter(x=>x.id.startsWith('buff_')))assert.equal(Number(row.duration),4,'defense buff lasts four rounds '+row.id);
+ for(const attr of G.ATTRS){
+  const attack=spell('attack',attr);
+  const fighterBase={hp:1000,mag:12,def:10,res:10};
+  const defender=G.makeUnit(fighterBase,1,{},[spell('defense',attr)]);
+  const attacker=G.makeUnit(fighterBase,1,{},[attack,attack]);
+  const normalDamage=G.damage(attacker,defender,attack,()=>.99);
+  const damageTaken=[],resistTurns=[],bonusTurns=[];
+  for(let turn=0;turn<5;turn++){
+   const before=defender.hp;
+   G.round(defender,attacker,turn===0?0:-1,turn%2,buffs,()=>.99);
+   damageTaken.push(before-defender.hp);
+   resistTurns.push(G.status(defender,'resist_'+attr)?.turns??0);
+   bonusTurns.push(defender.statuses.find(x=>x.id.startsWith('buff_'))?.turns??0);
+  }
+  assert.deepEqual(resistTurns,[3,2,1,0,0],'resistance expires after four attack phases: '+attr);
+  assert.deepEqual(bonusTurns,[3,2,1,0,0],'secondary buff tracks resistance: '+attr);
+  assert.ok(damageTaken.slice(0,4).every(d=>d<normalDamage),'four protected hits: '+attr+' '+damageTaken);
+  assert.equal(damageTaken[4],normalDamage,'fifth hit is unprotected: '+attr);
+ }
+
 for(const attr of G.ATTRS){
  const u=unit();
  G.addStatus(u,{id:'debuff_'+attr,kind:'debuff',attribute:attr,effect:'burn',value:.5,turns:2});
