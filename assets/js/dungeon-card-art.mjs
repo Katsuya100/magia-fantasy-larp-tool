@@ -40,9 +40,10 @@ export function paintCircleArt(ctx,artwork){
   result.data.set(pixels);
   sctx.clearRect(0,0,size,size);
   sctx.putImageData(result,0,0);
-  const cx=917,cy=335,diameter=366;
+  // Roughly 15% larger, shifted up to stay clear of the footer and labels.
+  const cx=917,cy=330,diameter=420;
   ctx.save();
-  ctx.beginPath();ctx.arc(cx,cy,183,0,Math.PI*2);ctx.clip();
+  ctx.beginPath();ctx.arc(cx,cy,205,0,Math.PI*2);ctx.clip();
   ctx.globalCompositeOperation='lighter';
   ctx.filter='blur(19px)';ctx.globalAlpha=.85;
   ctx.drawImage(source,cx-diameter/2,cy-diameter/2,diameter,diameter);
