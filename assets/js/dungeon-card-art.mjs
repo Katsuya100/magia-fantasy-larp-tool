@@ -55,7 +55,7 @@ export function circleOutlinePixels({width,height,data},attribute){
  }
  return out;
 }
-// Gaussian-softened glow only: avoid reintroducing jagged Sobel pixels with a hard core.
+// Tighter Gaussian glow with a separately anti-aliased core; never draw raw Sobel edges.
 export function paintCircleArt(ctx,artwork){
  if(!artwork?.image||typeof document==='undefined')return false;
  try{
@@ -69,27 +69,38 @@ export function paintCircleArt(ctx,artwork){
   result.data.set(pixels);
   sctx.clearRect(0,0,size,size);
   sctx.putImageData(result,0,0);
-  // Blur a separate mask *before* the additive passes, so no raw jagged
-  // Sobel pixels are ever composited directly onto the adventurer card.
+  // Build distinct glow and core masks. The latter softens staircase
+  // pixels without washing out the writing inside the original magic circle.
   const glowBase=document.createElement('canvas');
   glowBase.width=size;glowBase.height=size;
   const gctx=glowBase.getContext('2d');
   if(!gctx)return false;
-  gctx.filter='blur(3px)';
+  gctx.filter='blur(2px)';
   gctx.drawImage(source,0,0);
   gctx.filter='none';
+  const coreBase=document.createElement('canvas');
+  coreBase.width=size;coreBase.height=size;
+  const cctx=coreBase.getContext('2d');
+  if(!cctx)return false;
+  cctx.filter='blur(0.8px)';
+  cctx.drawImage(source,0,0);
+  cctx.filter='none';
   // Let the outline visually reach the decorative rim without covering the card text.
   const cx=920,cy=328,diameter=468;
   ctx.save();
   ctx.beginPath();ctx.arc(cx,cy,229,0,Math.PI*2);ctx.clip();
   ctx.globalCompositeOperation='lighter';
-  ctx.filter='blur(22px)';ctx.globalAlpha=.72;
+  ctx.imageSmoothingEnabled=true;
+  if('imageSmoothingQuality' in ctx)ctx.imageSmoothingQuality='high';
+  ctx.filter='blur(16px)';ctx.globalAlpha=.56;
   ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='blur(9px)';ctx.globalAlpha=.82;
+  ctx.filter='blur(6px)';ctx.globalAlpha=.70;
   ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  // A brighter near glow replaces the previous unblurred sharp core.
-  ctx.filter='blur(2px)';ctx.globalAlpha=.98;
+  ctx.filter='blur(1.5px)';ctx.globalAlpha=.82;
   ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
+  // The core is pre-antialiased, not the jagged original Sobel bitmap.
+  ctx.filter='none';ctx.globalAlpha=.72;
+  ctx.drawImage(coreBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
   ctx.restore();
   return true;
  }catch(error){

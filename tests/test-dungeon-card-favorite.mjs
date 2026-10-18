@@ -75,29 +75,34 @@ try{
   return canvas;
  }};
  const ctx={
-  filter:'none',globalAlpha:1,globalCompositeOperation:'source-over',
+  filter:'none',globalAlpha:1,globalCompositeOperation:'source-over',imageSmoothingEnabled:false,imageSmoothingQuality:'low',
   save(){saveCalls.push('save');},restore(){saveCalls.push('restore');},
   beginPath(){},arc(...args){clipCircles.push(args);},clip(){},
-  drawImage(...args){drawCalls.push({args,filter:this.filter,alpha:this.globalAlpha,composite:this.globalCompositeOperation});}
+  drawImage(...args){drawCalls.push({args,filter:this.filter,alpha:this.globalAlpha,composite:this.globalCompositeOperation,smoothing:this.imageSmoothingEnabled,quality:this.imageSmoothingQuality});}
  };
  assert.equal(paintCircleArt(ctx,{image:{},attribute:'aqua'}),true);
 }finally{
  if(originalDocument===undefined)delete globalThis.document;
  else globalThis.document=originalDocument;
 }
-assert.equal(canvases.length,2,'separate original contour and preblurred glow canvases');
-assert.deepEqual([canvases[0].width,canvases[0].height,canvases[1].width,canvases[1].height],[256,256,256,256]);
-const preblur=offscreenDraws.find(call=>call.canvas===canvases[1]);
-assert.equal(preblur?.filter,'blur(3px)','glow mask is Gaussian-blurred before card painting');
-assert.equal(preblur?.args[0],canvases[0],'preblur is derived from original extracted outlines');
+assert.equal(canvases.length,3,'original contour, glow mask and anti-aliased core are separate canvases');
+assert.ok(canvases.every(canvas=>canvas.width===256&&canvas.height===256),'all masks retain 256px source size');
+const glowPreblur=offscreenDraws.find(call=>call.canvas===canvases[1]);
+assert.equal(glowPreblur?.filter,'blur(2px)','glow uses a lighter Gaussian preblur');
+assert.equal(glowPreblur?.args[0],canvases[0],'glow is derived from the original contour');
+const corePreblur=offscreenDraws.find(call=>call.canvas===canvases[2]);
+assert.equal(corePreblur?.filter,'blur(0.8px)','core is anti-aliased before being drawn');
+assert.equal(corePreblur?.args[0],canvases[0],'core uses the extracted contour as source');
 assert.deepEqual(clipCircles[0].slice(0,3),[920,328,229],'artwork slightly overlaps the decorative frame');
-assert.equal(drawCalls.length,3,'only three softened glow layers are painted');
-assert.deepEqual(drawCalls.map(call=>call.filter),['blur(22px)','blur(9px)','blur(2px)'],'each glow layer is blurred, never a crisp core');
-assert.ok(drawCalls.every(call=>call.args[0]===canvases[1]),'all card passes use Gaussian-preblurred mask, not raw pixel edges');
-assert.ok(drawCalls.every(call=>call.args[0]!==canvases[0]),'jagged original Sobel contour is never drawn directly');
-assert.ok(drawCalls.every(call=>call.args[3]===468&&call.args[4]===468),'all artwork layers use enlarged 468px diameter');
-assert.ok(drawCalls.every(call=>call.composite==='lighter'),'all glow layers retain additive blending');
-assert.ok(drawCalls[2].alpha>drawCalls[0].alpha,'near glow preserves legibility without a hard core');
+assert.equal(drawCalls.length,4,'three reduced glow layers plus one anti-aliased core');
+assert.deepEqual(drawCalls.map(call=>call.filter),['blur(16px)','blur(6px)','blur(1.5px)','none'],'soft glow layers precede the pre-smoothed core');
+assert.ok(drawCalls.slice(0,3).every(call=>call.args[0]===canvases[1]),'glow passes use glow mask');
+assert.equal(drawCalls[3].args[0],canvases[2],'final core uses the anti-aliased canvas');
+assert.ok(drawCalls.every(call=>call.args[0]!==canvases[0]),'no layer draws the raw jagged outline');
+assert.ok(drawCalls.every(call=>call.args[3]===468&&call.args[4]===468),'all artwork layers keep 468px diameter');
+assert.ok(drawCalls.every(call=>call.composite==='lighter'),'all layers retain additive blending');
+assert.ok(drawCalls.every(call=>call.smoothing&&call.quality==='high'),'scale-up uses high-quality antialiasing');
+assert.ok(drawCalls[3].alpha>.6&&drawCalls[3].alpha<.8,'core remains visible but not harsh');
 assert.deepEqual(saveCalls,['save','restore'],'glow compositing state restored');
 
 const factory=fakeIndexedDB(),db=await openStore(factory),profile=await getProfile(db);
