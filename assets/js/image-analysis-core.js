@@ -1102,6 +1102,21 @@
         lastSharpTip = index;
       }
     }
+    // Broad star tips are not always sharp enough for the interior-angle test.
+    // Count pronounced, separated radial lobes independently of point angles.
+    // A rounded circle/oval has no such repeating protrusions.
+    let radialLobes = 0;
+    let lastLobe = -samples;
+    for (let index = 0; index < samples; index += 1) {
+      if (index - lastLobe < 20) continue;
+      const at = offset => contour[(index + offset + samples) % samples];
+      const localMaximum = Math.max(...Array.from({length: 15}, (_, offset) => at(offset - 7)));
+      const shoulder = (at(-12) + at(12)) / 2;
+      if (contour[index] >= localMaximum - .002 && contour[index] - shoulder > .018) {
+        radialLobes++;
+        lastLobe = index;
+      }
+    }
     const angularity = clamp(turns / 24 + contourRoughness * 2);
     const lineDensity = clamp(dark * 6 + contourRoughness * 1.4);
     const missingRayRatio = radii.filter(value => value === 0).length / samples;
@@ -1116,23 +1131,25 @@
     // closed symbol must not overpower broad-corner shields or pointed attacks.
     // A shield has strong radial variation with broad bends; an oval does not.
     const closedContourWeight = closedness ** 4;
-    const shieldSilhouette = broadBendRuns > 0 && sharpTipCount <= 2
+    const repeatedLobes = radialVariation > .055 && broadAngleRatio < .14
+      ? Math.max(0, radialLobes - 3) : 0;
+    const shieldSilhouette = broadBendRuns > 0 && sharpTipCount <= 2 && repeatedLobes === 0
       ? Math.max(0, radialVariation - .05) * 8
       : 0;
     const raw = {
-      attack: Math.max(0, (Math.max(0, sharpTipCount - 2) * .85 + sharpAngleRatio * .65 + sharpCornerScore) * closedContourWeight),
+      attack: Math.max(0, (Math.max(0, sharpTipCount - 1) * .85 + sharpAngleRatio * .65 + sharpCornerScore + repeatedLobes * .55) * closedContourWeight),
       defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5
         + shieldSilhouette) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
       support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 2.4)
         / (1 + broadBendRuns * .3 * (1 - mean)) * closedContourWeight
         * Math.max(.35, 1 - sharpTipCount * .12),
-      debuff: missingRayRatio * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
+      debuff: missingRayRatio ** 2 * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
     };
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
     const scores = { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
     return {
       scores,
-      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
+      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, radialLobes, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
       // Angular contour changes are a proxy for wobble in the drawn lines.
       lineStraightness: clamp(1 - roughness * 6),
     };
