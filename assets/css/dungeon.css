@@ -1587,3 +1587,17 @@ html,body{overflow-x:clip}
 .support-prompt-inner h2{font-size:23px;color:var(--gold);margin:0 0 14px}
 .support-prompt-inner p{font-size:14px;color:var(--soft);margin:9px 0}
 .support-prompt-actions{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:25px}
+
+/* Share and donation use the same quiet link affordance, only in the profile. */
+.profile-support{display:flex;align-items:center;justify-content:center;gap:10px 25px;flex-wrap:wrap}
+.profile-support #openAdventurerShare{border:0!important;padding:0!important;background:none!important;box-shadow:none!important;color:var(--gold)!important;font-size:13px!important;font-weight:400!important;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
+.profile-support #openAdventurerShare:hover{color:var(--pale)!important}
+.profile-support #openAdventurerShare:focus-visible{outline:2px solid #9ae3db;outline-offset:4px}
+.support-prompt-dialog{width:min(580px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
+#adventurerShareCanvas{display:block;width:100%;height:auto;aspect-ratio:1200 / 675;border:1px solid #c5a06a70;margin:17px auto 7px}
+.support-share-help{font-size:11px!important;line-height:1.5;color:var(--soft)!important}
+.support-prompt-actions{gap:12px 27px}
+.support-card-tools{display:flex;gap:9px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:16px}
+.support-card-tools button{min-width:0;padding:8px 12px!important;font-size:12px!important}
+.support-card-tools #supportNativeShare,.support-card-tools #supportSaveImage{background:transparent!important;color:var(--gold)!important;border:1px solid var(--border)!important;box-shadow:none!important}
+@media(max-width:630px){.support-prompt-inner{padding:22px 13px}.support-prompt-inner h2{font-size:20px}.support-share-help{font-size:10px!important}}
