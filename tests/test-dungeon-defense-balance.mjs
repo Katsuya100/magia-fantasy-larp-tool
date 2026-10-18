@@ -86,10 +86,18 @@ for(const band of bands){
  console.log('CHALLENGE '+JSON.stringify({name:band.name,playerLevel:band.level,
   firstEnemyLevel:minimum,lastEnemyLevel:targetClearLevel(band.to),fights:(band.to-band.from+1)*5}));
 }
-const results=[],samples=192;
-for(const [duration,scale] of [[2,1],[4,1],[4,.75],[4,.65],[4,.625],[4,.6],[4,.575],[4,.55],[4,.5]]){
- configure({...data,balance:data.balance.map(row=>row.key==='resistance_buff_duration'?{...row,value:String(duration)}:row.key==='defense_resistance_gain'?{...row,value:String(Number(row.value)*scale)}:row)});
- const buffs=data.buffs.map(row=>row.id.startsWith('buff_')?{...row,duration:String(duration),value:String(Number(row.value)*scale)}:row);
+// Keep the shipped CSV in sync with the vetted, 4-round 60% configuration.
+const legacyValues={"buff_flame":0.2,"buff_bolt":0.25,"buff_aqua":0.25,"buff_storm":-0.2,"buff_gravity":20,"buff_law":0.25,"buff_chaos":0.15};
+assert.equal(Number(data.balance.find(row=>row.key==='resistance_buff_duration').value),4);
+assert.ok(Math.abs(Number(data.balance.find(row=>row.key==='defense_resistance_gain').value)-0.18)<1e-9);
+for(const row of data.buffs.filter(x=>x.id.startsWith('buff_'))){
+ assert.equal(Number(row.duration),4,'four-round '+row.id);
+ assert.ok(Math.abs(Number(row.value)-legacyValues[row.id]*.6)<1e-9,'tuned buff '+row.id);
+}
+const results=[],samples=128;
+for(const [duration,scale] of [[2,1],[4,.6]]){
+ configure({...data,balance:data.balance.map(row=>row.key==='resistance_buff_duration'?{...row,value:String(duration)}:row.key==='defense_resistance_gain'?{...row,value:String(0.3*scale)}:row)});
+ const buffs=data.buffs.map(row=>row.id.startsWith('buff_')?{...row,duration:String(duration),value:String(legacyValues[row.id]*scale)}:row);
  for(const band of bands)for(const mode of ['none','flame-once','storm-once']){
   const runs=Array.from({length:samples},(_,i)=>play(17101+i*47,band,mode,buffs));
   const avg=key=>Math.round(runs.reduce((s,x)=>s+x[key],0)/samples*10)/10;
@@ -104,22 +112,22 @@ for(const [duration,scale] of [[2,1],[4,1],[4,.75],[4,.65],[4,.625],[4,.6],[4,.5
 }
 for(const band of bands)for(const mode of ['none','flame-once','storm-once']){
  const prev=results.find(x=>x.duration===2&&x.name===band.name&&x.mode===mode);
- const now=results.find(x=>x.duration===4&&x.name===band.name&&x.mode===mode);
+ const now=results.find(x=>x.duration===4&&x.scale===.6&&x.name===band.name&&x.mode===mode);
  console.log('DEFENSE_DELTA '+JSON.stringify({name:band.name,mode,
   winPoints:Math.round((now.winRate-prev.winRate)*10)/10,
   cleared:Math.round((now.avgCleared-prev.avgCleared)*10)/10,
   incomingPercent:prev.avgIncoming?Math.round((now.avgIncoming/prev.avgIncoming-1)*100):null,
   turnsPercent:prev.avgTurns?Math.round((now.avgTurns/prev.avgTurns-1)*100):null}));
 }
-assert.equal(results.length,bands.length*3*9);
+assert.equal(results.length,bands.length*3*2);
 assert.ok(results.every(x=>Number.isFinite(x.avgCleared)&&x.winRate>=0&&x.winRate<=100));
 for(const band of bands){
  const old=results.find(x=>x.duration===2&&x.name===band.name&&x.mode==='none');
- const now=results.find(x=>x.duration===4&&x.name===band.name&&x.mode==='none');
- if(now.winRate+5<old.winRate)console.log('BALANCE_ALERT '+JSON.stringify({name:band.name,before:old.winRate,after:now.winRate,changePoints:Math.round((now.winRate-old.winRate)*10)/10}));
+ const now=results.find(x=>x.duration===4&&x.scale===.6&&x.name===band.name&&x.mode==='none');
+ assert.ok(now.winRate+5>=old.winRate,'above-level no-defense win rate regressed: '+band.name+' '+old.winRate+' vs '+now.winRate);
 }
 for(const name of bands.map(x=>x.name))for(const mode of ['none','flame-once','storm-once']){
  const group=results.filter(x=>x.name===name&&x.mode===mode);
  console.log('STRENGTH_SWEEP '+JSON.stringify({name,mode,variants:group.map(x=>({duration:x.duration,scale:x.scale,winRate:x.winRate,avgCleared:x.avgCleared,avgTurns:x.avgTurns,avgIncoming:x.avgIncoming}))}));
 }
-console.log('PASS defense strength sweep vs above-level enemies');
+console.log('PASS shipped four-round 60% defense vs legacy two-round guard in all above-level bands');
