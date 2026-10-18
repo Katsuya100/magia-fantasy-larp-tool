@@ -1,4 +1,4 @@
-import {highestRankLayer,rankTitle} from './dungeon-ranks.mjs';
+import {highestRankLayer,rankTitle,rankMetalPalette} from './dungeon-ranks.mjs';
 import {deepestReturnedLayer} from './dungeon-progress.mjs';
 
 export const DUNGEON_SHARE_URL='https://katsuya100.github.io/magia-fantasy-larp-tool/dungeon.html';
@@ -6,6 +6,7 @@ export function adventurerShareData(profile){
  const level=Number(profile?.level);
  return {
   rank:rankTitle(highestRankLayer(profile)),
+  rankLayer:highestRankLayer(profile),
   level:Number.isSafeInteger(level)&&level>0?level:1,
   deepest:deepestReturnedLayer(profile)
  };
@@ -42,8 +43,27 @@ export function paintAdventurerCard(canvas,data){
  ctx.fillStyle='#ddbe85';ctx.font='600 22px Georgia, serif';ctx.fillText('MAGIA CIRCLE  /  DUNGEON ATTACK',82,101);
  ctx.fillStyle='#f6e4c2';ctx.font='600 34px sans-serif';ctx.fillText('マギアサークル - ダンジョンアタック',82,157,630);
  ctx.strokeStyle='#ae8b5866';ctx.beginPath();ctx.moveTo(82,184);ctx.lineTo(688,184);ctx.stroke();
- ctx.fillStyle='#adabb8';ctx.font='600 24px sans-serif';ctx.fillText('冒険者等級',82,246);
- ctx.fillStyle='#f6d796';ctx.font='700 76px sans-serif';ctx.fillText(data.rank,82,331,610);
+ ctx.fillStyle='#adabb8';ctx.font='600 24px sans-serif';ctx.fillText('冒険者等級',82,242);
+ // The rank plaque mirrors the profile's --rank-light/mid/deep/glow insignia.
+ const metal=rankMetalPalette(data.rankLayer);
+ const plate=ctx.createLinearGradient(82,264,630,365);
+ plate.addColorStop(0,metal.deep);plate.addColorStop(.48,'#151422');plate.addColorStop(1,metal.deep);
+ ctx.fillStyle=plate;ctx.fillRect(82,260,546,106);
+ ctx.lineWidth=3;ctx.strokeStyle=metal.mid;ctx.strokeRect(82,260,546,106);
+ const shine=ctx.createLinearGradient(0,265,0,358);
+ shine.addColorStop(0,'#ffffff33');shine.addColorStop(.4,'#ffffff0a');shine.addColorStop(1,'#ffffff00');
+ ctx.fillStyle=shine;ctx.fillRect(85,263,540,99);
+ const lettering=ctx.createLinearGradient(110,0,590,0);
+ if(data.rankLayer===90){
+  for(const [at,color] of [[0,'#a28df9'],[.34,'#ebd2ff'],[.52,'#ffffff'],[.72,'#baa4ff'],[1,'#8ddce9']])lettering.addColorStop(at,color);
+ }else if(data.rankLayer===100){
+  for(const [at,color] of [[0,'#ffd7ba'],[.25,'#fff4b2'],[.48,'#fffefa'],[.68,'#c6e7ff'],[.88,'#f9b7ef'],[1,'#ffd680']])lettering.addColorStop(at,color);
+ }else{
+  for(const [at,color] of [[0,metal.mid],[.31,metal.light],[.49,'#fffdf3'],[.68,metal.light],[1,metal.mid]])lettering.addColorStop(at,color);
+ }
+ ctx.shadowColor=metal.glow;ctx.shadowBlur=14;
+ ctx.fillStyle=lettering;ctx.font='800 66px sans-serif';ctx.fillText(data.rank,107,335,500);
+ ctx.shadowBlur=0;
  ctx.fillStyle='#adabb8';ctx.font='600 24px Georgia, serif';ctx.fillText('LEVEL',83,411);
  ctx.fillText('最深帰還',361,411);
  ctx.fillStyle='#fbebcb';ctx.font='700 58px Georgia, sans-serif';ctx.fillText('Lv.'+data.level,83,483,280);
