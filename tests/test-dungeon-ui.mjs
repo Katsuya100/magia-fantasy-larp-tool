@@ -345,7 +345,7 @@ try{
  assert.equal($('enemyCombatant').dataset.dying,'false','completed death effect can clear its animation without resurrecting the boss');
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
  assert.doesNotMatch($('checkpointInfo').textContent,/次は2層/);
- assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\\n1層踏破。\\n未確定報酬 [0-9]+個 \\/ 経験値 [0-9]+。/,'checkpoint text stays concise');
+ assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\n1層踏破。\n未確定報酬 [0-9]+個 \/ 経験値 [0-9]+。/,'checkpoint text stays concise');
   assert.doesNotMatch($('checkpointInfo').textContent,/続行して敗北すると失われる/,'warning is removed');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
