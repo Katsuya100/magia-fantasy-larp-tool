@@ -4,6 +4,11 @@ import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCa
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,getProfile,saveProfile} from '../assets/js/dungeon-store.mjs';
+import * as G from '../assets/js/dungeon-core.mjs';
+import {configure} from '../assets/js/dungeon-tuning.mjs';
+const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
+const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','floors','player-base'].map(csv));
+configure({balance,levels,floors,playerBase});
 
 const profile={name:'秘密の冒険者名',level:21,adventurerRank:10,deepestReturnedLayer:10};
 const data=adventurerShareData(profile);
