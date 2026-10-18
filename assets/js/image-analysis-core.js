@@ -1113,7 +1113,7 @@
       }, 0);
       const straightShare = perimeter ? straightPerimeter / perimeter : 1;
       totalFaceArea += area;
-      if (poly.length >= 8 && acute <= 1 && circularity >= .795 && straightShare < .3) roundedFaceArea += area;
+      if (poly.length >= 8 && acute <= 1 && circularity >= .795 && straightShare < .6) roundedFaceArea += area;
       faceCount++;
       if (acute >= 2) pointedFaces++;
     }
