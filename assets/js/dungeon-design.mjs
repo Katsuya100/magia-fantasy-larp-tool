@@ -21,6 +21,22 @@ export function targetClearLevel(layer){
  return Math.round(1+2*x-49*x*(x-1)/(99*98));
 }
 export const layerForFight=fight=>Math.ceil(fight/5);
+// Shuffle a layer's four regular encounters once per expedition. The fifth,
+// boss encounter is intentionally excluded. A canonical prefix preserves
+// previously fought opponents when resuming a pre-shuffle save mid-layer.
+export function shuffledLayerEnemyIds(enemies,layer,r=Math.random,completed=0){
+ if(!Number.isSafeInteger(layer)||layer<1||layer>DESIGNED_LAYERS)throw Error('Invalid designed layer');
+ if(!Number.isInteger(completed)||completed<0||completed>4)throw Error('Invalid completed encounters');
+ const suffix=String(layer).padStart(3,'0');
+ const ids=Array.from({length:4},(_,i)=>'foe_l'+suffix+'_'+(i+1));
+ if(ids.some(id=>!enemies.some(enemy=>enemy.id===id)))throw Error('Missing designed layer enemies '+layer);
+ for(let i=ids.length-1;i>completed;i--){
+  const draw=Math.min(1-Number.EPSILON,Math.max(0,Number(r())));
+  const j=completed+Math.floor(draw*(i-completed+1));
+  [ids[i],ids[j]]=[ids[j],ids[i]];
+ }
+ return ids;
+}
 export function enemyForFight(enemies,fight,r=Math.random){
  if(!Number.isSafeInteger(fight)||fight<1)throw Error('Invalid fight');
  const layer=layerForFight(fight),slot=(fight-1)%5+1;

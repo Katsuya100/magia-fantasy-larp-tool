@@ -146,7 +146,9 @@ assert.match(css,/\.return-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,
 assert.match(css,/\.return-grid\{[^}]*max-height:min\(40dvh,320px\)/,'return list scrolls internally to keep the action in view');
 assert.match(css,/@media\(max-width:630px\)\{\.return-panel[^}]+\}\.return-glyph[^}]+\}\.return-panel h2[^}]+\}\.return-grid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/,'mobile maintains three columns');
 assert.match(css,/\.return-treasure \.return-new,\.return-reward \.return-new\{/,'first-acquisition badges have a distinct style');
-assert.match(page,/v2026\.10\.18\.17/,'visible version confirms the refreshed public release');
+assert.match(page,/v2026\.10\.18\.18/,'visible version confirms the refreshed public release');
+assert.match(app,/shuffledLayerEnemyIds\(masters\.enemies,layer,Math\.random,slot\)/,'game assigns and saves a random order for each new layer');
+assert.match(app,/run\.layerEnemyOrder=\{layer,ids:/,'the order is stored in the active expedition');
 assert.match(css,/#gearCards \.loadout-tile,#battleItems \.battle-item-tile\{[^}]*aspect-ratio:1\s*\/\s*1/,'prepared and battle item tiles are both square');
 assert.match(css,/#gearCards \.tile-item-effect,#battleItems \.tile-item-effect\{[^}]*position:static/,'item effects sit directly beneath item names, never pinned at the bottom');
 assert.match(css,/#gearCards \.loadout-tile,#battleItems \.battle-item-tile\{[^}]*justify-content:center/,'both contexts center their icon/name/effect group');
