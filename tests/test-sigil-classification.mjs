@@ -37,6 +37,12 @@ const rays = (count, angleOffset = 8) =>
 
 // Standard shapes plus edge cases, generated deterministically as real RGBA
 // from SVG. These are explicitly visual expectations, not trained labels.
+
+const pentagram = radius => {
+  const vertices = Array.from({length: 5}, (_, index) => point(-90 + index * 72, radius));
+  return '<path d="M' + [0, 2, 4, 1, 3, 0].map(i => vertices[i]).join(' L') + '"/>';
+};
+
 const fixtures = [
   {name: 'standard sharp 6-point star', role: 'attack', shape: star(6)},
   {name: 'standard broad 6-corner hexagon', role: 'defense', shape: polygon(6, 155)},
@@ -67,20 +73,29 @@ const fixtures = [
   {name: 'defense: thin stroke hexagon', role: 'defense', shape: polygon(6, 155), stroke: 3},
   {name: 'support: almost round dodecagon', role: 'support', shape: polygon(12, 145)},
   {name: 'attack: thin stroke star', role: 'attack', shape: star(6), stroke: 3},
+  {name: 'attack: crossing pentagram', role: 'attack', shape: pentagram(160), expectPointedFaces: true},
+  {name: 'attack: doubled crossing pentagram', role: 'attack', shape: pentagram(160) + pentagram(153), expectPointedFaces: true},
+  {name: 'attack: overlapping triangles', role: 'attack',
+    shape: polygon(3, 157, -90) + polygon(3, 157, 90), expectPointedFaces: true},
+  {name: 'support: circle with cross', role: 'support',
+    shape: '<circle cx="256" cy="256" r="150"/><path d="M256 125 L256 387 M125 256 L387 256"/>'},
+  {name: 'support: circle with smaller crossing lines', role: 'support',
+    shape: '<circle cx="256" cy="256" r="150"/><path d="M256 172 L256 340 M172 256 L340 256"/>'},
 ];
 
 let passed = 0;
 const failures = [];
-for (const {name, role, shape, stroke = 7} of fixtures) {
+for (const {name, role, shape, stroke = 7, expectPointedFaces = false} of fixtures) {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><g fill="none" stroke="#111" stroke-width="' + stroke + '" stroke-linecap="round" stroke-linejoin="round">' + shape + '</g></svg>');
   const image = await sharp(svg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { scores, features } = analyzeSigilMetricsJs(image.data, size, size, paths);
   const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   console.log(JSON.stringify({ name, expected: role, predicted: ranked[0][0], scores,
-    features: {mean: features.mean, radialVariation: features.radialVariation,
+    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, mean: features.mean, radialVariation: features.radialVariation,
       broadAngleRatio: features.broadAngleRatio, sharpTipCount: features.sharpTipCount,
       missingRayRatio: features.missingRayRatio, broadBendRuns: features.broadBendRuns} }));
-  if (ranked[0][0] !== role || ranked[0][1] < .35 || ranked[0][1] - ranked[1][1] < .02) {
+  if (ranked[0][0] !== role || ranked[0][1] < .35 || ranked[0][1] - ranked[1][1] < .02 ||
+    (expectPointedFaces && features.pointedFaces < 2)) {
     failures.push(name + ': expected ' + role + ', got ' + ranked[0][0] + ', margin=' + (ranked[0][1] - ranked[1][1]).toFixed(3));
   } else passed++;
 }
