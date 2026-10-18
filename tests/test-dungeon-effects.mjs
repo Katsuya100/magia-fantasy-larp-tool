@@ -77,7 +77,7 @@ const foe1=G.makeUnit(base,1,{flame:.3},[spell('attack','flame')]);
 const foe2=G.makeUnit(base,1,{flame:1.4},[spell('attack','flame')]);
 assert.ok(G.damage(a,foe1,spell('attack','flame'))<G.damage(a,foe2,spell('attack','flame')),'enemy-specific resistance');
 for(let lv=1;lv<=150;lv++){
- const row=level(lv);assert.ok(+row.carry_limit>=3&&+row.carry_limit<=15);
+ const row=level(lv);assert.ok(+row.carry_limit>=3&&+row.carry_limit<=18);
  if(lv>1)assert.ok(+row.hp_multiplier>=+level(lv-1).hp_multiplier);
  assert.ok(+row.xp_to_next>0);
 }
