@@ -64,6 +64,9 @@ try{
  assert.equal($2('home').hidden,false);
  assert.equal($2('supportPromptDialog').open,true);
  assert.equal($2('supportPromptTitle').textContent,'10層の踏破記録を更新！');
+ assert.equal($2('adventurerShareCanvas').width,1200,'milestone shows rendered share card in same dialog');
+ assert.equal(new URL($2('supportXLink').href).hostname,'x.com','X link is beside optional OFUSE support');
+ assert.equal($2('supportOptionalNote').hidden,false,'milestone dialog still explains support is optional');
  await $2('supportPromptClose').fire('click');
  assert.equal($2('supportPromptDialog').open,false,'prompt can be closed without payment');
  await env2.document.click({disabled:false,dataset:{view:'collection'},closest(){return this;}});
