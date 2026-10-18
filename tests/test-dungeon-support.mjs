@@ -19,7 +19,7 @@ assert.ok(html.includes('id="supportPromptClose"'),'adventurer card can be dismi
 const milestoneHtml=html.slice(html.indexOf('<dialog id="milestoneChoiceDialog"'),html.indexOf('<dialog id="supportPromptDialog"'));
 assert.ok(milestoneHtml.includes('id="milestoneShare"')&&milestoneHtml.includes('id="milestoneDonate"'),'milestone has share and OFUSE options');
 assert.ok(milestoneHtml.includes('冒険を楽しんでいただき、ありがとうございます。シェアや応援をいただけると励みになります。'),'requested gratitude appears in milestone dialog');
-assert.ok(milestoneHtml.includes('どちらも任意です'),'milestone offers choice without payment pressure');
+assert.ok(milestoneHtml.includes('シェアも応援も任意です'),'milestone offers choice without payment pressure');
 assert.ok(!milestoneHtml.includes('id="adventurerShareCanvas"'),'milestone dialog cannot accidentally display the full adventurer card');
 assert.ok(milestoneHtml.indexOf('id="milestoneShare"')<milestoneHtml.indexOf('id="milestoneDonate"'),'share is before support');
 assert.equal((milestoneHtml.match(/class="profile-action"/g)||[]).length,2,'two milestone buttons share profile design');
