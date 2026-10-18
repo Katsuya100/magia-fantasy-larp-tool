@@ -1116,11 +1116,19 @@
     // and repeated rounded arcs are separate signals. Open, straight runs only
     // contribute to debuff when the contour has actual gaps.
     const closedContourWeight = closedness ** 4;
+    // A shield often has only one or two broad corners after smoothing, so
+    // relying solely on corner runs makes it look like a healing circle.
+    // Its lower, asymmetric silhouette varies markedly in radius, unlike an
+    // ellipse. Require a compact contour and exclude sharp star-like tips.
+    const shieldSilhouette = clamp((radialVariation - .07) * 16)
+      * clamp((.70 - mean) * 8) * (1 - clamp(sharpTipCount / 3));
     const raw = {
       attack: Math.max(0, (Math.max(0, sharpTipCount - 2) * .7 + sharpAngleRatio * .5 + sharpCornerScore) * closedContourWeight),
-      defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5) * closedContourWeight
-        * Math.max(0, 1 - sharpTipCount / 8),
-      support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 6.2)
+      defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5
+        + shieldSilhouette * 2) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
+      // A large radial mean alone is not evidence for healing: it previously
+      // swamped both shield corners and moderately pointed attack sigils.
+      support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 9) * .5 + mean ** 3 * 3.2)
         / (1 + broadBendRuns * .3 * (1 - mean)) * closedContourWeight,
       debuff: missingRayRatio * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
     };
