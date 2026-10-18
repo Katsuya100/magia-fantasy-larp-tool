@@ -13,9 +13,17 @@ const profileMarkup=html.slice(html.indexOf('<section id="home"'),html.indexOf('
 assert.ok(profileMarkup.includes('class="profile-support" aria-label='),'support actions are in the profile screen');
 assert.ok(profileMarkup.indexOf('class="profile-support"')<profileMarkup.indexOf('id="deleteSaveData"'),'support and share precede data deletion');
 assert.ok(profileMarkup.includes('href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer"'),'public OFUSE link stays in the profile');
-assert.equal((html.match(/href="https:\/\/ofuse\.me\/2429ddee"/g)||[]).length,1,'only the profile links to OFUSE');
+assert.equal((html.match(/href="https:\/\/ofuse\.me\/2429ddee"/g)||[]).length,2,'OFUSE only appears in profile and milestone choice');
 assert.ok(!html.includes('id="supportDonateLink"')&&!html.includes('id="supportOptionalNote"'),'milestone dialog has no donation CTA or note');
-assert.ok(html.includes('id="supportPromptClose"'),'optional support prompt is dismissible');
+assert.ok(html.includes('id="supportPromptClose"'),'adventurer card can be dismissed');
+const milestoneHtml=html.slice(html.indexOf('<dialog id="milestoneChoiceDialog"'),html.indexOf('<dialog id="supportPromptDialog"'));
+assert.ok(milestoneHtml.includes('id="milestoneShare"')&&milestoneHtml.includes('id="milestoneDonate"'),'milestone has share and OFUSE options');
+assert.ok(milestoneHtml.includes('冒険を楽しんでいただき、ありがとうございます。シェアや応援をいただけると励みになります。'),'requested gratitude appears in milestone dialog');
+assert.ok(milestoneHtml.includes('シェアも応援も任意です'),'milestone offers choice without payment pressure');
+assert.ok(!milestoneHtml.includes('id="adventurerShareCanvas"'),'milestone dialog cannot accidentally display the full adventurer card');
+assert.ok(milestoneHtml.indexOf('id="milestoneShare"')<milestoneHtml.indexOf('id="milestoneDonate"'),'share is before support');
+assert.equal((milestoneHtml.match(/class="profile-action"/g)||[]).length,2,'two milestone buttons share profile design');
+assert.match(milestoneHtml,/id="milestoneShare"[^>]*>.*?<svg class="share-mark"/s,'milestone share uses the existing share SVG icon');
 
 assert.equal(supportPromptForReturn(0,9,0),null,'ordinary progress cannot trigger a prompt');
 assert.equal(supportPromptForReturn(10,10,0),null,'repeating a milestone does not trigger a prompt');
@@ -50,9 +58,10 @@ try{
  await wait(()=>$1('checkpoint').hidden===false);
  await $1('returnHome').fire('click');
  assert.equal($1('home').hidden,false);
- assert.equal($1('supportPromptDialog').open,false,'ordinary return has no prompt');
+ assert.equal($1('milestoneChoiceDialog').open,false,'ordinary return has no milestone dialog');
+ assert.equal($1('supportPromptDialog').open,false,'ordinary return has no card dialog');
  await env1.document.click({disabled:false,dataset:{view:'home'},closest(){return this;}});
- assert.equal($1('supportPromptDialog').open,false,'manually opening the profile has no prompt');
+ assert.equal($1('milestoneChoiceDialog').open,false,'manually opening the profile has no milestone prompt');
 }finally{env1.restore();}
 
 // A newly confirmed ten-layer boundary prompts only when already on the profile.
@@ -60,18 +69,22 @@ const milestone=await fixture(9,50),env2=fakeDungeonBrowser({factory:milestone.f
 try{
  await import('../assets/js/dungeon-app.mjs?integration=support-milestone');
  await wait(()=>$2('checkpoint').hidden===false);
- assert.equal($2('supportPromptDialog').open,false,'no prompt during combat or checkpoints');
+ assert.equal($2('milestoneChoiceDialog').open,false,'no prompt during ordinary checkpoint');
  await $2('returnHome').fire('click');
  assert.equal($2('home').hidden,false);
- assert.equal($2('supportPromptDialog').open,true);
- assert.equal($2('supportPromptTitle').textContent,'10層の踏破記録を更新！');
- assert.equal($2('adventurerShareCanvas').width,1200,'milestone shows rendered share card in same dialog');
- assert.equal(new URL($2('supportXLink').href).hostname,'x.com','milestone card retains X sharing');
+ assert.equal($2('milestoneChoiceDialog').open,true);
+ assert.equal($2('milestoneChoiceTitle').textContent,'10層の踏破記録を更新！');
+ assert.equal($2('supportPromptDialog').open,false,'return milestone offers options instead of opening the card');
+ await $2('milestoneShare').fire('click');
+ assert.equal($2('milestoneChoiceDialog').open,false,'choosing share closes milestone choices');
+ assert.equal($2('supportPromptDialog').open,true,'share choice opens separate adventurer card dialog');
+ assert.equal($2('supportPromptTitle').textContent,'冒険者カード');
+ assert.equal(new URL($2('supportXLink').href).hostname,'x.com');
  await $2('supportPromptClose').fire('click');
- assert.equal($2('supportPromptDialog').open,false,'prompt can be closed without payment');
+ assert.equal($2('supportPromptDialog').open,false,'card can be dismissed');
  await env2.document.click({disabled:false,dataset:{view:'collection'},closest(){return this;}});
  await env2.document.click({disabled:false,dataset:{view:'home'},closest(){return this;}});
- assert.equal($2('supportPromptDialog').open,false,'returning to the profile tab does not repeat the prompt');
+ assert.equal($2('milestoneChoiceDialog').open,false,'returning to profile tab does not repeat the milestone prompt');
 }finally{env2.restore();}
 
 // A newly obtained rank presents the optional dialog AFTER the reward showcase,
@@ -90,15 +103,16 @@ const env4=fakeDungeonBrowser({factory:badge.factory}),$4=id=>env4.document.getE
 try{
  await import('../assets/js/dungeon-app.mjs?integration=support-badge-after-reload');
  await wait(()=>$4('startupMask').hidden===true&&$4('returnShowcase').hidden===false&&$4('returnNext').textContent==='完了');
- assert.equal($4('supportPromptDialog').open,false,'reload does not show the prompt prematurely');
+ assert.equal($4('milestoneChoiceDialog').open,false,'reload does not show milestone prematurely');
  await $4('returnNext').fire('click');
  assert.equal($4('home').hidden,false);
- assert.equal($4('supportPromptDialog').open,true);
- assert.equal($4('supportPromptTitle').textContent,'新しい冒険者章を獲得！');
- assert.equal($4('supportPromptMessage').textContent,'11層から探索できるようになりました。');
+ assert.equal($4('milestoneChoiceDialog').open,true,'new rank offers both actions after rewards');
+ assert.equal($4('supportPromptDialog').open,false,'new badge does not open the card automatically');
+ assert.equal($4('milestoneChoiceTitle').textContent,'新しい冒険者章を獲得！');
+ assert.equal($4('milestoneChoiceMessage').textContent,'11層から探索できるようになりました。');
  assert.equal((await getProfile(badge.db)).pendingReturn,null,'reward state clears before optional prompt');
- await $4('supportPromptClose').fire('click');
- assert.equal($4('supportPromptDialog').open,false);
+ await $4('milestoneClose').fire('click');
+ assert.equal($4('milestoneChoiceDialog').open,false);
 }finally{env4.restore();}
 
-console.log('PASS profile-only OFUSE link, single optional milestone/rank prompts, reload and no-pressure dismissal');
+console.log('PASS optional boss/rank action choice, explicit card opening, reload and no-pressure dismissal');

@@ -1576,10 +1576,10 @@ html,body{overflow-x:clip}
 
 /* Profile actions are deliberate, equally weighted controls above save management. */
 .profile-support{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;max-width:760px;margin:24px auto 0;padding-top:18px;border-top:1px solid var(--border)}
-.profile-support .profile-action{display:flex;align-items:center;justify-content:center;gap:12px;min-width:0;min-height:74px;padding:13px 15px;border:1px solid #d7b37e91;border-radius:12px;background:linear-gradient(145deg,#6847295e,#32283a 55%,#17283b);box-shadow:inset 0 1px 0 #fff3d324,0 6px 16px #0003;color:#f7e1b3;font-size:clamp(13px,2vw,16px);font-family:inherit;font-weight:700;line-height:1.4;text-align:center;text-decoration:none;transition:background .16s,border-color .16s,transform .16s,box-shadow .16s;cursor:pointer}
-.profile-support .profile-action:hover{border-color:#ffe1ac;background:linear-gradient(145deg,#80553188,#49324b 57%,#1b3547);box-shadow:inset 0 1px 0 #ffecd43d,0 9px 25px #0006;transform:translateY(-1px)}
-.profile-support .profile-action:focus-visible,.support-prompt-actions .support-share-action:focus-visible{outline:2px solid #9ae3db;outline-offset:4px}
-.profile-support .profile-action-icon{display:grid;flex:none;place-items:center;width:34px;height:34px;border:1px solid #f1c88f75;border-radius:50%;background:#1719288c;color:#f4d6a0;font-size:21px;font-weight:500;line-height:1}
+.profile-support .profile-action,.milestone-choice-actions .profile-action{display:flex;align-items:center;justify-content:center;gap:12px;min-width:0;min-height:74px;padding:13px 15px;border:1px solid #d7b37e91;border-radius:12px;background:linear-gradient(145deg,#6847295e,#32283a 55%,#17283b);box-shadow:inset 0 1px 0 #fff3d324,0 6px 16px #0003;color:#f7e1b3;font-size:clamp(13px,2vw,16px);font-family:inherit;font-weight:700;line-height:1.4;text-align:center;text-decoration:none;transition:background .16s,border-color .16s,transform .16s,box-shadow .16s;cursor:pointer}
+.profile-support .profile-action:hover,.milestone-choice-actions .profile-action:hover{border-color:#ffe1ac;background:linear-gradient(145deg,#80553188,#49324b 57%,#1b3547);box-shadow:inset 0 1px 0 #ffecd43d,0 9px 25px #0006;transform:translateY(-1px)}
+.profile-support .profile-action:focus-visible,.milestone-choice-actions .profile-action:focus-visible,.support-prompt-actions .support-share-action:focus-visible{outline:2px solid #9ae3db;outline-offset:4px}
+.profile-support .profile-action-icon,.milestone-choice-actions .profile-action-icon{display:grid;flex:none;place-items:center;width:34px;height:34px;border:1px solid #f1c88f75;border-radius:50%;background:#1719288c;color:#f4d6a0;font-size:21px;font-weight:500;line-height:1}
 @media(max-width:540px){.profile-support{grid-template-columns:minmax(0,1fr);gap:10px}.profile-support .profile-action{min-height:63px;padding:12px 14px}}
 .support-prompt-actions .support-share-action{display:inline-flex;flex:1 1 0;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:46px;padding:11px 10px;border:1px solid #d7b37e91;border-radius:10px;background:linear-gradient(145deg,#6847295e,#32283a 55%,#17283b);box-shadow:inset 0 1px 0 #fff3d324,0 6px 16px #0003;color:#f7e1b3;font-family:inherit;font-size:clamp(11px,2.4vw,14px);font-weight:700;line-height:1.35;text-align:center;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,box-shadow .16s}
 .support-prompt-actions .support-share-action:hover:enabled,.support-prompt-actions a.support-share-action:hover{border-color:#ffe1ac;background:linear-gradient(145deg,#80553188,#49324b 57%,#1b3547);box-shadow:inset 0 1px 0 #ffecd43d,0 9px 25px #0006;color:#ffe5b8}
@@ -1622,3 +1622,12 @@ html,body{overflow-x:clip}
 }
 .tutorial-sheet #tutorialHint,.tutorial-sheet #tutorialDetails,.tutorial-sheet #tutorialFreedom{white-space:pre-line}
 .tutorial-sheet #tutorialAttributes{margin:0 0 9px;color:var(--gold);font-weight:700;line-height:1.7;letter-spacing:.02em}
+
+/* On a tenth-layer victory, offer two choices before opening the full card. */
+.milestone-choice-dialog{width:min(620px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
+.milestone-choice-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:24px auto 16px;width:100%}
+.milestone-choice-actions .profile-action{text-decoration:none}
+.milestone-choice-actions .profile-action-icon .share-mark,.profile-support .profile-action-icon .share-mark{width:20px;height:20px;stroke:currentColor}
+.milestone-choice-optional{font-size:12px!important;line-height:1.5}
+.milestone-choice-dialog #milestoneClose{min-width:105px;margin-top:8px}
+@media(max-width:540px){.milestone-choice-actions{grid-template-columns:minmax(0,1fr);gap:10px}.milestone-choice-actions .profile-action{min-height:63px;padding:12px 14px}}
