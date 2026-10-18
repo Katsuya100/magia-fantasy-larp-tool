@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.22">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.23">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,12 +19,12 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.22" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.23" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261018.22" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261018.23" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -89,6 +89,7 @@
 
     <section id="library" class="panel grimoire-panel" hidden>
       <div class="section-heading"><div><p class="chapter">CHAPTER II · GRIMOIRE</p><h2>魔導書</h2></div><span class="section-mark" aria-hidden="true">◎</span></div>
+      <button type="button" id="tutorialReplay" class="subtle tutorial-replay">◎ 描き方を練習</button>
       <details class="regulations">
         <summary>魔法陣の描き方・登録規則 <span aria-hidden="true">⌄</span></summary>
         <ol>
@@ -99,7 +100,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.22" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.23" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -267,8 +268,34 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.22</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.23</span></footer>
   </main>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.22"></script>
+  <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
+    <div class="tutorial-sheet">
+      <div class="tutorial-top"><span id="tutorialCount">1 / 6</span><button type="button" id="tutorialSkip" class="subtle">スキップ</button></div>
+      <h2 id="tutorialTitle">魔法陣の作り方</h2>
+      <p id="tutorialHint">サンプルを見て、順番に描いてみよう。</p>
+      <div id="tutorialExample" class="tutorial-example">
+        <img src="assets/images/sample.png?v=20261018.23" alt="外円と内円、その間に英語の呪文、内円の中に紋様を描いたお手本">
+        <ol><li>外円と内円を閉じる</li><li>円の間に英語の呪文</li><li>中心に紋様を描く</li><li>1つずつ明るい場所で撮影</li></ol>
+      </div>
+      <div id="tutorialPad" class="tutorial-pad" data-step="1" hidden>
+        <svg viewBox="0 0 320 320" aria-hidden="true" class="tutorial-guides">
+          <circle class="tutorial-outer" cx="160" cy="160" r="116" />
+          <circle class="tutorial-inner" cx="160" cy="160" r="66" />
+          <text class="tutorial-letters" x="160" y="55" text-anchor="middle">FIRE</text>
+          <path class="tutorial-symbol" d="M160 108 L143 159 L174 153 L154 209 L184 145 L154 150 Z" />
+        </svg>
+        <canvas id="tutorialCanvas" width="320" height="320" aria-label="ここを指またはマウスでなぞって魔法陣を描く"></canvas>
+        <span id="tutorialFinger" class="tutorial-finger" aria-hidden="true">👆</span>
+      </div>
+      <p id="tutorialFeedback" role="status" aria-live="polite" class="tutorial-feedback"></p>
+      <div class="tutorial-actions">
+        <button type="button" id="tutorialRetry" class="subtle" hidden>書き直す</button>
+        <button type="button" id="tutorialContinue" class="primary-action tutorial-next">描いてみる</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.23"></script>
 </body>
 </html>
