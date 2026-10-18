@@ -345,7 +345,8 @@ try{
  assert.equal($('enemyCombatant').dataset.dying,'false','completed death effect can clear its animation without resurrecting the boss');
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
  assert.doesNotMatch($('checkpointInfo').textContent,/次は2層/);
- assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\n1層踏破。\n未確定報酬 [0-9]+個 \/ 経験値 [0-9]+。\n続行して敗北すると失われる。/,'each checkpoint sentence appears on its own line');
+ assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\\n1層踏破。\\n未確定報酬 [0-9]+個 \\/ 経験値 [0-9]+。/,'checkpoint text stays concise');
+  assert.doesNotMatch($('checkpointInfo').textContent,/続行して敗北すると失われる/,'warning is removed');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
  assert.ok(p.run.loot.length>=5&&p.run.loot.length<=35);
@@ -477,15 +478,15 @@ assert.doesNotMatch($('gearCards').innerHTML,/class="tile-detail item-effect-ico
  assert.equal(p.run.carry.filter(Boolean).length,2,'used potion removed, other slots remain');
  assert.equal(p.run.carry[0],null,'consumed item leaves a blank slot');
  assert.equal(p.run.carry[1].instanceId,savedBeforeAttack.carrySlots[1],'other slots keep their identities');
- assert.equal(p.run.usedItems,1);
- assert.match($('battleInfo').innerHTML,/道具行使<\/span>[\s\S]*?battle-stat-value">1<span class="battle-stat-max"> \/ 1<\/span>/,'item usage counter updates after using an item');
+ assert.doesNotMatch($('battleInfo').innerHTML,/道具行使|data-kind="item"/,'item usage card stays removed');
+ assert.equal(($('battleInfo').innerHTML.match(/class="battle-stat"/g)||[]).length,2,'only loot and EXP are displayed');
  assert.equal(($('battleItems').innerHTML.match(/data-use="/g)||[]).length,2,'item grid keeps usable tiles');
 assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,2,'combat uses the same centered stat class as preparation');
  assert.equal(($('battleItems').innerHTML.match(/data-open-item="/g)||[]).length,0,'battle items are not preparation slots');
  assert.equal(($('battleItems').innerHTML.match(/battle-item-tile empty/g)||[]).length,1,'the unused position stays visible in a three-slot grid');
  await doc.click(btn({use:'0'}));
  p=await getProfile(db);
- assert.equal(p.run.carry.filter(Boolean).length,2,'one free item per round');
+ assert.equal(p.run.carry.filter(Boolean).length,2,'consumed slot cannot be used twice');
  // An entire second 5-fight block must offer a choice, and continued runs retain HP.
  for(let fight=1;fight<=5;fight++)await doc.click(btn({cast:'0'}));
  p=await getProfile(db);
