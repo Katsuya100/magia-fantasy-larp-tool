@@ -94,7 +94,7 @@ const formulas=[
 const results=[],samples=96;
 for(const formula of formulas){
  const balance=data.balance.map(row=>({...row}));
- for(const [key,value] of [['defense_duration_base',formula.base],['defense_duration_cap',formula.cap],['defense_duration_power_step',formula.step]]){
+ for(const [key,value] of [['resistance_buff_duration',formula.base],['defense_duration_base',formula.base],['defense_duration_cap',formula.cap],['defense_duration_power_step',formula.step]]){
   const row=balance.find(x=>x.key===key);assert.ok(row);row.value=String(value);
  }
  configure({...data,balance});
