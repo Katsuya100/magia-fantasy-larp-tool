@@ -1572,3 +1572,8 @@ html,body{overflow-x:clip}
 
 /* Match the two-card battle ledger in the sanctuary. */
 #checkpointLedger{max-width:750px;margin:16px auto 4px}
+
+/* Layer name is the primary battle heading; the encounter count is secondary. */
+.battle-panel .section-heading>div{min-width:0}
+.battle-panel .section-heading h2{font-size:clamp(18px,4.5vw,30px);overflow-wrap:anywhere}
+.battle-encounter-label{margin:5px 0 0;color:var(--soft);font-size:clamp(13px,1.8vw,16px);font-weight:500;letter-spacing:.06em}
