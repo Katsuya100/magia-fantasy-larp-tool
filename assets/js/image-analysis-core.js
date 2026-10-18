@@ -1126,7 +1126,7 @@
       attack: Math.max(0, (Math.max(0, sharpTipCount - 2) * .7 + sharpAngleRatio * .5
         + Math.max(0, sharpAngleRatio - .09) * 30 + sharpCornerScore) * closedContourWeight),
       defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5
-        + shieldSilhouette * 2) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
+        + shieldSilhouette * 2.8) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
       // A large radial mean alone is not evidence for healing: it previously
       // swamped both shield corners and moderately pointed attack sigils.
       support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 9) * .45 + mean ** 3 * 2.6)
