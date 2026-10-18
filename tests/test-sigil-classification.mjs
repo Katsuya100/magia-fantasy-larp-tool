@@ -43,11 +43,37 @@ const pentagram = radius => {
   return '<path d="M' + [0, 2, 4, 1, 3, 0].map(i => vertices[i]).join(' L') + '"/>';
 };
 
+const openLetter = {
+  I: '<path d="M256 130 L256 382"/>',
+  T: '<path d="M165 148 L347 148 M256 148 L256 374"/>',
+  V: '<path d="M145 130 L256 370 L367 130"/>',
+  X: '<path d="M147 148 L365 367 M365 148 L147 367"/>',
+  Y: '<path d="M160 137 L256 248 L348 137 M256 248 L256 379"/>',
+  Z: '<path d="M154 151 L361 151 L151 364 L360 364"/>',
+};
+const radialGap = Array.from({length: 9}, (_, index) => {
+  const angle = index * 40 - 90;
+  return '<path d="M' + point(angle, 45) + ' L' + point(angle, 165) + '"/>';
+}).join('');
+
 const fixtures = [
   {name: 'standard sharp 6-point star', role: 'attack', shape: star(6)},
   {name: 'standard broad 6-corner hexagon', role: 'defense', shape: polygon(6, 155)},
   {name: 'standard round contour', role: 'support', shape: '<circle cx="256" cy="256" r="150"/>'},
   {name: 'standard disconnected straight rays', role: 'debuff', shape: rays(8)},
+  ...Object.entries(openLetter).map(([letter, shape]) => ({
+    name: 'debuff: unclosed straight-letter ' + letter, role: 'debuff', shape,
+  })),
+  {name: 'debuff: nine separated radial strokes', role: 'debuff', shape: radialGap},
+  {name: 'debuff: thin unclosed X', role: 'debuff', shape: openLetter.X, stroke: 3},
+  {name: 'support: an open X inside a complete circle stays support',
+    role: 'support', shape: '<circle cx="256" cy="256" r="150"/>' + openLetter.X},
+  {name: 'support: an open T inside a complete circle stays support',
+    role: 'support', shape: '<circle cx="256" cy="256" r="150"/>' + openLetter.T},
+  {name: 'defense: a closed hexagon with open strokes stays defense',
+    role: 'defense', shape: polygon(6, 155) + '<path d="M256 171 L256 340 M178 256 L332 256"/>'},
+  {name: 'attack: sharp star with an added open stroke stays attack',
+    role: 'attack', shape: star(6) + '<path d="M256 205 L256 305"/>'},
   {name: 'attack: 5-point star', role: 'attack', shape: star(5, 158, 68)},
   {name: 'attack: rotated 8-point star', role: 'attack', shape: star(8, 165, 74, -78)},
   {name: 'defense: rotated hexagon', role: 'defense', shape: polygon(6, 155, -60)},
@@ -104,7 +130,7 @@ for (const {name, role, shape, stroke = 7, expectPointedFaces = false} of fixtur
   console.log(JSON.stringify({ name, expected: role, predicted: ranked[0][0], scores,
     features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
       broadAngleRatio: features.broadAngleRatio, sharpTipCount: features.sharpTipCount,
-      missingRayRatio: features.missingRayRatio, broadBendRuns: features.broadBendRuns} }));
+      missingRayRatio: features.missingRayRatio, openPathStraightness: features.openPathStraightness, broadBendRuns: features.broadBendRuns} }));
   if (ranked[0][0] !== role || ranked[0][1] < .35 || ranked[0][1] - ranked[1][1] < .02 ||
     (expectPointedFaces && features.pointedFaces < 2)) {
     failures.push(name + ': expected ' + role + ', got ' + ranked[0][0] + ', margin=' + (ranked[0][1] - ranked[1][1]).toFixed(3));
