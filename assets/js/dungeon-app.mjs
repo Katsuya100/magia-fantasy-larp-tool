@@ -1,20 +1,20 @@
-import * as G from './dungeon-core.mjs?v=20261018.13';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.13';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.13';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.13';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.13';
-import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.13';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.13';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.13';
+import * as G from './dungeon-core.mjs?v=20261018.14';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.14';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.14';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.14';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.14';
+import {circleListIndexes,itemListIndexes,collectionListIndexes} from './dungeon-list-view.mjs?v=20261018.14';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.14';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.14';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.13';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.13';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.13';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.13';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.13';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.13';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.13';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.13';
+import {enemyForFight,layerForFight,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.14';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.14';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.14';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.14';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.14';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.14';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.14';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.14';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -225,16 +225,17 @@ function renderRun(){
     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button></div>';
  }).join('');
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
- const maxSlots=Math.max(5,run.carry.length);
+ // Match the prepared-item capacity, but keep extra occupied legacy slots visible.
+ const maxSlots=Math.max(G.capacity(profile.level),run.carry.findLastIndex(Boolean)+1);
  $('battleItems').innerHTML=Array.from({length:maxSlots},(_,i)=>{
   const item=run.carry[i],noEffect=Boolean(item&&!G.canUseBattleItem(hero,item,masters.items,masters.buffs));
   const disabled=noEffect||(run.usedItems||0)>=num('item_per_round');
   if(!item)return '<button type="button" class="loadout-tile battle-tile battle-item-tile empty" disabled aria-label="アイテム空き枠 '+(i+1)+'"><span class="tile-index">'+String(i+1).padStart(2,'0')+'</span><span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">空き</span></button>';
-  return '<button type="button" class="loadout-tile battle-tile battle-item-tile equipped'+(noEffect?' no-effect':'')+'" data-use="'+i+'" '+(disabled?'disabled':'')+' aria-label="'+esc(itemName(item))+(noEffect?'・現在は効果なし':'')+'">'
+  return '<button type="button" class="loadout-tile battle-tile battle-item-tile equipped'+(noEffect?' no-effect':'')+'" data-use="'+i+'" '+(disabled?'disabled':'')+' aria-label="'+esc(itemName(item))+'・'+esc(itemEffectText(item))+(noEffect?'・現在は効果なし':'')+'">'
    +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
    +'<span class="tile-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="tile-title">'+esc(itemName(item))+'</span>'
-   +'<span class="tile-detail item-effect-icons" aria-label="'+esc(itemEffectText(item))+'">'+itemEffectIcons(item)+(item.bonus?' ✦':'')+'</span></button>';
+   +'<span class="tile-item-effect item-effect-icons" aria-hidden="true">'+itemEffectIcons(item)+(item.bonus?' ✦':'')+'</span></button>';
  }).join('');
  $('battleInfo').textContent='未確定報酬 '+run.loot.length+'個 / 未確定経験値 '+run.xp+' / アイテム '+(run.usedItems||0)+'/'+num('item_per_round')+(hero.reviveArmed?' / 🔴生命の紅石：復活待機中':hero.reviveUsed?' / 🔴生命の紅石：発動済み':'');
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');

@@ -85,6 +85,7 @@ try{
   await import('../assets/js/dungeon-app.mjs?integration=special-elixir-battle');
   await wait(()=>$2('battleItems').innerHTML.includes('エリクシール小'),'elixir battle ready');
   assert.match($2('battleItems').innerHTML,/❤️💠35%/,'elixir displays icon and percent rather than a sentence');
+  assert.match($2('battleItems').innerHTML,/class="tile-item-effect item-effect-icons" aria-hidden="true"/,'battle item stats use the same markup as preparation');
   assert.doesNotMatch($2('battleItems').innerHTML,/equipped no-effect" data-use="0"/,'elixir remains enabled when HP and MP are low');
   assert.doesNotMatch($2('battleItems').innerHTML,/>HP\/MP各35%回復</,'long effect text is not visible');
   await doc2.click(btn({use:'0'}));
