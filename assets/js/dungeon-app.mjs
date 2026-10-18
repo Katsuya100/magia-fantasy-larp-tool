@@ -1,25 +1,25 @@
-import * as G from './dungeon-core.mjs?v=20261018.45';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.45';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.45';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.45';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.45';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261018.45';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.45';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.45';
+import * as G from './dungeon-core.mjs?v=20261018.46';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.46';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.46';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.46';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.46';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261018.46';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.46';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.46';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.45';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.45';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.45';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.45';
-import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261018.45';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.45';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.45';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.45';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.45';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.45';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.45';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.45';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261018.45';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.46';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.46';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.46';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.46';
+import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261018.46';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.46';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.46';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.46';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.46';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.46';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.46';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.46';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261018.46';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -338,7 +338,7 @@ function renderRun(){
    +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
    +'<span class="tile-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="tile-title">'+esc(itemName(item))+'</span>'
-   +'<span class="tile-item-effect item-effect-icons" aria-hidden="true">'+itemEffectIcons(item)+(item.bonus?' ✦':'')+'</span></button>';
+   +'<span class="tile-item-effect item-effect-icons" aria-hidden="true">'+itemEffectIcons(item)+'</span></button>';
  }).join('');
  $('battleInfo').innerHTML=rewardLedgerMarkup(run)
   +(hero.reviveArmed?'<div class="battle-revival">🪽 生命の紅石 · 復活待機中</div>':hero.reviveUsed?'<div class="battle-revival">🪽 生命の紅石 · 発動済み</div>':'');
@@ -582,9 +582,10 @@ function renderReturnStep(){
   $('returnCollections').innerHTML=returnFlow.collections.map(({id,count,isNew},i)=>{
    const index=masters.collections.findIndex(row=>row.id===id),row=masters.collections[index];
    if(!row)return '';
-   return '<article class="return-treasure" data-rarity="'+esc(row.rarity)+'" style="--reveal-delay:'+(Math.min(i,12)*.07)+'s">'
+   return '<article class="return-treasure relic-card discovered" data-rarity="'+esc(row.rarity)+'" style="--reveal-delay:'+(Math.min(i,12)*.07)+'s">'
     +(isNew?'<span class="return-new">NEW</span>':'')
-    +'<div class="return-treasure-art" aria-hidden="true">'+relicSymbolSvg(index,true)+'</div>'
+    +'<div class="return-treasure-art relic-art" aria-hidden="true">'+relicSymbolSvg(index,true)+'</div>'
+     +'<span class="relic-rarity" aria-label="レア度 '+esc(row.rarity)+'">'+collectionRarityMarks(row.rarity)+'</span>'
     +'<strong>'+esc(row.name)+'</strong>'+(count>1?'<span class="return-count">×'+count+'</span>':'')+'</article>';
   }).join('');
  }else if(kind==='rewards'){
@@ -601,7 +602,7 @@ function renderReturnStep(){
     +(reward.isNew||reward.type==='rank'||reward.type==='stone'?'<span class="return-new">NEW</span>':'')
     +symbolMarkup
     +'<strong>'+esc(name)+'</strong>'
-    +(reward.type==='use'?'<span class="return-reward-effect" aria-label="'+esc(itemEffectText(reward.item))+'">'+itemEffectIcons(reward.item)+(reward.item.bonus?' ✦':'')+'</span>':'')
+    +(reward.type==='use'?'<span class="return-reward-effect" aria-label="'+esc(itemEffectText(reward.item))+'">'+itemEffectIcons(reward.item)+'</span>':'')
     +(count>1?'<span class="return-count">×'+count+'</span>':'')+'</article>';
   }).join('');
  }else{

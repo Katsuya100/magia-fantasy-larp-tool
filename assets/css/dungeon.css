@@ -1610,3 +1610,15 @@ html,body{overflow-x:clip}
 .circle-grid .card[data-favorite="true"]{border-color:#f5d58a;box-shadow:0 0 0 1px #cbaa69,0 0 22px #ffcf6c33}
 .circle-grid .card[data-favorite="true"]::before{content:"★";z-index:2;top:7px;right:15px;color:#ffdc83;font-size:22px;text-shadow:0 0 10px #ffd786}
 .favorite-hint{margin:0;color:var(--soft);font-size:11px;text-align:right}
+
+/* Reward trophies share the collection-book rarity ink, aura and stars. */
+.return-treasure.relic-card.discovered{min-height:125px;padding:12px 5px;gap:4px}
+.return-treasure.relic-card.discovered .return-treasure-art{margin:4px auto 8px}
+.return-treasure.relic-card.discovered .relic-rarity{margin:0 auto 3px;padding:0 4px}
+.return-treasure.relic-card.discovered strong{color:var(--rarity-ink)}
+@media(max-width:630px){
+ .return-treasure.relic-card.discovered{min-height:108px;padding:9px 3px;gap:3px}
+ .return-treasure.relic-card.discovered .return-treasure-art{margin:2px auto 4px}
+}
+.tutorial-sheet #tutorialHint,.tutorial-sheet #tutorialDetails,.tutorial-sheet #tutorialFreedom{white-space:pre-line}
+.tutorial-sheet #tutorialAttributes{margin:0 0 9px;color:var(--gold);font-weight:700;line-height:1.7;letter-spacing:.02em}

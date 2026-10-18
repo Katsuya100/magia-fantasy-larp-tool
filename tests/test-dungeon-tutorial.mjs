@@ -12,13 +12,16 @@ assert.match(CIRCLE_TUTORIAL_STEPS[2].hint,/外円の内側.*ください/);
 assert.match(CIRCLE_TUTORIAL_STEPS[3].hint,/内円と外円の間.*英語の呪文.*ください/);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].hint,/内円の中に紋.*ください/);
 assert.deepEqual(CIRCLE_TUTORIAL_STEPS.map(x=>x.image),[null,'tutorial-outer.gif','tutorial-inner.gif','tutorial-spell.gif','tutorial-sigil.gif']);
-assert.match(CIRCLE_TUTORIAL_STEPS[3].detail,/相.*炎.*雷.*水.*風.*重力.*秩序.*混沌/);
-assert.match(CIRCLE_TUTORIAL_STEPS[4].detail,/紋の種別.*形.*攻撃.*防御.*回復.*弱体/);
+assert.match(CIRCLE_TUTORIAL_STEPS[3].detail,/相.*意味.*決まります。/);
+assert.match(CIRCLE_TUTORIAL_STEPS[3].attributes,/炎.*雷.*水.*風.*重力.*秩序.*混沌/);
+assert.match(CIRCLE_TUTORIAL_STEPS[4].detail,/紋の種別.*形.*決まります。/);
+assert.match(CIRCLE_TUTORIAL_STEPS[4].attributes,/攻撃.*防御.*回復.*弱体/);
 for(const i of [3,4])assert.match(CIRCLE_TUTORIAL_STEPS[i].freedom,/サンプルに合わせる必要はありません.*自由.*ください/);
 for(const step of CIRCLE_TUTORIAL_STEPS){
  assert.match(step.title,/ましょう$/,step.title);
  assert.match(step.hint,/ください。$/,step.title+' hint');
- assert.match(step.detail,/ください。|決まります：/,step.title+' detail');
+ assert.match(step.detail,/ください。|決まります。/,step.title+' detail');
+ if(step.attributes)assert.doesNotMatch(step.attributes,/。$/,step.title+' attributes must not end with a period');
 }
 const env=fakeDungeonBrowser();
 try{
@@ -31,6 +34,7 @@ try{
  assert.equal($('tutorialDetails').textContent,CIRCLE_TUTORIAL_STEPS[0].detail);
  assert.equal($('tutorialPrevious').hidden,true);
  assert.equal($('tutorialFreedom').hidden,true);
+ assert.equal($('tutorialAttributes').hidden,true);
  assert.equal($('tutorialTitle').textContent,CIRCLE_TUTORIAL_STEPS[0].title);
  assert.equal($('dungeonApp').attributes.inert,'');
  for(let i=1;i<5;i++){
@@ -42,6 +46,8 @@ try{
   assert.equal($('tutorialTitle').textContent,CIRCLE_TUTORIAL_STEPS[i].title);
   assert.equal($('tutorialHint').textContent,CIRCLE_TUTORIAL_STEPS[i].hint);
   assert.equal($('tutorialDetails').textContent,CIRCLE_TUTORIAL_STEPS[i].detail);
+  assert.equal($('tutorialAttributes').hidden,i<3);
+  if(i>=3)assert.equal($('tutorialAttributes').textContent,CIRCLE_TUTORIAL_STEPS[i].attributes);
   assert.equal($('tutorialFreedom').hidden,i<3);
   if(i>=3)assert.equal($('tutorialFreedom').textContent,CIRCLE_TUTORIAL_STEPS[i].freedom);
  }
@@ -69,6 +75,7 @@ const script=await readFile(new URL('../assets/js/dungeon-tutorial.mjs',import.m
 assert.match(html,/id="tutorialFigure" class="tutorial-animation" hidden/);
 assert.match(html,/id="tutorialAnimation" alt="" width="320" height="320"/);
 assert.match(html,/id="tutorialReplay"/);
+assert.match(html,/id="tutorialAttributes" hidden/);
 const release=html.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 assert.ok(release,'tutorial HTML contains a release version');
 assert.ok(html.includes('dungeon-app.mjs?v='+release),'tutorial HTML loads the current app');

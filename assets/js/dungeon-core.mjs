@@ -165,7 +165,11 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
    const oldHp=role==='support'?a.u.hp:a.t.hp;
    let message;
    if(role==='basic'){
-    const d=Math.max(1,Math.round(num('basic_attack')*a.u.stats.mag/num('mag_reference')*num('def_divisor')/(num('def_divisor')+armor(a.t))));
+    // HP scaling approximates one fifth of an ordinary enemy in the recommended level band.
+     // It does not adapt to the current target, so bosses keep their HP advantage.
+     const d=Math.max(1,Math.round(num('basic_attack')*a.u.stats.hp*
+      factor(a.u,'attack')*factor(a.u,'output')*factor(a.t,'incoming')*
+      num('def_divisor')/(num('def_divisor')+armor(a.t))));
     a.t.hp=Math.max(0,a.t.hp-d);
     message=a.name+'：通常攻撃 '+d;
    }else message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);

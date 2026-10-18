@@ -11,22 +11,45 @@ export function circleEffectBadges(circle,buffs=[],escapeText=x=>String(x),mpCos
   +'</div>';
 }
 export function itemSymbol(item){return item?.id==='life_ruby'?'🔴':item?.id?.startsWith('elixir_')?'⚗':item?.id==='escape_scroll'?'📜':item?.id?.startsWith('heal_')?'✚':item?.id?.startsWith('mana_')?'✧':'◈';}
-export function itemEffectText(item){return item?.id==='life_ruby'?'死亡時に1回だけHP50%で復活':item?.id?.startsWith('elixir_')?'HP/MP各'+item.value+'%回復':item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.value?'効果 '+item.value:'状態異常解除';}
+// Show compact bonus effects consistently in loadout, battle and rewards.
+const elementIcons={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪️',gravity:'🪨',law:'⚖️',chaos:'🌀'};
+const bonusEffects={
+ attack:['⚔️↑','攻撃上昇'],output:['✨↑','威力上昇'],
+ heal:['✚↑','回復量上昇'],incoming:['🛡️↑','被ダメージ軽減'],
+ def:['🛡️↑','防御上昇'],resistance:['🛡️↑','耐性上昇'],
+ resist:['🛡️↑','属性耐性上昇']
+};
+export function itemBonusEffect(item){
+ const id=item?.bonus;
+ if(!id)return null;
+ const [kind,attribute]=String(id).split('_');
+ const effect=kind==='resist'?'resist':({flame:'attack',bolt:'output',aqua:'heal',storm:'incoming',gravity:'def',law:'resistance',chaos:'output'}[attribute]);
+ const info=bonusEffects[effect];
+ if(!info)return {icons:'✦↑',text:'追加強化'};
+ if(kind==='resist')return {icons:(elementIcons[attribute]||'')+info[0],text:(elementIcons[attribute]||'')+info[1]};
+ return {icons:info[0],text:info[1]};
+}
+export function itemEffectText(item){
+ const primary=item?.id==='life_ruby'?'死亡時に1回だけHP50%で復活':item?.id?.startsWith('elixir_')?'HP/MP各'+item.value+'%回復':item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.value?'効果 '+item.value:'状態異常解除';
+ const bonus=itemBonusEffect(item);
+ return primary+(bonus?'・追加効果：'+bonus.text:'');
+}
 // Short visible effect shared by the battle item slot and the return reward card.
 // Absolute HP/MP potions use raw recovery values; elixirs and revival use percent.
 export function itemEffectIcons(item){
  const id=item?.id||'',numeric=Number(item?.value);
  const value=Number.isFinite(numeric)&&numeric>=0?String(numeric):'?';
- if(id.startsWith('heal_'))return '❤️+'+value;
- if(id.startsWith('mana_'))return '💠+'+value;
- if(id.startsWith('elixir_'))return '❤️💠'+value+'%';
+ const effect=itemBonusEffect(item);const extra=effect?' '+effect.icons:'';
+ if(id.startsWith('heal_'))return '❤️+'+value+extra;
+ if(id.startsWith('mana_'))return '💠+'+value+extra;
+ if(id.startsWith('elixir_'))return '❤️💠'+value+'%'+extra;
  if(id.startsWith('clear_')){
   const elements={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪️',gravity:'🪨',law:'🔒',chaos:'🌀'};
-  return '🧼'+(elements[id.slice(6)]||'');
+  return '🧼'+(elements[id.slice(6)]||'')+extra;
  }
- if(id==='life_ruby')return '🪽50%';
- if(id==='escape_scroll')return '↩️';
- return '◈'+value;
+ if(id==='life_ruby')return '🪽50%'+extra;
+ if(id==='escape_scroll')return '↩️'+extra;
+ return '◈'+value+extra;
 }
 export function spellGrid(slots,circles,imageUrl,escapeText,active=true,buffs=[],mpCost=()=>null){
  const byId=new Map(circles.map(circle=>[circle.id,circle]));
@@ -51,7 +74,7 @@ export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,a
      +'<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span>'
      +'<span class="tile-item-icon" aria-hidden="true">'+(locked?'♙':value?itemSymbol(value):'＋')+'</span>'
      +'<span class="tile-title">'+(locked?'未解放':value?escapeText(itemName(value)):'空き')+'</span>'
-     +(value?'<span class="tile-item-effect item-effect-icons" aria-hidden="true">'+itemEffectIcons(value)+(value.bonus?' ✦':'')+'</span>':'')
+     +(value?'<span class="tile-item-effect item-effect-icons" aria-hidden="true">'+itemEffectIcons(value)+'</span>':'')
      +'</button>';
    }).join('')+'</div>';
 }
@@ -73,10 +96,10 @@ export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventor
  if(!inventory.length)return '<p class="collection-empty">携行品がありません。</p>';
  return indexes.map(index=>[inventory[index],index]).map(([item,index])=>{
   const selectedSlot=slots.indexOf(index),selected=selectedSlot>=0,current=selected&&selectedSlot===editingSlot;
-  return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-item="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(itemName(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
+  return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-item="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(itemName(item))+'・'+escapeText(itemEffectText(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
    +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
-   +(item.id==='life_ruby'||item.id?.startsWith('elixir_')||item.id==='escape_scroll'?itemEffectText(item):item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' ✦追加効果':'')+'</small></span>'
+   +(item.id==='life_ruby'||item.id?.startsWith('elixir_')||item.id==='escape_scroll'?itemEffectText({...item,bonus:null}):item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' '+itemBonusEffect(item).icons:'')+'</small></span>'
    +'</button>';
  }).join('');
 }

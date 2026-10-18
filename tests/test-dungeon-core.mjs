@@ -10,12 +10,21 @@ const [enemies,items,collections,buffs,balance,levels,floors,playerBase]=await P
  'dungeon-balance.csv','dungeon-levels.csv','dungeon-floors.csv','dungeon-player-base.csv'].map(get));
 configure({balance,levels,floors,playerBase});
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
-assert.equal(G.capacity(1),3);assert.equal(G.capacity(5),4);assert.equal(G.capacity(49),15);
+for(const [lvl,slots] of [[1,3],[9,3],[10,4],[19,4],[20,5],[49,7],[50,8],[150,18]])
+ assert.equal(G.capacity(lvl),slots,'carry slot increases each 10 levels');
 assert.equal(G.nextXp(1),108);assert.equal(floor(5).boss,'1');
 assert.deepEqual(G.startingBase(()=>0),{hp:90,mag:8,def:5,res:5});
 assert.deepEqual(G.startingBase(()=>.99999),{hp:110,mag:12,def:10,res:10});
 const base={hp:100,mag:10,def:7,res:7};
 assert.deepEqual(G.stats(base,1),base);assert.ok(G.stats(base,20).hp>G.stats(base,10).hp);
+for(const lvl of [1,20,50]){
+ for(const row of enemies.filter(row=>row.min_level==='1'&&row.boss_only==='0').slice(0,4)){
+  const hero=G.makeUnit(base,lvl),foe=G.fromEnemy(row,lvl),before=foe.hp;
+  G.round(hero,foe,-1,-1,buffs,()=>.999);
+  const ratio=(before-foe.hp)/before;
+  assert.ok(ratio>=.13&&ratio<=.27,'normal attack near 1/5 recommended normal foe HP at level '+lvl+' '+row.id+' '+ratio);
+ }
+}
 assert.deepEqual(G.dropCounts(1,()=>0),{collection:5,stone:1,use:3});
 assert.deepEqual(G.dropCounts(100,()=>.9999),{collection:0,stone:0,use:0});
 assert.equal(G.dropCount(1,()=>0),9);

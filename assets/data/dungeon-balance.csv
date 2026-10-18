@@ -9,7 +9,7 @@ magic_magnitude_divisor,35,状態効果強度の基準
 magic_magnitude_min,0.5,効果強度の最小倍率
 magic_magnitude_max,1.5,効果強度の最大倍率
 def_divisor,100,防御計算の基準値
-basic_attack,6,通常攻撃の基礎威力
+basic_attack,0.14,通常攻撃の係数（推奨帯の雑魚敵HP約5分の1）
 defense_resistance_gain,0.3,防御魔法による耐性補正
 defense_resistance_cap,0.75,防御魔法の補正上限
 status_min_resistance,0.05,属性倍率の下限

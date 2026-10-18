@@ -195,7 +195,7 @@ for(let layer=1;layer<=100;layer++){
  assert.equal(profile.level,expected,'level after five fights fits layer '+layer);
  if(layer<100)G.experience(profile,5*G.fightExperience(expected,profile.level,layer));
 }
-assert.equal(level(150).carry_limit,'15');
+assert.equal(level(150).carry_limit,'18');
 for(let i=0;i<500;i++)assert.equal(enemyForFight(enemies,501,()=>(i+.5)/500).id,enemies[i].id);
 for(let i=0;i<100;i++){
  const boss=enemyForFight(enemies,505,()=>(i+.5)/100);
