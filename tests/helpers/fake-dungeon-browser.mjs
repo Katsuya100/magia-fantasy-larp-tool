@@ -4,7 +4,7 @@ export function fakeDungeonBrowser(config={}){
  const factory=config.factory||fakeIndexedDB(config.storage),dom=new Map(),listeners=new Map();
  const make=(id)=>{
   const handlers=new Map();
-  const element={id,hidden:['library','prepare','collection','battle','checkpoint','analyzing','result','cameraCanvas','cameraVideo','cameraCapture','cameraStop','pageError','battleError','cameraError','notice'].includes(id),disabled:false,open:false,attributes:{},innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
+  const element={id,hidden:['library','prepare','collection','battle','checkpoint','analyzing','result','cameraCanvas','cameraVideo','cameraCapture','cameraStop','pageError','battleError','cameraError','notice','tutorialOverlay','tutorialExample','tutorialPad','tutorialRetry','tutorialFinger'].includes(id),disabled:false,open:false,attributes:{},innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
    addEventListener(name,fn){handlers.set(name,fn);},
    fire(name){return handlers.get(name)?.({target:element,preventDefault(){this.defaultPrevented=true;}});},
    setAttribute(name,value){this.attributes[name]=String(value);},
