@@ -31,10 +31,10 @@ def build(source, output):
                        .49<=radius<.77,
                        .49<=radius<=1.075,
                        radius<.49)
-                show=(bands[0] and (step>0 or step==0 and angle/(2*math.pi)<=progress)) or \\
-                     (bands[1] and (step>1 or step==1 and angle/(2*math.pi)<=progress)) or \\
-                     (bands[2] and (step>2 or step==2 and x/320<=progress)) or \\
-                     (bands[3] and (step>3 or step==3 and y/320<=progress))
+                show=((bands[0] and (step>0 or step==0 and angle/(2*math.pi)<=progress))
+                      or (bands[1] and (step>1 or step==1 and angle/(2*math.pi)<=progress))
+                      or (bands[2] and (step>2 or step==2 and x/320<=progress))
+                      or (bands[3] and (step>3 or step==3 and y/320<=progress)))
                 pixels[j]=255 if show else 0
             mask.frombytes(bytes(pixels))
             frame=Image.new('RGB',(320,360),'#17151d')
