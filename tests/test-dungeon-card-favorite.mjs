@@ -85,19 +85,23 @@ try{
  if(originalDocument===undefined)delete globalThis.document;
  else globalThis.document=originalDocument;
 }
-assert.equal(canvases.length,2,'separate original contour and preblurred glow canvases');
-assert.deepEqual([canvases[0].width,canvases[0].height,canvases[1].width,canvases[1].height],[256,256,256,256]);
-const preblur=offscreenDraws.find(call=>call.canvas===canvases[1]);
-assert.equal(preblur?.filter,'blur(3px)','glow mask is Gaussian-blurred before card painting');
-assert.equal(preblur?.args[0],canvases[0],'preblur is derived from original extracted outlines');
+assert.equal(canvases.length,3,'original contour, glow, and antialiased core canvases');
+assert.deepEqual(canvases.flatMap(canvas=>[canvas.width,canvas.height]),[256,256,256,256,256,256]);
+const glowPreblur=offscreenDraws.find(call=>call.canvas===canvases[1]);
+const corePreblur=offscreenDraws.find(call=>call.canvas===canvases[2]);
+assert.equal(glowPreblur?.filter,'blur(2px)','glow preblur is reduced to preserve detail');
+assert.equal(glowPreblur?.args[0],canvases[0],'glow derives from extracted outline');
+assert.equal(corePreblur?.filter,'blur(0.8px)','core is antialiased by a tiny Gaussian blur');
+assert.equal(corePreblur?.args[0],canvases[0],'core derives from extracted outline');
 assert.deepEqual(clipCircles[0].slice(0,3),[920,328,229],'artwork slightly overlaps the decorative frame');
-assert.equal(drawCalls.length,3,'only three softened glow layers are painted');
-assert.deepEqual(drawCalls.map(call=>call.filter),['blur(22px)','blur(9px)','blur(2px)'],'each glow layer is blurred, never a crisp core');
-assert.ok(drawCalls.every(call=>call.args[0]===canvases[1]),'all card passes use Gaussian-preblurred mask, not raw pixel edges');
-assert.ok(drawCalls.every(call=>call.args[0]!==canvases[0]),'jagged original Sobel contour is never drawn directly');
+assert.equal(drawCalls.length,4,'three tighter glows and a softly antialiased core');
+assert.deepEqual(drawCalls.map(call=>call.filter),['blur(16px)','blur(6px)','blur(1.5px)','none'],'blur reduction followed by already antialiased core');
+assert.ok(drawCalls.slice(0,3).every(call=>call.args[0]===canvases[1]),'glow passes use softer glow canvas');
+assert.equal(drawCalls[3].args[0],canvases[2],'core draws antialiased canvas, not raw outline');
+assert.ok(drawCalls.every(call=>call.args[0]!==canvases[0]),'jagged unprocessed outline is never painted directly');
 assert.ok(drawCalls.every(call=>call.args[3]===468&&call.args[4]===468),'all artwork layers use enlarged 468px diameter');
-assert.ok(drawCalls.every(call=>call.composite==='lighter'),'all glow layers retain additive blending');
-assert.ok(drawCalls[2].alpha>drawCalls[0].alpha,'near glow preserves legibility without a hard core');
+assert.ok(drawCalls.every(call=>call.composite==='lighter'),'all layers retain additive blending');
+assert.ok(drawCalls[3].alpha>.6&&drawCalls[3].alpha<.8,'core remains visible without overwhelming the glows');
 assert.deepEqual(saveCalls,['save','restore'],'glow compositing state restored');
 
 const factory=fakeIndexedDB(),db=await openStore(factory),profile=await getProfile(db);
