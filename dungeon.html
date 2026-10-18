@@ -85,6 +85,7 @@
         <p>この端末に保存されている冒険のデータを管理します。</p>
         <button type="button" id="deleteSaveData" class="danger" data-action="delete-data">冒険データをすべて削除</button>
       </div>
+      <div class="profile-support"><a href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer">作者を応援 ↗</a></div>
     </section>
 
     <section id="library" class="panel grimoire-panel" hidden>
@@ -252,6 +253,17 @@
         <div class="buttons">
           <button type="button" id="cancelCircleAction" class="subtle">キャンセル</button>
           <button type="button" id="confirmCircleAction" class="primary-action"></button>
+        </div>
+      </div>
+    </dialog>
+    <dialog id="supportPromptDialog" class="name-dialog support-prompt-dialog" aria-labelledby="supportPromptTitle" aria-describedby="supportPromptMessage">
+      <div class="support-prompt-inner">
+        <h2 id="supportPromptTitle"></h2>
+        <p id="supportPromptMessage"></p>
+        <p>応援は任意です。</p>
+        <div class="support-prompt-actions">
+          <button type="button" id="supportPromptClose" class="subtle">閉じる</button>
+          <a href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer">作者を応援 ↗</a>
         </div>
       </div>
     </dialog>
