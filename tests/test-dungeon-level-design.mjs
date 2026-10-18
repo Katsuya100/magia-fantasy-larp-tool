@@ -174,7 +174,7 @@ for(let layer=1;layer<=100;layer++){
  const bossId=ids[4],trophy=bossUniqueCollection(collections,bossId);
  assert.equal(trophy.rarity,layer%10===0?'legendary':'epic','boss trophy rarity for layer '+layer);
  const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,guaranteeBossCollection:true});
- assert.ok(rewards.length>=1&&rewards.length<=5);
+ assert.ok(rewards.length>=1&&rewards.length<=9);
  assert.equal(rewards.filter(x=>x.id===trophy.id).length,1,'boss trophy guaranteed on first victory at layer '+layer);
   const repeats=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId});
   assert.equal(repeats.filter(x=>x.id===trophy.id).length,0,'repeat boss wins no longer guarantee the trophy at layer '+layer);

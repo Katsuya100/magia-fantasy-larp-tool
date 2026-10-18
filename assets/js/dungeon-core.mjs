@@ -61,28 +61,43 @@ export function rollPotionValue(item,layer,r=Math.random){
  const upper=Math.max(minimum,Number(item.max_value),Math.ceil(maximum*tierCeiling));
  return roll(minimum,upper,r);
 }
-export function dropCount(l,r=Math.random){const p=clamp(num('loot_chance_base')+num('loot_chance_per_level')*(l-1),num('loot_chance_base'),num('loot_chance_cap'));let n=num('loot_count_min');for(let i=0;i<num('loot_count_max')-num('loot_count_min');i++)if(r()<p)n++;return n;}
+// The three reward types roll independently: a rich collection drop never
+// crowds out a magic stone or a usable item. Five fights form one layer.
+const countSuccesses=(rolls,chance,r)=>{
+ let count=0;
+ for(let i=0;i<rolls;i++)if(r()<chance)count++;
+ return count;
+};
+export function dropCounts(_enemyLevel,r=Math.random){
+ return {
+  collection:countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r),
+  stone:countSuccesses(num('magic_stone_drop_rolls'),num('magic_stone_drop_chance'),r),
+  use:countSuccesses(num('consumable_drop_rolls'),num('consumable_drop_chance'),r)
+ };
+}
+export function dropCount(l,r=Math.random){
+ return Object.values(dropCounts(l,r)).reduce((total,count)=>total+count,0);
+}
 export function drops(items,collections,l,r=Math.random,context={}){
- const layer=context.layer??1;
- // Per-enemy rewards can be zero; five encounters average about four drops per layer.
- const rewards=Array.from({length:dropCount(l,r)},()=>{
-  if(r()<num('consumable_drop_rate')){
-   const tier=rollConsumableTier(layer,r);
-   const x=weighted(eligibleConsumables(items,layer,tier),r);
-   return {type:'use',id:x.id,value:rollPotionValue(x,layer,r),bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null};
-  }
-  if(r()<num('magic_stone_drop_rate'))return {type:'stone',id:'magic_stone'};
-  return {type:'collection',id:rollCollection(collections,layer,r,context.bossEnemyId??null).id};
- });
+ const layer=context.layer??1,{collection,stone,use}=dropCounts(l,r),rewards=[];
+ for(let i=0;i<use;i++){
+  const tier=rollConsumableTier(layer,r);
+  const x=weighted(eligibleConsumables(items,layer,tier),r);
+  rewards.push({type:'use',id:x.id,value:rollPotionValue(x,layer,r),
+   bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null});
+ }
+ for(let i=0;i<stone;i++)rewards.push({type:'stone',id:'magic_stone'});
+ for(let i=0;i<collection;i++)
+  rewards.push({type:'collection',id:rollCollection(collections,layer,r,context.bossEnemyId??null).id});
  if(context.bossEnemyId&&context.guaranteeBossCollection){
   const id=bossUniqueCollection(collections,context.bossEnemyId).id;
   const existing=rewards.findIndex(item=>item.type==='collection'&&item.id===id);
-  const slot=existing>=0?existing:rewards.findIndex(item=>item.type==='collection');
-  // Even an otherwise empty boss drop always contains its first-clear trophy.
-  // Replace one random reward if five were rolled; avoid adding a sixth.
-  if(slot>=0)rewards[slot]={type:'collection',id};
-  else if(rewards.length)rewards[rewards.length-1]={type:'collection',id};
-  else rewards.push({type:'collection',id});
+  if(existing<0){
+   // Replace only a collection so fixed trophies do not reduce stone/item drops.
+   const slot=rewards.findIndex(item=>item.type==='collection');
+   if(slot>=0)rewards[slot]={type:'collection',id};
+   else rewards.push({type:'collection',id});
+  }
  }
  return rewards;
 }
