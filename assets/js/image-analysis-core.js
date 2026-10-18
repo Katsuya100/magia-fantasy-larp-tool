@@ -1257,6 +1257,11 @@
     // A shield has strong radial variation with broad bends; an oval does not.
     const enclosedFaces = enclosedSigilFaces(image.gray, image.width, image.height, cx, cy, radius);
     const closedContourWeight = closedness ** 4;
+    // A lone regular polygon may have a nearly circular convex hull, yet its
+    // repeated broad corners distinguish it from a genuinely rounded motif.
+    const polygonalFace = enclosedFaces.faceCount === 1
+      && broadBendRuns >= 4 && broadAngleRatio > .13;
+    const roundedAreaShare = polygonalFace ? 0 : enclosedFaces.roundedAreaShare;
     const repeatedLobes = radialVariation > .055 && broadAngleRatio < .14
       ? Math.max(0, radialLobes - 3) : 0;
     const shieldSilhouette = broadBendRuns > 0 && sharpTipCount <= 2 && repeatedLobes === 0
@@ -1265,13 +1270,13 @@
     const raw = {
       attack: Math.max(0, (Math.max(0, sharpTipCount - 1) * .85 + sharpAngleRatio * .65 + sharpCornerScore + repeatedLobes * .75) * closedContourWeight
         + enclosedFaces.attackBoost * clamp((radialVariation - .035) / .06))
-        * Math.max(.2, 1 - enclosedFaces.roundedAreaShare),
+        * Math.max(.2, 1 - roundedAreaShare),
       defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5
         + shieldSilhouette) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
       support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 2.4)
         / (1 + broadBendRuns * .3 * (1 - mean)) * closedContourWeight
         * Math.max(.35, 1 - sharpTipCount * .12)
-        + enclosedFaces.roundedAreaShare * 14 * closedContourWeight,
+        + roundedAreaShare * 14 * closedContourWeight,
       debuff: missingRayRatio ** 2 * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
     };
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
