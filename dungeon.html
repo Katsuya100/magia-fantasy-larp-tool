@@ -285,27 +285,16 @@
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
-      <div class="tutorial-top"><span id="tutorialCount">1 / 6</span><button type="button" id="tutorialSkip" class="subtle">スキップ</button></div>
-      <h2 id="tutorialTitle">魔法陣の作り方</h2>
-      <p id="tutorialHint">サンプルを見て、順番に描いてみよう。</p>
-      <div id="tutorialExample" class="tutorial-example">
-        <img src="assets/images/sample.png?v=20261018.26" alt="外円と内円、その間に英語の呪文、内円の中に紋様を描いたお手本">
-        <ol><li>外円と内円を閉じる</li><li>円の間に英語の呪文</li><li>中心に紋様を描く</li><li>1つずつ明るい場所で撮影</li></ol>
-      </div>
-      <div id="tutorialPad" class="tutorial-pad" data-step="1" hidden>
-        <svg viewBox="0 0 320 320" aria-hidden="true" class="tutorial-guides">
-          <circle class="tutorial-outer" cx="160" cy="160" r="116" />
-          <circle class="tutorial-inner" cx="160" cy="160" r="66" />
-          <text class="tutorial-letters" x="160" y="55" text-anchor="middle">FIRE</text>
-          <path class="tutorial-symbol" d="M160 108 L143 159 L174 153 L154 209 L184 145 L154 150 Z" />
-        </svg>
-        <canvas id="tutorialCanvas" width="320" height="320" aria-label="ここを指またはマウスでなぞって魔法陣を描く"></canvas>
-        <span id="tutorialFinger" class="tutorial-finger" aria-hidden="true">👆</span>
-      </div>
-      <p id="tutorialFeedback" role="status" aria-live="polite" class="tutorial-feedback"></p>
+      <div class="tutorial-top"><span>MAGIA CIRCLE</span><button type="button" id="tutorialSkip" class="subtle">スキップ</button></div>
+      <h2 id="tutorialTitle">魔法陣の描き方</h2>
+      <p id="tutorialHint">紙に描く順番を見てみよう。</p>
+      <figure class="tutorial-animation">
+        <img id="tutorialAnimation" src="assets/images/dungeon-circle-tutorial.gif?v=20261018.26" alt="外円、内円、英語の呪文、中央の紋様の順で完成する魔法陣" width="320" height="360">
+        <figcaption>外円 → 内円 → 英語の呪文 → 紋様</figcaption>
+      </figure>
+      <p class="tutorial-rules">円は閉じて、呪文は二つの円の間に。明るい場所で全体を撮影しよう。</p>
       <div class="tutorial-actions">
-        <button type="button" id="tutorialRetry" class="subtle" hidden>書き直す</button>
-        <button type="button" id="tutorialContinue" class="primary-action tutorial-next">描いてみる</button>
+        <button type="button" id="tutorialContinue" class="primary-action tutorial-next">魔導書へ <span aria-hidden="true">⟶</span></button>
       </div>
     </div>
   </div>
