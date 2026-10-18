@@ -1577,3 +1577,13 @@ html,body{overflow-x:clip}
 .battle-panel .section-heading>div{min-width:0}
 .battle-panel .section-heading h2{font-size:clamp(18px,4.5vw,30px);overflow-wrap:anywhere}
 .battle-encounter-label{margin:5px 0 0;color:var(--soft);font-size:clamp(13px,1.8vw,16px);font-weight:500;letter-spacing:.06em}
+
+/* Support is a low-key link only at the bottom of the profile. */
+.profile-support{margin-top:25px;padding-top:18px;border-top:1px solid var(--border);text-align:center}
+.profile-support a,.support-prompt-actions a{color:var(--gold);font-size:13px;text-underline-offset:4px}
+.profile-support a:hover,.support-prompt-actions a:hover{color:var(--pale)}
+.profile-support a:focus-visible,.support-prompt-actions a:focus-visible{outline:2px solid #9ae3db;outline-offset:4px}
+.support-prompt-inner{text-align:center;padding:30px 24px}
+.support-prompt-inner h2{font-size:23px;color:var(--gold);margin:0 0 14px}
+.support-prompt-inner p{font-size:14px;color:var(--soft);margin:9px 0}
+.support-prompt-actions{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:25px}
