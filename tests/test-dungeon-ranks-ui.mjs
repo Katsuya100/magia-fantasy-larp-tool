@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {ADVENTURER_RANKS} from '../assets/js/dungeon-ranks.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,getProfile,putCircle,saveProfile} from '../assets/js/dungeon-store.mjs';
@@ -11,6 +12,11 @@ configure({balance,levels,floors,playerBase});
 const wait=async(check,description)=>{const end=Date.now()+9000;while(!(await check())&&Date.now()<end)await new Promise(r=>setTimeout(r,25));assert.ok(await check(),description);};
 const btn=data=>({dataset:data,disabled:false,closest(){return this;}});
 const attack={role:'attack',attribute:'flame',power:5000};
+const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+assert.match(css,/\.adventurer-grade strong>span\{[^}]*linear-gradient\(/,'rank titles use a metallic text gradient');
+for(const rank of ADVENTURER_RANKS){
+ assert.ok(css.includes('.adventurer-grade strong[data-rank="'+rank.layer+'"]'),'missing unique metallic palette for '+rank.name);
+}
 const originalRandom=Math.random;
 try{
  // Start from the tenth-layer boss, so the badge is earned through actual UI combat.
@@ -28,6 +34,7 @@ try{
   await import('../assets/js/dungeon-app.mjs?integration=rank-award');
   await wait(()=>$('battle').hidden===false,'saved boss battle resumes');
   assert.equal($('startLayer').value,'1','default route is always first layer');
+  assert.match($('playerStats').innerHTML,/<strong data-rank="0"><span>未取得<\/span><\/strong>/);
   await doc.click(btn({cast:'-1'}));
   await wait(async()=> (await getProfile(db)).run?.stage==='checkpoint','boss defeated');
   let saved=await getProfile(db);
@@ -49,8 +56,8 @@ try{
   assert.equal($('returnSceneTitle').textContent,'アイテム報酬');
   assert.match($('returnRewards').innerHTML,/鉛級冒険者章/);
   await doc.click(btn({view:'home'}));
-  assert.match($('playerStats').innerHTML,/冒険者等級：<strong>鉛級<\/strong>/);
-  assert.match($('playerStats').innerHTML,/取得済み冒険者章：鉛級/);
+  assert.match($('playerStats').innerHTML,/冒険者等級：<strong data-rank="10"><span>鉛級<\/span><\/strong>/);
+  assert.doesNotMatch($('playerStats').innerHTML,/取得済み冒険者章|adventurer-badges/);
   await doc.click(btn({view:'prepare'}));
   assert.match($('startLayer').innerHTML,/value="1">1層から<\/option>/,'dynamic first-floor label is concise');
   assert.match($('startLayer').innerHTML,/value="11">11層から（鉛級）<\/option>/,'鉛級の短縮表示に「初戦」は含めない');
@@ -81,7 +88,8 @@ try{
     [31,'31層から（鋼級）'],[41,'41層から（銅級）'],
     [51,'51層から（銀級）'],[61,'61層から（金級）']
    ],'all unlocked shortcut labels use 層から without 初戦');
-  assert.match($2('playerStats').innerHTML,/鉛級・鉄級・鋼級・銅級・銀級・金級/);
+  assert.match($2('playerStats').innerHTML,/<strong data-rank="60"><span>金級<\/span><\/strong>/);
+  assert.doesNotMatch($2('playerStats').innerHTML,/取得済み冒険者章|adventurer-badges/);
   assert.doesNotMatch($2('collectionGrid').innerHTML,/冒険者章/);
   $2('startLayer').value='41';await $2('startLayer').fire('change');
   await env2.document.click(btn({view:'home'}));
