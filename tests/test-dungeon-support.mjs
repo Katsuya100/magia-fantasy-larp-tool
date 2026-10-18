@@ -86,10 +86,9 @@ try{
 const env4=fakeDungeonBrowser({factory:badge.factory}),$4=id=>env4.document.getElementById(id);
 try{
  await import('../assets/js/dungeon-app.mjs?integration=support-badge-after-reload');
- await wait(()=>$4('returnShowcase').hidden===false);
+ await wait(()=>$4('startupMask').hidden===true&&$4('returnShowcase').hidden===false&&$4('returnNext').textContent==='完了');
  assert.equal($4('supportPromptDialog').open,false,'reload does not show the prompt prematurely');
  await $4('returnNext').fire('click');
- console.log('SUPPORT DEBUG',JSON.stringify({nextDisabled:$4('returnNext').disabled,nextText:$4('returnNext').textContent,dialog:$4('supportPromptDialog').open,title:$4('supportPromptTitle').textContent,home:$4('home').hidden,showcase:$4('returnShowcase').hidden,pending:(await getProfile(badge.db)).pendingReturn}));
  assert.equal($4('home').hidden,false);
  assert.equal($4('supportPromptDialog').open,true);
  assert.equal($4('supportPromptTitle').textContent,'新しい冒険者章を獲得！');
