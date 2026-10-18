@@ -69,22 +69,22 @@ const fixtures = [
   ...Object.entries(openLetter).map(([letter, shape]) => ({
     name: 'debuff: unclosed straight-letter ' + letter, role: 'debuff', shape,
   })),
-  {name: 'debuff: nine separated radial strokes', role: 'debuff', shape: radialGap},
+  {name: 'debuff: nine separated radial strokes', role: 'debuff', shape: radialGap, expectOpenLinearOverride: true},
   {name: 'debuff: nine rays with a partial scan-rim circle', role: 'debuff',
-    shape: radialGap + openRing(191, 25)},
+    shape: radialGap + openRing(191, 25), expectOpenLinearOverride: true},
   {name: 'debuff: nine rays with a narrow-gap scan-rim arc', role: 'debuff',
-    shape: radialGap + openRing(191, 14)},
+    shape: radialGap + openRing(191, 14), expectOpenLinearOverride: true},
   {name: 'support: smooth interrupted circle without spokes', role: 'support',
-    shape: openRing(150, 10)},
+    shape: openRing(150, 10), expectNoOverride: true},
   {name: 'debuff: thin unclosed X', role: 'debuff', shape: openLetter.X, stroke: 3},
   {name: 'support: an open X inside a complete circle stays support',
-    role: 'support', shape: '<circle cx="256" cy="256" r="150"/>' + openLetter.X},
+    role: 'support', shape: '<circle cx="256" cy="256" r="150"/>' + openLetter.X, expectNoOverride: true},
   {name: 'support: an open T inside a complete circle stays support',
     role: 'support', shape: '<circle cx="256" cy="256" r="150"/>' + openLetter.T},
   {name: 'defense: a closed hexagon with open strokes stays defense',
     role: 'defense', shape: polygon(6, 155) + '<path d="M256 171 L256 340 M178 256 L332 256"/>'},
   {name: 'attack: sharp star with an added open stroke stays attack',
-    role: 'attack', shape: star(6) + '<path d="M256 205 L256 305"/>'},
+    role: 'attack', shape: star(6) + '<path d="M256 205 L256 305"/>', expectNoOverride: true},
   {name: 'attack: 5-point star', role: 'attack', shape: star(5, 158, 68)},
   {name: 'attack: rotated 8-point star', role: 'attack', shape: star(8, 165, 74, -78)},
   {name: 'defense: rotated hexagon', role: 'defense', shape: polygon(6, 155, -60)},
@@ -133,17 +133,19 @@ const fixtures = [
 
 let passed = 0;
 const failures = [];
-for (const {name, role, shape, stroke = 7, expectPointedFaces = false} of fixtures) {
+for (const {name, role, shape, stroke = 7, expectPointedFaces = false, expectOpenLinearOverride = false, expectNoOverride = false} of fixtures) {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><g fill="none" stroke="#111" stroke-width="' + stroke + '" stroke-linecap="round" stroke-linejoin="round">' + shape + '</g></svg>');
   const image = await sharp(svg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { scores, features } = analyzeSigilMetricsJs(image.data, size, size, paths);
   const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   console.log(JSON.stringify({ name, expected: role, predicted: ranked[0][0], scores,
-    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
+    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, openLinearStrokes: features.openLinearStrokes, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
       broadAngleRatio: features.broadAngleRatio, sharpTipCount: features.sharpTipCount,
       missingRayRatio: features.missingRayRatio, openPathStraightness: features.openPathStraightness, broadBendRuns: features.broadBendRuns} }));
   if (ranked[0][0] !== role || ranked[0][1] < .35 || ranked[0][1] - ranked[1][1] < .02 ||
-    (expectPointedFaces && features.pointedFaces < 2)) {
+    (expectPointedFaces && features.pointedFaces < 2) ||
+    (expectOpenLinearOverride && features.openLinearStrokes < 3) ||
+    (expectNoOverride && features.openLinearStrokes !== 0)) {
     failures.push(name + ': expected ' + role + ', got ' + ranked[0][0] + ', margin=' + (ranked[0][1] - ranked[1][1]).toFixed(3));
   } else passed++;
 }
