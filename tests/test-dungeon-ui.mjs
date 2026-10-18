@@ -247,7 +247,8 @@ try{
  assert.equal(new Set(firstLayerOrder).size,4,'each regular foe appears once per layer');
  assert.equal(p.run.enemy.id,firstLayerOrder[0],'first fight uses shuffled opponent #1');
  assert.equal(p.deepestReturnedLayer,0,'entering 1層 does not count as a completed return');
- assert.equal($('floorLabel').textContent,'1層1戦目','initial dungeon label is layer and fight');assert.equal(p.run.carry.filter(Boolean).length,0,'first outing has no carried items');
+ assert.equal($('floorLabel').textContent,'1層 はじまりの魔窟','first layer shows its name');
+ assert.equal($('battleEncounterLabel').textContent,'1戦目','the encounter is a separate smaller line');assert.equal(p.run.carry.filter(Boolean).length,0,'first outing has no carried items');
  assert.equal($('tab-prepare').hidden,true,'preparation tab disappears during battle');
  assert.equal($('tab-library').hidden,true,'grimoire tab disappears during battle');
  assert.equal($('tab-dungeon').hidden,false,'dungeon tab replaces preparation tabs');
@@ -312,7 +313,8 @@ try{
  assert.equal(p.run.floor,2,'first cast consumes the turn and wins the fight');
  assert.deepEqual(p.run.layerEnemyOrder.ids,firstLayerOrder,'the shuffled order is persisted as fights progress');
  assert.equal(p.run.enemy.id,firstLayerOrder[1],'second fight uses shuffled opponent #2');
- assert.equal($('floorLabel').textContent,'1層2戦目');
+ assert.equal($('floorLabel').textContent,'1層 はじまりの魔窟');
+ assert.equal($('battleEncounterLabel').textContent,'2戦目');
  assert.ok(animationRoles.includes('hero:attack'),'real hero attack triggers clash animation');
  assert.ok(projectileEvents.some(event=>event.side==='hero'&&event.attribute==='flame'),'flame attack launches from hero toward enemy');
  assert.equal($('heroProjectile').dataset.effect,'idle','attacker projectile resets after the combat phase');
@@ -338,7 +340,10 @@ try{
   p=await getProfile(db);
   if(fight<5)assert.equal(p.run.floor,fight+1);
   if(fight<4)assert.equal(p.run.enemy.id,firstLayerOrder[fight],'regular fights respect the saved shuffled order');
-  if(fight<5)assert.equal($('floorLabel').textContent,'1層'+(fight+1)+'戦目'+(fight===4?' · 階層ボス':''),'boss is 1層5戦目');
+  if(fight<5){
+   assert.equal($('floorLabel').textContent,'1層 はじまりの魔窟','layer heading stays stable through each encounter');
+   assert.equal($('battleEncounterLabel').textContent,(fight+1)+'戦目','boss is still the fifth encounter');
+  }
  }
  assert.equal(p.run.stage,'checkpoint');
  assert.equal(p.deepestReturnedLayer,0,'boss victory does not count as a return until leaving');
@@ -525,7 +530,8 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
  assert.equal(p.run.floor,6);
  assert.equal(p.run.layerEnemyOrder.layer,2,'continuing to the next layer reshuffles the new regular opponents');
  assert.equal(p.run.enemy.id,p.run.layerEnemyOrder.ids[0],'next layer uses its own shuffled order');
- assert.equal($('floorLabel').textContent,'2層1戦目','next layer begins after the fifth boss');
+ assert.equal($('floorLabel').textContent,'2層 地下の亜人砦','next layer has a distinct heading');
+ assert.equal($('battleEncounterLabel').textContent,'1戦目');
  assert.equal($('enemyCombatant').dataset.defeated,'false','fresh opponent appears only after starting next layer');
  assert.equal(p.deepestReturnedLayer,1,'descending into the next layer does not count as a return');
  assert.equal(p.run.enemy.level,3);
@@ -544,7 +550,8 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   assert.equal(el('prepare').hidden,true,'active dungeon takes priority over first-view preparation');
   assert.equal(el('tab-dungeon').attributes['aria-current'],'page','battle is under the dungeon tab');
   assert.equal(el('heroName').textContent,'暁の旅人','reloaded dungeon restores saved name');
-  assert.equal(el('floorLabel').textContent,'2層1戦目','reloading preserves the layer and encounter number');
+  assert.equal(el('floorLabel').textContent,'2層 地下の亜人砦','reloading preserves the layer name');
+  assert.equal(el('battleEncounterLabel').textContent,'1戦目','reloading preserves the encounter');
   assert.equal((await getProfile(await openStore(env2.factory))).deepestReturnedLayer,1,'reload keeps only the deepest successful return');
   const deaths=[];
   const stage2=el('battleCeremony');
