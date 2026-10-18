@@ -236,10 +236,8 @@ try{
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);
  assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="loot"/,'battle HUD shows earned loot as a card');
  assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="xp"/,'battle HUD shows provisional EXP as a card');
- assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="item"/,'battle HUD shows free item usage as a card');
- assert.match($('battleInfo').innerHTML,/⚗<\/span> 携行品/,'item status is labeled 携行品');
- assert.match($('battleInfo').innerHTML,/>未<\/strong>/,'the carried-item action initially shows 未');
- assert.doesNotMatch($('battleInfo').innerHTML,/この戦闘|道具行使|battle-stat-max/,'remove unnecessary item counter text');
+ assert.doesNotMatch($('battleInfo').innerHTML,/data-kind="item"/,'removed item usage card is absent');
+ assert.equal(($('battleInfo').innerHTML.match(/class="battle-stat"/g)||[]).length,2,'only loot and EXP cards');
  assert.match($('battleInfo').innerHTML,/<strong class="battle-stat-value">0<\/strong>/,'initial rewards start at zero');
  assert.match($('battleInfo').innerHTML,/>未確定 · 持ち帰り待ち</,'unbanked loot remains clearly provisional');
  assert.doesNotMatch($('battleInfo').innerHTML,/未確定報酬 [0-9]+個 \/ 未確定経験値/,'the cramped slash-separated sentence is removed');
@@ -356,7 +354,8 @@ try{
  assert.equal($('enemyCombatant').dataset.dying,'false','completed death effect can clear its animation without resurrecting the boss');
  assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破/);
  assert.doesNotMatch($('checkpointInfo').textContent,/次は2層/);
- assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\n1層踏破。\n未確定報酬 [0-9]+個 \/ 経験値 [0-9]+。\n続行して敗北すると失われる。/,'each checkpoint sentence appears on its own line');
+ assert.match($('checkpointInfo').textContent,/1層の階層ボスを撃破！\n1層踏破。\n未確定報酬 [0-9]+個 \/ 経験値 [0-9]+。/,'checkpoint text stays concise');
+ assert.doesNotMatch($('checkpointInfo').textContent,/続行して敗北すると失われる/,'warning is removed');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
  assert.ok(p.run.loot.length>=1&&p.run.loot.length<=25,'one layer has sparse drops and a guaranteed first-clear boss trophy');
@@ -490,15 +489,14 @@ assert.doesNotMatch($('gearCards').innerHTML,/class="tile-detail item-effect-ico
  assert.equal(p.run.carry.filter(Boolean).length,2,'used potion removed, other slots remain');
  assert.equal(p.run.carry[0],null,'consumed item leaves a blank slot');
  assert.equal(p.run.carry[1].instanceId,savedBeforeAttack.carrySlots[1],'other slots keep their identities');
- assert.equal(p.run.usedItems,1);
- assert.match($('battleInfo').innerHTML,/携行品<\/span>[\s\S]*?battle-stat-value">済<\/strong>/,'item status changes to 済 after the free use');
+ assert.doesNotMatch($('battleInfo').innerHTML,/data-kind="item"/,'no usage card after item use');
  assert.equal(($('battleItems').innerHTML.match(/data-use="/g)||[]).length,2,'item grid keeps usable tiles');
 assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,2,'combat uses the same centered stat class as preparation');
  assert.equal(($('battleItems').innerHTML.match(/data-open-item="/g)||[]).length,0,'battle items are not preparation slots');
  assert.equal(($('battleItems').innerHTML.match(/battle-item-tile empty/g)||[]).length,1,'the unused position stays visible in a three-slot grid');
  await doc.click(btn({use:'0'}));
  p=await getProfile(db);
- assert.equal(p.run.carry.filter(Boolean).length,2,'one free item per round');
+ assert.equal(p.run.carry.filter(Boolean).length,2,'already consumed slot cannot be reused');
  // An entire second 5-fight block must offer a choice, and continued runs retain HP.
  const oldBattleScroll=577;
  window.scrollY=oldBattleScroll;

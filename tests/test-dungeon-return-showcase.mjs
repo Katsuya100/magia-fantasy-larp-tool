@@ -71,7 +71,8 @@ try{
   {type:'use',id:newItem.id,value:10,bonus:null},
   {type:'collection',id:oldCollection.id},
   {type:'collection',id:newCollection.id},
-  {type:'stone'}
+  {type:'stone'},
+  {type:'rank',layer:10}
  ];
  const repeatRun=structuredClone(initial.run);
  await saveProfile(history.db,initial);
@@ -87,9 +88,12 @@ try{
   await $h('returnNext').fire('click');
   assert.equal($h('returnSceneTitle').textContent,'アイテム報酬');
   const displayedRewards=$h('returnRewards').innerHTML;
-  assert.ok(displayedRewards.indexOf('魔導石')<displayedRewards.indexOf(newItem.name),'magic stones are always the first reward');
+  assert.ok(displayedRewards.indexOf('鉛級冒険者章')<displayedRewards.indexOf('魔導石'),'badge comes first');
+  assert.ok(displayedRewards.indexOf('魔導石')<displayedRewards.indexOf(newItem.name),'magic stones precede regular items');
   assert.ok(displayedRewards.indexOf(newItem.name)<displayedRewards.indexOf(oldItem.name),'first-ever item precedes previously acquired item');
-  assert.equal((displayedRewards.match(/class="return-new"/g)||[]).length,1,'only first-ever item receives NEW');
+  assert.equal((displayedRewards.match(/class="return-new"/g)||[]).length,3,'badge, magic stone, and first-ever item receive NEW');
+  assert.match(displayedRewards,/class="return-new">NEW<\/span>[\s\S]*?<strong>鉛級冒険者章<\/strong>/,'badge is always NEW');
+  assert.match(displayedRewards,/class="return-new">NEW<\/span>[\s\S]*?<strong>魔導石<\/strong>/,'magic stone is always NEW');
   assert.match(displayedRewards,/class="return-reward-effect"[^>]*>❤️\+10<\/span>/,'returned HP potions show the same concise numeric effect as battle slots');
   assert.doesNotMatch(displayedRewards,/>効果 10</,'reward item cards have no explanatory sentence');
   const saved=await getProfile(history.db);

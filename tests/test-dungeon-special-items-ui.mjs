@@ -77,8 +77,8 @@ try{
  hero.hp=1;hero.mp=1;
  const enemy=G.fromEnemy(enemies.find(x=>x.id==='foe_l001_1'),1);
  p2.run={floor:1,slotIds:p2.slots,hero,enemy,enemyName:enemy.id,
- carry:[{type:'use',id:'elixir_s',value:35,bonus:null},null,null,null,null],
- loot:[],xp:0,usedItems:0,log:[],stage:'battle'};
+ carry:[{type:'use',id:'elixir_s',value:35,bonus:null},{type:'use',id:'elixir_s',value:35,bonus:null},null,null,null],
+ loot:[],xp:0,usedItems:1,log:[],stage:'battle'};
  await saveProfile(db2,p2);
  const env2=fakeDungeonBrowser({factory:f2}),doc2=env2.document,$2=id=>doc2.getElementById(id);
  try{
@@ -93,7 +93,12 @@ try{
   assert.equal(after.run.hero.hp,1+Math.ceil(after.run.hero.stats.hp*.35));
   assert.equal(after.run.hero.mp,1+Math.ceil(after.run.hero.maxMp*.35));
   assert.equal(after.run.carry[0],null,'elixir is consumed');
-  assert.equal(after.run.usedItems,1,'elixir respects the normal one-item-per-round limit');
+  assert.doesNotMatch($2('battleItems').innerHTML,/data-use="1" disabled/,'second item remains usable in the same battle');
+  await doc2.click(btn({use:'1'}));
+  const twice=await getProfile(db2);
+  assert.equal(twice.run.carry[1],null,'second elixir consumed in the same battle');
+  assert.ok(twice.run.hero.hp>after.run.hero.hp,'second elixir heals without advancing battle');
+  assert.equal(twice.run.floor,1,'item use does not advance turns');
  }finally{env2.restore();}
 
  // 3. Activating a ruby survives the first fatal hit, but not a second.

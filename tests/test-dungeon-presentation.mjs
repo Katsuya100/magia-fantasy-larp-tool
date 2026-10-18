@@ -3,6 +3,9 @@ import {readFile,stat} from 'node:fs/promises';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const [page,home,css]=await Promise.all([read('dungeon.html'),read('index.html'),read('assets/css/dungeon.css')]);
 assert.match(page,/自分だけの魔法陣で迷宮へ/);
+assert.match(page,/<button type="button" id="returnHome" class="danger">帰還する<\/button>/,'short return button');
+assert.match(css,/#returnHome\{background:linear-gradient\(#d9494f,#941f32\)/,'return button is red');
+assert.doesNotMatch(page,/FREE ACTION · 1 \/ ROUND|道具使用回数|携行品使用状況/,'obsolete labels absent');
 assert.match(home,/自分だけの魔法陣で迷宮へ/);
 assert.doesNotMatch(home,/五つの陣で深淵へ/);
 assert.doesNotMatch(page,/共鳴率/);
@@ -146,11 +149,10 @@ assert.match(css,/\.return-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,
 assert.match(css,/\.return-grid\{[^}]*max-height:min\(40dvh,320px\)/,'return list scrolls internally to keep the action in view');
 assert.match(css,/@media\(max-width:630px\)\{\.return-panel[^}]+\}\.return-glyph[^}]+\}\.return-panel h2[^}]+\}\.return-grid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/,'mobile maintains three columns');
 assert.match(css,/\.return-treasure \.return-new,\.return-reward \.return-new\{/,'first-acquisition badges have a distinct style');
-assert.match(page,/v2026\.10\.18\.20/,'visible version confirms the refreshed public release');
-assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の戦利品・経験値・携行品使用状況"/,'battle counters use a dedicated accessible grouped status');
-assert.match(css,/\.battle-info\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'battle ledger presents three equal-width cards');
+assert.match(page,/v2026\.10\.18\.21/,'visible version confirms the refreshed public release');
+assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の戦利品・経験値"/,'battle counters use a dedicated accessible grouped status');
+assert.match(css,/\.battle-info\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'battle ledger presents two equal-width cards');
 assert.match(css,/@media\(max-width:630px\)\{\s*\.battle-info\{gap:5px/,'battle counters remain compact on phones');
-assert.match(css,/\.battle-stat\[data-kind="item"\] \.battle-stat-value\{font-family:var\(--serif\)/,'携行品 uses a readable kanji font');
 
 
 assert.match(css,/#gearCards \.loadout-tile,#battleItems \.battle-item-tile\{[^}]*aspect-ratio:1\s*\/\s*1/,'prepared and battle item tiles are both square');
@@ -286,7 +288,7 @@ assert.match(css,/\.scene-stack > #checkpoint\.panel:not\(\[hidden\]\)/,'checkpo
 assert.match(css,/\.scene-stack > #result\.panel:not\(\[hidden\]\)/,'defeat and return transition does not overlap the old battle');
 const battleMarkup=page.match(/<section id="battle"[^>]*>([\s\S]*?)<\/section>/)?.[1]||'';
 assert.ok(battleMarkup.indexOf('id="battleInfo"')>battleMarkup.indexOf('id="battleArena"')&&
- battleMarkup.indexOf('id="battleInfo"')<battleMarkup.indexOf('<h3>魔法陣</h3>'),'pending loot, XP and item usage appear above the magic-circle heading');
+ battleMarkup.indexOf('id="battleInfo"')<battleMarkup.indexOf('<h3>魔法陣</h3>'),'pending loot and EXP appear above the magic-circle heading');
 assert.equal((battleMarkup.match(/id="battleInfo"/g)||[]).length,1,'combat status is displayed only once');
 for(const side of ['hero','enemy']){
  const fighter=battleMarkup.match(new RegExp('<article id="'+side+'Combatant"[\\s\\S]*?<\\/article>'))?.[0]||'';
