@@ -146,10 +146,12 @@ assert.match(css,/\.return-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,
 assert.match(css,/\.return-grid\{[^}]*max-height:min\(40dvh,320px\)/,'return list scrolls internally to keep the action in view');
 assert.match(css,/@media\(max-width:630px\)\{\.return-panel[^}]+\}\.return-glyph[^}]+\}\.return-panel h2[^}]+\}\.return-grid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/,'mobile maintains three columns');
 assert.match(css,/\.return-treasure \.return-new,\.return-reward \.return-new\{/,'first-acquisition badges have a distinct style');
-assert.match(page,/v2026\.10\.18\.19/,'visible version confirms the refreshed public release');
-assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の戦利品・経験値・道具使用回数"/,'battle counters use a dedicated accessible grouped status');
+assert.match(page,/v2026\.10\.18\.20/,'visible version confirms the refreshed public release');
+assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の戦利品・経験値・携行品使用状況"/,'battle counters use a dedicated accessible grouped status');
 assert.match(css,/\.battle-info\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'battle ledger presents three equal-width cards');
 assert.match(css,/@media\(max-width:630px\)\{\s*\.battle-info\{gap:5px/,'battle counters remain compact on phones');
+assert.match(css,/\.battle-stat\[data-kind="item"\] \.battle-stat-value\{font-family:var\(--serif\)/,'携行品 uses a readable kanji font');
+
 
 assert.match(css,/#gearCards \.loadout-tile,#battleItems \.battle-item-tile\{[^}]*aspect-ratio:1\s*\/\s*1/,'prepared and battle item tiles are both square');
 assert.match(css,/#gearCards \.tile-item-effect,#battleItems \.tile-item-effect\{[^}]*position:static/,'item effects sit directly beneath item names, never pinned at the bottom');
@@ -160,6 +162,9 @@ assert.doesNotMatch(page,/<option value="default">レアリティ順<\/option>/,
 assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is concise');
 assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!important;/,'selected choice border does not change the button box size');
 const app=await read('assets/js/dungeon-app.mjs');
+assert.match(app,/run\.checkpointBattleScrollY=window\.scrollY/,'boss victory captures the battle scroll before showing checkpoint');
+assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing deeper restores the original battle scroll');
+assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
 assert.match(app,/shuffledLayerEnemyIds\(masters\.enemies,layer,Math\.random,slot\)/,'game assigns and saves a random order for each new layer');
 assert.match(app,/run\.layerEnemyOrder=\{layer,ids:/,'the order is stored in the active expedition');
 assert.match(app,/finishStartup\(\);\s*if\(!profile\.name\)openNameDialog\(true\)/,'startup mask closes before first-player name dialog appears');
@@ -197,7 +202,7 @@ assert.match(app,/await animateBattle\(steps\)/);
 assert.ok(app.includes('await playCombatSequence(steps,phase=>'));
 assert.ok(app.includes('for(const step of phase)'),'both fighters are painted within one phase');
 assert.ok(app.includes("treasureChestMarkup(drops)"),'drop count controls number of chests');
-assert.ok(app.includes("rewards.length+'個 · 未確定',rewards.length"));
+assert.ok(app.includes("rewards.length?rewards.length+'個 · 未確定':'次の戦いへ',rewards.length"));
 assert.ok(app.includes("await ceremony('encounter'"),'battle begins with an encounter');
 assert.ok(app.includes("onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death'"),'fatal ceremony overlaps the last attack');
 assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');

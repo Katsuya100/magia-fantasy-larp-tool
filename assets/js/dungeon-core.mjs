@@ -64,6 +64,7 @@ export function rollPotionValue(item,layer,r=Math.random){
 export function dropCount(l,r=Math.random){const p=clamp(num('loot_chance_base')+num('loot_chance_per_level')*(l-1),num('loot_chance_base'),num('loot_chance_cap'));let n=num('loot_count_min');for(let i=0;i<num('loot_count_max')-num('loot_count_min');i++)if(r()<p)n++;return n;}
 export function drops(items,collections,l,r=Math.random,context={}){
  const layer=context.layer??1;
+ // Per-enemy rewards can be zero; five encounters average about four drops per layer.
  const rewards=Array.from({length:dropCount(l,r)},()=>{
   if(r()<num('consumable_drop_rate')){
    const tier=rollConsumableTier(layer,r);
@@ -77,7 +78,11 @@ export function drops(items,collections,l,r=Math.random,context={}){
   const id=bossUniqueCollection(collections,context.bossEnemyId).id;
   const existing=rewards.findIndex(item=>item.type==='collection'&&item.id===id);
   const slot=existing>=0?existing:rewards.findIndex(item=>item.type==='collection');
-  rewards[slot>=0?slot:rewards.length-1]={type:'collection',id};
+  // Even an otherwise empty boss drop always contains its first-clear trophy.
+  // Replace one random reward if five were rolled; avoid adding a sixth.
+  if(slot>=0)rewards[slot]={type:'collection',id};
+  else if(rewards.length)rewards[rewards.length-1]={type:'collection',id};
+  else rewards.push({type:'collection',id});
  }
  return rewards;
 }
