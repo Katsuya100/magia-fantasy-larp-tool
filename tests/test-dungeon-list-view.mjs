@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,itemKind} from '../assets/js/dungeon-list-view.mjs';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks,itemKind} from '../assets/js/dungeon-list-view.mjs';
 import {circleChoices,itemChoices,itemGrid} from '../assets/js/dungeon-preparation-ui.mjs';
 const photo=(id,registeredAt,attribute,role,power,revealed=true)=>({id,registeredAt,image:new Blob([id]),
  analysis:{attribute,role,power},revealed});
@@ -32,6 +32,10 @@ const short=itemGrid([0,1,null,null,null],inventory,3,true,x=>x.id,esc);
 assert.equal((short.match(/data-open-item=/g)||[]).length,3,'three visual slots for level 1');
 assert.equal((itemGrid([0,1,null,null,null],inventory,3,false,x=>x.id,esc).match(/data-open-item=/g)||[]).length,0,'none are visible before the first return');
 assert.equal((itemGrid(Array(15).fill(null),inventory,15,true,x=>x.id,esc).match(/data-open-item=/g)||[]).length,15,'level gains add more visible slots');
+for(const [rarity,count] of [['common',1],['uncommon',2],['rare',3],['epic',4],['legendary',5]]){
+ assert.equal(collectionRarityMarks(rarity),'✴︎'.repeat(count),rarity+' mark count');
+}
+assert.equal(collectionRarityMarks('unknown'),'','unknown rarity has no marks');
 const relics=[{id:'common',name:'短剣',rarity:'common'},{id:'rare',name:'宝珠',rarity:'rare'},
  {id:'legend',name:'秘密の王冠',rarity:'legendary'},{id:'epic',name:'魔杖',rarity:'epic'}];
 const owned={common:5,rare:1};

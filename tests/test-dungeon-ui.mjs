@@ -432,7 +432,8 @@ try{
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,300-distinctCollected);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,distinctCollected);
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-rarity"/g)||[]).length,distinctCollected,'each discovered relic has one rarity label');
- assert.match($('collectionGrid').innerHTML,/<span class="relic-rarity">✦ エピック<\/span>/,'discovered normal boss trophy shows epic rarity');
+ assert.match($('collectionGrid').innerHTML,/<span class="relic-rarity" aria-hidden="true">(?:✴︎){4}<\/span>/,'discovered normal boss trophy shows four stars');
+ assert.match($('collectionGrid').innerHTML,/aria-label="赤角鬼王の霊石・エピック"/,'accessible rarity names remain intact');
  assert.equal($('magicStoneBalance').textContent,'✦ 魔導石：'+p.magicStones+'個','stone balance remains concise as loot changes');
  $('collectionDiscoveryFilter').value='found';await $('collectionDiscoveryFilter').fire('change');
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,distinctCollected,

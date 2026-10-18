@@ -34,6 +34,8 @@ export function itemListIndexes(inventory,masterItems=[],{kind='all',sort='defau
  }).map(row=>row.index);
 }
 export const RARITY_ORDER={common:1,uncommon:2,rare:3,epic:4,legendary:5};
+// Visual-only rarity marks; filters and sorting keep the original rarity names.
+export const collectionRarityMarks=rarity=>'✴︎'.repeat(RARITY_ORDER[rarity]||0);
 export function collectionListIndexes(collections,owned={}, {discovery='all',rarity='all',sort='common'}={}){
  const found=row=>validNumber(owned[row.id])>0;
  return collections.map((item,index)=>({item,index})).filter(({item})=>
