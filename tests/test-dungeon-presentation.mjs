@@ -135,7 +135,6 @@ assert.match(page,/id="loadoutOptions" class="picker-grid"/);
 assert.match(css,/\.picker-grid\.circle-picker-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'circle picker has exactly three columns');
 assert.match(css,/\.circle-picker-grid \.picker-circle-wrap\{[^}]*aspect-ratio:1\s*\/\s*1/,'circle picker cells are square');
 assert.match(css,/\.circle-picker-grid \.picker-circle-wrap \.picker-option img\{[^}]*width:100%;height:100%/,'circle image fills the square button');
-assert.match(app,/className=picker\.kind==='circle'\?'picker-grid circle-picker-grid':'picker-grid'/,'item picker keeps its layout');
 assert.doesNotMatch(page,/id="startLayerHint"|10層ごとの冒険者章を獲得すると開始階層が増えます。/,'misleading start layer hint is removed from static HTML');
 assert.doesNotMatch(app,/startLayerHint|10層ごとの冒険者章を獲得すると開始階層が増えます。/,'hint must not reappear after JS starts');
 assert.match(css,/\.loadout-grid\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
@@ -180,6 +179,7 @@ assert.doesNotMatch(page,/<option value="default">レアリティ順<\/option>/,
 assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is concise');
 assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!important;/,'selected choice border does not change the button box size');
 const app=await read('assets/js/dungeon-app.mjs');
+assert.match(app,/className=picker\.kind==='circle'\?'picker-grid circle-picker-grid':'picker-grid'/,'item picker keeps its layout');
 assert.match(app,/run\.checkpointBattleScrollY=window\.scrollY/,'boss victory captures the battle scroll before showing checkpoint');
 assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing deeper restores the original battle scroll');
 assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
