@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {layerOfFight,encounterOfFight,isLayerBoss,encounterLabel,battleHeading,
+import {layerOfFight,encounterOfFight,isLayerBoss,encounterLabel,battleHeading,battleEncounter,layerName,LAYER_NAMES,
  clearedLayer,nextLayer,deepestReturnedLayer,recordReturnedLayer,FIGHTS_PER_LAYER} from '../assets/js/dungeon-progress.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 assert.equal(FIGHTS_PER_LAYER,5);
@@ -13,10 +13,23 @@ for(const [fight,layer,round,boss] of [
  assert.equal(encounterOfFight(fight),round);
  assert.equal(isLayerBoss(fight),boss);
  assert.equal(encounterLabel(fight),layer+'層'+round+'戦目');
- assert.equal(battleHeading(fight),layer+'層'+round+'戦目'+(boss?' · 階層ボス':''));
+ assert.equal(battleHeading(fight),layer+'層 '+layerName(layer));
+ assert.equal(battleEncounter(fight),round+'戦目');
  assert.equal(clearedLayer(fight),boss?layer:0);
  assert.equal(nextLayer(fight),layer+1);
 }
+assert.equal(LAYER_NAMES.length,100,'every designed layer has a name');
+assert.equal(new Set(LAYER_NAMES).size,100,'each layer name is unique');
+assert.ok(LAYER_NAMES.every(name=>name.length>0&&name.length<=10&&!name.includes('竜')),
+ 'layer names stay short and consistently use 龍 rather than 竜');
+for(const [layer,expected] of [
+ [1,'はじまりの魔窟'],[8,'毒鰻の沼'],[24,'幽霊船の甲板'],
+ [38,'落雷の高原'],[63,'絶海の鰻龍宮'],[99,'世界樹の終末'],[100,'永劫の魔王城']
+])assert.equal(layerName(layer),expected,'boss-linked layer name at layer '+layer);
+assert.equal(layerName(101),'終わりなき深淵','endless layers have a sensible label');
+assert.equal(battleHeading(0),'未到達');
+assert.equal(battleEncounter(0),'');
+assert.equal(layerName(0),'');
 assert.equal(layerOfFight(0),0);
 assert.equal(encounterOfFight(0),0);
 assert.equal(encounterLabel(0),'未到達');
