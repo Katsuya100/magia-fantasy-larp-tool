@@ -1,25 +1,25 @@
-import * as G from './dungeon-core.mjs?v=20261018.47';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.47';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.47';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.47';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.47';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261018.47';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.47';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.47';
+import * as G from './dungeon-core.mjs?v=20261018.48';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261018.48';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261018.48';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261018.48';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261018.48';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261018.48';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261018.48';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261018.48';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.47';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.47';
-import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.47';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.47';
-import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261018.47';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.47';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.47';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.47';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.47';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.47';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.47';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.47';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261018.47';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261018.48';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.48';
+import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.48';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.48';
+import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261018.48';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.48';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.48';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.48';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261018.48';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261018.48';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261018.48';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261018.48';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261018.48';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -527,7 +527,15 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
   if(bossEnemyId){profile.defeatedBosses??={};profile.defeatedBosses[bossEnemyId]=true;}
   const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot);
   if(badge)rewards.push(badge);
-  run.loot.push(...rewards);run.xp+=G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor));run.log.push(rewards.length?'撃破！ '+rewards.length+'個を入手（未確定）':'撃破！ 今回の戦利品はなし');await ceremony('loot',rewards.length?'戦利品の発見':'戦利品なし',rewards.length?rewards.length+'個 · 未確定':'次の戦いへ',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero);if(isLayerBoss(run.floor)){run.checkpointBattleScrollY=window.scrollY??window.pageYOffset??0;run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();return;}run.floor++;enterFight();renderRun();
+  run.loot.push(...rewards);run.xp+=G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor));run.log.push(rewards.length?'撃破！ '+rewards.length+'個を入手（未確定）':'撃破！ 今回の戦利品はなし');await ceremony('loot',rewards.length?'戦利品の発見':'戦利品なし',rewards.length?rewards.length+'個 · 未確定':'次の戦いへ',rewards.length);run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero);if(isLayerBoss(run.floor)){
+ const completed=clearedLayer(run.floor);
+ const promptForBoss=completed>0&&completed%10===0&&Number(run.lastMilestoneChoiceLayer)!==completed;
+ if(promptForBoss)run.lastMilestoneChoiceLayer=completed;
+ run.checkpointBattleScrollY=window.scrollY??window.pageYOffset??0;
+ run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();
+ if(promptForBoss)showMilestoneChoice({title:completed+'層のボス撃破！',message:completed+'層の階層ボスを倒しました。'});
+ return;
+}run.floor++;enterFight();renderRun();
 // Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
 // between the loot overlay and the following encounter animation.
 const nextEntrance=ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');await persist();await nextEntrance;}
@@ -629,8 +637,14 @@ function renderReturnStep(){
  }
 }
 let shareImageFile=null,shareImageGeneration=0;
+function showMilestoneChoice(prompt){
+ if(!prompt)return;
+ $('milestoneChoiceTitle').textContent=prompt.title;
+ $('milestoneChoiceMessage').textContent=prompt.message;
+ $('milestoneChoiceDialog').showModal();
+}
 function showSupportPrompt(prompt){
- if(!prompt||activeScene!=='home')return;
+ if(!prompt||!['home','checkpoint'].includes(activeScene))return;
  const generation=++shareImageGeneration;
  shareImageFile=null;
  const data=adventurerShareData(profile),canvas=$('adventurerShareCanvas');
@@ -684,6 +698,7 @@ function showSupportPrompt(prompt){
  }
 }
 function openAdventurerShare(){
+ if($('milestoneChoiceDialog').open)$('milestoneChoiceDialog').close();
  showSupportPrompt({title:'冒険者カード',message:'冒険者等級・レベル・最深帰還をシェア'});
 }
 function downloadAdventurerCard(){
@@ -720,7 +735,7 @@ async function advanceReturnStep(){
  await persist();
  returnFlow=null;
  show('home');
- showSupportPrompt(supportPrompt);
+ showMilestoneChoice(supportPrompt);
 }
 async function leave(mode='checkpoint'){
  const run=profile.run;
@@ -762,7 +777,7 @@ async function leave(mode='checkpoint'){
  G.experience(profile,run.xp);
  const previousDepth=deepestReturnedLayer(profile);
  recordReturnedLayer(profile,mode==='escape'?Math.floor((run.floor-1)/FIGHTS_PER_LAYER)*FIGHTS_PER_LAYER:run.floor);
- const supportPrompt=supportPromptForReturn(previousDepth,deepestReturnedLayer(profile),badges.length?highestRankLayer(profile):0);
+ const supportPrompt=run.lastMilestoneChoiceLayer?null:supportPromptForReturn(previousDepth,deepestReturnedLayer(profile),badges.length?highestRankLayer(profile):0);
  profile.returns++;
  profile.obtainedItemIds=[...new Set([...knownItems,...[...items.values()].map(({item})=>item.id)])];
  profile.run=null;
@@ -777,7 +792,7 @@ async function leave(mode='checkpoint'){
   await persist();
   render();
   show('home');
-  showSupportPrompt(supportPrompt);
+  showMilestoneChoice(supportPrompt);
   return;
  }
  returnFlow={steps,step:0,collections:[...found.values()].sort((a,b)=>Number(b.isNew)-Number(a.isNew)),rewards,before,gained:run.xp,supportPrompt};
@@ -1196,6 +1211,9 @@ function wire(){
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
   $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
   $('openAdventurerShare').addEventListener('click',openAdventurerShare);
+  $('milestoneShare').addEventListener('click',openAdventurerShare);
+  $('milestoneDonate').addEventListener('click',()=>$('milestoneChoiceDialog').close());
+  $('milestoneClose').addEventListener('click',()=>$('milestoneChoiceDialog').close());
   $('supportPromptClose').addEventListener('click',()=>$('supportPromptDialog').close());
   $('supportXLink').addEventListener('click',()=>$('supportPromptDialog').close());
   $('supportSaveImage').addEventListener('click',downloadAdventurerCard);
