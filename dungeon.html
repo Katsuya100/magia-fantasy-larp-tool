@@ -87,6 +87,11 @@
       </div>
       <div class="profile-data-actions">
         <p>この端末に保存されている冒険のデータを管理します。</p>
+        <div class="save-persistence">
+          <p id="savePersistenceStatus" class="save-persistence-status" role="status" aria-live="polite">保存領域の保護状態を確認しています…</p>
+          <button type="button" id="enablePersistentSave" class="subtle">セーブデータを永続保存する</button>
+          <p class="save-persistence-note">ブラウザの容量不足による自動削除を防ぎやすくします。許可されない場合もあります。サイトデータの手動削除や端末故障は防げません。</p>
+        </div>
         <button type="button" id="deleteSaveData" class="danger" data-action="delete-data">冒険データをすべて削除</button>
       </div>
     </section>
@@ -291,7 +296,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.28</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.29</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -308,6 +313,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.28"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.29"></script>
 </body>
 </html>
