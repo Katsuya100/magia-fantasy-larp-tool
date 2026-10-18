@@ -57,12 +57,22 @@ const fixtures = [
   {name: 'support: smaller circle', role: 'support', shape: '<circle cx="256" cy="256" r="115"/>'},
   {name: 'support: oval contour', role: 'support', shape: '<ellipse cx="256" cy="256" rx="135" ry="153"/>'},
   {name: 'debuff: fewer disconnected rays', role: 'debuff', shape: rays(5, 10)},
+  {name: 'attack: triangular spear point', role: 'attack', shape: polygon(3, 160)},
+  {name: 'attack: arrow silhouette', role: 'attack',
+    shape: '<polygon points="256,92 361,245 306,245 306,388 206,388 206,245 151,245"/>'},
+  {name: 'attack: lightning silhouette', role: 'attack',
+    shape: '<polygon points="294,93 204,260 270,251 203,414 342,210 270,224"/>'},
+  {name: 'attack: blunt five-point star', role: 'attack', shape: star(5, 162, 103)},
+  {name: 'defense: five broad corners', role: 'defense', shape: polygon(5, 155)},
+  {name: 'defense: thin stroke hexagon', role: 'defense', shape: polygon(6, 155), stroke: 3},
+  {name: 'support: almost round dodecagon', role: 'support', shape: polygon(12, 145)},
+  {name: 'attack: thin stroke star', role: 'attack', shape: star(6), stroke: 3},
 ];
 
 let passed = 0;
 const failures = [];
-for (const {name, role, shape} of fixtures) {
-  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><g fill="none" stroke="#111" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">' + shape + '</g></svg>');
+for (const {name, role, shape, stroke = 7} of fixtures) {
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><g fill="none" stroke="#111" stroke-width="' + stroke + '" stroke-linecap="round" stroke-linejoin="round">' + shape + '</g></svg>');
   const image = await sharp(svg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { scores, features } = analyzeSigilMetricsJs(image.data, size, size, paths);
   const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
