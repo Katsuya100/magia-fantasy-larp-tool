@@ -1601,3 +1601,5 @@ html,body{overflow-x:clip}
 .support-card-tools button{min-width:0;padding:8px 12px!important;font-size:12px!important}
 .support-card-tools #supportNativeShare,.support-card-tools #supportSaveImage{background:transparent!important;color:var(--gold)!important;border:1px solid var(--border)!important;box-shadow:none!important}
 @media(max-width:630px){.support-prompt-inner{padding:22px 13px}.support-prompt-inner h2{font-size:20px}.support-share-help{font-size:10px!important}}
+
+#adventurerShareCanvas[hidden]{display:none}
