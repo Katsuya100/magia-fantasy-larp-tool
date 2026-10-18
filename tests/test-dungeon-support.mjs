@@ -13,14 +13,17 @@ const profileMarkup=html.slice(html.indexOf('<section id="home"'),html.indexOf('
 assert.ok(profileMarkup.includes('class="profile-support" aria-label='),'support actions are in the profile screen');
 assert.ok(profileMarkup.indexOf('class="profile-support"')<profileMarkup.indexOf('id="deleteSaveData"'),'support and share precede data deletion');
 assert.ok(profileMarkup.includes('href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer"'),'public OFUSE link stays in the profile');
-assert.equal((html.match(/href="https:\/\/ofuse\.me\/2429ddee"/g)||[]).length,1,'only the profile links to OFUSE');
+assert.equal((html.match(/href="https:\/\/ofuse\.me\/2429ddee"/g)||[]).length,2,'OFUSE only appears in profile and milestone choice');
 assert.ok(!html.includes('id="supportDonateLink"')&&!html.includes('id="supportOptionalNote"'),'milestone dialog has no donation CTA or note');
 assert.ok(html.includes('id="supportPromptClose"'),'adventurer card can be dismissed');
 const milestoneHtml=html.slice(html.indexOf('<dialog id="milestoneChoiceDialog"'),html.indexOf('<dialog id="supportPromptDialog"'));
 assert.ok(milestoneHtml.includes('id="milestoneShare"')&&milestoneHtml.includes('id="milestoneDonate"'),'milestone has share and OFUSE options');
-assert.ok(milestoneHtml.includes('シェアや応援で力を貸してもらえると嬉しいです'),'friendly invitation appears in milestone dialog');
+assert.ok(milestoneHtml.includes('冒険を楽しんでいただき、ありがとうございます。シェアや応援をいただけると励みになります。'),'requested gratitude appears in milestone dialog');
 assert.ok(milestoneHtml.includes('どちらも任意です'),'milestone offers choice without payment pressure');
 assert.ok(!milestoneHtml.includes('id="adventurerShareCanvas"'),'milestone dialog cannot accidentally display the full adventurer card');
+assert.ok(milestoneHtml.indexOf('id="milestoneShare"')<milestoneHtml.indexOf('id="milestoneDonate"'),'share is before support');
+assert.equal((milestoneHtml.match(/class="profile-action"/g)||[]).length,2,'two milestone buttons share profile design');
+assert.match(milestoneHtml,/id="milestoneShare"[^>]*>.*?<svg class="share-mark"/s,'milestone share uses the existing share SVG icon');
 
 assert.equal(supportPromptForReturn(0,9,0),null,'ordinary progress cannot trigger a prompt');
 assert.equal(supportPromptForReturn(10,10,0),null,'repeating a milestone does not trigger a prompt');
