@@ -61,6 +61,8 @@ try{
  await import('../assets/js/dungeon-app.mjs?integration=adventurer-share');
  await wait(()=>$('startupMask').hidden===true);
  assert.equal($('supportPromptDialog').open,false,'no unsolicited share popup');
+ await env.document.click({disabled:false,dataset:{view:'home'},closest(){return this;}});
+ assert.equal($('home').hidden,false,'profile is visible before user opens the share dialog');
  await $('openAdventurerShare').fire('click');
  assert.equal($('supportPromptDialog').open,true,'profile opens the same milestone modal');
  assert.equal($('supportPromptTitle').textContent,'冒険者カード');
