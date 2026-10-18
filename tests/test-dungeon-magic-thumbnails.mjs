@@ -42,8 +42,14 @@ assert.doesNotMatch(grid,/circle-card-status|炎熱鼓舞|火傷|混乱|ラン�
 assert.equal((grid.match(/class="circle-card-mp">MP:\?<\/span><span class="circle-card-power">威力:\?<\/span>/g)||[]).length,5);
 assert.equal((grid.match(/class="loadout-tile equipped"/g)||[]).length,5,'preserve five original equipment tiles');
 const picker=circleChoices(roster,ids,()=>'/img.png',escapeText,null,buffs,mpCost);
-assert.equal((picker.match(/class="circle-card-info"/g)||[]).length,0,'picker hides stats to give the image more space');
+assert.equal((picker.match(/class="circle-card-info"/g)||[]).length,5,'every tall picker card shows its attribute/type and stats');
+assert.equal((picker.match(/class="circle-card-symbols"/g)||[]).length,5,'attribute and type icons are visible for all picker choices');
+assert.match(picker,/class="circle-card-symbols">🔥 \/ 🛡️<\/span>/,'picker retains attribute and type icons');
+assert.equal((picker.match(/class="circle-card-mp">MP:\?<\/span><span class="circle-card-power">威力:\?<\/span>/g)||[]).length,5,'unknown MP and power stay hidden until first use');
+assert.doesNotMatch(picker,/circle-card-status|炎熱鼓舞|火傷|混乱|ランダム弱体/,'picker does not add long effect descriptions');
+const knownPicker=circleChoices([{...attack,revealed:true}],[],()=>'/img.png',escapeText,null,buffs,mpCost);
+assert.match(knownPicker,/class="circle-card-mp">MP:6<\/span><span class="circle-card-power">威力:512<\/span>/,'used spells reveal real MP and power');
 assert.equal((picker.match(/data-circle-detail=/g)||[]).length,5,'the full effect details remain accessible for every circle');
-assert.equal((picker.match(/class="picker-option/g)||[]).length,5,'five distinct square choices remain selectable');
+assert.equal((picker.match(/class="picker-option/g)||[]).length,5,'all five choices remain selectable');
 assert.doesNotMatch(picker,/class="picker-label"/,'no duplicate summary row');
 console.log('PASS compact spell thumbnails and named effects in details only');

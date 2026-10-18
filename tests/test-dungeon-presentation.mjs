@@ -133,8 +133,11 @@ assert.match(page,/🌪️storm\s*\/\s*🪨gravity\s*\/\s*⚖️law\s*\/\s*🌀c
 assert.match(page,/<dialog id="loadoutDialog"/);
 assert.match(page,/id="loadoutOptions" class="picker-grid"/);
 assert.match(css,/\.picker-grid\.circle-picker-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'circle picker has exactly three columns');
-assert.match(css,/\.circle-picker-grid \.picker-circle-wrap\{[^}]*aspect-ratio:1\s*\/\s*1/,'circle picker cells are square');
-assert.match(css,/\.circle-picker-grid \.picker-circle-wrap \.picker-option img\{[^}]*width:100%;height:100%/,'circle image fills the square button');
+assert.match(css,/\.circle-picker-grid \.picker-circle-wrap\{[^}]*display:flex;flex-direction:column;gap:5px/,'circle picker cards are tall, vertically stacked');
+assert.doesNotMatch(css,/\.circle-picker-grid \.picker-circle-wrap\{[^}]*aspect-ratio:1\s*\/\s*1/,'circle picker cards no longer have a forced square ratio');
+assert.match(css,/\.circle-picker-grid \.picker-circle-wrap \.picker-option\{[^}]*aspect-ratio:1\s*\/\s*1/,'only the photo button remains square');
+assert.match(css,/\.circle-picker-grid \.picker-circle-wrap \.picker-option img\{[^}]*width:100%;height:100%/,'circle image fills the photo button');
+assert.match(css,/\.circle-picker-grid \.picker-circle-wrap \.magic-expand\{[^}]*position:static;width:100%/,'details button follows the statistics rather than covering the photo');
 assert.doesNotMatch(page,/id="startLayerHint"|10層ごとの冒険者章を獲得すると開始階層が増えます。/,'misleading start layer hint is removed from static HTML');
 assert.match(css,/\.loadout-grid\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
 assert.match(css,/\.loadout-tile\{[^}]*aspect-ratio:1\s*\/\s*1/);
