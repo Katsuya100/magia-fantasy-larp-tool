@@ -152,10 +152,11 @@ assert.match(css,/\.return-treasure \.return-new,\.return-reward \.return-new\{/
 assert.match(page,/v2026\.10\.18\.24/,'visible version confirms the refreshed public release');
 assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の戦利品・経験値"/,'battle counters use a dedicated accessible grouped status');
 assert.match(page,/<div id="checkpointLedger" class="battle-info" role="group" aria-label="帰還の祭壇の戦利品・経験値"/,'sanctuary reuses the same reward card class');
-assert.match(app,/function rewardLedgerMarkup\(run\)/,'battle and sanctuary share a reward renderer');
-assert.match(app,/\$\('checkpointLedger'\)\.innerHTML=rewardLedgerMarkup\(run\)/,'checkpoint refreshes the card contents');
-assert.doesNotMatch(app,/未確定 · 持ち帰り待ち/,'no redundant labels');
-assert.doesNotMatch(app,/\x27未確定報酬 \x27\+run\.loot\.length/,'checkpoint has no duplicate reward line');
+const rewardSource=await read('assets/js/dungeon-app.mjs');
+assert.match(rewardSource,/function rewardLedgerMarkup\(run\)/,'battle and sanctuary share a reward renderer');
+assert.match(rewardSource,/\$\('checkpointLedger'\)\.innerHTML=rewardLedgerMarkup\(run\)/,'checkpoint refreshes the card contents');
+assert.doesNotMatch(rewardSource,/未確定 · 持ち帰り待ち/,'no redundant labels');
+assert.doesNotMatch(rewardSource,/\x27未確定報酬 \x27\+run\.loot\.length/,'checkpoint has no duplicate reward line');
 assert.match(css,/\.battle-info\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'battle ledger presents two equal-width cards');
 assert.match(css,/@media\(max-width:630px\)\{\s*\.battle-info\{gap:5px/,'battle counters remain compact on phones');
 
