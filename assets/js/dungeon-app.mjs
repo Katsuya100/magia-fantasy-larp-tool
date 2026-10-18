@@ -227,9 +227,10 @@ function renderRun(){
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
  const maxSlots=Math.max(5,run.carry.length);
  $('battleItems').innerHTML=Array.from({length:maxSlots},(_,i)=>{
-  const item=run.carry[i],disabled=(run.usedItems||0)>=num('item_per_round');
+  const item=run.carry[i],noEffect=Boolean(item&&!G.canUseBattleItem(hero,item,masters.items,masters.buffs));
+  const disabled=noEffect||(run.usedItems||0)>=num('item_per_round');
   if(!item)return '<button type="button" class="loadout-tile battle-tile battle-item-tile empty" disabled aria-label="アイテム空き枠 '+(i+1)+'"><span class="tile-index">'+String(i+1).padStart(2,'0')+'</span><span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">空き</span></button>';
-  return '<button type="button" class="loadout-tile battle-tile battle-item-tile equipped" data-use="'+i+'" '+(disabled?'disabled':'')+' aria-label="'+esc(itemName(item))+'">'
+  return '<button type="button" class="loadout-tile battle-tile battle-item-tile equipped'+(noEffect?' no-effect':'')+'" data-use="'+i+'" '+(disabled?'disabled':'')+' aria-label="'+esc(itemName(item))+(noEffect?'・現在は効果なし':'')+'">'
    +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
    +'<span class="tile-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="tile-title">'+esc(itemName(item))+'</span>'
@@ -422,7 +423,7 @@ const nextEntrance=ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた
 await persist();renderRun();}
 async function useItem(index){
  const run=profile.run;if(playingEffects||!run||run.stage!=='battle'||(run.usedItems||0)>=num('item_per_round'))return;
- const item=run.carry[index];if(!item)return;
+ const item=run.carry[index];if(!item||!G.canUseBattleItem(run.hero,item,masters.items,masters.buffs))return;
  try{
   const row=masters.items.find(x=>x.id===item.id);
   if(row?.kind==='escape'){

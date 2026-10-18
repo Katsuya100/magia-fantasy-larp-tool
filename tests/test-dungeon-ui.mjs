@@ -425,7 +425,18 @@ try{
  assert.equal(p.attempts,2);assert.equal(p.run.carry.filter(Boolean).length,3);
  assert.equal($('tab-dungeon').hidden,false,'second adventure switches to dungeon tab');
  const before=p.run.hero.hp;
+ // A full-health consumable must stay disabled rather than being wasted.
+ assert.match($('battleItems').innerHTML,/class="loadout-tile battle-tile battle-item-tile equipped no-effect" data-use="0" disabled/,'full-resource potion grays out');
  await doc.click(btn({use:'0'}));
+ p=await getProfile(db);
+ assert.equal(p.run.carry.filter(Boolean).length,3,'an ineffective potion cannot be consumed by programmatic clicks');
+ assert.equal(p.run.usedItems,0);
+ // Use a spell first to spend MP, then the relevant consumable becomes effective.
+ await doc.click(btn({cast:'0'}));
+ p=await getProfile(db);
+ assert.ok(p.run.hero.mp<p.run.hero.maxMp,'casting spends MP');
+ assert.ok($('battleItems').innerHTML.includes('data-use="1"'),'remaining items are still rendered');
+ await doc.click(btn({use:'1'}));
  p=await getProfile(db);
  assert.equal(p.run.hero.hp,before,'free potion does not cost a battle turn');
  assert.equal(p.run.floor,1);

@@ -85,6 +85,7 @@ try{
   await import('../assets/js/dungeon-app.mjs?integration=special-elixir-battle');
   await wait(()=>$2('battleItems').innerHTML.includes('エリクシール小'),'elixir battle ready');
   assert.match($2('battleItems').innerHTML,/❤️💠35%/,'elixir displays icon and percent rather than a sentence');
+  assert.doesNotMatch($2('battleItems').innerHTML,/equipped no-effect" data-use="0"/,'elixir remains enabled when HP and MP are low');
   assert.doesNotMatch($2('battleItems').innerHTML,/>HP\/MP各35%回復</,'long effect text is not visible');
   await doc2.click(btn({use:'0'}));
   const after=await getProfile(db2);
@@ -114,6 +115,7 @@ try{
   assert.equal(after.run.carry[0],null);
   assert.match($3('battleInfo').textContent,/復活待機中/);
    assert.equal($3('heroName').textContent,'生命の紅石確認 🪽','armed life ruby adds a wing next to the adventurer name');
+   assert.match($3('battleItems').innerHTML,/class="loadout-tile battle-tile battle-item-tile equipped no-effect" data-use="1" disabled/,'second ruby becomes gray when revival is already armed');
    assert.equal($3('heroName').attributes['aria-label'],'生命の紅石確認・生命の紅石：復活待機中');
   await doc3.click(btn({cast:'-1'}));
   after=await getProfile(db3);

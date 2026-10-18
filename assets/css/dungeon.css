@@ -82,6 +82,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .battle-basic{display:flex;justify-content:flex-end;margin:9px 0 16px}
 .battle-basic .basic-attack{font-size:13px!important}
 .battle-spells button:disabled,.battle-items button:disabled{opacity:.46}
+.battle-items .battle-tile.no-effect{filter:grayscale(1);opacity:.42;cursor:not-allowed}
 @media(max-width:630px){
  .battle-spells,.battle-items{gap:5px}
  .battle-spells .battle-tile,.battle-items .battle-tile{min-height:127px;padding:17px 3px 7px!important;gap:4px}
