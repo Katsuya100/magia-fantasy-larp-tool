@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import {fakeIndexedDB} from './fake-indexeddb.mjs';
 export function fakeDungeonBrowser(config={}){
- const factory=config.factory||fakeIndexedDB(config.storage),dom=new Map(),listeners=new Map();
+ const factory=config.factory||fakeIndexedDB(config.storage),dom=new Map(),listeners=new Map(),downloads=[],nativeShares=[];
  const make=(id)=>{
   const handlers=new Map();
   const element={id,hidden:['library','prepare','collection','battle','checkpoint','analyzing','result','cameraCanvas','cameraVideo','cameraCapture','cameraStop','pageError','battleError','cameraError','notice','tutorialOverlay','tutorialExample','tutorialPad','tutorialRetry','tutorialFinger'].includes(id),disabled:false,open:false,attributes:{},innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
@@ -15,14 +15,16 @@ export function fakeDungeonBrowser(config={}){
    closest(){return element;},
    focus(){},
    play:async()=>{},
-   getContext:()=>({drawImage(...args){element.drawImageArgs=args;},clearRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}}),
+   getContext:()=>({drawImage(...args){element.drawImageArgs=args;},clearRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},fillRect(){},strokeRect(){},arc(){},closePath(){},fillText(){},createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){return {addColorStop(){}};}}),
     getBoundingClientRect:()=>({left:0,top:0,width:320,height:320}),setPointerCapture(){},releasePointerCapture(){},
-   toBlob:callback=>callback(new Blob(['camera-capture'],{type:'image/jpeg'}))
+   toBlob:callback=>callback(new Blob(['camera-capture'],{type:'image/png'})),
+   toDataURL:()=>'data:image/png;base64,ZmFrZQ=='
   };
   return element;
  };
  const document={
   getElementById(id){if(!dom.has(id))dom.set(id,make(id));return dom.get(id);},
+  createElement(tag){if(tag!=='a')throw Error('Unsupported fake element '+tag);return {href:'',download:'',click(){downloads.push({href:this.href,download:this.download});}};},
   addEventListener(name,fn){listeners.set(name,fn);},
   click(button){return listeners.get('click')?.({target:button});}
  };
@@ -63,7 +65,9 @@ export function fakeDungeonBrowser(config={}){
  URL.createObjectURL=blob=>{const url='blob:mock-'+(++imageSerial);createdImageUrls.push({blob,url});return url;};
  URL.revokeObjectURL=url=>{revokedImageUrls.push(url);};
  globalThis.DataTransfer=class{constructor(){this.files=[];this.items={add:file=>this.files.push(file)};}};
- Object.defineProperty(globalThis,'navigator',{value:{mediaDevices:{getUserMedia:async()=>{mediaOpened++;if(config.cameraFailure)throw Error('Permission denied');return {getTracks:()=>[{stop(){mediaClosed++;}}]};}}},configurable:true});
+ const mockedNavigator={mediaDevices:{getUserMedia:async()=>{mediaOpened++;if(config.cameraFailure)throw Error('Permission denied');return {getTracks:()=>[{stop(){mediaClosed++;}}]};}}};
+ if(config.nativeShare){mockedNavigator.canShare=({files})=>Array.isArray(files)&&files.length===1;mockedNavigator.share=async data=>{nativeShares.push(data);};}
+ Object.defineProperty(globalThis,'navigator',{value:mockedNavigator,configurable:true});
  function restore(){globalThis.document=old.document;globalThis.window=old.window;globalThis.indexedDB=old.indexedDB;globalThis.fetch=old.fetch;URL.createObjectURL=old.createObjectURL;URL.revokeObjectURL=old.revokeObjectURL;globalThis.DataTransfer=old.DataTransfer;Object.defineProperty(globalThis,'navigator',{value:old.navigator,configurable:true});}
- return {factory,document,dom,analyzerState,restore,createdImageUrls,revokedImageUrls,get opened(){return mediaOpened;},get closed(){return mediaClosed;},get iframe(){return iframe;}};
+ return {factory,document,dom,analyzerState,restore,createdImageUrls,revokedImageUrls,downloads,nativeShares,get opened(){return mediaOpened;},get closed(){return mediaClosed;},get iframe(){return iframe;}};
 }
