@@ -140,7 +140,7 @@ assert.match(css,/\.return-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,
 assert.match(css,/\.return-grid\{[^}]*max-height:min\(40dvh,320px\)/,'return list scrolls internally to keep the action in view');
 assert.match(css,/@media\(max-width:630px\)\{\.return-panel[^}]+\}\.return-glyph[^}]+\}\.return-panel h2[^}]+\}\.return-grid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/,'mobile maintains three columns');
 assert.match(css,/\.return-treasure \.return-new,\.return-reward \.return-new\{/,'first-acquisition badges have a distinct style');
-assert.match(page,/v2026\.10\.18\.10/,'visible version confirms the refreshed public release');
+assert.match(page,/v2026\.10\.18\.11/,'visible version confirms the refreshed public release');
 assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is concise');
 assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!important;/,'selected choice border does not change the button box size');
 const app=await read('assets/js/dungeon-app.mjs');
@@ -153,6 +153,10 @@ for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.match(store,/from '\.\/dungeon-core\.mjs'/);
 assert.match(picker,/from '\.\/dungeon-loadout\.mjs'/);
+assert.doesNotMatch(picker,/picker-equipped|✓ 選択中/,'circle picker no longer renders a selected badge');
+assert.match(picker,/aria-pressed="'\+selected/,'selected circles remain accessible');
+assert.match(css,/\.picker-option\.picker-current\{/,'the focused slot keeps its stronger glowing frame');
+assert.doesNotMatch(css,/\.picker-equipped/,'unused badge styles are removed');
 assert.doesNotMatch(app,/魔法陣を保存した。性能は初回使用時に判明する。/);
 assert.doesNotMatch(app,/鑑定/);
 assert.doesNotMatch(picker,/鑑定/);

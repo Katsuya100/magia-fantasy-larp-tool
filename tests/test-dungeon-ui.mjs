@@ -170,6 +170,7 @@ try{
   assert.equal($('loadoutDialog').open,true,'opens the spell picker for each slot');
   assert.match($('loadoutOptions').innerHTML,/data-choose-circle="/);
   if(i>0) assert.equal(($('loadoutOptions').innerHTML.match(/picker-option picker-selected/g)||[]).length,i,'previously equipped circles glow');
+  assert.doesNotMatch($('loadoutOptions').innerHTML,/class="picker-equipped"/,'selected circle uses the glowing frame, not a visible badge');
   assert.doesNotMatch($('loadoutOptions').innerHTML,/魔法陣\s*0[1-9]/,'selection dialog also hides generated names');
   if(i===0) assert.equal(($('loadoutOptions').innerHTML.match(/data-choose-circle="/g)||[]).length,5);
   await doc.click(btn({chooseCircle:String(i)}));
@@ -189,6 +190,8 @@ try{
  await doc.click(btn({openSlot:'0'}));
  assert.equal(($('loadoutOptions').innerHTML.match(/picker-option picker-selected/g)||[]).length,5,'all equipped circles highlighted');
  assert.equal(($('loadoutOptions').innerHTML.match(/picker-option picker-selected picker-current/g)||[]).length,1,'current slot stronger glow');
+ assert.doesNotMatch($('loadoutOptions').innerHTML,/class="picker-equipped"/,'equipped circles have no selected badge on any picker card');
+ assert.match($('loadoutOptions').innerHTML,/aria-pressed="true"/,'the pressed state stays accessible');
  await doc.click(btn({chooseCircle:'1'}));
  let prepared=await getProfile(db);
  assert.deepEqual(prepared.slots.slice(0,2),[circles[1].id,circles[0].id],'selecting an equipped spell swaps the slots');

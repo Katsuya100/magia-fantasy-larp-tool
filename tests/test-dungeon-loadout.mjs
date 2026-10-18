@@ -74,7 +74,7 @@ assert.equal((selectedSpells.match(/picker-option picker-selected/g)||[]).length
 assert.equal((selectedSpells.match(/picker-option picker-selected picker-current/g)||[]).length,1,'the slot being edited glows more strongly');
 assert.match(selectedSpells,/data-choose-circle="1" aria-pressed="true"[^>]*選択中 3枠目/,'selected spell announces its assigned slot');
 assert.match(selectedSpells,/data-choose-circle="0" aria-pressed="true"[^>]*選択中 1枠目/,'current spell stays indicated');
-assert.match(selectedSpells,/✓ 選択中・1枠/,'visible equipped label accompanies the glow');
+assert.doesNotMatch(selectedSpells,/class="picker-equipped"|✓ 選択中/,'equipped circles only use the glowing frame without a visible selected badge');
 assert.doesNotMatch(selectedSpells,/魔法陣0/,'selected spells do not reveal generated names');
 const selectedItems=itemChoices(inventory,[0,null,2],itemName,esc,[2,1,0],2);
 assert.equal((selectedItems.match(/picker-option picker-selected/g)||[]).length,2,'only carried item instances glow');
