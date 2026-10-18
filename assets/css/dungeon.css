@@ -1534,41 +1534,22 @@ html,body{overflow-x:clip}
 }
 
 
-/* First adventure: the dark scrim blocks all game controls until practice ends. */
-.tutorial-overlay{position:fixed;z-index:3000;inset:0;overflow-y:auto;display:grid;place-items:center;padding:14px;background:#070810e8;backdrop-filter:grayscale(1) blur(4px)}
-.tutorial-sheet{width:min(460px,100%);margin:auto;padding:22px 22px 18px;border:1px solid #e9c98a;background:linear-gradient(145deg,#2b2231,#111c26);box-shadow:0 20px 80px #000c;text-align:center}
-.tutorial-top{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--soft);font-size:12px}
+/* A short sample animation replaces inaccurate phone drawing practice. */
+.tutorial-overlay{position:fixed;z-index:3000;inset:0;overflow-y:auto;display:grid;place-items:center;padding:14px;background:#070810ed;backdrop-filter:grayscale(1) blur(4px)}
+.tutorial-sheet{width:min(440px,100%);margin:auto;padding:20px;border:1px solid #e9c98a;background:linear-gradient(145deg,#2b2231,#111c26);box-shadow:0 20px 80px #000c;text-align:center}
+.tutorial-top{display:flex;align-items:center;justify-content:space-between;color:var(--soft);font-size:11px;letter-spacing:.09em}
 .tutorial-top button{font-size:12px;padding:6px 11px}
-.tutorial-sheet h2{margin:7px 0 3px;font-size:clamp(21px,5vw,27px);color:var(--gold)}
-.tutorial-sheet p{margin:0;color:var(--pale);font-size:14px}
-.tutorial-example{display:grid;grid-template-columns:145px minmax(0,1fr);gap:14px;align-items:center;margin:18px auto 8px;text-align:left}
-.tutorial-example img{display:block;width:100%;aspect-ratio:1;object-fit:contain;border:5px solid #e7d8b4;background:#e7d8b4}
-.tutorial-example ol{margin:0;padding:0 0 0 18px;color:var(--pale);font-size:13px;line-height:1.8}
-.tutorial-pad{position:relative;width:min(100%,320px);aspect-ratio:1;margin:17px auto 2px;border:1px solid #e1bf8166;background:#e7d8b4;touch-action:none}
-.tutorial-guides,.tutorial-pad canvas{position:absolute;inset:0;width:100%;height:100%}
-.tutorial-guides{fill:none;stroke:#aa947b;stroke-width:3;stroke-dasharray:5 8;pointer-events:none}
-.tutorial-pad canvas{touch-action:none;cursor:crosshair}
-.tutorial-letters{stroke:none;fill:#b99c7f;font:600 28px Georgia,serif;letter-spacing:5px}
-.tutorial-symbol{stroke:#aa947b;stroke-width:2}
-.tutorial-pad[data-step="1"] .tutorial-inner,.tutorial-pad[data-step="1"] .tutorial-letters,.tutorial-pad[data-step="1"] .tutorial-symbol{opacity:.15}
-.tutorial-pad[data-step="2"] .tutorial-outer{opacity:.25}
-.tutorial-pad[data-step="2"] .tutorial-letters,.tutorial-pad[data-step="2"] .tutorial-symbol{opacity:.1}
-.tutorial-pad[data-step="3"] .tutorial-outer,.tutorial-pad[data-step="3"] .tutorial-inner{opacity:.45}
-.tutorial-pad[data-step="3"] .tutorial-symbol{opacity:.1}
-.tutorial-pad[data-step="4"] .tutorial-outer,.tutorial-pad[data-step="4"] .tutorial-inner{opacity:.4}
-.tutorial-pad[data-step="4"] .tutorial-letters{opacity:.2}
-.tutorial-finger{position:absolute;left:50%;top:11%;font-size:34px;pointer-events:none;transform:translate(-50%,-50%);animation:tutorial-point 1.2s ease-in-out infinite;filter:drop-shadow(0 2px 3px #0007)}
-.tutorial-pad[data-step="2"] .tutorial-finger{top:29%}
-.tutorial-pad[data-step="3"] .tutorial-finger{top:18%;left:37%}
-.tutorial-pad[data-step="4"] .tutorial-finger{top:50%;left:50%}
-.tutorial-feedback{min-height:26px;margin:7px 0!important;color:var(--gold)!important;font-size:13px!important}
-.tutorial-actions{display:flex;gap:10px;align-items:center;justify-content:center}
-.tutorial-actions button{min-width:0}
-.tutorial-actions .tutorial-next{position:relative;flex:1;max-width:280px}
-.tutorial-next:not(:disabled):after{content:"👆";position:absolute;right:-8px;bottom:-12px;pointer-events:none;font-size:27px;animation:tutorial-point 1.2s ease-in-out infinite}
+.tutorial-sheet h2{margin:10px 0 3px;font-size:24px;color:var(--gold)}
+.tutorial-sheet p{margin:0;color:var(--pale);font-size:13px}
+.tutorial-animation{width:min(100%,320px);margin:15px auto 8px}
+.tutorial-animation img{display:block;width:100%;height:auto;aspect-ratio:8/9;object-fit:contain;border:1px solid #e1bf8166;background:#17151d}
+.tutorial-animation figcaption{margin:7px auto;color:var(--gold);font-size:12px}
+.tutorial-sheet .tutorial-rules{margin:9px 0 15px;line-height:1.7}
+.tutorial-actions{display:flex;justify-content:center}
+.tutorial-actions .tutorial-next{width:100%;min-width:0;max-width:280px;position:relative}
+.tutorial-next:after{content:"👆";position:absolute;right:-10px;bottom:-14px;pointer-events:none;font-size:25px}
 .tutorial-replay{display:block;margin:0 0 11px auto;font-size:12px!important;padding:8px 12px!important}
-@keyframes tutorial-point{0%,100%{transform:translate(-50%,-45%)}50%{transform:translate(-50%,-62%)}}
-@media(max-width:420px){.tutorial-sheet{padding:15px 13px}.tutorial-example{grid-template-columns:115px 1fr;gap:9px}.tutorial-example ol{font-size:11px;line-height:1.65}.tutorial-pad{width:min(100%,290px)}}
+@media(max-width:420px){.tutorial-sheet{padding:14px}.tutorial-animation{width:min(100%,275px)}}
 
 /* Match the two-card battle ledger in the sanctuary. */
 #checkpointLedger{max-width:750px;margin:16px auto 4px}
