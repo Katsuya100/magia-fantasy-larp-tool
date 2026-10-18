@@ -320,7 +320,7 @@ try{
  assert.equal(p.run.stage,'checkpoint');
  assert.equal(p.deepestReturnedLayer,0,'boss victory does not count as a return until leaving');
  assert.equal(p.run.floor,5,'saved checkpoint remains the fifth fight');
-  assert.ok(p.run.loot.some(item=>item.id==='relic_boss_001'),'boss grants its dedicated legendary');
+  assert.ok(p.run.loot.some(item=>item.id==='relic_boss_001'),'boss grants its dedicated epic trophy on the first victory');
    assert.equal(p.defeatedBosses.boss_l001,true,'first boss defeat is saved before returning');
  assert.ok(cinematicEvents.some(x=>x.event==='encounter'&&x.tier==='boss'),'fifth encounter plays layer-boss entrance');
  assert.ok(cinematicEvents.some(x=>x.event==='enemy-death'&&x.tier==='boss'),'fifth encounter plays layer-boss defeat');
@@ -389,15 +389,18 @@ try{
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,299);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,1);
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-rarity"/g)||[]).length,1,'one found relic shows exactly one rarity label');
- assert.match($('collectionGrid').innerHTML,/<span class="relic-rarity">★ レジェンダリー<\/span>/,'discovered legendary shows color-independent rarity label');
+ assert.match($('collectionGrid').innerHTML,/<span class="relic-rarity">✦ エピック<\/span>/,'discovered normal boss trophy shows epic rarity');
  assert.equal($('magicStoneBalance').textContent,'✦ 魔導石：'+p.magicStones+'個','stone balance remains concise as loot changes');
  $('collectionDiscoveryFilter').value='found';await $('collectionDiscoveryFilter').fire('change');
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,1,
   'collection discovery filter shows only found relics');
  assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/);
+ $('collectionRarityFilter').value='epic';await $('collectionRarityFilter').fire('change');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,1,
+  'epic filter shows the normal boss trophy');
  $('collectionRarityFilter').value='legendary';await $('collectionRarityFilter').fire('change');
- assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,
-  Number(p.collection.relic_boss_001)>0?1:0,'legendary filter displays only collected legendary items');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,0,
+  'legendary filter excludes the normal boss trophy');
  assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/,
   'rarity filtering never discloses uncollected rarity');
  $('collectionRarityFilter').value='all';await $('collectionRarityFilter').fire('change');
@@ -469,7 +472,7 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
  for(let fight=1;fight<=5;fight++)await doc.click(btn({cast:'0'}));
  p=await getProfile(db);
  assert.equal(p.run.stage,'checkpoint');
- assert.equal(p.run.loot.filter(item=>item.id==='relic_boss_001').length,0,'repeat boss has no second guaranteed legendary');
+ assert.equal(p.run.loot.filter(item=>item.id==='relic_boss_001').length,0,'repeat boss has no second guaranteed trophy');
  const hpAtCheckpoint=p.run.hero.hp, pendingLoot=p.run.loot.length;
  await $('deeper').fire('click');
  p=await getProfile(db);

@@ -14,8 +14,16 @@ const rarityRanks={common:0,uncommon:1,rare:2,epic:3,legendary:4};
 const names=collections.map(x=>x.name);
 assert.equal(new Set(names).size,300,'all relic names must be distinct');
 assert.ok(names.every(name=>!/\\d/.test(name)&&name.length<=20),'relic display names have no serial numbers');
-for(let i=1;i<collections.length;i++)
- assert.ok(rarityRanks[collections[i].rarity]>=rarityRanks[collections[i-1].rarity],'CSV is ordered by rarity');
+// Common drops remain grouped by rarity; named boss trophies stay grouped
+// by layer number so their artwork and stable catalogue indices do not change.
+const randomCollections=collections.filter(x=>!x.boss_enemy_id);
+const bossTrophies=collections.filter(x=>x.boss_enemy_id);
+for(let i=1;i<randomCollections.length;i++)
+ assert.ok(rarityRanks[randomCollections[i].rarity]>=rarityRanks[randomCollections[i-1].rarity],'random collection CSV is ordered by rarity');
+assert.equal(randomCollections.length,200);
+assert.equal(bossTrophies.length,100);
+assert.deepEqual(bossTrophies.map(x=>x.boss_enemy_id),Array.from({length:100},(_,i)=>'boss_l'+String(i+1).padStart(3,'0')),
+ 'boss trophy catalogue order and artwork indexes remain stable');
 for(const id of ['fang','slime_core','bone','copper_sigil','obsidian','moon_scale','ancient_scroll',
  'lightning_crystal','aqua_pearl','labyrinth_key','sealed_eye','forgotten_crown'])
  assert.ok(collections.some(item=>item.id===id),'preserve original collectible ID '+id);
@@ -57,7 +65,9 @@ for(const [rows,name] of [[enemies,'enemy'],[collections,'collection']]){
  assert.equal(new Set(rows.map(x=>x.name)).size,rows.length,name+' names unique');
 }
 assert.deepEqual(Object.fromEntries(['common','uncommon','rare','epic','legendary'].map(r=>[r,collections.filter(x=>x.rarity===r).length])),
- {common:104,uncommon:52,rare:26,epic:13,legendary:105});
+ {common:104,uncommon:52,rare:26,epic:103,legendary:15});
+assert.equal(bossTrophies.filter(x=>x.rarity==='epic').length,90,'non-decade boss trophies are epic');
+assert.equal(bossTrophies.filter(x=>x.rarity==='legendary').length,10,'every tenth-layer trophy stays legendary');
 assert.deepEqual(rarityWeights(1),[40,20,10,5,2]);
 const histogram=Object.fromEntries(['common','uncommon','rare','epic','legendary'].map(r=>[r,0]));
 for(let i=0;i<7700;i++)histogram[rollRarity(1,()=>(i+.5)/7700)]++;
@@ -91,12 +101,18 @@ for(let layer=1;layer<=100;layer++){
  }
  assert.equal(new Set(ids).size,5,'distinct enemy kinds at layer '+layer);
  const bossId=ids[4],trophy=bossUniqueCollection(collections,bossId);
- const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,guaranteeBossLegendary:true});
+ assert.equal(trophy.rarity,layer%10===0?'legendary':'epic','boss trophy rarity for layer '+layer);
+ const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,guaranteeBossCollection:true});
  assert.ok(rewards.length>=1&&rewards.length<=7);
  assert.equal(rewards.filter(x=>x.id===trophy.id).length,1,'boss trophy guaranteed on first victory at layer '+layer);
   const repeats=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId});
   assert.equal(repeats.filter(x=>x.id===trophy.id).length,0,'repeat boss wins no longer guarantee the trophy at layer '+layer);
-  assert.equal(rollCollection(collections,layer,()=>.999,bossId).id,trophy.id,'repeat boss trophy can still roll by legendary rarity');
+  // The optional repeat drop rolls in the trophy's actual rarity bucket.
+  const picks=[trophy.rarity==='legendary'?.999:.93,.999];
+  assert.equal(rollCollection(collections,layer,()=>picks.shift(),bossId).id,trophy.id,
+   'repeat boss trophy can still roll by its rarity at layer '+layer);
+  assert.equal(rollCollection(collections,layer,()=>.999).boss_enemy_id,'',
+   'ordinary drops do not reveal boss-specific trophies');
  const hero=G.makeUnit(base,expected,{},[attack]);
  const boss=G.fromEnemy(enemies.find(x=>x.id===bossId),expected);
  const outgoing=G.damage(hero,boss,attack,()=>.99),incoming=G.damage(boss,hero,boss.spells[0],()=>.99);
@@ -111,7 +127,8 @@ for(let i=0;i<500;i++)assert.equal(enemyForFight(enemies,501,()=>(i+.5)/500).id,
 for(let i=0;i<100;i++){
  const boss=enemyForFight(enemies,505,()=>(i+.5)/100);
  assert.equal(boss.boss_only,'1');
- assert.equal(bossUniqueCollection(collections,boss.id).rarity,'legendary');
+ const number=Number(boss.id.slice(6));
+ assert.equal(bossUniqueCollection(collections,boss.id).rarity,number%10===0?'legendary':'epic');
 }
 assert.equal(floor(505).enemy_level,'150');
 assert.equal(floor(505).boss,'1');

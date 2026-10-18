@@ -57,8 +57,11 @@ export function rollCollection(collections,layer,r=Math.random,bossEnemyId=null)
  return pool.at(-1);
 }
 export function bossUniqueCollection(collections,id){
- const found=collections.filter(x=>x.boss_enemy_id===id&&x.rarity==='legendary');
- if(found.length!==1)throw Error('Expected one boss legendary for '+id);
+ const match=/^boss_l(\d{3})$/.exec(id);
+ if(!match)throw Error('Invalid boss trophy ID '+id);
+ const rarity=Number(match[1])%10===0?'legendary':'epic';
+ const found=collections.filter(x=>x.boss_enemy_id===id);
+ if(found.length!==1||found[0].rarity!==rarity)throw Error('Expected one '+rarity+' boss trophy for '+id);
  return found[0];
 }
 
