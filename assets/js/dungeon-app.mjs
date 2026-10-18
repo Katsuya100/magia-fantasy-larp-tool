@@ -11,6 +11,7 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261018.28';
 import {upgradeCircle,savedUpgrade} from './dungeon-upgrades.mjs?v=20261018.28';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData} from './dungeon-store.mjs?v=20261018.28';
+import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261018.29';
 import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261018.28';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261018.28';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261018.28';
@@ -40,6 +41,28 @@ function note(message){
  $(target).textContent=message;$(target).hidden=false;
 }
 async function persist(){await saveProfile(db,profile);}
+function showStoragePersistenceStatus(status){
+ const messages={
+  'persistent':'永続保存が有効です。ブラウザによる自動削除から保護されています。',
+  'best-effort':'現在は通常保存です。容量不足時に自動削除される可能性があります。',
+  'denied':'ブラウザが永続保存を許可しませんでした。通常保存を継続します。',
+  'unsupported':'このブラウザでは永続保存を要求できません。通常保存を継続します。',
+  'error':'保存領域の保護状態を確認できませんでした。通常のセーブ機能は引き続き利用できます。'
+ };
+ $('savePersistenceStatus').textContent=messages[status]||messages.error;
+ $('enablePersistentSave').hidden=status==='persistent'||status==='unsupported';
+ $('enablePersistentSave').disabled=false;
+}
+async function checkStoragePersistence(){
+ showStoragePersistenceStatus(await storagePersistenceStatus());
+}
+async function enableStoragePersistence(){
+ const button=$('enablePersistentSave');
+ button.disabled=true;
+ $('savePersistenceStatus').textContent='永続保存の許可を確認しています…';
+ // Run persist() directly from this click, since browsers may require user activation.
+ showStoragePersistenceStatus(await requestPersistentStorage());
+}
 function startupStage(message){$('startupDetail').textContent=message;}
 function finishStartup(){
  $('dungeonApp').removeAttribute('inert');
@@ -92,6 +115,7 @@ async function load(){
  await persist();
  wire();
  render();
+ void checkStoragePersistence();
  if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}
  if(returnFlow)renderReturnStep();
  show(returnFlow?'returnShowcase':profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');
@@ -1094,6 +1118,7 @@ function wire(){
  });
  $('cancelDeleteData').addEventListener('click',()=>$('deleteDataDialog').close());
  $('confirmDeleteData').addEventListener('click',()=>exclusive(eraseSaveData));
+ $('enablePersistentSave').addEventListener('click',enableStoragePersistence);
  $('closeMagicDetails').addEventListener('click',()=>$('magicDetailsDialog').close());
  $('upgradeCircle').addEventListener('click',()=>askCircleAction('upgrade',$('magicDetailsDialog').dataset.circleId));
  $('cancelCircleAction').addEventListener('click',()=>{$('circleActionDialog').close();pendingCircleAction=null;});
