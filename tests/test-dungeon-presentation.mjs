@@ -151,9 +151,7 @@ assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-la
 assert.match(css,/\.battle-info\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'battle ledger presents three equal-width cards');
 assert.match(css,/@media\(max-width:630px\)\{\s*\.battle-info\{gap:5px/,'battle counters remain compact on phones');
 assert.match(css,/\.battle-stat\[data-kind="item"\] \.battle-stat-value\{font-family:var\(--serif\)/,'携行品 uses a readable kanji font');
-assert.match(app,/run\.checkpointBattleScrollY=window\.scrollY/,'boss victory captures the battle scroll before showing checkpoint');
-assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing deeper restores the original battle scroll');
-assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
+
 
 assert.match(css,/#gearCards \.loadout-tile,#battleItems \.battle-item-tile\{[^}]*aspect-ratio:1\s*\/\s*1/,'prepared and battle item tiles are both square');
 assert.match(css,/#gearCards \.tile-item-effect,#battleItems \.tile-item-effect\{[^}]*position:static/,'item effects sit directly beneath item names, never pinned at the bottom');
@@ -164,6 +162,9 @@ assert.doesNotMatch(page,/<option value="default">レアリティ順<\/option>/,
 assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is concise');
 assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!important;/,'selected choice border does not change the button box size');
 const app=await read('assets/js/dungeon-app.mjs');
+assert.match(app,/run\.checkpointBattleScrollY=window\.scrollY/,'boss victory captures the battle scroll before showing checkpoint');
+assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing deeper restores the original battle scroll');
+assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
 assert.match(app,/shuffledLayerEnemyIds\(masters\.enemies,layer,Math\.random,slot\)/,'game assigns and saves a random order for each new layer');
 assert.match(app,/run\.layerEnemyOrder=\{layer,ids:/,'the order is stored in the active expedition');
 assert.match(app,/finishStartup\(\);\s*if\(!profile\.name\)openNameDialog\(true\)/,'startup mask closes before first-player name dialog appears');
