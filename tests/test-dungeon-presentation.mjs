@@ -140,7 +140,7 @@ assert.match(css,/\.return-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,
 assert.match(css,/\.return-grid\{[^}]*max-height:min\(40dvh,320px\)/,'return list scrolls internally to keep the action in view');
 assert.match(css,/@media\(max-width:630px\)\{\.return-panel[^}]+\}\.return-glyph[^}]+\}\.return-panel h2[^}]+\}\.return-grid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/,'mobile maintains three columns');
 assert.match(css,/\.return-treasure \.return-new,\.return-reward \.return-new\{/,'first-acquisition badges have a distinct style');
-assert.match(page,/v2026\.10\.18\.14/,'visible version confirms the refreshed public release');
+assert.match(page,/v2026\.10\.18\.15/,'visible version confirms the refreshed public release');
 assert.match(css,/#gearCards \.loadout-tile,#battleItems \.battle-item-tile\{[^}]*aspect-ratio:1\s*\/\s*1/,'prepared and battle item tiles are both square');
 assert.match(css,/#gearCards \.tile-item-effect,#battleItems \.tile-item-effect\{[^}]*position:static/,'item effects sit directly beneath item names, never pinned at the bottom');
 assert.match(css,/#gearCards \.loadout-tile,#battleItems \.battle-item-tile\{[^}]*justify-content:center/,'both contexts center their icon/name/effect group');
@@ -170,6 +170,9 @@ assert.doesNotMatch(picker,/鑑定/);
 assert.match(app,/battleImageUrl\(c\.image\)/);
 assert.match(app,/Math\.max\(G\.capacity\(profile\.level\),run\.carry\.findLastIndex\(Boolean\)\+1\)/,'combat item slots follow equipped capacity and retain occupied legacy slots');
 assert.match(app,/renderHeroName\(hero\)/,'life ruby readiness appears beside the player name');
+assert.match(app,/Boolean\(profile\?\.run\|\|returnFlow\)/,'return ceremony remains an active dungeon scene');
+assert.match(app,/profile\.pendingReturn=returnFlow/,'uncompleted rewards survive tab browsing and reload');
+assert.match(app,/profile\.pendingReturn=null/,'completion clears pending return');
 assert.match(app,/collectionSort:'common'/,'collection sorting defaults to ascending rarity');
 assert.match(app,/itemEffectIcons\(item\)/,'battle slots use compact item-effect icons');
 assert.match(app,/run\.carry\.findLastIndex\(Boolean\)\+1/,'combat shows capacity slots plus any occupied legacy slots');
