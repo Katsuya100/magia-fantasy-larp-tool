@@ -1559,20 +1559,19 @@ html,body{overflow-x:clip}
 .battle-panel .section-heading h2{font-size:clamp(18px,4.5vw,30px);overflow-wrap:anywhere}
 .battle-encounter-label{margin:5px 0 0;color:var(--soft);font-size:clamp(13px,1.8vw,16px);font-weight:500;letter-spacing:.06em}
 
-/* Support is a low-key link only at the bottom of the profile. */
-.profile-support{margin-top:25px;padding-top:18px;border-top:1px solid var(--border);text-align:center}
-.profile-support a,.support-prompt-actions a{color:var(--gold);font-size:13px;text-underline-offset:4px}
-.profile-support a:hover,.support-prompt-actions a:hover{color:var(--pale)}
-.profile-support a:focus-visible,.support-prompt-actions a:focus-visible{outline:2px solid #9ae3db;outline-offset:4px}
+/* Profile actions are deliberate, equally weighted controls above save management. */
+.profile-support{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;max-width:760px;margin:24px auto 0;padding-top:18px;border-top:1px solid var(--border)}
+.profile-support .profile-action{display:flex;align-items:center;justify-content:center;gap:12px;min-width:0;min-height:74px;padding:13px 15px;border:1px solid #d7b37e91;border-radius:12px;background:linear-gradient(145deg,#6847295e,#32283a 55%,#17283b);box-shadow:inset 0 1px 0 #fff3d324,0 6px 16px #0003;color:#f7e1b3;font-size:clamp(13px,2vw,16px);font-family:inherit;font-weight:700;line-height:1.4;text-align:center;text-decoration:none;transition:background .16s,border-color .16s,transform .16s,box-shadow .16s;cursor:pointer}
+.profile-support .profile-action:hover{border-color:#ffe1ac;background:linear-gradient(145deg,#80553188,#49324b 57%,#1b3547);box-shadow:inset 0 1px 0 #ffecd43d,0 9px 25px #0006;transform:translateY(-1px)}
+.profile-support .profile-action:focus-visible,.support-prompt-actions a:focus-visible{outline:2px solid #9ae3db;outline-offset:4px}
+.profile-support .profile-action-icon{display:grid;flex:none;place-items:center;width:34px;height:34px;border:1px solid #f1c88f75;border-radius:50%;background:#1719288c;color:#f4d6a0;font-size:21px;font-weight:500;line-height:1}
+@media(max-width:540px){.profile-support{grid-template-columns:minmax(0,1fr);gap:10px}.profile-support .profile-action{min-height:63px;padding:12px 14px}}
+.support-prompt-actions a{color:var(--gold);font-size:13px;text-underline-offset:4px}
+.support-prompt-actions a:hover{color:var(--pale)}
 .support-prompt-inner{text-align:center;padding:30px 24px}
 .support-prompt-inner h2{font-size:23px;color:var(--gold);margin:0 0 14px}
 .support-prompt-inner p{font-size:14px;color:var(--soft);margin:9px 0}
 .support-prompt-actions{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:25px}
-/* Share and donation use the same quiet link affordance, only in the profile. */
-.profile-support{display:flex;align-items:center;justify-content:center;gap:10px 25px;flex-wrap:wrap}
-.profile-support #openAdventurerShare{border:0!important;padding:0!important;background:none!important;box-shadow:none!important;color:var(--gold)!important;font-size:13px!important;font-weight:400!important;text-decoration:underline;text-underline-offset:4px;cursor:pointer}
-.profile-support #openAdventurerShare:hover{color:var(--pale)!important}
-.profile-support #openAdventurerShare:focus-visible{outline:2px solid #9ae3db;outline-offset:4px}
 .support-prompt-dialog{width:min(580px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
 #adventurerShareCanvas{display:block;width:100%;height:auto;aspect-ratio:1200 / 675;border:1px solid #c5a06a70;margin:17px auto 7px}
 .support-share-help{font-size:11px!important;line-height:1.5;color:var(--soft)!important}
@@ -1583,3 +1582,8 @@ html,body{overflow-x:clip}
 @media(max-width:630px){.support-prompt-inner{padding:22px 13px}.support-prompt-inner h2{font-size:20px}.support-share-help{font-size:10px!important}}
 
 #adventurerShareCanvas[hidden]{display:none}
+
+/* The reward's rank insignia reuses the profile's exact metallic badge markup. */
+.return-rank-symbol{display:grid;place-items:center;min-height:62px;line-height:normal}
+.return-rank-symbol .adventurer-grade{margin:0;display:flex;justify-content:center;max-width:100%}
+.return-rank-symbol .adventurer-grade strong{min-height:39px;max-width:100%;padding:6px clamp(7px,1.4vw,12px);font-size:clamp(13px,2.4vw,19px);letter-spacing:.02em}
