@@ -231,7 +231,7 @@ try{
  assert.equal(p.attempts,1);assert.equal(p.run.floor,1);
  assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="loot"/,'battle HUD shows earned loot as a card');
  assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="xp"/,'battle HUD shows provisional EXP as a card');
- assert.match($('battleInfo').innerHTML,/class="battle-stat" data-kind="item"/,'battle HUD shows free item usage as a card');
+ assert.doesNotMatch($('battleInfo').innerHTML,/data-kind="item"/,'battle HUD omits the removed item-usage card');
  assert.match($('battleInfo').innerHTML,/<strong class="battle-stat-value">0<\/strong>/,'initial rewards start at zero');
  assert.match($('battleInfo').innerHTML,/>未確定 · 持ち帰り待ち</,'unbanked loot remains clearly provisional');
  assert.doesNotMatch($('battleInfo').innerHTML,/未確定報酬 [0-9]+個 \/ 未確定経験値/,'the cramped slash-separated sentence is removed');
