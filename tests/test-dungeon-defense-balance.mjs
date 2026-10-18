@@ -86,8 +86,8 @@ for(const band of bands){
  console.log('CHALLENGE '+JSON.stringify({name:band.name,playerLevel:band.level,
   firstEnemyLevel:minimum,lastEnemyLevel:targetClearLevel(band.to),fights:(band.to-band.from+1)*5}));
 }
-const results=[],samples=128;
-for(const [duration,scale] of [[2,1],[3,1],[4,1],[4,.75],[4,.5],[4,.25]]){
+const results=[],samples=192;
+for(const [duration,scale] of [[2,1],[4,1],[4,.75],[4,.65],[4,.625],[4,.6],[4,.575],[4,.55],[4,.5]]){
  configure({...data,balance:data.balance.map(row=>row.key==='resistance_buff_duration'?{...row,value:String(duration)}:row.key==='defense_resistance_gain'?{...row,value:String(Number(row.value)*scale)}:row)});
  const buffs=data.buffs.map(row=>row.id.startsWith('buff_')?{...row,duration:String(duration),value:String(Number(row.value)*scale)}:row);
  for(const band of bands)for(const mode of ['none','flame-once','storm-once']){
@@ -111,7 +111,7 @@ for(const band of bands)for(const mode of ['none','flame-once','storm-once']){
   incomingPercent:prev.avgIncoming?Math.round((now.avgIncoming/prev.avgIncoming-1)*100):null,
   turnsPercent:prev.avgTurns?Math.round((now.avgTurns/prev.avgTurns-1)*100):null}));
 }
-assert.equal(results.length,bands.length*3*6);
+assert.equal(results.length,bands.length*3*9);
 assert.ok(results.every(x=>Number.isFinite(x.avgCleared)&&x.winRate>=0&&x.winRate<=100));
 for(const band of bands){
  const old=results.find(x=>x.duration===2&&x.name===band.name&&x.mode==='none');
