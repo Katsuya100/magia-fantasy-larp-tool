@@ -229,7 +229,7 @@ assert.match(css,/\.cloud-sync-actions\{display:flex;flex-wrap:wrap/,'connection
 assert.match(page,/<button type="button" id="setupGoogleDrive"[^>]*>GoogleDriveに同期する<\/button>/,'pre-registration sync button matches profile');
 assert.match(page,/<button type="button" id="setupWithoutBackup"[^>]*>同期せず始める<\/button>/,'local-only choice is clear');
 const cloudSync=await read('assets/js/dungeon-cloud-sync.mjs');
-assert.match(cloudSync,/if\(choice==='restore'\|\|choice==='overwrite'\)\{[\s\S]*?lockLocalOnly\(true\);[\s\S]*?\}\s*choicePending=false;\s*conflictDialog\.close\(\)/,'restore hides skip before the overlay chooser closes');
+assert.match(cloudSync,/if\(choice==='restore'\|\|choice==='overwrite'\)\{[\s\S]*?lockLocalOnly\(true\);[\s\S]*?\}\s*choicePending=false;\s*pendingChoiceCancel=null;\s*conflictDialog\.close\(\)/,'restore hides skip before the overlay chooser closes');
 assert.match(cloudSync,/setSyncing\(true\);\s*show\('同期中…'\)/,'background sync marks real API work busy');
 assert.match(cloudSync,/if\(again&&!stopped&&!restoring&&drive\)\{[\s\S]*?queueMicrotask\(\(\)=>\{if\(drive&&!stopped&&!restoring\)void sync\(false\)/,'at most one queued follow-up save starts immediately after active upload');
 assert.match(cloudSync,/if\(busy\)\{again=true;return;\}/,'autosave edits during upload coalesce into one pending bit');
