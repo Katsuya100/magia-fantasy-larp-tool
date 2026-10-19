@@ -38,7 +38,27 @@ class Element{
  }
  setAttribute(name,value){this[name]=value;}
 }
-function fakeUi(){
+function createCookieJar(){
+ const values=new Map(),writes=[];
+ return {
+  writes,
+  get cookie(){
+   for(const [name,item] of values)if(item.until<=Date.now())values.delete(name);
+   return [...values].map(([name,item])=>name+'='+item.value).join('; ');
+  },
+  set cookie(line){
+   writes.push(line);
+   const [pair,...flags]=line.split(';').map(item=>item.trim());
+   const separator=pair.indexOf('=');
+   const name=pair.slice(0,separator),value=pair.slice(separator+1);
+   const age=flags.find(item=>item.toLowerCase().startsWith('max-age='));
+   const seconds=age?Number(age.slice(8)):Infinity;
+   if(!value||seconds<=0)values.delete(name);
+   else values.set(name,{value,until:Date.now()+seconds*1000});
+  }
+ };
+}
+function fakeUi(cookies=createCookieJar()){
  const elements=new Map();
  const doc={
   getElementById(id){
@@ -46,10 +66,12 @@ function fakeUi(){
    return elements.get(id);
   },
   addEventListener(){},
+  get cookie(){return cookies.cookie;},
+  set cookie(value){cookies.cookie=value;},
   head:{append(){throw Error('Unexpected Google script injection');}}
  };
  const get=id=>doc.getElementById(id);
- return {get,doc,win:{document:doc,addEventListener(){}},button:get('connectGoogleDrive'),status:get('googleDriveStatus')};
+ return {get,doc,cookies,win:{document:doc,location:{protocol:'https:',pathname:'/magia-fantasy-larp-tool/dungeon.html'},addEventListener(){}},button:get('connectGoogleDrive'),status:get('googleDriveStatus')};
 }
 function mockGoogle(){
  const requests=[];
@@ -144,6 +166,8 @@ try{
  await wait(()=>firstReady===1,'no existing backup opens player naming directly');
  assert.equal(firstDrive.uploads,1,'the empty starting profile is uploaded exactly once');
  assert.deepEqual(firstDrive.operations,['POST'],'missing backup creates a new file using Drive POST');
+ assert.match(firstUi.doc.cookie,/__Secure-magiaDungeonDriveToken=/,'short-lived authorization is persisted to the HTTPS cookie');
+ assert.ok(firstUi.cookies.writes.some(value=>value.includes('Secure; SameSite=Strict; Max-Age=')&&value.includes('Path=/magia-fantasy-larp-tool/')),'cookie is HTTPS-only, strict, expiring and path-scoped');
  assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.name,undefined,'initial file precedes the name');
  assert.equal(firstUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(firstUi.button.hidden,true,'no redundant button once a real file is verified');
@@ -307,7 +331,45 @@ try{
  assert.deepEqual(reopenedDrive.operations,[],'startup must not silently overwrite existing Drive data');
  assert.equal(reopenedUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,true);
 
- // 11. Page reload loses its OAuth token; cached metadata is NOT a current success.
+ // 11. A page refresh restores the short-lived token from a cookie, then
+ // verifies the actual Drive backup without another Google authorization popup.
+ const refreshUi=fakeUi(firstUi.cookies);
+ let refreshReady=0;
+ const loginsBeforeRefresh=auth.requests.length;
+ const beforeRefreshDownloads=firstDrive.downloads;
+ start(firstDb,refreshUi,firstDrive.fetchImpl,{onInitialReady:()=>refreshReady++});
+ await wait(()=>refreshReady===1,'refresh resumes sync from the HTTPS cookie automatically');
+ assert.equal(auth.requests.length,loginsBeforeRefresh,'page refresh needs no OAuth popup while the token is valid');
+ assert.equal(refreshUi.status.textContent,'GoogleDrive同期済み');
+ assert.equal(refreshUi.button.hidden,true);
+ assert.ok(firstDrive.downloads>beforeRefreshDownloads,'cookie reloading still verifies the remote backup');
+ assert.deepEqual(firstDrive.operations,['POST','PATCH'],'refresh must not create or overwrite a matching backup');
+
+ // 12. If that cached token is revoked, reconnection is required and the
+ // cookie must be discarded instead of repeatedly claiming the user is synced.
+ const revokedCookies=createCookieJar(),revokedUi=fakeUi(revokedCookies);
+ revokedUi.doc.cookie=firstUi.doc.cookie.split(';')[0]+'; Path=/magia-fantasy-larp-tool/; Secure; SameSite=Strict; Max-Age=100';
+ const revokedDrive=remoteApi(firstDrive.current);
+ revokedDrive.expire();
+ start(firstDb,revokedUi,revokedDrive.fetchImpl);
+ await wait(()=>revokedUi.status.textContent.includes('再接続'),'revoked cookie shows reconnect');
+ assert.equal(revokedUi.button.hidden,false);
+ assert.notEqual(revokedUi.status.textContent,'GoogleDrive同期済み');
+ assert.equal(revokedUi.doc.cookie,'','revoked cookie must be removed');
+
+ // 13. Expired cookie values never authorize requests or claim success.
+ const expiredCookies=createCookieJar(),expiredUi=fakeUi(expiredCookies);
+ expiredUi.doc.cookie='__Secure-magiaDungeonDriveToken='+encodeURIComponent(JSON.stringify({token:'expired',expires:Date.now()-5000}))
+  +'; Path=/magia-fantasy-larp-tool/; Secure; SameSite=Strict; Max-Age=100';
+ const expiredDrive=remoteApi(firstDrive.current);
+ start(firstDb,expiredUi,expiredDrive.fetchImpl);
+ await wait(()=>!expiredUi.get('setupGoogleDrive').disabled,'OAuth initialized without using the expired cookie');
+ assert.equal(expiredUi.doc.cookie,'');
+ assert.notEqual(expiredUi.status.textContent,'GoogleDrive同期済み');
+ assert.equal(expiredUi.button.hidden,false);
+ assert.equal(expiredDrive.downloads,0,'expired token never reads Drive');
+
+ // 14. Page reload without any token still prompts reconnect, not "synced".
  const lostTokenDb=await newDb(),lostTokenUi=fakeUi(),lostTokenDrive=remoteApi(firstDrive.current);
  await saveCloudSyncState(lostTokenDb,{fileId:'backup-1',hash:'last-success'});
  start(lostTokenDb,lostTokenUi,lostTokenDrive.fetchImpl);
@@ -317,12 +379,12 @@ try{
  assert.ok(!lostTokenUi.status.textContent.includes('同期済み'),'do not label a tokenless session synced');
  assert.deepEqual(lostTokenDrive.operations,[],'without OAuth, reload cannot touch Drive');
 
- // 12. A previously verified account loses synced status when authorization ends.
+ // 15. A previously verified account loses synced status when authorization ends.
  firstDrive.expire();
  await firstController.sync(true);
  assert.equal(firstUi.button.hidden,false,'expired auth reveals reconnect');
  assert.match(firstUi.status.textContent,/再接続/);
  assert.notEqual(firstUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(firstUi.get('googleDriveExpiredDialog').open,true);
- console.log('PASS Drive POST/PATCH, initial and name uploads, restore/new, local-only, retry, restart, data preservation, readback and expiry');
+ console.log('PASS Drive POST/PATCH, HTTPS cookie resume and rejection, name sync, restore/new, local-only, retries, readback and expiry');
 }finally{auth.restore();}
