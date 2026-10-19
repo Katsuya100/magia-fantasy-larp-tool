@@ -78,11 +78,15 @@ export function rollCollection(collections,layer,r=Math.random,bossEnemyId=null,
  const favored=new Set(favoredIds);
  const preferred=eligible.filter(x=>favored.has(x.id));
  // Rarity is drawn first. This bias only changes which item wins within that rarity.
- const pool=preferred.length&&r()<.7?preferred:eligible;
- const total=pool.reduce((n,x)=>n+Number(x.weight),0);
+ const pickFavored=preferred.length>0&&r()<.7;
+ const pool=pickFavored?preferred:eligible;
+ // An exclusive boss trophy has base weight 1; equal priority in the favored lane
+ // keeps it competitive with ordinary relics without touching rarity odds.
+ const weight=x=>pickFavored?1:Number(x.weight);
+ const total=pool.reduce((n,x)=>n+weight(x),0);
  if(!total)throw Error('Missing random drop for '+rarity);
  let ticket=Math.min(1-Number.EPSILON,Math.max(0,r()))*total;
- for(const item of pool){ticket-=Number(item.weight);if(ticket<0)return item;}
+ for(const item of pool){ticket-=weight(item);if(ticket<0)return item;}
  return pool.at(-1);
 }
 export function bossUniqueCollection(collections,id){
