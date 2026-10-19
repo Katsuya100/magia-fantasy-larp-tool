@@ -307,7 +307,17 @@ try{
  assert.deepEqual(reopenedDrive.operations,[],'startup must not silently overwrite existing Drive data');
  assert.equal(reopenedUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,true);
 
- // 11. A previously verified account loses synced status when authorization ends.
+ // 11. Page reload loses its OAuth token; cached metadata is NOT a current success.
+ const lostTokenDb=await newDb(),lostTokenUi=fakeUi(),lostTokenDrive=remoteApi(firstDrive.current);
+ await saveCloudSyncState(lostTokenDb,{fileId:'backup-1',hash:'last-success'});
+ start(lostTokenDb,lostTokenUi,lostTokenDrive.fetchImpl);
+ await wait(()=>lostTokenUi.status.textContent.includes('再接続'),'last-sync metadata should prompt reconnect');
+ assert.equal(lostTokenUi.button.hidden,false,'the connection button remains available after reload');
+ assert.notEqual(lostTokenUi.status.textContent,'GoogleDrive同期済み');
+ assert.ok(!lostTokenUi.status.textContent.includes('同期済み'),'do not label a tokenless session synced');
+ assert.deepEqual(lostTokenDrive.operations,[],'without OAuth, reload cannot touch Drive');
+
+ // 12. A previously verified account loses synced status when authorization ends.
  firstDrive.expire();
  await firstController.sync(true);
  assert.equal(firstUi.button.hidden,false,'expired auth reveals reconnect');
