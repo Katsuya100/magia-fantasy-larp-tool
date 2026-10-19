@@ -1,6 +1,6 @@
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
 import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs';
-import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
+import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash,verifyDungeonBackup} from './dungeon-cloud-snapshot.mjs';
 import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange} from './dungeon-store.mjs';
 
 export function decideCloudSync({file,meta,hash,pristine}){
@@ -35,7 +35,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
  const show=message=>{status.textContent=message;if(spinner){spinner.hidden=!busy;status.prepend(spinner);}};
  function schedule(){
   if(!drive||stopped||restoring||choicePending)return;
-  clearTimeout(timer);timer=setTimeout(()=>{void sync();},1800);
+  clearTimeout(timer);timer=setTimeout(()=>{void sync();},0);
  }
  async function sync(){
   if(!drive||stopped||choicePending)return;
@@ -48,10 +48,12 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
    const snapshot=await readDungeonSnapshot(db);
    const text=await serializeDungeonSnapshot(snapshot),hash=await snapshotHash(text);
    const files=await drive.list();
-   if(files.length>1){show('複数のクラウドセーブが見つかりました。安全のため自動上書きを停止しました。');return;}
    const file=files[0]||null;
-   const decision=decideCloudSync({file,meta,hash,pristine:isPristineDungeonSnapshot(snapshot)});
-   if(decision==='blocked'||decision==='conflict'){
+   let remote=null,remoteText=null;
+   if(file){for(const candidate of files){try{const candidateText=await drive.download(candidate.id);const candidateData=await verifyDungeonBackup(candidateText);remote=candidateData;remoteText=candidateText;break;}catch(error){console.warn('バックアップ世代を検証できません',error);}}}
+   if(file&&!remote){show('Driveのバックアップが破損しています。安全のため同期を停止しました。');return;}
+   const decision=!file?'upload':isPristineDungeonSnapshot(snapshot)?'download':remote.savedAt>snapshot.savedAt?'download':'upload';
+   if(meta?.blocked||decision==='conflict'){
     choicePending=true;
     show('端末とGoogle Driveのセーブを確認してください。選択するまで同期は停止します。');
     const dialog=windowImpl?.document?.getElementById('googleDriveConflictDialog');
@@ -65,8 +67,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
    }
    if(decision==='synced'){show('Google Driveと同期済み。セーブ変更は自動でバックアップされます。');return;}
    if(decision==='download'){
-    const remoteText=await drive.download(file.id);
-    const data=deserializeDungeonSnapshot(remoteText);
+    const data=remote;
     // Do not replace an active combat session with state from another device.
     if(snapshot.profile?.run&&!isPristineDungeonSnapshot(snapshot)){
      show('探索中はクラウドからの復元を保留しています。帰還後に確認します。');return;
@@ -78,12 +79,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
     onRestore();
     return;
    }
-   // Recheck the remote timestamp immediately before overwriting it.
-   if(file){
-    const newest=await drive.metadata(file.id);
-    if(newest.modifiedTime!==file.modifiedTime){again=true;return;}
-   }
-   const saved=await drive.upload(text,file?.id||null);
+   // Never mutate an existing valid backup: commit a new immutable generation.
+   const saved=await drive.uploadAtomic(text);
    await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
    show('Google Driveへ自動バックアップ済み。今後の変更も自動で保存します。');
   }catch(error){
