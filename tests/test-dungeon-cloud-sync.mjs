@@ -5,24 +5,31 @@ import {openStore,saveProfile,putCircle,readDungeonSnapshot,replaceDungeonSnapsh
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {createDungeonDrive,DRIVE_SCOPE,DriveAuthError} from '../assets/js/dungeon-cloud-drive.mjs';
 import {decideCloudSync} from '../assets/js/dungeon-cloud-sync.mjs';
+import {verifyLocalSnapshot} from '../assets/js/dungeon-cloud-integrity.mjs';
 
 const db=await openStore(fakeIndexedDB());
 let changes=0;
 const stop=onDungeonDataChange(db,()=>changes++);
 const profile={name:'冒険者',level:12,attempts:3,inventory:[{id:'potion'}],run:{floor:12}};
 await saveProfile(db,profile);
-const photo=new Blob([Uint8Array.from([0,1,255,42,10])],{type:'image/png'});
+const photo=new Blob([Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0])],{type:'image/png'});
 await putCircle(db,{id:'sigil-1',name:'魔法陣',image:photo,analysis:{power:42}});
 assert.equal(changes,2);
 const original=await readDungeonSnapshot(db);
+assert.equal((await verifyLocalSnapshot(original)).status,'valid');
 const encoded=await serializeDungeonSnapshot(original);
+assert.ok(original.savedAt>0);
+assert.match(encoded,/"checksum":"[0-9a-f]+"/);
 assert.match(encoded,/"format":"magia-dungeon-save-v1"/);
 assert.ok(!encoded.includes('access_token'));
 const decoded=deserializeDungeonSnapshot(encoded);
 assert.deepEqual(decoded.profile,profile);
+assert.equal(decoded.savedAt,original.savedAt);
+assert.equal(decoded.legacy,false);
 assert.equal(decoded.circles[0].image.type,'image/png');
 assert.deepEqual(new Uint8Array(await decoded.circles[0].image.arrayBuffer()),new Uint8Array(await photo.arrayBuffer()));
 assert.equal(await snapshotHash(encoded,webcrypto),await snapshotHash(encoded,webcrypto));
+assert.throws(()=>deserializeDungeonSnapshot(encoded.replace('"冒険者"','"改ざん"')),/チェックサム/);
 assert.equal(isPristineDungeonSnapshot(original),false);
 assert.equal(isPristineDungeonSnapshot({profile:{name:'新規冒険者',tutorialDone:true,level:1,attempts:0,returns:0,run:null},circles:[]}),true,'a new device can recover after the mandatory name dialog');
 assert.equal(isPristineDungeonSnapshot({profile:{name:'',attempts:0,returns:0,run:null},circles:[]}),true);
@@ -45,15 +52,29 @@ assert.equal((await getCloudSyncState(db)).blocked,true,'intentional deletion ca
 stop();
 
 const file={id:'1',name:'magia-dungeon-save-v1.json',modifiedTime:'t2'};
-const meta={fileId:'1',modifiedTime:'t1',hash:'same'};
-assert.equal(decideCloudSync({file:null,meta:null,hash:'h',pristine:true}),'upload');
-assert.equal(decideCloudSync({file,meta:null,hash:'h',pristine:true}),'download');
-assert.equal(decideCloudSync({file,meta:null,hash:'h',pristine:false}),'conflict');
-assert.equal(decideCloudSync({file:{...file,modifiedTime:'t1'},meta,hash:'same'}),'synced');
-assert.equal(decideCloudSync({file:{...file,modifiedTime:'t1'},meta,hash:'changed'}),'upload');
-assert.equal(decideCloudSync({file,meta,hash:'same'}),'download');
-assert.equal(decideCloudSync({file,meta,hash:'changed'}),'conflict');
-assert.equal(decideCloudSync({file,meta:{blocked:true},hash:'h'}),'blocked');
+assert.equal(decideCloudSync({file:null,pristine:true}),'wait');
+assert.equal(decideCloudSync({file:null,pristine:false}),'upload');
+assert.equal(decideCloudSync({file,pristine:true}),'choose');
+assert.equal(decideCloudSync({file,localHash:'h',remoteHash:'h'}),'synced');
+assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:9}),'upload');
+assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:9,remoteSavedAt:10}),'download');
+assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:10}),'download');
+assert.equal(decideCloudSync({file,blocked:true}),'blocked');
+
+// Simulate an unplanned IndexedDB record loss. The preexisting trusted seal
+// must detect it rather than creating a new valid checksum on the next save.
+const tamperFactory=fakeIndexedDB(),damaged=await openStore(tamperFactory);
+await saveProfile(damaged,{name:'検証対象',level:5});
+await putCircle(damaged,{id:'tamper-circle',name:'画像',image:photo});
+const maps=tamperFactory.databases.get('magia-dungeon-v1');
+const circleTable=maps.get('circles');
+const intact=structuredClone(circleTable.get('tamper-circle'));
+circleTable.set('tamper-circle',{...intact,image:null});
+assert.deepEqual((await verifyLocalSnapshot(await readDungeonSnapshot(damaged))).badImageIds,['tamper-circle']);
+circleTable.set('tamper-circle',intact);
+circleTable.delete('tamper-circle');
+assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(damaged))).status,'corrupt');
+await assert.rejects(saveProfile(damaged,{name:'誤上書き',level:5}),/整合性/);
 
 const calls=[];
 const mockedFetch=async(url,options={})=>{
