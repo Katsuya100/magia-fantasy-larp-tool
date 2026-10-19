@@ -31,7 +31,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
   expiryNoticeShown=true;
   windowImpl?.document?.getElementById('googleDriveExpiredDialog')?.showModal?.();
  }
- const show=message=>{status.textContent=message;};
+ const spinner=windowImpl?.document?.getElementById('googleDriveSpinner');
+ const show=message=>{status.textContent=message;if(spinner){spinner.hidden=!busy;status.prepend(spinner);}};
  function schedule(){
   if(!drive||stopped||restoring||choicePending)return;
   clearTimeout(timer);timer=setTimeout(()=>{void sync();},1800);
@@ -41,6 +42,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
   if(busy){again=true;return;}
   if(Date.now()>=expires){expireConnection();return;}
   busy=true;
+  show('Google Driveへバックアップ・同期中…');
   try{
    const meta=await getCloudSyncState(db);
    const snapshot=await readDungeonSnapshot(db);
@@ -89,6 +91,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
    else show('クラウド同期に失敗しました。端末内のセーブは保持されています：'+error.message);
   }finally{
    busy=false;
+   if(spinner)spinner.hidden=true;
    if(again&&!stopped){again=false;schedule();}
   }
  }
@@ -153,6 +156,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
   conflictDialog?.close();
   drive=createDungeonDrive(token,fetchImpl);
   button.textContent='Google Driveに再接続';
+  windowImpl?.alert?.('バックアップ中は回転マークが表示されます。完了までページを閉じると最新の変更がDriveに保存されない場合があります。認証期限切れ時は再接続が必要です。');
   show('Google Driveとセーブデータを照合中…');
   await sync();
  }
