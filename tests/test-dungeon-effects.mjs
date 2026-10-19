@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
+import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
 import {configure,num,level,floor} from '../assets/js/dungeon-tuning.mjs';
 const get=async p=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+p+'.csv',import.meta.url),'utf8'));
 const [enemies,items,collections,buffs,balance,levels,floors,playerBase]=await Promise.all(['enemies','consumables','collections','buffs','balance','levels','floors','player-base'].map(get));
@@ -171,8 +172,8 @@ assert.ok(G.resist(wet,'aqua')>dryRes,'soaking degrades resistance buffs');
 
 // Values above 1000 still make a difference (including enhanced, already-powerful circles).
 assert.equal(num('debuff_power_max'),6);
-assert.equal(num('burn_max_hp_rate'),.3);
-for(const [lower,higher] of [[1000,2000],[2000,5000],[5000,10000]]){
+assert.equal(num('burn_max_hp_rate'),.14);
+for(const [lower,higher] of [[100,300],[300,500],[500,1100],[1100,2200],[2200,4840],[4840,7370]]){
  assert.ok(G.debuffPowerFactor(burnSpell(higher))>G.debuffPowerFactor(burnSpell(lower)),
   'status strength scales past power '+lower);
  const weak=burnTarget(100000),strong=burnTarget(100000);
@@ -187,8 +188,62 @@ const burnCapTicks=[];
 G.round(vulnerableHigh,unit(),-1,-1,buffs,()=>.99,e=>{
  if(e.role==='burn'&&e.side==='hero')burnCapTicks.push(e.amount);
 });
-assert.deepEqual(burnCapTicks,[Math.round(vulnerableHigh.stats.hp*.30)],
- 'extreme power and vulnerability cannot exceed 30% HP per burn tick');
+assert.deepEqual(burnCapTicks,[Math.round(vulnerableHigh.stats.hp*.14)],
+ 'extreme power and vulnerability cannot exceed 14% HP per burn tick');
+
+// 170-stone / five-circle economy: baseline drawing quality is 100-500,
+// exceptional 1100; 34 stones per circle should stay in the intended range.
+assert.equal(num('magic_stone_drop_chance'),.30);
+for(const [original,expected] of [[100,440],[300,1320],[500,2200],[1100,4840]])
+ assert.equal(strengthenedPower(original,34),expected,'34-stone distribution '+original);
+assert.equal(strengthenedPower(1100,57),7370,'focused premium spell');
+
+// With equally matched MAG/RES and neutral attributes, benchmark the new
+// power-first curves at early, mid, and end-of-run spell strengths.
+const matchedBase={hp:10000,mag:10,def:7,res:10};
+const matchedCaster=G.makeUnit(matchedBase,1,{},[],'player');
+const target=()=>G.makeUnit(matchedBase,1,{},[],'enemy');
+const near=(actual,expected,name)=>assert.ok(Math.abs(actual-expected)<1e-9,name+': '+actual+' vs '+expected);
+for(const power of [100,300,500,1100,1320,2200,4840,7370,10000]){
+ const factor=Math.sqrt(power/500);
+ const effects=[['flame',Math.min(.14,.045+.025*factor)],
+  ['aqua',Math.min(.5,.12+.12*factor)],
+  ['storm',Math.min(.45,.08+.15*factor)],
+  ['gravity',-Math.min(.5,.12+.12*factor)]];
+ for(const [attribute,expected] of effects){
+  const victim=target();
+  G.cast(matchedCaster,victim,spell('debuff',attribute,power),buffs);
+  const actual=G.status(victim,'debuff_'+attribute).value;
+  near(attribute==='flame'?actual*num('burn_hp_rate'):actual,expected,
+   'balanced curse '+attribute+' power '+power);
+ }
+ const z=target();
+ G.cast(matchedCaster,z,spell('debuff','bolt',power),buffs);
+ assert.equal(G.status(z,'debuff_bolt').shockExtra,Math.min(3,1+Math.floor(power/1250)),
+  'balanced shock '+power);
+ const sealed=target();
+ G.cast(matchedCaster,sealed,spell('debuff','law',power),buffs);
+ assert.equal(G.status(sealed,'debuff_law').sealedRoles.length,power>=1600?2:1,
+  'balanced seal '+power);
+}
+const floor100Caster=G.makeUnit({hp:100,mag:10,def:7,res:7},150,{},[],'player');
+const floor100Boss=G.fromEnemy(enemies.find(e=>e.id==='boss_l100'),150);
+G.cast(floor100Caster,floor100Boss,spell('debuff','flame',2200),buffs);
+const floor100MagResRatio=G.clamp(2*floor100Caster.stats.mag/
+ (floor100Caster.stats.mag+floor100Boss.stats.res),.7,1.3);
+near(num('burn_hp_rate')*G.status(floor100Boss,'debuff_flame').value,
+ Math.min(.14,(.045+.025*Math.sqrt(2200/500))*floor100MagResRatio*
+ G.resist(floor100Boss,'flame')),'100F relative MAG/RES curve');
+
+// Stat progression must not multiply curse strength by raw late-game MAG.
+const lowLevel=G.makeUnit({hp:100,mag:10,def:7,res:10},1,{},[],'player');
+const lowLevelTarget=G.makeUnit({hp:100,mag:10,def:7,res:10},1,{},[],'enemy');
+const highLevel=G.makeUnit({hp:100,mag:10,def:7,res:10},150,{},[],'player');
+const highLevelTarget=G.makeUnit({hp:100,mag:10,def:7,res:10},150,{},[],'enemy');
+G.cast(lowLevel,lowLevelTarget,spell('debuff','storm',500),buffs);
+G.cast(highLevel,highLevelTarget,spell('debuff','storm',500),buffs);
+near(G.status(lowLevelTarget,'debuff_storm').value,
+ G.status(highLevelTarget,'debuff_storm').value,'same-level curse works from 1F to 100F');
 
 // Upgraded power also controls soak, dizzy, gravity, shock and seal.
 const curseCaster=unit();
@@ -209,7 +264,7 @@ assert.ok(G.status(twiceDizzy,'debuff_storm').value>G.status(highDizzy,'debuff_s
 assert.equal(num('dizzy_max_rate'),0.45,'dizzy failure chance is capped at 45%');
 const cappedDizzy=unit(),dizzyAttack=spell('attack','flame',500);
 G.cast(curseCaster,cappedDizzy,spell('debuff','storm',5000),buffs);
-assert.ok(G.status(cappedDizzy,'debuff_storm').value>0.45,'high-power dizziness reaches its cap');
+assert.equal(G.status(cappedDizzy,'debuff_storm').value,0.45,'high-power dizziness reaches its cap');
 assert.equal(G.damage(cappedDizzy,unit(),dizzyAttack,()=>0.449),0,'magic misses below 45%');
 assert.ok(G.damage(cappedDizzy,unit(),dizzyAttack,()=>0.45)>0,'magic hits at 45%');
 const basicMissVictim=unit(),basicMissHp=basicMissVictim.hp;
@@ -226,7 +281,7 @@ G.cast(curseCaster,lowGravity,spell('debuff','gravity',270),buffs);
 G.cast(curseCaster,highGravity,spell('debuff','gravity',1000),buffs);
 assert.ok(G.factor(highGravity,'output')<G.factor(lowGravity,'output'),'gravity reduces output more with power');
 const shockTarget=()=>unit([spell('attack','flame')]);
-for(const [power,extra] of [[270,1],[1000,1],[2000,2],[5000,4],[10000,6]]){
+for(const [power,extra] of [[100,1],[500,1],[1100,1],[1320,2],[2200,2],[4840,3],[10000,3]]){
  const victim=shockTarget();
  G.cast(curseCaster,victim,spell('debuff','bolt',power),buffs);
  assert.equal(G.status(victim,'debuff_bolt').shockExtra,extra,'shock tier '+power);
