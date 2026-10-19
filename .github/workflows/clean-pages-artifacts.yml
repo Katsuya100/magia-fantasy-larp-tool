@@ -1,0 +1,72 @@
+name: Clean old GitHub Pages artifacts
+
+on:
+  # Run once on installation/updates, then automatically after Pages builds.
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/clean-pages-artifacts.yml
+      - scripts/clean-pages-artifacts.cjs
+      - scripts/clean-pages-artifacts.test.cjs
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types: [completed]
+  # Fallback if the GitHub-managed Pages workflow does not emit workflow_run.
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: clean-pages-artifacts
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Unit test the two-artifact retention policy
+        run: node --test scripts/clean-pages-artifacts.test.cjs
+      - name: Delete old github-pages artifacts; keep latest two
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const path = require('node:path');
+            const { selectOldPagesArtifacts } = require(path.join(
+              process.env.GITHUB_WORKSPACE, 'scripts/clean-pages-artifacts.cjs'
+            ));
+            const { owner, repo } = context.repo;
+            // Paginate the entire repository rather than assuming <= 100 artifacts.
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, name: 'github-pages', per_page: 100 }
+            );
+            const obsolete = selectOldPagesArtifacts(artifacts, 2);
+            const bytes = obsolete.reduce((sum, a) => sum + (a.size_in_bytes || 0), 0);
+            core.info(`Found ${artifacts.length} GitHub Pages artifacts; deleting ${obsolete.length} old items (about ${(bytes / 1024 / 1024).toFixed(1)} MiB).`);
+
+            let deleted = 0;
+            for (const artifact of obsolete) {
+              try {
+                await github.rest.actions.deleteArtifact({
+                  owner, repo, artifact_id: artifact.id
+                });
+                deleted++;
+                core.info(`Deleted github-pages artifact ${artifact.id} (${artifact.size_in_bytes || 0} bytes).`);
+              } catch (error) {
+                if (error.status === 404) {
+                  core.warning(`Artifact ${artifact.id} was already removed or expired.`);
+                } else {
+                  throw error;
+                }
+              }
+            }
+            core.notice(`Deleted ${deleted} old GitHub Pages artifacts; retained the newest two.`);
