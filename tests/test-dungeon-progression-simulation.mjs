@@ -277,6 +277,32 @@ for(const curve of zeroCurves){
   }
  }
 }
+// Where to stop victory regeneration entirely? Bracket a late shutdown.
+const depthZeroCandidates=[
+ {name:'zero95',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,.34],[80,.29],[90,.23],[95,0],[100,0]]},
+ {name:'zero100',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,.34],[80,.29],[90,.23],[99,.20],[100,0]]},
+ {name:'nearZero100',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,.34],[80,.29],[90,.23],[100,.08]]}
+];
+for(const curve of depthZeroCandidates){
+ for(const stoneUse of [.5,.75,1]){
+  for(const band of scenarios.filter(x=>x.stones==='earned'&&[128,139,150].includes(x.level))){
+   const result=summarize({...band,stoneUse,mpRecoveryFactor:curve.points},64);
+   console.log('STONE_MP_ZERO_ONSET '+JSON.stringify({curve:curve.name,level:band.level,
+    fromLayer:band.fromLayer,toLayer:band.toLayer,stoneUse,
+    winRate:result.winRate,mpPercent:result.avgMpPercent,
+    avgSpentStones:result.avgSpentStones,avgCleared:result.avgCleared}));
+  }
+ }
+}
+for(const stoneUse of [.5,.75,1]){
+ for(const band of scenarios.filter(x=>x.stones==='earned'&&[37,55,87,115,139,150].includes(x.level))){
+  const result=summarize({...band,stoneUse,mpRecoveryFactor:zeroCurves[0].points},128);
+  console.log('STONE_MP_ZERO128 '+JSON.stringify({curve:'zero90',level:band.level,
+   fromLayer:band.fromLayer,toLayer:band.toLayer,stoneUse,
+   winRate:result.winRate,mpPercent:result.avgMpPercent,
+   avgSpentStones:result.avgSpentStones,avgCleared:result.avgCleared}));
+ }
+}
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
