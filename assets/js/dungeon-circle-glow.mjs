@@ -1,6 +1,6 @@
 // The profile card's exact ink segmentation: local exposure normalization,
 // Sobel edges and colored alpha. Render only when a ritual is requested.
-import {circleOutlinePixels} from './dungeon-card-art.mjs?v=20261020.11';
+import {circleOutlinePixels} from './dungeon-card-art.mjs?v=20261020.12';
 export async function paintCircleGlow(canvas,photo,attribute){
  if(!canvas||!photo||typeof document==='undefined')return false;
  try{
