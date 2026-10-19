@@ -323,6 +323,20 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    }
    const remote=await checkedRemote(file,initial);
    ensureCurrent(activeSyncEpoch);
+   // Validating old local records does not authorize syncing a separate play.
+   // It only establishes their integrity before a manual choice is offered.
+   if(file&&remote.valid&&verification.status==='legacy'){
+    await establishLegacyIntegrity(db,local);
+    local=await readDungeonSnapshot(db);
+    verification=await verifyLocalSnapshot(local);
+    upgradedLegacy=true;
+    if(verification.status!=='valid'){
+     show(verification.status==='badImages'
+      ?'旧形式の画像が不足しています。バックアップは変更していません。'
+      :'旧形式のセーブの整合性を確認できません。バックアップは変更していません。');
+     return result;
+    }
+   }
    const localPlayId=local.profile?.playId,remotePlayId=remote.data?.profile?.playId;
    let legacyAdoption=false,samePlay=!file;
    if(file&&remote.valid){
@@ -338,7 +352,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    if(file&&remote.valid&&!samePlay&&!meta?.blocked){
     if(!initial){show('別のプレイの可能性があります。自動同期を停止しました。再接続して選択してください。');return result;}
     const choice=await chooseCloud('同じプレイと確認できません。引き継ぐか、上書きするか選んでください。',
-     {allowOverwrite:verification.status==='valid',initialChoice:initial});
+     {allowOverwrite:verification.status==='valid'&&!(upgradedLegacy&&local.savedAt===0),initialChoice:initial});
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
      if(verification.status==='legacy'){
