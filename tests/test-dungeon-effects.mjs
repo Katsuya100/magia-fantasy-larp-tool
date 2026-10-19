@@ -123,7 +123,7 @@ G.addStatus(burnt,{id:'debuff_flame',kind:'debuff',attribute:'flame',effect:'bur
 G.round(burnt,other,-1,-1,buffs,()=>.99);
 G.round(normal,unit(),-1,-1,buffs,()=>.99);
 assert.ok(burnt.hp<normal.hp,'burn deals delayed status damage');
-// Burn is fixed when cast: spell power, not the victim's maximum HP, sets its tick.
+// Burn keeps a fraction of target maximum HP, but upgraded power changes the percentage.
 const burnCaster=unit(),burnSpell=power=>spell('debuff','flame',power);
 const burnTarget=hp=>G.makeUnit({hp,mag:12,def:10,res:10},1,{},[],'enemy');
 const burnSmall=burnTarget(110),burnLarge=burnTarget(2000);
@@ -131,39 +131,88 @@ G.cast(burnCaster,burnSmall,burnSpell(270),buffs);
 G.cast(burnCaster,burnLarge,burnSpell(270),buffs);
 const burnLow=G.status(burnSmall,'debuff_flame');
 const burnTall=G.status(burnLarge,'debuff_flame');
-assert.equal(burnLow.burnDamage,burnTall.burnDamage,'burn damage is independent of target max HP');
-assert.equal(burnLow.burnDamage,Math.max(num('status_tick_min_damage'),
- Math.round(G.effectivePower(burnCaster,burnSpell(270))*burnLow.value*num('burn_power_rate'))));
+assert.equal(burnLow.value,burnTall.value,'same power gives same burn percentage across HP sizes');
+assert.equal(G.debuffPowerFactor(burnSpell(500)),1,'power 500 is the debuff reference');
+assert.ok(G.debuffPowerFactor(burnSpell(1000))>G.debuffPowerFactor(burnSpell(270)));
 const burnHigh=burnTarget(2000);
 G.cast(burnCaster,burnHigh,burnSpell(1000),buffs);
-assert.ok(G.status(burnHigh,'debuff_flame').burnDamage>burnLow.burnDamage,
- 'higher upgraded spell power produces stronger burn');
+assert.ok(G.status(burnHigh,'debuff_flame').value>burnLow.value,
+ 'higher upgraded spell power increases burn percentage');
 const fireResistant=G.makeUnit({hp:2000,mag:12,def:10,res:10},1,{flame:.25},[],'enemy');
 G.cast(burnCaster,fireResistant,burnSpell(270),buffs);
-assert.ok(G.status(fireResistant,'debuff_flame').burnDamage<burnLow.burnDamage,
- 'flame resistance reduces burn tick damage');
+assert.ok(G.status(fireResistant,'debuff_flame').value<burnLow.value,
+ 'flame resistance reduces burn percentage');
 const burnStack=burnTarget(2000);
 G.cast(burnCaster,burnStack,burnSpell(270),buffs);
 G.cast(burnCaster,burnStack,burnSpell(1000),buffs);
-const strongest=G.status(burnStack,'debuff_flame').burnDamage;
+const strongest=G.status(burnStack,'debuff_flame').value;
 G.cast(burnCaster,burnStack,burnSpell(270),buffs);
-assert.equal(G.status(burnStack,'debuff_flame').burnDamage,strongest,
- 'reapplying a weaker burn must not lower the damage');
+assert.equal(G.status(burnStack,'debuff_flame').value,strongest,
+ 'reapplying a weaker burn must not lower the HP percentage');
+const tickFor=(target,value)=>Math.max(num('status_tick_min_damage'),Math.round(target.stats.hp*num('burn_hp_rate')*value));
+const lowTick=tickFor(burnSmall,burnLow.value),largeTick=tickFor(burnLarge,burnTall.value);
+assert.ok(largeTick>lowTick,'same burn power scales with target maximum HP');
 const ticks=[];
 G.round(burnLarge,unit(),-1,-1,buffs,()=>.99,event=>{
  if(event.role==='burn')ticks.push(event.amount);
 });
-assert.deepEqual(ticks,[burnLow.burnDamage],'one end-of-round burn tick');
+assert.deepEqual(ticks,[largeTick],'one max-HP-based end-of-round burn tick');
 const enemyBurnCaster=G.makeUnit(base,1,{},[],'enemy');
 const playerBurnTarget=G.makeUnit({hp:110,mag:12,def:10,res:10},1,{},[],'player');
 G.cast(enemyBurnCaster,playerBurnTarget,burnSpell(270),buffs);
-assert.equal(G.status(playerBurnTarget,'debuff_flame').burnDamage,burnLow.burnDamage,
- 'players and enemies receive identical burn damage');
+assert.equal(G.status(playerBurnTarget,'debuff_flame').value,burnLow.value,
+ 'players and enemies receive identical burn strength');
+
 const wet=unit();
 G.addStatus(wet,{id:'resist_aqua',kind:'buff',attribute:'aqua',effect:'resist',value:.4,turns:2});
 const dryRes=G.resist(wet,'aqua');
 G.addStatus(wet,{id:'debuff_aqua',kind:'debuff',attribute:'aqua',effect:'soak',value:.5,turns:2});
 assert.ok(G.resist(wet,'aqua')>dryRes,'soaking degrades resistance buffs');
+
+// Upgraded power also controls soak, dizzy, gravity, shock and seal.
+const curseCaster=unit();
+const lowSoak=unit(),highSoak=unit();
+G.cast(curseCaster,lowSoak,spell('debuff','aqua',270),buffs);
+G.cast(curseCaster,highSoak,spell('debuff','aqua',1000),buffs);
+assert.ok(G.resist(lowSoak,'flame')>1,'soaking exposes base resistance, even without buffs');
+assert.ok(G.resist(highSoak,'flame')>G.resist(lowSoak,'flame'),'high power increases soak vulnerability');
+const lowDizzy=unit(),highDizzy=unit();
+G.cast(curseCaster,lowDizzy,spell('debuff','storm',270),buffs);
+G.cast(curseCaster,highDizzy,spell('debuff','storm',1000),buffs);
+assert.ok(G.status(highDizzy,'debuff_storm').value>G.status(lowDizzy,'debuff_storm').value);
+const dizzyVictim=unit(),beforeDizzyVictim=dizzyVictim.hp;
+G.round(highDizzy,dizzyVictim,-1,-1,buffs,()=>0);
+assert.equal(dizzyVictim.hp,beforeDizzyVictim,'dizzy can also miss normal attacks');
+const lowGravity=unit(),highGravity=unit();
+G.cast(curseCaster,lowGravity,spell('debuff','gravity',270),buffs);
+G.cast(curseCaster,highGravity,spell('debuff','gravity',1000),buffs);
+assert.ok(G.factor(highGravity,'output')<G.factor(lowGravity,'output'),'gravity reduces output more with power');
+const shockTarget=()=>unit([spell('attack','flame')]);
+for(const [power,extra] of [[270,1],[540,2],[1000,3]]){
+ const victim=shockTarget();
+ G.cast(curseCaster,victim,spell('debuff','bolt',power),buffs);
+ assert.equal(G.status(victim,'debuff_bolt').shockExtra,extra,'shock tier '+power);
+ G.prepare(victim,0);
+ assert.equal(victim.cooldowns[0],num('spell_cooldown')+extra,'shock cooldown '+power);
+}
+const sealedTarget=()=>unit([spell('attack','flame'),spell('defense','flame'),spell('support','flame'),spell('debuff','flame')]);
+const lowSeal=sealedTarget(),highSeal=sealedTarget();
+G.cast(curseCaster,lowSeal,spell('debuff','law',270),buffs,()=>.99);
+G.cast(curseCaster,highSeal,spell('debuff','law',1000),buffs,()=>.99);
+assert.equal(G.status(lowSeal,'debuff_law').sealedRoles.length,1,'low-power seal blocks one role');
+const roles=G.status(highSeal,'debuff_law').sealedRoles;
+assert.equal(roles.length,2,'high-power seal blocks exactly two roles');
+assert.equal(new Set(roles).size,2,'sealed roles must differ');
+for(let i=0;i<4;i++)assert.equal(G.canCast(highSeal,i),!roles.includes(highSeal.spells[i].role),'two-role seal enforcement');
+G.cast(curseCaster,highSeal,spell('debuff','law',270),buffs,()=>0);
+assert.ok(G.status(highSeal,'debuff_law').sealedRoles.length<=2,'reapplying seal never exceeds two roles');
+const chaosTarget=unit([spell('attack','flame'),spell('support','aqua')]);
+G.cast(curseCaster,chaosTarget,spell('debuff','chaos',540),buffs,()=>.99);
+assert.equal(G.status(chaosTarget,'debuff_chaos').effect,'confused','chaos applies its own status only');
+assert.equal(chaosTarget.statuses.length,1,'chaos does not also apply unrelated debuffs');
+const chaosCast=G.prepare(chaosTarget,0,()=>.99);
+assert.equal(chaosCast.role,'support','chaos randomly changes the next magic');
+assert.equal(G.status(chaosTarget,'debuff_chaos'),undefined,'chaos is consumed after cast');
 const chaos=unit([spell('attack','law'),spell('support','law')]);
 G.addStatus(chaos,{id:'debuff_chaos',kind:'debuff',attribute:'chaos',effect:'confused',value:1,turns:2});
 G.prepare(chaos,0,()=>.99);
