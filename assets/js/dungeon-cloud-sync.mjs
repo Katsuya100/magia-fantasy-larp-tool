@@ -78,10 +78,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    return {valid:false,data:null,invalidImages:[],error};
   }
  }
- async function restore(remote,file){
+ async function restore(remote,file,{explicit=false}={}){
   if(!remote.valid)throw Error('破損したDriveバックアップは復元できません。');
   const before=await readDungeonSnapshot(db);
-  if(before.profile?.run&&!isPristineDungeonSnapshot(before)){
+  if(before.profile?.run&&!isPristineDungeonSnapshot(before)&&!explicit){
    show('探索中に新しいDriveデータが見つかりました。探索終了まで自動復元と上書きを停止しています。');
    return 'deferred';
   }
@@ -137,7 +137,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    if(meta?.blocked){
     if(!file){await saveCloudSyncState(db,{});show('Driveにバックアップはありません。新しい冒険の記録を自動保存します。');return 'ready';}
     const choice=await chooseCloud('この端末では以前の冒険データを削除しています。Driveから復元するか、新しい端末データでバックアップを置き換えるか選んでください。');
-    if(choice==='restore')return await restore(remote,file);
+    if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
      await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
      show('新しい冒険を開始します。セーブ変更後にバックアップを更新します。');
@@ -147,8 +147,15 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return result;
    }
    if(verification.status==='corrupt'){
-    if(remote.valid&&remote.trusted)return await restore(remote,file);
-    show('端末のセーブが破損しています。正常なDriveバックアップもないため、上書きを停止しました。');
+    if(remote.valid&&remote.trusted){
+     const rescue=doc?.getElementById('backupSetupDialog')?.open;
+     return await restore(remote,file,{explicit:Boolean(rescue)});
+    }
+    if(remote.valid){
+     const choice=await chooseCloud('端末セーブの破損を検出しました。Driveの旧形式バックアップは完全性を確認できません。復元する場合は内容が古い可能性があります。',{allowOverwrite:false});
+     if(choice==='restore')return await restore(remote,file,{explicit:true});
+    }
+    show('端末のセーブが破損しています。確認済みのDriveバックアップがないため上書きを停止しました。');
     return result;
    }
    if(verification.status==='badImages'){
@@ -184,7 +191,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     }
    }
    if(verification.status==='legacy'){
-    if(remote.valid&&remote.trusted)return await restore(remote,file);
+    if(remote.valid){
+     const choice=await chooseCloud('この端末は旧形式のセーブです。整合性と更新日時を比較できないため、自動上書きせず選択を待ちます。Driveから復元するか、バックアップを変更せず保留してください。',{allowOverwrite:false});
+     if(choice==='restore')return await restore(remote,file,{explicit:true});
+     return result;
+    }
     if(file){
      show('旧端末セーブを安全に検証できず、Driveも破損しています。自動上書きを停止しました。');
      return result;
@@ -216,7 +227,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(meta?.freshStart)return 'ready';
     // Never silently overwrite a blank/new browser with Drive data, or vice versa.
     const choice=await chooseCloud('Driveに以前の冒険の記録があります。「復元」でその記録を使用、「端末データ」で新しい冒険を開始します。新規開始するとDriveのバックアップは上書きされます。');
-    if(choice==='restore')return await restore(remote,file);
+    if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
      // Starting fresh must not replace a healthy older backup with an empty save.
      await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
