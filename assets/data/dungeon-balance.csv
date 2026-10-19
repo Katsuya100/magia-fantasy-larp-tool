@@ -17,8 +17,14 @@ status_max_resistance,2,属性倍率の上限
 modifier_min,0.1,通常バフ倍率の下限
 modifier_max,3,通常バフ倍率の上限
 debuff_res_base,100,状態異常RES基準
-burn_hp_rate,0.045,旧セーブに残る火傷の最大HP割合（互換用）
-burn_power_rate,0.5,実効魔力と火傷強度に掛ける継続ダメージ係数
+burn_hp_rate,0.045,火傷の最大HP割合（威力と耐性で変動）
+debuff_power_reference,500,弱体威力倍率が1になる威力
+debuff_power_min,0.5,弱体威力倍率の下限
+debuff_power_max,2,弱体威力倍率の上限
+soak_vulnerability_rate,0.25,浸水中の属性被ダメージ増加係数
+shock_power_step,400,感電クールダウン増加の威力段階
+shock_cooldown_max_extra,3,感電クールダウン延長の上限
+seal_two_roles_power,750,封印2種類に必要な耐性補正後の威力
 dizzy_max_rate,0.65,目眩の命中率減少上限
 shock_cooldown_extra,1,感電によるクールダウン延長
 spell_cooldown,2,魔法陣クールダウン初期値
