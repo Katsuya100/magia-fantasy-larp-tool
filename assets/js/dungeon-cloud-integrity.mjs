@@ -27,15 +27,12 @@ export function photoDescriptors(circles){
  return Object.fromEntries(circles.map(c=>[c.id,c.image instanceof Blob?{size:c.image.size,type:c.image.type}:null]));
 }
 export async function digestPhoto(blob,cryptoImpl=globalThis.crypto){
- if(!(blob instanceof Blob)||blob.size<4||blob.size>25*1024*1024||!/^image\/(jpeg|png|webp|gif)$/.test(blob.type))throw Error('魔法陣画像が欠損・破損しています。');
- const buf=await blob.arrayBuffer(),bytes=new Uint8Array(buf);
- const jpeg=blob.type==='image/jpeg'&&bytes[0]===255&&bytes[1]===216&&bytes.at(-2)===255&&bytes.at(-1)===217;
- const png=blob.type==='image/png'&&bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71;
- const webp=blob.type==='image/webp'&&String.fromCharCode(...bytes.subarray(0,4))==='RIFF'&&String.fromCharCode(...bytes.subarray(8,12))==='WEBP';
- const gif=blob.type==='image/gif'&&String.fromCharCode(...bytes.subarray(0,3))==='GIF';
- if(!jpeg&&!png&&!webp&&!gif)throw Error('魔法陣画像が欠損・破損しています。');
+ // An existing image's exact bytes are authenticated by a trusted SHA-256
+ // proof. Strict file signatures are not assumed: some camera/exporters add
+ // metadata or encode noncanonical container variants.
+ if(!(blob instanceof Blob)||blob.size<1||blob.size>25*1024*1024||!/^image\\/(jpeg|png|webp|gif)$/.test(blob.type))throw Error('魔法陣画像が欠損・破損しています。');
  if(!cryptoImpl?.subtle?.digest)throw Error('HTTPSの安全な環境で開いてください。');
- const hash=new Uint8Array(await cryptoImpl.subtle.digest('SHA-256',buf));
+ const hash=new Uint8Array(await cryptoImpl.subtle.digest('SHA-256',await blob.arrayBuffer()));
  return [...hash].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 export async function photoEvidence(circles){
