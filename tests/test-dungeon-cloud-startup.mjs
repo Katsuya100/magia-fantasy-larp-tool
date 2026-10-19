@@ -88,7 +88,7 @@ function mockGoogle(){
 }
 function remoteApi(initial=null,{tamperReadback=false}={}){
  const id='backup-1',modified=()=>new Date(Date.UTC(2026,9,19,10,0,version)).toISOString();
- let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null;
+ let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null,putPause=null,putRequests=0;
  const operations=[];
  const fetchImpl=async (url,options={})=>{
   if(expired)return new Response('',{status:401});
@@ -116,6 +116,8 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   }
   if(u.includes('/upload/session/mock')){
    assert.equal(method,'PUT');
+   putRequests++;
+   if(putPause){const paused=putPause;putPause=null;await paused;}
    if(failUpload)return new Response('',{status:503});
    value=await options.body.text();
    version++;
@@ -128,12 +130,18 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   fetchImpl,
   get current(){return value;},
   get uploads(){return uploads;},
+  get putRequests(){return putRequests;},
   get downloads(){return downloads;},
   get operations(){return [...operations];},
   pauseNextList(){
    let release;
    listPause=new Promise(resolve=>{release=resolve;});
    return ()=>{listPause=null;release();};
+  },
+  pauseNextUpload(){
+   let release;
+   putPause=new Promise(resolve=>{release=resolve;});
+   return ()=>release();
   },
   expire(){expired=true;},
   failUploads(){failUpload=true;},
@@ -226,6 +234,40 @@ try{
  await wait(()=>firstDrive.uploads===beforeAutoUploads+1,'automatic backup uploads after local edit');
  await wait(()=>firstUi.get('driveSyncActivity').hidden&&firstUi.status.textContent==='GoogleDrive同期済み','automatic progress disappears only after verification');
  assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.magicStones,autoProfile.magicStones,'automatic backup preserves the changed resource');
+
+ // Queued autosave: while a real upload PUT is in-flight, several local
+ // name changes must commit immediately and reserve only one follow-up upload.
+ const queuedDb=await newDb(),queuedUi=fakeUi(),queuedDrive=remoteApi();
+ let queuedReady=0;
+ const queuedController=start(queuedDb,queuedUi,queuedDrive.fetchImpl,{onInitialReady:()=>queuedReady++});
+ await connect(queuedUi);
+ await wait(()=>queuedReady===1,'queue test starts from a verified cloud backup');
+ const firstRename=await getProfile(queuedDb);
+ firstRename.name='最初の名前';
+ await saveProfile(queuedDb,firstRename);
+ const beforeQueuedPuts=queuedDrive.putRequests;
+ const releaseInFlight=queuedDrive.pauseNextUpload();
+ const firstNamePass=queuedController.syncNow();
+ await wait(()=>queuedDrive.putRequests===beforeQueuedPuts+1,'first rename is in-flight at Drive');
+ assert.equal(queuedUi.get('driveSyncActivity').hidden,false,'busy upload shows progress');
+ const secondRename=await getProfile(queuedDb);
+ secondRename.name='二度目の名前';
+ await saveProfile(queuedDb,secondRename);
+ assert.equal((await getProfile(queuedDb)).name,'二度目の名前','local rename commits while Drive is stalled');
+ assert.equal(await queuedController.syncNow(),'deferred','another rename queues work rather than overlapping PUT requests');
+ const finalRename=await getProfile(queuedDb);
+ finalRename.name='最後の名前';
+ await saveProfile(queuedDb,finalRename);
+ assert.equal((await getProfile(queuedDb)).name,'最後の名前','third rename is also saved before upload completes');
+ assert.equal(await queuedController.syncNow(),'deferred','additional requests set only one pending flag');
+ assert.equal(queuedDrive.putRequests,beforeQueuedPuts+1,'there is still exactly one in-flight PUT');
+ releaseInFlight();
+ assert.equal(await firstNamePass,'deferred','outdated upload must not be reported as fully synced');
+ await wait(()=>queuedDrive.putRequests===beforeQueuedPuts+2&&queuedUi.get('driveSyncActivity').hidden
+  &&queuedUi.status.textContent==='GoogleDrive同期済み','queued pass flushes the latest data and stops the spinner');
+ assert.equal(deserializeDungeonSnapshot(queuedDrive.current).profile.name,'最後の名前','last local edit wins after a single queued upload');
+ assert.equal(queuedDrive.putRequests,beforeQueuedPuts+2,'three edits coalesce into two serialized PUTs');
+ assert.equal(queuedUi.get('googleDriveConflictDialog').open,false,'no restore chooser is needed for queued saves');
 
  // 2. Fresh local browser + existing named cloud backup: require only two
  // choices, never a name form until the user chooses a new game.

@@ -205,7 +205,9 @@ const cloudSyncSource=await read('assets/js/dungeon-cloud-sync.mjs');
 assert.doesNotMatch(cloudSyncSource,/この端末は旧形式のセーブです。整合性と更新日時を比較できない/,'legacy conversion no longer presents the obsolete blocking chooser');
 assert.match(cloudSyncSource,/await establishLegacyIntegrity\(db,local\);\s*local=await readDungeonSnapshot\(db\);\s*verification=await verifyLocalSnapshot\(local\);/,'migration recomputes a trusted seal before any upload');
 assert.match(cloudSyncSource,/if\(overwriteWarning\)overwriteWarning.hidden=!allowOverwrite/,'non-overwrite flows conceal misleading warning');
-assert.match(app,/await cloudSyncController\?\.syncNow\?\.\(\)/,'name submission uploads without waiting for the background timer');
+assert.match(app,/void cloudSyncController\?\.syncNow\?\.\(\)/,'name submission queues Drive upload without holding the local action lock');
+assert.doesNotMatch(app,/await cloudSyncController\?\.syncNow\?\.\(\)/,'network uploads never block the rename form');
+assert.match(app,/await persist\(\);\$\('nameDialog'\)\.close\(\);render\(\);[\s\S]*?void cloudSyncController\?\.syncNow\?\.\(\)/,'name change is persisted locally and dialog closes before the Drive request starts');
 assert.equal(page.split('システム上 <strong>'+concurrentWarning+'</strong>。').length-1,2,'both backup surfaces show the same explicit rollback warning');
 assert.ok(page.indexOf('<p class="backup-sync-warning">'+copyWarning+'</p>')<page.indexOf('id="backupSetupStatus"'),'the initial warning precedes connection status');
 const cloudMarkup=page.match(/<div class="cloud-sync">([\s\S]*?)<\/div>/)?.[1];
@@ -226,7 +228,9 @@ assert.match(page,/<button type="button" id="setupWithoutBackup"[^>]*>同期せ�
 const cloudSync=await read('assets/js/dungeon-cloud-sync.mjs');
 assert.match(cloudSync,/if\(choice==='restore'\|\|choice==='overwrite'\)\{[\s\S]*?lockLocalOnly\(true\);[\s\S]*?\}\s*choicePending=false;\s*conflictDialog\.close\(\)/,'restore hides skip before the overlay chooser closes');
 assert.match(cloudSync,/setSyncing\(true\);\s*show\('同期中…'\)/,'background sync marks real API work busy');
-assert.match(cloudSync,/busy=false;\s*setSyncing\(false\);/,'busy spinner resets even on backup failure');
+assert.match(cloudSync,/if\(again&&!stopped&&!restoring&&drive\)\{[\s\S]*?queueMicrotask\(\(\)=>\{if\(drive&&!stopped&&!restoring\)void sync\(false\)/,'at most one queued follow-up save starts immediately after active upload');
+assert.match(cloudSync,/if\(busy\)\{again=true;return;\}/,'autosave edits during upload coalesce into one pending bit');
+assert.match(cloudSync,/setSyncing\(false\);\s*\}\s*\}\s*\}/,'busy spinner is cleared once the pending queue is drained');
 assert.doesNotMatch(page,/起動・再接続時は保存日時で後勝ち判定/,'implementation jargon is not shown to users');
 assert.match(css,/\.profile-data-actions \.backup-sync-warning\{[\s\S]*?color:#ff7777/,'backup loss and rollback text remains visibly red');
 

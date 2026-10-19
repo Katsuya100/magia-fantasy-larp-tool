@@ -129,6 +129,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  }
  function schedule(){
   if(!drive||stopped||restoring||choicePending)return;
+  // One upload at a time; changes made during network IO only reserve one
+  // follow-up pass, which will read the latest IndexedDB snapshot.
+  if(busy){again=true;return;}
   clearTimeout(timer);
   timer=setTimeout(()=>{void sync(false);},1800);
  }
@@ -392,8 +395,16 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    return 'deferred';
   }finally{
    busy=false;
-   setSyncing(false);
-   if(again&&!stopped){again=false;schedule();}
+   if(again&&!stopped&&!restoring&&drive){
+    // Keep the spinner up while draining the single pending save.
+    // The queued pass starts immediately, not after another debounce.
+    again=false;
+    show('同期中…');
+    queueMicrotask(()=>{if(drive&&!stopped&&!restoring)void sync(false);else setSyncing(false);});
+   }else{
+    again=false;
+    setSyncing(false);
+   }
   }
  }
  async function acceptGoogleToken(result){
@@ -459,6 +470,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  setupButton?.addEventListener('click',connectOrCheck);
  // The caller explicitly disconnects before opening a local-only new game.
  function disconnect(){
+  again=false;
   clearTimeout(expiryTimer);expiryTimer=null;
   clearAuthCookie();
   drive=null;expires=0;validatedDrive=null;
