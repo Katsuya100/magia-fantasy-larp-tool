@@ -199,8 +199,13 @@ assert.match(page,/id="backupRiskWarning" class="backup-sync-warning"/,'profile 
 assert.match(page,/id="backupRollbackWarning" class="backup-sync-warning" hidden/,'concurrent-browser warning only appears once connected');
 assert.doesNotMatch(page,/id="setupCreatePlayer"|id="setupSwitchGoogleDrive"/,'no redundant no-backup chooser appears');
 assert.match(page,/data-action="restore">引き継ぐ<\/button>/,'restoration choice is explicit');
-assert.match(page,/data-action="overwrite">新しく始める<\/button>/,'new game choice appears only for an existing backup');
-assert.match(page,/<p id="googleDriveOverwriteWarning">新しく始めると以前のバックアップを上書きします。<\/p>/,'overwrite warning can be hidden when overwrite is forbidden');
+assert.match(page,/data-action="overwrite">新しいデータで上書きする<\/button>/,'overwrite option uses an explicit label at startup and from profile');
+assert.doesNotMatch(page,/data-action="overwrite">新しく始める<\/button>/,'old ambiguous overwrite label is gone');
+assert.match(page,/<dialog id="googleDriveOverwriteDialog" class="name-dialog"/,'destructive overwrite requires its own confirmation');
+assert.match(page,/data-action="back">戻る<\/button>/,'overwrite can be canceled');
+assert.match(page,/data-action="confirm">上書きする<\/button>/,'overwrite requires a separate explicit confirmation');
+assert.match(css,/#googleDriveConflictDialog \[data-action="overwrite"\],#googleDriveOverwriteDialog \[data-action="confirm"\]\{background:linear-gradient\(#d9494f,#941f32\)/,'both destructive actions are red');
+assert.match(page,/<p id="googleDriveOverwriteWarning">上書きすると以前のバックアップは失われます。<\/p>/,'overwrite warning can be hidden when overwrite is forbidden');
 const cloudSyncSource=await read('assets/js/dungeon-cloud-sync.mjs');
 assert.doesNotMatch(cloudSyncSource,/この端末は旧形式のセーブです。整合性と更新日時を比較できない/,'legacy conversion no longer presents the obsolete blocking chooser');
 assert.match(cloudSyncSource,/await establishLegacyIntegrity\(db,local\);\s*local=await readDungeonSnapshot\(db\);\s*verification=await verifyLocalSnapshot\(local\);/,'migration recomputes a trusted seal before any upload');
@@ -233,8 +238,10 @@ assert.match(cloudSync,/if\(choice==='restore'\|\|choice==='overwrite'\)\{[\s\S]
 assert.match(cloudSync,/setSyncing\(true\);\s*show\('同期中…'\)/,'background sync marks real API work busy');
 assert.match(cloudSync,/if\(again&&!stopped&&!restoring&&drive\)\{[\s\S]*?queueMicrotask\(\(\)=>\{if\(drive&&!stopped&&!restoring\)void sync\(false\)/,'at most one queued follow-up save starts immediately after active upload');
 assert.match(cloudSync,/if\(busy\)\{again=true;return;\}/,'autosave edits during upload coalesce into one pending bit');
-assert.match(cloudSync,/disconnectButton\?\.addEventListener\('click',disconnect\)/,'unlink action is wired');
-assert.match(cloudSync,/requestController\?\.abort\(\);requestController=null;/,'in-flight uploads are aborted on unlink');
+assert.match(cloudSync,/disconnectButton\?\.addEventListener\('click',\(\)=>\{void disconnect\(\);\}\)/,'unlink action waits without blocking gameplay');
+assert.match(cloudSync,/if\(disconnectPending\)\{\s*finishDisconnect\(\)/,'unlink happens only in the active request finalizer');
+assert.match(cloudSync,/requestController=null; \/\/ No abort: all in-flight requests have settled/,'normal unlink no longer aborts Drive uploads');
+assert.match(cloudSync,/if\(await confirmOverwrite\(\)\)finish\('overwrite'\)/,'overwriting requires a second confirmed choice');
 assert.match(cloudSync,/connectionEpoch\+\+;/,'old connection callbacks are invalidated');
 assert.match(cloudSync,/if\(!isCurrent\(activeSyncEpoch\)\)return 'deferred';/,'stale network results cannot restore connected UI');
 assert.match(cloudSync,/clearAuthCookie\(\);\s*drive=null;expires=0;validatedDrive=null;/,'unlink removes token while preserving data');
@@ -333,6 +340,7 @@ assert.match(css,/@keyframes circle-upgrade-aura/,'upgrades have a ritual animat
 assert.match(page,/id="deleteSaveData"[^>]*data-action="delete-data"/,'profile has a full save deletion action');
 assert.match(page,/id="deleteDataDialog"/,'data reset is confirmed');
 assert.match(page,/id="deleteDataPhrase"/,'data reset requires typing a confirmation word');
+assert.match(app,/await cloudSyncController\?\.disconnect\?\.\(\);\s*await clearDungeonData\(db\)/,'account deletion disconnects and clears auth cookie before erasing local data');
 assert.match(app,/clearDungeonData\(db\)/,'save reset clears both persistent stores');
 assert.match(app,/applyView\(name,before\)/,'tabs crossfade while preserving the outgoing scene');
 assert.match(css,/@keyframes snappy-rush-hero/,'hero attacks have accelerated easing');
