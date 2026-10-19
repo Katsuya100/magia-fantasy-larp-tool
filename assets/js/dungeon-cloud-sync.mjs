@@ -21,11 +21,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return {ready:false};
  }
  let client=null,drive=null,expires=0,busy=false,again=false,timer=null,restoring=false,stopped=false;
- let expiryNoticeShown=false,choicePending=false;
+ let expiryNoticeShown=false,choicePending=false,validatedDrive=null;
  const doc=windowImpl?.document;
  const conflictDialog=doc?.getElementById('googleDriveConflictDialog');
  const setupButton=doc?.getElementById('setupGoogleDrive');
- const show=message=>{status.textContent=message;};
+ const show=message=>{status.textContent=message;const setup=doc?.getElementById('backupSetupStatus');if(setup)setup.textContent=message;};
  function expireConnection(){
   drive=null;
   show('Google認証の期限が切れました。再接続するまでバックアップは停止します。');
@@ -59,8 +59,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    conflictDialog.showModal();
   });
  }
- async function checkedRemote(file){
+ async function checkedRemote(file,refresh=false){
   if(!file)return {valid:false,data:null,invalidImages:[]};
+  if(!refresh&&validatedDrive?.id===file.id&&validatedDrive.modifiedTime===file.modifiedTime)return validatedDrive.result;
   try{
    const remoteText=await drive.download(file.id);
    const data=deserializeDungeonSnapshot(remoteText);
@@ -69,7 +70,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(!circle.image){invalidImages.push(circle.id);continue;}
     try{await digestPhoto(circle.image);}catch{invalidImages.push(circle.id);}
    }
-   return {valid:invalidImages.length===0,data,invalidImages,text:remoteText,hash:await snapshotHash(remoteText)};
+   const result={valid:invalidImages.length===0,data,invalidImages,text:remoteText,hash:await snapshotHash(remoteText)};
+   if(result.valid)validatedDrive={id:file.id,modifiedTime:file.modifiedTime,result};
+   return result;
   }catch(error){
    if(error instanceof DriveAuthError)throw error;
    return {valid:false,data:null,invalidImages:[],error};
@@ -105,7 +108,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    if(now.modifiedTime!==file.modifiedTime){again=true;return 'deferred';}
   }
   const saved=await drive.upload(text,file?.id||null);
-  await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash:await snapshotHash(text)});
+  const hash=await snapshotHash(text);
+  validatedDrive={id:saved.id,modifiedTime:saved.modifiedTime,result:{valid:true,data:snapshot,hash,text,invalidImages:[]}};
+  await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
   show('Google Driveにバックアップ済み。変更時は接続中に自動更新します。');
   return 'ready';
  }
@@ -122,7 +127,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const files=await drive.list();
    if(files.length>1){show('Driveに複数のバックアップがあります。安全のため自動同期を停止しました。');return result;}
    const file=files[0]||null;
-   const remote=await checkedRemote(file);
+   const remote=await checkedRemote(file,initial);
    if(!file&&verification.status==='legacy'){
     await establishLegacyIntegrity(db,local);
     local=await readDungeonSnapshot(db);
@@ -226,6 +231,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   doc?.getElementById('googleDriveExpiredDialog')?.close?.();
   expires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
   drive=createDungeonDrive(result.access_token,fetchImpl);
+  validatedDrive=null;
   button.textContent='Google Driveに再接続';
   show('Driveとセーブを検証・照合中…');
   const outcome=await sync(true);
