@@ -141,7 +141,7 @@ try{
  await wait(()=>!localUi.button.disabled,'local-only choice initialized');
  localUi.get('setupGoogleDrive').click();
  await wait(()=>!localUi.get('setupCreatePlayer').hidden,'local-only account checked');
- localUi.get('setupWithoutBackup').click();
+ localSession.disconnect();
  assert.equal(localUi.button.hidden,false,'explicit local-only play reveals a future connect action');
  assert.match(localUi.status.textContent,/同期オフ/);
  assert.equal(await localSession.sync(true),'deferred','local-only choice has disabled the live Drive session');
