@@ -151,7 +151,7 @@ async function load(){
   startupStage('セーブの破損を検出しました。Driveからの復元が必要です。');
   wire();
   initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),
-   onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages,onImagesRestored:handleDriveImageRepair,onImagesRestored:handleDriveImageRepair});
+   onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages,onImagesRestored:handleDriveImageRepair});
   $('backupSetupTitle').textContent='セーブの破損を検出しました';
   $('setupWithoutBackup').disabled=true;
   finishStartup();
