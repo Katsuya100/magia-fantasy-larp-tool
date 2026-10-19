@@ -29,8 +29,8 @@ assert.deepEqual(initial.map(x=>x.id),['heal_s','mana_s']);
 assert.deepEqual(eligibleConsumables(items,19,'small').map(x=>x.id),initial.map(x=>x.id));
 assert.equal(eligibleConsumables(items,19,'extreme').length,2);
 assert.equal(eligibleConsumables(items,20,'small').length,10);
-assert.equal(eligibleConsumables(items,69,'small').length,11);
-assert.equal(eligibleConsumables(items,70,'small').length,12);
+assert.equal(eligibleConsumables(items,69,'small').length,12);
+assert.equal(eligibleConsumables(items,70,'small').length,13);
 assert.equal(eligibleConsumables(items,100,'extreme').length,13);
 assert.deepEqual(eligibleConsumables(items,101,'extreme').map(x=>x.id),eligibleConsumables(items,100,'extreme').map(x=>x.id));
 for(const layer of [1,2,10,19,20,50,69,70,75,99,100,101,300]){
