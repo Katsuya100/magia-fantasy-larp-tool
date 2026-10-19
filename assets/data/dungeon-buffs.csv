@@ -6,11 +6,11 @@ buff_storm,嵐の衣,buff,incoming,-0.12,4
 buff_gravity,重力装甲,buff,def,12,4
 buff_law,秩序の庇護,buff,resistance,0.15,4
 buff_chaos,混沌の祝福,buff,output,0.09,4
-debuff_flame,火傷,debuff,burn,0.75,2
+debuff_flame,火傷,debuff,burn,0.045,2
 debuff_bolt,感電,debuff,shock,1,2
-debuff_aqua,浸水,debuff,soak,0.5,2
-debuff_storm,目眩,debuff,dizzy,0.35,2
-debuff_gravity,重圧,debuff,output,-0.22,2
+debuff_aqua,浸水,debuff,soak,0.12,2
+debuff_storm,目眩,debuff,dizzy,0.08,2
+debuff_gravity,重圧,debuff,output,-0.12,2
 debuff_law,封印,debuff,seal,1,2
 debuff_chaos,暴走,debuff,confused,1,2
 resist_flame,flame耐性上昇,buff,resist,0.25,2
