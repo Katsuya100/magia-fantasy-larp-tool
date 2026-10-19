@@ -17,5 +17,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run simulate:dungeon-stones -- 512
       - run: npm run check
       - run: npm run build
