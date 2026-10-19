@@ -15,7 +15,7 @@ export function rollConsumableTier(layer,r=Math.random){
 }
 export function eligibleConsumables(items,layer,tier){
  return items.filter(row=>Number(row.min_layer||1)<=layer &&
-  (row.kind==='clear'||row.kind==='escape'||row.kind==='revive'||row.tier===tier||(row.kind==='elixir'&&tier==='extreme'&&row.tier==='large')));
+  (row.kind==='clear'||row.kind==='clear_all'||row.kind==='escape'||row.kind==='revive'||row.tier===tier||(row.kind==='elixir'&&tier==='extreme'&&row.tier==='large')));
 }
 export function targetClearLevel(layer){
  if(!Number.isSafeInteger(layer)||layer<1)throw Error('Invalid layer');

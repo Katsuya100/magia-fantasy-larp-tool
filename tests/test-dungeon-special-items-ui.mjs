@@ -151,6 +151,7 @@ try{
    {type:'use',id:'mana_s',value:20,bonus:null},
    {type:'use',id:'elixir_s',value:35,bonus:null},
    {type:'use',id:'clear_flame',value:0,bonus:null},
+   {type:'use',id:'luna_stone',value:0,bonus:null},
    {type:'use',id:'escape_scroll',value:0,bonus:null}
   ],loot:[],xp:0,usedItems:0,log:[],stage:'battle'};
  await saveProfile(db4,p4);
@@ -158,25 +159,35 @@ try{
  try{
   await import('../assets/js/dungeon-app.mjs?integration=ineffective-battle-items');
   await wait(()=>$4('battleItems').innerHTML.includes('脱出の巻物'),'full-resource item battle ready');
-  for(let i=0;i<4;i++)assert.match($4('battleItems').innerHTML,
+  for(let i=0;i<5;i++)assert.match($4('battleItems').innerHTML,
    new RegExp('class="loadout-tile battle-tile battle-item-tile equipped no-effect" data-use="'+i+'" disabled'),
    'no-effect item in slot '+i+' is grayed out and disabled');
-  assert.match($4('battleItems').innerHTML,/class="loadout-tile battle-tile battle-item-tile equipped" data-use="4"[^>]*>/,'escape scroll remains usable at full resources');
+  assert.match($4('battleItems').innerHTML,/class="loadout-tile battle-tile battle-item-tile equipped" data-use="5"[^>]*>/,'escape scroll remains usable at full resources');
   await doc4.click(btn({use:'0'}));
   const saved=await getProfile(db4);
-  assert.equal(saved.run.carry.filter(Boolean).length,5,'disabled HP potion cannot be wasted');
+  assert.equal(saved.run.carry.filter(Boolean).length,6,'disabled HP potion cannot be wasted');
   assert.equal(saved.run.usedItems,0,'no-effect click does not consume item allowance');
  }finally{env4.restore();}
  const active=await getProfile(db4);
  active.run.hero.hp-=15;
  active.run.hero.mp-=15;
- active.run.hero.statuses=[{id:'debuff_flame',kind:'debuff',attribute:'flame',effect:'burn',value:.1,turns:2}];
+ active.run.hero.statuses=[
+ {id:'debuff_flame',kind:'debuff',attribute:'flame',effect:'burn',value:.1,turns:2},
+ {id:'debuff_bolt',kind:'debuff',attribute:'bolt',effect:'shock',value:.1,turns:2},
+ {id:'buff_law',kind:'buff',attribute:'law',effect:'resist',value:.2,turns:2}
+];
  await saveProfile(db4,active);
  const env5=fakeDungeonBrowser({factory:f4}),$5=id=>env5.document.getElementById(id);
  try{
   await import('../assets/js/dungeon-app.mjs?integration=effective-battle-items');
   await wait(()=>$5('battleItems').innerHTML.includes('脱出の巻物'),'damaged item battle ready');
-  assert.doesNotMatch($5('battleItems').innerHTML,/equipped no-effect/,'HP, MP, elixir and cleanser become usable once needed');
+  assert.doesNotMatch($5('battleItems').innerHTML,/equipped no-effect/,'HP, MP, elixir, cleansers and luna stone become usable once needed');
+   assert.match($5('battleItems').innerHTML,/ルナストーン/);
+   assert.match($5('battleItems').innerHTML,/🌙全解除/);
+   await env5.document.click(btn({use:'4'}));
+   const purified=await getProfile(db4);
+   assert.deepEqual(purified.run.hero.statuses.map(s=>s.id),['buff_law'],'using luna stone clears every debuff without removing buffs');
+   assert.equal(purified.run.carry[4],null,'luna stone is consumed once');
  }finally{env5.restore();}
  console.log('PASS special consumable UI, filters, elixir, revival, and ineffective item graying and blocking');
 }finally{Math.random=originalRandom;}
