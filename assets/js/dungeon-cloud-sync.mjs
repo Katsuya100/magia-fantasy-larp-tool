@@ -15,14 +15,16 @@ export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remote
 }
 export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=()=>{},onRepairImages=async()=>false,fetchImpl=globalThis.fetch,windowImpl=globalThis.window}){
  if(!GOOGLE_CLIENT_ID){
+  windowImpl?.document?.getElementById('setupGoogleDrive')?.setAttribute('disabled','');
   status.textContent='Google連携を利用できません。この端末内のセーブだけでは消失する可能性があります。';
   button.disabled=true;
   return {ready:false};
  }
  let client=null,drive=null,expires=0,busy=false,again=false,timer=null,restoring=false,stopped=false;
- let expiryNoticeShown=false,initialConnection=false,choicePending=false;
+ let expiryNoticeShown=false,choicePending=false;
  const doc=windowImpl?.document;
  const conflictDialog=doc?.getElementById('googleDriveConflictDialog');
+ const setupButton=doc?.getElementById('setupGoogleDrive');
  const show=message=>{status.textContent=message;};
  function expireConnection(){
   drive=null;
@@ -127,7 +129,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     verification=await verifyLocalSnapshot(local);
    }
    if(meta?.blocked){
-    if(!file){show('端末データを削除済みです。新しいセーブを始めるときは再接続してください。');return 'ready';}
+    if(!file){await saveCloudSyncState(db,{});show('Driveにバックアップはありません。新しい冒険の記録を自動保存します。');return 'ready';}
     const choice=await chooseCloud('この端末では以前の冒険データを削除しています。Driveから復元するか、新しい端末データでバックアップを置き換えるか選んでください。');
     if(choice==='restore')return await restore(remote,file);
     if(choice==='overwrite'){
@@ -145,6 +147,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return result;
    }
    if(verification.status==='badImages'){
+    // A newer complete Drive save wins before any local image repair can advance savedAt.
+    if(remote.valid&&Number(remote.data.savedAt||0)>=Number(local.savedAt||0))return await restore(remote,file);
     const restored=[];
     if(remote.valid){
      for(const id of verification.badImageIds){
@@ -246,6 +250,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    error_callback:()=>show('Googleログインが中断されました。再度お試しください。')
   });
   button.disabled=false;
+  if(setupButton)setupButton.disabled=false;
   show('Google Driveに接続すると、端末データの消失に備えて自動バックアップします。認証期限切れやオフライン中は停止します。');
  }).catch(error=>show(error.message));
  button.disabled=true;
@@ -256,6 +261,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  });
  expiredDialog?.querySelector('[data-action="later"]')?.addEventListener('click',()=>expiredDialog.close());
  button.addEventListener('click',()=>{client?.requestAccessToken({prompt:'consent'});});
+ setupButton?.addEventListener('click',()=>{client?.requestAccessToken({prompt:'consent'});});
  const unsubscribe=onDungeonDataChange(db,schedule);
  windowImpl?.addEventListener?.('online',schedule);
  doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
