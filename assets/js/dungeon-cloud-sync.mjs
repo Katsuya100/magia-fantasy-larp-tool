@@ -158,6 +158,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const files=await drive.list();
    if(files.length>1){show('Driveに複数のバックアップがあります。安全のため自動同期を停止しました。');return result;}
    const file=files[0]||null;
+   // An account previously confirmed as synced must have a real Drive file.
+   if(!file&&meta?.fileId&&!meta?.blocked){
+    reconnectPresentation('同期エラー：Drive上にバックアップがありません。');
+    return result;
+   }
    const remote=await checkedRemote(file,initial);
    if(!file&&verification.status==='legacy'){
     await establishLegacyIntegrity(db,local);
@@ -165,16 +170,18 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     verification=await verifyLocalSnapshot(local);
    }
    if(meta?.blocked){
-    if(!file){await saveCloudSyncState(db,{});return noBackupPresentation();}
-    const choice=await chooseCloud('この端末では以前の冒険データを削除しています。Driveから復元するか、新しい端末データでバックアップを置き換えるか選んでください。');
-    if(choice==='restore')return await restore(remote,file,{explicit:true});
-    if(choice==='overwrite'){
-     await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
-     show('新しい冒険を開始します。セーブ変更後にバックアップを更新します。');
-     return 'start-new';
+    if(!file)await saveCloudSyncState(db,{});
+    else{
+     if(!remote.valid){show('バックアップが破損しています。復元できません。');return result;}
+     const choice=await chooseCloud('引き継ぐか、新しく始めるか選んでください。',{initialChoice:true});
+     if(choice==='restore')return await restore(remote,file,{explicit:true});
+     if(choice==='overwrite'){
+      // New game replaces the old backup only after the explicit choice.
+      const outcome=await upload(local,file,{allowInitial:true});
+      return outcome==='ready'?'start-new':outcome;
+     }
+     return result;
     }
-    show('選択を保留しました。Driveのバックアップは変更していません。');
-    return result;
    }
    if(verification.status==='corrupt'){
     if(remote.valid&&remote.trusted){
@@ -242,7 +249,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(pristine){show('Driveのバックアップが破損しています。端末データでの上書きは停止しました。');return result;}
     return await upload(local,file);
    }
-   if(!file&&pristine)return noBackupPresentation();
+   if(!file){
+    // Save the unnamed starting profile before allowing a name to be entered.
+    return await upload(local,null,{allowInitial:true});
+   }
    const localText=await serializeDungeonSnapshot(local);
    const decision=decideCloudSync({file,localHash:await snapshotHash(localText),remoteHash:remote.hash,
     localSavedAt:local.savedAt,remoteSavedAt:remote.data?.savedAt||0,pristine});
@@ -253,13 +263,12 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    }
    if(decision==='choose'){
     // Never silently overwrite a blank/new browser with Drive data, or vice versa.
-    const choice=await chooseCloud('Driveに以前の冒険の記録があります。「復元」でその記録を使用、「端末データ」で新しい冒険を開始します。新規開始するとDriveのバックアップは上書きされます。');
+    const choice=await chooseCloud('引き継ぐか、新しく始めるか選んでください。',{initialChoice:initial});
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
-     // Starting fresh must not replace a healthy older backup with an empty save.
-     await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
-     show('新しい冒険を開始します。最初の進行が保存されるまでDriveは上書きしません。');
-     return 'start-new';
+     // Replace only after explicit user consent, and protect even the unnamed profile.
+     const outcome=await upload(local,file,{allowInitial:true});
+     return outcome==='ready'?'start-new':outcome;
     }
     show('バックアップを変更せず保留しました。');
     return result;
@@ -269,14 +278,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(!initial){show('Driveにより新しい記録があります。プレイ中は復元・上書きを保留します。再接続時に照合してください。');return result;}
     return await restore(remote,file);
    }
-   if(decision==='upload'){
-    if(pristine)return noBackupPresentation();
-    return await upload(local,file);
-   }
+   if(decision==='upload')return await upload(local,file);
    return 'ready';
   }catch(error){
    if(error instanceof DriveAuthError)expireConnection();
-   else show('バックアップ処理を停止しました（端末内のデータは保持）：'+error.message);
+   else reconnectPresentation('同期エラー：'+error.message);
    return 'deferred';
   }finally{
    busy=false;
@@ -291,14 +297,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   drive=createDungeonDrive(result.access_token,fetchImpl);
   validatedDrive=null;
   connectedPresentation();
-  if(createPlayerButton)createPlayerButton.hidden=true;
-  if(switchAccountButton)switchAccountButton.hidden=true;
-  show('Driveの記録を確認中…');
+  show('確認中…');
   const outcome=await sync(true);
   if(outcome==='ready'||outcome==='start-new')onInitialReady();
-  else if(outcome==='deferred')reconnectPresentation();
-  // A fresh browser must not be sent to the naming dialog until the user
-  // explicitly chooses a new game or restores an existing Drive backup.
+  // A failed Drive read or upload never opens the naming dialog.
  }
  function loadIdentity(){
   return new Promise((resolve,reject)=>{
@@ -343,21 +345,14 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  };
  button.addEventListener('click',connectOrCheck);
  setupButton?.addEventListener('click',connectOrCheck);
- createPlayerButton?.addEventListener('click',()=>{
-  if(!drive||Date.now()>=expires){reconnectPresentation('再接続してください。');return;}
-  createPlayerButton.hidden=true;
-  if(switchAccountButton)switchAccountButton.hidden=true;
-  onInitialReady();
- });
- switchAccountButton?.addEventListener('click',()=>client?.requestAccessToken({prompt:'select_account'}));
  // The caller explicitly disconnects before opening a local-only new game.
  function disconnect(){
   drive=null;expires=0;validatedDrive=null;
   clearTimeout(timer);
-  reconnectPresentation('同期オフ。端末にのみ保存します。');
+  reconnectPresentation('未接続');
  }
  const unsubscribe=onDungeonDataChange(db,schedule);
  windowImpl?.addEventListener?.('online',schedule);
  doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
- return {ready:true,unsubscribe,sync,disconnect};
+ return {ready:true,unsubscribe,sync,disconnect,syncNow:()=>{clearTimeout(timer);return sync(false);}};
 }
