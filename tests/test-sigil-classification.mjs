@@ -81,7 +81,7 @@ const fixtures = [
   {name: 'debuff: branched straight arrows with tiny crossing pockets', role: 'debuff',
     shape: branchedOpenArrow, expectBranchedOverride: true},
   {name: 'debuff: open arrows with one tiny closed ornament', role: 'debuff',
-    shape: branchedOpenArrow + '<polygon points="157,267 176,297 138,297"/>',
+    shape: branchedOpenArrow + '<polygon points="159,250 188,316 130,316"/>',
     expectBranchedOverride: true, expectTinyFace: true},
   {name: 'debuff: nine rays with a narrow-gap scan-rim arc', role: 'debuff',
     shape: radialGap + openRing(191, 14), expectOpenLinearOverride: true},
