@@ -1,27 +1,26 @@
-import * as G from './dungeon-core.mjs?v=20261019.9';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261019.9';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261019.9';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261019.9';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261019.9';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261019.9';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261019.9';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261019.9';
+import * as G from './dungeon-core.mjs?v=20261019.11';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261019.11';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261019.11';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261019.11';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261019.11';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261019.11';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261019.11';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261019.11';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261019.9';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261019.9';
-import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261019.9';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData,saveProfileWithCircles} from './dungeon-store.mjs?v=20261019.9';
-import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261019.9';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261019.9';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261019.9';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261019.9';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261019.9';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261019.9';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261019.9';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261019.9';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261019.9';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261019.9';
-import {createSuccessorProfile,legacyContents,reclaimLegacies} from './dungeon-permadeath.mjs?v=20261019.9';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261019.11';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261019.11';
+import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261019.11';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData,saveProfileWithCircles} from './dungeon-store.mjs?v=20261019.11';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261019.11';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261019.11';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261019.11';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261019.11';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261019.11';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261019.11';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261019.11';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261019.11';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261019.11';
+import {createSuccessorProfile,legacyContents,reclaimLegacies} from './dungeon-permadeath.mjs?v=20261019.11';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -44,27 +43,56 @@ function note(message){
  $(target).textContent=message;$(target).hidden=false;
 }
 async function persist(){await saveProfile(db,profile);}
-function showStoragePersistenceStatus(status){
- const messages={
-  'persistent':'永続保存が有効です。ブラウザによる自動削除から保護されています。',
-  'best-effort':'現在は通常保存です。容量不足時に自動削除される可能性があります。',
-  'denied':'ブラウザが永続保存を許可しませんでした。通常保存を継続します。',
-  'unsupported':'このブラウザでは永続保存を要求できません。通常保存を継続します。',
-  'error':'保存領域の保護状態を確認できませんでした。通常のセーブ機能は引き続き利用できます。'
- };
- $('savePersistenceStatus').textContent=messages[status]||messages.error;
- $('enablePersistentSave').hidden=status==='persistent'||status==='unsupported';
- $('enablePersistentSave').disabled=false;
+function openBackupSetup(){
+ if(profile.name)return;
+ $('backupSetupStatus').textContent=$('googleDriveStatus').textContent;
+ if(!$('backupSetupDialog').open)$('backupSetupDialog').showModal();
 }
-async function checkStoragePersistence(){
- showStoragePersistenceStatus(await storagePersistenceStatus());
+function finishBackupSetup(){
+ if($('backupSetupDialog').open)$('backupSetupDialog').close();
+ if(!profile.name)openNameDialog(true);
 }
-async function enableStoragePersistence(){
- const button=$('enablePersistentSave');
- button.disabled=true;
- $('savePersistenceStatus').textContent='永続保存の許可を確認しています…';
- // Run persist() directly from this click, since browsers may require user activation.
- showStoragePersistenceStatus(await requestPersistentStorage());
+async function recaptureMissingImages(ids){
+ const dialog=$('imageRepairDialog'),input=$('imageRepairFile'),message=$('imageRepairCircleName'),error=$('imageRepairError');
+ const remaining=[...new Set(ids)];
+ if(!remaining.length)return true;
+ return new Promise(resolve=>{
+  let done=false,working=false;
+  const finish=ok=>{
+   if(done)return;
+   done=true;input.onchange=null;$('imageRepairLater').onclick=null;
+   if(dialog.open)dialog.close();
+   resolve(ok);
+  };
+  const display=()=>{
+   const id=remaining[0],circle=circles.find(c=>c.id===id);
+   message.textContent=(circle?.name||'魔法陣')+'（'+(ids.length-remaining.length+1)+' / '+ids.length+'）の写真を選択してください。';
+   error.textContent='';
+   input.value='';
+  };
+  input.onchange=async()=>{
+   if(working||!remaining.length)return;
+   const file=input.files?.[0];
+   if(!file)return;
+   working=true;input.disabled=true;
+   try{
+    const id=remaining[0],original=circles.find(c=>c.id===id);
+    if(!original)throw Error('魔法陣の記録が見つかりません。');
+    await putCircle(db,{...original,image:file});
+    circleImages.release(original.image);
+    circles=circles.map(c=>c.id===id?{...c,image:file}:c);
+    remaining.shift();
+    render();
+    if(!remaining.length)finish(true);
+    else display();
+   }catch(e){error.textContent='画像を保存できませんでした：'+e.message;}
+   finally{working=false;input.disabled=false;}
+  };
+  $('imageRepairLater').onclick=()=>{if(!working)finish(false);};
+  dialog.addEventListener('cancel',event=>{event.preventDefault();if(!working)finish(false);},{once:true});
+  display();
+  dialog.showModal();
+ });
 }
 function startupStage(message){$('startupDetail').textContent=message;}
 function finishStartup(){
@@ -124,14 +152,14 @@ async function load(){
  startupStage('迷宮の扉を開いている…');
  await persist();
  wire();
- initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),onRestore:()=>location.reload()});
+ initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),
+  onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages});
  render();
- void checkStoragePersistence();
  if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}
  if(returnFlow)renderReturnStep();
  show(returnFlow?'returnShowcase':profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');
  finishStartup();
- if(!profile.name)openNameDialog(true);
+ if(!profile.name)openBackupSetup();
  else if(!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run)tutorial.open();
 }
 const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result','returnShowcase']);
@@ -1131,7 +1159,7 @@ async function eraseSaveData(){
   note('');
   render();
   show('prepare');
-  openNameDialog(true);
+  openBackupSetup();
  }catch(e){
   $('deleteDataError').textContent='データの削除に失敗しました：'+e.message;
  }
@@ -1258,7 +1286,8 @@ function wire(){
  });
  $('cancelDeleteData').addEventListener('click',()=>$('deleteDataDialog').close());
  $('confirmDeleteData').addEventListener('click',()=>exclusive(eraseSaveData));
- $('enablePersistentSave').addEventListener('click',enableStoragePersistence);
+ $('setupWithoutBackup').addEventListener('click',finishBackupSetup);
+ $('backupSetupDialog').addEventListener('cancel',event=>event.preventDefault());
  $('closeMagicDetails').addEventListener('click',()=>$('magicDetailsDialog').close());
  $('upgradeCircle').addEventListener('click',()=>askCircleAction('upgrade',$('magicDetailsDialog').dataset.circleId));
  $('cancelCircleAction').addEventListener('click',()=>{$('circleActionDialog').close();pendingCircleAction=null;});
