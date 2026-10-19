@@ -347,6 +347,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   onInitialReady();
  });
  switchAccountButton?.addEventListener('click',()=>client?.requestAccessToken({prompt:'select_account'}));
+ // Choosing local-only play must stop live uploads even if OAuth was just
+ // completed against an account with no backup.
+ doc?.getElementById('setupWithoutBackup')?.addEventListener('click',()=>{
+  drive=null;expires=0;validatedDrive=null;
+  clearTimeout(timer);
+  reconnectPresentation('同期オフ。端末にのみ保存します。');
+ });
  const unsubscribe=onDungeonDataChange(db,schedule);
  windowImpl?.addEventListener?.('online',schedule);
  doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
