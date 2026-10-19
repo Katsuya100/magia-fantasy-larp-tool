@@ -137,8 +137,9 @@ for(const tier of [2,3,4]){
 assert.match(cinematicCss,/\[data-incoming-tier="4"\]/,'ultimate damage has its own impact');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?tier-seal/,'tiered artwork is motion-safe');
 const appSource=await readFile(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
-assert.match(cinematicPage,/data-release="20261020\.8"/,'new FX release is cache-busted in HTML');
-assert.match(appSource,/dungeon-combat-fx\.mjs\?v=20261020\.8/,'FX JavaScript import matches the release');
+const liveRelease=cinematicPage.match(/data-release="(\d{8}\.\d+)"/)?.[1];
+assert.ok(liveRelease,'the release marker exists in HTML');
+assert.ok(appSource.includes('dungeon-combat-fx.mjs?v='+liveRelease),'FX JavaScript import matches the release');
 assert.match(appSource,/projectile\.dataset\.tier=actor\.dataset\.tier/,'attack projectiles use caster investment');
 assert.match(appSource,/victim\.dataset\.incomingAttribute=/,'dual casts keep the incoming attribute independent');
 assert.match(cinematicCss,/--impact-color/,'incoming projectile controls impact hue');
