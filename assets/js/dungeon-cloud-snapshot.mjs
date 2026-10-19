@@ -30,9 +30,23 @@ export async function serializeDungeonSnapshot(snapshot){
   if(!(circle.image instanceof Blob)||circle.image.size>MAX_PHOTO)throw Error('魔法陣画像をバックアップできません。');
   return {...circle,image:{blob:true,type:circle.image.type,base64:toBase64(new Uint8Array(await circle.image.arrayBuffer()))}};
  }));
- const text=JSON.stringify({format:FORMAT,profile:snapshot.profile,circles});
+ const payload={format:FORMAT,profile:snapshot.profile,circles,savedAt:Number.isFinite(snapshot.savedAt)?snapshot.savedAt:Date.now()};
+ payload.checksum=await snapshotHash(JSON.stringify(payload));
+ const text=JSON.stringify(payload);
  if(text.length>MAX_PAYLOAD)throw Error('バックアップ容量が上限を超えました。');
  return text;
+}
+export async function verifyDungeonSnapshot(text){
+ if(typeof text!=='string'||text.length>MAX_PAYLOAD)throw Error('バックアップ容量が上限を超えました。');
+ const data=JSON.parse(text);
+ if(data?.format!==FORMAT)throw Error('未対応のバックアップ形式です。');
+ assertShape(data);
+ if(data.checksum!==undefined){
+  if(typeof data.checksum!=='string'||!Number.isFinite(data.savedAt))throw Error('バックアップの検証情報が不正です。');
+  const {checksum,...payload}=data;
+  if(await snapshotHash(JSON.stringify(payload))!==checksum)throw Error('バックアップのチェックサムが一致しません。');
+ }
+ return deserializeDungeonSnapshot(text);
 }
 export function deserializeDungeonSnapshot(text){
  if(typeof text!=='string'||text.length>MAX_PAYLOAD)throw Error('バックアップ容量が上限を超えました。');
@@ -44,7 +58,7 @@ export function deserializeDungeonSnapshot(text){
   if(circle.image?.blob!==true||typeof circle.image.type!=='string')throw Error('画像形式が不正です。');
   return {...circle,image:new Blob([fromBase64(circle.image.base64)],{type:circle.image.type})};
  });
- return {profile:data.profile,circles};
+ return {profile:data.profile,circles,savedAt:data.savedAt??null};
 }
 export function isPristineDungeonSnapshot(snapshot){
  const p=snapshot.profile;
