@@ -1,6 +1,6 @@
 # Google Drive 自動バックアップのセットアップ
 
-> **PR段階 / 本番未設定**：OAuthクライアントIDは空のため、公開ゲームではこの機能は無効です。Cloud側の設定を行い、iPhone Safariなどで実機認証を確認してから有効化してください。
+> **PR段階 / 本番未公開**：公開用Google OAuthクライアントIDはPRに設定済み。Google CloudのDrive API・同意画面・JavaScript生成元の設定と、iPhone Safariでの実機認証・保存・復元検証を終えるまで、mainへはマージしないでください。
 
 ## 目的
 
