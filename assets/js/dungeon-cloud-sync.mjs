@@ -9,7 +9,7 @@ import {verifyLocalSnapshot,digestPhoto} from './dungeon-cloud-integrity.mjs';
 export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remoteSavedAt=0,pristine=false,blocked=false}){
  if(blocked)return 'blocked';
  if(!file)return 'upload';
- if(localHash===remoteHash)return 'synced';
+ if(localHash&&remoteHash&&localHash===remoteHash)return 'synced';
  if(pristine)return 'choose';
  return Number(localSavedAt)>Number(remoteSavedAt)?'upload':'download';
 }
