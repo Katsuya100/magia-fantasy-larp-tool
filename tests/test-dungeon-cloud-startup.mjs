@@ -21,7 +21,7 @@ const wait=async(check,message)=>{
 };
 class Element{
  constructor(id){
-  this.id=id;this.hidden=['backupRollbackWarning','backupSetupSpinner','googleDriveSpinner'].includes(id);this.disabled=false;this.open=false;this.textContent='';this.showModalCount=0;
+  this.id=id;this.hidden=['backupRollbackWarning','backupSetupSpinner','googleDriveSpinner','driveSyncActivity'].includes(id);this.disabled=false;this.open=false;this.textContent='';this.showModalCount=0;
   this.handlers=new Map();this.children=new Map();
  }
  addEventListener(name,handler){
@@ -173,6 +173,7 @@ try{
  await connect(firstUi);
  await wait(()=>firstUi.get('backupSetupSpinner').hidden===false,'initial Drive check visibly starts spinner');
  assert.equal(firstUi.get('googleDriveSpinner').hidden,false,'profile section shares background sync progress');
+ assert.equal(firstUi.get('driveSyncActivity').hidden,false,'global spinner is visible from any gameplay tab');
  assert.equal(firstUi.get('setupWithoutBackup').hidden,true,'local-only action is untouchable during first Drive check');
  assert.equal(firstUi.get('setupWithoutBackup').disabled,true,'initial sync disables bypass');
  assert.equal(firstUi.status['aria-busy'],'true','screen reader receives busy state');
@@ -180,6 +181,7 @@ try{
  await wait(()=>firstReady===1,'no existing backup opens player naming directly');
  assert.equal(firstUi.get('backupSetupSpinner').hidden,true,'spinner stops when verified upload finishes');
  assert.equal(firstUi.get('googleDriveSpinner').hidden,true);
+ assert.equal(firstUi.get('driveSyncActivity').hidden,true);
  assert.equal(firstUi.status['aria-busy'],'false');
  assert.equal(firstDrive.uploads,1,'the empty starting profile is uploaded exactly once');
  assert.deepEqual(firstDrive.operations,['POST'],'missing backup creates a new file using Drive POST');
@@ -202,6 +204,7 @@ try{
  releaseNameList();
  assert.equal(await nameSync,'ready','name is uploaded on demand, without debounce');
  assert.equal(firstUi.get('googleDriveSpinner').hidden,true,'name sync spinner stops only after Drive verification');
+ assert.equal(firstUi.get('driveSyncActivity').hidden,true,'global indicator stops with the verified save');
  assert.equal(firstDrive.uploads,2,'one upload before name and another immediately after name');
  assert.deepEqual(firstDrive.operations,['POST','PATCH'],'naming updates the created file through Drive PATCH');
  assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.name,'星の魔導士','the remote contains the exact saved name');
