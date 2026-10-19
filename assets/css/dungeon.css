@@ -1636,3 +1636,10 @@ html,body{overflow-x:clip}
 .inherited-flame{display:inline-block;margin-inline-start:.25em;filter:hue-rotate(165deg) saturate(2.4);vertical-align:middle}
 .permadeath-choice{display:flex;align-items:center;justify-content:center;gap:.55rem;margin:.7rem 0;cursor:pointer}
 .permadeath-choice input{width:1.05rem;height:1.05rem;accent-color:#76b6ed}
+
+/* Google Drive cloud backup, separate from browser storage permissions. */
+.cloud-sync{margin:18px 0;padding:17px;border:1px solid var(--border);background:#0c1723a8}
+.cloud-sync h3{margin:0 0 9px;color:var(--gold);font-size:16px}
+.cloud-sync [role="status"]{font-size:13px;color:var(--pale);line-height:1.6;overflow-wrap:anywhere}
+.cloud-sync-note{font-size:12px!important;color:var(--soft);line-height:1.65}
+.cloud-sync button[disabled]{opacity:.55;cursor:not-allowed}
