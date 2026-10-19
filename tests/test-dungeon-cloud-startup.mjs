@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {openStore,getProfile,saveProfile,putCircle,readDungeonSnapshot,saveCloudSyncState} from '../assets/js/dungeon-store.mjs';
+import {openStore,getProfile,saveProfile,putCircle,readDungeonSnapshot,saveCloudSyncState,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import {verifyLocalSnapshot} from '../assets/js/dungeon-cloud-integrity.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {initDungeonCloudSync} from '../assets/js/dungeon-cloud-sync.mjs';
@@ -89,8 +89,9 @@ function mockGoogle(){
 function remoteApi(initial=null,{tamperReadback=false}={}){
  const id='backup-1',modified=()=>new Date(Date.UTC(2026,9,19,10,0,version)).toISOString();
  let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null,putPause=null,putRequests=0;
- const operations=[];
+ const operations=[],signals=[];
  const fetchImpl=async (url,options={})=>{
+  if(options.signal)signals.push(options.signal);
   if(expired)return new Response('',{status:401});
   const u=String(url),method=options.method||'GET';
   if(u.includes('spaces=appDataFolder')){
@@ -133,6 +134,7 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   get putRequests(){return putRequests;},
   get downloads(){return downloads;},
   get operations(){return [...operations];},
+  get signals(){return [...signals];},
   pauseNextList(){
    let release;
    listPause=new Promise(resolve=>{release=resolve;});
@@ -309,22 +311,28 @@ try{
  assert.equal(refreshDetachedUi.get('disconnectGoogleDrive').hidden,false);
  assert.equal(detachedDrive.operations.filter(method=>method==='POST').length,1,'reconnect updates existing backup, never creates a duplicate');
 
- // Disconnect during an active Drive listing must not resurrect the old
- // connection, create an upload, or put a stale synced label on the screen.
+ // Disconnect during a Drive list waits for the existing request to settle
+ // before dropping the cookie; no partial transfer or stale result is exposed.
  const detachingDb=await newDb(),detachingUi=fakeUi(),detachingDrive=remoteApi();
  let detachingReady=0;
  const detachingController=start(detachingDb,detachingUi,detachingDrive.fetchImpl,{onInitialReady:()=>detachingReady++});
  await connect(detachingUi);
- await wait(()=>detachingReady===1,'in-flight cancellation starts connected');
+ await wait(()=>detachingReady===1,'in-flight wait starts connected');
  const releaseStaleList=detachingDrive.pauseNextList();
  const detachingRequest=detachingController.syncNow();
  await wait(()=>!detachingUi.get('googleDriveSpinner').hidden,'network sync has begun');
  detachingUi.get('disconnectGoogleDrive').click();
- assert.equal(detachingUi.get('googleDriveSpinner').hidden,true,'disconnect immediately dismisses pending network indicator');
- assert.equal(detachingUi.doc.cookie,'','abort clears resumable authorization');
- releaseStaleList(); // The fake endpoint intentionally ignores AbortSignal.
- assert.equal(await detachingRequest,'deferred','old connection is not allowed to finish as synced');
- assert.match(detachingUi.status.textContent,/同期を解除しました/,'stale sync cannot replace unlinked status');
+ assert.equal(detachingUi.get('googleDriveSpinner').hidden,false,'spinner remains visible until the Drive request settles');
+ assert.equal(detachingUi.get('disconnectGoogleDrive').disabled,true,'button cannot issue repeated unlink actions');
+ assert.match(detachingUi.doc.cookie,/__Secure-magiaDungeonDriveToken/,'access cookie is retained until transfer finishes');
+ assert.match(detachingUi.status.textContent,/完了後に解除/,'status explains unlink is waiting');
+ assert.equal(detachingDrive.signals.some(signal=>signal.aborted),false,'disconnect does not abort an active request');
+ releaseStaleList();
+ assert.equal(await detachingRequest,'ready','active request completes normally before unlink');
+ assert.equal(detachingUi.doc.cookie,'','cookie is cleared after the request finishes');
+ assert.equal(detachingUi.get('googleDriveSpinner').hidden,true,'spinner clears after disconnect completes');
+ assert.equal(detachingUi.get('disconnectGoogleDrive').hidden,true);
+ assert.match(detachingUi.status.textContent,/同期を解除しました/,'completed work cannot override disconnected status');
  assert.equal(detachingDrive.uploads,1,'stale request cannot start another upload');
  const afterStaleEdit=await getProfile(detachingDb);
  afterStaleEdit.name='オフライン冒険者';
@@ -332,9 +340,8 @@ try{
  assert.equal(await detachingController.syncNow(),'deferred','further updates stay local only');
  assert.equal(detachingDrive.uploads,1,'no queued upload survives disconnect');
 
- // A staged upload can already have reached Drive before the user clicks
- // disconnect. It must never schedule the queued next upload or falsely mark
- // the browser as connected when the old request finally returns.
+ // If Drive is already receiving a PUT, wait until upload + readback ends.
+ // Suppress additional queued transfers after the user requests unlink.
  const midDb=await newDb(),midUi=fakeUi(),midDrive=remoteApi();
  let midReady=0;
  const midController=start(midDb,midUi,midDrive.fetchImpl,{onInitialReady:()=>midReady++});
@@ -351,12 +358,38 @@ try{
  await saveProfile(midDb,queuedProfile);
  assert.equal(await midController.syncNow(),'deferred','a second edit queues while the first PUT is active');
  midUi.get('disconnectGoogleDrive').click();
+ assert.match(midUi.doc.cookie,/__Secure-magiaDungeonDriveToken/,'credential remains while an upload is in flight');
+ assert.equal(midUi.get('driveSyncActivity').hidden,false,'ongoing upload stays visible');
+ assert.equal(midDrive.signals.some(signal=>signal.aborted),false,'resumable PUT was not canceled');
+ const downloadsBeforeWait=midDrive.downloads;
  const uploadsWhenDetached=midDrive.putRequests;
  releaseMidUpload();
- assert.equal(await uploadAtDisconnect,'deferred','stale upload never certifies sync');
- assert.equal(midDrive.putRequests,uploadsWhenDetached,'pending follow-up is discarded at disconnect');
- assert.match(midUi.status.textContent,/同期を解除しました/,'stale PUT result cannot restore connected UI');
- assert.equal((await getProfile(midDb)).name,'解除後の変更','local game remains current after canceled upload');
+ assert.equal(await uploadAtDisconnect,'deferred','an old upload finishes, but pending local changes remain unsynced');
+ assert.ok(midDrive.downloads>downloadsBeforeWait,'unlink waited through remote readback verification');
+ assert.equal(midDrive.putRequests,uploadsWhenDetached,'new queued upload is suppressed after unlink request');
+ assert.equal(midDrive.signals.some(signal=>signal.aborted),false,'no Drive requests are aborted during unlink');
+ assert.equal(midUi.doc.cookie,'','cookie is removed only after PUT and readback');
+ assert.match(midUi.status.textContent,/同期を解除しました/,'upload completion cannot restore the connected status');
+ assert.equal((await getProfile(midDb)).name,'解除後の変更','local game remains current after unlink');
+
+ // Account deletion unlinks first so a refreshed blank profile cannot
+ // silently reconnect and reopen the cloud restore/new dialog.
+ const deleteDb=await newDb(),deleteUi=fakeUi(),deleteDrive=remoteApi();
+ let deleteReady=0;
+ const deleteController=start(deleteDb,deleteUi,deleteDrive.fetchImpl,{onInitialReady:()=>deleteReady++});
+ await connect(deleteUi);
+ await wait(()=>deleteReady===1,'account deletion begins from a connected session');
+ const backupBeforeDelete=deleteDrive.current;
+ await deleteController.disconnect();
+ await clearDungeonData(deleteDb);
+ assert.equal(deleteUi.doc.cookie,'','account deletion clears OAuth cookie before local save reset');
+ assert.equal(deleteDrive.current,backupBeforeDelete,'account deletion leaves cloud backup on Drive');
+ const afterDeleteUi=fakeUi(deleteUi.cookies);
+ start(deleteDb,afterDeleteUi,deleteDrive.fetchImpl);
+ await wait(()=>!afterDeleteUi.button.disabled,'blank device may choose when to connect');
+ assert.equal(afterDeleteUi.get('googleDriveConflictDialog').open,false,'deleted account refresh never opens restore chooser');
+ assert.equal(afterDeleteUi.get('disconnectGoogleDrive').hidden,true,'deleted account stays unlinked');
+ assert.equal((await readDungeonSnapshot(deleteDb)).profile?.name,undefined,'local account is deleted');
 
  // 2. Fresh local browser + existing named cloud backup: require only two
  // choices, never a name form until the user chooses a new game.
@@ -384,6 +417,36 @@ try{
  assert.equal((await readDungeonSnapshot(recoveringDb)).profile.name,'星の魔導士');
  assert.equal(recoveringNames,0,'restoration does not open a new name dialog');
 
+ // One adventurer can have a lower-level Drive checkpoint than the local
+ // device. Explicit "引き継ぐ" is a deliberate choice: restore the verified
+ // Drive copy regardless of the local level, progression or later timestamp.
+ const deliberateDb=await newDb();
+ const deliberateUi=fakeUi(),deliberateDrive=remoteApi(firstDrive.current);
+ const oldCloud=deserializeDungeonSnapshot(firstDrive.current);
+ const deliberateLocal=await getProfile(deliberateDb);
+ deliberateLocal.name=oldCloud.profile.name;
+ deliberateLocal.level=120;
+ deliberateLocal.xp=99999;
+ deliberateLocal.returns=42;
+ await saveProfile(deliberateDb,deliberateLocal);
+ await saveCloudSyncState(deliberateDb,{blocked:true});
+ const localBeforeChoice=await readDungeonSnapshot(deliberateDb);
+ assert.ok(deliberateLocal.level>oldCloud.profile.level,'same adventurer can appear more advanced locally');
+ let deliberateRestores=0;
+ start(deliberateDb,deliberateUi,deliberateDrive.fetchImpl,{onRestore:()=>deliberateRestores++});
+ await connect(deliberateUi,'connectGoogleDrive');
+ await wait(()=>deliberateUi.get('googleDriveConflictDialog').open,'same-adventurer divergent saves require a real choice');
+ assert.equal(deliberateDrive.uploads,0,'higher level alone never authorizes overwriting Drive');
+ deliberateUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ await wait(()=>deliberateRestores===1,'explicit import is respected despite apparent local progress');
+ const deliberatelyRestored=await readDungeonSnapshot(deliberateDb);
+ assert.equal(deliberatelyRestored.profile.name,deliberateLocal.name,'restored checkpoint belongs to the same adventurer');
+ assert.equal(deliberatelyRestored.profile.level,oldCloud.profile.level,'explicit import overrides higher local level');
+ assert.equal(deliberatelyRestored.profile.xp,oldCloud.profile.xp,'explicit import overrides higher local XP');
+ assert.equal(deliberatelyRestored.savedAt,oldCloud.savedAt,'the selected Drive saved timestamp is retained');
+ assert.deepEqual(deliberateDrive.operations,[],'explicit restore never uploads the other checkpoint');
+ assert.notEqual(deliberatelyRestored.savedAt,localBeforeChoice.savedAt,'local timestamp does not override explicit selection');
+
  // 3. Fresh browser + existing backup + explicit new game: the unnamed seed
  // replaces the backup BEFORE naming; the name is then synced immediately.
  const newGameDb=await newDb(),newGameUi=fakeUi(),newGameDrive=remoteApi(firstDrive.current);
@@ -392,7 +455,18 @@ try{
  await connect(newGameUi);
  await wait(()=>newGameUi.get('googleDriveConflictDialog').open,'new-game choice presented');
  newGameUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').click();
- assert.equal(newGameUi.get('setupWithoutBackup').hidden,true,'new game selection also protects the initial upload');
+ assert.equal(newGameUi.get('googleDriveConflictDialog').open,true,'first tap does not dismiss the backup chooser');
+ assert.equal(newGameUi.get('googleDriveOverwriteDialog').open,true,'every new-game overwrite requires a second confirmation');
+ assert.equal(newGameDrive.uploads,0,'Drive is unchanged before the confirmation');
+ newGameUi.get('googleDriveOverwriteDialog').querySelector('[data-action="back"]').click();
+ assert.equal(newGameUi.get('googleDriveOverwriteDialog').open,false,'back closes only the overwrite confirmation');
+ assert.equal(newGameUi.get('googleDriveConflictDialog').open,true,'back returns to the existing choice dialog');
+ assert.equal(newGameDrive.uploads,0,'canceled overwrite leaves Drive untouched');
+ newGameUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').click();
+ assert.equal(newGameUi.get('googleDriveOverwriteDialog').open,true,'confirmation can be reopened');
+ newGameUi.get('googleDriveOverwriteDialog').querySelector('[data-action="confirm"]').click();
+ await wait(()=>newGameUi.get('googleDriveConflictDialog').open===false,'explicit confirmation closes chooser');
+ assert.equal(newGameUi.get('setupWithoutBackup').hidden,true,'confirmed overwrite protects the initial upload');
  await wait(()=>newGameReady===1,'new game opens name entry only after initial backup');
  assert.equal(newGameDrive.uploads,1,'new initial state is backed up before naming');
  assert.deepEqual(newGameDrive.operations,['PATCH'],'explicit new-game choice updates only the existing file');
@@ -403,6 +477,41 @@ try{
  assert.equal(await newGameController.syncNow(),'ready','new-game name syncs immediately');
  assert.equal(deserializeDungeonSnapshot(newGameDrive.current).profile.name,'新たな冒険者');
  assert.equal(newGameDrive.uploads,2);
+
+ // Profile-side connection uses the same wording and secondary confirmation.
+ const profileChoiceDb=await newDb(),profileChoiceUi=fakeUi(),profileChoiceDrive=remoteApi(firstDrive.current);
+ await saveCloudSyncState(profileChoiceDb,{blocked:true});
+ let profileChoiceReady=0;
+ start(profileChoiceDb,profileChoiceUi,profileChoiceDrive.fetchImpl,{onInitialReady:()=>profileChoiceReady++});
+ await connect(profileChoiceUi,'connectGoogleDrive');
+ await wait(()=>profileChoiceUi.get('googleDriveConflictDialog').open,'profile connection opens shared Drive chooser');
+ const profileOverwrite=profileChoiceUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]');
+ profileOverwrite.click();
+ assert.equal(profileChoiceUi.get('googleDriveOverwriteDialog').open,true,'profile overwrite opens second confirmation');
+ assert.equal(profileChoiceDrive.uploads,0,'profile does not write before confirmation');
+ profileChoiceUi.get('googleDriveOverwriteDialog').querySelector('[data-action="back"]').click();
+ assert.equal(profileChoiceUi.get('googleDriveConflictDialog').open,true,'profile cancellation returns to chooser');
+ assert.equal(profileChoiceDrive.uploads,0,'profile cancellation keeps original remote save');
+ profileOverwrite.click();
+ profileChoiceUi.get('googleDriveOverwriteDialog').querySelector('[data-action="confirm"]').click();
+ await wait(()=>profileChoiceReady===1,'profile overwrite starts only after confirmation');
+ assert.equal(profileChoiceDrive.uploads,1,'profile confirmation performs exactly one PATCH');
+ assert.equal(profileChoiceDrive.operations[0],'PATCH','profile overwrites existing Drive file');
+
+ // Unlinking while the second confirmation is open closes both dialogs
+ // without modifying Drive or leaving an OAuth cookie behind.
+ const confirmDb=await newDb(),confirmUi=fakeUi(),confirmDrive=remoteApi(firstDrive.current);
+ const confirmController=start(confirmDb,confirmUi,confirmDrive.fetchImpl);
+ await connect(confirmUi);
+ await wait(()=>confirmUi.get('googleDriveConflictDialog').open,'confirmation unlink test has a conflict');
+ confirmUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').click();
+ assert.equal(confirmUi.get('googleDriveOverwriteDialog').open,true);
+ const confirmBefore=confirmDrive.current;
+ await confirmController.disconnect();
+ assert.equal(confirmUi.get('googleDriveConflictDialog').open,false,'unlink closes underlying conflict dialog');
+ assert.equal(confirmUi.get('googleDriveOverwriteDialog').open,false,'unlink closes overwrite confirmation');
+ assert.equal(confirmUi.doc.cookie,'','unlink during confirmation removes cookie');
+ assert.equal(confirmDrive.current,confirmBefore,'unlink during confirmation never overwrites Drive');
 
  // 4. Reconnecting to the same initial backup should not show the chooser
  // just because a player has not entered a name yet.
