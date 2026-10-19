@@ -27,10 +27,35 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const doc=windowImpl?.document;
  const conflictDialog=doc?.getElementById('googleDriveConflictDialog');
  const setupButton=doc?.getElementById('setupGoogleDrive');
+ const createPlayerButton=doc?.getElementById('setupCreatePlayer');
+ const switchAccountButton=doc?.getElementById('setupSwitchGoogleDrive');
  const show=message=>{const lines=message.replace(/。(?!$)/g,'。\n');status.textContent=lines;const setup=doc?.getElementById('backupSetupStatus');if(setup)setup.textContent=lines;};
+ function connectedPresentation(){
+  button.hidden=true;
+  if(setupButton)setupButton.hidden=true;
+ }
+ function reconnectPresentation(message){
+  button.hidden=false;
+  button.textContent='GoogleDriveに同期する';
+  if(setupButton)setupButton.hidden=false;
+  if(createPlayerButton)createPlayerButton.hidden=true;
+  if(switchAccountButton)switchAccountButton.hidden=true;
+  if(message)show(message);
+ }
+ function syncedPresentation(){
+  connectedPresentation();
+  show('GoogleDrive同期済み');
+ }
+ function noBackupPresentation(){
+  connectedPresentation();
+  if(createPlayerButton)createPlayerButton.hidden=false;
+  if(switchAccountButton)switchAccountButton.hidden=false;
+  show('このアカウントにバックアップはありません。\n別のアカウントで確認するか、新しく始めてください。');
+  return 'no-backup';
+ }
  function expireConnection(){
   drive=null;
-  show('Google認証の期限が切れました。再接続するまでバックアップは停止します。');
+  reconnectPresentation('認証が切れました。再接続してください。');
   if(!expiryNoticeShown){
    expiryNoticeShown=true;
    doc?.getElementById('googleDriveExpiredDialog')?.showModal?.();
@@ -114,7 +139,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   const hash=await snapshotHash(text);
   validatedDrive={id:saved.id,modifiedTime:saved.modifiedTime,result:{valid:true,data:snapshot,hash,text,invalidImages:[],trusted:true}};
   await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
-  show('同期済み。');
+  syncedPresentation();
   return 'ready';
  }
  async function sync(initial=false){
@@ -137,13 +162,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     verification=await verifyLocalSnapshot(local);
    }
    if(meta?.blocked){
-    if(!file){await saveCloudSyncState(db,{});show('Driveにバックアップはありません。新しい冒険の記録を自動保存します。');return 'ready';}
+    if(!file){await saveCloudSyncState(db,{});return noBackupPresentation();}
     const choice=await chooseCloud('この端末では以前の冒険データを削除しています。Driveから復元するか、新しい端末データでバックアップを置き換えるか選んでください。');
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
      await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
      show('新しい冒険を開始します。セーブ変更後にバックアップを更新します。');
-     return 'ready';
+     return 'start-new';
     }
     show('選択を保留しました。Driveのバックアップは変更していません。');
     return result;
@@ -214,10 +239,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(pristine){show('Driveのバックアップが破損しています。端末データでの上書きは停止しました。');return result;}
     return await upload(local,file);
    }
-   if(!file&&pristine){
-    show('冒険者作成後に自動保存します。');
-    return 'ready';
-   }
+   if(!file&&pristine)return noBackupPresentation();
    const localText=await serializeDungeonSnapshot(local);
    const decision=decideCloudSync({file,localHash:await snapshotHash(localText),remoteHash:remote.hash,
     localSavedAt:local.savedAt,remoteSavedAt:remote.data?.savedAt||0,pristine});
@@ -227,7 +249,6 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return result;
    }
    if(decision==='choose'){
-    if(meta?.freshStart)return 'ready';
     // Never silently overwrite a blank/new browser with Drive data, or vice versa.
     const choice=await chooseCloud('Driveに以前の冒険の記録があります。「復元」でその記録を使用、「端末データ」で新しい冒険を開始します。新規開始するとDriveのバックアップは上書きされます。');
     if(choice==='restore')return await restore(remote,file,{explicit:true});
@@ -235,18 +256,18 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      // Starting fresh must not replace a healthy older backup with an empty save.
      await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
      show('新しい冒険を開始します。最初の進行が保存されるまでDriveは上書きしません。');
-     return 'ready';
+     return 'start-new';
     }
     show('バックアップを変更せず保留しました。');
     return result;
    }
-   if(decision==='synced'){show('同期済み。');return 'ready';}
+   if(decision==='synced'){syncedPresentation();return 'ready';}
    if(decision==='download'){
     if(!initial){show('Driveにより新しい記録があります。プレイ中は復元・上書きを保留します。再接続時に照合してください。');return result;}
     return await restore(remote,file);
    }
    if(decision==='upload'){
-    if(pristine)return 'ready';
+    if(pristine)return noBackupPresentation();
     return await upload(local,file);
    }
    return 'ready';
@@ -266,10 +287,15 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   expires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
   drive=createDungeonDrive(result.access_token,fetchImpl);
   validatedDrive=null;
-  button.textContent='GoogleDriveに同期する';
-  show('Driveとセーブを検証・照合中…');
+  connectedPresentation();
+  if(createPlayerButton)createPlayerButton.hidden=true;
+  if(switchAccountButton)switchAccountButton.hidden=true;
+  show('Driveの記録を確認中…');
   const outcome=await sync(true);
-  if(outcome==='ready')onInitialReady();
+  if(outcome==='ready'||outcome==='start-new')onInitialReady();
+  else if(outcome==='deferred')reconnectPresentation();
+  // A fresh browser must not be sent to the naming dialog until the user
+  // explicitly chooses a new game or restores an existing Drive backup.
  }
  function loadIdentity(){
   return new Promise((resolve,reject)=>{
@@ -292,16 +318,35 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   button.disabled=false;
   if(setupButton)setupButton.disabled=false;
   show('未接続');
+  void getCloudSyncState(db).then(meta=>{
+   if(!drive&&meta?.fileId&&meta?.hash)show('前回GoogleDrive同期済み。\n再接続してください。');
+  }).catch(()=>{});
  }).catch(error=>show(error.message));
  button.disabled=true;
+ button.hidden=false;
  const expiredDialog=doc?.getElementById('googleDriveExpiredDialog');
  expiredDialog?.querySelector('[data-action="reconnect"]')?.addEventListener('click',()=>{
   expiredDialog.close();
   client?.requestAccessToken({prompt:'consent'});
  });
  expiredDialog?.querySelector('[data-action="later"]')?.addEventListener('click',()=>expiredDialog.close());
- button.addEventListener('click',()=>{client?.requestAccessToken({prompt:'consent'});});
- setupButton?.addEventListener('click',()=>{client?.requestAccessToken({prompt:'consent'});});
+ const connectOrCheck=()=>{
+  if(drive&&Date.now()<expires){
+   void sync(true).then(outcome=>{
+    if(outcome==='deferred')reconnectPresentation();
+    if(outcome==='ready'||outcome==='start-new')onInitialReady();
+   });
+  }else client?.requestAccessToken({prompt:'consent'});
+ };
+ button.addEventListener('click',connectOrCheck);
+ setupButton?.addEventListener('click',connectOrCheck);
+ createPlayerButton?.addEventListener('click',()=>{
+  if(!drive||Date.now()>=expires){reconnectPresentation('再接続してください。');return;}
+  createPlayerButton.hidden=true;
+  if(switchAccountButton)switchAccountButton.hidden=true;
+  onInitialReady();
+ });
+ switchAccountButton?.addEventListener('click',()=>client?.requestAccessToken({prompt:'select_account'}));
  const unsubscribe=onDungeonDataChange(db,schedule);
  windowImpl?.addEventListener?.('online',schedule);
  doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
