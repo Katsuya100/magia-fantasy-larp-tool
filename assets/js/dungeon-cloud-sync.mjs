@@ -61,6 +61,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const setupButton=doc?.getElementById('setupGoogleDrive');
  const riskWarning=doc?.getElementById('backupRiskWarning');
  const rollbackWarning=doc?.getElementById('backupRollbackWarning');
+ const overwriteWarning=doc?.getElementById('googleDriveOverwriteWarning');
  const localOnlyButton=doc?.getElementById('setupWithoutBackup');
  const syncingIcons=[doc?.getElementById('backupSetupSpinner'),doc?.getElementById('googleDriveSpinner')];
  function setSyncing(active){
@@ -137,6 +138,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    choicePending=true;
    conflictDialog.querySelector('[data-role="description"]').textContent=description.replace(/。(?!$)/g,'。\n');
    conflictDialog.querySelector('[data-action="overwrite"]').hidden=!allowOverwrite;
+   if(overwriteWarning)overwriteWarning.hidden=!allowOverwrite;
    conflictDialog.querySelector('[data-action="later"]').hidden=initialChoice;
    const title=doc?.getElementById('googleDriveConflictTitle');
    if(title)title.textContent=initialChoice?'バックアップが見つかりました':'冒険データの確認';
@@ -240,6 +242,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const meta=await getCloudSyncState(db);
    let local=await readDungeonSnapshot(db);
    let verification=await verifyLocalSnapshot(local);
+   let upgradedLegacy=false;
    const files=await drive.list();
    if(files.length>1){show('Driveに複数のバックアップがあります。安全のため自動同期を停止しました。');return result;}
    const file=files[0]||null;
@@ -318,15 +321,19 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     }
    }
    if(verification.status==='legacy'){
-    if(remote.valid){
-     const choice=await chooseCloud('この端末は旧形式のセーブです。整合性と更新日時を比較できないため、自動上書きせず選択を待ちます。Driveから復元するか、バックアップを変更せず保留してください。',{allowOverwrite:false});
-     if(choice==='restore')return await restore(remote,file,{explicit:true});
+    // A legacy seal is not corruption. Verify every record and photo,
+    // atomically upgrade the local proof, then apply normal sync ordering.
+    show('旧形式のセーブを確認・変換中…');
+    await establishLegacyIntegrity(db,local);
+    local=await readDungeonSnapshot(db);
+    verification=await verifyLocalSnapshot(local);
+    if(verification.status!=='valid'){
+     show(verification.status==='badImages'
+      ?'旧形式の画像が不足しています。バックアップの上書きを停止しました。画像を修復してください。'
+      :'旧形式のセーブを安全に変換できませんでした。バックアップは変更していません。');
      return result;
     }
-    if(file){
-     show('旧端末セーブを安全に検証できず、Driveも破損しています。自動上書きを停止しました。');
-     return result;
-    }
+    upgradedLegacy=true;
    }
    if(verification.status!=='valid'){
     show('セーブの破損・画像欠損を検出しました。復旧するまで自動バックアップを停止します。');
@@ -334,6 +341,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    }
    const pristine=isPristineDungeonSnapshot(local);
    if(file&&!remote.valid){
+    // A newly migrated legacy proof does not authorize overwriting damaged Drive data.
+    if(upgradedLegacy){show('旧形式のセーブは変換しましたが、Drive側のバックアップが破損しています。上書きは停止しました。');return result;}
     // A valid sealed local copy can replace a broken Drive copy.
     if(pristine){show('Driveのバックアップが破損しています。端末データでの上書きは停止しました。');return result;}
     return await upload(local,file);
@@ -343,8 +352,16 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return await upload(local,null,{allowInitial:true});
    }
    const localText=await serializeDungeonSnapshot(local);
-   const decision=decideCloudSync({file,localHash:await snapshotHash(localText),remoteHash:remote.hash,
+   const localHash=await snapshotHash(localText);
+   const decision=decideCloudSync({file,localHash,remoteHash:remote.hash,
     localSavedAt:local.savedAt,remoteSavedAt:remote.data?.savedAt||0,pristine});
+   // Unknown historic timestamps cannot safely resolve conflicting saves:
+   // do not silently overwrite or replace either copy.
+   if(upgradedLegacy&&!pristine&&local.savedAt===0&&localHash!==remote.hash){
+    const choice=await chooseCloud('端末とDriveの記録が異なります。端末セーブは新形式に変換済みです。Driveから引き継ぐか、両方の記録を変更せず保留してください。',{allowOverwrite:false});
+    if(choice==='restore')return await restore(remote,file,{explicit:true});
+    return result;
+   }
    if(meta?.freshStart&&!pristine){
     if(decision==='upload')return await upload(local,file);
     show('Drive側に新しい記録があります。バックアップの上書きは保留しています。');
