@@ -123,6 +123,42 @@ G.addStatus(burnt,{id:'debuff_flame',kind:'debuff',attribute:'flame',effect:'bur
 G.round(burnt,other,-1,-1,buffs,()=>.99);
 G.round(normal,unit(),-1,-1,buffs,()=>.99);
 assert.ok(burnt.hp<normal.hp,'burn deals delayed status damage');
+// Burn is fixed when cast: spell power, not the victim's maximum HP, sets its tick.
+const burnCaster=unit(),burnSpell=power=>spell('debuff','flame',power);
+const burnTarget=hp=>G.makeUnit({hp,mag:12,def:10,res:10},1,{},[],'enemy');
+const burnSmall=burnTarget(110),burnLarge=burnTarget(2000);
+G.cast(burnCaster,burnSmall,burnSpell(270),buffs);
+G.cast(burnCaster,burnLarge,burnSpell(270),buffs);
+const burnLow=G.status(burnSmall,'debuff_flame');
+const burnTall=G.status(burnLarge,'debuff_flame');
+assert.equal(burnLow.burnDamage,burnTall.burnDamage,'burn damage is independent of target max HP');
+assert.equal(burnLow.burnDamage,Math.max(num('status_tick_min_damage'),
+ Math.round(G.effectivePower(burnCaster,burnSpell(270))*burnLow.value*num('burn_power_rate'))));
+const burnHigh=burnTarget(2000);
+G.cast(burnCaster,burnHigh,burnSpell(1000),buffs);
+assert.ok(G.status(burnHigh,'debuff_flame').burnDamage>burnLow.burnDamage,
+ 'higher upgraded spell power produces stronger burn');
+const fireResistant=G.makeUnit({hp:2000,mag:12,def:10,res:10},1,{flame:.25},[],'enemy');
+G.cast(burnCaster,fireResistant,burnSpell(270),buffs);
+assert.ok(G.status(fireResistant,'debuff_flame').burnDamage<burnLow.burnDamage,
+ 'flame resistance reduces burn tick damage');
+const burnStack=burnTarget(2000);
+G.cast(burnCaster,burnStack,burnSpell(270),buffs);
+G.cast(burnCaster,burnStack,burnSpell(1000),buffs);
+const strongest=G.status(burnStack,'debuff_flame').burnDamage;
+G.cast(burnCaster,burnStack,burnSpell(270),buffs);
+assert.equal(G.status(burnStack,'debuff_flame').burnDamage,strongest,
+ 'reapplying a weaker burn must not lower the damage');
+const ticks=[];
+G.round(burnLarge,unit(),-1,-1,buffs,()=>.99,event=>{
+ if(event.role==='burn')ticks.push(event.amount);
+});
+assert.deepEqual(ticks,[burnLow.burnDamage],'one end-of-round burn tick');
+const enemyBurnCaster=G.makeUnit(base,1,{},[],'enemy');
+const playerBurnTarget=G.makeUnit({hp:110,mag:12,def:10,res:10},1,{},[],'player');
+G.cast(enemyBurnCaster,playerBurnTarget,burnSpell(270),buffs);
+assert.equal(G.status(playerBurnTarget,'debuff_flame').burnDamage,burnLow.burnDamage,
+ 'players and enemies receive identical burn damage');
 const wet=unit();
 G.addStatus(wet,{id:'resist_aqua',kind:'buff',attribute:'aqua',effect:'resist',value:.4,turns:2});
 const dryRes=G.resist(wet,'aqua');
