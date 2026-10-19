@@ -109,7 +109,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
  const first=(fromLayer-1)*5+1,last=toLayer*5;
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
   startLevel:effectiveLevel,forecastLevelAtEntry:history.level??null,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,unspentStones:Math.max(0,history.stones-budget),upgradeCounts:equipment.counts,
-  initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[]};
+  initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[],rankEligibleAtEnd:false};
  for(let fight=first;fight<=last;fight++){
   const foe=enemyForFight(data.enemies,fight);
   const enemy=G.fromEnemy(foe,+data.floors[fight-1].enemy_level);
@@ -128,6 +128,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
   stats.fightStats.push({fight,layer:Math.ceil(fight/5),win,turns:turns+1,hpBefore,hpAfter:hero.hp,mpBefore,mpAfter:hero.mp});
   if(!win)break;
   stats.clear=fight;
+  if(fight===last&&fight%50===0)stats.rankEligibleAtEnd=hero.hp>=hero.stats.hp*.8&&hero.mp>=hero.maxMp*.8;
   hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
   stats.mpRestored+=G.recoverVictoryMp(hero,Math.ceil(fight/5),mpRecoveryFactor);
   if(fight%50===0&&fight<last){ // 10th/20th/... layer, after the boss
@@ -316,6 +317,23 @@ for(const cutoff of [82,85,88,90,92,95,100]){
     winRate:result.winRate,mpPercent:result.avgMpPercent,avgCleared:result.avgCleared,
     avgStones:result.avgStones,avgSpentStones:result.avgSpentStones}));
   }
+ }
+}
+// End-to-end verification for the 90+ zero-recovery candidate. Rank
+// eligibility is tested BEFORE post-victory MP restoration or checkpoint bonus.
+for(const stoneUse of [.5,.75,1]){
+ for(const level of [37,55,72,87,102,115,128,139,150]){
+  const band=scenarios.find(x=>x.level===level&&x.stones==='earned');
+  const candidate={...band,stoneUse,mpRecoveryFactor:G.DEFAULT_VICTORY_MP_CURVE};
+  const runs=Array.from({length:128},(_,i)=>simulate(17011+i*13,candidate));
+  const wins=runs.filter(x=>x.win);
+  const pct=n=>Math.round(100*n/runs.length);
+  const mp=wins.length?Math.round(100*wins.reduce((a,x)=>a+x.mp/x.initialMp,0)/wins.length):null;
+  const eligible=runs.filter(x=>x.rankEligibleAtEnd).length;
+  console.log('STONE_ZERO_90_CONFIRM '+JSON.stringify({level,stoneUse,samples:runs.length,
+   winRate:pct(wins.length),mpPercent:mp,rankEligibleRate:pct(eligible),
+   meanStones:Math.round(runs.reduce((a,x)=>a+x.availableStones,0)/runs.length*10)/10,
+   spent:Math.round(runs.reduce((a,x)=>a+x.spentStones,0)/runs.length*10)/10}));
  }
 }
 // Every planned band is checked using the level intended for its final boss.
