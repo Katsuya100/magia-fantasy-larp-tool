@@ -234,6 +234,19 @@ for(const rate of [0,.2,.35,.5,.65,.75,.87]){
    cleared:result.avgCleared,earned:result.avgStones,spent:result.avgSpentStones}));
  }
 }
+const boundaryCandidates={
+ 37:[.67,.69,.7,.72],55:[.57,.6,.62,.65],72:[.53,.56,.59,.62],
+ 87:[.40,.43,.46,.49],102:[.35,.38,.41,.44],
+ 115:[.27,.3,.33,.36],128:[.24,.27,.30,.33],
+ 139:[.15,.18,.21,.24],150:[.15,.18,.21,.24]};
+for(const [key,rates] of Object.entries(boundaryCandidates)){
+ const config=scenarios.find(x=>x.level===Number(key)&&x.stones==='earned');
+ for(const rate of rates){
+  const result=summarize({...config,stoneUse:.5,mpRecoveryFactor:rate},32);
+  console.log('STONE_MP_BOUNDARY '+JSON.stringify({level:config.level,fromLayer:config.fromLayer,
+   toLayer:config.toLayer,rate,winRate:result.winRate,mpPercent:result.avgMpPercent}));
+ }
+}
 for(const config of scenarios.filter(x=>x.stones==='earned'&&[37,55,87,150].includes(x.level))){
  for(const stoneUse of [0,.5,1]){
   const result=summarize({...config,stoneUse},32);
