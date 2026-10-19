@@ -8,6 +8,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
   <link rel="stylesheet" href="assets/css/dungeon.css?v=20261019.10">
+<style>@keyframes drive-spin{to{transform:rotate(360deg)}} #googleDriveSpinner:not([hidden]){display:inline-block!important} #googleDriveSpinner[hidden]{display:none!important}</style>
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -98,7 +99,7 @@
         <p>この端末に保存されている冒険のデータを管理します。</p>
         <div class="cloud-sync">
           <h3>☁ Google Drive 自動バックアップ</h3>
-          <p id="googleDriveStatus" role="status" aria-live="polite">Google連携の状態を確認しています…</p>
+          <p id="googleDriveStatus" role="status" aria-live="polite"><span id="googleDriveSpinner" hidden aria-hidden="true" style="display:inline-block;width:1em;height:1em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:middle;animation:drive-spin .8s linear infinite"></span>Google連携の状態を確認しています…</p>
           <button type="button" id="connectGoogleDrive" class="subtle" disabled>Google Driveに接続して自動同期</button>
           <p class="cloud-sync-note">セーブデータはSafariの仕様や端末の状態により予告なく消える可能性があります。Google Driveに接続すると認証が有効な間、進行状況と魔法陣の写真を自動バックアップします。同期は新しいセーブを優先する後勝ち方式で、古いデータへの巻き戻りが起こる場合があります。同じセーブを複数端末・ブラウザで同時プレイしないでください。認証切れの際は再接続が必要です。バックアップがなければ消失したデータは復元できません。</p>
         </div>
