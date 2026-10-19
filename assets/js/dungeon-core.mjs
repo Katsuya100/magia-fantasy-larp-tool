@@ -253,6 +253,8 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  const snapshot=u=>({...u,statuses:u.statuses.map(x=>({...x})),cooldowns:[...u.cooldowns]});
  const publish=(a,role,attribute,message,amount=0)=>{
   if(onStep)onStep({side:a.side,role,attribute,text:message,amount,
+   // Read-only FX metadata: never used for damage, status, MP or cast order.
+   upgradeLevel:['attack','defense','support','debuff'].includes(role)?a.sp?.upgradeLevel??0:0,
    hero:snapshot(player),enemy:snapshot(enemy)});
  };
  for(const role of ['support','defense','debuff','attack','basic']){
