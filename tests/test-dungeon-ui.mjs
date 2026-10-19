@@ -393,7 +393,7 @@ try{
  assert.equal($('returnShowcase').hidden,false,'the dungeon tab resumes pending rewards');
  assert.equal($('returnSceneTitle').textContent,'コレクション報酬','tab browsing cannot skip the first reward step');
  assert.equal($('returnSceneTitle').textContent,'コレクション報酬');
- assert.match($('returnCollections').innerHTML,/赤角鬼王の霊石/);
+ assert.doesNotMatch($('returnCollections').innerHTML,/赤角鬼王の霊石/,'unrolled boss trophy stays absent from return rewards');
  await $('returnNext').fire('click');
  assert.equal($('returnSceneTitle').textContent,'アイテム報酬');
  assert.ok($('returnRewards').innerHTML.length>0);
