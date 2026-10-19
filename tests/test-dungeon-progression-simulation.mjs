@@ -77,7 +77,7 @@ export function stoneLedger(seed,throughLayer,returnEvery=1){
 // This deliberately models successful repeat runs, not guaranteed wins, and
 // applies both the game's falling overlevel stone drop chance and reduced XP.
 // Spending is handled separately: bank here means stones earned, not still held.
-export function stoneFarmingLedger(seed,throughLayer,extraRunsPerDecade=0){
+export function stoneFarmingLedger(seed,throughLayer,extraRunsPerDecade=0,farmMode='decade'){
  const r=rng(seed),progress={level:1,xp:0},reports=[];
  let earned=0,pendingStones=0,pendingXp=0,farmStones=0,farmBattles=0;
  const completeLayer=layer=>{
@@ -104,9 +104,18 @@ export function stoneFarmingLedger(seed,throughLayer,extraRunsPerDecade=0){
   if(layer%10===0){
    const levelBeforeFarm=progress.level,before=earned;
    for(let n=0;n<extraRunsPerDecade;n++){
-    completeLayer(layer);
+    if(farmMode==='decade'){
+     // Only starts 1, 11, 21, ... are selectable after rank unlock.
+     // Therefore repeat the entire previously cleared 10-layer expedition.
+     for(let replayLayer=layer-9;replayLayer<=layer;replayLayer++)
+      completeLayer(replayLayer);
+     farmBattles+=50;
+    }else{
+     // Optimistic per-layer farming bound: the boss layer alone is NOT
+     // directly selectable at the dungeon entrance.
+     completeLayer(layer);farmBattles+=5;
+    }
     farmStones+=returnHome();
-    farmBattles+=5;
    }
    reports.push({layer,levelBeforeFarm,levelAfterFarm:progress.level,
     earnedFromFarming:earned-before,totalEarned:earned});
@@ -139,11 +148,11 @@ export function upgradeSpells(spells,budget){
  return {spells:base,counts,costs:base.map(s=>G.spellMpCost(s))};
 }
 const ledgerCache=new Map();
-export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5,mpRecoveryFactor=undefined,farmRunsPerDecade=0}={}){
+export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5,mpRecoveryFactor=undefined,farmRunsPerDecade=0,farmMode='decade'}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
- const ledgerKey=seed+':'+fromLayer+':farm'+farmRunsPerDecade;
+ const ledgerKey=seed+':'+fromLayer+':farm'+farmRunsPerDecade+':'+farmMode;
  if(stones==='earned'&&!ledgerCache.has(ledgerKey))ledgerCache.set(ledgerKey,
-  farmRunsPerDecade>0?stoneFarmingLedger(seed+81,fromLayer-1,farmRunsPerDecade)
+  farmRunsPerDecade>0?stoneFarmingLedger(seed+81,fromLayer-1,farmRunsPerDecade,farmMode)
    :stoneLedger(seed+81,fromLayer-1,10));
  const history=stones==='earned'?ledgerCache.get(ledgerKey):{stones:0};
  const budget=stones==='earned'?Math.floor(history.stones*Math.max(0,Math.min(1,stoneUse))):Math.max(0,Number(stones)||0);
@@ -503,27 +512,36 @@ assert.ok(actualLast.avgMpPercent<=25,'recommended curve should leave <=25% MP a
 // Base case is one clear of each 10-layer milestone. Also repeat the frontier
 // layer 2, 5, and 10 extra times after each rank milestone: the drop penalty
 // grows as the character overlevels, so extra runs do not yield 1.5 stones each.
-for(const extraRuns of [0,2,5,10]){
- const ledgers=Array.from({length:128},(_,i)=>stoneFarmingLedger(99173+i*73,90,extraRuns));
- const sorted=ledgers.map(x=>x.stones).sort((a,b)=>a-b);
- const mean=k=>Math.round(10*ledgers.reduce((a,x)=>a+x[k],0)/ledgers.length)/10;
- console.log('FARMING_STONE_ECONOMY '+JSON.stringify({extraRunsPerDecade:extraRuns,
-  totalFarmBattles:mean('farmBattles'),meanEarned:mean('stones'),
-  meanFarmStones:mean('earnedFromFarming'),p10:sorted[12],
-  median:sorted[64],p90:sorted[115],meanLevelAfter90:mean('level')}));
+// Economy forecast: compare the actually selectable decade expeditions
+// against the optimistic frontier-only replay bound. Bank is cumulative.
+for(const farmMode of ['decade','frontier']){
+ for(const extraRuns of [0,2,5,10]){
+  const ledgers=Array.from({length:64},(_,i)=>
+   stoneFarmingLedger(99173+i*73,90,extraRuns,farmMode));
+  const sorted=ledgers.map(x=>x.stones).sort((a,b)=>a-b);
+  const mean=k=>Math.round(10*ledgers.reduce((a,x)=>a+x[k],0)/ledgers.length)/10;
+  console.log('FARMING_STONE_ECONOMY '+JSON.stringify({
+   farmMode,extraRunsPerDecade:extraRuns,
+   totalFarmBattles:mean('farmBattles'),meanEarned:mean('stones'),
+   meanFarmStones:mean('earnedFromFarming'),p10:sorted[6],
+   median:sorted[32],p90:sorted[57],meanLevelAfter90:mean('level')}));
+ }
 }
-for(const extraRuns of [0,2,5,10]){
- for(const entryLevel of [150,'forecast']){
-  for(const band of scenarios.filter(x=>x.stones==='earned'&&[37,55,87,115,139,150].includes(x.level))){
-   const result=summarize({...band,level:entryLevel==='forecast'?'forecast':band.level,
-    stoneUse:1,farmRunsPerDecade:extraRuns},128);
-   console.log('FARMING_100_PERCENT_COMBAT '+JSON.stringify({
-    extraRunsPerDecade:extraRuns,entryLevel:entryLevel==='forecast'?'forecast':'target',
-    targetLevel:band.level,fromLayer:band.fromLayer,toLayer:band.toLayer,
-    forecastLevel:result.forecastLevelAtEntry,
-    winRate:result.winRate,mpPercent:result.avgMpPercent,
-    earned:result.avgStones,farmStones:result.avgFarmStones,
-    spent:result.avgSpentStones,avgCleared:result.avgCleared}));
+for(const farmMode of ['decade','frontier']){
+ for(const extraRuns of [0,2,5,10]){
+  for(const level of [37,87,139,150]){
+   const band=scenarios.find(x=>x.level===level&&x.stones==='earned');
+   for(const entryLevel of ['target','forecast']){
+    const result=summarize({...band,level:entryLevel==='forecast'?'forecast':band.level,
+     stoneUse:1,farmRunsPerDecade:extraRuns,farmMode},64);
+    console.log('FARMING_100_PERCENT_COMBAT '+JSON.stringify({
+     farmMode,extraRunsPerDecade:extraRuns,entryLevel,
+     targetLevel:band.level,fromLayer:band.fromLayer,toLayer:band.toLayer,
+     forecastLevel:result.forecastLevelAtEntry,
+     winRate:result.winRate,mpPercent:result.avgMpPercent,
+     earned:result.avgStones,farmStones:result.avgFarmStones,
+     spent:result.avgSpentStones,avgCleared:result.avgCleared}));
+   }
   }
  }
 }
@@ -564,7 +582,7 @@ assert.equal(G.magicStoneDropChance(targetClearLevel(30)+1,30),.15);
 assert.equal(stoneLedger(1,0).stones,0);
 for(const sample of [1,7293,8191]){
  const standard=stoneLedger(sample,90,10);
- const farm0=stoneFarmingLedger(sample,90,0);
+ const farm0=stoneFarmingLedger(sample,90,0,'decade');
  assert.equal(farm0.stones,standard.stones,'zero farming must preserve natural stone supply');
  assert.equal(farm0.level,standard.level,'zero farming must preserve natural XP level');
 }
