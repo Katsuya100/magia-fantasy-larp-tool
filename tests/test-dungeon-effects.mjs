@@ -58,6 +58,33 @@ for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4]
 }
 const upgraded={role:'defense',attribute:'flame',power:1000,basePower:270};
 assert.equal(G.defenseDuration(upgraded),6,'stone-upgraded power, not original MP basis');
+for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4],[800,5],[1000,6]]){
+ const curse=spell('debuff',attr,power);
+ assert.equal(G.statusDuration(curse),G.defenseDuration(curse),'shared status formula');
+ const hero=G.makeUnit({hp:3000,mag:12,def:10,res:10},1,{},[],'player');
+ const foe=G.makeUnit({hp:3000,mag:12,def:10,res:10},1,{},[curse],'enemy');
+ const countdown=[];
+ for(let i=0;i<7;i++){
+  G.round(hero,foe,-1,i===0?0:-1,buffs,()=>.1);
+  countdown.push(G.status(hero,'debuff_'+attr)?.turns??0);
+ }
+ assert.deepEqual(countdown,Array.from({length:7},(_,i)=>Math.max(0,duration-i-1)),
+  'debuff countdown, same as defense '+attr+' P'+power);
+}
+const caster=unit();
+for(const power of [270,540,1000]){
+ const curse=spell('debuff','flame',power);
+ const resistant=G.makeUnit(base,1,{flame:.25},[],'player');
+ const vulnerable=G.makeUnit(base,1,{flame:1.5},[],'enemy');
+ G.cast(caster,resistant,curse,buffs,()=>.99);
+ G.cast(caster,vulnerable,curse,buffs,()=>.99);
+ const a=G.status(resistant,'debuff_flame'),b=G.status(vulnerable,'debuff_flame');
+ assert.equal(a.turns,G.statusDuration(curse));
+ assert.equal(b.turns,a.turns,'same turns with different target resistance/side');
+ assert.ok(b.value>a.value,'resistance still reduces debuff intensity');
+}
+assert.equal(G.statusDuration({role:'debuff',attribute:'flame',power:1000,basePower:270}),6,
+ 'stone-upgraded debuff power, not MP basis, sets duration');
 
 for(const attr of G.ATTRS){
  const u=unit();
