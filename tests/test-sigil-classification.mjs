@@ -61,6 +61,25 @@ const radialGap = Array.from({length: 9}, (_, index) => {
   return '<path d="M' + point(angle, 45) + ' L' + point(angle, 165) + '"/>';
 }).join('');
 
+
+// Diagram with open arrows and intersecting line segments. The small enclosed
+// triangles at the crossing should not turn the main open glyph into attack.
+// The actual user's photographs are intentionally NOT checked into Git.
+const crossingOpenArrows = '<path d="M91 214 L412 214 M91 214 L115 192 M91 214 L114 235 ' +
+  'M412 214 L390 194 M412 214 L389 235 M253 214 L253 406 ' +
+  'M253 406 L239 385 M253 406 L270 386 M253 214 L110 367 ' +
+  'M253 214 L391 366 M253 214 L263 101 M110 367 L133 347 ' +
+  'M391 366 L371 347"/>' +
+  '<path d="M232 214 L252 245 L273 214 Z M240 217 L253 238 L266 217 Z"/>';
+const peripheralOpenMarks = Array.from({length: 5}, (_, index) => {
+  const angle = (-90 + index * 72) * Math.PI / 180;
+  const x = 256 + Math.cos(angle) * 167, y = 256 + Math.sin(angle) * 167;
+  return '<path d="M' + (x - 9).toFixed(1) + ' ' + y.toFixed(1) +
+    ' L' + (x + 9).toFixed(1) + ' ' + y.toFixed(1) + ' M' +
+    x.toFixed(1) + ' ' + (y - 9).toFixed(1) + ' L' +
+    x.toFixed(1) + ' ' + (y + 9).toFixed(1) + '"/>';
+}).join('');
+
 const fixtures = [
   {name: 'standard sharp 6-point star', role: 'attack', shape: star(6)},
   {name: 'standard broad 6-corner hexagon', role: 'defense', shape: polygon(6, 155)},
@@ -70,6 +89,12 @@ const fixtures = [
     name: 'debuff: unclosed straight-letter ' + letter, role: 'debuff', shape,
   })),
   {name: 'debuff: nine separated radial strokes', role: 'debuff', shape: radialGap, expectOpenLinearOverride: true},
+  {name: 'debuff: open crossed arrows with tiny closed triangles', role: 'debuff',
+    shape: crossingOpenArrows},
+  {name: 'debuff: open crossed arrows and separated small markings', role: 'debuff',
+    shape: crossingOpenArrows + peripheralOpenMarks},
+  {name: 'debuff: narrow stroke open arrows with tiny triangles', role: 'debuff',
+    shape: crossingOpenArrows, stroke: 4},
   {name: 'debuff: nine rays with a partial scan-rim circle', role: 'debuff',
     shape: radialGap + openRing(191, 25), expectOpenLinearOverride: true},
   {name: 'debuff: nine rays with a narrow-gap scan-rim arc', role: 'debuff',
