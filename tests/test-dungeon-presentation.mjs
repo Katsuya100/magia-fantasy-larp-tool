@@ -194,7 +194,13 @@ assert.match(page,/<dialog id="backupSetupDialog"/,'backup setup dialog exists')
 
 const copyWarning='バックアップがない端末内セーブは予告なく消える可能性があります。';
 const concurrentWarning='複数ブラウザで同時プレイをすると進行が巻き戻る場合があります';
-assert.equal(page.split('<p class="backup-sync-warning">'+copyWarning+'</p>').length-1,2,'unbacked save loss is displayed at the top of both backup sections');
+assert.equal(page.split(copyWarning).length-1,2,'unbacked save loss is declared in setup and the disconnected profile section');
+assert.match(page,/id="backupRiskWarning" class="backup-sync-warning"/,'profile risk notice can disappear after confirmed backup');
+assert.match(page,/id="backupRollbackWarning" class="backup-sync-warning" hidden/,'concurrent-browser warning only appears once connected');
+assert.doesNotMatch(page,/id="setupCreatePlayer"|id="setupSwitchGoogleDrive"/,'no redundant no-backup chooser appears');
+assert.match(page,/data-action="restore">引き継ぐ<\/button>/,'restoration choice is explicit');
+assert.match(page,/data-action="overwrite">新しく始める<\/button>/,'new game choice appears only for an existing backup');
+assert.match(app,/await cloudSyncController\?\.syncNow\?\.\(\)/,'name submission uploads without waiting for the background timer');
 assert.equal(page.split('システム上 <strong>'+concurrentWarning+'</strong>。').length-1,2,'both backup surfaces show the same explicit rollback warning');
 assert.ok(page.indexOf('<p class="backup-sync-warning">'+copyWarning+'</p>')<page.indexOf('id="backupSetupStatus"'),'the initial warning precedes connection status');
 const cloudMarkup=page.match(/<div class="cloud-sync">([\s\S]*?)<\/div>/)?.[1];
