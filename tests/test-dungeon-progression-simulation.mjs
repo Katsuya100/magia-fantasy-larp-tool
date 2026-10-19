@@ -260,6 +260,23 @@ for(const curve of depthCurves){
    winRate:result.winRate,mpPercent:result.avgMpPercent,avgCleared:result.avgCleared}));
  }
 }
+// Aggressive no-regen depth policies, with 50% and 100% invested stone budgets.
+// These are deliberately stress-test alternatives, not adopted production values.
+const zeroCurves=[
+ {name:'zero90',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,.34],[80,.29],[90,0],[100,0]]},
+ {name:'zero70',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,0],[80,0],[90,0],[100,0]]},
+ {name:'zero50',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,0],[60,0],[70,0],[80,0],[90,0],[100,0]]}
+];
+for(const curve of zeroCurves){
+ for(const stoneUse of [.5,1]){
+  for(const band of scenarios.filter(x=>x.stones==='earned')){
+   const result=summarize({...band,stoneUse,mpRecoveryFactor:curve.points},32);
+   console.log('STONE_MP_ZERO_CURVE '+JSON.stringify({curve:curve.name,level:band.level,
+    fromLayer:band.fromLayer,toLayer:band.toLayer,stoneUse,winRate:result.winRate,
+    mpPercent:result.avgMpPercent,avgCleared:result.avgCleared,avgSpentStones:result.avgSpentStones}));
+  }
+ }
+}
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
