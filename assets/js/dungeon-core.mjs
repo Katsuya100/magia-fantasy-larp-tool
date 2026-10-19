@@ -266,7 +266,7 @@ export function repairInvalidMp(hero){
  hero.mp=hero.maxMp;
  return true;
 }
-export const VICTORY_MP_LAYER_CURVE=Object.freeze([[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,.34],[80,.32],[90,.30],[100,.27]].map(point=>Object.freeze(point)));
+export const VICTORY_MP_LAYER_CURVE=Object.freeze([[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,.34],[80,.32],[90,.23],[100,0]].map(point=>Object.freeze(point)));
 export function victoryMpLayerFactor(layer,policy=VICTORY_MP_LAYER_CURVE){
  const floor=Number(layer);
  if(!Number.isFinite(floor))return 1;
