@@ -59,7 +59,15 @@
         <form id="nameForm">
           <label for="playerNameInput">冒険者名</label>
           <input id="playerNameInput" name="playerName" type="text" maxlength="20" required autocomplete="nickname" placeholder="名前を入力">
-          <label id="permadeathChoice" class="permadeath-choice"><input id="permadeathInput" type="checkbox"> パーマデスモード</label>
+          <div id="permadeathChoice" class="game-mode-choice">
+            <label for="permadeathInput">プレイモード</label>
+            <select id="permadeathInput" class="game-mode-select">
+              <option value="casual">カジュアルモード</option>
+              <option value="permadeath">パーマデスモード</option>
+            </select>
+            <p id="gameModeDescription" class="game-mode-description">1人の冒険者が何度もダンジョンに挑む</p>
+            <p id="gameModeWarning" class="game-mode-warning" hidden>※キャラロストがあります</p>
+          </div>
           <p id="nameError" class="name-error" role="alert"></p>
           <button type="submit" id="savePlayerName" class="primary-action">この名で冒険する <span aria-hidden="true">⟶</span></button>
         </form>

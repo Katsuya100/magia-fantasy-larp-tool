@@ -1643,3 +1643,11 @@ html,body{overflow-x:clip}
 .cloud-sync [role="status"]{font-size:13px;color:var(--pale);line-height:1.6;overflow-wrap:anywhere}
 .cloud-sync-note{font-size:12px!important;color:var(--soft);line-height:1.65}
 .cloud-sync button[disabled]{opacity:.55;cursor:not-allowed}
+
+.game-mode-choice{display:grid;gap:9px;margin:16px 0;text-align:left}
+.game-mode-choice[hidden]{display:none}
+.game-mode-select{width:100%;padding:12px 14px;border:1px solid #64788a;border-radius:8px;background:#152434;color:#f4f5f7;font:inherit;cursor:pointer}
+.game-mode-select:focus-visible{outline:2px solid #91c9ee;outline-offset:2px}
+.game-mode-description{margin:0;color:#b8c9d6;font-size:.9rem;line-height:1.65}
+.game-mode-warning{margin:0;color:#ff7777;font-size:.9rem;font-weight:700}
+.game-mode-warning[hidden]{display:none}
