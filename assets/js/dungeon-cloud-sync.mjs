@@ -483,7 +483,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     show('バックアップを変更せず保留しました。');
     return result;
    }
-   if(decision==='synced'){syncedPresentation();return 'ready';}
+   if(decision==='synced'){
+    // Equal verified bytes establish a durable trusted baseline so old saves
+    // without play IDs can acquire one on their next genuine local edit.
+    await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
+    syncedPresentation();
+    return 'ready';
+   }
    if(decision==='download'){
     if(!initial){show('Driveにより新しい記録があります。プレイ中は復元・上書きを保留します。再接続時に照合してください。');return result;}
     return await restore(remote,file);
