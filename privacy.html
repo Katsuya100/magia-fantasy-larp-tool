@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="マギア・ファンタジー LARPツールのプライバシーポリシー。Google Driveへのセーブ、端末内保存、画像と認証情報の取り扱いを説明します。">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/legal.css">
+  <title>プライバシーポリシー | マギア・ファンタジー LARPツール</title>
+</head>
+<body>
+<main class="legal-shell">
+  <nav class="legal-nav" aria-label="サイト内の案内">
+    <a href="index.html">← トップに戻る</a>
+    <a href="terms.html">利用規約 →</a>
+  </nav>
+  <header>
+    <p class="eyebrow">MAGIA ARCHIVE · POLICY</p>
+    <h1>プライバシーポリシー</h1>
+    <p class="lead">このページでは、マギア・ファンタジー LARPツールにおけるデータの扱い、とくにGoogle Driveバックアップについて説明します。</p>
+    <p class="meta">制定・最終更新：2026年10月19日</p>
+  </header>
+  <article>
+    <section>
+      <h2>1. 対象と提供者</h2>
+      <p>本ポリシーは、Katsuya100が公開する「マギア・ファンタジー LARPツール」（コトダマギア、マギアサークル、マギアサークル・ダンジョンアタック。以下「本サービス」）に適用されます。本サービスはGitHub Pagesで公開されるブラウザアプリです。</p>
+    </section>
+    <section>
+      <h2>2. 扱うデータと利用目的</h2>
+      <ul>
+        <li>ダンジョンアタックでは冒険者名、進行状況、所持品、登録した魔法陣とその元画像などを、ゲームの継続・復元のために端末内に保存します。</li>
+        <li>カメラで撮影した画像や選択した画像、呪文・解析結果は、魔法陣の登録や画像解析のためにブラウザ内で処理します。Google Drive同期を有効にしない限り、ゲームのセーブとしてGoogle Driveへは送信しません。</li>
+        <li>処理に必要な辞書・モデルなどのキャッシュ、保存状態の情報をブラウザのストレージに保存する場合があります。</li>
+      </ul>
+    </section>
+    <section>
+      <h2>3. Google Drive連携でアクセスする情報</h2>
+      <p>ダンジョンアタックで利用者が「GoogleDriveに同期する」を選択し、Googleの画面で権限を許可した場合にのみ、<code>https://www.googleapis.com/auth/drive.appdata</code> の権限を利用します。</p>
+      <p>この権限でアクセスするのは、利用者自身のGoogle Driveにある本アプリ専用の非表示領域（<code>appDataFolder</code>）です。バックアップ用ファイル <code>magia-dungeon-save-v1.json</code> の作成、読取、更新を行い、プロフィール・冒険記録・魔法陣画像を保存・復元します。Google Driveの「マイドライブ」にある通常のファイルを読み取る目的では使用しません。</p>
+      <p>Googleアカウントの氏名・メールアドレスや連絡先を取得するための権限は要求しません。取得したGoogleユーザーデータを、広告配信、販売、第三者への提供、ユーザーを対象とする独立した分析には利用しません。本サービスのバックアップ・復元機能に必要な範囲でのみ使用します。</p>
+    </section>
+    <section>
+      <h2>4. 保存先・通信・認証情報</h2>
+      <p>ゲームのセーブは基本的に利用端末のIndexedDB等に保存されます。Google Drive接続時には、セーブデータと魔法陣の元画像がブラウザからGoogle Drive APIへ送信されます。開発者が運営する独自のセーブ収集サーバーには送信しません。</p>
+      <p>Googleのアクセストークンは、認証中の処理に利用します。ページ更新時の再接続のため、短期間有効なアクセストークンをHTTPS上のSecure・SameSite=Strict属性付きCookieに一時保存する場合があります。このCookieはJavaScriptから参照可能で、HttpOnlyではありません。更新トークンやGoogleパスワードは保存しません。</p>
+      <p>本サービスでは画像解析をブラウザ内で行います。ただし、アプリや解析用ライブラリ、辞書、モデルを取得する際はGitHub Pages、CDN、モデル配信サービスとの通信が発生します。これらの事業者が接続元IPアドレス等のアクセス情報を取り扱う場合があります。Google認証・Google Drive連携にはGoogleのサービスが使われ、それぞれの事業者のプライバシーに関する定めが適用されます。</p>
+    </section>
+    <section>
+      <h2>5. 保存期間と削除方法</h2>
+      <p>端末内のゲームデータは、ゲーム内の削除操作やブラウザのサイトデータ削除などを行うまで残る場合があります。キャッシュ等もブラウザの設定から削除できます。</p>
+      <p>Google Driveに作成したバックアップは、端末内のデータを削除しても自動では削除されません。Googleアカウントでアプリのアクセス権を取り消しても、保存済みバックアップが必ず削除されるわけではありません。Driveのアプリデータの削除についてはGoogleが提供する管理方法を確認してください。本サービスには現在、Drive上のバックアップを直接削除する画面はありません。</p>
+      <p>開発者は利用者のGoogle Driveアカウントの内容を直接閲覧・削除する権限を保持していません。</p>
+    </section>
+    <section>
+      <h2>6. 利用者による選択と安全性</h2>
+      <p>Google Drive連携は任意です。権限はGoogleアカウントの設定から取り消せます。認証期限切れ、通信障害、ブラウザのデータ消去、複数端末での同時利用などにより、同期や復元ができない場合があります。重要なデータについては、同期状態をご確認ください。</p>
+    </section>
+    <section>
+      <h2>7. 内容の変更・お問い合わせ</h2>
+      <p>機能やデータの取扱いが変わる場合、本ページを更新します。Googleのユーザーデータを新たな目的で利用する場合は、その内容を説明し、必要な同意を取得します。</p>
+      <p>本ポリシーに関するお問い合わせは、<a href="https://github.com/Katsuya100/magia-fantasy-larp-tool/issues">GitHubのIssue</a>をご利用ください。投稿内容は公開されますので、パスワード、アクセストークン、メールアドレスなどの個人情報・認証情報を記載しないでください。</p>
+    </section>
+  </article>
+  <footer>マギア・ファンタジー LARPツール · <a href="terms.html">利用規約</a> · <a href="index.html">トップへ</a></footer>
+</main>
+</body>
+</html>
