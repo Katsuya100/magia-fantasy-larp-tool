@@ -30,7 +30,11 @@ export function defenseDuration(spell){
  return clamp(base+Math.floor(power/step),1,cap);
 }
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
-export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
+// Experimental high-power-only surcharge. A zero step keeps shipped costs unchanged.
+export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'))+
+ (num('mp_cost_high_power_step')>0
+  ?Math.ceil(Math.max(0,Number(p)-num('mp_cost_high_power_threshold'))/num('mp_cost_high_power_step'))
+  :0);
 export const spellMpCost=spell=>mpCost(spell.basePower??spell.power);
 const levelRow=l=>level(l);
 const growthKeys=['hp','mag','def','res'];
