@@ -23,7 +23,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return {ready:false};
  }
  let client=null,drive=null,expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
- let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initializing=false;
+ let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initializing=false,initialChoiceCommitted=false;
  // A short-lived access token is kept only in an HTTPS, path-scoped cookie so
  // a page refresh can resume syncing. Never persist a Google refresh token.
  const cookieName='__Secure-magiaDungeonDriveToken';
@@ -61,6 +61,22 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const setupButton=doc?.getElementById('setupGoogleDrive');
  const riskWarning=doc?.getElementById('backupRiskWarning');
  const rollbackWarning=doc?.getElementById('backupRollbackWarning');
+ const localOnlyButton=doc?.getElementById('setupWithoutBackup');
+ const syncingIcons=[doc?.getElementById('backupSetupSpinner'),doc?.getElementById('googleDriveSpinner')];
+ function setSyncing(active){
+  for(const spinner of syncingIcons)if(spinner)spinner.hidden=!active;
+  status?.setAttribute?.('aria-busy',String(active));
+  doc?.getElementById('backupSetupStatus')?.setAttribute?.('aria-busy',String(active));
+ }
+ function lockLocalOnly(locked){
+  if(!localOnlyButton)return;
+  localOnlyButton.disabled=locked;
+  localOnlyButton.hidden=locked;
+ }
+ function completeInitialCheck(outcome){
+  if(outcome==='ready'||outcome==='start-new')onInitialReady();
+  else if(outcome!=='restored'&&!initialChoiceCommitted)lockLocalOnly(false);
+ }
  const show=message=>{const lines=message.replace(/。(?!$)/g,'。\n');status.textContent=lines;const setup=doc?.getElementById('backupSetupStatus');if(setup)setup.textContent=lines;};
  function connectedPresentation(){
   button.hidden=true;
@@ -123,6 +139,12 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const title=doc?.getElementById('googleDriveConflictTitle');
    if(title)title.textContent=initialChoice?'バックアップが見つかりました':'冒険データの確認';
    const finish=choice=>{
+    // Hide the dangerous local-only option BEFORE the topmost chooser
+    // closes, so it can never flash or receive a mis-tap during restoration.
+    if(choice==='restore'||choice==='overwrite'){
+     initialChoiceCommitted=true;
+     lockLocalOnly(true);
+    }
     choicePending=false;
     conflictDialog.close();
     conflictDialog.removeEventListener('cancel',cancel);
@@ -164,6 +186,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   }
   const current=await drive.metadata(file.id);
   if(current.modifiedTime!==file.modifiedTime){again=true;return 'deferred';}
+  lockLocalOnly(true);
   restoring=true;
   await replaceDungeonSnapshot(db,remote.data);
   await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
@@ -208,6 +231,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(busy){again=true;return 'deferred';}
   if(Date.now()>=expires){expireConnection();return 'deferred';}
   busy=true;
+  setSyncing(true);
+  show('同期中…');
   let result='deferred';
   try{
    const meta=await getCloudSyncState(db);
@@ -348,6 +373,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    return 'deferred';
   }finally{
    busy=false;
+   setSyncing(false);
    if(again&&!stopped){again=false;schedule();}
   }
  }
@@ -363,9 +389,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   // OAuth is not backup success. Only hide the risk once a real file is verified.
   button.hidden=true;
   if(setupButton)setupButton.hidden=true;
+  lockLocalOnly(true);
   show('確認中…');
   const outcome=await sync(true);
-  if(outcome==='ready'||outcome==='start-new')onInitialReady();
+  completeInitialCheck(outcome);
   // A failed Drive read or upload never opens the naming dialog.
  }
  function loadIdentity(){
@@ -424,6 +451,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
  const savedAuth=readAuthCookie();
  if(savedAuth){
+  lockLocalOnly(true);
   // On reload, verify Drive's actual bytes before displaying "同期済み".
   expires=savedAuth.expires;
   drive=createDungeonDrive(savedAuth.token,fetchImpl);
@@ -431,9 +459,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   button.hidden=true;
   if(setupButton)setupButton.hidden=true;
   show('確認中…');
-  void sync(true).then(outcome=>{
-   if(outcome==='ready'||outcome==='start-new')onInitialReady();
-  });
+  void sync(true).then(completeInitialCheck);
  }
  return {ready:true,unsubscribe,sync,disconnect,syncNow:()=>{clearTimeout(timer);return sync(false);}};
 }
