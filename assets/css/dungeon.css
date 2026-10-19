@@ -1639,6 +1639,7 @@ html,body{overflow-x:clip}
 .cloud-sync [role="status"]{font-size:13px;color:var(--pale);line-height:1.6;overflow-wrap:anywhere}
 .cloud-sync-note{font-size:12px!important;color:var(--soft);line-height:1.65}
 .cloud-sync button[disabled]{opacity:.55;cursor:not-allowed}
+.cloud-sync-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
 /* Automatic Drive sync stays nonblocking; the ring appears only while the
    remote list/upload/download/readback operation is actually in progress. */
 .drive-sync-state{display:flex;align-items:center;gap:9px;min-height:26px}
@@ -1650,7 +1651,7 @@ html,body{overflow-x:clip}
 @keyframes drive-sync-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.drive-sync-spinner{animation:none;border-top-color:var(--jade);box-shadow:0 0 0 1px var(--jade)}}
 
-#connectGoogleDrive[hidden],#setupGoogleDrive[hidden]{display:none!important}
+#connectGoogleDrive[hidden],#disconnectGoogleDrive[hidden],#setupGoogleDrive[hidden]{display:none!important}
 .backup-sync-warning[hidden]{display:none!important}
 /* Keep both save-loss and concurrent-browser warnings visibly red. */
 .delete-data-dialog-inner .backup-sync-warning,
