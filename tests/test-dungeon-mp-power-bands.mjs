@@ -11,13 +11,13 @@ const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'
 const data={balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')};
 const originalBalance=data.balance.map(row=>({...row}));
 const SAMPLES=32;
-// step = 0 disables the surcharge; threshold = 500.
-// +1 MP per 200/125/80 points above 500 are comparison hypotheses.
+// Stage 2: keep all common P270-540 circles completely unchanged.
+// Compare only +1/+2 MP near P1000, rather than penalizing P540.
 const proposals=[
- {id:'current',step:0},
- {id:'gentle',step:200},
- {id:'moderate',step:125},
- {id:'strong',step:80}
+ {id:'current',threshold:500,step:0},
+ {id:'above700_plus1',threshold:700,step:500},
+ {id:'above800_plus1',threshold:800,step:250},
+ {id:'above800_plus2',threshold:800,step:100}
 ];
 const profiles=['existing','max500','one1000','all800','all1000'];
 const clone=s=>({...s});
@@ -67,8 +67,10 @@ function evaluate(band,profile){
 for(const proposal of proposals){
  const balance=originalBalance.map(row=>({...row}));
  const step=balance.find(row=>row.key==='mp_cost_high_power_step');
- assert.ok(step);
+ const threshold=balance.find(row=>row.key==='mp_cost_high_power_threshold');
+ assert.ok(step&&threshold);
  step.value=String(proposal.step);
+ threshold.value=String(proposal.threshold);
  configure({...data,balance});
  // Below the threshold must remain exactly the same under every proposal.
  for(const power of [100,300,400,500]){
@@ -80,11 +82,11 @@ for(const proposal of proposals){
   assert.equal(G.spellMpCost(upgraded),G.mpCost(power),'upgrades retain original MP pricing');
  }
  const prices=Object.fromEntries([300,400,500,600,800,1000,1200].map(p=>[p,G.mpCost(p)]));
- console.log('MP_PROPOSAL_COST '+JSON.stringify({proposal:proposal.id,step:proposal.step,prices}));
+ console.log('MP_PROPOSAL_COST '+JSON.stringify({proposal:proposal.id,threshold:proposal.threshold,step:proposal.step,prices}));
  for(const band of scenarios){
   for(const profile of profiles)
    console.log('MP_BAND_RESULT '+JSON.stringify({proposal:proposal.id,...evaluate(band,profile)}));
  }
 }
 configure({...data,balance:originalBalance});
-console.log('PASS 15 level bands x 5 realistic loadouts x 4 MP proposals x 32 seeded full fight runs, with actual base-power upgrade pricing');
+console.log('PASS refined 15 level bands x 5 realistic loadouts x 4 MP proposals x 32 seeded full fight runs, with actual base-power upgrade pricing');
