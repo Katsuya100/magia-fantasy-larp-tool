@@ -317,6 +317,29 @@ for(const zeroFrom of lateZeroOnsets){
   }
  }
 }
+const zero97Policy=[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],
+ [60,.43],[70,.34],[80,.29],[90,.23],[97,0],[100,0]];
+for(const stoneUse of [.5,.75,1]){
+ for(const level of [37,55,72,87,102,115,128,139,150]){
+  const band=scenarios.find(x=>x.level===level&&x.stones==='earned');
+  const result=summarize({...band,stoneUse,mpRecoveryFactor:zero97Policy},128);
+  console.log('STONE_MP_ZERO97_FULL '+JSON.stringify({level,stoneUse,
+   winRate:result.winRate,mpPercent:result.avgMpPercent,
+   earned:result.avgStones,spent:result.avgSpentStones,cleared:result.avgCleared}));
+ }
+}
+for(const startLayer of [11,21,41,61,81,91]){
+ for(const stoneUse of [.5,.75,1]){
+  const band={name:'On-curve '+startLayer+'-'+(startLayer+9),level:'forecast',
+   fromLayer:startLayer,toLayer:startLayer+9,spells:'five',stones:'earned',stoneUse,
+   mpRecoveryFactor:zero97Policy};
+  const result=summarize(band,128);
+  console.log('STONE_MP_ZERO97_ONCURVE '+JSON.stringify({startLayer,stoneUse,
+   forecastLevelAtEntry:result.forecastLevelAtEntry,winRate:result.winRate,
+   mpPercent:result.avgMpPercent,earned:result.avgStones,
+   spent:result.avgSpentStones,cleared:result.avgCleared}));
+ }
+}
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
