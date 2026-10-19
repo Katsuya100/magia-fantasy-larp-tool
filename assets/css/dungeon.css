@@ -1639,6 +1639,15 @@ html,body{overflow-x:clip}
 .cloud-sync [role="status"]{font-size:13px;color:var(--pale);line-height:1.6;overflow-wrap:anywhere}
 .cloud-sync-note{font-size:12px!important;color:var(--soft);line-height:1.65}
 .cloud-sync button[disabled]{opacity:.55;cursor:not-allowed}
+/* Automatic Drive sync stays nonblocking; the ring appears only while the
+   remote list/upload/download/readback operation is actually in progress. */
+.drive-sync-state{display:flex;align-items:center;gap:9px;min-height:26px}
+.drive-sync-state [role="status"]{margin:0;min-width:0}
+.drive-sync-spinner{flex:0 0 auto;width:17px;height:17px;border:2px solid #bca67965;border-top-color:var(--gold);border-radius:50%;animation:drive-sync-spin .8s linear infinite}
+.drive-sync-spinner[hidden]{display:none!important}
+@keyframes drive-sync-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.drive-sync-spinner{animation:none;border-top-color:var(--jade);box-shadow:0 0 0 1px var(--jade)}}
+
 #connectGoogleDrive[hidden],#setupGoogleDrive[hidden]{display:none!important}
 .backup-sync-warning[hidden]{display:none!important}
 /* Keep both save-loss and concurrent-browser warnings visibly red. */
