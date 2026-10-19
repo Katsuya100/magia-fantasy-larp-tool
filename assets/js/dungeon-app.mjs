@@ -555,7 +555,7 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
    run.xp+=G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor));
    run.log.push(dropCount?'撃破！ '+dropCount+'個を入手（未確定）':'撃破！ 今回の戦利品はなし');
    await ceremony('loot',dropCount?'戦利品の発見':'戦利品なし',dropCount?dropCount+'個 · 未確定':'次の戦いへ',dropCount);
-   run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero);if(isLayerBoss(run.floor)){
+   run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero,layerForFight(run.floor));if(isLayerBoss(run.floor)){
  const completed=clearedLayer(run.floor);
  const promptForBoss=completed>0&&completed%10===0&&Number(run.lastMilestoneChoiceLayer)!==completed;
  if(promptForBoss)run.lastMilestoneChoiceLayer=completed;
