@@ -226,6 +226,8 @@ try{
  $('tab-dungeon').closest=()=>({scrollIntoView:opts=>{tabScrolls.push(opts);window.scrollY=96;}});
  await $('startAttack').fire('click');
  await wait(()=>$('battle').hidden===false,'battle start');
+ assert.equal($('battle').attributes.style,'--dungeon-crimson:2%;--dungeon-darkness:0%;--dungeon-fog:0%','first layer lightly tints the battle panel');
+ assert.equal($('battle').attributes['data-mist'],'false','no fog below layer 50');
  assert.deepEqual(tabScrolls,[{behavior:'instant',block:'start'}],'entering the labyrinth scrolls to the top edge of the tabs');
  // Simulate actual navigation scrolling: a boss checkpoint scrolls to the
  // tabs, but continuing must restore the scroll position of the boss battle.
@@ -370,6 +372,7 @@ try{
  assert.doesNotMatch($('checkpointInfo').textContent,/続行して敗北すると失われる/,'warning is removed');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
+ assert.equal($('checkpoint').attributes.style,'--dungeon-crimson:2%;--dungeon-darkness:0%;--dungeon-fog:0%','checkpoint matches battle panel');
  assert.ok(p.run.loot.length>=1&&p.run.loot.length<=46,'one layer has independent reward categories without guaranteed boss trophies');
  const loot=p.run.loot.length;
  const collectionCount=p.run.loot.filter(item=>item.type==='collection').length;
@@ -531,6 +534,7 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
  assert.ok(restoredScroll.includes(oldBattleScroll),'continued battle actively restores the viewport');
  assert.equal(p.run.checkpointBattleScrollY,undefined,'completed checkpoint no longer holds an outdated scroll position');
  assert.equal(p.run.floor,6);
+ assert.equal($('battle').attributes.style,'--dungeon-crimson:4%;--dungeon-darkness:0%;--dungeon-fog:0%','entering layer two deepens the panel');
  assert.equal(p.run.layerEnemyOrder.layer,2,'continuing to the next layer reshuffles the new regular opponents');
  assert.equal(p.run.enemy.id,p.run.layerEnemyOrder.ids[0],'next layer uses its own shuffled order');
  assert.equal($('floorLabel').textContent,'2層 地下の亜人砦','next layer has a distinct heading');

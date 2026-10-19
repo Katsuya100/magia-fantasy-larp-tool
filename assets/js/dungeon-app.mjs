@@ -8,7 +8,7 @@ import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261019.11';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261019.11';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261019.11';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261019.11';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261019.12';
 import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261019.11';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData,saveProfileWithCircles} from './dungeon-store.mjs?v=20261019.11';
 import {storagePersistenceStatus,requestPersistentStorage} from './dungeon-persistence.mjs?v=20261019.11';
@@ -311,8 +311,16 @@ function rewardLedgerMarkup(run){
    +'<strong class="battle-stat-value">+'+run.xp+'</strong>'
    +'<small>帰還時に確定</small></div>';
 }
+function updateDungeonPanelBackground(fight){
+ const {crimson,darkness,fog}=dungeonDepthBlend(fight);
+ for(const id of ['battle','checkpoint']){
+  $(id).setAttribute('style','--dungeon-crimson:'+crimson+';--dungeon-darkness:'+darkness+';--dungeon-fog:'+fog);
+  $(id).setAttribute('data-mist',fog==='0%'?'false':'true');
+ }
+}
 function renderRun(){
  const run=profile.run;if(!run)return;
+ updateDungeonPanelBackground(run.floor);
  const enemy=run.enemy,hero=run.hero;
  $('floorLabel').textContent=battleHeading(run.floor);
  $('battleEncounterLabel').textContent=battleEncounter(run.floor);
@@ -486,6 +494,7 @@ function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor,ru
 function narrativeLines(id,lines){$(id).textContent=lines.join('\n');}
 function renderCheckpoint(){
  const run=profile.run;if(!run)return;
+ updateDungeonPanelBackground(run.floor);
  const layer=clearedLayer(run.floor);
  narrativeLines('checkpointInfo',[
   layer+'層の階層ボスを撃破！',
