@@ -64,7 +64,6 @@ async function handleDriveImageRepair(){
  slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));
  await refreshRepairStatus();
  render();
- $('repairMagicCirclePhotos').hidden=initialHealth.status!=='badImages';
  if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}
 }
 async function recaptureMissingImages(ids){
@@ -183,11 +182,12 @@ async function load(){
  // Reading the game must not advance savedAt or conceal a damaged prior seal.
  wire();
  initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),
-  onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages});
+  onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages,onImagesRestored:handleDriveImageRepair});
  render();
  if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}
  if(returnFlow)renderReturnStep();
  show(returnFlow?'returnShowcase':profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');
+ $('repairMagicCirclePhotos').hidden=initialHealth.status!=='badImages';
  finishStartup();
  if(!profile.name)openBackupSetup();
  else if(!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run)tutorial.open();
