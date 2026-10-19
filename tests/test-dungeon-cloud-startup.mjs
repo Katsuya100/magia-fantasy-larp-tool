@@ -389,7 +389,7 @@ try{
  await wait(()=>!afterDeleteUi.button.disabled,'blank device may choose when to connect');
  assert.equal(afterDeleteUi.get('googleDriveConflictDialog').open,false,'deleted account refresh never opens restore chooser');
  assert.equal(afterDeleteUi.get('disconnectGoogleDrive').hidden,true,'deleted account stays unlinked');
- assert.equal((await readDungeonSnapshot(deleteDb)).profile.name,undefined,'local account is deleted');
+ assert.equal((await readDungeonSnapshot(deleteDb)).profile?.name,undefined,'local account is deleted');
 
  // 2. Fresh local browser + existing named cloud backup: require only two
  // choices, never a name form until the user chooses a new game.
