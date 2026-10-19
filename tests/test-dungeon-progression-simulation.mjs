@@ -182,3 +182,67 @@ assert.ok(ledger.levels.every(x=>x.to>x.from),'level ups require accumulated XP'
 assert.ok(ledger.levels.every((x,i)=>i===0||x.stones>=ledger.levels[i-1].stones),'stone bank is never debited before upgrades');
 assert.ok(ledger.returns.every((x,i)=>i===0||x.level>=ledger.returns[i-1].level),'return-only levels are monotonic');
 console.log('PASS seeded full combat with resource carryover, tenth-layer HP/MP recovery, saved reward ledger and permanent stone upgrades');
+
+
+// Audit-only matrix: high-power photographs can be equipped from level 1.
+// This deliberately does not change battle logic or assert a target win rate.
+const originalMpDivisor=data.balance.find(x=>x.key==='mp_cost_divisor').value;
+const originalSpells=Object.fromEntries(Object.entries(SPELLS).map(([k,v])=>[k,v]));
+const mpProbeBands=[
+ {id:'Lv1 / layer 1',level:1,fromLayer:1,toLayer:1,spells:'beginner'},
+ {id:'Lv3 / layers 1-2',level:3,fromLayer:1,toLayer:2,spells:'beginner'},
+ {id:'Lv5 / layers 1-3',level:5,fromLayer:1,toLayer:3,spells:'beginner'},
+ {id:'Lv19 / layers 1-10',level:19,fromLayer:1,toLayer:10,spells:'five'},
+ {id:'Lv37 / layers 10-20',level:37,fromLayer:10,toLayer:20,spells:'five'}
+];
+function probeSummary(config,samples=32){
+ const runs=Array.from({length:samples},(_,i)=>simulate(17011+i*13,config));
+ const avg=f=>Math.round(runs.reduce((n,x)=>n+f(x),0)/runs.length*10)/10;
+ const completed=runs.filter(x=>x.win);
+ return {winRate:Math.round(100*completed.length/samples),avgClear:avg(x=>x.clear),
+  avgTurns:avg(x=>x.turns),avgNormal:avg(x=>x.normalAttacks),
+  avgFightMpCost:avg(x=>x.fightStats.reduce((s,f)=>s+f.mpBefore-f.mpAfter,0)),
+  avgRestored:avg(x=>x.mpRestored),
+  avgEndMpPercent:Math.round(avg(x=>100*x.mp/x.initialMp)),
+  avgEndHpPercent:Math.round(avg(x=>100*x.hp/x.initialHp)),
+  avgFights:avg(x=>x.fightStats.length)};
+}
+for(const power of [300,400,600,800,1000])
+ console.log('MP_POWER_COST '+JSON.stringify({power,baseMagic:G.basePower(power),cost:G.mpCost(power),
+  lv1MaxMp:G.makeUnit({hp:100,mag:10,def:7,res:7},1).maxMp,
+  lv1WinRestore:Math.round(100*(.09+.045))/100}));
+for(const p of [400,1000]){
+ const up=strengthenedPower(p,10);
+ console.log('MP_UPGRADE_AUDIT '+JSON.stringify({originalPower:p,afterTenStones:up,
+  inGameMp:G.spellMpCost({power:up,basePower:p}),existingSimulatorMp:G.mpCost(up)}));
+}
+for(const divisor of [12,8,6,4]){
+ data.balance.find(x=>x.key==='mp_cost_divisor').value=String(divisor);
+ configure(data);
+ // Existing playtest loadouts unchanged: potential collateral at all levels.
+ for(const s of scenarios){
+  console.log('MP_ORIGINAL_SWEEP '+JSON.stringify({divisor,band:s.name,
+   ...probeSummary(s,32)}));
+ }
+ for(const power of [300,400,600,800,1000]){
+  SPELLS.beginner=[
+   {role:'attack',attribute:'flame',power},
+   {role:'attack',attribute:'bolt',power},
+   {role:'support',attribute:'aqua',power:Math.round(power*.8)}
+  ];
+  SPELLS.five=[
+   {role:'attack',attribute:'flame',power},
+   {role:'attack',attribute:'bolt',power},
+   {role:'attack',attribute:'gravity',power},
+   {role:'support',attribute:'aqua',power:Math.round(power*.8)},
+   {role:'defense',attribute:'law',power:Math.round(power*.8)}
+  ];
+  for(const cohort of mpProbeBands)
+   console.log('MP_EARLY_POWER_SWEEP '+JSON.stringify({divisor,power,band:cohort.id,
+    ...probeSummary(cohort,32)}));
+ }
+}
+data.balance.find(x=>x.key==='mp_cost_divisor').value=originalMpDivisor;
+for(const [k,v] of Object.entries(originalSpells))SPELLS[k]=v;
+configure(data);
+console.log('PASS MP consumption and high-power early-loadout audit matrix');
