@@ -65,6 +65,7 @@ function mockGoogle(){
 function remoteApi(initial=null,{tamperReadback=false}={}){
  const id='backup-1',modified=()=>new Date(Date.UTC(2026,9,19,10,0,version)).toISOString();
  let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false;
+ const operations=[];
  const fetchImpl=async (url,options={})=>{
   if(expired)return new Response('',{status:401});
   const u=String(url),method=options.method||'GET';
@@ -79,7 +80,13 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   if(u.includes('?fields=id,name,modifiedTime'))return Response.json({id,name:'magia-dungeon-save-v1.json',modifiedTime:modified()});
   if(u.includes('uploadType=resumable')){
    assert.ok(method==='POST'||method==='PATCH','create vs update upload method');
-   if(method==='PATCH')assert.notEqual(value,null,'updates require an existing remote file');
+   operations.push(method);
+   const metadata=JSON.parse(options.body);
+   if(method==='POST')assert.deepEqual(metadata.parents,['appDataFolder'],'new backups must be created in the private appDataFolder');
+   if(method==='PATCH'){
+    assert.notEqual(value,null,'updates require an existing remote file');
+    assert.equal(metadata.parents,undefined,'updates must preserve the existing Drive file');
+   }
    return new Response('',{status:200,headers:{Location:'https://www.googleapis.com/upload/session/mock'}});
   }
   if(u.includes('/upload/session/mock')){
@@ -97,8 +104,10 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   get current(){return value;},
   get uploads(){return uploads;},
   get downloads(){return downloads;},
+  get operations(){return [...operations];},
   expire(){expired=true;},
-  failUploads(){failUpload=true;}
+  failUploads(){failUpload=true;},
+  resumeUploads(){failUpload=false;}
  };
 }
 async function newDb(){
@@ -134,6 +143,7 @@ try{
  await connect(firstUi);
  await wait(()=>firstReady===1,'no existing backup opens player naming directly');
  assert.equal(firstDrive.uploads,1,'the empty starting profile is uploaded exactly once');
+ assert.deepEqual(firstDrive.operations,['POST'],'missing backup creates a new file using Drive POST');
  assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.name,undefined,'initial file precedes the name');
  assert.equal(firstUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(firstUi.button.hidden,true,'no redundant button once a real file is verified');
@@ -146,6 +156,7 @@ try{
  await saveProfile(firstDb,newlyNamed);
  assert.equal(await firstController.syncNow(),'ready','name is uploaded on demand, without debounce');
  assert.equal(firstDrive.uploads,2,'one upload before name and another immediately after name');
+ assert.deepEqual(firstDrive.operations,['POST','PATCH'],'naming updates the created file through Drive PATCH');
  assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.name,'星の魔導士','the remote contains the exact saved name');
  assert.equal(firstUi.status.textContent,'GoogleDrive同期済み','only confirmed bytes count as synced');
  assert.equal(firstUi.get('googleDriveConflictDialog').open,false,'naming never reopens the restore/new chooser');
@@ -163,6 +174,7 @@ try{
  assert.equal(recoveringNames,0);
  assert.equal(recoveringUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,true,'only two startup choices');
  assert.equal(recoveringDrive.uploads,0,'never replace the stored name before an explicit choice');
+ assert.deepEqual(recoveringDrive.operations,[],'a found backup must not receive POST or PATCH before choosing');
  recoveringUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
  await wait(()=>reloads===1,'existing player restored');
  assert.equal((await readDungeonSnapshot(recoveringDb)).profile.name,'星の魔導士');
@@ -178,6 +190,7 @@ try{
  newGameUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').click();
  await wait(()=>newGameReady===1,'new game opens name entry only after initial backup');
  assert.equal(newGameDrive.uploads,1,'new initial state is backed up before naming');
+ assert.deepEqual(newGameDrive.operations,['PATCH'],'explicit new-game choice updates only the existing file');
  assert.ok(!deserializeDungeonSnapshot(newGameDrive.current).profile.name,'old name intentionally replaced only on explicit user choice');
  const newGameProfile=await getProfile(newGameDb);
  newGameProfile.name='新たな冒険者';
@@ -228,12 +241,88 @@ try{
  assert.equal(badDrive.uploads,1,'server accepted upload but readback failed');
  assert.notEqual(badUi.status.textContent,'GoogleDrive同期済み');
 
- // 7. A previously verified account loses synced status when authorization ends.
+ // 7. Without Google Drive, beginning locally must never upload anything.
+ // The app's setupWithoutBackup button calls disconnect() before opening the name form.
+ const localOnlyDb=await newDb(),localOnlyUi=fakeUi(),localOnlyDrive=remoteApi();
+ let localOnlyReady=0;
+ const localOnlyController=start(localOnlyDb,localOnlyUi,localOnlyDrive.fetchImpl,{onInitialReady:()=>localOnlyReady++});
+ await wait(()=>!localOnlyUi.get('setupGoogleDrive').disabled,'local-only setup is ready');
+ localOnlyController.disconnect();
+ const localOnlyProfile=await getProfile(localOnlyDb);
+ localOnlyProfile.name='端末だけの冒険者';
+ await saveProfile(localOnlyDb,localOnlyProfile);
+ assert.equal(await localOnlyController.syncNow(),'deferred','no Drive token means no network sync');
+ assert.equal(localOnlyReady,0);
+ assert.deepEqual(localOnlyDrive.operations,[]);
+ assert.equal(localOnlyDrive.current,null);
+ assert.equal(localOnlyUi.button.hidden,false,'disconnected status offers syncing later');
+
+ // 8. A failed initial POST retains the empty local save and allows an explicit retry.
+ const failedSeedDb=await newDb(),failedSeedUi=fakeUi(),failedSeedDrive=remoteApi();
+ failedSeedDrive.failUploads();
+ let failedSeedReady=0;
+ const failedSeedController=start(failedSeedDb,failedSeedUi,failedSeedDrive.fetchImpl,{onInitialReady:()=>failedSeedReady++});
+ await connect(failedSeedUi);
+ await wait(()=>failedSeedUi.status.textContent.includes('同期エラー'),'failed initial upload is reported');
+ assert.equal(failedSeedReady,0,'do not open the name form after a failed POST');
+ assert.equal(failedSeedDrive.current,null);
+ assert.equal(failedSeedUi.button.hidden,false);
+ assert.equal((await getProfile(failedSeedDb)).name,undefined);
+ failedSeedDrive.resumeUploads();
+ assert.equal(await failedSeedController.sync(true),'ready','retry can create the missing file');
+ assert.equal(failedSeedDrive.uploads,1);
+ assert.deepEqual(failedSeedDrive.operations,['POST','POST']);
+ assert.equal(failedSeedUi.status.textContent,'GoogleDrive同期済み');
+ assert.equal(failedSeedUi.button.hidden,true);
+
+ // 9. A failed name PATCH must preserve local data, never claim success, and retry.
+ const retryDb=await newDb(),retryUi=fakeUi(),retryDrive=remoteApi();
+ let retryReady=0;
+ const retryController=start(retryDb,retryUi,retryDrive.fetchImpl,{onInitialReady:()=>retryReady++});
+ await connect(retryUi);
+ await wait(()=>retryReady===1,'retry test creates a starting backup');
+ retryDrive.failUploads();
+ const retryProfile=await getProfile(retryDb);
+ retryProfile.name='保存を再試行する冒険者';
+ await saveProfile(retryDb,retryProfile);
+ assert.equal(await retryController.syncNow(),'deferred');
+ assert.equal((await getProfile(retryDb)).name,'保存を再試行する冒険者','failed backup must not lose the local name');
+ assert.notEqual(deserializeDungeonSnapshot(retryDrive.current).profile.name,'保存を再試行する冒険者','failed PATCH must not alter the remote');
+ assert.match(retryUi.status.textContent,/同期エラー/);
+ assert.equal(retryUi.button.hidden,false);
+ retryDrive.resumeUploads();
+ assert.equal(await retryController.syncNow(),'ready','failed name upload can be retried');
+ assert.equal(deserializeDungeonSnapshot(retryDrive.current).profile.name,'保存を再試行する冒険者');
+ assert.deepEqual(retryDrive.operations,['POST','PATCH','PATCH']);
+ assert.equal(retryUi.status.textContent,'GoogleDrive同期済み');
+ assert.equal(retryUi.button.hidden,true);
+
+ // 10. A new browser after a complete backup needs a restore/new decision again.
+ const reopenedDb=await newDb(),reopenedUi=fakeUi(),reopenedDrive=remoteApi(firstDrive.current);
+ let reopenedReady=0;
+ start(reopenedDb,reopenedUi,reopenedDrive.fetchImpl,{onInitialReady:()=>reopenedReady++});
+ await connect(reopenedUi);
+ await wait(()=>reopenedUi.get('googleDriveConflictDialog').open,'page restart detects an existing backup');
+ assert.equal(reopenedReady,0);
+ assert.deepEqual(reopenedDrive.operations,[],'startup must not silently overwrite existing Drive data');
+ assert.equal(reopenedUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,true);
+
+ // 11. Page reload loses its OAuth token; cached metadata is NOT a current success.
+ const lostTokenDb=await newDb(),lostTokenUi=fakeUi(),lostTokenDrive=remoteApi(firstDrive.current);
+ await saveCloudSyncState(lostTokenDb,{fileId:'backup-1',hash:'last-success'});
+ start(lostTokenDb,lostTokenUi,lostTokenDrive.fetchImpl);
+ await wait(()=>lostTokenUi.status.textContent.includes('再接続'),'last-sync metadata should prompt reconnect');
+ assert.equal(lostTokenUi.button.hidden,false,'the connection button remains available after reload');
+ assert.notEqual(lostTokenUi.status.textContent,'GoogleDrive同期済み');
+ assert.ok(!lostTokenUi.status.textContent.includes('同期済み'),'do not label a tokenless session synced');
+ assert.deepEqual(lostTokenDrive.operations,[],'without OAuth, reload cannot touch Drive');
+
+ // 12. A previously verified account loses synced status when authorization ends.
  firstDrive.expire();
  await firstController.sync(true);
  assert.equal(firstUi.button.hidden,false,'expired auth reveals reconnect');
  assert.match(firstUi.status.textContent,/再接続/);
  assert.notEqual(firstUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(firstUi.get('googleDriveExpiredDialog').open,true);
- console.log('PASS initial pre-name upload and readback, immediate name upload, restore/new flow, same seed, lost backup errors, readback failure and expiry');
+ console.log('PASS Drive POST/PATCH, initial and name uploads, restore/new, local-only, retry, restart, data preservation, readback and expiry');
 }finally{auth.restore();}

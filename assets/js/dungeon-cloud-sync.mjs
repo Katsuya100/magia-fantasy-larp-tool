@@ -334,7 +334,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(setupButton)setupButton.disabled=false;
   show('未接続');
   void getCloudSyncState(db).then(meta=>{
-   if(!drive&&meta?.fileId&&meta?.hash)show('前回GoogleDrive同期済み。\n再接続してください。');
+   if(!drive&&meta?.fileId&&meta?.hash)show('未接続。再接続してください。');
   }).catch(()=>{});
  }).catch(error=>show(error.message));
  button.disabled=true;
