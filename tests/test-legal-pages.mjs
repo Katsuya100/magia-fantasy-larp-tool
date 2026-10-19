@@ -17,8 +17,8 @@ assert.ok(home.indexOf('class="site-links"')<home.indexOf('class="choices"'),'Le
 assert.match(home,/<nav class="site-links"[^>]*>[\s\S]*?<a href="privacy\.html">プライバシーポリシー<\/a>[\s\S]*?<a href="terms\.html">利用規約<\/a>[\s\S]*?<\/nav>/);
 assert.match(home,/\.site-links\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'Legal links must stay side by side');
 assert.match(home,/\.site-links a\{[^}]*min-height:56px/,'Legal links must be comfortably tappable');
-assert.match(home,/\.site-links a\{[^}]*font:650 16px/,'Legal text must be legible');
-assert.match(home,/@media\(max-width:480px\)\{\.site-links\{[^}]*\}\.site-links a\{[^}]*min-height:58px/,'Mobile links must remain comfortably tappable');
+assert.match(home,/\.site-links a\{[^}]*font:650 17px/,'Legal text must be legible');
+assert.match(home,/@media\(max-width:480px\)\{\.site-links\{[^}]*\}\.site-links a\{[^}]*min-height:64px/,'Mobile links must remain comfortably tappable');
 assert.equal([...home.matchAll(/class="choice(?: circle)?"/g)].length,3,'Keep the original three course cards');
 
 for(const [file,html] of [['privacy.html',privacy],['terms.html',terms]]){
