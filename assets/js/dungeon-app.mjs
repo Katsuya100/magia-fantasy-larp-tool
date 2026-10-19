@@ -10,8 +10,9 @@ import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261019.11';
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer} from './dungeon-progress.mjs?v=20261019.11';
 import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261019.11';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,clearDungeonData,saveProfileWithCircles} from './dungeon-store.mjs?v=20261019.11';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles} from './dungeon-store.mjs?v=20261019.11';
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261019.11';
+import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261019.11';
 import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261019.11';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261019.11';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261019.11';
@@ -128,6 +129,20 @@ async function load(){
  G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);
  startupStage('冒険者の記録を整えている…');
  profile=await getProfile(db);
+ const initialHealth=await verifyLocalSnapshot(await readDungeonSnapshot(db));
+ if(initialHealth.status==='corrupt'){
+  // Do not start the game or create new integrity evidence from corrupt data.
+  // Require a healthy Drive recovery before any player interaction is allowed.
+  startupStage('セーブの破損を検出しました。Driveからの復元が必要です。');
+  wire();
+  initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),
+   onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages});
+  $('backupSetupTitle').textContent='セーブの破損を検出しました';
+  $('setupWithoutBackup').disabled=true;
+  finishStartup();
+  $('backupSetupDialog').showModal();
+  return;
+ }
  profile.legacies??=[];
  returnFlow=Array.isArray(profile.pendingReturn?.steps)&&profile.pendingReturn.steps.length?profile.pendingReturn:null;
  if(!Array.isArray(profile.obtainedItemIds))profile.obtainedItemIds=[...new Set([...(profile.inventory||[]),...(profile.run?.carry||[])].filter(Boolean).map(item=>item.id).filter(Boolean))];
