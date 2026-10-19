@@ -210,6 +210,8 @@ assert.doesNotMatch(cloudMarkup,/<h3>Google Drive<\/h3>/,'redundant Google Drive
 assert.match(cloudMarkup,/<p id="googleDriveStatus" role="status" aria-live="polite" aria-busy="false">未接続<\/p>/,'a single status provides connection state');
 assert.match(page,/<span id="backupSetupSpinner" class="drive-sync-spinner" aria-hidden="true" hidden><\/span>/,'initial setup has a hidden-by-default progress spinner');
 assert.match(page,/<span id="googleDriveSpinner" class="drive-sync-spinner" aria-hidden="true" hidden><\/span>/,'profile background backups use an inline progress spinner');
+assert.match(page,/<div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden>/,'nonblocking always-visible gameplay sync indicator exists');
+assert.match(css,/\.drive-sync-activity\{[^\n]*pointer-events:none\}/,'floating Drive activity display does not block gameplay taps');
 assert.match(css,/\.drive-sync-spinner\[hidden\]\{display:none!important\}/,'spinner never appears between syncs');
 assert.match(css,/@keyframes drive-sync-spin/,'actual CSS spinner animation exists');
 assert.match(app,/if\(!profile\.name\)openBackupSetup\(\)/,'new player setup remains explicit');
