@@ -311,26 +311,26 @@ try{
 
  // Disconnect during an active Drive listing must not resurrect the old
  // connection, create an upload, or put a stale synced label on the screen.
- const staleDb=await newDb(),staleUi=fakeUi(),staleDrive=remoteApi();
- let staleReady=0;
- const staleController=start(staleDb,staleUi,staleDrive.fetchImpl,{onInitialReady:()=>staleReady++});
- await connect(staleUi);
- await wait(()=>staleReady===1,'in-flight cancellation starts connected');
- const releaseStaleList=staleDrive.pauseNextList();
- const staleRequest=staleController.syncNow();
- await wait(()=>!staleUi.get('googleDriveSpinner').hidden,'network sync has begun');
- staleUi.get('disconnectGoogleDrive').click();
- assert.equal(staleUi.get('googleDriveSpinner').hidden,true,'disconnect immediately dismisses pending network indicator');
- assert.equal(staleUi.doc.cookie,'','abort clears resumable authorization');
+ const detachingDb=await newDb(),detachingUi=fakeUi(),detachingDrive=remoteApi();
+ let detachingReady=0;
+ const detachingController=start(detachingDb,detachingUi,detachingDrive.fetchImpl,{onInitialReady:()=>detachingReady++});
+ await connect(detachingUi);
+ await wait(()=>detachingReady===1,'in-flight cancellation starts connected');
+ const releaseStaleList=detachingDrive.pauseNextList();
+ const detachingRequest=detachingController.syncNow();
+ await wait(()=>!detachingUi.get('googleDriveSpinner').hidden,'network sync has begun');
+ detachingUi.get('disconnectGoogleDrive').click();
+ assert.equal(detachingUi.get('googleDriveSpinner').hidden,true,'disconnect immediately dismisses pending network indicator');
+ assert.equal(detachingUi.doc.cookie,'','abort clears resumable authorization');
  releaseStaleList(); // The fake endpoint intentionally ignores AbortSignal.
- assert.equal(await staleRequest,'deferred','old connection is not allowed to finish as synced');
- assert.match(staleUi.status.textContent,/同期を解除しました/,'stale sync cannot replace unlinked status');
- assert.equal(staleDrive.uploads,1,'stale request cannot start another upload');
- const afterStaleEdit=await getProfile(staleDb);
+ assert.equal(await detachingRequest,'deferred','old connection is not allowed to finish as synced');
+ assert.match(detachingUi.status.textContent,/同期を解除しました/,'stale sync cannot replace unlinked status');
+ assert.equal(detachingDrive.uploads,1,'stale request cannot start another upload');
+ const afterStaleEdit=await getProfile(detachingDb);
  afterStaleEdit.name='オフライン冒険者';
- await saveProfile(staleDb,afterStaleEdit);
- assert.equal(await staleController.syncNow(),'deferred','further updates stay local only');
- assert.equal(staleDrive.uploads,1,'no queued upload survives disconnect');
+ await saveProfile(detachingDb,afterStaleEdit);
+ assert.equal(await detachingController.syncNow(),'deferred','further updates stay local only');
+ assert.equal(detachingDrive.uploads,1,'no queued upload survives disconnect');
 
  // A staged upload can already have reached Drive before the user clicks
  // disconnect. It must never schedule the queued next upload or falsely mark
