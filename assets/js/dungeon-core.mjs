@@ -21,7 +21,7 @@ export function fightExperience(enemyLevel,playerLevel,layer){
  const gap=Math.max(0,Number(playerLevel)-Number(enemyLevel));
  return Math.max(1,Math.round(full*Math.pow(num('xp_overlevel_factor_per_level'),gap)));
 }
-// Identical defense-duration formula for hero and enemy; use upgraded raw spell.power.
+// Identical rules for both sides: use raw power after UGC/stone upgrades.
 export function defenseDuration(spell){
  const step=num('defense_duration_power_step');
  if(step<=0)return num('resistance_buff_duration'); // Retain existing duration overrides and tests.
