@@ -531,18 +531,46 @@ for(const farmMode of ['decade','frontier']){
  for(const extraRuns of [0,2,5,10]){
   for(const level of [37,87,139,150]){
    const band=scenarios.find(x=>x.level===level&&x.stones==='earned');
+   // Real rank-unlocked entry: 11, 41, 81, 91, not the prior boss layer.
+   const actualStart={37:11,87:41,139:81,150:91}[level];
    for(const entryLevel of ['target','forecast']){
-    const result=summarize({...band,level:entryLevel==='forecast'?'forecast':band.level,
+    const result=summarize({...band,fromLayer:actualStart,
+     level:entryLevel==='forecast'?'forecast':band.level,
      stoneUse:1,farmRunsPerDecade:extraRuns,farmMode},64);
     console.log('FARMING_100_PERCENT_COMBAT '+JSON.stringify({
      farmMode,extraRunsPerDecade:extraRuns,entryLevel,
-     targetLevel:band.level,fromLayer:band.fromLayer,toLayer:band.toLayer,
+     targetLevel:band.level,fromLayer:actualStart,toLayer:band.toLayer,
      forecastLevel:result.forecastLevelAtEntry,
      winRate:result.winRate,mpPercent:result.avgMpPercent,
      earned:result.avgStones,farmStones:result.avgFarmStones,
      spent:result.avgSpentStones,avgCleared:result.avgCleared}));
    }
   }
+ }
+}
+// Revisit final-layer MP tuning with 100% of earned stones on the *same*
+// five circles and replayable ten-layer expeditions, not a 75%-budget guess.
+// The existing 30% -> 27% curve is the control; explore much lower restore.
+const fullStoneLatePolicies=[
+ {name:'current30to27',at90:.30,at100:.27},
+ {name:'thirtyTo20',at90:.30,at100:.20},
+ {name:'thirtyTo12',at90:.30,at100:.12},
+ {name:'thirtyTo06',at90:.30,at100:.06},
+ {name:'thirtyToZero',at90:.30,at100:0},
+ {name:'twentyThreeToZero',at90:.23,at100:0}
+];
+for(const policy of fullStoneLatePolicies){
+ const curve=[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],
+  [60,.43],[70,.34],[80,.32],[90,policy.at90],[100,policy.at100]];
+ for(const extraRuns of [0,2,5,10]){
+  const result=summarize({name:policy.name,level:'forecast',fromLayer:91,
+   toLayer:100,spells:'five',stones:'earned',stoneUse:1,
+   farmMode:'decade',farmRunsPerDecade:extraRuns,mpRecoveryFactor:curve},64);
+  console.log('FARMING_MP_FINAL_SWEEP '+JSON.stringify({
+   policy:policy.name,extraRuns,forecastLevel:result.forecastLevelAtEntry,
+   winRate:result.winRate,mpPercent:result.avgMpPercent,
+   earned:result.avgStones,farmStones:result.avgFarmStones,
+   spent:result.avgSpentStones,cleared:result.avgCleared}));
  }
 }
 for(const band of scenarios.filter(x=>x.stones==='earned')){
