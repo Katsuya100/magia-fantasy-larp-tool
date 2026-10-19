@@ -16,7 +16,9 @@ export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remote
 export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=()=>{},onRepairImages=async()=>false,onImagesRestored=async()=>{},fetchImpl=globalThis.fetch,windowImpl=globalThis.window}){
  if(!GOOGLE_CLIENT_ID){
   windowImpl?.document?.getElementById('setupGoogleDrive')?.setAttribute('disabled','');
-  status.textContent='Google連携を利用できません。この端末内のセーブだけでは消失する可能性があります。';
+  status.textContent='GoogleDriveを利用できません。';
+  const setupStatus=windowImpl?.document?.getElementById('backupSetupStatus');
+  if(setupStatus)setupStatus.textContent=status.textContent;
   button.disabled=true;
   return {ready:false};
  }
@@ -25,7 +27,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const doc=windowImpl?.document;
  const conflictDialog=doc?.getElementById('googleDriveConflictDialog');
  const setupButton=doc?.getElementById('setupGoogleDrive');
- const show=message=>{status.textContent=message;const setup=doc?.getElementById('backupSetupStatus');if(setup)setup.textContent=message;};
+ const show=message=>{const lines=message.replace(/。(?!$)/g,'。\n');status.textContent=lines;const setup=doc?.getElementById('backupSetupStatus');if(setup)setup.textContent=lines;};
  function expireConnection(){
   drive=null;
   show('Google認証の期限が切れました。再接続するまでバックアップは停止します。');
@@ -43,7 +45,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return new Promise(resolve=>{
    if(!conflictDialog?.showModal){resolve('later');return;}
    choicePending=true;
-   conflictDialog.querySelector('[data-role="description"]').textContent=description;
+   conflictDialog.querySelector('[data-role="description"]').textContent=description.replace(/。(?!$)/g,'。\n');
    conflictDialog.querySelector('[data-action="overwrite"]').hidden=!allowOverwrite;
    const finish=choice=>{
     choicePending=false;
@@ -112,7 +114,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   const hash=await snapshotHash(text);
   validatedDrive={id:saved.id,modifiedTime:saved.modifiedTime,result:{valid:true,data:snapshot,hash,text,invalidImages:[],trusted:true}};
   await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
-  show('Google Driveにバックアップ済み。変更時は接続中に自動更新します。');
+  show('同期済み。');
   return 'ready';
  }
  async function sync(initial=false){
@@ -213,7 +215,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return await upload(local,file);
    }
    if(!file&&pristine){
-    show('Google Driveに接続しました。冒険者作成後の変更から自動バックアップします。');
+    show('冒険者作成後に自動保存します。');
     return 'ready';
    }
    const localText=await serializeDungeonSnapshot(local);
@@ -238,7 +240,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     show('バックアップを変更せず保留しました。');
     return result;
    }
-   if(decision==='synced'){show('Google Driveと同期済み。変更は自動バックアップされます。');return 'ready';}
+   if(decision==='synced'){show('同期済み。');return 'ready';}
    if(decision==='download'){
     if(!initial){show('Driveにより新しい記録があります。プレイ中は復元・上書きを保留します。再接続時に照合してください。');return result;}
     return await restore(remote,file);
@@ -264,7 +266,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   expires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
   drive=createDungeonDrive(result.access_token,fetchImpl);
   validatedDrive=null;
-  button.textContent='Google Driveに再接続';
+  button.textContent='GoogleDriveに同期する';
   show('Driveとセーブを検証・照合中…');
   const outcome=await sync(true);
   if(outcome==='ready')onInitialReady();
@@ -289,7 +291,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   });
   button.disabled=false;
   if(setupButton)setupButton.disabled=false;
-  show('Google Driveに接続すると、端末データの消失に備えて自動バックアップします。認証期限切れやオフライン中は停止します。');
+  show('未接続');
  }).catch(error=>show(error.message));
  button.disabled=true;
  const expiredDialog=doc?.getElementById('googleDriveExpiredDialog');
