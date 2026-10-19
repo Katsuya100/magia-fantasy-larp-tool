@@ -144,7 +144,7 @@ export const scenarios=[
  {name:'Lv150 / 90-100F / 5 circles / no items / no stones',level:150,fromLayer:90,toLayer:100,spells:'five',stones:'none'},
  {name:'Lv150 / 90-100F / 5 circles / no items / earned stones',level:150,fromLayer:90,toLayer:100,spells:'five',stones:'earned'}
 ];
-export function summarize(config,samples=32){
+export function summarize(config,samples=128){
  const runs=Array.from({length:samples},(_,i)=>simulate(17011+i*13,config));
  const wins=runs.filter(x=>x.win);
  const avg=x=>Math.round(x.reduce((n,v)=>n+v,0)/x.length*10)/10;
@@ -158,7 +158,13 @@ export function summarize(config,samples=32){
   avgSpentStones:avg(runs.map(x=>x.spentStones)),
   lossByFight:Object.entries(runs.filter(x=>!x.win).reduce((a,x)=>{const f=x.clear+1;a[f]=(a[f]||0)+1;return a;},{}))};
 }
-for(const config of scenarios)console.log('PROGRESSION_SIM '+JSON.stringify(summarize(config)));
+const progressSummaries=scenarios.map(config=>summarize(config));
+for(const summary of progressSummaries)console.log('PROGRESSION_SIM '+JSON.stringify(summary));
+// Ensure every mid-/late-game consecutive band stays challenging but viable.
+for(const summary of progressSummaries.slice(5)){
+ assert.ok(summary.winRate>=70,summary.name+' clear rate below 70%: '+summary.winRate+'%');
+ assert.ok(summary.avgMpPercent!==null&&summary.avgMpPercent<=30,summary.name+' clears with too much MP: '+summary.avgMpPercent+'%');
+}
 // Every planned band is checked using the level intended for its final boss.
 for(const config of scenarios.filter(x=>x.toLayer>=10)){
  assert.equal(config.level,targetClearLevel(config.toLayer),'intended boss level '+config.toLayer);
