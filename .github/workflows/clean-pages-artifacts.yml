@@ -1,19 +1,10 @@
 name: Clean old GitHub Pages artifacts
 
 on:
-  # Run once on installation/updates, then automatically after Pages builds.
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/clean-pages-artifacts.yml
-      - scripts/clean-pages-artifacts.cjs
-      - scripts/clean-pages-artifacts.test.cjs
+  # Clean up after a GitHub Pages deployment, or when manually dispatched.
   workflow_run:
     workflows: ["pages build and deployment"]
     types: [completed]
-  # Fallback if the GitHub-managed Pages workflow does not emit workflow_run.
-  schedule:
-    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
