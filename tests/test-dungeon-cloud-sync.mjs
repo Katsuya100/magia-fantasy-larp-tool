@@ -76,6 +76,26 @@ circleTable.delete('tamper-circle');
 assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(damaged))).status,'corrupt');
 await assert.rejects(saveProfile(damaged,{name:'誤上書き',level:5}),/整合性/);
 
+// Permadeath legacies retain their photographs inside nested profile objects.
+// JSON.stringify(Blob) used to discard these without warning.
+const legacyFactory=fakeIndexedDB(),legacyDb=await openStore(legacyFactory);
+await saveProfile(legacyDb,{name:'後継者',level:2});
+await putCircle(legacyDb,{id:'lost-photo',image:photo,analysis:{power:8}});
+const heir=await readDungeonSnapshot(legacyDb);
+heir.profile.legacies=[{name:'先代',circles:[{id:'lost-photo',image:photo}],loot:[]}];
+await saveProfile(legacyDb,heir.profile);
+const sealedLegacy=await readDungeonSnapshot(legacyDb);
+assert.equal((await verifyLocalSnapshot(sealedLegacy)).status,'valid','nested photos have trusted evidence');
+const legacyText=await serializeDungeonSnapshot(sealedLegacy);
+const legacyDecoded=deserializeDungeonSnapshot(legacyText);
+assert.ok(legacyDecoded.profile.legacies[0].circles[0].image instanceof Blob,'the backup preserves a nested image');
+assert.deepEqual(new Uint8Array(await legacyDecoded.profile.legacies[0].circles[0].image.arrayBuffer()),new Uint8Array(await photo.arrayBuffer()));
+const corruptedPhoto=new Blob([Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,1])],{type:'image/png'});
+const storedProfile=legacyFactory.databases.get('magia-dungeon-v1').get('settings').get('profile');
+storedProfile.legacies[0].circles[0].image=corruptedPhoto;
+legacyFactory.databases.get('magia-dungeon-v1').get('settings').set('profile',storedProfile);
+assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(legacyDb))).status,'corrupt','tampered legacy photo cannot silently overwrite backup');
+
 const calls=[];
 const mockedFetch=async(url,options={})=>{
  calls.push({url:String(url),options});
