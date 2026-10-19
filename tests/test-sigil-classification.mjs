@@ -90,11 +90,11 @@ const fixtures = [
   })),
   {name: 'debuff: nine separated radial strokes', role: 'debuff', shape: radialGap, expectOpenLinearOverride: true},
   {name: 'debuff: open crossed arrows with tiny closed triangles', role: 'debuff',
-    shape: crossingOpenArrows},
+    shape: crossingOpenArrows, expectGlyphOverride: true},
   {name: 'debuff: open crossed arrows and separated small markings', role: 'debuff',
-    shape: crossingOpenArrows + peripheralOpenMarks},
+    shape: crossingOpenArrows + peripheralOpenMarks, expectGlyphOverride: true},
   {name: 'debuff: narrow stroke open arrows with tiny triangles', role: 'debuff',
-    shape: crossingOpenArrows, stroke: 4},
+    shape: crossingOpenArrows, stroke: 4, expectGlyphOverride: true},
   {name: 'debuff: nine rays with a partial scan-rim circle', role: 'debuff',
     shape: radialGap + openRing(191, 25), expectOpenLinearOverride: true},
   {name: 'debuff: nine rays with a narrow-gap scan-rim arc', role: 'debuff',
@@ -158,19 +158,20 @@ const fixtures = [
 
 let passed = 0;
 const failures = [];
-for (const {name, role, shape, stroke = 7, expectPointedFaces = false, expectOpenLinearOverride = false, expectNoOverride = false} of fixtures) {
+for (const {name, role, shape, stroke = 7, expectPointedFaces = false, expectOpenLinearOverride = false, expectNoOverride = false, expectGlyphOverride = false} of fixtures) {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><g fill="none" stroke="#111" stroke-width="' + stroke + '" stroke-linecap="round" stroke-linejoin="round">' + shape + '</g></svg>');
   const image = await sharp(svg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { scores, features } = analyzeSigilMetricsJs(image.data, size, size, paths);
   const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   console.log(JSON.stringify({ name, expected: role, predicted: ranked[0][0], scores,
-    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, openLinearStrokes: features.openLinearStrokes, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
+    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, openLinearStrokes: features.openLinearStrokes, radialStrokeCrossings: features.radialStrokeCrossings, enclosedAreaFraction: features.enclosedAreaFraction, openGlyphOverride: features.openGlyphOverride, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
       broadAngleRatio: features.broadAngleRatio, sharpTipCount: features.sharpTipCount,
       missingRayRatio: features.missingRayRatio, openPathStraightness: features.openPathStraightness, broadBendRuns: features.broadBendRuns} }));
   if (ranked[0][0] !== role || ranked[0][1] < .35 || ranked[0][1] - ranked[1][1] < .02 ||
     (expectPointedFaces && features.pointedFaces < 2) ||
     (expectOpenLinearOverride && features.openLinearStrokes < 3) ||
-    (expectNoOverride && features.openLinearStrokes !== 0)) {
+    (expectNoOverride && features.openGlyphOverride) ||
+    (expectGlyphOverride && !features.openGlyphOverride)) {
     failures.push(name + ': expected ' + role + ', got ' + ranked[0][0] + ', margin=' + (ranked[0][1] - ranked[1][1]).toFixed(3));
   } else passed++;
 }
