@@ -1640,6 +1640,7 @@ html,body{overflow-x:clip}
 .cloud-sync-note{font-size:12px!important;color:var(--soft);line-height:1.65}
 .cloud-sync button[disabled]{opacity:.55;cursor:not-allowed}
 .cloud-sync-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+#googleDriveConflictDialog [data-action="overwrite"],#googleDriveOverwriteDialog [data-action="confirm"]{background:linear-gradient(#d9494f,#941f32);color:#fff;border-color:#f17980}
 /* Automatic Drive sync stays nonblocking; the ring appears only while the
    remote list/upload/download/readback operation is actually in progress. */
 .drive-sync-state{display:flex;align-items:center;gap:9px;min-height:26px}
