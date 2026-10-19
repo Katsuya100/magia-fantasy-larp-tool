@@ -73,6 +73,48 @@ export function stoneLedger(seed,throughLayer,returnEvery=1){
  }
  return {level:progress.level,stones:bank,levels,returns};
 }
+// Repeat the last conquered boss layer after each ten-layer milestone.
+// This deliberately models successful repeat runs, not guaranteed wins, and
+// applies both the game's falling overlevel stone drop chance and reduced XP.
+// Spending is handled separately: bank here means stones earned, not still held.
+export function stoneFarmingLedger(seed,throughLayer,extraRunsPerDecade=0){
+ const r=rng(seed),progress={level:1,xp:0},reports=[];
+ let earned=0,pendingStones=0,pendingXp=0,farmStones=0,farmBattles=0;
+ const completeLayer=layer=>{
+  for(let i=0;i<5;i++){
+   const fight=(layer-1)*5+i+1,foe=enemyForFight(data.enemies,fight);
+   const enemyLevel=Number(data.floors[fight-1].enemy_level);
+   pendingStones+=G.drops(data.items,data.collections,enemyLevel,r,{
+    layer,playerLevel:progress.level,bossEnemyId:i===4?foe.id:null
+   }).filter(x=>x.type==='stone').length;
+   pendingXp+=G.fightExperience(enemyLevel,progress.level,layer);
+  }
+ };
+ const returnHome=()=>{
+  const stones=pendingStones;
+  earned+=stones;
+  G.experience(progress,pendingXp);
+  pendingStones=0;pendingXp=0;
+  return stones;
+ };
+ for(let layer=1;layer<=throughLayer;layer++){
+  completeLayer(layer);
+  if(layer%10!==0&&layer!==throughLayer)continue;
+  returnHome();
+  if(layer%10===0){
+   const levelBeforeFarm=progress.level,before=earned;
+   for(let n=0;n<extraRunsPerDecade;n++){
+    completeLayer(layer);
+    farmStones+=returnHome();
+    farmBattles+=5;
+   }
+   reports.push({layer,levelBeforeFarm,levelAfterFarm:progress.level,
+    earnedFromFarming:earned-before,totalEarned:earned});
+  }
+ }
+ return {level:progress.level,stones:earned,earnedFromFarming:farmStones,
+  farmBattles,returns:reports};
+}
 // Allocate a documented share of stones earned before this band to the equipped circles.
 // Unlike the former 12%-and-16-cap shortcut, no fabricated upper limit is imposed.
 // Players can spend anything from 0% to 100%, so sensitivity is measured below.
@@ -97,10 +139,12 @@ export function upgradeSpells(spells,budget){
  return {spells:base,counts,costs:base.map(s=>G.spellMpCost(s))};
 }
 const ledgerCache=new Map();
-export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5,mpRecoveryFactor=undefined}={}){
+export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5,mpRecoveryFactor=undefined,farmRunsPerDecade=0}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
- const ledgerKey=seed+':'+fromLayer;
- if(stones==='earned'&&!ledgerCache.has(ledgerKey))ledgerCache.set(ledgerKey,stoneLedger(seed+81,fromLayer-1,10));
+ const ledgerKey=seed+':'+fromLayer+':farm'+farmRunsPerDecade;
+ if(stones==='earned'&&!ledgerCache.has(ledgerKey))ledgerCache.set(ledgerKey,
+  farmRunsPerDecade>0?stoneFarmingLedger(seed+81,fromLayer-1,farmRunsPerDecade)
+   :stoneLedger(seed+81,fromLayer-1,10));
  const history=stones==='earned'?ledgerCache.get(ledgerKey):{stones:0};
  const budget=stones==='earned'?Math.floor(history.stones*Math.max(0,Math.min(1,stoneUse))):Math.max(0,Number(stones)||0);
  const equipment=upgradeSpells(SPELLS[spells],budget);
@@ -108,7 +152,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
  const hero=G.makeUnit(base,effectiveLevel,{},equipment.spells,'player');
  const first=(fromLayer-1)*5+1,last=toLayer*5;
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
-  startLevel:effectiveLevel,forecastLevelAtEntry:history.level??null,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,unspentStones:Math.max(0,history.stones-budget),upgradeCounts:equipment.counts,
+  startLevel:effectiveLevel,forecastLevelAtEntry:history.level??null,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,unspentStones:Math.max(0,history.stones-budget),farmStones:history.earnedFromFarming??0,farmBattles:history.farmBattles??0,upgradeCounts:equipment.counts,
   initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[]};
  for(let fight=first;fight<=last;fight++){
   const foe=enemyForFight(data.enemies,fight);
@@ -169,6 +213,8 @@ export function summarize(config,samples=32){
   avgMpPercent:wins.length?Math.round(100*avg(wins.map(x=>x.mp/x.initialMp))):null,
   avgStones:avg(runs.map(x=>x.availableStones)),
   avgSpentStones:avg(runs.map(x=>x.spentStones)),
+  avgFarmStones:avg(runs.map(x=>x.farmStones)),
+  avgFarmBattles:avg(runs.map(x=>x.farmBattles)),
   avgUnspentStones:avg(runs.map(x=>x.unspentStones)),
   forecastLevelAtEntry:avg(runs.map(x=>x.forecastLevelAtEntry??0)),
   lossByFight:Object.entries(runs.filter(x=>!x.win).reduce((a,x)=>{const f=x.clear+1;a[f]=(a[f]||0)+1;return a;},{}))};
@@ -454,6 +500,33 @@ const actualLast=summarize({name:'Actual XP final',level:'forecast',
  fromLayer:91,toLayer:100,spells:'five',stones:'earned',stoneUse:.75},128);
 assert.ok(actualLast.winRate>=70,'recommended MP recovery curve needs at least 70% clears from forecast level at 91F, with 75% earned-stone upgrades');
 assert.ok(actualLast.avgMpPercent<=25,'recommended curve should leave <=25% MP at the final boss');
+// Base case is one clear of each 10-layer milestone. Also repeat the frontier
+// layer 2, 5, and 10 extra times after each rank milestone: the drop penalty
+// grows as the character overlevels, so extra runs do not yield 1.5 stones each.
+for(const extraRuns of [0,2,5,10]){
+ const ledgers=Array.from({length:128},(_,i)=>stoneFarmingLedger(99173+i*73,90,extraRuns));
+ const sorted=ledgers.map(x=>x.stones).sort((a,b)=>a-b);
+ const mean=k=>Math.round(10*ledgers.reduce((a,x)=>a+x[k],0)/ledgers.length)/10;
+ console.log('FARMING_STONE_ECONOMY '+JSON.stringify({extraRunsPerDecade:extraRuns,
+  totalFarmBattles:mean('farmBattles'),meanEarned:mean('stones'),
+  meanFarmStones:mean('earnedFromFarming'),p10:sorted[12],
+  median:sorted[64],p90:sorted[115],meanLevelAfter90:mean('level')}));
+}
+for(const extraRuns of [0,2,5,10]){
+ for(const entryLevel of [150,'forecast']){
+  for(const band of scenarios.filter(x=>x.stones==='earned'&&[37,55,87,115,139,150].includes(x.level))){
+   const result=summarize({...band,level:entryLevel==='forecast'?'forecast':band.level,
+    stoneUse:1,farmRunsPerDecade:extraRuns},128);
+   console.log('FARMING_100_PERCENT_COMBAT '+JSON.stringify({
+    extraRunsPerDecade:extraRuns,entryLevel:entryLevel==='forecast'?'forecast':'target',
+    targetLevel:band.level,fromLayer:band.fromLayer,toLayer:band.toLayer,
+    forecastLevel:result.forecastLevelAtEntry,
+    winRate:result.winRate,mpPercent:result.avgMpPercent,
+    earned:result.avgStones,farmStones:result.avgFarmStones,
+    spent:result.avgSpentStones,avgCleared:result.avgCleared}));
+  }
+ }
+}
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
@@ -489,6 +562,12 @@ assert.ok(upgradeSpells(SPELLS.five,80).costs.every((mp,i)=>mp===G.mpCost(SPELLS
 assert.equal(G.magicStoneDropChance(targetClearLevel(30),30),.3);
 assert.equal(G.magicStoneDropChance(targetClearLevel(30)+1,30),.15);
 assert.equal(stoneLedger(1,0).stones,0);
+for(const sample of [1,7293,8191]){
+ const standard=stoneLedger(sample,90,10);
+ const farm0=stoneFarmingLedger(sample,90,0);
+ assert.equal(farm0.stones,standard.stones,'zero farming must preserve natural stone supply');
+ assert.equal(farm0.level,standard.level,'zero farming must preserve natural XP level');
+}
 assert.equal(stoneLedger(1,10,10).returns.filter(x=>x.settled).length,1,'ten-layer return policy settles exactly once');
 assert.ok(ledger.stones>0,'stones are banked across completed checkpoints');
 assert.ok(ledger.levels.every(x=>x.to>x.from),'level ups require accumulated XP');
