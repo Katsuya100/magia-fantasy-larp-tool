@@ -1639,6 +1639,7 @@ html,body{overflow-x:clip}
 .cloud-sync [role="status"]{font-size:13px;color:var(--pale);line-height:1.6;overflow-wrap:anywhere}
 .cloud-sync-note{font-size:12px!important;color:var(--soft);line-height:1.65}
 .cloud-sync button[disabled]{opacity:.55;cursor:not-allowed}
+#connectGoogleDrive[hidden],#setupGoogleDrive[hidden],#setupCreatePlayer[hidden],#setupSwitchGoogleDrive[hidden]{display:none!important}
 /* Keep both save-loss and concurrent-browser warnings visibly red. */
 .delete-data-dialog-inner .backup-sync-warning,
 .profile-data-actions .backup-sync-warning{
