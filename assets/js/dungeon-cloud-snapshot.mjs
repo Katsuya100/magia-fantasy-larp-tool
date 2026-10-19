@@ -17,6 +17,30 @@ function fromBase64(text){
  return bytes;
 }
 const assertShape=checkSnapshotShape;
+// The profile can contain hidden photos in permadeath legacies, including
+// nested lost rewards. JSON.stringify(Blob) silently turns those into {}.
+async function encodeNested(value,depth=0){
+ if(depth>50)throw Error('バックアップの入れ子が深すぎます。');
+ if(value instanceof Blob){
+  await digestPhoto(value);
+  return {__magiaSavePhoto:true,type:value.type,base64:toBase64(new Uint8Array(await value.arrayBuffer()))};
+ }
+ if(Array.isArray(value))return Promise.all(value.map(item=>encodeNested(item,depth+1)));
+ if(!value||typeof value!=='object')return value;
+ const entries=await Promise.all(Object.entries(value).map(async ([key,item])=>[key,await encodeNested(item,depth+1)]));
+ return Object.fromEntries(entries);
+}
+function decodeNested(value,depth=0){
+ if(depth>50)throw Error('バックアップの入れ子が深すぎます。');
+ if(!value||typeof value!=='object')return value;
+ if(value.__magiaSavePhoto===true){
+  if(typeof value.type!=='string')throw Error('遺物の画像形式が不正です。');
+  return new Blob([fromBase64(value.base64)],{type:value.type});
+ }
+ if(Array.isArray(value))return value.map(item=>decodeNested(item,depth+1));
+ return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,decodeNested(item,depth+1)]));
+}
+
 export async function serializeDungeonSnapshot(snapshot){
  assertShape(snapshot);
  const circles=await Promise.all(snapshot.circles.map(async circle=>{
@@ -25,7 +49,7 @@ export async function serializeDungeonSnapshot(snapshot){
   if(!(circle.image instanceof Blob)||circle.image.size>MAX_PHOTO||!/^image\/(jpeg|png|webp|gif)$/.test(circle.image.type))throw Error('魔法陣画像の形式をバックアップできません。');
   return {...circle,image:{blob:true,type:circle.image.type,base64:toBase64(new Uint8Array(await circle.image.arrayBuffer()))}};
  }));
- const payload={format:FORMAT,savedAt:Number(snapshot.savedAt)||0,profile:snapshot.profile,circles};
+ const payload={format:FORMAT,savedAt:Number(snapshot.savedAt)||0,profile:await encodeNested(snapshot.profile),circles};
   const text=JSON.stringify({...payload,checksum:quickFingerprint(payload)});
  if(text.length>MAX_PAYLOAD)throw Error('バックアップ容量が上限を超えました。');
  return text;
@@ -43,7 +67,7 @@ export function deserializeDungeonSnapshot(text){
   if(circle.image?.blob!==true||typeof circle.image.type!=='string')throw Error('画像形式が不正です。');
   return {...circle,image:new Blob([fromBase64(circle.image.base64)],{type:circle.image.type})};
  });
- return {profile:data.profile,circles,savedAt:Number(data.savedAt)||0,legacy:checksum===undefined};
+ return {profile:decodeNested(data.profile),circles,savedAt:Number(data.savedAt)||0,legacy:checksum===undefined};
 }
 export function isPristineDungeonSnapshot(snapshot){
  const p=snapshot.profile;
