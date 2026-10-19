@@ -333,7 +333,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    if(file&&remote.valid&&!samePlay&&!meta?.blocked){
     if(!initial){show('別のプレイの可能性があります。自動同期を停止しました。再接続して選択してください。');return result;}
     const choice=await chooseCloud('同じプレイと確認できません。引き継ぐか、上書きするか選んでください。',
-     {allowOverwrite:verification.status==='valid'||verification.status==='legacy'});
+     {allowOverwrite:verification.status==='valid'||verification.status==='legacy',initialChoice:initial});
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
      if(verification.status==='legacy'){
