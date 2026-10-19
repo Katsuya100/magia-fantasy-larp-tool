@@ -17,7 +17,8 @@ status_max_resistance,2,属性倍率の上限
 modifier_min,0.1,通常バフ倍率の下限
 modifier_max,3,通常バフ倍率の上限
 debuff_res_base,100,状態異常RES基準
-burn_hp_rate,0.045,火傷ダメージの最大HP割合
+burn_hp_rate,0.045,旧セーブに残る火傷の最大HP割合（互換用）
+burn_power_rate,0.5,実効魔力と火傷強度に掛ける継続ダメージ係数
 dizzy_max_rate,0.65,目眩の命中率減少上限
 shock_cooldown_extra,1,感電によるクールダウン延長
 spell_cooldown,2,魔法陣クールダウン初期値
