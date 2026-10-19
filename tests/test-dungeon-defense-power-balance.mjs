@@ -1,4 +1,4 @@
-// Prototype analysis. Runs only in GitHub Actions, not merged/deployed.
+// Symmetric power-duration regression: real combat against above-recommended enemies.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
@@ -14,6 +14,8 @@ const styles=[
  {id:'flame',attr:'flame',once:false,stones:0},
  {id:'flame+5',attr:'flame',once:false,stones:5},
  {id:'flame+10',attr:'flame',once:false,stones:10},
+ {id:'flame+20',attr:'flame',once:false,stones:20},
+ {id:'flame+30',attr:'flame',once:false,stones:30},
  {id:'flame-once',attr:'flame',once:true,stones:0},
  {id:'storm-once',attr:'storm',once:true,stones:0},
  {id:'flame-once+5',attr:'flame',once:true,stones:5},
@@ -87,9 +89,9 @@ const formulas=[
  {id:'constant2',base:2,cap:2,step:0},
  {id:'constant3',base:3,cap:3,step:0},
  {id:'constant4',base:4,cap:4,step:0},
- {id:'power200',base:2,cap:4,step:200},
- {id:'power250',base:2,cap:4,step:250},
- {id:'power300',base:2,cap:4,step:300}
+ {id:'power200',base:2,cap:6,step:200},
+ {id:'power250',base:2,cap:6,step:250},
+ {id:'power300',base:2,cap:6,step:300}
 ];
 const results=[],samples=96;
 for(const formula of formulas){
@@ -98,7 +100,7 @@ for(const formula of formulas){
   const row=balance.find(x=>x.key===key);assert.ok(row);row.value=String(value);
  }
  configure({...data,balance});
- for(const [power,duration] of [[50,formula.base],[168,formula.base],[270,Math.min(formula.cap,formula.base+(formula.step>0?Math.floor(270/formula.step):0))],[540,Math.min(formula.cap,formula.base+(formula.step>0?Math.floor(540/formula.step):0))]]){
+ for(const [power,duration] of [[50,formula.base],[168,formula.base],[270,Math.min(formula.cap,formula.base+(formula.step>0?Math.floor(270/formula.step):0))],[540,Math.min(formula.cap,formula.base+(formula.step>0?Math.floor(540/formula.step):0))],[1000,Math.min(formula.cap,formula.base+(formula.step>0?Math.floor(1000/formula.step):0))]]){
   assert.equal(G.defenseDuration({power}),duration,formula.id+' P'+power);
  }
  for(const band of bands){
