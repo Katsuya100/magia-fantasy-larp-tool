@@ -22,7 +22,7 @@ const wait=async(check,message)=>{
 };
 class Element{
  constructor(id){
-  this.id=id;this.hidden=['backupRollbackWarning','backupSetupSpinner','googleDriveSpinner','driveSyncActivity'].includes(id);this.disabled=false;this.open=false;this.textContent='';this.showModalCount=0;
+  this.id=id;this.hidden=['backupRollbackWarning','backupSetupSpinner','googleDriveSpinner','driveSyncActivity','disconnectGoogleDrive'].includes(id);this.disabled=false;this.open=false;this.textContent='';this.showModalCount=0;
   this.handlers=new Map();this.children=new Map();
  }
  addEventListener(name,handler){
@@ -199,6 +199,7 @@ try{
  assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.name,undefined,'initial file precedes the name');
  assert.equal(firstUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(firstUi.button.hidden,true,'no redundant button once a real file is verified');
+ assert.equal(firstUi.get('disconnectGoogleDrive').hidden,false,'connected profile exposes a disconnect action');
  assert.equal(firstUi.get('backupRiskWarning').hidden,true,'unbacked save warning is hidden only on success');
  assert.equal(firstUi.get('backupRollbackWarning').hidden,false);
 
@@ -268,6 +269,94 @@ try{
  assert.equal(deserializeDungeonSnapshot(queuedDrive.current).profile.name,'最後の名前','last local edit wins after a single queued upload');
  assert.equal(queuedDrive.putRequests,beforeQueuedPuts+2,'three edits coalesce into two serialized PUTs');
  assert.equal(queuedUi.get('googleDriveConflictDialog').open,false,'no restore chooser is needed for queued saves');
+
+ // Explicit unlink leaves both copies intact, cancels autosaves and the
+ // short-lived token cookie. Reconnection remains possible without data loss.
+ const detachedDb=await newDb(),detachedUi=fakeUi(),detachedDrive=remoteApi();
+ let detachedReady=0;
+ const detachedController=start(detachedDb,detachedUi,detachedDrive.fetchImpl,{onInitialReady:()=>detachedReady++});
+ await connect(detachedUi);
+ await wait(()=>detachedReady===1,'disconnect test starts with a verified backup');
+ assert.equal(detachedUi.get('disconnectGoogleDrive').hidden,false,'disconnect becomes available on verified connection');
+ const storedBeforeDetach=await readDungeonSnapshot(detachedDb),remoteBeforeDetach=detachedDrive.current;
+ const uploadedBeforeDetach=detachedDrive.uploads;
+ detachedUi.get('disconnectGoogleDrive').click();
+ assert.equal(detachedUi.doc.cookie,'','disconnect removes the short-lived authentication cookie');
+ assert.equal(detachedUi.button.hidden,false,'disconnect makes the connect button available again');
+ assert.equal(detachedUi.get('disconnectGoogleDrive').hidden,true,'disconnect button is hidden until reconnected');
+ assert.equal(detachedUi.get('backupRiskWarning').hidden,false,'offline data-loss warning is shown after unlink');
+ assert.equal(detachedUi.get('backupRollbackWarning').hidden,true,'concurrent-device warning is hidden when offline');
+ assert.equal(detachedUi.get('googleDriveSpinner').hidden,true,'disconnect hides the active spinner');
+ assert.equal(detachedUi.get('driveSyncActivity').hidden,true,'disconnect hides the global spinner');
+ assert.match(detachedUi.status.textContent,/同期を解除しました/);
+ assert.deepEqual(await readDungeonSnapshot(detachedDb),storedBeforeDetach,'disconnect does not delete or modify local game data');
+ assert.equal(detachedDrive.current,remoteBeforeDetach,'disconnect does not delete or overwrite Drive backup');
+ const detachedProfile=await getProfile(detachedDb);
+ detachedProfile.name='解除後の冒険者';
+ await saveProfile(detachedDb,detachedProfile);
+ assert.equal(await detachedController.syncNow(),'deferred','manual sync cannot upload after disconnect');
+ assert.equal(detachedDrive.uploads,uploadedBeforeDetach,'local edits after disconnect do not reach Drive');
+ // A page refresh cannot silently log back in after the access cookie is gone.
+ const refreshDetachedUi=fakeUi(detachedUi.cookies);
+ const refreshDetachedController=start(detachedDb,refreshDetachedUi,detachedDrive.fetchImpl);
+ await wait(()=>!refreshDetachedUi.button.disabled,'refreshed local-only view can reconnect');
+ assert.equal(refreshDetachedUi.button.hidden,false,'refresh stays disconnected');
+ assert.equal(refreshDetachedUi.get('disconnectGoogleDrive').hidden,true);
+ assert.equal(detachedDrive.uploads,uploadedBeforeDetach,'refresh never uploads while disconnected');
+ await connect(refreshDetachedUi,'connectGoogleDrive');
+ await wait(()=>refreshDetachedUi.status.textContent==='GoogleDrive同期済み','manual reconnect resumes verified backup');
+ assert.equal(deserializeDungeonSnapshot(detachedDrive.current).profile.name,'解除後の冒険者','reconnect uploads retained local edits');
+ assert.equal(refreshDetachedUi.get('disconnectGoogleDrive').hidden,false);
+ assert.equal(detachedDrive.operations.filter(method=>method==='POST').length,1,'reconnect updates existing backup, never creates a duplicate');
+
+ // Disconnect during an active Drive listing must not resurrect the old
+ // connection, create an upload, or put a stale synced label on the screen.
+ const staleDb=await newDb(),staleUi=fakeUi(),staleDrive=remoteApi();
+ let staleReady=0;
+ const staleController=start(staleDb,staleUi,staleDrive.fetchImpl,{onInitialReady:()=>staleReady++});
+ await connect(staleUi);
+ await wait(()=>staleReady===1,'in-flight cancellation starts connected');
+ const releaseStaleList=staleDrive.pauseNextList();
+ const staleRequest=staleController.syncNow();
+ await wait(()=>!staleUi.get('googleDriveSpinner').hidden,'network sync has begun');
+ staleUi.get('disconnectGoogleDrive').click();
+ assert.equal(staleUi.get('googleDriveSpinner').hidden,true,'disconnect immediately dismisses pending network indicator');
+ assert.equal(staleUi.doc.cookie,'','abort clears resumable authorization');
+ releaseStaleList(); // The fake endpoint intentionally ignores AbortSignal.
+ assert.equal(await staleRequest,'deferred','old connection is not allowed to finish as synced');
+ assert.match(staleUi.status.textContent,/同期を解除しました/,'stale sync cannot replace unlinked status');
+ assert.equal(staleDrive.uploads,1,'stale request cannot start another upload');
+ const afterStaleEdit=await getProfile(staleDb);
+ afterStaleEdit.name='オフライン冒険者';
+ await saveProfile(staleDb,afterStaleEdit);
+ assert.equal(await staleController.syncNow(),'deferred','further updates stay local only');
+ assert.equal(staleDrive.uploads,1,'no queued upload survives disconnect');
+
+ // A staged upload can already have reached Drive before the user clicks
+ // disconnect. It must never schedule the queued next upload or falsely mark
+ // the browser as connected when the old request finally returns.
+ const midDb=await newDb(),midUi=fakeUi(),midDrive=remoteApi();
+ let midReady=0;
+ const midController=start(midDb,midUi,midDrive.fetchImpl,{onInitialReady:()=>midReady++});
+ await connect(midUi);
+ await wait(()=>midReady===1,'upload-disconnect scenario starts connected');
+ const midProfile=await getProfile(midDb);
+ midProfile.name='送信途中';
+ await saveProfile(midDb,midProfile);
+ const releaseMidUpload=midDrive.pauseNextUpload();
+ const uploadAtDisconnect=midController.syncNow();
+ await wait(()=>midDrive.putRequests===2,'upload has reached Drive transport');
+ const queuedProfile=await getProfile(midDb);
+ queuedProfile.name='解除後の変更';
+ await saveProfile(midDb,queuedProfile);
+ assert.equal(await midController.syncNow(),'deferred','a second edit queues while the first PUT is active');
+ midUi.get('disconnectGoogleDrive').click();
+ const uploadsWhenDetached=midDrive.putRequests;
+ releaseMidUpload();
+ assert.equal(await uploadAtDisconnect,'deferred','stale upload never certifies sync');
+ assert.equal(midDrive.putRequests,uploadsWhenDetached,'pending follow-up is discarded at disconnect');
+ assert.match(midUi.status.textContent,/同期を解除しました/,'stale PUT result cannot restore connected UI');
+ assert.equal((await getProfile(midDb)).name,'解除後の変更','local game remains current after canceled upload');
 
  // 2. Fresh local browser + existing named cloud backup: require only two
  // choices, never a name form until the user chooses a new game.
