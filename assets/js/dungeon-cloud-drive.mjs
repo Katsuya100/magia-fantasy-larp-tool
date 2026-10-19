@@ -14,7 +14,7 @@ export function createDungeonDrive(token,fetchImpl=globalThis.fetch){
   return response;
  }
  async function list(){
-  const search=new URLSearchParams({spaces:'appDataFolder',q:"name = '"+FILE_NAME+"' and trashed = false",fields:'nextPageToken,files(id,name,modifiedTime)',pageSize:'100'});
+  const search=new URLSearchParams({spaces:'appDataFolder',q:"name contains 'magia-dungeon-save-v1' and trashed = false",fields:'nextPageToken,files(id,name,modifiedTime)',pageSize:'100'});
   let page,files=[];
   do{
    if(page)search.set('pageToken',page);else search.delete('pageToken');
@@ -22,7 +22,7 @@ export function createDungeonDrive(token,fetchImpl=globalThis.fetch){
    files.push(...(result.files||[]));
    page=result.nextPageToken;
   }while(page&&files.length<1000);
-  return files.filter(file=>file.name===FILE_NAME).sort((a,b)=>String(b.modifiedTime).localeCompare(String(a.modifiedTime)));
+  return files.filter(file=>file.name===FILE_NAME||file.name.startsWith('magia-dungeon-save-v1-')).sort((a,b)=>String(b.modifiedTime).localeCompare(String(a.modifiedTime)));
  }
  async function download(id){
   return (await request(API+'/'+encodeURIComponent(id)+'?alt=media')).text();
@@ -43,8 +43,24 @@ export function createDungeonDrive(token,fetchImpl=globalThis.fetch){
   if(!file?.id||!file.modifiedTime)throw Error('保存完了の確認ができませんでした。');
   return file;
  }
+ async function uploadAtomic(text){
+  const bytes=new Blob([text],{type:'application/json'});
+  const name='magia-dungeon-save-v1-'+Date.now()+'-'+Math.random().toString(36).slice(2)+'.json';
+  const init=await request(UPLOAD+'?uploadType=resumable&fields=id,modifiedTime',{
+   method:'POST',headers:{'Content-Type':'application/json','X-Upload-Content-Type':'application/json','X-Upload-Content-Length':String(bytes.size)},
+   body:JSON.stringify({name,mimeType:'application/json',parents:['appDataFolder']})
+  });
+  const session=init.headers.get('Location');
+  if(!session||new URL(session).origin!=='https://www.googleapis.com')throw Error('安全なアップロード先を取得できませんでした。');
+  const done=await request(session,{method:'PUT',headers:{'Content-Type':'application/json'},body:bytes});
+  const file=await done.json();
+  if(!file?.id)throw Error('バックアップの確定に失敗しました。');
+  const written=await download(file.id);
+  if(written!==text)throw Error('アップロード後の検証に失敗しました。以前のバックアップは保持されます。');
+  return file;
+ }
  async function metadata(id){
   return (await request(API+'/'+encodeURIComponent(id)+'?fields=id,name,modifiedTime')).json();
  }
- return {list,download,upload,metadata};
+ return {list,download,upload,uploadAtomic,metadata};
 }
