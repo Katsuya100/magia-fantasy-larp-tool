@@ -1,7 +1,7 @@
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
 import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
-import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,establishLegacyIntegrity} from './dungeon-store.mjs';
+import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,establishLegacyIntegrity,getProfile,saveProfile} from './dungeon-store.mjs';
 import {verifyLocalSnapshot,digestPhoto} from './dungeon-cloud-integrity.mjs';
 
 // Last-write-wins: the timestamp belongs to the game save, not Drive metadata.
@@ -12,6 +12,12 @@ export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remote
  if(localHash&&remoteHash&&localHash===remoteHash)return 'synced';
  if(pristine)return 'choose';
  return Number(localSavedAt)>Number(remoteSavedAt)?'upload':'download';
+}
+// Never infer game continuity from player name, level or timestamps.
+export function canAutoSyncPlay({localPlayId,remotePlayId,fileId,remoteHash,knownFileId,knownHash,identical=false}){
+ if(localPlayId&&remotePlayId)return localPlayId===remotePlayId;
+ if(localPlayId&&!remotePlayId)return Boolean(fileId&&knownFileId===fileId&&remoteHash&&knownHash===remoteHash);
+ return !localPlayId&&!remotePlayId&&identical;
 }
 export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=()=>{},onRepairImages=async()=>false,onImagesRestored=async()=>{},fetchImpl=globalThis.fetch,windowImpl=globalThis.window}){
  if(!GOOGLE_CLIENT_ID){
@@ -312,6 +318,35 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    }
    const remote=await checkedRemote(file,initial);
    ensureCurrent(activeSyncEpoch);
+   const localPlayId=local.profile?.playId,remotePlayId=remote.data?.profile?.playId;
+   let legacyAdoption=false,samePlay=!file;
+   if(file&&remote.valid){
+    let identical=false;
+    if(!localPlayId&&!remotePlayId&&verification.status==='valid'){
+     const text=await serializeDungeonSnapshot(local);
+     identical=(await snapshotHash(text))===remote.hash;
+    }
+    legacyAdoption=Boolean(localPlayId&&!remotePlayId&&meta?.fileId===file.id&&meta?.hash===remote.hash);
+    samePlay=canAutoSyncPlay({localPlayId,remotePlayId,fileId:file.id,remoteHash:remote.hash,
+     knownFileId:meta?.fileId,knownHash:meta?.hash,identical});
+   }
+   if(file&&remote.valid&&!samePlay&&!meta?.blocked){
+    if(!initial){show('別のプレイの可能性があります。自動同期を停止しました。再接続して選択してください。');return result;}
+    const choice=await chooseCloud('同じプレイと確認できません。引き継ぐか、上書きするか選んでください。',
+     {allowOverwrite:verification.status==='valid'||verification.status==='legacy'});
+    if(choice==='restore')return await restore(remote,file,{explicit:true});
+    if(choice==='overwrite'){
+     if(verification.status==='legacy'){
+      await establishLegacyIntegrity(db,local);
+      local=await readDungeonSnapshot(db);
+      verification=await verifyLocalSnapshot(local);
+     }
+     if(verification.status!=='valid'){show('端末データを検証できないため上書きできません。');return result;}
+     const outcome=await upload(local,file,{allowInitial:true});
+     return outcome==='ready'?'start-new':outcome;
+    }
+    return result;
+   }
    if(!file&&verification.status==='legacy'){
     await establishLegacyIntegrity(db,local);
     local=await readDungeonSnapshot(db);
@@ -398,14 +433,16 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    ensureCurrent(activeSyncEpoch);
    const pristine=isPristineDungeonSnapshot(local);
    if(file&&!remote.valid){
-    // A newly migrated legacy proof does not authorize overwriting damaged Drive data.
-    if(upgradedLegacy){show('旧形式のセーブは変換しましたが、Drive側のバックアップが破損しています。上書きは停止しました。');return result;}
-    // A valid sealed local copy can replace a broken Drive copy.
-    if(pristine){show('Driveのバックアップが破損しています。端末データでの上書きは停止しました。');return result;}
-    return await upload(local,file);
+    show('Driveのバックアップを検証できません。自動上書きを停止しました。');
+    return result;
    }
    if(!file){
-    // Save the unnamed starting profile before allowing a name to be entered.
+    if(!local.profile?.playId){
+     // Brand-new cloud backup: assign a durable play ID before uploading.
+     const profile=await getProfile(db);
+     await saveProfile(db,profile);
+     local=await readDungeonSnapshot(db);
+    }
     return await upload(local,null,{allowInitial:true});
    }
    const localText=await serializeDungeonSnapshot(local);
@@ -413,6 +450,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    ensureCurrent(activeSyncEpoch);
    const decision=decideCloudSync({file,localHash,remoteHash:remote.hash,
     localSavedAt:local.savedAt,remoteSavedAt:remote.data?.savedAt||0,pristine});
+   if(legacyAdoption&&decision==='download'){
+    show('旧バックアップとの同期を保留しました。再接続して確認してください。');
+    return result;
+   }
    // Unknown historic timestamps cannot safely resolve conflicting saves:
    // do not silently overwrite or replace either copy.
    if(upgradedLegacy&&!pristine&&local.savedAt===0&&localHash!==remote.hash){
