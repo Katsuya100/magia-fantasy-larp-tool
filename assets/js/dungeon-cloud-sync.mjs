@@ -13,7 +13,7 @@ export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remote
  if(localHash===remoteHash)return 'synced';
  return Number(localSavedAt)>Number(remoteSavedAt)?'upload':'download';
 }
-export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=()=>{},onRepairImages=async()=>false,fetchImpl=globalThis.fetch,windowImpl=globalThis.window}){
+export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=()=>{},onRepairImages=async()=>false,onImagesRestored=async()=>{},fetchImpl=globalThis.fetch,windowImpl=globalThis.window}){
  if(!GOOGLE_CLIENT_ID){
   windowImpl?.document?.getElementById('setupGoogleDrive')?.setAttribute('disabled','');
   status.textContent='Google連携を利用できません。この端末内のセーブだけでは消失する可能性があります。';
@@ -179,6 +179,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      local=await readDungeonSnapshot(db);
      verification=await verifyLocalSnapshot(local);
      show(restored.length+'件の魔法陣画像をDriveから個別復旧しました。');
+     await onImagesRestored(restored);
     }
     if(verification.status==='badImages'){
      const repaired=await onRepairImages(verification.badImageIds);
