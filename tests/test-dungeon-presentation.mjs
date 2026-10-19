@@ -241,7 +241,7 @@ assert.match(cloudSync,/if\(busy\)\{again=true;return;\}/,'autosave edits during
 assert.match(cloudSync,/disconnectButton\?\.addEventListener\('click',\(\)=>\{void disconnect\(\);\}\)/,'unlink action waits without blocking gameplay');
 assert.match(cloudSync,/if\(disconnectPending\)\{\s*finishDisconnect\(\)/,'unlink happens only in the active request finalizer');
 assert.match(cloudSync,/requestController=null; \/\/ No abort: all in-flight requests have settled/,'normal unlink no longer aborts Drive uploads');
-assert.match(cloudSync,/if\(await confirmOverwrite\(\)\)finish\('overwrite'\)/,'overwriting requires a second confirmed choice');
+assert.match(cloudSync,/if\(await confirmOverwrite\(\)&&!disconnectPending&&conflictDialog\.open\)finish\('overwrite'\)/,'overwriting requires a second confirmed choice and active authorization');
 assert.match(cloudSync,/connectionEpoch\+\+;/,'old connection callbacks are invalidated');
 assert.match(cloudSync,/if\(!isCurrent\(activeSyncEpoch\)\)return 'deferred';/,'stale network results cannot restore connected UI');
 assert.match(cloudSync,/clearAuthCookie\(\);\s*drive=null;expires=0;validatedDrive=null;/,'unlink removes token while preserving data');
