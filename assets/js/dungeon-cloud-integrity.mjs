@@ -50,7 +50,7 @@ export async function verifyLocalSnapshot(snapshot){
  const badImageIds=[];
  for(const circle of snapshot.circles){
   const expected=proof.photos[circle.id];
-  if(expected===null&&circle.image==null)continue;
+  if(circle.image==null){badImageIds.push(circle.id);continue;}
   try{
    if(typeof expected!=='string'||!(circle.image instanceof Blob)||!circle.image.type||!descriptors[circle.id]||await digestPhoto(circle.image)!==expected)badImageIds.push(circle.id);
   }catch{badImageIds.push(circle.id);}
