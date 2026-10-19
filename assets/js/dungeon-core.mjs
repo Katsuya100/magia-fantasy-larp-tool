@@ -113,7 +113,7 @@ export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
 export const status=(actor,id)=>actor.statuses.find(s=>s.id===id);
-export function addStatus(actor,s){const old=status(actor,s.id);if(old&&s.id==='debuff_chaos'){Object.assign(old,s);return;}if(old){old.turns=Math.max(old.turns,s.turns);if(Math.abs(s.value)>Math.abs(old.value))old.value=s.value;return;}actor.statuses.push(s);}
+export function addStatus(actor,s){const old=status(actor,s.id);if(old&&s.id==='debuff_chaos'){Object.assign(old,s);return;}if(old){old.turns=Math.max(old.turns,s.turns);if(Math.abs(s.value)>Math.abs(old.value))old.value=s.value;if(s.effect==='burn'&&s.burnDamage!==undefined)old.burnDamage=Math.max(old.burnDamage??0,s.burnDamage);return;}actor.statuses.push(s);}
 export function resist(actor,attr){let r=actor.resists[attr]??1;const buff=status(actor,'resist_'+attr);const soak=status(actor,'debuff_aqua');if(buff)r*=1-buff.value*(soak?Math.max(0,1-soak.value):1);return clamp(r,num('status_min_resistance'),num('status_max_resistance'));}
 export function factor(actor,effect){return clamp(actor.statuses.filter(x=>x.effect===effect).reduce((n,x)=>n*(1+x.value),1),num('modifier_min'),num('modifier_max'));}
 export const armor=actor=>Math.ceil(Math.max(0,actor.stats.def+actor.statuses.filter(x=>x.effect==='def').reduce((n,x)=>n+x.value,0)));
@@ -186,7 +186,9 @@ export function cast(src,tgt,spell,buffs,r=Math.random){
   const law=status(tgt,'buff_law'),protection=law?Math.max(0,1-law.value):1;
   // Attribute/RES/law protection changes strength, not duration.
    const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);
-  addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:statusDuration(spell),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});
+  const value=Number(row.value)*power;
+  const burnDamage=row.effect==='burn'?Math.max(num('status_tick_min_damage'),Math.round(B*value*num('burn_power_rate'))):undefined;
+  addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value,burnDamage,turns:statusDuration(spell),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});
  }
  return a+'弱体付与'+legacy;
 }
@@ -237,7 +239,8 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  for(const a of actions){
   for(const s of a.u.statuses){
    if(s.effect==='burn'){
-    const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*num('burn_hp_rate')*s.value));
+    // Old saved battles may still carry a burn without its power-based tick.
+     const d=Math.max(num('status_tick_min_damage'),Math.round(s.burnDamage??a.u.stats.hp*num('burn_hp_rate')*s.value));
     const oldHp=a.u.hp;
     a.u.hp=Math.max(0,a.u.hp-d);
     const amount=oldHp-a.u.hp;
