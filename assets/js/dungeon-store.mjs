@@ -4,6 +4,7 @@ const DB_NAME='magia-dungeon-v1';
 const DB_VERSION=2;
 const STORES=['circles','settings'];
 const changes=new WeakMap();
+function stamp(tx){tx.objectStore('settings').put(Date.now(),'saveUpdatedAt');}
 function notifyDungeonDataChange(db){
  for(const cb of changes.get(db)||[])try{cb();}catch(error){console.error('セーブ変更通知の失敗',error);}
 }
@@ -45,6 +46,7 @@ function request(db,store,mode,op,{silent=false}={}){
       transaction.onerror=()=>reject(transaction.error||Error('保存に失敗しました。'));
       transaction.onabort=()=>reject(transaction.error||Error('保存が中断されました。'));
       const q=op(transaction.objectStore(store));
+      if(mode==='readwrite'&&!silent&&store==='settings'&&transaction.objectStoreNames.contains('settings'))stamp(transaction);
       q.onsuccess=()=>{result=q.result;};
       q.onerror=()=>reject(q.error||Error('保存データにアクセスできません。'));
     }catch(e){reject(e);}
@@ -58,8 +60,9 @@ export async function allCircles(db){
  const upgrades=profile?.circleUpgrades||{};
  return circles.map(circle=>applySavedUpgrade(circle,upgrades[circle.id]));
 }
-export const putCircle=(db,circle)=>request(db,'circles','readwrite',s=>s.put(circle));
-export const deleteCircle=(db,id)=>request(db,'circles','readwrite',s=>s.delete(id));
+export const putCircle=(db,circle)=>writeCircle(db,s=>s.put(circle));
+export const deleteCircle=(db,id)=>writeCircle(db,s=>s.delete(id));
+function writeCircle(db,op){return new Promise((resolve,reject)=>{const tx=db.transaction(STORES,'readwrite');let value;tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve(value);};tx.onerror=()=>reject(tx.error||Error('魔法陣を保存できません。'));const q=op(tx.objectStore('circles'));q.onsuccess=()=>{value=q.result;};stamp(tx);});}
 // Atomically erase only this dungeon game's own IndexedDB data.
 // Keeping both stores in one transaction prevents a partially erased profile.
 export function clearDungeonData(db){
@@ -86,6 +89,7 @@ export function saveProfileWithCircles(db,profile,added=[],removed=[]){
    for(const id of removed)photos.delete(id);
    for(const circle of added)photos.put(circle);
    tx.objectStore('settings').put(profile,'profile');
+   stamp(tx);
    tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve();};
    tx.onerror=()=>reject(tx.error||Error('遺物の保存に失敗しました'));
    tx.onabort=()=>reject(tx.error||Error('遺物の保存が中断されました'));
@@ -108,18 +112,19 @@ export function readDungeonSnapshot(db){
  return new Promise((resolve,reject)=>{
   try{
    const tx=db.transaction(STORES,'readonly');
-   let profile,circles;
-   tx.oncomplete=()=>resolve({profile,circles});
+   let profile,circles,savedAt;
+   tx.oncomplete=()=>resolve({profile,circles,savedAt:savedAt||0});
    tx.onerror=()=>reject(tx.error||Error('セーブの読み出しに失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブの読み出しが中断されました。'));
    const p=tx.objectStore('settings').get('profile');
    p.onsuccess=()=>{profile=p.result;};
+   const t=tx.objectStore('settings').get('saveUpdatedAt');t.onsuccess=()=>{savedAt=t.result;};
    const c=tx.objectStore('circles').getAll();
    c.onsuccess=()=>{circles=c.result;};
   }catch(error){reject(error);}
  });
 }
-export function replaceDungeonSnapshot(db,{profile,circles}){
+export function replaceDungeonSnapshot(db,{profile,circles,savedAt}){
  validateDatabase(db);
  if(!profile||typeof profile!=='object'||!Array.isArray(circles))return Promise.reject(Error('セーブの形式が不正です。'));
  return new Promise((resolve,reject)=>{
@@ -131,6 +136,7 @@ export function replaceDungeonSnapshot(db,{profile,circles}){
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
    settings.clear();items.clear();
    settings.put(profile,'profile');
+   settings.put(savedAt||Date.now(),'saveUpdatedAt');
    for(const circle of circles)items.put(circle);
   }catch(error){reject(error);}
  });
