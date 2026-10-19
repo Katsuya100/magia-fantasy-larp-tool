@@ -53,6 +53,20 @@ function finishBackupSetup(){
  if($('backupSetupDialog').open)$('backupSetupDialog').close();
  if(!profile.name)openNameDialog(true);
 }
+async function refreshRepairStatus(){
+ const health=await verifyLocalSnapshot(await readDungeonSnapshot(db));
+ $('repairMagicCirclePhotos').hidden=health.status!=='badImages';
+ return health;
+}
+async function handleDriveImageRepair(){
+ circleImages.releaseAll();
+ circles=newestCirclesFirst(await allCircles(db));
+ slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));
+ await refreshRepairStatus();
+ render();
+ $('repairMagicCirclePhotos').hidden=initialHealth.status!=='badImages';
+ if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}
+}
 async function recaptureMissingImages(ids){
  const dialog=$('imageRepairDialog'),input=$('imageRepairFile'),message=$('imageRepairCircleName'),error=$('imageRepairError');
  const remaining=[...new Set(ids)];
@@ -83,6 +97,7 @@ async function recaptureMissingImages(ids){
     circleImages.release(original.image);
     circles=circles.map(c=>c.id===id?{...c,image:file}:c);
     remaining.shift();
+    await refreshRepairStatus();
     render();
     if(!remaining.length)finish(true);
     else display();
@@ -136,7 +151,7 @@ async function load(){
   startupStage('セーブの破損を検出しました。Driveからの復元が必要です。');
   wire();
   initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),
-   onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages});
+   onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages,onImagesRestored:handleDriveImageRepair,onImagesRestored:handleDriveImageRepair});
   $('backupSetupTitle').textContent='セーブの破損を検出しました';
   $('setupWithoutBackup').disabled=true;
   finishStartup();
@@ -1302,6 +1317,11 @@ function wire(){
  $('cancelDeleteData').addEventListener('click',()=>$('deleteDataDialog').close());
  $('confirmDeleteData').addEventListener('click',()=>exclusive(eraseSaveData));
  $('setupWithoutBackup').addEventListener('click',finishBackupSetup);
+ $('repairMagicCirclePhotos').addEventListener('click',()=>{void exclusive(async()=>{
+  const health=await refreshRepairStatus();
+  if(health.status==='badImages')await recaptureMissingImages(health.badImageIds);
+  await refreshRepairStatus();
+ }).catch(error=>note('写真の修復に失敗しました：'+error.message));});
  $('backupSetupDialog').addEventListener('cancel',event=>event.preventDefault());
  $('closeMagicDetails').addEventListener('click',()=>$('magicDetailsDialog').close());
  $('upgradeCircle').addEventListener('click',()=>askCircleAction('upgrade',$('magicDetailsDialog').dataset.circleId));
