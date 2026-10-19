@@ -135,12 +135,16 @@ assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75
  'victory MP recovery decreases with level');
 
 assert.deepEqual(G.VICTORY_MP_LAYER_CURVE.map(([floor,rate])=>[floor,rate]),
- [[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],
-  [70,.34],[80,.32],[90,.23],[100,0]]);
-for(const [layer,expected] of [[1,1],[10,1],[15,.86],[20,.72],
- [80,.32],[90,.23],[95,.115],[100,0],[105,0]]){
+ [[1,1],[10,1],[20,.5976],[30,.5395],[40,.406],[50,.3332],[60,.2924],
+  [70,.2244],[80,.192],[90,.1288],[100,0]]);
+for(const [layer,expected] of [[1,1],[10,1],[15,.7988],[20,.5976],
+ [80,.192],[90,.1288],[95,.0644],[100,0],[105,0]]){
  assert.ok(Math.abs(G.victoryMpLayerFactor(layer)-expected)<1e-10,
   'victory MP recovery multiplier for floor '+layer);
+}
+for(let layer=2;layer<=110;layer++){
+ assert.ok(G.victoryMpLayerFactor(layer)<=G.victoryMpLayerFactor(layer-1),
+  'victory MP multiplier never increases with dungeon depth at '+layer+'F');
 }
 const checkMpLayer=layer=>{
  const hero=G.makeUnit(base,150);
