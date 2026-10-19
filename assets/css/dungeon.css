@@ -1823,3 +1823,136 @@ html,body{overflow-x:clip}
  .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{animation:none}
  .magic-details-dialog[data-enhancing="true"] .magic-details-content:after{display:none}
 }
+
+/* Stone-investment visual tiers (0-4 / 5-19 / 20-54 / 55+).
+   Each fighter/projectile has independent data-tier; incoming hits have their
+   own data-incoming-tier. Never move the arena, viewport or combat UI. */
+#battleArena .unit,#battleArena .spell-projectile{--stone-scale:1;--stone-glow:0px}
+#battleArena :is(.unit,.spell-projectile)[data-tier="2"]{--stone-scale:1.22;--stone-glow:12px}
+#battleArena :is(.unit,.spell-projectile)[data-tier="3"]{--stone-scale:1.5;--stone-glow:22px}
+#battleArena :is(.unit,.spell-projectile)[data-tier="4"]{--stone-scale:1.85;--stone-glow:38px}
+#battleArena :is(.unit,.spell-projectile)[data-tier="2"] :is(.element-flare,.element-trail,.combatant-ring,.combatant-burst),
+#battleArena :is(.unit,.spell-projectile)[data-tier="3"] :is(.element-flare,.element-trail,.combatant-ring,.combatant-burst),
+#battleArena :is(.unit,.spell-projectile)[data-tier="4"] :is(.element-flare,.element-trail,.combatant-ring,.combatant-burst){
+ scale:var(--stone-scale);filter:drop-shadow(0 0 var(--stone-glow) var(--combat-color,#fff9d8))
+}
+/* Projectiles share the seven original combat colors, independently by side. */
+#battleArena .spell-projectile{--combat-color:#f2d995}
+#battleArena .spell-projectile[data-attribute="flame"]{--combat-color:#ff9b58}
+#battleArena .spell-projectile[data-attribute="bolt"]{--combat-color:#f8db64}
+#battleArena .spell-projectile[data-attribute="aqua"]{--combat-color:#71d8e6}
+#battleArena .spell-projectile[data-attribute="storm"]{--combat-color:#a5f0d4}
+#battleArena .spell-projectile[data-attribute="gravity"]{--combat-color:#aa92e4}
+#battleArena .spell-projectile[data-attribute="law"]{--combat-color:#f2d995}
+#battleArena .spell-projectile[data-attribute="chaos"]{--combat-color:#f68fcb}
+/* The circular seal is etched with radial spokes, an inner rune and an outer
+   glowing halo. All are decorative, and never change casting/playback time. */
+#battleArena :is(.combatant-fx,.spell-projectile) :is(.tier-seal,.tier-halo,.tier-shards){
+ position:absolute;left:50%;top:42%;width:90px;height:90px;
+ pointer-events:none;opacity:0;z-index:5;transform-origin:center;
+ color:var(--combat-color,#f2d995)
+}
+#battleArena .spell-projectile :is(.tier-seal,.tier-halo,.tier-shards){left:0;top:0}
+#battleArena :is(.combatant-fx,.spell-projectile) .tier-seal{
+ border:3px double currentColor;border-radius:50%;
+ background:repeating-conic-gradient(from 9deg,currentColor 0deg 2deg,transparent 3deg 28deg);
+ mask-image:radial-gradient(circle,transparent 0 35%,#000 36% 44%,transparent 45% 53%,#000 54% 100%);
+ filter:drop-shadow(0 0 11px currentColor)
+}
+#battleArena :is(.combatant-fx,.spell-projectile) .tier-halo{
+ border:3px solid currentColor;border-radius:50%;
+ box-shadow:0 0 16px currentColor,inset 0 0 20px currentColor;
+ background:conic-gradient(from 8deg,transparent 0deg 25deg,currentColor 27deg 30deg,transparent 33deg 85deg,currentColor 87deg 90deg,transparent 93deg 145deg,currentColor 147deg 150deg,transparent 153deg 205deg,currentColor 207deg 210deg,transparent 213deg 265deg,currentColor 267deg 270deg,transparent 273deg 325deg,currentColor 327deg 330deg,transparent 333deg);
+}
+#battleArena :is(.combatant-fx,.spell-projectile) .tier-shards{
+ background:
+  radial-gradient(circle at 50% 0%,#fff 0 3px,transparent 5px),
+  radial-gradient(circle at 95% 22%,currentColor 0 4px,transparent 6px),
+  radial-gradient(circle at 98% 78%,#fff 0 3px,transparent 6px),
+  radial-gradient(circle at 50% 100%,currentColor 0 5px,transparent 7px),
+  radial-gradient(circle at 4% 75%,#fff 0 3px,transparent 5px),
+  radial-gradient(circle at 0% 22%,currentColor 0 4px,transparent 6px),
+  repeating-conic-gradient(from 9deg,transparent 0deg 25deg,currentColor 26deg 28deg,transparent 31deg 60deg);
+ mask-image:radial-gradient(circle,transparent 0 40%,#000 45% 100%);
+ filter:drop-shadow(0 0 9px currentColor)
+}
+/* Tier II: brighter, slightly larger primary rune. */
+#battleArena :is(.unit,.spell-projectile)[data-tier="2"] .tier-seal{
+ animation:stone-seal .44s ease-out both;scale:.85
+}
+/* Tier III: two opposing runic wheels and a scattering of magical motes. */
+#battleArena :is(.unit,.spell-projectile)[data-tier="3"] .tier-seal{
+ animation:stone-seal .44s ease-out both;scale:1.2
+}
+#battleArena :is(.unit,.spell-projectile)[data-tier="3"] .tier-halo{
+ animation:stone-halo .44s ease-out both;scale:1.35
+}
+#battleArena :is(.unit,.spell-projectile)[data-tier="3"] .tier-shards{
+ animation:stone-shards .44s ease-out both;scale:1.5
+}
+/* Tier IV: oversized triple-layer ceremony, luminous torrent, and impact. */
+#battleArena :is(.unit,.spell-projectile)[data-tier="4"] .tier-seal{
+ animation:stone-seal .44s ease-out both;scale:1.85
+}
+#battleArena :is(.unit,.spell-projectile)[data-tier="4"] .tier-halo{
+ animation:stone-halo .44s ease-out both;scale:2.1;
+ box-shadow:0 0 28px 5px currentColor,inset 0 0 30px currentColor
+}
+#battleArena :is(.unit,.spell-projectile)[data-tier="4"] .tier-shards{
+ animation:stone-shards .44s ease-out both;scale:2.3
+}
+@keyframes stone-seal{
+ 0%{opacity:0;transform:translate(-50%,-50%) rotate(-100deg) scale(.35)}
+ 33%,67%{opacity:.94;transform:translate(-50%,-50%) rotate(22deg) scale(1.05)}
+ 100%{opacity:0;transform:translate(-50%,-50%) rotate(94deg) scale(1.27)}
+}
+@keyframes stone-halo{
+ 0%{opacity:0;transform:translate(-50%,-50%) rotate(130deg) scale(.25)}
+ 41%,72%{opacity:.87;transform:translate(-50%,-50%) rotate(-25deg) scale(1)}
+ 100%{opacity:0;transform:translate(-50%,-50%) rotate(-130deg) scale(1.4)}
+}
+@keyframes stone-shards{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-25deg)}
+ 36%,65%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(35deg)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(1.6) rotate(90deg)}
+}
+/* Incoming color belongs to the attacking spell, even when both units cast. */
+#battleArena .unit[data-incoming-attribute="flame"]{--impact-color:#ff9b58}
+#battleArena .unit[data-incoming-attribute="bolt"]{--impact-color:#f8db64}
+#battleArena .unit[data-incoming-attribute="aqua"]{--impact-color:#71d8e6}
+#battleArena .unit[data-incoming-attribute="storm"]{--impact-color:#a5f0d4}
+#battleArena .unit[data-incoming-attribute="gravity"]{--impact-color:#aa92e4}
+#battleArena .unit[data-incoming-attribute="law"]{--impact-color:#f2d995}
+#battleArena .unit[data-incoming-attribute="chaos"]{--impact-color:#f68fcb}
+/* Powerful spell collisions and curses burst at the struck opponent.
+   Spell-to-target strength is not inferred from the victim's own cast. */
+#battleArena .unit[data-incoming="debuff"][data-incoming-tier="2"] :is(.element-flare,.element-trail){scale:1.22}
+#battleArena .unit[data-incoming="debuff"][data-incoming-tier="3"] :is(.element-flare,.element-trail){scale:1.5}
+#battleArena .unit[data-incoming="debuff"][data-incoming-tier="4"] :is(.element-flare,.element-trail){scale:1.85}
+#battleArena .unit[data-hit="true"][data-incoming-tier="3"] .combatant-fx,
+#battleArena .unit[data-hit="true"][data-incoming-tier="4"] .combatant-fx{opacity:1}
+#battleArena .unit[data-hit="true"][data-incoming-tier="3"] .combatant-fx::before,
+#battleArena .unit[data-hit="true"][data-incoming-tier="4"] .combatant-fx::before{
+ content:"";position:absolute;z-index:-1;left:50%;top:42%;
+ width:110px;height:110px;border-radius:50%;pointer-events:none;
+ background:radial-gradient(circle,#fffbd9e3 0 8%,var(--impact-color,var(--combat-color)) 20%,transparent 68%);
+ box-shadow:0 0 36px 10px var(--combat-aura);
+ animation:stone-impact .44s ease-out both
+}
+#battleArena .unit[data-hit="true"][data-incoming-tier="4"] .combatant-fx::before{
+ width:150px;height:150px;box-shadow:0 0 50px 20px var(--combat-aura)
+}
+@keyframes stone-impact{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.1)}
+ 39%,59%{opacity:.95;transform:translate(-50%,-50%) scale(1.2)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(2.05)}
+}
+@media(prefers-reduced-motion:reduce){
+ #battleArena :is(.unit,.spell-projectile) :is(.tier-seal,.tier-halo,.tier-shards){
+  animation:none!important;opacity:0!important;scale:1!important
+ }
+ #battleArena .unit[data-hit="true"] .combatant-fx::before{animation:none!important;opacity:0!important}
+ #battleArena :is(.unit,.spell-projectile) :is(.element-flare,.element-trail,.combatant-ring,.combatant-burst){
+  scale:1!important;filter:none!important
+ }
+}
