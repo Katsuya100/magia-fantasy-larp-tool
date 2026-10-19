@@ -150,7 +150,7 @@ async function load(){
  if(!profile.run)profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
  carry=profile.run?prepareItems([],profile.inventory.length,G.capacity(profile.level)):restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
  startupStage('迷宮の扉を開いている…');
- await persist();
+ // Reading the game must not advance savedAt or conceal a damaged prior seal.
  wire();
  initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),
   onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages});
