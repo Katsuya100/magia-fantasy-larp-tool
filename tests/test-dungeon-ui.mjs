@@ -19,6 +19,10 @@ try{
  assert.equal($('tab-library').hidden,false);
  assert.equal($('tab-dungeon').hidden,true,'no dungeon tab before an expedition');
  assert.equal($('tab-home').attributes['aria-current'],undefined);
+ assert.equal($('backupSetupDialog').open,true,'new adventurer first chooses backup or local save');
+ assert.equal($('nameDialog').open,false,'backup setup must happen before name entry');
+ await $('setupWithoutBackup').fire('click');
+ assert.equal($('backupSetupDialog').open,false,'local-only choice closes setup');
  assert.equal($('nameDialog').open,true,'new adventurer is named in a dialog');
  $('playerNameInput').value='　 ';
  await $('nameForm').fire('submit');
