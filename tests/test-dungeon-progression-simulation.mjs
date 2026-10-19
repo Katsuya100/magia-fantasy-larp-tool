@@ -97,7 +97,7 @@ export function upgradeSpells(spells,budget){
  return {spells:base,counts,costs:base.map(s=>G.spellMpCost(s))};
 }
 const ledgerCache=new Map();
-export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5,mpRecoveryFactor=.87}={}){
+export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5,mpRecoveryFactor=undefined}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
  const ledgerKey=seed+':'+fromLayer;
  if(stones==='earned'&&!ledgerCache.has(ledgerKey))ledgerCache.set(ledgerKey,stoneLedger(seed+81,fromLayer-1,10));
@@ -427,6 +427,33 @@ for(const policy of bossTurnPolicies){
   }
  }
 }
+// Release-candidate verification: deliberately omit mpRecoveryFactor so this
+// exercises the exact default curve exported by dungeon-core.mjs and used by the app.
+// Counts are 128 independent seeded combat runs per selected band.
+for(const stoneUse of [.5,.75,1]){
+ for(const band of scenarios.filter(x=>x.stones==='earned')){
+  const result=summarize({...band,stoneUse},128);
+  console.log('RECOMMENDED_MP_REVIEW '+JSON.stringify({level:band.level,
+   fromLayer:band.fromLayer,toLayer:band.toLayer,stoneUse,
+   winRate:result.winRate,mpPercent:result.avgMpPercent,earned:result.avgStones,
+   spent:result.avgSpentStones,cleared:result.avgCleared}));
+ }
+}
+for(const startLayer of [11,21,41,61,81,91]){
+ for(const stoneUse of [.5,.75,1]){
+  const cfg={name:'Actual XP trajectory',level:'forecast',fromLayer:startLayer,
+   toLayer:startLayer+9,spells:'five',stones:'earned',stoneUse};
+  const result=summarize(cfg,128);
+  console.log('RECOMMENDED_MP_ONCURVE '+JSON.stringify({startLayer,
+   forecastLevelAtEntry:result.forecastLevelAtEntry,stoneUse,
+   winRate:result.winRate,mpPercent:result.avgMpPercent,
+   earned:result.avgStones,spent:result.avgSpentStones,cleared:result.avgCleared}));
+ }
+}
+const actualLast=summarize({name:'Actual XP final',level:'forecast',
+ fromLayer:91,toLayer:100,spells:'five',stones:'earned',stoneUse:.75},128);
+assert.ok(actualLast.winRate>=70,'recommended MP recovery curve needs at least 70% clears from forecast level at 91F, with 75% earned-stone upgrades');
+assert.ok(actualLast.avgMpPercent<=25,'recommended curve should leave <=25% MP at the final boss');
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
