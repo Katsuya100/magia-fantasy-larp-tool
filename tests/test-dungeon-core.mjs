@@ -133,6 +133,25 @@ assert.ok(victoryMpRate(75)<.056,'mid-depth MP recovery is meaningfully reduced'
 assert.ok(victoryMpRate(150)>=.024&&victoryMpRate(150)<=.027,'deepest battles retain the playtested minimum recovery');
 assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75)&&victoryMpRate(75)>victoryMpRate(150),
  'victory MP recovery decreases with level');
+
+assert.deepEqual(G.VICTORY_MP_LAYER_CURVE.map(([floor,rate])=>[floor,rate]),
+ [[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],
+  [70,.34],[80,.32],[90,.23],[100,0]]);
+for(const [layer,expected] of [[1,1],[10,1],[15,.86],[20,.72],
+ [80,.32],[90,.23],[95,.115],[100,0],[105,0]]){
+ assert.ok(Math.abs(G.victoryMpLayerFactor(layer)-expected)<1e-10,
+  'victory MP recovery multiplier for floor '+layer);
+}
+const checkMpLayer=layer=>{
+ const hero=G.makeUnit(base,150);
+ hero.mp=0;
+ return G.recoverVictoryMp(hero,layer);
+};
+assert.ok(checkMpLayer(1)>checkMpLayer(50)&&checkMpLayer(50)>checkMpLayer(90),
+ 'victory MP restored decreases with dungeon depth at the same level');
+assert.equal(checkMpLayer(100),0,'100F victory grants zero automatic MP');
+assert.equal(checkMpLayer(110),0,'post-100 victory remains at zero automatic MP');
+
 const weak=G.enemyScaling(1),deep=G.enemyScaling(150);
 assert.ok(weak.hp<1&&weak.mag<1&&deep.hp<1&&deep.mag<1,'enemy tuning softens all levels');
 assert.ok(weak.hp<deep.hp&&weak.mag<deep.mag,'late bosses remain relatively tougher');
