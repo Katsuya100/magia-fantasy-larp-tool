@@ -280,7 +280,7 @@ assert.doesNotMatch(app,/魔法陣を保存した。性能は初回使用時に�
 assert.doesNotMatch(app,/鑑定/);
 assert.doesNotMatch(picker,/鑑定/);
 assert.match(app,/battleImageUrl\(c\.image\)/);
-assert.match(app,/data-circle-id.*?data-attribute.*?data-favorite/,'library retains attribute for subtle halo');
+assert.match(app,/data-circle-id.*?data-favorite.*?data-attribute/,'library retains favorite layout and adds attribute glow');
 assert.match(app,/data-attribute.*?data-cast/,'battle tile receives the same elemental halo');
 assert.match(css,/\.circle-grid \.card\[data-attribute\]::after,\.loadout-tile\[data-attribute\]::after/,'thumbnail halos stay behind the image');
 assert.match(css,/\.capture-reveal-dialog\[data-attribute\] #captureRevealImage\{/,'photo revelation gets a matching glow');
