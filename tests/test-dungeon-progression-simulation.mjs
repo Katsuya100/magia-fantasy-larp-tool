@@ -189,6 +189,22 @@ for(const layer of [10,20,30,40,50,60,70,80,90,100]){
 
 // The player cannot actually select 2,3,... as starting layers: compare a
 // ten-layer expedition plus return, assuming a badge was earned each decade.
+
+// A layer-by-layer ledger distinguishes stones already confirmed at the last
+// successful return from the unconfirmed drops held during the current sortie.
+for(let layer=1;layer<=100;layer++){
+ const at=decadeEconomyRuns.map(run=>run.returns[layer-1]);
+ const mean=fn=>Math.round(at.reduce((sum,row)=>sum+fn(row),0)/at.length*10)/10;
+ const confirmed=mean(r=>r.stones),pending=mean(r=>r.pendingStones);
+ const cumulative=mean(r=>r.stones+r.pendingStones);
+ const spendHalf=mean(r=>Math.floor(r.stones/2));
+ const afterHalf=mean(r=>r.stones-Math.floor(r.stones/2));
+ console.log('STONE_ECONOMY_LAYER '+JSON.stringify({layer,
+  recommendedLevel:targetClearLevel(layer),playerLevelDuringLayer:at[0].levelBefore,
+  playerLevelAfterReturn:at[0].level,banked:confirmed,pending,
+  earnedCumulative:cumulative,spentIfHalf:spendHalf,remainingIfHalf:afterHalf,
+  justReturned:at[0].settled}));
+}
 for(const layer of [10,20,30,40,50,60,70,80,90,100]){
  const sorted=decadeEconomyRuns.map(run=>run.returns[layer-1].stones).sort((a,b)=>a-b);
  const example=decadeEconomyRuns[0].returns[layer-1];
