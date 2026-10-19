@@ -365,6 +365,33 @@ for(const [curveName,rate90,rateEnd,layerEnd] of onCurveLateRecovery){
    level150MpPercent:atTarget.avgMpPercent}));
  }
 }
+// Final boss (fight 500): count actual combat rounds, not the entire 10-layer trek.
+// Include all attempts that reach the boss; give a separate distribution for wins.
+const bossPolicies=[
+ {name:'zero97',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,.34],[80,.29],[90,.23],[97,0],[100,0]]},
+ {name:'zero99',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,.34],[80,.29],[90,.23],[99,0],[100,0]]},
+ {name:'flat35',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],[70,.34],[80,.29],[90,.35],[100,.30]]}
+];
+for(const policy of bossPolicies){
+ for(const stoneUse of [.5,.75,1]){
+  for(const entryLevel of [150,'forecast']){
+   const config={level:entryLevel,fromLayer:91,toLayer:100,spells:'five',
+    stones:'earned',stoneUse,mpRecoveryFactor:policy.points};
+   const sims=Array.from({length:128},(_,i)=>simulate(17011+i*13,config));
+   const bossFights=sims.map(run=>run.fightStats.find(f=>f.fight===500)).filter(Boolean);
+   const wins=bossFights.filter(f=>f.win);
+   const sorted=wins.map(f=>f.turns).sort((a,b)=>a-b);
+   const hist=Object.entries(wins.reduce((m,f)=>(m[f.turns]=(m[f.turns]||0)+1,m),{}))
+    .sort((a,b)=>Number(a[0])-Number(b[0]));
+   const avg=wins.length?Math.round(wins.reduce((total,f)=>total+f.turns,0)*10/wins.length)/10:null;
+   console.log('FINAL_BOSS_500_TURNS '+JSON.stringify({policy:policy.name,stoneUse,
+    entryLevel:entryLevel==='forecast'?sims[0].startLevel:entryLevel,
+    attempts:sims.length,reachBoss:bossFights.length,bossWins:wins.length,
+    meanTurns:avg,minTurns:sorted[0]??null,medianTurns:sorted[Math.floor(sorted.length/2)]??null,
+    maxTurns:sorted.at(-1)??null,turnHistogram:hist}));
+  }
+ }
+}
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
