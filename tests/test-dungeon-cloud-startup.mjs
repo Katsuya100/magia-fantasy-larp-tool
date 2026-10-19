@@ -448,6 +448,41 @@ try{
  assert.equal(deserializeDungeonSnapshot(newGameDrive.current).profile.name,'新たな冒険者');
  assert.equal(newGameDrive.uploads,2);
 
+ // Profile-side connection uses the same wording and secondary confirmation.
+ const profileChoiceDb=await newDb(),profileChoiceUi=fakeUi(),profileChoiceDrive=remoteApi(firstDrive.current);
+ await saveCloudSyncState(profileChoiceDb,{blocked:true});
+ let profileChoiceReady=0;
+ start(profileChoiceDb,profileChoiceUi,profileChoiceDrive.fetchImpl,{onInitialReady:()=>profileChoiceReady++});
+ await connect(profileChoiceUi,'connectGoogleDrive');
+ await wait(()=>profileChoiceUi.get('googleDriveConflictDialog').open,'profile connection opens shared Drive chooser');
+ const profileOverwrite=profileChoiceUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]');
+ profileOverwrite.click();
+ assert.equal(profileChoiceUi.get('googleDriveOverwriteDialog').open,true,'profile overwrite opens second confirmation');
+ assert.equal(profileChoiceDrive.uploads,0,'profile does not write before confirmation');
+ profileChoiceUi.get('googleDriveOverwriteDialog').querySelector('[data-action="back"]').click();
+ assert.equal(profileChoiceUi.get('googleDriveConflictDialog').open,true,'profile cancellation returns to chooser');
+ assert.equal(profileChoiceDrive.uploads,0,'profile cancellation keeps original remote save');
+ profileOverwrite.click();
+ profileChoiceUi.get('googleDriveOverwriteDialog').querySelector('[data-action="confirm"]').click();
+ await wait(()=>profileChoiceReady===1,'profile overwrite starts only after confirmation');
+ assert.equal(profileChoiceDrive.uploads,1,'profile confirmation performs exactly one PATCH');
+ assert.equal(profileChoiceDrive.operations[0],'PATCH','profile overwrites existing Drive file');
+
+ // Unlinking while the second confirmation is open closes both dialogs
+ // without modifying Drive or leaving an OAuth cookie behind.
+ const confirmDb=await newDb(),confirmUi=fakeUi(),confirmDrive=remoteApi(firstDrive.current);
+ const confirmController=start(confirmDb,confirmUi,confirmDrive.fetchImpl);
+ await connect(confirmUi);
+ await wait(()=>confirmUi.get('googleDriveConflictDialog').open,'confirmation unlink test has a conflict');
+ confirmUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').click();
+ assert.equal(confirmUi.get('googleDriveOverwriteDialog').open,true);
+ const confirmBefore=confirmDrive.current;
+ await confirmController.disconnect();
+ assert.equal(confirmUi.get('googleDriveConflictDialog').open,false,'unlink closes underlying conflict dialog');
+ assert.equal(confirmUi.get('googleDriveOverwriteDialog').open,false,'unlink closes overwrite confirmation');
+ assert.equal(confirmUi.doc.cookie,'','unlink during confirmation removes cookie');
+ assert.equal(confirmDrive.current,confirmBefore,'unlink during confirmation never overwrites Drive');
+
  // 4. Reconnecting to the same initial backup should not show the chooser
  // just because a player has not entered a name yet.
  const seed=await readDungeonSnapshot(await newDb()),identicalDb=await newDb();
