@@ -66,8 +66,8 @@ function mutate(db,perform,overrides={}){
     if(++reads!==3)return;
     try{
      const p=previousProfile.result,c=previousCircles.result,seal=previousSeal.result;
-     if(seal?.version===1&&p){
-      if(seal.records!==recordFingerprint({profile:p,circles:c})||seal.savedAt===undefined)throw Error('保存データの整合性が一致しません。復元が必要です。');
+     if(seal?.version===1){
+      if(!p||seal.records!==recordFingerprint({profile:p,circles:c})||seal.savedAt===undefined)throw Error('保存データの整合性が一致しません。復元が必要です。');
      }
      perform(settings,items);
      const nextProfile=settings.get('profile'),nextCircles=items.getAll();
@@ -142,7 +142,10 @@ export async function getProfile(db){
   let p=await request(db,'settings','readonly',s=>s.get('profile'));
   if(!p){
     p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,tutorialDone:false,inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReturnedLayer:0,magicStones:0,run:null};
-    await saveProfile(db,p);
+    const seal=await request(db,'settings','readonly',s=>s.get('integrity'));
+    // A missing profile with a prior seal means corruption, not a new player.
+    // Keep it missing on disk so Drive can restore the complete trusted save.
+    if(!seal)await saveProfile(db,p);
   }
   return p;
 }
