@@ -223,6 +223,9 @@ assert.match(css,/\.drive-sync-spinner\[hidden\]\{display:none!important\}/,'spi
 assert.match(css,/@keyframes drive-sync-spin/,'actual CSS spinner animation exists');
 assert.match(app,/if\(!profile\.name\)openBackupSetup\(\)/,'new player setup remains explicit');
 assert.match(page,/<button type="button" id="connectGoogleDrive"[^>]*>GoogleDriveに同期する<\/button>/,'profile sync button is short');
+assert.match(page,/<button type="button" id="disconnectGoogleDrive" class="subtle" hidden>Google Driveの同期を解除<\/button>/,'profile exposes a hidden-until-connected disconnect button');
+assert.match(css,/#disconnectGoogleDrive\[hidden\]\{display:none!important\}|#connectGoogleDrive\[hidden\],#disconnectGoogleDrive\[hidden\]/,'disconnect is not shown when disconnected');
+assert.match(css,/\.cloud-sync-actions\{display:flex;flex-wrap:wrap/,'connection controls remain usable at mobile widths');
 assert.match(page,/<button type="button" id="setupGoogleDrive"[^>]*>GoogleDriveに同期する<\/button>/,'pre-registration sync button matches profile');
 assert.match(page,/<button type="button" id="setupWithoutBackup"[^>]*>同期せず始める<\/button>/,'local-only choice is clear');
 const cloudSync=await read('assets/js/dungeon-cloud-sync.mjs');
@@ -230,6 +233,11 @@ assert.match(cloudSync,/if\(choice==='restore'\|\|choice==='overwrite'\)\{[\s\S]
 assert.match(cloudSync,/setSyncing\(true\);\s*show\('同期中…'\)/,'background sync marks real API work busy');
 assert.match(cloudSync,/if\(again&&!stopped&&!restoring&&drive\)\{[\s\S]*?queueMicrotask\(\(\)=>\{if\(drive&&!stopped&&!restoring\)void sync\(false\)/,'at most one queued follow-up save starts immediately after active upload');
 assert.match(cloudSync,/if\(busy\)\{again=true;return;\}/,'autosave edits during upload coalesce into one pending bit');
+assert.match(cloudSync,/disconnectButton\?\.addEventListener\('click',disconnect\)/,'unlink action is wired');
+assert.match(cloudSync,/requestController\?\.abort\(\);requestController=null;/,'in-flight uploads are aborted on unlink');
+assert.match(cloudSync,/connectionEpoch\+\+;/,'old connection callbacks are invalidated');
+assert.match(cloudSync,/if\(!isCurrent\(activeSyncEpoch\)\)return 'deferred';/,'stale network results cannot restore connected UI');
+assert.match(cloudSync,/clearAuthCookie\(\);\s*drive=null;expires=0;validatedDrive=null;/,'unlink removes token while preserving data');
 assert.match(cloudSync,/setSyncing\(false\);\s*\}\s*\}\s*\}/,'busy spinner is cleared once the pending queue is drained');
 assert.doesNotMatch(page,/起動・再接続時は保存日時で後勝ち判定/,'implementation jargon is not shown to users');
 assert.match(css,/\.profile-data-actions \.backup-sync-warning\{[\s\S]*?color:#ff7777/,'backup loss and rollback text remains visibly red');
