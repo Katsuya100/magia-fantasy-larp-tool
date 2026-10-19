@@ -348,7 +348,7 @@ assert.match(css,/@keyframes circle-upgrade-ring\{[\s\S]*?100%\{opacity:0/,'ring
 assert.match(css,/@keyframes circle-upgrade-glow\{\s*0%,100%\{filter:none\}/,'photo returns to an unglowed state');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.magic-details-dialog\[data-enhancing="true"\] \.magic-details-content:after\{display:none\}/,'reduced motion does not leave the success flare stuck on screen');
 assert.match(app,/animationName==='circle-upgrade-aura'\)\$\('magicDetailsDialog'\)\.dataset\.enhancing='false'/,'animation completion clears enhancing state');
-assert.match(app,/addEventListener\('close',\(\)=>\$\('magicDetailsDialog'\)\.dataset\.enhancing='false'\)/,'closing early also clears enhancing state');
+assert.match(app,/addEventListener\('close',\(\)=>\{detailGlowEpoch\+\+;\$\('magicDetailsDialog'\)\.dataset\.enhancing='false';\}\)/,'closing early cancels pending painted glow and clears enhancing state');
 assert.match(app,/window\.matchMedia\?\.\('\(prefers-reduced-motion: reduce\)'\)/,'reduced-motion skips the ritual rather than leaving it active');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\s*\.magic-details-dialog\[data-enhancing="true"\] \.magic-circle-image-frame::before,[\s\S]*?\.magic-circle-image-frame::after\{animation:none\}/,'upgrade respects reduced motion');
 assert.match(page,/id="circleActionDialog"/,'delete and enhancement need confirmation');
