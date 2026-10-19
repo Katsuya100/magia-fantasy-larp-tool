@@ -188,7 +188,9 @@ assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing de
 assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
 assert.match(app,/shuffledLayerEnemyIds\(masters\.enemies,layer,Math\.random,slot\)/,'game assigns and saves a random order for each new layer');
 assert.match(app,/run\.layerEnemyOrder=\{layer,ids:/,'the order is stored in the active expedition');
-assert.match(app,/finishStartup\(\);\s*if\(!profile\.name\)openNameDialog\(true\)/,'startup mask closes before first-player name dialog appears');
+assert.match(app,/finishStartup\\(\\);\\s*if\\(!profile\\.name\\)openBackupSetup\\(\\)/,'backup setup appears before first-player name dialog');
+assert.match(page,/<dialog id="backupSetupDialog"/,'backup setup dialog exists');
+assert.match(page,/<dialog id="imageRepairDialog"/,'recapture dialog exists');
 assert.match(app,/load\(\)\.catch\(failStartup\)/,'startup errors remain visible inside the loading overlay');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
