@@ -1821,4 +1821,5 @@ html,body{overflow-x:clip}
 @media(prefers-reduced-motion:reduce){
  .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::before,
  .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{animation:none}
+ .magic-details-dialog[data-enhancing="true"] .magic-details-content:after{display:none}
 }

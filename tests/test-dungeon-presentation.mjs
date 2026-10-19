@@ -337,6 +337,7 @@ assert.match(css,/\.magic-details-dialog\[data-enhancing="true"\] \.magic-circle
 assert.match(css,/@keyframes circle-upgrade-halo\{[\s\S]*?100%\{opacity:0/,'background halo fades away');
 assert.match(css,/@keyframes circle-upgrade-ring\{[\s\S]*?100%\{opacity:0/,'ring fades away');
 assert.match(css,/@keyframes circle-upgrade-glow\{\s*0%,100%\{filter:none\}/,'photo returns to an unglowed state');
+assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.magic-details-dialog\[data-enhancing="true"\] \.magic-details-content:after\{display:none\}/,'reduced motion does not leave the success flare stuck on screen');
 assert.match(app,/animationName==='circle-upgrade-aura'\)\$\('magicDetailsDialog'\)\.dataset\.enhancing='false'/,'animation completion clears enhancing state');
 assert.match(app,/addEventListener\('close',\(\)=>\$\('magicDetailsDialog'\)\.dataset\.enhancing='false'\)/,'closing early also clears enhancing state');
 assert.match(app,/window\.matchMedia\?\.\('\(prefers-reduced-motion: reduce\)'\)/,'reduced-motion skips the ritual rather than leaving it active');
