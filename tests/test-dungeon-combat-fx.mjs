@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {effectCaption,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,COMBAT_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
+import {magicEffectTier,effectCaption,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,COMBAT_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase,buffs]=await Promise.all(['balance','levels','floors','player-base','buffs'].map(csv));
 configure({balance,levels,floors,playerBase});
@@ -47,6 +47,28 @@ assert.match(effectCaption({role:'defense',attribute:'aqua'}),/防御/);
 assert.match(effectCaption({role:'debuff',attribute:'storm'}),/弱体/);
 assert.match(effectCaption({role:'buff',attribute:'law'}),/強化/);
 assert.match(effectCaption({role:'support',attribute:'aqua',amount:8}),/回復 \+8/);
+// Strict boundaries for 3 ultimate circles at 55 spent stones each (165 total).
+for(const [stones,expected] of [[0,1],[4,1],[5,2],[19,2],[20,3],[54,3],[55,4],[100,4]]){
+ for(const role of ['attack','defense','support','debuff'])
+  assert.equal(magicEffectTier(stones,role),expected,role+' tier at '+stones);
+}
+for(const value of [undefined,null,-1,2.5,NaN,Infinity,'not-a-stone'])
+ assert.equal(magicEffectTier(value),1,'invalid investment is safe');
+for(const role of ['basic','burn','item','buff','revive'])
+ assert.equal(magicEffectTier(55,role),1,role+' never upgrades animation');
+const magicHero=unit([{...s('attack'),upgradeLevel:55}]);
+const magicEnemy=unit([{...s('attack','bolt'),upgradeLevel:20}]);
+const dual=ordered(magicHero,magicEnemy,0,0);
+assert.deepEqual(dual.slice(0,2).map(x=>[x.side,x.upgradeLevel]),[['hero',55],['enemy',20]],
+ 'simultaneous magic casts keep their own upgrade level');
+assert.deepEqual(dual.slice(0,2).map(x=>magicEffectTier(x.upgradeLevel,x.role)),[4,3]);
+const simple=unit([s('attack')]),upgradedVisual=unit([{...s('attack'),upgradeLevel:55}]);
+const foe1=unit([]),foe2=unit([]);
+const originalDamage=ordered(simple,foe1,0,-1)[0].amount;
+const tieredDamage=ordered(upgradedVisual,foe2,0,-1)[0].amount;
+assert.equal(tieredDamage,originalDamage,'visual investment alone never alters damage');
+const withoutMagic=ordered(unit([]),unit([]),-1,-1);
+assert.ok(withoutMagic.every(x=>x.upgradeLevel===0),'basic attacks stay tier I');
 assert.equal(effectDuration(),0,'without browser motion is disabled');
 assert.ok(COMBAT_EFFECT_MS<=480,'combat playback is snappier than before');
 assert.ok(ENCOUNTER_EFFECT_MS>COMBAT_EFFECT_MS,'entrance offers a short reading pause');
@@ -104,6 +126,24 @@ assert.equal(ceremonyDuration('loot',500,{drops:7}),lootCeremonyDuration(7),'loo
 assert.equal(ceremonyDuration('hero-death',500),1120,'player defeat remains unchanged');
 const cinematicCss=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
 const cinematicPage=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
+const arenaMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleArena"'),cinematicPage.indexOf('id="battleInfo"'));
+for(const name of ['tier-seal','tier-halo','tier-shards']){
+ assert.equal((arenaMarkup.match(new RegExp('class="'+name+'"','g'))||[]).length,4,
+  'each decorative tier layer exists for both combatants and both projectiles: '+name);
+}
+for(const tier of [2,3,4]){
+ assert.ok(cinematicCss.includes('[data-tier="'+tier+'"]'),'enhancement tier styling '+tier);
+}
+assert.match(cinematicCss,/\[data-incoming-tier="4"\]/,'ultimate damage has its own impact');
+assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?tier-seal/,'tiered artwork is motion-safe');
+const appSource=await readFile(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
+assert.match(appSource,/projectile\.dataset\.tier=actor\.dataset\.tier/,'attack projectiles use caster investment');
+assert.match(appSource,/victim\.dataset\.incomingAttribute=/,'dual casts keep the incoming attribute independent');
+assert.match(cinematicCss,/--impact-color/,'incoming projectile controls impact hue');
+assert.match(appSource,/victim\.dataset\.incomingTier=String\(magicEffectTier\(step\.upgradeLevel,step\.role\)\)/,
+ 'incoming force comes from opponent cast, not victim investment');
+assert.match(appSource,/target\.dataset\.tier='1'/,'cast animation is reset between phases');
+assert.match(appSource,/activeSpells\[index\]\.upgradeLevel=/,'saved expeditions recover their investment');
 for(const name of ['boss-vfx-flash','boss-vfx-wheel','boss-vfx-ring','boss-vfx-beam','boss-vfx-sparks'])
  assert.match(cinematicPage,new RegExp('class="[^"]*'+name),'boss ceremony artwork exists: '+name);
 for(const tier of ['boss','milestone','final'])
