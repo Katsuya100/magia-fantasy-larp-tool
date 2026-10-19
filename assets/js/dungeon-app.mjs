@@ -1,27 +1,27 @@
-import * as G from './dungeon-core.mjs?v=20261020.7';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261020.7';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261020.7';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261020.7';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261020.7';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261020.7';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261020.7';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261020.7';
+import * as G from './dungeon-core.mjs?v=20261020.8';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261020.8';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261020.8';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261020.8';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261020.8';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261020.8';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261020.8';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261020.8';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261020.7';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261020.7';
-import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261020.7';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles} from './dungeon-store.mjs?v=20261020.7';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261020.7';
-import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261020.7';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261020.7';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261020.7';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261020.7';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261020.7';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261020.7';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261020.7';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261020.7';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261020.7';
-import {createSuccessorProfile,legacyContents,reclaimLegacies} from './dungeon-permadeath.mjs?v=20261020.7';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261020.8';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261020.8';
+import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261020.8';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles} from './dungeon-store.mjs?v=20261020.8';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261020.8';
+import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261020.8';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261020.8';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261020.8';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261020.8';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261020.8';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261020.8';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261020.8';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261020.8';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261020.8';
+import {createSuccessorProfile,legacyContents,reclaimLegacies} from './dungeon-permadeath.mjs?v=20261020.8';
 let cloudSyncController;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -174,6 +174,8 @@ async function load(){
  if(Array.isArray(activeSpells))for(const [index,id] of (profile.run.slotIds||[]).entries()){
   const circle=circles.find(c=>c.id===id);
   if(activeSpells[index]&&circle?.basePower>0)activeSpells[index].basePower=circle.basePower;
+  // Restore the FX-only tier when resuming an expedition saved before upgrade visuals.
+  if(activeSpells[index]&&circle)activeSpells[index].upgradeLevel=Number.isSafeInteger(circle.upgradeLevel)?circle.upgradeLevel:0;
  }
  slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));
  ensureItemInstances(profile);
@@ -426,9 +428,13 @@ function clearCombatEffects(){
  for(const side of ['hero','enemy']){
   const target=$(side+'Combatant');
   target.dataset.effect='idle';
+  target.dataset.tier='1';
   target.dataset.hit='false';
-   target.dataset.incoming='none';
+  target.dataset.incoming='none';
+  target.dataset.incomingAttribute='law';
+  target.dataset.incomingTier='1';
   $(side+'Projectile').dataset.effect='idle';
+  $(side+'Projectile').dataset.tier='1';
   $(side+'FxText').textContent='';
  }
 }
@@ -447,12 +453,14 @@ async function animateBattle(steps){
     const actor=$(step.side+'Combatant');
     actor.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
     actor.dataset.effect=step.role;
+    actor.dataset.tier=String(magicEffectTier(step.upgradeLevel,step.role));
     // Magic attacks travel across the arena from their caster to their target.
     // Each simultaneous fighter controls a separate projectile.
     if(step.role==='attack'){
      const projectile=$(step.side+'Projectile');
      projectile.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
      projectile.dataset.effect='attack';
+     projectile.dataset.tier=actor.dataset.tier;
     }
     $(step.side+'FxText').textContent=effectCaption(step);
    }
@@ -462,6 +470,8 @@ async function animateBattle(steps){
     const victim=$(opponent+'Combatant');
     victim.dataset.hit='true';
      victim.dataset.incoming=step.role;
+    victim.dataset.incomingAttribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
+    victim.dataset.incomingTier=String(magicEffectTier(step.upgradeLevel,step.role));
     if(victim.dataset.effect==='idle')victim.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
    }
    const final=phase.at(-1);
