@@ -23,7 +23,14 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
   return {ready:false};
  }
  let token=null,expires=0,client=null,busy=false,again=false,timer=null,restoring=false;
- let drive=null,stopped=false;
+ let drive=null,stopped=false,expiryNoticeShown=false;
+ function expireConnection(){
+  drive=null;
+  show('Google認証が切れました。再接続すると自動同期が再開します。');
+  if(expiryNoticeShown)return;
+  expiryNoticeShown=true;
+  windowImpl?.document?.getElementById('googleDriveExpiredDialog')?.showModal?.();
+ }
  const show=message=>{status.textContent=message;};
  function schedule(){
   if(!drive||stopped||restoring)return;
@@ -32,7 +39,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
  async function sync(){
   if(!drive||stopped)return;
   if(busy){again=true;return;}
-  if(Date.now()>=expires){drive=null;show('Google認証の期限が切れています。再接続すると自動同期が再開します。');return;}
+  if(Date.now()>=expires){expireConnection();return;}
   busy=true;
   try{
    const meta=await getCloudSyncState(db);
@@ -68,7 +75,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
    await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
    show('Google Driveへ自動バックアップ済み。今後の変更も自動で保存します。');
   }catch(error){
-   if(error instanceof DriveAuthError){drive=null;show('Google認証が切れました。再接続すると自動同期が再開します。');}
+   if(error instanceof DriveAuthError)expireConnection();
    else show('クラウド同期に失敗しました。端末内のセーブは保持されています：'+error.message);
   }finally{
    busy=false;
@@ -80,6 +87,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
  windowImpl?.document?.addEventListener?.('visibilitychange',()=>{if(!windowImpl.document.hidden)schedule();});
  async function acceptGoogleToken(result){
   if(result.error||!result.access_token){show('Google連携が完了しませんでした。');return;}
+  expiryNoticeShown=false;
+  windowImpl?.document?.getElementById('googleDriveExpiredDialog')?.close?.();
   token=result.access_token;
   expires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
   drive=createDungeonDrive(token,fetchImpl);
@@ -110,6 +119,12 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
   show('Google Driveに一度接続すると、接続中のセーブ変更は自動でバックアップされます。');
  }).catch(error=>show(error.message));
  button.disabled=true;
+ const expiredDialog=windowImpl?.document?.getElementById('googleDriveExpiredDialog');
+ expiredDialog?.querySelector('[data-action="reconnect"]')?.addEventListener('click',()=>{
+  expiredDialog.close();
+  if(client)client.requestAccessToken({prompt:'consent'});
+ });
+ expiredDialog?.querySelector('[data-action="later"]')?.addEventListener('click',()=>expiredDialog.close());
  button.addEventListener('click',()=>{
   if(!client)return;
   // Google requires a direct user gesture for this popup (not an awaited Promise).
