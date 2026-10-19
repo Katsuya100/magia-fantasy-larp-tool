@@ -72,9 +72,13 @@ export function rollRarity(layer,r=Math.random){
  for(let i=0;i<weights.length;i++){ticket-=weights[i];if(ticket<0)return RARITIES[i];}
  return RARITIES.at(-1);
 }
-export function rollCollection(collections,layer,r=Math.random,bossEnemyId=null){
+export function rollCollection(collections,layer,r=Math.random,bossEnemyId=null,favoredIds=[]){
  const rarity=rollRarity(layer,r);
- const pool=collections.filter(x=>x.rarity===rarity&&(!x.boss_enemy_id||x.boss_enemy_id===bossEnemyId));
+ const eligible=collections.filter(x=>x.rarity===rarity&&(!x.boss_enemy_id||x.boss_enemy_id===bossEnemyId));
+ const favored=new Set(favoredIds);
+ const preferred=eligible.filter(x=>favored.has(x.id));
+ // Rarity is drawn first. This bias only changes which item wins within that rarity.
+ const pool=preferred.length&&r()<.7?preferred:eligible;
  const total=pool.reduce((n,x)=>n+Number(x.weight),0);
  if(!total)throw Error('Missing random drop for '+rarity);
  let ticket=Math.min(1-Number.EPSILON,Math.max(0,r()))*total;
