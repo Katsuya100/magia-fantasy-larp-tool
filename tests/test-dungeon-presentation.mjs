@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile,stat} from 'node:fs/promises';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
-const [page,home,css]=await Promise.all([read('dungeon.html'),read('index.html'),read('assets/css/dungeon.css')]);
+const [page,home,css,app]=await Promise.all([read('dungeon.html'),read('index.html'),read('assets/css/dungeon.css'),read('assets/js/dungeon-app.mjs')]);
 assert.match(page,/自分だけの魔法陣で迷宮へ/);
 assert.match(page,/<button type="button" id="returnHome" class="danger">帰還する<\/button>/,'short return button');
 assert.match(css,/#returnHome\{background:linear-gradient\(#d9494f,#941f32\)/,'return button is red');
@@ -196,7 +196,7 @@ assert.match(page,/<select id="collectionSort"><option value="common">レア度�
 assert.doesNotMatch(page,/<option value="default">レアリティ順<\/option>/,'redundant rarity-order option is removed');
 assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is concise');
 assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!important;/,'selected choice border does not change the button box size');
-const app=await read('assets/js/dungeon-app.mjs');
+// App source is loaded above so capture assertions can verify the real call path.
 assert.doesNotMatch(app,/startLayerHint|10層ごとの冒険者章を獲得すると開始階層が増えます。/,'hint must not reappear after JS starts');
 assert.match(app,/className=picker\.kind==='circle'\?'picker-grid circle-picker-grid':'picker-grid'/,'item picker keeps its layout');
 assert.match(app,/run\.checkpointBattleScrollY=window\.scrollY/,'boss victory captures the battle scroll before showing checkpoint');
