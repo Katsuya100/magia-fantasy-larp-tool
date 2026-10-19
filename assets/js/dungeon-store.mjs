@@ -5,6 +5,14 @@ const DB_NAME='magia-dungeon-v1';
 const DB_VERSION=2;
 const STORES=['circles','settings'];
 const changes=new WeakMap();
+// One random identity for the entire save history, including permadeath heirs.
+function withPlayId(profile){
+ if(!profile.playId){
+  if(!globalThis.crypto?.randomUUID)throw Error('プレイの識別には安全なHTTPS接続が必要です。');
+  profile.playId=globalThis.crypto.randomUUID();
+ }
+ return profile;
+}
 function notifyDungeonDataChange(db){
  for(const cb of changes.get(db)||[])try{cb();}catch(error){console.error('セーブ変更通知の失敗',error);}
 }
@@ -146,11 +154,13 @@ async function trustedProfileHashes(db,profile){
  return hashes;
 }
 export async function saveProfile(db,p){
+ withPlayId(p);
  const hashes=await trustedProfileHashes(db,p);
  return mutate(db,settings=>settings.put(p,'profile'),{},hashes);
 }
 // One IndexedDB transaction prevents a lost/recovered photo and its owner from diverging.
 export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
+ withPlayId(profile);
  const hashes=await photoEvidence(added),profileHashes=await trustedProfileHashes(db,profile);
  return mutate(db,(settings,items)=>{
   for(const id of removed)items.delete(id);
@@ -168,6 +178,7 @@ export async function getProfile(db){
     // Keep it missing on disk so Drive can restore the complete trusted save.
     if(!seal)await saveProfile(db,p);
   }
+  if(p&&!p.playId)withPlayId(p); // Legacy: persist this ID with the next actual game edit.
   return p;
 }
 
