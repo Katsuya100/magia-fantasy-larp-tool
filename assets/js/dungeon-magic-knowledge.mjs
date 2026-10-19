@@ -89,7 +89,7 @@ export function circleCardInfo(circle,buffs=[],mpCost=()=>null){
   power:revealed?String(a.power):'?'
  };
 }
-export function circleEffectDetails(circle,buffs=[]){
+export function circleEffectDetails(circle,buffs=[],defenseDuration=null){
  const a=circle?.analysis;if(!a)return {effect:'解析されていません。',statusName:'',statusDescription:'',duration:''};
  const {attribute,role}=a,info=circleAttributeEffects(circle,buffs);
  if(role==='attack')return {effect:'敵に'+ATTRIBUTES[attribute].label+'属性の魔法ダメージを与えます。ダメージは属性相性・相手の防御力・状態効果で変わります。',statusName:'',statusDescription:'',duration:''};
@@ -98,7 +98,7 @@ export function circleEffectDetails(circle,buffs=[]){
   effect:'自分に'+ATTRIBUTES[attribute].label+'属性への耐性を付与し、追加で🛡️強化効果を得ます。',
   statusName:info.buff,
   statusDescription:info.buffDescription,
-  duration:attribute==='chaos'?'選ばれた強化の設定ターン数に従います。':'基本'+info.buffDuration+'ターン。耐性効果は別途持続します。強化量は魔法の威力によって変わります。'
+  duration:isRevealed(circle)&&typeof defenseDuration==='function'?defenseDuration(a)+'ターン（威力連動）':'2〜6ターン（威力連動）'
  };
  return {
   effect:'敵に'+ATTRIBUTES[attribute].label+'属性の🕸️弱体効果を与えます。付与の強さと持続時間は魔法の威力・相手の耐性で変化します。',

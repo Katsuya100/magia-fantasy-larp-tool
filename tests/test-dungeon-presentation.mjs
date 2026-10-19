@@ -359,7 +359,7 @@ for(const [key,label] of [['attack','⚔️攻撃'],['defense','🛡️防御'],
 assert.doesNotMatch(page,/id="attributeEffects"/,'remove global attribute effect legend');
 assert.doesNotMatch(page,/7属性の強化・🕸️弱体効果/,'effect names belong to their individual circles');
 assert.match(app,/circleEffectBadges\(c,masters\.buffs,esc,G\.mpCost\)/);
-assert.match(app,/circleEffectDetails\(circle,masters\.buffs\)/);
+assert.match(app,/circleEffectDetails\(circle,masters\.buffs,G\.defenseDuration\)/,'magic-circle detail shows power-derived duration');
 assert.match(app,/\['追加効果の詳細',info\.statusDescription\]/);
 assert.match(css,/\.circle-card-info\{[^}]*display:flex/);
 assert.match(css,/\.circle-card-stats\{[^}]*font-size:/);

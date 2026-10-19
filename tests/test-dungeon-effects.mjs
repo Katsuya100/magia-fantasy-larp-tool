@@ -28,29 +28,36 @@ for(const a of G.ATTRS){
  assert.ok(src.statuses.some(s=>s.kind==='buff'&&s.id!=='resist_'+a),'element buff '+a);
 }
 
- // Defense resolves before the attack phase. It protects the casting round
- // and the next three rounds, then expires before the fifth attack.
- assert.equal(num('resistance_buff_duration'),4);
- for(const row of buffs.filter(x=>x.id.startsWith('buff_')))assert.equal(Number(row.duration),4,'defense buff lasts four rounds '+row.id);
- for(const attr of G.ATTRS){
-  const attack=spell('attack',attr);
-  const fighterBase={hp:1000,mag:12,def:10,res:10};
-  const defender=G.makeUnit(fighterBase,1,{},[spell('defense',attr)]);
-  const attacker=G.makeUnit(fighterBase,1,{},[attack,attack]);
-  const normalDamage=G.damage(attacker,defender,attack,()=>.99);
-  const damageTaken=[],resistTurns=[],bonusTurns=[];
-  for(let turn=0;turn<5;turn++){
-   const before=defender.hp;
-   G.round(defender,attacker,turn===0?0:-1,turn%2,buffs,()=>.99);
-   damageTaken.push(before-defender.hp);
-   resistTurns.push(G.status(defender,'resist_'+attr)?.turns??0);
-   bonusTurns.push(defender.statuses.find(x=>x.id.startsWith('buff_'))?.turns??0);
-  }
-  assert.deepEqual(resistTurns,[3,2,1,0,0],'resistance expires after four attack phases: '+attr);
-  assert.deepEqual(bonusTurns,[3,2,1,0,0],'secondary buff tracks resistance: '+attr);
-  assert.ok(damageTaken.slice(0,4).every(d=>d<normalDamage),'four protected hits: '+attr+' '+damageTaken);
-  assert.equal(damageTaken[4],normalDamage,'fifth hit is unprotected: '+attr);
+// Same upgraded-power formula for player and enemy. Defense protects immediately,
+// remains active for the configured count, then expires; bonus and resist match.
+assert.equal(num('defense_duration_base'),2);
+assert.equal(num('defense_duration_power_step'),250);
+assert.equal(num('defense_duration_cap'),6);
+for(const [power,duration] of [[49,2],[168,2],[249,2],[250,3],[270,3],[499,3],[500,4],[540,4],[749,4],[750,5],[999,5],[1000,6],[1500,6]]){
+ assert.equal(G.defenseDuration({power}),duration,'power breakpoint '+power);
+}
+for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4],[800,5],[1000,6]]){
+ const attack=spell('attack',attr);
+ const fighterBase={hp:1500,mag:12,def:10,res:10};
+ const defender=G.makeUnit(fighterBase,1,{},[spell('defense',attr,power)]);
+ const attacker=G.makeUnit(fighterBase,1,{},[attack,attack]);
+ const normalDamage=G.damage(attacker,defender,attack,()=>.99);
+ const damageTaken=[],resistTurns=[],bonusTurns=[];
+ for(let turn=0;turn<7;turn++){
+  const before=defender.hp;
+  G.round(defender,attacker,turn===0?0:-1,turn%2,buffs,()=>.99);
+  damageTaken.push(before-defender.hp);
+  resistTurns.push(G.status(defender,'resist_'+attr)?.turns??0);
+  bonusTurns.push(defender.statuses.find(x=>x.id.startsWith('buff_'))?.turns??0);
  }
+ const expectedTurns=Array.from({length:7},(_,i)=>Math.max(0,duration-i-1));
+ assert.deepEqual(resistTurns,expectedTurns,'resistance countdown '+attr+' P'+power);
+ assert.deepEqual(bonusTurns,expectedTurns,'extra buff countdown '+attr+' P'+power);
+ assert.ok(damageTaken.slice(0,duration).every(d=>d<normalDamage),'protected hits '+attr+' P'+power);
+ assert.ok(damageTaken.slice(duration).every(d=>d===normalDamage),'unprotected hits '+attr+' P'+power);
+}
+const upgraded={role:'defense',attribute:'flame',power:1000,basePower:270};
+assert.equal(G.defenseDuration(upgraded),6,'stone-upgraded power, not original MP basis');
 
 for(const attr of G.ATTRS){
  const u=unit();
