@@ -24,6 +24,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  }
  let client=null,drive=null,expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
  let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initializing=false,initialChoiceCommitted=false;
+ let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
+ const isCurrent=epoch=>epoch===connectionEpoch&&Boolean(drive);
+ const ensureCurrent=epoch=>{if(!isCurrent(epoch))throw Error('Drive同期は解除されました。');};
  // A short-lived access token is kept only in an HTTPS, path-scoped cookie so
  // a page refresh can resume syncing. Never persist a Google refresh token.
  const cookieName='__Secure-magiaDungeonDriveToken';
@@ -59,6 +62,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const doc=windowImpl?.document;
  const conflictDialog=doc?.getElementById('googleDriveConflictDialog');
  const setupButton=doc?.getElementById('setupGoogleDrive');
+ const disconnectButton=doc?.getElementById('disconnectGoogleDrive');
  const riskWarning=doc?.getElementById('backupRiskWarning');
  const rollbackWarning=doc?.getElementById('backupRollbackWarning');
  const overwriteWarning=doc?.getElementById('googleDriveOverwriteWarning');
@@ -82,12 +86,14 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  }
  const show=message=>{const lines=message.replace(/。(?!$)/g,'。\n');status.textContent=lines;const setup=doc?.getElementById('backupSetupStatus');if(setup)setup.textContent=lines;};
  function connectedPresentation(){
+  if(disconnectButton)disconnectButton.hidden=false;
   button.hidden=true;
   if(setupButton)setupButton.hidden=true;
   if(riskWarning)riskWarning.hidden=true;
   if(rollbackWarning)rollbackWarning.hidden=false;
  }
  function reconnectPresentation(message){
+  if(disconnectButton)disconnectButton.hidden=true;
   button.hidden=false;
   button.textContent='GoogleDriveに同期する';
   if(setupButton)setupButton.hidden=false;
@@ -104,6 +110,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   expiryTimer=null;
   clearAuthCookie();
   drive=null;expires=0;validatedDrive=null;
+  requestController?.abort();requestController=null;
+  connectionEpoch++;
   reconnectPresentation('認証が切れました。再接続してください。');
   if(!expiryNoticeShown){
    expiryNoticeShown=true;
@@ -153,6 +161,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      lockLocalOnly(true);
     }
     choicePending=false;
+    pendingChoiceCancel=null;
     conflictDialog.close();
     conflictDialog.removeEventListener('cancel',cancel);
     for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.removeEventListener('click',handler);
@@ -162,6 +171,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const handlers=[['restore',()=>finish('restore')],['overwrite',()=>finish('overwrite')],['later',()=>finish('later')]];
    for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.addEventListener('click',handler,{once:true});
    conflictDialog.addEventListener('cancel',cancel);
+   pendingChoiceCancel=()=>finish('later');
    conflictDialog.showModal();
   });
  }
@@ -170,6 +180,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(!refresh&&validatedDrive?.id===file.id&&validatedDrive.modifiedTime===file.modifiedTime)return validatedDrive.result;
   try{
    const remoteText=await drive.download(file.id);
+   ensureCurrent(activeSyncEpoch);
    const data=deserializeDungeonSnapshot(remoteText);
    const invalidImages=[];
    for(const circle of data.circles){
@@ -186,12 +197,15 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  }
  async function restore(remote,file,{explicit=false}={}){
   if(!remote.valid)throw Error('破損したDriveバックアップは復元できません。');
+  ensureCurrent(activeSyncEpoch);
   const before=await readDungeonSnapshot(db);
+  ensureCurrent(activeSyncEpoch);
   if(before.profile?.run&&!isPristineDungeonSnapshot(before)&&!explicit){
    show('探索中に新しいDriveデータが見つかりました。探索終了まで自動復元と上書きを停止しています。');
    return 'deferred';
   }
   const current=await drive.metadata(file.id);
+  ensureCurrent(activeSyncEpoch);
   if(current.modifiedTime!==file.modifiedTime){again=true;return 'deferred';}
   lockLocalOnly(true);
   restoring=true;
@@ -204,27 +218,36 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  async function upload(snapshot,file,{allowInitial=false}={}){
   // The exact serialized, inspected bytes are uploaded; do not recompute
   // a new checksum from damaged IndexedDB data after verification.
+  ensureCurrent(activeSyncEpoch);
   const verification=await verifyLocalSnapshot(snapshot);
+  ensureCurrent(activeSyncEpoch);
   if(isPristineDungeonSnapshot(snapshot)&&!allowInitial)throw Error('初期セーブのアップロードは接続確認時のみ許可します。');
   if(verification.status!=='valid')throw Error('端末セーブの整合性を検証できないため、バックアップの上書きを中止しました。');
   const text=await serializeDungeonSnapshot(snapshot);
+  ensureCurrent(activeSyncEpoch);
   // A concurrent game write must not make an earlier snapshot clobber a later one.
   const latest=await readDungeonSnapshot(db);
+  ensureCurrent(activeSyncEpoch);
   if(latest.savedAt!==snapshot.savedAt) {again=true;return 'deferred';}
   if(file){
    const now=await drive.metadata(file.id);
+   ensureCurrent(activeSyncEpoch);
    if(now.modifiedTime!==file.modifiedTime){again=true;return 'deferred';}
   }
   show('保存中…');
   const saved=await drive.upload(text,file?.id||null);
+  ensureCurrent(activeSyncEpoch);
   const hash=await snapshotHash(text);
   // An upload response is not enough: verify the exact remote contents.
   const downloaded=await drive.download(saved.id);
+  ensureCurrent(activeSyncEpoch);
   if(await snapshotHash(downloaded)!==hash)throw Error('Drive側の保存内容が一致しません。');
+  ensureCurrent(activeSyncEpoch);
   const confirmed=deserializeDungeonSnapshot(downloaded);
   validatedDrive={id:saved.id,modifiedTime:saved.modifiedTime,result:{valid:true,data:confirmed,hash,text:downloaded,invalidImages:[],trusted:true}};
   await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
   const newest=await readDungeonSnapshot(db);
+  ensureCurrent(activeSyncEpoch);
   if(newest.savedAt!==snapshot.savedAt){
    again=true;
    show('同期中…');
@@ -238,6 +261,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(busy){again=true;return 'deferred';}
   if(Date.now()>=expires){expireConnection();return 'deferred';}
   busy=true;
+  activeSyncEpoch=connectionEpoch;
   setSyncing(true);
   show('同期中…');
   let result='deferred';
@@ -247,6 +271,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    let verification=await verifyLocalSnapshot(local);
    let upgradedLegacy=false;
    const files=await drive.list();
+   ensureCurrent(activeSyncEpoch);
    if(files.length>1){show('Driveに複数のバックアップがあります。安全のため自動同期を停止しました。');return result;}
    const file=files[0]||null;
    // An account previously confirmed as synced must have a real Drive file.
@@ -259,6 +284,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return result;
    }
    const remote=await checkedRemote(file,initial);
+   ensureCurrent(activeSyncEpoch);
    if(!file&&verification.status==='legacy'){
     await establishLegacyIntegrity(db,local);
     local=await readDungeonSnapshot(db);
@@ -342,6 +368,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     show('セーブの破損・画像欠損を検出しました。復旧するまで自動バックアップを停止します。');
     return result;
    }
+   ensureCurrent(activeSyncEpoch);
    const pristine=isPristineDungeonSnapshot(local);
    if(file&&!remote.valid){
     // A newly migrated legacy proof does not authorize overwriting damaged Drive data.
@@ -356,6 +383,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    }
    const localText=await serializeDungeonSnapshot(local);
    const localHash=await snapshotHash(localText);
+   ensureCurrent(activeSyncEpoch);
    const decision=decideCloudSync({file,localHash,remoteHash:remote.hash,
     localSavedAt:local.savedAt,remoteSavedAt:remote.data?.savedAt||0,pristine});
    // Unknown historic timestamps cannot safely resolve conflicting saves:
@@ -390,6 +418,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    if(decision==='upload')return await upload(local,file);
    return 'ready';
   }catch(error){
+   if(!isCurrent(activeSyncEpoch))return 'deferred';
    if(error instanceof DriveAuthError)expireConnection();
    else reconnectPresentation('同期エラー：'+error.message);
    return 'deferred';
@@ -408,13 +437,20 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   }
  }
  async function acceptGoogleToken(result){
+  if(!oauthPending)return; // Ignore an authorization response after disconnect.
+  oauthPending=false;
   if(result.error||!result.access_token){show('Google連携が完了しませんでした。');return;}
   expiryNoticeShown=false;
   doc?.getElementById('googleDriveExpiredDialog')?.close?.();
   expires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
   saveAuthCookie(result.access_token,expires);
-  drive=createDungeonDrive(result.access_token,fetchImpl);
+  connectionEpoch++;
+  requestController?.abort();
+  requestController=new AbortController();
+  drive=createDungeonDrive(result.access_token,fetchImpl,{signal:requestController.signal});
+  manuallyDisconnected=false;
   validatedDrive=null;
+  if(disconnectButton)disconnectButton.hidden=false;
   watchTokenExpiry();
   // OAuth is not backup success. Only hide the risk once a real file is verified.
   button.hidden=true;
@@ -445,9 +481,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   });
   button.disabled=false;
   if(setupButton)setupButton.disabled=false;
-  if(!drive&&!expiryNoticeShown)show('未接続');
+  if(!drive&&!expiryNoticeShown&&!manuallyDisconnected)show('未接続');
   void getCloudSyncState(db).then(meta=>{
-   if(!drive&&!expiryNoticeShown&&meta?.fileId&&meta?.hash)show('未接続。再接続してください。');
+   if(!drive&&!expiryNoticeShown&&!manuallyDisconnected&&meta?.fileId&&meta?.hash)show('未接続。再接続してください。');
   }).catch(()=>{});
  }).catch(error=>show(error.message));
  button.disabled=true;
@@ -455,6 +491,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const expiredDialog=doc?.getElementById('googleDriveExpiredDialog');
  expiredDialog?.querySelector('[data-action="reconnect"]')?.addEventListener('click',()=>{
   expiredDialog.close();
+  oauthPending=Boolean(client);
   client?.requestAccessToken({prompt:'consent'});
  });
  expiredDialog?.querySelector('[data-action="later"]')?.addEventListener('click',()=>expiredDialog.close());
@@ -464,19 +501,32 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(outcome==='deferred')reconnectPresentation();
     if(outcome==='ready'||outcome==='start-new')onInitialReady();
    });
-  }else client?.requestAccessToken({prompt:'consent'});
+  }else{
+   oauthPending=Boolean(client);
+   client?.requestAccessToken({prompt:'consent'});
+  }
  };
  button.addEventListener('click',connectOrCheck);
  setupButton?.addEventListener('click',connectOrCheck);
  // The caller explicitly disconnects before opening a local-only new game.
  function disconnect(){
+  // Detach this browser only: leave IndexedDB and appDataFolder untouched.
+  manuallyDisconnected=true;
+  oauthPending=false;
+  connectionEpoch++;
+  requestController?.abort();requestController=null;
+  pendingChoiceCancel?.(); // Do not apply a late restore/overwrite choice.
   again=false;
   clearTimeout(expiryTimer);expiryTimer=null;
+  clearTimeout(timer);timer=null;
   clearAuthCookie();
   drive=null;expires=0;validatedDrive=null;
-  clearTimeout(timer);
-  reconnectPresentation('未接続');
+  setSyncing(false);
+  if(!initialChoiceCommitted)lockLocalOnly(false);
+  doc?.getElementById('googleDriveExpiredDialog')?.close?.();
+  reconnectPresentation('Google Driveの同期を解除しました。端末のセーブとDriveのバックアップは残ります。');
  }
+ disconnectButton?.addEventListener('click',disconnect);
  const unsubscribe=onDungeonDataChange(db,schedule);
  windowImpl?.addEventListener?.('online',schedule);
  doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
@@ -485,7 +535,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   lockLocalOnly(true);
   // On reload, verify Drive's actual bytes before displaying "同期済み".
   expires=savedAuth.expires;
-  drive=createDungeonDrive(savedAuth.token,fetchImpl);
+  requestController=new AbortController();
+  drive=createDungeonDrive(savedAuth.token,fetchImpl,{signal:requestController.signal});
+  if(disconnectButton)disconnectButton.hidden=false;
   watchTokenExpiry();
   button.hidden=true;
   if(setupButton)setupButton.hidden=true;
