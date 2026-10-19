@@ -1,8 +1,15 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {parseCsv} from '../assets/js/dungeon-core.mjs';
+import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,getProfile,saveProfile,readDungeonSnapshot} from '../assets/js/dungeon-store.mjs';
 import {serializeDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {initDungeonCloudSync} from '../assets/js/dungeon-cloud-sync.mjs';
+
+const csv=async name=>parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
+const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','floors','player-base'].map(csv));
+configure({balance,levels,floors,playerBase});
 
 const wait=async(condition,message)=>{
  const end=Date.now()+6000;
