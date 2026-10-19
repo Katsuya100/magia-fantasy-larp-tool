@@ -127,7 +127,7 @@ try{
  grid.fire('pointerdown',{target,button:0,clientX:10,clientY:10});
  await new Promise(r=>setTimeout(r,620));
  assert.equal((await getProfile(db)).favoriteCircleId,'b','long hold persists the photo ID');
- assert.match(grid.innerHTML,/data-circle-id="b" data-favorite="true"/,'star marker follows saved favorite');
+ assert.match(grid.innerHTML,/data-circle-id="b"[^>]*data-favorite="true"/,'star marker follows saved favorite');
  grid.fire('pointerdown',{target,button:0,clientX:10,clientY:10});
  await new Promise(r=>setTimeout(r,620));
  assert.equal((await getProfile(db)).favoriteCircleId,null,'holding again removes favorite');
