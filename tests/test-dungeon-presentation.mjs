@@ -205,7 +205,9 @@ assert.equal(page.split('システム上 <strong>'+concurrentWarning+'</strong>�
 assert.ok(page.indexOf('<p class="backup-sync-warning">'+copyWarning+'</p>')<page.indexOf('id="backupSetupStatus"'),'the initial warning precedes connection status');
 const cloudMarkup=page.match(/<div class="cloud-sync">([\s\S]*?)<\/div>/)?.[1];
 assert.ok(cloudMarkup,'backup section exists');
-assert.ok(cloudMarkup.indexOf(copyWarning)<cloudMarkup.indexOf('<h3>Google Drive</h3>'),'save-loss warning is above the section heading');
+assert.ok(cloudMarkup.indexOf(copyWarning)<cloudMarkup.indexOf('id="googleDriveStatus"'),'save-loss warning is above the sync status');
+assert.doesNotMatch(cloudMarkup,/<h3>Google Drive<\/h3>/,'redundant Google Drive heading does not repeat the synced status');
+assert.match(cloudMarkup,/<p id="googleDriveStatus" role="status" aria-live="polite">未接続<\/p>/,'a single status provides connection state');
 assert.match(page,/<button type="button" id="connectGoogleDrive"[^>]*>GoogleDriveに同期する<\/button>/,'profile sync button is short');
 assert.match(page,/<button type="button" id="setupGoogleDrive"[^>]*>GoogleDriveに同期する<\/button>/,'pre-registration sync button matches profile');
 assert.match(page,/<button type="button" id="setupWithoutBackup"[^>]*>同期せず始める<\/button>/,'local-only choice is clear');
