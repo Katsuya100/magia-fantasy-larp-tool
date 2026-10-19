@@ -60,7 +60,7 @@ export function weighted(rows,r=Math.random){let sum=rows.reduce((n,x)=>n+Number
 // 75% is guaranteed even for the highest possible starting HP/MAG roll.
 // Store the rolled value on each item so old inventory and later use remain stable.
 export function rollPotionValue(item,layer,r=Math.random){
- if(['clear','escape','revive'].includes(item.kind))return 0;
+ if(['clear','clear_all','escape','revive'].includes(item.kind))return 0;
  if(item.kind==='elixir')return Number(item.min_value);
  if(item.kind!=='heal'&&item.kind!=='mana')throw Error('Unknown potion kind');
  const recommended=level(targetClearLevel(layer));
@@ -135,6 +135,7 @@ export function canUseBattleItem(hero,item,items,buffs=[]){
  if(row.kind==='mana')return (strength&&hero.mp<hero.maxMp)||hasBonus;
  if(row.kind==='elixir')return (strength&&(hero.hp<hero.stats.hp||hero.mp<hero.maxMp))||hasBonus;
  if(row.kind==='clear')return hero.statuses.some(s=>s.kind==='debuff'&&s.attribute===row.attribute)||hasBonus;
+ if(row.kind==='clear_all')return hero.statuses.some(s=>s.kind==='debuff');
  return false;
 }
 export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.id);if(!row)throw Error('Unknown potion');let amount=0;if(row.kind==='heal'){amount=Math.min(u.stats.hp-u.hp,item.value);u.hp+=amount;}else if(row.kind==='mana'){amount=Math.min(u.maxMp-u.mp,item.value);u.mp+=amount;}else if(row.kind==='elixir'){
@@ -143,6 +144,7 @@ export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.i
  const mp=Math.max(0,Math.min(u.maxMp-u.mp,Math.ceil(u.maxMp*rate)));
  u.hp+=hp;u.mp+=mp;amount=hp+mp;
  }else if(row.kind==='clear')u.statuses=u.statuses.filter(s=>s.kind!=='debuff'||s.attribute!==row.attribute);
+ else if(row.kind==='clear_all')u.statuses=u.statuses.filter(s=>s.kind!=='debuff');
  else if(row.kind==='revive'){
   if(u.reviveArmed||u.reviveUsed||u.hp<=0)throw Error('生命の紅石はこの戦闘ですでに使用済みです');
   u.reviveArmed=true;
@@ -305,7 +307,7 @@ export function fromEnemy(row,level){
  const b={hp:Math.max(1,Math.round(+row.hp*scale.hp)),mag:Math.max(1,Math.round(+row.mag*scale.mag)),def:+row.def,res:+row.res};const resists=Object.fromEntries(ATTRS.map(a=>[a,+row['resist_'+a]]));const spells=row.spells.split('|').map(s=>{const [role,attribute,power]=s.split(':');return {role,attribute,power:+power};});return makeUnit(b,level,resists,spells,row.id);}
 export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items){
   if(+i.min_value>+i.max_value||!(Number(i.weight)>0))throw Error('Bad item roll');
-  if(['clear','escape','revive'].includes(i.kind)){
+  if(['clear','clear_all','escape','revive'].includes(i.kind)){
    if(+i.min_layer<(i.kind==='revive'?50:20)||i.tier||+i.min_value||+i.max_value)throw Error('Invalid special consumable '+i.id);
   }else if(i.kind==='elixir'){
    if(!({small:30,medium:55,large:80}[i.tier]===Number(i.min_layer))||i.min_value!==i.max_value||!({small:35,medium:65,large:100}[i.tier]===Number(i.min_value)))throw Error('Invalid elixir '+i.id);

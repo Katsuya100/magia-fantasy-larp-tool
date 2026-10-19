@@ -14,6 +14,7 @@ clear_storm,目眩の浄化薬,clear,storm,0,0,resist_storm,0.1,2,,20
 clear_gravity,重圧の浄化薬,clear,gravity,0,0,resist_gravity,0.1,2,,20
 clear_law,封印の浄化薬,clear,law,0,0,resist_law,0.1,2,,20
 clear_chaos,混乱の浄化薬,clear,chaos,0,0,resist_chaos,0.1,2,,20
+luna_stone,ルナストーン,clear_all,,0,0,,0,2,,20
 escape_scroll,脱出の巻物,escape,,0,0,,0,2,,20
 elixir_s,エリクシール小,elixir,,35,35,,0,10,small,30
 elixir_m,エリクシール中,elixir,,65,65,,0,9,medium,55

@@ -11,7 +11,7 @@ export function circleEffectBadges(circle,buffs=[],escapeText=x=>String(x),mpCos
   +'<span class="circle-card-power">威力:'+escapeText(d.power)+'</span></span>'
   +'</div>';
 }
-export function itemSymbol(item){return item?.id==='life_ruby'?'🔴':item?.id?.startsWith('elixir_')?'⚗':item?.id==='escape_scroll'?'📜':item?.id?.startsWith('heal_')?'✚':item?.id?.startsWith('mana_')?'✧':'◈';}
+export function itemSymbol(item){return item?.id==='luna_stone'?'🌙':item?.id==='life_ruby'?'🔴':item?.id?.startsWith('elixir_')?'⚗':item?.id==='escape_scroll'?'📜':item?.id?.startsWith('heal_')?'✚':item?.id?.startsWith('mana_')?'✧':'◈';}
 // Show compact bonus effects consistently in loadout, battle and rewards.
 const elementIcons={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪️',gravity:'🪨',law:'⚖️',chaos:'🌀'};
 const bonusEffects={
@@ -31,7 +31,7 @@ export function itemBonusEffect(item){
  return {icons:info[0],text:info[1]};
 }
 export function itemEffectText(item){
- const primary=item?.id==='life_ruby'?'死亡時に1回だけHP50%で復活':item?.id?.startsWith('elixir_')?'HP/MP各'+item.value+'%回復':item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.value?'効果 '+item.value:'状態異常解除';
+ const primary=item?.id==='life_ruby'?'死亡時に1回だけHP50%で復活':item?.id?.startsWith('elixir_')?'HP/MP各'+item.value+'%回復':item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.id==='luna_stone'?'全状態異常解除':item?.value?'効果 '+item.value:'状態異常解除';
  const bonus=itemBonusEffect(item);
  return primary+(bonus?'・追加効果：'+bonus.text:'');
 }
@@ -48,6 +48,7 @@ export function itemEffectIcons(item){
   const elements={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪️',gravity:'🪨',law:'🔒',chaos:'🌀'};
   return '🧼'+(elements[id.slice(6)]||'')+extra;
  }
+ if(id==='luna_stone')return '🌙全解除'+extra;
  if(id==='life_ruby')return '🪽50%'+extra;
  if(id==='escape_scroll')return '↩️'+extra;
  return '◈'+value+extra;
@@ -100,7 +101,7 @@ export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventor
   return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-item="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(itemName(item))+'・'+escapeText(itemEffectText(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
    +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
-   +(item.id==='life_ruby'||item.id?.startsWith('elixir_')||item.id==='escape_scroll'?itemEffectText({...item,bonus:null}):item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' '+itemBonusEffect(item).icons:'')+'</small></span>'
+   +(item.id==='luna_stone'||item.id==='life_ruby'||item.id?.startsWith('elixir_')||item.id==='escape_scroll'?itemEffectText({...item,bonus:null}):item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' '+itemBonusEffect(item).icons:'')+'</small></span>'
    +'</button>';
  }).join('');
 }
