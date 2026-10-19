@@ -3,7 +3,8 @@ import {readFile} from 'node:fs/promises';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {openStore,getProfile,saveProfile,readDungeonSnapshot,saveCloudSyncState} from '../assets/js/dungeon-store.mjs';
+import {openStore,getProfile,saveProfile,putCircle,readDungeonSnapshot,saveCloudSyncState} from '../assets/js/dungeon-store.mjs';
+import {verifyLocalSnapshot} from '../assets/js/dungeon-cloud-integrity.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {initDungeonCloudSync} from '../assets/js/dungeon-cloud-sync.mjs';
 
@@ -431,6 +432,104 @@ try{
  assert.notEqual(lostTokenUi.status.textContent,'GoogleDrive同期済み');
  assert.ok(!lostTokenUi.status.textContent.includes('同期済み'),'do not label a tokenless session synced');
  assert.deepEqual(lostTokenDrive.operations,[],'without OAuth, reload cannot touch Drive');
+
+ // Legacy v1 local saves must be migrated into the strong on-disk proof
+ // without asking a spurious legacy-format question, or overwriting Drive.
+ async function legacyDevice(name,{withPhoto=false,withoutTimestamp=false,missingPhoto=false,tampered=false}={}){
+  const factory=fakeIndexedDB(),db=await openStore(factory);
+  const profile=await getProfile(db);
+  profile.name=name;profile.level=4;profile.attempts=2;
+  await saveProfile(db,profile);
+  if(withPhoto||missingPhoto){
+   const image=new Blob([Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0])],{type:'image/png'});
+   await putCircle(db,{id:'legacy-art',name:'受け継いだ魔法陣',image});
+  }
+  const original=await readDungeonSnapshot(db);
+  const settings=factory.databases.get('magia-dungeon-v1').get('settings');
+  const existing=settings.get('integrity');
+  if(withoutTimestamp)settings.delete('integrity');
+  else settings.set('integrity',{...existing,legacy:true});
+  if(missingPhoto){
+   const circles=factory.databases.get('magia-dungeon-v1').get('circles');
+   circles.set('legacy-art',{...circles.get('legacy-art'),image:null});
+  }
+  if(tampered)settings.set('profile',{...settings.get('profile'),name:'未検証の変更'});
+  assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(db))).status,'legacy');
+  return {db,original};
+ }
+ // Identical cloud data: convert silently and recognize it as already synced.
+ const sameLegacy=await legacyDevice('同一の旧データ',{withPhoto:true});
+ const sameLegacyUi=fakeUi(),sameLegacyDrive=remoteApi(await serializeDungeonSnapshot(sameLegacy.original));
+ let sameLegacyReady=0;
+ start(sameLegacy.db,sameLegacyUi,sameLegacyDrive.fetchImpl,{onInitialReady:()=>sameLegacyReady++});
+ await connect(sameLegacyUi);
+ await wait(()=>sameLegacyReady===1,'matching legacy save converts automatically and initializes');
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(sameLegacy.db))).status,'valid');
+ assert.equal((await readDungeonSnapshot(sameLegacy.db)).savedAt,sameLegacy.original.savedAt,'conversion does not fake a newer last save');
+ assert.deepEqual(sameLegacyDrive.operations,[],'matching remote file is never overwritten during migration');
+ assert.equal(sameLegacyUi.get('googleDriveConflictDialog').open,false,'no old-format decision dialog for matching saves');
+ assert.equal(sameLegacyUi.status.textContent,'GoogleDrive同期済み');
+ assert.deepEqual(new Uint8Array(await (await readDungeonSnapshot(sameLegacy.db)).circles[0].image.arrayBuffer()),
+  new Uint8Array(await sameLegacy.original.circles[0].image.arrayBuffer()),'conversion preserves exact photo bytes');
+
+ // Standalone legacy save: upgrade, upload the full save, and verify readback.
+ const aloneLegacy=await legacyDevice('端末の古い冒険者',{withPhoto:true});
+ const aloneUi=fakeUi(),aloneDrive=remoteApi();
+ let aloneReady=0;
+ start(aloneLegacy.db,aloneUi,aloneDrive.fetchImpl,{onInitialReady:()=>aloneReady++});
+ await connect(aloneUi);
+ await wait(()=>aloneReady===1,'standalone legacy save converts and uploads automatically');
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(aloneLegacy.db))).status,'valid');
+ assert.equal((await readDungeonSnapshot(aloneLegacy.db)).savedAt,aloneLegacy.original.savedAt);
+ assert.equal(deserializeDungeonSnapshot(aloneDrive.current).profile.name,'端末の古い冒険者');
+ assert.equal(deserializeDungeonSnapshot(aloneDrive.current).circles.length,1,'converted photo is included in cloud backup');
+ assert.deepEqual(aloneDrive.operations,['POST']);
+ assert.equal(aloneUi.get('googleDriveConflictDialog').open,false,'legacy conversion does not prompt if no backup exists');
+
+ // An established newer cloud save wins using the original (not migration)
+ // savedAt; converting an old device must not overwrite its remote backup.
+ const staleLegacy=await legacyDevice('古い端末の記録',{withPhoto:true});
+ const newerProfile={...staleLegacy.original.profile,name:'Driveの新しい記録',level:9};
+ const newerRemote=await serializeDungeonSnapshot({...staleLegacy.original,profile:newerProfile,savedAt:staleLegacy.original.savedAt+100000});
+ const staleUi=fakeUi(),staleDrive=remoteApi(newerRemote);
+ let staleRestored=0;
+ start(staleLegacy.db,staleUi,staleDrive.fetchImpl,{onRestore:()=>staleRestored++});
+ await connect(staleUi);
+ await wait(()=>staleRestored===1,'newer Drive backup is restored after legacy conversion');
+ assert.equal((await readDungeonSnapshot(staleLegacy.db)).profile.name,'Driveの新しい記録');
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(staleLegacy.db))).status,'valid');
+ assert.deepEqual(staleDrive.operations,[],'local migration cannot upload over a newer cloud save');
+ assert.equal(staleUi.get('googleDriveConflictDialog').open,false,'time ordering avoids a legacy-format chooser');
+
+ // No historical timestamp means a real conflict cannot be ordered safely.
+ // Keep both copies untouched and hide the irrelevant overwrite warning.
+ const unknownLegacy=await legacyDevice('日時不明の端末',{withoutTimestamp:true});
+ const unknownUi=fakeUi(),unknownDrive=remoteApi(newerRemote);
+ start(unknownLegacy.db,unknownUi,unknownDrive.fetchImpl);
+ await connect(unknownUi);
+ await wait(()=>unknownUi.get('googleDriveConflictDialog').open,'only real unknown-timestamp conflicts require a choice');
+ assert.equal((await readDungeonSnapshot(unknownLegacy.db)).savedAt,0,'migration does not invent a timestamp');
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(unknownLegacy.db))).status,'valid');
+ assert.equal(unknownUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').hidden,true);
+ assert.equal(unknownUi.get('googleDriveOverwriteWarning').hidden,true,'disallowed overwrite warning must not mislead');
+ assert.ok(!unknownUi.get('googleDriveConflictDialog').querySelector('[data-role="description"]').textContent.includes('旧形式'),'old-format dialog is replaced by an actual conflict explanation');
+ assert.deepEqual(unknownDrive.operations,[],'neither side is silently overwritten');
+
+ // Missing legacy photos or mismatching historic fingerprints must not be
+ // legitimized by migration and uploaded as new trusted saves.
+ const photoLegacy=await legacyDevice('画像が欠けた冒険者',{missingPhoto:true});
+ const photoUi=fakeUi(),photoDrive=remoteApi(newerRemote);
+ start(photoLegacy.db,photoUi,photoDrive.fetchImpl);
+ await connect(photoUi);
+ await wait(()=>photoUi.status.textContent.includes('画像が不足'),'legacy photo failure is explained');
+ assert.deepEqual(photoDrive.operations,[],'missing photo never overwrites Drive');
+ assert.equal(photoUi.get('googleDriveConflictDialog').open,false);
+ const corruptLegacy=await legacyDevice('記録改ざん',{tampered:true});
+ const corruptUi=fakeUi(),corruptDrive=remoteApi(newerRemote);
+ start(corruptLegacy.db,corruptUi,corruptDrive.fetchImpl);
+ await connect(corruptUi);
+ await wait(()=>corruptUi.status.textContent.includes('整合性'),'mismatching historic proof prevents migration');
+ assert.deepEqual(corruptDrive.operations,[],'corrupt local record never overwrites the healthy remote');
 
  // 15. An idle tab proactively notifies at token expiry without waiting
  // for another save. The dialog is one-shot until a fresh token is authorized.
