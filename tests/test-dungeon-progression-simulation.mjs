@@ -604,7 +604,7 @@ for(const [fromLayer,toLayer] of [[11,20],[41,50],[81,90],[91,100]]){
    stones:outcome.avgStones,winRate:outcome.winRate,mpPercent:outcome.avgMpPercent}));
  }
 }
-assert.equal(G.victoryMpLayerFactor(90),.23);
+assert.ok(Math.abs(G.victoryMpLayerFactor(90)-.23)<1e-10,'layer 90 recovery factor matches config');
 assert.equal(G.victoryMpLayerFactor(100),0);
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
