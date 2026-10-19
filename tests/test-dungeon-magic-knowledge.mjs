@@ -46,11 +46,13 @@ assert.equal(circleEffectDetails(used,buffs,()=>4).duration,'4ターン（威力
 assert.equal(circleEffectDetails(enhanced,buffs,()=>6).duration,'6ターン（威力連動）');
 assert.equal(circleEffectDetails(pending,buffs,()=>4).duration,'2〜6ターン（威力連動）','unknown power does not reveal duration');
 assert.match(circleEffectDetails(debuff,buffs).statusDescription,/継続ダメージ/);
-assert.match(circleEffectDetails(debuff,buffs).duration,/耐性/);
+assert.match(circleEffectDetails(debuff,buffs).duration,/2〜6ターン/);
+assert.equal(circleEffectDetails(revealOnUse(debuff),buffs,()=>4).duration,'4ターン（威力連動）');
 assert.equal(circleEffectDetails(attack,buffs).statusName,'');
 assert.equal(circleEffectDetails(support,buffs).statusName,'');
 const chaos=savePreanalysis(circle,{attribute:'chaos',role:'debuff',power:512});
 assert.equal(circleEffectDetails(chaos,buffs).statusName,'ランダム弱体');
+assert.equal(circleEffectDetails(revealOnUse(chaos),buffs,()=>6).duration,'6ターン（威力連動）');
 assert.equal(isRevealed({analysis:pending.analysis}),true,'legacy analyzed circles retain visible power');
 assert.match(spellEffect({...pending.analysis,role:'debuff'},buffs),/🕸️火傷/);
 assert.match(spellEffect({...pending.analysis,role:'attack'},buffs),/⚔️属性攻撃/);

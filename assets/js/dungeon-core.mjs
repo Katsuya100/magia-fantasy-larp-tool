@@ -22,13 +22,15 @@ export function fightExperience(enemyLevel,playerLevel,layer){
  return Math.max(1,Math.round(full*Math.pow(num('xp_overlevel_factor_per_level'),gap)));
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
-export function defenseDuration(spell){
+// Same upgraded-power duration applies to defense and debuff, hero and enemy.
+export function statusDuration(spell){
  const step=num('defense_duration_power_step');
  if(step<=0)return num('resistance_buff_duration'); // Retain existing duration overrides and tests.
  const base=num('defense_duration_base'),cap=num('defense_duration_cap');
  const power=Math.max(0,Number(spell?.power)||0);
  return clamp(base+Math.floor(power/step),1,cap);
 }
+export const defenseDuration=statusDuration; // Compatibility for existing API consumers.
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
 export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
 export const spellMpCost=spell=>mpCost(spell.basePower??spell.power);
@@ -171,7 +173,7 @@ export function cast(src,tgt,spell,buffs,r=Math.random){
   return 'HP '+heal+'回復・'+a+'解除'+legacy;
  }
  if(spell.role==='defense'){
-  const duration=defenseDuration(spell);
+  const duration=statusDuration(spell);
   addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(num('defense_resistance_gain')*q,0,num('defense_resistance_cap')),turns:duration});
   const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);
   if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:duration});
@@ -180,8 +182,9 @@ export function cast(src,tgt,spell,buffs,r=Math.random){
  const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);
  if(row){
   const law=status(tgt,'buff_law'),protection=law?Math.max(0,1-law.value):1;
-  const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);
-  addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:clamp(Math.round(Number(row.duration)*power),num('debuff_min_duration'),num('debuff_max_duration')),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});
+  // Attribute/RES/law protection changes strength, not duration.
+   const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);
+  addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:statusDuration(spell),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});
  }
  return a+'弱体付与'+legacy;
 }

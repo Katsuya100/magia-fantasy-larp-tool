@@ -1,4 +1,4 @@
-// Seeded combat comparisons for original (2), alternative (3), published (4) defense turns.
+// Historical two-turn resistance vs current power-scaled 2–6 turns, same for debuffs.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
@@ -96,7 +96,7 @@ for(const row of data.buffs.filter(x=>x.id.startsWith('buff_'))){
 }
 const results=[],samples=128;
 for(const [duration,scale] of [[2,1],[4,.6]]){
- configure({...data,balance:data.balance.map(row=>row.key==='resistance_buff_duration'?{...row,value:String(duration)}:row.key==='defense_duration_power_step'?{...row,value:'0'}:row.key==='defense_resistance_gain'?{...row,value:String(0.3*scale)}:row)});
+ configure({...data,balance:data.balance.map(row=>row.key==='resistance_buff_duration'?{...row,value:String(duration)}:row.key==='defense_duration_power_step'?{...row,value:duration===2?'0':'250'}:row.key==='defense_resistance_gain'?{...row,value:String(0.3*scale)}:row)});
  const buffs=data.buffs.map(row=>row.id.startsWith('buff_')?{...row,duration:String(duration),value:String(legacyValues[row.id]*scale)}:row);
  for(const band of bands)for(const mode of ['none','flame-once','storm-once']){
   const runs=Array.from({length:samples},(_,i)=>play(17101+i*47,band,mode,buffs));
@@ -130,4 +130,4 @@ for(const name of bands.map(x=>x.name))for(const mode of ['none','flame-once','s
  const group=results.filter(x=>x.name===name&&x.mode===mode);
  console.log('STRENGTH_SWEEP '+JSON.stringify({name,mode,variants:group.map(x=>({duration:x.duration,scale:x.scale,winRate:x.winRate,avgCleared:x.avgCleared,avgTurns:x.avgTurns,avgIncoming:x.avgIncoming}))}));
 }
-console.log('PASS shipped four-round 60% defense vs legacy two-round guard in all above-level bands');
+console.log('PASS shipped power-scaled shared statuses vs legacy two-round guard in above-level bands');

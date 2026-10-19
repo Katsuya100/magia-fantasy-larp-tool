@@ -89,7 +89,7 @@ export function circleCardInfo(circle,buffs=[],mpCost=()=>null){
   power:revealed?String(a.power):'?'
  };
 }
-export function circleEffectDetails(circle,buffs=[],defenseDuration=null){
+export function circleEffectDetails(circle,buffs=[],statusDuration=null){
  const a=circle?.analysis;if(!a)return {effect:'解析されていません。',statusName:'',statusDescription:'',duration:''};
  const {attribute,role}=a,info=circleAttributeEffects(circle,buffs);
  if(role==='attack')return {effect:'敵に'+ATTRIBUTES[attribute].label+'属性の魔法ダメージを与えます。ダメージは属性相性・相手の防御力・状態効果で変わります。',statusName:'',statusDescription:'',duration:''};
@@ -98,13 +98,13 @@ export function circleEffectDetails(circle,buffs=[],defenseDuration=null){
   effect:'自分に'+ATTRIBUTES[attribute].label+'属性への耐性を付与し、追加で🛡️強化効果を得ます。',
   statusName:info.buff,
   statusDescription:info.buffDescription,
-  duration:isRevealed(circle)&&typeof defenseDuration==='function'?defenseDuration(a)+'ターン（威力連動）':'2〜6ターン（威力連動）'
+  duration:isRevealed(circle)&&typeof statusDuration==='function'?statusDuration(a)+'ターン（威力連動）':'2〜6ターン（威力連動）'
  };
  return {
-  effect:'敵に'+ATTRIBUTES[attribute].label+'属性の🕸️弱体効果を与えます。付与の強さと持続時間は魔法の威力・相手の耐性で変化します。',
+  effect:'敵に'+ATTRIBUTES[attribute].label+'属性の🕸️弱体効果を与えます。持続時間は魔法の威力で決まり、強さは相手の耐性などで変わります。',
   statusName:info.debuff,
   statusDescription:info.debuffDescription,
-  duration:attribute==='chaos'?'七属性から弱体効果をランダムに選びます。持続ターン数は相手の耐性などで変わります。':'基本'+info.debuffDuration+'ターン。相手の耐性・魔法の威力に応じて短縮・延長される場合があります。'
+  duration:isRevealed(circle)&&typeof statusDuration==='function'?statusDuration(a)+'ターン（威力連動）':'2〜6ターン（威力連動）'
  };
 }
 export function attributeEffectGuide(buffs=[]){

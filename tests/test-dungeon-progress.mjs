@@ -1,9 +1,17 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {layerOfFight,encounterOfFight,isLayerBoss,encounterLabel,battleHeading,battleEncounter,layerName,LAYER_NAMES,
- clearedLayer,nextLayer,deepestReturnedLayer,recordReturnedLayer,FIGHTS_PER_LAYER} from '../assets/js/dungeon-progress.mjs';
+ clearedLayer,nextLayer,deepestReturnedLayer,recordReturnedLayer,FIGHTS_PER_LAYER,dungeonDepthBlend} from '../assets/js/dungeon-progress.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 assert.equal(FIGHTS_PER_LAYER,5);
+for(const [fight,crimson,darkness,fog] of [
+ [0,'0%','0%','0%'],[1,'2%','0%','0%'],[245,'98%','0%','0%'],
+ [246,'100%','0%','18%'],[250,'100%','0%','18%'],
+ [251,'100%','2%','18%'],[495,'100%','98%','28%'],
+ [496,'100%','100%','28%'],[500,'100%','100%','28%'],
+ [505,'100%','100%','28%']
+])assert.deepEqual(dungeonDepthBlend(fight),{crimson,darkness,fog},'dungeon panel background at fight '+fight);
+
 for(const [fight,layer,round,boss] of [
  [1,1,1,false],[4,1,4,false],[5,1,5,true],
  [6,2,1,false],[9,2,4,false],[10,2,5,true],
