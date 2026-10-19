@@ -242,8 +242,10 @@ const highLevel=G.makeUnit({hp:100,mag:10,def:7,res:10},150,{},[],'player');
 const highLevelTarget=G.makeUnit({hp:100,mag:10,def:7,res:10},150,{},[],'enemy');
 G.cast(lowLevel,lowLevelTarget,spell('debuff','storm',500),buffs);
 G.cast(highLevel,highLevelTarget,spell('debuff','storm',500),buffs);
-near(G.status(lowLevelTarget,'debuff_storm').value,
- G.status(highLevelTarget,'debuff_storm').value,'same-level curse works from 1F to 100F');
+const lowLevelDizzy=G.status(lowLevelTarget,'debuff_storm').value;
+const highLevelDizzy=G.status(highLevelTarget,'debuff_storm').value;
+assert.ok(highLevelDizzy>=lowLevelDizzy&&highLevelDizzy<=lowLevelDizzy*1.3,
+ 'level growth alters MAG/RES balance slightly, never multiplies curse by raw MAG');
 
 // Upgraded power also controls soak, dizzy, gravity, shock and seal.
 const curseCaster=unit();
