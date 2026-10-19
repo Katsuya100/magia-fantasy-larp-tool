@@ -21,7 +21,7 @@ const wait=async(check,message)=>{
 };
 class Element{
  constructor(id){
-  this.id=id;this.hidden=id==='backupRollbackWarning';this.disabled=false;this.open=false;this.textContent='';this.showModalCount=0;
+  this.id=id;this.hidden=['backupRollbackWarning','backupSetupSpinner','googleDriveSpinner','driveSyncActivity'].includes(id);this.disabled=false;this.open=false;this.textContent='';this.showModalCount=0;
   this.handlers=new Map();this.children=new Map();
  }
  addEventListener(name,handler){
@@ -87,12 +87,13 @@ function mockGoogle(){
 }
 function remoteApi(initial=null,{tamperReadback=false}={}){
  const id='backup-1',modified=()=>new Date(Date.UTC(2026,9,19,10,0,version)).toISOString();
- let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false;
+ let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null;
  const operations=[];
  const fetchImpl=async (url,options={})=>{
   if(expired)return new Response('',{status:401});
   const u=String(url),method=options.method||'GET';
   if(u.includes('spaces=appDataFolder')){
+   if(listPause)await listPause;
    return Response.json({files:value===null?[]:[{id,name:'magia-dungeon-save-v1.json',modifiedTime:modified()}]});
   }
   if(u.includes('?alt=media')){
@@ -128,6 +129,11 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   get uploads(){return uploads;},
   get downloads(){return downloads;},
   get operations(){return [...operations];},
+  pauseNextList(){
+   let release;
+   listPause=new Promise(resolve=>{release=resolve;});
+   return ()=>{listPause=null;release();};
+  },
   expire(){expired=true;},
   failUploads(){failUpload=true;},
   resumeUploads(){failUpload=false;}
@@ -163,8 +169,20 @@ try{
    firstReady++;
   }
  });
+ const releaseInitialList=firstDrive.pauseNextList();
  await connect(firstUi);
+ await wait(()=>firstUi.get('backupSetupSpinner').hidden===false,'initial Drive check visibly starts spinner');
+ assert.equal(firstUi.get('googleDriveSpinner').hidden,false,'profile section shares background sync progress');
+ assert.equal(firstUi.get('driveSyncActivity').hidden,false,'global spinner is visible from any gameplay tab');
+ assert.equal(firstUi.get('setupWithoutBackup').hidden,true,'local-only action is untouchable during first Drive check');
+ assert.equal(firstUi.get('setupWithoutBackup').disabled,true,'initial sync disables bypass');
+ assert.equal(firstUi.status['aria-busy'],'true','screen reader receives busy state');
+ releaseInitialList();
  await wait(()=>firstReady===1,'no existing backup opens player naming directly');
+ assert.equal(firstUi.get('backupSetupSpinner').hidden,true,'spinner stops when verified upload finishes');
+ assert.equal(firstUi.get('googleDriveSpinner').hidden,true);
+ assert.equal(firstUi.get('driveSyncActivity').hidden,true);
+ assert.equal(firstUi.status['aria-busy'],'false');
  assert.equal(firstDrive.uploads,1,'the empty starting profile is uploaded exactly once');
  assert.deepEqual(firstDrive.operations,['POST'],'missing backup creates a new file using Drive POST');
  assert.match(firstUi.doc.cookie,/__Secure-magiaDungeonDriveToken=/,'short-lived authorization is persisted to the HTTPS cookie');
@@ -179,13 +197,34 @@ try{
  const newlyNamed=await getProfile(firstDb);
  newlyNamed.name='星の魔導士';
  await saveProfile(firstDb,newlyNamed);
- assert.equal(await firstController.syncNow(),'ready','name is uploaded on demand, without debounce');
+ const releaseNameList=firstDrive.pauseNextList();
+ const nameSync=firstController.syncNow();
+ await wait(()=>!firstUi.get('googleDriveSpinner').hidden,'name change displays a nonblocking background sync spinner');
+ assert.equal(firstUi.status.textContent,'同期中…');
+ releaseNameList();
+ assert.equal(await nameSync,'ready','name is uploaded on demand, without debounce');
+ assert.equal(firstUi.get('googleDriveSpinner').hidden,true,'name sync spinner stops only after Drive verification');
+ assert.equal(firstUi.get('driveSyncActivity').hidden,true,'global indicator stops with the verified save');
  assert.equal(firstDrive.uploads,2,'one upload before name and another immediately after name');
  assert.deepEqual(firstDrive.operations,['POST','PATCH'],'naming updates the created file through Drive PATCH');
  assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.name,'星の魔導士','the remote contains the exact saved name');
  assert.equal(firstUi.status.textContent,'GoogleDrive同期済み','only confirmed bytes count as synced');
  assert.equal(firstUi.get('googleDriveConflictDialog').open,false,'naming never reopens the restore/new chooser');
  assert.ok(firstDrive.downloads>=2,'both uploads were verified with Drive downloads');
+
+ // Real autosave, not just an explicit syncNow(): a local edit schedules
+ // a nonblocking backup after the 1.8s debounce and the spinner stays visible.
+ const autoProfile=await getProfile(firstDb);
+ autoProfile.magicStones=Number(autoProfile.magicStones||0)+1;
+ const beforeAutoUploads=firstDrive.uploads;
+ const releaseAutoList=firstDrive.pauseNextList();
+ await saveProfile(firstDb,autoProfile);
+ await wait(()=>!firstUi.get('driveSyncActivity').hidden,'automatic edit-triggered backup starts visibly without a syncNow call');
+ assert.equal(firstDrive.uploads,beforeAutoUploads,'background sync is still waiting on the remote API');
+ releaseAutoList();
+ await wait(()=>firstDrive.uploads===beforeAutoUploads+1,'automatic backup uploads after local edit');
+ await wait(()=>firstUi.get('driveSyncActivity').hidden&&firstUi.status.textContent==='GoogleDrive同期済み','automatic progress disappears only after verification');
+ assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.magicStones,autoProfile.magicStones,'automatic backup preserves the changed resource');
 
  // 2. Fresh local browser + existing named cloud backup: require only two
  // choices, never a name form until the user chooses a new game.
@@ -196,12 +235,20 @@ try{
  });
  await connect(recoveringUi);
  await wait(()=>recoveringUi.get('googleDriveConflictDialog').open,'existing remote opens restore/new chooser');
+ // Reproduce the actual startup modal behind the restore chooser.
+ recoveringUi.get('backupSetupDialog').showModal();
+ recoveringUi.get('setupWithoutBackup').hidden=false;
+ recoveringUi.get('setupWithoutBackup').disabled=false;
  assert.equal(recoveringNames,0);
  assert.equal(recoveringUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,true,'only two startup choices');
  assert.equal(recoveringDrive.uploads,0,'never replace the stored name before an explicit choice');
  assert.deepEqual(recoveringDrive.operations,[],'a found backup must not receive POST or PATCH before choosing');
  recoveringUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ assert.equal(recoveringUi.get('setupWithoutBackup').hidden,true,'skip option disappears synchronously BEFORE chooser closes');
+ assert.equal(recoveringUi.get('setupWithoutBackup').disabled,true,'no mis-tap can bypass chosen restoration');
+ assert.equal(recoveringUi.get('googleDriveConflictDialog').open,false);
  await wait(()=>reloads===1,'existing player restored');
+ assert.equal(recoveringUi.get('setupWithoutBackup').hidden,true,'skip option cannot flash before reload');
  assert.equal((await readDungeonSnapshot(recoveringDb)).profile.name,'星の魔導士');
  assert.equal(recoveringNames,0,'restoration does not open a new name dialog');
 
@@ -213,6 +260,7 @@ try{
  await connect(newGameUi);
  await wait(()=>newGameUi.get('googleDriveConflictDialog').open,'new-game choice presented');
  newGameUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').click();
+ assert.equal(newGameUi.get('setupWithoutBackup').hidden,true,'new game selection also protects the initial upload');
  await wait(()=>newGameReady===1,'new game opens name entry only after initial backup');
  assert.equal(newGameDrive.uploads,1,'new initial state is backed up before naming');
  assert.deepEqual(newGameDrive.operations,['PATCH'],'explicit new-game choice updates only the existing file');
@@ -292,6 +340,8 @@ try{
  assert.equal(failedSeedReady,0,'do not open the name form after a failed POST');
  assert.equal(failedSeedDrive.current,null);
  assert.equal(failedSeedUi.button.hidden,false);
+ assert.equal(failedSeedUi.get('googleDriveSpinner').hidden,true,'failed save stops the busy indicator');
+ assert.equal(failedSeedUi.get('setupWithoutBackup').hidden,false,'failed initial connection permits deliberately choosing local-only play');
  assert.equal((await getProfile(failedSeedDb)).name,undefined);
  failedSeedDrive.resumeUploads();
  assert.equal(await failedSeedController.sync(true),'ready','retry can create the missing file');
@@ -344,7 +394,7 @@ try{
  assert.equal(refreshUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(refreshUi.button.hidden,true);
  assert.ok(firstDrive.downloads>beforeRefreshDownloads,'cookie reloading still verifies the remote backup');
- assert.deepEqual(firstDrive.operations,['POST','PATCH'],'refresh must not create or overwrite a matching backup');
+ assert.deepEqual(firstDrive.operations,['POST','PATCH','PATCH'],'refresh must not create or overwrite a matching backup');
 
  // 12. If that cached token is revoked, reconnection is required and the
  // cookie must be discarded instead of repeatedly claiming the user is synced.
