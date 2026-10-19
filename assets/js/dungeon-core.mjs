@@ -267,7 +267,7 @@ export function repairInvalidMp(hero){
  return true;
 }
 export function recoverVictoryMp(hero,layer=1){
- // Victory MP regeneration fades by dungeon layer and ends at layer 20.
+ // Victory MP recovery tapers from layer 11 and retains 86.65% from layer 20 onward.
  const floor=Number(layer);
  
  const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1);
@@ -275,7 +275,7 @@ export function recoverVictoryMp(hero,layer=1){
  const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
   num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12)-
   num('victory_mp_middle_taper')*middle*(1-middle);
- const layerFactor=Number.isFinite(floor)?Math.max(0.8,Math.min(1,1-(Math.max(10,floor)-10)*0.02)):1;
+ const layerFactor=Number.isFinite(floor)?Math.max(0.8665,Math.min(1,1-(Math.max(10,floor)-10)*0.013349999999999996)):1;
  const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*rate*layerFactor)));
  hero.mp+=gained;
  return gained;
