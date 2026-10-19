@@ -402,14 +402,14 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  font-weight:900;font-size:21px;letter-spacing:.1em;color:#fff2c9;
  background:radial-gradient(ellipse,#b28047e8,#5f325dcc 68%,transparent);
  border:1px solid #fff0b6;border-radius:12px;pointer-events:none;
- animation:circle-upgrade-aura 1.8s ease-out both
+ animation:circle-upgrade-aura 1.26s ease-out both
 }
 .magic-details-dialog[data-enhancing="true"] #magicDetailsImage{
- animation:circle-upgrade-glow 1.8s ease-out
+ animation:circle-upgrade-glow 1.26s ease-out
 }
 @keyframes circle-upgrade-aura{
- 0%{opacity:0;transform:scale(.45) rotate(-8deg);filter:brightness(3)}
- 25%{opacity:1;transform:scale(1.06) rotate(0);filter:brightness(1.5)}
+ 0%{opacity:0;transform:scale(.45);filter:brightness(3)}
+ 25%{opacity:1;transform:scale(1.06);filter:brightness(1.5)}
  65%{opacity:1;transform:scale(1);filter:brightness(1)}
  100%{opacity:0;transform:scale(1.15)}
 }
@@ -1717,14 +1717,24 @@ html,body{overflow-x:clip}
 .capture-reveal-body{padding:clamp(20px,5vw,30px);text-align:center}
 .capture-reveal-body h2{margin:0 0 24px;color:var(--gold);font-size:clamp(21px,5vw,26px)}
 .capture-reveal-image-wrap{
- position:relative;width:min(62vw,240px);aspect-ratio:1/1;margin:0 auto 25px
+ position:relative;isolation:isolate;width:min(62vw,240px);aspect-ratio:1/1;margin:0 auto 25px
 }
 .capture-reveal-image-wrap::before{
- content:"";position:absolute;inset:-10px;border:2px solid var(--reveal-color);
- border-radius:50%;box-shadow:0 0 24px var(--reveal-color);opacity:.75;pointer-events:none
+ content:"";position:absolute;inset:0;z-index:1;border-radius:10px;
+ background:#010205;opacity:0;pointer-events:none
+}
+.capture-reveal-image-wrap::after,.capture-reveal-ring{
+ content:"";position:absolute;inset:-12%;z-index:4;border:2px solid var(--reveal-color);
+ border-radius:50%;opacity:0;transform:scale(1.36);pointer-events:none;
+ box-shadow:0 0 16px 3px color-mix(in srgb,var(--reveal-color) 65%,transparent),
+ inset 0 0 20px color-mix(in srgb,var(--reveal-color) 27%,transparent)
+}
+.capture-reveal-ring{
+ inset:3%;z-index:5;border-width:1px;transform:scale(1.46);
+ box-shadow:0 0 13px 2px color-mix(in srgb,var(--reveal-color) 78%,transparent)
 }
 .capture-reveal-image-wrap img{
- position:relative;display:block;width:100%;height:100%;object-fit:cover;
+ position:relative;z-index:0;display:block;width:100%;height:100%;object-fit:cover;
  border:1px solid #edcf99;border-radius:10px;box-shadow:0 0 24px #000b
 }
 .capture-reveal-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 24px}
@@ -1732,13 +1742,10 @@ html,body{overflow-x:clip}
 .capture-reveal-results dt{font-size:12px;color:var(--soft);margin-bottom:6px}
 .capture-reveal-results dd{margin:0;color:var(--reveal-color);font-size:clamp(18px,4.3vw,23px);font-weight:800;overflow-wrap:anywhere}
 #closeCaptureReveal{width:100%;max-width:300px}
-.capture-reveal-dialog[open] .capture-reveal-image-wrap{animation:capture-circle-appear .8s ease-out both}
-.capture-reveal-dialog[open] .capture-reveal-results>div{animation:capture-symbol-appear .65s ease-out .3s both}
-.capture-reveal-dialog[open] .capture-reveal-results>div:nth-child(2){animation-delay:.5s}
-@keyframes capture-circle-appear{from{opacity:0;transform:scale(.8) rotate(-8deg);filter:brightness(1.7)}to{opacity:1;transform:scale(1) rotate(0);filter:brightness(1)}}
+.capture-reveal-dialog[open] .capture-reveal-results>div{animation:capture-symbol-appear .455s ease-out .21s both}
+.capture-reveal-dialog[open] .capture-reveal-results>div:nth-child(2){animation-delay:.35s}
 @keyframes capture-symbol-appear{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){
- .capture-reveal-dialog[open] .capture-reveal-image-wrap,
  .capture-reveal-dialog[open] .capture-reveal-results>div{animation:none}
 }
 
@@ -1794,10 +1801,10 @@ html,body{overflow-x:clip}
  border:1px solid var(--border);filter:none
 }
 .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::before{
- animation:circle-upgrade-halo 1.8s ease-out both
+ animation:circle-upgrade-halo 1.26s ease-out both
 }
 .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{
- animation:circle-upgrade-ring 1.8s ease-out both
+ animation:circle-upgrade-ring 1.26s ease-out both
 }
 @keyframes circle-upgrade-halo{
  0%{opacity:0;transform:scale(.85)}
@@ -1806,18 +1813,17 @@ html,body{overflow-x:clip}
  100%{opacity:0;transform:scale(1.16)}
 }
 @keyframes circle-upgrade-ring{
- 0%{opacity:0;transform:scale(.9)}
- 35%{opacity:1;transform:scale(1.06);
+ 0%{opacity:0;transform:scale(1.32)}
+ 35%{opacity:1;transform:scale(1.02);
   box-shadow:0 0 26px 8px color-mix(in srgb,var(--spell-glow) 45%,transparent)}
- 100%{opacity:0;transform:scale(1.15)}
+ 100%{opacity:0;transform:scale(.93)}
 }
-.capture-reveal-dialog[data-attribute] .capture-reveal-image-wrap::before{
+.capture-reveal-dialog[data-attribute] .capture-reveal-image-wrap::after,
+.capture-reveal-dialog[data-attribute] .capture-reveal-ring{
  border-color:var(--spell-glow);
  box-shadow:0 0 15px var(--spell-glow),0 0 32px color-mix(in srgb,var(--spell-glow) 52%,transparent)
 }
-.capture-reveal-dialog[data-attribute] #captureRevealImage{
- filter:drop-shadow(0 0 12px color-mix(in srgb,var(--spell-glow) 70%,transparent))
-}
+.capture-reveal-dialog[data-attribute] #captureRevealImage{filter:none}
 @media(prefers-reduced-motion:reduce){
  .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::before,
  .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{animation:none}
@@ -1958,8 +1964,8 @@ html,body{overflow-x:clip}
 }
 
 
-/* Ink-derived light, not a rectangular drop-shadow on the camera photo.
-   The pixels come from the profile card's exposure-balanced Sobel outline. */
+/* Ink-derived light uses the exact profile-image contour extraction.
+   Normal photo stays behind a black veil that dissolves with the glowing ink. */
 .magic-circle-image-frame>.magic-circle-glow,
 .capture-reveal-image-wrap>.magic-circle-glow{
  position:absolute;inset:0;z-index:3;display:block;
@@ -1968,22 +1974,46 @@ html,body{overflow-x:clip}
  transform:translateZ(0)
 }
 .magic-details-dialog[data-enhancing="true"] .magic-circle-glow[data-ready="true"]{
- animation:magic-ink-light 1.8s ease-out both
+ animation:magic-ink-light 1.26s ease-out both
+}
+.capture-reveal-dialog[data-revealing="true"] .capture-reveal-image-wrap::before{
+ animation:capture-black-veil 1.575s ease-in-out both
 }
 .capture-reveal-dialog[data-revealing="true"] .magic-circle-glow[data-ready="true"]{
- animation:magic-ink-light 2.25s ease-out both
+ animation:capture-ink-light 1.575s ease-in-out both
 }
-.capture-reveal-dialog[data-revealing="true"] #captureRevealImage{
- animation:magic-ink-photo 2.25s ease-out both
+.capture-reveal-dialog[data-revealing="true"] .capture-reveal-image-wrap::after{
+ animation:capture-outer-ring 1.575s ease-out both
+}
+.capture-reveal-dialog[data-revealing="true"] .capture-reveal-ring{
+ animation:capture-inner-ring 1.575s ease-out both
+}
+@keyframes capture-black-veil{
+ 0%{opacity:0}
+ 15%,57%{opacity:1}
+ 100%{opacity:0}
+}
+@keyframes capture-ink-light{
+ 0%{opacity:0;transform:scale(1)}
+ 22%,58%{opacity:1;transform:scale(1)}
+ 100%{opacity:0;transform:scale(1)}
+}
+@keyframes capture-outer-ring{
+ 0%{opacity:0;transform:scale(1.36)}
+ 19%{opacity:1;transform:scale(1.05)}
+ 52%{opacity:.55;transform:scale(.98)}
+ 100%{opacity:0;transform:scale(.88)}
+}
+@keyframes capture-inner-ring{
+ 0%{opacity:0;transform:scale(1.46)}
+ 32%{opacity:.95;transform:scale(1.04)}
+ 68%{opacity:.4;transform:scale(.98)}
+ 100%{opacity:0;transform:scale(.90)}
 }
 @keyframes magic-ink-light{
  0%{opacity:0;transform:scale(.98)}
  22%,57%{opacity:1;transform:scale(1.015)}
  100%{opacity:0;transform:scale(1.055)}
-}
-@keyframes magic-ink-photo{
- 0%,100%{filter:none}
- 23%,60%{filter:brightness(.57) contrast(1.22)}
 }
 @keyframes circle-upgrade-glow{
  0%,100%{filter:none}
@@ -1992,5 +2022,7 @@ html,body{overflow-x:clip}
 @media(prefers-reduced-motion:reduce){
  .magic-details-dialog[data-enhancing="true"] .magic-circle-glow,
  .capture-reveal-dialog[data-revealing="true"] .magic-circle-glow{animation:none;opacity:0}
- .capture-reveal-dialog[data-revealing="true"] #captureRevealImage{animation:none}
+ .capture-reveal-dialog[data-revealing="true"] .capture-reveal-image-wrap::before,
+ .capture-reveal-dialog[data-revealing="true"] .capture-reveal-image-wrap::after,
+ .capture-reveal-dialog[data-revealing="true"] .capture-reveal-ring{animation:none;opacity:0}
 }
