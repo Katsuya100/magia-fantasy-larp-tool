@@ -28,6 +28,15 @@ export function layerOfFight(fight){
  const n=Number(fight);
  return Number.isSafeInteger(n)&&n>0?Math.ceil(n/FIGHTS_PER_LAYER):0;
 }
+// From 1–50 layers the panel becomes crimson; from 51–100 it darkens.
+export function dungeonDepthBlend(fight){
+ const layer=Math.min(layerOfFight(fight),100);
+ return {
+  crimson:Math.min(layer*2,100)+'%',
+  darkness:Math.max(0,(layer-50)*2)+'%',
+  fog:layer>=50?(18+Math.round((layer-50)/5))+'%':'0%'
+ };
+}
 export function encounterOfFight(fight){
  const n=Number(fight);
  return Number.isSafeInteger(n)&&n>0?(n-1)%FIGHTS_PER_LAYER+1:0;

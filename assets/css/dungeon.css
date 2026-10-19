@@ -1651,3 +1651,20 @@ html,body{overflow-x:clip}
 .game-mode-description{margin:0;color:#b8c9d6;font-size:.9rem;line-height:1.65}
 .game-mode-warning{margin:0;color:#ff7777;font-size:.9rem;font-weight:700}
 .game-mode-warning[hidden]{display:none}
+
+/* Only the descent panels, not the page backdrop, change with depth. */
+:is(#battle,#checkpoint){
+ --dungeon-crimson:0%;--dungeon-darkness:0%;--dungeon-fog:0%;
+ background:
+  radial-gradient(ellipse 65% 36% at 20% 77%,color-mix(in srgb,transparent,#d5b1bd var(--dungeon-fog)),transparent 85%),
+  radial-gradient(ellipse 75% 33% at 85% 34%,color-mix(in srgb,transparent,#ad8597 var(--dungeon-fog)),transparent 90%),
+  linear-gradient(155deg,
+   color-mix(in srgb,color-mix(in srgb,#251c28,#b81436 var(--dungeon-crimson)),#29060e var(--dungeon-darkness)),
+   color-mix(in srgb,color-mix(in srgb,#111722,#690d24 var(--dungeon-crimson)),#100308 var(--dungeon-darkness)));
+ background-size:145% 125%,145% 125%,100% 100%;
+ background-position:0% 20%,100% 75%,center;
+}
+:is(#battle,#checkpoint)[data-mist="true"]{animation:dungeon-mist-drift 24s ease-in-out infinite alternate}
+@keyframes dungeon-mist-drift{
+ to{background-position:80% 75%,15% 18%,center}
+}
