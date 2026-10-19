@@ -321,7 +321,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(!file)await saveCloudSyncState(db,{});
     else{
      if(!remote.valid){show('バックアップが破損しています。復元できません。');return result;}
-     const choice=await chooseCloud('引き継ぐか、新しく始めるか選んでください。',{initialChoice:true});
+     const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:true});
      if(choice==='restore')return await restore(remote,file,{explicit:true});
      if(choice==='overwrite'){
       // New game replaces the old backup only after the explicit choice.
@@ -427,7 +427,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    }
    if(decision==='choose'){
     // Never silently overwrite a blank/new browser with Drive data, or vice versa.
-    const choice=await chooseCloud('引き継ぐか、新しく始めるか選んでください。',{initialChoice:initial});
+    const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:initial});
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
      // Replace only after explicit user consent, and protect even the unnamed profile.
