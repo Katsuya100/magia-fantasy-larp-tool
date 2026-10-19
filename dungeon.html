@@ -96,16 +96,11 @@
       </div>
       <div class="profile-data-actions">
         <p>この端末に保存されている冒険のデータを管理します。</p>
-        <div class="save-persistence">
-          <p id="savePersistenceStatus" class="save-persistence-status" role="status" aria-live="polite">保存領域の保護状態を確認しています…</p>
-          <button type="button" id="enablePersistentSave" class="subtle">セーブデータを永続保存する</button>
-          <p class="save-persistence-note">永続保存が許可されると、ブラウザの容量不足による自動削除から保護されます（許可されない場合もあります）。※セーブデータはまずこの端末・ブラウザ内に保存されます。Google Driveへの接続・同期が完了していないデータは、端末故障やサイトデータ削除で失われる場合があります。</p>
-        </div>
         <div class="cloud-sync">
           <h3>☁ Google Drive 自動バックアップ</h3>
           <p id="googleDriveStatus" role="status" aria-live="polite">Google連携の状態を確認しています…</p>
           <button type="button" id="connectGoogleDrive" class="subtle" disabled>Google Driveに接続して自動同期</button>
-          <p class="cloud-sync-note">初回のGoogle認証後、接続中のセーブ変更は自動でバックアップします。写真も対象です。認証期限切れ・オフライン中は再接続や通信回復が必要です。競合時は上書きを停止します。</p>
+          <p class="cloud-sync-note">セーブデータはSafariの仕様や端末の状態により予告なく消える可能性があります。Google Driveに接続すると認証が有効な間、進行状況と魔法陣の写真を自動バックアップします。同期は新しいセーブを優先する後勝ち方式で、古いデータへの巻き戻りが起こる場合があります。同じセーブを複数端末・ブラウザで同時プレイしないでください。認証切れの際は再接続が必要です。バックアップがなければ消失したデータは復元できません。</p>
         </div>
         <button type="button" id="deleteSaveData" class="danger" data-action="delete-data">冒険データをすべて削除</button>
       </div>
