@@ -191,6 +191,21 @@ assert.match(app,/shuffledLayerEnemyIds\(masters\.enemies,layer,Math\.random,slo
 assert.match(app,/run\.layerEnemyOrder=\{layer,ids:/,'the order is stored in the active expedition');
 assert.match(app,/finishStartup\(\);\s*if\(!profile\.name\)openBackupSetup\(\)/,'backup setup appears before first-player name dialog');
 assert.match(page,/<dialog id="backupSetupDialog"/,'backup setup dialog exists');
+
+const copyWarning='バックアップがない端末内セーブは予告なく消える可能性があります。';
+const concurrentWarning='複数ブラウザで同時プレイをすると進行が巻き戻る場合があります';
+assert.equal(page.split('<p class="backup-sync-warning">'+copyWarning+'</p>').length-1,2,'unbacked save loss is displayed at the top of both backup sections');
+assert.equal(page.split('システム上 <strong>'+concurrentWarning+'</strong>。').length-1,2,'both backup surfaces show the same explicit rollback warning');
+assert.ok(page.indexOf('<p class="backup-sync-warning">'+copyWarning+'</p>')<page.indexOf('id="backupSetupStatus"'),'the initial warning precedes connection status');
+const cloudMarkup=page.match(/<div class="cloud-sync">([\s\S]*?)<\/div>/)?.[1];
+assert.ok(cloudMarkup,'backup section exists');
+assert.ok(cloudMarkup.indexOf(copyWarning)<cloudMarkup.indexOf('☁ バックアップ'),'save-loss warning is above the section heading');
+assert.match(page,/<button type="button" id="connectGoogleDrive"[^>]*>GoogleDriveに同期する<\/button>/,'profile sync button is short');
+assert.match(page,/<button type="button" id="setupGoogleDrive"[^>]*>GoogleDriveに同期する<\/button>/,'pre-registration sync button matches profile');
+assert.match(page,/<button type="button" id="setupWithoutBackup"[^>]*>同期せず始める<\/button>/,'local-only choice is clear');
+assert.doesNotMatch(page,/起動・再接続時は保存日時で後勝ち判定/,'implementation jargon is not shown to users');
+assert.match(css,/\.profile-data-actions \.backup-sync-warning\{[\s\S]*?color:#ff7777/,'backup loss and rollback text remains visibly red');
+
 assert.match(page,/<dialog id="imageRepairDialog"/,'recapture dialog exists');
 assert.match(app,/load\(\)\.catch\(failStartup\)/,'startup errors remain visible inside the loading overlay');
 const store=await read('assets/js/dungeon-store.mjs');
