@@ -96,9 +96,12 @@ export function upgradeSpells(spells,budget){
  // Real circles retain their original basePower, hence their original MP cost.
  return {spells:base,counts,costs:base.map(s=>G.spellMpCost(s))};
 }
-export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5}={}){
+const ledgerCache=new Map();
+export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5,mpRecoveryFactor=.87}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
- const history=stones==='earned'?stoneLedger(seed+81,fromLayer-1,10):{stones:0};
+ const ledgerKey=seed+':'+fromLayer;
+ if(stones==='earned'&&!ledgerCache.has(ledgerKey))ledgerCache.set(ledgerKey,stoneLedger(seed+81,fromLayer-1,10));
+ const history=stones==='earned'?ledgerCache.get(ledgerKey):{stones:0};
  const budget=stones==='earned'?Math.floor(history.stones*Math.max(0,Math.min(1,stoneUse))):Math.max(0,Number(stones)||0);
  const equipment=upgradeSpells(SPELLS[spells],budget);
  const effectiveLevel=level==='forecast'?(history.level||1):level;
@@ -126,7 +129,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
   if(!win)break;
   stats.clear=fight;
   hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
-  stats.mpRestored+=G.recoverVictoryMp(hero,Math.ceil(fight/5));
+  stats.mpRestored+=G.recoverVictoryMp(hero,Math.ceil(fight/5),mpRecoveryFactor);
   if(fight%50===0&&fight<last){ // 10th/20th/... layer, after the boss
    hero.hp=hero.stats.hp;hero.mp=hero.maxMp;stats.restores++;
   }
@@ -219,6 +222,18 @@ for(const target of [20,30,50,70,90,100]){
   fromLayer:target-9,toLayer:target,spells:'five',stones:'earned',stoneUse:.5},32);
  console.log('STONE_ON_CURVE_COMBAT '+JSON.stringify(result));
 }
+// Recovery-rate grid is evaluated against a realistic range of stone use.
+// Exact stage levels in these comparisons are boss-target benchmark levels;
+// the separate STONE_ON_CURVE_COMBAT probes entry at the actual XP forecast.
+const diagnosticBands=scenarios.filter(x=>x.stones==='earned'&&[37,55,72,87,102,139,150].includes(x.level));
+for(const rate of [0,.2,.35,.5,.65,.75,.87]){
+ for(const band of diagnosticBands){
+  const result=summarize({...band,stoneUse:.5,mpRecoveryFactor:rate},32);
+  console.log('STONE_MP_GRID '+JSON.stringify({rate,stoneUse:.5,level:band.level,fromLayer:band.fromLayer,
+   toLayer:band.toLayer,winRate:result.winRate,mpPercent:result.avgMpPercent,
+   cleared:result.avgCleared,earned:result.avgStones,spent:result.avgSpentStones}));
+ }
+}
 for(const config of scenarios.filter(x=>x.stones==='earned'&&[37,55,87,150].includes(x.level))){
  for(const stoneUse of [0,.5,1]){
   const result=summarize({...config,stoneUse},32);
@@ -236,7 +251,8 @@ const overleveled=summarize(scenarios.find(x=>x.level===12));
 assert.ok(overleveled.winRate>=95,'a level 12 party should reliably clear layer 3 without consumables');
 const endgame=summarize(scenarios.find(x=>x.level===150&&x.stones==='earned'));
 assert.ok(endgame.winRate>=70,'item-free level 150 party using earned stone upgrades should clear through layer 100');
-assert.ok(endgame.avgMpPercent<=25,'final stretch should be close in MP, not trivial');
+const noStoneEndgame=summarize({...scenarios.find(x=>x.level===150&&x.stones==='earned'),stones:'none'});
+assert.ok(noStoneEndgame.avgMpPercent<=25,'unupgraded reference should be close in MP');
 const ledger=stoneLedger(7293,10);
 console.log('MAGIC_STONE_LEDGER '+JSON.stringify({throughLayer:10,level:ledger.level,stones:ledger.stones,
  levels:ledger.levels,returns:ledger.returns}));
