@@ -9,11 +9,9 @@ import {
 assert.equal(MAGIC_STONES_PER_ULTIMATE,150);
 assert.equal(EQUIPPED_CIRCLES,5);
 assert.equal(ALL_ULTIMATE_COST,750);
-assert.deepEqual(
- Array.from({length:4},()=>seededRandom(1234)()).map(x=>x),
- Array.from({length:4},()=>seededRandom(1234)()).map(x=>x),
- 'seeded random values reproduce exactly'
-);
+const randomA=seededRandom(1234),randomB=seededRandom(1234);
+assert.deepEqual(Array.from({length:4},()=>randomA()),
+ Array.from({length:4},()=>randomB()),'seeded random sequence reproduces exactly');
 assert.equal(simulateProgression(7213).stones,simulateProgression(7213).stones,'identical seed, identical stone result');
 assert.equal(targetClearLevel(100),150);
 assert.equal(magicStoneDropChance(150,100),.3,'at-level floor 100 is 30% per fight');
