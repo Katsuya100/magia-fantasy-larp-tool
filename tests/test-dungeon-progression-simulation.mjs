@@ -340,6 +340,31 @@ for(const startLayer of [11,21,41,61,81,91]){
    spent:result.avgSpentStones,cleared:result.avgCleared}));
  }
 }
+const onCurveLateRecovery=[
+ ['zero97',.23,0,97],
+ ['zero100',.23,0,100],
+ ['flat23',.23,.23,100],
+ ['flat35',.35,.30,100],
+ ['flat45',.45,.40,100],
+ ['flat55',.55,.50,100],
+ ['flat65',.65,.60,100],
+ ['flat75',.75,.70,100]
+];
+for(const [curveName,rate90,rateEnd,layerEnd] of onCurveLateRecovery){
+ const policy=[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],
+  [60,.43],[70,.34],[80,.29],[90,rate90],[layerEnd,rateEnd],[100,rateEnd]];
+ for(const stoneUse of [.75,1]){
+  const onCurve=summarize({name:'forecast-Lv141 / 91-100F',level:'forecast',
+   fromLayer:91,toLayer:100,spells:'five',stones:'earned',stoneUse,
+   mpRecoveryFactor:policy},128);
+  const target=scenarios.find(x=>x.level===150&&x.stones==='earned');
+  const atTarget=summarize({...target,stoneUse,mpRecoveryFactor:policy},128);
+  console.log('STONE_MP_ONCURVE_SWEEP '+JSON.stringify({curveName,stoneUse,
+   forecastLevel:onCurve.forecastLevelAtEntry,oncurveWinRate:onCurve.winRate,
+   oncurveMpPercent:onCurve.avgMpPercent,level150WinRate:atTarget.winRate,
+   level150MpPercent:atTarget.avgMpPercent}));
+ }
+}
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
