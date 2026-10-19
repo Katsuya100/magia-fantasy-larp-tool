@@ -268,7 +268,7 @@ export function repairInvalidMp(hero){
 }
 export const DEFAULT_VICTORY_MP_CURVE=Object.freeze([
  [1,1],[10,1],[20,.71],[30,.63],[40,.58],[50,.47],
- [60,.42],[70,.33],[80,.29],[90,.20],[100,.17]
+ [60,.42],[70,.33],[80,.29],[90,0],[100,0]
 ].map(point=>Object.freeze(point)));
 export function victoryMpLayerFactor(layer,policy=DEFAULT_VICTORY_MP_CURVE){
  const floor=Number(layer);
