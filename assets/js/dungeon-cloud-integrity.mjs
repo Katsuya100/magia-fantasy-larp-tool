@@ -52,7 +52,7 @@ export async function verifyLocalSnapshot(snapshot){
   const expected=proof.photos[circle.id];
   if(expected===null&&circle.image==null)continue;
   try{
-   if(typeof expected!=='string'||!(circle.image instanceof Blob)||!descriptors[circle.id]||await digestPhoto(circle.image)!==expected)badImageIds.push(circle.id);
+   if(typeof expected!=='string'||!(circle.image instanceof Blob)||!circle.image.type||!descriptors[circle.id]||await digestPhoto(circle.image)!==expected)badImageIds.push(circle.id);
   }catch{badImageIds.push(circle.id);}
  }
  return {status:badImageIds.length?'badImages':'valid',badImageIds};
