@@ -21,7 +21,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return {ready:false};
  }
  let client=null,drive=null,expires=0,busy=false,again=false,timer=null,restoring=false,stopped=false;
- let expiryNoticeShown=false,choicePending=false,validatedDrive=null;
+ let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initializing=false;
  const doc=windowImpl?.document;
  const conflictDialog=doc?.getElementById('googleDriveConflictDialog');
  const setupButton=doc?.getElementById('setupGoogleDrive');
@@ -70,7 +70,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(!circle.image){invalidImages.push(circle.id);continue;}
     try{await digestPhoto(circle.image);}catch{invalidImages.push(circle.id);}
    }
-   const result={valid:invalidImages.length===0,data,invalidImages,text:remoteText,hash:await snapshotHash(remoteText)};
+   const result={valid:invalidImages.length===0,data,invalidImages,text:remoteText,hash:await snapshotHash(remoteText),trusted:!data.legacy};
    if(result.valid)validatedDrive={id:file.id,modifiedTime:file.modifiedTime,result};
    return result;
   }catch(error){
@@ -98,6 +98,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   // The exact serialized, inspected bytes are uploaded; do not recompute
   // a new checksum from damaged IndexedDB data after verification.
   const verification=await verifyLocalSnapshot(snapshot);
+  if(isPristineDungeonSnapshot(snapshot))throw Error('空の冒険記録でDriveを上書きできません。');
   if(verification.status!=='valid')throw Error('端末セーブの整合性を検証できないため、バックアップの上書きを中止しました。');
   const text=await serializeDungeonSnapshot(snapshot);
   // A concurrent game write must not make an earlier snapshot clobber a later one.
@@ -109,7 +110,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   }
   const saved=await drive.upload(text,file?.id||null);
   const hash=await snapshotHash(text);
-  validatedDrive={id:saved.id,modifiedTime:saved.modifiedTime,result:{valid:true,data:snapshot,hash,text,invalidImages:[]}};
+  validatedDrive={id:saved.id,modifiedTime:saved.modifiedTime,result:{valid:true,data:snapshot,hash,text,invalidImages:[],trusted:true}};
   await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
   show('Google Driveにバックアップ済み。変更時は接続中に自動更新します。');
   return 'ready';
@@ -138,30 +139,32 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     const choice=await chooseCloud('この端末では以前の冒険データを削除しています。Driveから復元するか、新しい端末データでバックアップを置き換えるか選んでください。');
     if(choice==='restore')return await restore(remote,file);
     if(choice==='overwrite'){
-     if(verification.status==='legacy'){
-      await establishLegacyIntegrity(db,local);local=await readDungeonSnapshot(db);
-     }
-     return await upload(local,file);
+     await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
+     show('新しい冒険を開始します。セーブ変更後にバックアップを更新します。');
+     return 'ready';
     }
     show('選択を保留しました。Driveのバックアップは変更していません。');
     return result;
    }
    if(verification.status==='corrupt'){
-    if(remote.valid)return await restore(remote,file);
+    if(remote.valid&&remote.trusted)return await restore(remote,file);
     show('端末のセーブが破損しています。正常なDriveバックアップもないため、上書きを停止しました。');
     return result;
    }
    if(verification.status==='badImages'){
     // A newer complete Drive save wins before any local image repair can advance savedAt.
-    if(remote.valid&&Number(remote.data.savedAt||0)>=Number(local.savedAt||0))return await restore(remote,file);
+    if(initial&&remote.valid&&Number(remote.data.savedAt||0)>=Number(local.savedAt||0))return await restore(remote,file);
     const restored=[];
-    if(remote.valid){
+    if(remote.data){
      for(const id of verification.badImageIds){
       const localCircle=local.circles.find(c=>c.id===id);
       const driveCircle=remote.data.circles.find(c=>c.id===id);
       if(localCircle&&driveCircle?.image){
-       await putCircle(db,{...localCircle,image:driveCircle.image},{repairImage:true});
-       restored.push(id);
+       try{
+        await digestPhoto(driveCircle.image);
+        await putCircle(db,{...localCircle,image:driveCircle.image},{repairImage:true});
+        restored.push(id);
+       }catch{ /* The other Drive photos may still be individually usable. */ }
       }
      }
     }
@@ -181,7 +184,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     }
    }
    if(verification.status==='legacy'){
-    if(remote.valid)return await restore(remote,file);
+    if(remote.valid&&remote.trusted)return await restore(remote,file);
     if(file){
      show('旧端末セーブを安全に検証できず、Driveも破損しています。自動上書きを停止しました。');
      return result;
@@ -204,17 +207,34 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const localText=await serializeDungeonSnapshot(local);
    const decision=decideCloudSync({file,localHash:await snapshotHash(localText),remoteHash:remote.hash,
     localSavedAt:local.savedAt,remoteSavedAt:remote.data?.savedAt||0,pristine});
+   if(meta?.freshStart&&!pristine){
+    if(decision==='upload')return await upload(local,file);
+    show('Drive側に新しい記録があります。バックアップの上書きは保留しています。');
+    return result;
+   }
    if(decision==='choose'){
+    if(meta?.freshStart)return 'ready';
     // Never silently overwrite a blank/new browser with Drive data, or vice versa.
     const choice=await chooseCloud('Driveに以前の冒険の記録があります。「復元」でその記録を使用、「端末データ」で新しい冒険を開始します。新規開始するとDriveのバックアップは上書きされます。');
     if(choice==='restore')return await restore(remote,file);
-    if(choice==='overwrite')return await upload(local,file);
+    if(choice==='overwrite'){
+     // Starting fresh must not replace a healthy older backup with an empty save.
+     await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
+     show('新しい冒険を開始します。最初の進行が保存されるまでDriveは上書きしません。');
+     return 'ready';
+    }
     show('バックアップを変更せず保留しました。');
     return result;
    }
    if(decision==='synced'){show('Google Driveと同期済み。変更は自動バックアップされます。');return 'ready';}
-   if(decision==='download')return await restore(remote,file);
-   if(decision==='upload')return await upload(local,file);
+   if(decision==='download'){
+    if(!initial){show('Driveにより新しい記録があります。プレイ中は復元・上書きを保留します。再接続時に照合してください。');return result;}
+    return await restore(remote,file);
+   }
+   if(decision==='upload'){
+    if(pristine)return 'ready';
+    return await upload(local,file);
+   }
    return 'ready';
   }catch(error){
    if(error instanceof DriveAuthError)expireConnection();
