@@ -388,9 +388,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   });
   button.disabled=false;
   if(setupButton)setupButton.disabled=false;
-  if(!drive)show('未接続');
+  if(!drive&&!expiryNoticeShown)show('未接続');
   void getCloudSyncState(db).then(meta=>{
-   if(!drive&&meta?.fileId&&meta?.hash)show('未接続。再接続してください。');
+   if(!drive&&!expiryNoticeShown&&meta?.fileId&&meta?.hash)show('未接続。再接続してください。');
   }).catch(()=>{});
  }).catch(error=>show(error.message));
  button.disabled=true;
