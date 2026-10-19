@@ -1,6 +1,6 @@
 import {startingBase} from './dungeon-core.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
-import {recordFingerprint,photoDescriptors,photoEvidence,digestPhoto} from './dungeon-cloud-integrity.mjs';
+import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto} from './dungeon-cloud-integrity.mjs';
 const DB_NAME='magia-dungeon-v1';
 const DB_VERSION=2;
 const STORES=['circles','settings'];
@@ -53,7 +53,7 @@ function request(db,store,mode,op,{silent=false}={}){
 }
 // Read and verify the previous seal BEFORE applying writes. A missing record
 // cannot be silently legitimized by a later (unrelated) profile update.
-function mutate(db,perform,overrides={}){
+function mutate(db,perform,overrides={},profileHashes=null){
  validateDatabase(db);
  return new Promise((resolve,reject)=>{
   let tx;
@@ -83,7 +83,7 @@ function mutate(db,perform,overrides={}){
        desc[circle.id]===null?null:'unknown'
       ]));
       const savedAt=Math.max(Date.now(),Number(seal?.savedAt||0)+1);
-      settings.put({version:1,records:recordFingerprint(next),photos,savedAt,
+      settings.put({version:1,records:recordFingerprint(next),photos,profilePhotos:profileHashes||seal?.profilePhotos||{},savedAt,
        legacy:Boolean(seal?.legacy||(!seal&&Boolean(p||c.length))||Object.values(photos).includes('unknown'))},'integrity');
      };
      nextProfile.onsuccess=stamp;nextCircles.onsuccess=stamp;
@@ -134,15 +134,29 @@ export function clearDungeonData(db){
   }catch(error){reject(error);}
  });
 }
-export const saveProfile=(db,p)=>mutate(db,settings=>settings.put(p,'profile'));
+async function trustedProfileHashes(db,profile){
+ const hashes=await profilePhotoEvidence(profile);
+ const existing=await readDungeonSnapshot(db);
+ const seal=existing.integrity;
+ if(seal?.version===1&&!seal.legacy){
+  const trusted=new Set([...Object.values(seal.photos||{}),...Object.values(seal.profilePhotos||{})].filter(x=>typeof x==='string'));
+  if(Object.values(hashes).some(hash=>!trusted.has(hash)))
+   throw Error('未確認の遺物画像があります。Driveへ誤保存しないため更新を停止しました。');
+ }
+ return hashes;
+}
+export async function saveProfile(db,p){
+ const hashes=await trustedProfileHashes(db,p);
+ return mutate(db,settings=>settings.put(p,'profile'),{},hashes);
+}
 // One IndexedDB transaction prevents a lost/recovered photo and its owner from diverging.
 export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
- const hashes=await photoEvidence(added);
+ const hashes=await photoEvidence(added),profileHashes=await trustedProfileHashes(db,profile);
  return mutate(db,(settings,items)=>{
   for(const id of removed)items.delete(id);
   for(const circle of added)items.put(circle);
   settings.put(profile,'profile');
- },hashes);
+ },hashes,profileHashes);
 }
 
 export async function getProfile(db){
@@ -179,7 +193,7 @@ export function readDungeonSnapshot(db){
 export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0}){
  validateDatabase(db);
  const next={profile,circles};
- const records=recordFingerprint(next),photos=await photoEvidence(circles);
+ const records=recordFingerprint(next),photos=await photoEvidence(circles),profilePhotos=await profilePhotoEvidence(profile);
  return new Promise((resolve,reject)=>{
   try{
    const tx=db.transaction(STORES,'readwrite');
@@ -190,14 +204,14 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0}){
    settings.clear();items.clear();
    settings.put(profile,'profile');
    for(const circle of circles)items.put(circle);
-   settings.put({version:1,records,photos,savedAt:Number(savedAt)||0,legacy:false},'integrity');
+   settings.put({version:1,records,photos,profilePhotos,savedAt:Number(savedAt)||0,legacy:false},'integrity');
   }catch(error){reject(error);}
  });
 }
 // Legacy saves have no trusted photo seal. Seal only after the caller has checked
 // that no sound Drive backup would be at risk from accepting this baseline.
 export async function establishLegacyIntegrity(db,snapshot){
- const hashes=await photoEvidence(snapshot.circles),records=recordFingerprint(snapshot);
+ const hashes=await photoEvidence(snapshot.circles),profileHashes=await profilePhotoEvidence(snapshot.profile),records=recordFingerprint(snapshot);
  return new Promise((resolve,reject)=>{
   try{
    const tx=db.transaction(STORES,'readwrite');
@@ -209,7 +223,7 @@ export async function establishLegacyIntegrity(db,snapshot){
     if(recordFingerprint({profile:p.result,circles:c.result})!==records){reject(Error('検証中にセーブが変更されました。'));tx.abort?.();return;}
     const prev=old.result;
     if(prev?.version===1&&prev.records!==records){reject(Error('保存データの整合性が一致しません。'));tx.abort?.();return;}
-    settings.put({version:1,records,photos:hashes,savedAt:prev?.savedAt||Date.now(),legacy:false},'integrity');
+    settings.put({version:1,records,photos:hashes,profilePhotos:profileHashes,savedAt:prev?.savedAt||Date.now(),legacy:false},'integrity');
    };
    p.onsuccess=done;c.onsuccess=done;old.onsuccess=done;
    tx.oncomplete=()=>resolve();
