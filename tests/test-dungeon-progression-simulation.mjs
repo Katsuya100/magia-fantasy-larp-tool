@@ -116,7 +116,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
   if(!win)break;
   stats.clear=fight;
   hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
-  stats.mpRestored+=G.recoverVictoryMp(hero);
+  stats.mpRestored+=G.recoverVictoryMp(hero,Math.ceil(fight/5));
   if(fight%50===0&&fight<last){ // 10th/20th/... layer, after the boss
    hero.hp=hero.stats.hp;hero.mp=hero.maxMp;stats.restores++;
   }
