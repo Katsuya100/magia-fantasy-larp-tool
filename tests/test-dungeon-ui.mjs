@@ -157,7 +157,8 @@ try{
  $('librarySort').value='newest';await $('librarySort').fire('change');
  assert.deepEqual([...$('libraryCards').innerHTML.matchAll(/data-circle-id="([^"]+)"/g)].map(x=>x[1]),photographedOrder);
  assert.equal((await allCircles(db)).length,5,'filters never delete or change registered photos');
- assert.equal(await circles[0].image.text(),'camera-capture');
+ assert.equal(circles[0].image.type,'image/png','captured photo keeps its MIME type');
+ assert.deepEqual([...new Uint8Array(await circles[0].image.arrayBuffer()).slice(0,8)],[137,80,78,71,13,10,26,10],'captured PNG bytes are retained');
  await doc.click(btn({view:'prepare'}));
  assert.equal($('tab-prepare').attributes['aria-current'],'page');
  await doc.click(btn({openSlot:'0'}));
