@@ -568,6 +568,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   oauthPending=false;
   again=false;
   clearTimeout(timer);timer=null;
+  // An idle-expiry timer must not abort the already running resumable upload.
+  // Credentials remain until its Drive readback has finished.
+  clearTimeout(expiryTimer);expiryTimer=null;
   disconnectPromise=new Promise(resolve=>{resolveDisconnect=resolve;});
   const completed=disconnectPromise;
   // Cancel user decisions, not active Drive transfers.
