@@ -272,6 +272,57 @@ try{
  assert.equal(queuedDrive.putRequests,beforeQueuedPuts+2,'three edits coalesce into two serialized PUTs');
  assert.equal(queuedUi.get('googleDriveConflictDialog').open,false,'no restore chooser is needed for queued saves');
 
+ // Two distinct play histories are never auto-merged, even when one has
+ // a higher level, newer savedAt or a different permadeath successor.
+ const separateDb=await newDb(),separateUi=fakeUi(),separateDrive=remoteApi();
+ let separateReady=0;
+ const separateController=start(separateDb,separateUi,separateDrive.fetchImpl,{onInitialReady:()=>separateReady++});
+ await connect(separateUi);
+ await wait(()=>separateReady===1,'play-lineage test starts with a verified backup');
+ const originalHistory=deserializeDungeonSnapshot(separateDrive.current);
+ const separateProfile=await getProfile(separateDb);
+ const newHistoryId=globalThis.crypto.randomUUID();
+ separateProfile.playId=newHistoryId;
+ separateProfile.name='新しい冒険者';
+ separateProfile.level=99;
+ separateProfile.xp=999999;
+ await saveProfile(separateDb,separateProfile);
+ const writesBeforeMismatch=separateDrive.uploads;
+ assert.equal(await separateController.syncNow(),'deferred','different play history refuses automatic overwrite');
+ assert.equal(separateDrive.uploads,writesBeforeMismatch,'automatic sync does not upload an unrelated play');
+ assert.equal(deserializeDungeonSnapshot(separateDrive.current).profile.playId,originalHistory.profile.playId,'Drive retains the original play history');
+ assert.match(separateUi.status.textContent,/別のプレイ/,'user sees reason automatic sync was blocked');
+ assert.equal(separateUi.get('googleDriveConflictDialog').open,false,'automatic sync never silently opens a destructive overwrite chooser');
+
+ // After a *new authentication*, explicit restore is allowed even when the
+ // new browser belongs to a completely different play.
+ const optInDb=await newDb(),optInUi=fakeUi(),optInDrive=remoteApi(separateDrive.current);
+ const beforeOptIn=(await getProfile(optInDb)).playId;
+ assert.notEqual(beforeOptIn,originalHistory.profile.playId,'the second browser begins as an unrelated play');
+ let optInRestored=0;
+ start(optInDb,optInUi,optInDrive.fetchImpl,{onRestore:()=>optInRestored++});
+ await connect(optInUi);
+ await wait(()=>optInUi.get('googleDriveConflictDialog').open,'new authorization asks before crossing play lineage');
+ assert.equal(optInDrive.uploads,0,'nothing is automatically uploaded across separate plays');
+ optInUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ await wait(()=>optInRestored===1,'explicit post-auth restore can take over a different play');
+ assert.equal((await getProfile(optInDb)).playId,originalHistory.profile.playId,'explicit restore adopts the remote play ID intact');
+ assert.equal(optInDrive.uploads,0,'explicit restore does not overwrite the Drive backup');
+
+ // Explicit overwrite remains separately confirmed even when play IDs differ.
+ const differentDb=await newDb(),differentUi=fakeUi(),differentDrive=remoteApi(separateDrive.current);
+ const differentId=(await getProfile(differentDb)).playId;
+ let differentReady=0;
+ start(differentDb,differentUi,differentDrive.fetchImpl,{onInitialReady:()=>differentReady++});
+ await connect(differentUi);
+ await wait(()=>differentUi.get('googleDriveConflictDialog').open,'different history requires human choice');
+ differentUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').click();
+ assert.equal(differentUi.get('googleDriveOverwriteDialog').open,true,'different history requires overwrite confirmation');
+ assert.equal(differentDrive.uploads,0,'first tap cannot replace the existing play');
+ differentUi.get('googleDriveOverwriteDialog').querySelector('[data-action="confirm"]').click();
+ await wait(()=>differentReady===1,'confirmed override finishes');
+ assert.equal(deserializeDungeonSnapshot(differentDrive.current).profile.playId,differentId,'explicit overwrite starts a different play identity');
+
  // Explicit unlink leaves both copies intact, cancels autosaves and the
  // short-lived token cookie. Reconnection remains possible without data loss.
  const detachedDb=await newDb(),detachedUi=fakeUi(),detachedDrive=remoteApi();
