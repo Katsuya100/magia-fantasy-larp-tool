@@ -25,6 +25,19 @@ for(const lvl of [1,20,50]){
   assert.ok(ratio>=.13&&ratio<=.27,'normal attack near 1/5 recommended normal foe HP at level '+lvl+' '+row.id+' '+ratio);
  }
 }
+assert.equal(G.magicStoneDropChance(1,1),.30,'at recommended level, keep full stone drop rate');
+assert.equal(G.magicStoneDropChance(2,1),.15,'one level above halves the stone drop rate');
+assert.equal(G.magicStoneDropChance(3,1),.075,'two levels above quarters the stone drop rate');
+assert.equal(G.magicStoneDropChance(2,2),.30,'below recommended level, keep full stone drop rate');
+assert.equal(G.magicStoneDropChance(3,2),.30,'at another layer recommended level, keep full rate');
+assert.equal(G.magicStoneDropChance(150,100),.30,'final designed layer remains eligible');
+assert.equal(G.magicStoneDropChance(150,101),.30,'endless layers remain eligible');
+assert.equal(G.magicStoneDropChance(11,1),.30/1024,'ten extra levels make stones extremely rare');
+assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:1}),{collection:5,stone:1,use:3});
+assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2}),{collection:5,stone:0,use:3},'overlevel only reduces stones');
+assert.deepEqual(G.dropCounts(1,()=>.1,{layer:1,playerLevel:2}),{collection:5,stone:1,use:3},'reduced rate is nonzero');
+assert.equal(G.drops(items,collections,1,()=>.2,{layer:1,playerLevel:2}).filter(x=>x.type==='stone').length,0,'actual rewards apply the overlevel penalty');
+assert.equal(G.drops(items,collections,3,()=>.2,{layer:2,playerLevel:2}).filter(x=>x.type==='stone').length,1,'non-overlevelled rewards retain original chance');
 assert.deepEqual(G.dropCounts(1,()=>0),{collection:5,stone:1,use:3});
 assert.deepEqual(G.dropCounts(100,()=>.9999),{collection:0,stone:0,use:0});
 assert.equal(G.dropCount(1,()=>0),9);

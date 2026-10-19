@@ -77,18 +77,25 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-export function dropCounts(_enemyLevel,r=Math.random){
+export function magicStoneDropChance(playerLevel,layer){
+ const overlevel=Math.max(0,Number(playerLevel)-targetClearLevel(layer));
+ return num('magic_stone_drop_chance')*Math.pow(num('magic_stone_overlevel_factor_per_level'),overlevel);
+}
+export function dropCounts(_enemyLevel,r=Math.random,context={}){
+ const stoneChance=context.playerLevel==null
+  ?num('magic_stone_drop_chance')
+  :magicStoneDropChance(context.playerLevel,context.layer??1);
  return {
   collection:countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r),
-  stone:countSuccesses(num('magic_stone_drop_rolls'),num('magic_stone_drop_chance'),r),
+  stone:countSuccesses(num('magic_stone_drop_rolls'),stoneChance,r),
   use:countSuccesses(num('consumable_drop_rolls'),num('consumable_drop_chance'),r)
  };
 }
-export function dropCount(l,r=Math.random){
- return Object.values(dropCounts(l,r)).reduce((total,count)=>total+count,0);
+export function dropCount(l,r=Math.random,context={}){
+ return Object.values(dropCounts(l,r,context)).reduce((total,count)=>total+count,0);
 }
 export function drops(items,collections,l,r=Math.random,context={}){
- const layer=context.layer??1,{collection,stone,use}=dropCounts(l,r),rewards=[];
+ const layer=context.layer??1,{collection,stone,use}=dropCounts(l,r,context),rewards=[];
  for(let i=0;i<use;i++){
   const tier=rollConsumableTier(layer,r);
   const x=weighted(eligibleConsumables(items,layer,tier),r);
