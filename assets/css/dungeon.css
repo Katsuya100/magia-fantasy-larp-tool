@@ -414,7 +414,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  100%{opacity:0;transform:scale(1.15)}
 }
 @keyframes circle-upgrade-glow{
- 0%,100%{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--spell-glow) 50%,transparent))}
+ 0%,100%{filter:none}
  35%{filter:drop-shadow(0 0 14px var(--spell-glow)) drop-shadow(0 0 30px var(--spell-glow)) brightness(1.45)}
 }
 @media(prefers-reduced-motion:reduce){
@@ -1772,36 +1772,44 @@ html,body{overflow-x:clip}
  filter:drop-shadow(0 0 7px color-mix(in srgb,var(--spell-glow) 43%,transparent))
 }
 
-/* The enlarged photo glows even when the detail is reopened after upgrading. */
+/* The enlarged photo has a one-shot ritual glow after upgrades, not a permanent halo. */
 .magic-circle-image-frame{
  position:relative;isolation:isolate;width:min(100%,320px);aspect-ratio:1;
  margin:18px auto 24px
 }
 .magic-circle-image-frame::before{
- content:"";position:absolute;inset:-13px;z-index:-1;border-radius:50%;
+ content:"";position:absolute;inset:-13px;z-index:-1;border-radius:50%;opacity:0;
  background:radial-gradient(circle,color-mix(in srgb,var(--spell-glow) 27%,transparent),transparent 73%);
  box-shadow:0 0 0 9px color-mix(in srgb,var(--spell-glow) 7%,transparent),
  0 0 34px color-mix(in srgb,var(--spell-glow) 35%,transparent)
 }
 .magic-circle-image-frame::after{
  content:"";position:absolute;inset:-12px;border:1px solid color-mix(in srgb,var(--spell-glow) 65%,transparent);
- border-radius:50%;pointer-events:none;
+ border-radius:50%;pointer-events:none;opacity:0;
  box-shadow:0 0 16px color-mix(in srgb,var(--spell-glow) 47%,transparent),
  inset 0 0 18px color-mix(in srgb,var(--spell-glow) 13%,transparent)
 }
 .magic-details-content .magic-circle-image-frame img{
  display:block;width:100%;height:100%;margin:0;object-fit:cover;
- border:1px solid color-mix(in srgb,var(--spell-glow) 55%,transparent);
- filter:drop-shadow(0 0 8px color-mix(in srgb,var(--spell-glow) 50%,transparent))
+ border:1px solid var(--border);filter:none
+}
+.magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::before{
+ animation:circle-upgrade-halo 1.8s ease-out both
 }
 .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{
  animation:circle-upgrade-ring 1.8s ease-out both
 }
+@keyframes circle-upgrade-halo{
+ 0%{opacity:0;transform:scale(.85)}
+ 30%{opacity:1;transform:scale(1.03)}
+ 65%{opacity:.6;transform:scale(1.1)}
+ 100%{opacity:0;transform:scale(1.16)}
+}
 @keyframes circle-upgrade-ring{
- 0%{opacity:.5;transform:scale(.9)}
+ 0%{opacity:0;transform:scale(.9)}
  35%{opacity:1;transform:scale(1.06);
   box-shadow:0 0 26px 8px color-mix(in srgb,var(--spell-glow) 45%,transparent)}
- 100%{opacity:1;transform:scale(1)}
+ 100%{opacity:0;transform:scale(1.15)}
 }
 .capture-reveal-dialog[data-attribute] .capture-reveal-image-wrap::before{
  border-color:var(--spell-glow);
@@ -1811,5 +1819,6 @@ html,body{overflow-x:clip}
  filter:drop-shadow(0 0 12px color-mix(in srgb,var(--spell-glow) 70%,transparent))
 }
 @media(prefers-reduced-motion:reduce){
+ .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::before,
  .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{animation:none}
 }
