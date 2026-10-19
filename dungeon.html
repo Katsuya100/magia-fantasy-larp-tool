@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261019.28">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261019.29">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,13 +19,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261019.28" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261019.29" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261019.28" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261019.29" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -113,8 +113,11 @@
         <div class="cloud-sync">
           <p id="backupRiskWarning" class="backup-sync-warning">バックアップがない端末内セーブは予告なく消える可能性があります。</p>
           <div class="drive-sync-state"><span id="googleDriveSpinner" class="drive-sync-spinner" aria-hidden="true" hidden></span><p id="googleDriveStatus" role="status" aria-live="polite" aria-busy="false">未接続</p></div>
-          <button type="button" id="connectGoogleDrive" class="subtle" disabled>GoogleDriveに同期する</button>
-          <button type="button" id="repairMagicCirclePhotos" class="subtle" hidden>魔法陣の写真を修復する</button>
+          <div class="cloud-sync-actions">
+            <button type="button" id="connectGoogleDrive" class="subtle" disabled>GoogleDriveに同期する</button>
+            <button type="button" id="disconnectGoogleDrive" class="subtle" hidden>Google Driveの同期を解除</button>
+            <button type="button" id="repairMagicCirclePhotos" class="subtle" hidden>魔法陣の写真を修復する</button>
+          </div>
           <p id="backupRollbackWarning" class="backup-sync-warning" hidden>システム上 <strong>複数ブラウザで同時プレイをすると進行が巻き戻る場合があります</strong>。</p>
         </div>
         <button type="button" id="deleteSaveData" class="danger" data-action="delete-data">冒険データをすべて削除</button>
@@ -134,7 +137,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261019.28" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261019.29" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -370,7 +373,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.19.28</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.19.29</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -389,6 +392,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261019.28"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261019.29"></script>
 </body>
 </html>
