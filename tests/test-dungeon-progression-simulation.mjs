@@ -392,6 +392,41 @@ for(const policy of bossPolicies){
   }
  }
 }
+// The user's question is about the 100F boss itself, not the entire 91-100F expedition.
+// 'turns' counts player/enemy combat exchanges, one player action per turn.
+const bossTurnPolicies=[
+ {name:'zero97',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],
+  [50,.49],[60,.43],[70,.34],[80,.29],[90,.23],[97,0],[100,0]]},
+ {name:'zero100',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],
+  [50,.49],[60,.43],[70,.34],[80,.29],[90,.23],[100,0]]},
+ {name:'flat23',points:[[1,1],[10,1],[20,.72],[30,.65],[40,.58],
+  [50,.49],[60,.43],[70,.34],[80,.29],[90,.23],[100,.23]]}
+];
+for(const policy of bossTurnPolicies){
+ for(const level of [150,'forecast']){
+  for(const stoneUse of [.5,.75,1]){
+   const runs=Array.from({length:128},(_,i)=>simulate(17011+i*13,{
+    level,fromLayer:91,toLayer:100,spells:'five',stones:'earned',stoneUse,
+    mpRecoveryFactor:policy.points}));
+   const atBoss=runs.filter(x=>x.fightStats.at(-1)?.fight===500);
+   const victories=atBoss.filter(x=>x.win);
+   const turns=victories.map(x=>x.fightStats.at(-1).turns).sort((a,b)=>a-b);
+   const allBossTurns=atBoss.map(x=>x.fightStats.at(-1).turns);
+   const pct=i=>turns.length?turns[Math.floor((turns.length-1)*i)]:null;
+   const avg=xs=>xs.length?Math.round(10*xs.reduce((a,b)=>a+b,0)/xs.length)/10:null;
+   console.log('STONE_BOSS100_TURNS '+JSON.stringify({
+    policy:policy.name,level,stoneUse,cleared: victories.length,
+    reachedBoss:atBoss.length,samples:runs.length,
+    bossWinRateAmongReached:atBoss.length?Math.round(100*victories.length/atBoss.length):null,
+    meanTurnsOnWin:avg(turns),medianTurnsOnWin:pct(.5),
+    p10TurnsOnWin:pct(.1),p90TurnsOnWin:pct(.9),
+    minTurnsOnWin:turns[0]??null,maxTurnsOnWin:turns.at(-1)??null,
+    avgBossTurnsAllAttempts:avg(allBossTurns),
+    avgMpBeforeBoss:avg(atBoss.map(x=>x.fightStats.at(-1).mpBefore))
+   }));
+  }
+ }
+}
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
