@@ -266,7 +266,11 @@ export function repairInvalidMp(hero){
  hero.mp=hero.maxMp;
  return true;
 }
-export function victoryMpLayerFactor(layer,policy=.87){
+export const DEFAULT_VICTORY_MP_CURVE=Object.freeze([
+ [1,1],[10,1],[20,.71],[30,.63],[40,.58],[50,.47],
+ [60,.42],[70,.33],[80,.29],[90,.20],[100,.17]
+].map(point=>Object.freeze(point)));
+export function victoryMpLayerFactor(layer,policy=DEFAULT_VICTORY_MP_CURVE){
  const floor=Number(layer);
  if(!Number.isFinite(floor))return 1;
  if(Array.isArray(policy)&&policy.length){
@@ -281,7 +285,7 @@ export function victoryMpLayerFactor(layer,policy=.87){
  const late=clamp(Number(policy),0,1);
  return Math.max(late,Math.min(1,1-(1-late)*Math.max(0,floor-10)/10));
 }
-export function recoverVictoryMp(hero,layer=1,lateFactor=.87){
+export function recoverVictoryMp(hero,layer=1,lateFactor=DEFAULT_VICTORY_MP_CURVE){
  const floor=Number(layer);
  const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1);
  const middle=clamp((Number(hero.level)-40)/Math.max(1,num('level_max')-40),0,1);
