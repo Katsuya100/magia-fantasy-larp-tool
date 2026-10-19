@@ -417,6 +417,36 @@ try{
  assert.equal((await readDungeonSnapshot(recoveringDb)).profile.name,'星の魔導士');
  assert.equal(recoveringNames,0,'restoration does not open a new name dialog');
 
+ // One adventurer can have a lower-level Drive checkpoint than the local
+ // device. Explicit "引き継ぐ" is a deliberate choice: restore the verified
+ // Drive copy regardless of the local level, progression or later timestamp.
+ const deliberateDb=await newDb();
+ const deliberateUi=fakeUi(),deliberateDrive=remoteApi(firstDrive.current);
+ const oldCloud=deserializeDungeonSnapshot(firstDrive.current);
+ const deliberateLocal=await getProfile(deliberateDb);
+ deliberateLocal.name=oldCloud.profile.name;
+ deliberateLocal.level=120;
+ deliberateLocal.xp=99999;
+ deliberateLocal.returns=42;
+ await saveProfile(deliberateDb,deliberateLocal);
+ await saveCloudSyncState(deliberateDb,{blocked:true});
+ const localBeforeChoice=await readDungeonSnapshot(deliberateDb);
+ assert.ok(deliberateLocal.level>oldCloud.profile.level,'same adventurer can appear more advanced locally');
+ let deliberateRestores=0;
+ start(deliberateDb,deliberateUi,deliberateDrive.fetchImpl,{onRestore:()=>deliberateRestores++});
+ await connect(deliberateUi,'connectGoogleDrive');
+ await wait(()=>deliberateUi.get('googleDriveConflictDialog').open,'same-adventurer divergent saves require a real choice');
+ assert.equal(deliberateDrive.uploads,0,'higher level alone never authorizes overwriting Drive');
+ deliberateUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ await wait(()=>deliberateRestores===1,'explicit import is respected despite apparent local progress');
+ const deliberatelyRestored=await readDungeonSnapshot(deliberateDb);
+ assert.equal(deliberatelyRestored.profile.name,deliberateLocal.name,'restored checkpoint belongs to the same adventurer');
+ assert.equal(deliberatelyRestored.profile.level,oldCloud.profile.level,'explicit import overrides higher local level');
+ assert.equal(deliberatelyRestored.profile.xp,oldCloud.profile.xp,'explicit import overrides higher local XP');
+ assert.equal(deliberatelyRestored.savedAt,oldCloud.savedAt,'the selected Drive saved timestamp is retained');
+ assert.deepEqual(deliberateDrive.operations,[],'explicit restore never uploads the other checkpoint');
+ assert.notEqual(deliberatelyRestored.savedAt,localBeforeChoice.savedAt,'local timestamp does not override explicit selection');
+
  // 3. Fresh browser + existing backup + explicit new game: the unnamed seed
  // replaces the backup BEFORE naming; the name is then synced immediately.
  const newGameDb=await newDb(),newGameUi=fakeUi(),newGameDrive=remoteApi(firstDrive.current);
