@@ -223,7 +223,10 @@ export async function establishLegacyIntegrity(db,snapshot){
     if(recordFingerprint({profile:p.result,circles:c.result})!==records){reject(Error('検証中にセーブが変更されました。'));tx.abort?.();return;}
     const prev=old.result;
     if(prev?.version===1&&prev.records!==records){reject(Error('保存データの整合性が一致しません。'));tx.abort?.();return;}
-    settings.put({version:1,records,photos:hashes,profilePhotos:profileHashes,savedAt:prev?.savedAt||Date.now(),legacy:false},'integrity');
+    // Conversion must not falsely advance the game's last-save timestamp.
+    const priorDate=Number(prev?.savedAt);
+    const savedAt=Number.isFinite(priorDate)&&priorDate>0?priorDate:0;
+    settings.put({version:1,records,photos:hashes,profilePhotos:profileHashes,savedAt,legacy:false},'integrity');
    };
    p.onsuccess=done;c.onsuccess=done;old.onsuccess=done;
    tx.oncomplete=()=>resolve();

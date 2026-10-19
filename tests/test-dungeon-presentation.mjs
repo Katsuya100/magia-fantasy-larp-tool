@@ -200,6 +200,11 @@ assert.match(page,/id="backupRollbackWarning" class="backup-sync-warning" hidden
 assert.doesNotMatch(page,/id="setupCreatePlayer"|id="setupSwitchGoogleDrive"/,'no redundant no-backup chooser appears');
 assert.match(page,/data-action="restore">引き継ぐ<\/button>/,'restoration choice is explicit');
 assert.match(page,/data-action="overwrite">新しく始める<\/button>/,'new game choice appears only for an existing backup');
+assert.match(page,/<p id="googleDriveOverwriteWarning">新しく始めると以前のバックアップを上書きします。<\/p>/,'overwrite warning can be hidden when overwrite is forbidden');
+const cloudSyncSource=await read('assets/js/dungeon-cloud-sync.mjs');
+assert.doesNotMatch(cloudSyncSource,/この端末は旧形式のセーブです。整合性と更新日時を比較できない/,'legacy conversion no longer presents the obsolete blocking chooser');
+assert.match(cloudSyncSource,/await establishLegacyIntegrity\(db,local\);\s*local=await readDungeonSnapshot\(db\);\s*verification=await verifyLocalSnapshot\(local\);/,'migration recomputes a trusted seal before any upload');
+assert.match(cloudSyncSource,/if\(overwriteWarning\)overwriteWarning.hidden=!allowOverwrite/,'non-overwrite flows conceal misleading warning');
 assert.match(app,/await cloudSyncController\?\.syncNow\?\.\(\)/,'name submission uploads without waiting for the background timer');
 assert.equal(page.split('システム上 <strong>'+concurrentWarning+'</strong>。').length-1,2,'both backup surfaces show the same explicit rollback warning');
 assert.ok(page.indexOf('<p class="backup-sync-warning">'+copyWarning+'</p>')<page.indexOf('id="backupSetupStatus"'),'the initial warning precedes connection status');
