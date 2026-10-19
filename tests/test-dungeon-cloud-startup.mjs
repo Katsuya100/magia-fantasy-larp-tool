@@ -211,6 +211,11 @@ try{
  assert.equal(missingDrive.uploads,0,'missing prior file must not be overwritten or recreated');
  assert.equal(missingUi.button.hidden,false,'error gives a recovery action');
  assert.equal(missingUi.get('backupRiskWarning').hidden,false,'never falsely show healthy backup');
+ const loginsBefore=auth.requests.length;
+ missingUi.button.click();
+ await wait(()=>auth.requests.length===loginsBefore+1,'missing backup offers new Google account authentication');
+ await wait(()=>missingUi.status.textContent.includes('同期エラー'),'wrong account retry must not create a blank file');
+ assert.equal(missingDrive.uploads,0);
 
  // 6. A server error or invalid read-back must never claim "synced" or open
  // name entry. The user's local data remains available.
