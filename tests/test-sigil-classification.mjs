@@ -61,6 +61,12 @@ const radialGap = Array.from({length: 9}, (_, index) => {
   return '<path d="M' + point(angle, 45) + ' L' + point(angle, 165) + '"/>';
 }).join('');
 
+const branchedOpenArrow = '<path d="M140 187 L372 187 M140 187 L157 174 M140 187 L157 202 M372 187 L355 172 M372 187 L355 202"/>'
+  + '<path d="M256 187 L256 373 M256 373 L240 355 M256 373 L273 355"/>'
+  + '<path d="M256 187 L150 356 M256 187 L362 356"/>'
+  + '<path d="M238 187 L256 221 L276 187 M244 187 L256 236 L268 187"/>'
+  + '<path d="M145 362 l-10 -10 m10 10 l11 -12 M361 362 l-10 -10 m10 10 l11 -12"/>';
+
 const fixtures = [
   {name: 'standard sharp 6-point star', role: 'attack', shape: star(6)},
   {name: 'standard broad 6-corner hexagon', role: 'defense', shape: polygon(6, 155)},
@@ -73,12 +79,10 @@ const fixtures = [
   {name: 'debuff: nine rays with a partial scan-rim circle', role: 'debuff',
     shape: radialGap + openRing(191, 25), expectOpenLinearOverride: true},
   {name: 'debuff: branched straight arrows with tiny crossing pockets', role: 'debuff',
-    shape: '<path d="M140 187 L372 187 M140 187 L157 174 M140 187 L157 202 M372 187 L355 172 M372 187 L355 202"/>'
-      + '<path d="M256 187 L256 373 M256 373 L240 355 M256 373 L273 355"/>'
-      + '<path d="M256 187 L150 356 M256 187 L362 356"/>'
-      + '<path d="M238 187 L256 221 L276 187 M244 187 L256 236 L268 187"/>'
-      + '<path d="M145 362 l-10 -10 m10 10 l11 -12 M361 362 l-10 -10 m10 10 l11 -12"/>',
-    expectDebuff: true},
+    shape: branchedOpenArrow, expectBranchedOverride: true},
+  {name: 'debuff: open arrows with one tiny closed ornament', role: 'debuff',
+    shape: branchedOpenArrow + '<polygon points="157,267 176,297 138,297"/>',
+    expectBranchedOverride: true, expectTinyFace: true},
   {name: 'debuff: nine rays with a narrow-gap scan-rim arc', role: 'debuff',
     shape: radialGap + openRing(191, 14), expectOpenLinearOverride: true},
   {name: 'support: smooth interrupted circle without spokes', role: 'support',
@@ -140,19 +144,21 @@ const fixtures = [
 
 let passed = 0;
 const failures = [];
-for (const {name, role, shape, stroke = 7, expectPointedFaces = false, expectOpenLinearOverride = false, expectNoOverride = false} of fixtures) {
+for (const {name, role, shape, stroke = 7, expectPointedFaces = false, expectOpenLinearOverride = false, expectNoOverride = false, expectBranchedOverride = false, expectTinyFace = false} of fixtures) {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><g fill="none" stroke="#111" stroke-width="' + stroke + '" stroke-linecap="round" stroke-linejoin="round">' + shape + '</g></svg>');
   const image = await sharp(svg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { scores, features } = analyzeSigilMetricsJs(image.data, size, size, paths);
   const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   console.log(JSON.stringify({ name, expected: role, predicted: ranked[0][0], scores,
-    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, openLinearStrokes: features.openLinearStrokes, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
+    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, openLinearStrokes: features.openLinearStrokes, openRadialSpokes: features.openRadialSpokes, faceAreaRatio: features.faceAreaRatio, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
       broadAngleRatio: features.broadAngleRatio, sharpTipCount: features.sharpTipCount,
       missingRayRatio: features.missingRayRatio, openPathStraightness: features.openPathStraightness, broadBendRuns: features.broadBendRuns} }));
   if (ranked[0][0] !== role || ranked[0][1] < .35 || ranked[0][1] - ranked[1][1] < .02 ||
     (expectPointedFaces && features.pointedFaces < 2) ||
     (expectOpenLinearOverride && features.openLinearStrokes < 3) ||
-    (expectNoOverride && features.openLinearStrokes !== 0)) {
+    (expectNoOverride && (features.openLinearStrokes !== 0 || features.openRadialSpokes !== 0)) ||
+    (expectBranchedOverride && !(features.openRadialSpokes >= 6 && features.faceAreaRatio < .075)) ||
+    (expectTinyFace && !(features.faceCount > 0 && features.faceAreaRatio > 0))) {
     failures.push(name + ': expected ' + role + ', got ' + ranked[0][0] + ', margin=' + (ranked[0][1] - ranked[1][1]).toFixed(3));
   } else passed++;
 }
