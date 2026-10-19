@@ -142,6 +142,12 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   const confirmed=deserializeDungeonSnapshot(downloaded);
   validatedDrive={id:saved.id,modifiedTime:saved.modifiedTime,result:{valid:true,data:confirmed,hash,text:downloaded,invalidImages:[],trusted:true}};
   await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
+  const newest=await readDungeonSnapshot(db);
+  if(newest.savedAt!==snapshot.savedAt){
+   again=true;
+   show('同期中…');
+   return 'deferred';
+  }
   syncedPresentation();
   return 'ready';
  }
@@ -296,7 +302,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   expires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
   drive=createDungeonDrive(result.access_token,fetchImpl);
   validatedDrive=null;
-  connectedPresentation();
+  // OAuth is not backup success. Only hide the risk once a real file is verified.
+  button.hidden=true;
+  if(setupButton)setupButton.hidden=true;
   show('確認中…');
   const outcome=await sync(true);
   if(outcome==='ready'||outcome==='start-new')onInitialReady();
