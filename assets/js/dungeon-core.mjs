@@ -104,17 +104,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
  }
  for(let i=0;i<stone;i++)rewards.push({type:'stone',id:'magic_stone'});
  for(let i=0;i<collection;i++)
-  rewards.push({type:'collection',id:rollCollection(collections,layer,r,context.bossEnemyId??null).id});
- if(context.bossEnemyId&&context.guaranteeBossCollection){
-  const id=bossUniqueCollection(collections,context.bossEnemyId).id;
-  const existing=rewards.findIndex(item=>item.type==='collection'&&item.id===id);
-  if(existing<0){
-   // Replace only a collection so fixed trophies do not reduce stone/item drops.
-   const slot=rewards.findIndex(item=>item.type==='collection');
-   if(slot>=0)rewards[slot]={type:'collection',id};
-   else rewards.push({type:'collection',id});
-  }
- }
+  rewards.push({type:'collection',id:rollCollection(collections,layer,r,context.bossEnemyId??null,context.favoredCollectionIds).id});
  return rewards;
 }
 export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
