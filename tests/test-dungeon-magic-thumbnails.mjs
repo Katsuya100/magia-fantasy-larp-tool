@@ -32,7 +32,7 @@ assert.equal(circleEffectDetails(debuff,buffs).statusName,'火傷');
 assert.equal(circleEffectDetails(defense,buffs).statusName,'炎熱鼓舞');
 assert.match(circleEffectDetails(debuff,buffs).statusDescription,/継続ダメージ/);
 assert.match(circleEffectDetails(defense,buffs).statusDescription,/攻撃ダメージ/);
-assert.match(circleEffectDetails(defense,buffs).duration,/2ターン/);
+assert.match(circleEffectDetails(defense,buffs).duration,/2〜6ターン/);
 assert.equal(circleEffectDetails(attack,buffs).statusName,'');
 assert.equal(circleEffectDetails(support,buffs).statusName,'');
 const roster=[defense,debuff,attack,support,chaos],ids=roster.map(c=>c.id);
