@@ -31,7 +31,7 @@ assert.deepEqual(new Uint8Array(await decoded.circles[0].image.arrayBuffer()),ne
 assert.equal(await snapshotHash(encoded,webcrypto),await snapshotHash(encoded,webcrypto));
 assert.throws(()=>deserializeDungeonSnapshot(encoded.replace('"冒険者"','"改ざん"')),/チェックサム/);
 assert.equal(isPristineDungeonSnapshot(original),false);
-assert.equal(isPristineDungeonSnapshot({profile:{name:'新規冒険者',tutorialDone:true,level:1,attempts:0,returns:0,run:null},circles:[]}),true,'a new device can recover after the mandatory name dialog');
+assert.equal(isPristineDungeonSnapshot({profile:{name:'新規冒険者',tutorialDone:true,level:1,attempts:0,returns:0,run:null},circles:[]}),false,'a player name is valuable progress that must be backed up');
 assert.equal(isPristineDungeonSnapshot({profile:{name:'',attempts:0,returns:0,run:null},circles:[]}),true);
 await assert.rejects(serializeDungeonSnapshot({profile:null,circles:[]}),/形式/);
 assert.throws(()=>deserializeDungeonSnapshot('{"format":"unsupported","profile":{},"circles":[]}'),/未対応/);
@@ -52,9 +52,10 @@ assert.equal((await getCloudSyncState(db)).blocked,true,'intentional deletion ca
 stop();
 
 const file={id:'1',name:'magia-dungeon-save-v1.json',modifiedTime:'t2'};
-assert.equal(decideCloudSync({file:null,pristine:true}),'wait');
+assert.equal(decideCloudSync({file:null,pristine:true}),'upload','even unnamed starting profiles need a Drive backup');
 assert.equal(decideCloudSync({file:null,pristine:false}),'upload');
 assert.equal(decideCloudSync({file,pristine:true}),'choose');
+assert.equal(decideCloudSync({file,pristine:true,localHash:'same',remoteHash:'same'}),'synced','the same unnamed backup must not trigger a pointless chooser');
 assert.equal(decideCloudSync({file,localHash:'h',remoteHash:'h'}),'synced');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:9}),'upload');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:9,remoteSavedAt:10}),'download');
