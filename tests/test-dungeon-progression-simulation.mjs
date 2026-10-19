@@ -273,6 +273,27 @@ for(const config of scenarios.filter(x=>x.stones==='earned'&&[37,55,87,150].incl
  }
 }
 
+// Experimental early-zero policy. The usual medium curve is retained until
+// ten layers before the candidate cutoff, then slopes down to no recovery.
+const cutoffPoints={
+ 30:[[1,1],[10,1],[20,.71],[30,0]],
+ 50:[[1,1],[10,1],[20,.71],[30,.63],[40,.58],[50,0]],
+ 70:[[1,1],[10,1],[20,.71],[30,.63],[40,.58],[50,.47],[60,.42],[70,0]],
+ 90:[[1,1],[10,1],[20,.71],[30,.63],[40,.58],[50,.47],[60,.42],[70,.33],[80,.29],[90,0]]
+};
+const cutoffBands=scenarios.filter(x=>x.stones==='earned');
+for(const [cutoff,points] of Object.entries(cutoffPoints)){
+ for(const spendFraction of [.5,.75,1]){
+  for(const band of cutoffBands){
+   const result=summarize({...band,mpRecoveryFactor:points,stoneUse:spendFraction},32);
+   console.log('STONE_ZERO_CUTOFF '+JSON.stringify({cutoff:Number(cutoff),spendFraction,
+    level:band.level,fromLayer:band.fromLayer,toLayer:band.toLayer,
+    winRate:result.winRate,mpPercent:result.avgMpPercent,
+    avgCleared:result.avgCleared,avgStones:result.avgStones,
+    avgSpentStones:result.avgSpentStones}));
+  }
+ }
+}
 // Every planned band is checked using the level intended for its final boss.
 for(const config of scenarios.filter(x=>x.toLayer>=10)){
  assert.equal(config.level,targetClearLevel(config.toLayer),'intended boss level '+config.toLayer);
