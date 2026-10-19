@@ -46,6 +46,8 @@ export function stoneLedger(seed,throughLayer){
  const r=rng(seed),progress={level:1,xp:0},levels=[],returns=[];
  let unconfirmedXp=0,unconfirmedStones=0,bank=0,lastLevel=1;
  for(let layer=1;layer<=throughLayer;layer++){
+  const levelBefore=progress.level;
+  const chance=G.magicStoneDropChance(levelBefore,layer);
   for(let i=0;i<5;i++){
    const fight=(layer-1)*5+i+1;
    const foe=enemyForFight(data.enemies,fight);
@@ -54,21 +56,23 @@ export function stoneLedger(seed,throughLayer){
    unconfirmedStones+=drops.filter(x=>x.type==='stone').length;
    unconfirmedXp+=G.fightExperience(enemyLevel,progress.level,layer);
   }
-  // Boss return: only now are stones and experience banked.
+  // Model one completed 5-fight layer, followed by an immediate successful return.
+  // All stones and XP become permanent only at this point.
   bank+=unconfirmedStones;
   G.experience(progress,unconfirmedXp);
   if(progress.level>lastLevel)levels.push({from:lastLevel,to:progress.level,stones:bank,layer});
   lastLevel=progress.level;
-  returns.push({layer,level:progress.level,stones:bank});
+  returns.push({layer,levelBefore,level:progress.level,stones:bank,
+   gained:unconfirmedStones,expectedGained:5*chance});
   unconfirmedStones=0;unconfirmedXp=0;
  }
  return {level:progress.level,stones:bank,levels,returns};
 }
-// Spend a modest fraction of acquired stones on the currently selected circles.
-// Most previously earned stones are assumed to have been spent on earlier gear
-// or saved. Upgrades use the same permanent 10%-of-base rule as the real game.
+// Allocate a documented share of stones earned before this band to the equipped circles.
+// Unlike the former 12%-and-16-cap shortcut, no fabricated upper limit is imposed.
+// Players can spend anything from 0% to 100%, so sensitivity is measured below.
 export function upgradeSpells(spells,budget){
- const base=spells.map(s=>({...s}));
+ const base=spells.map(s=>({...s,basePower:s.basePower??s.power}));
  const counts=base.map(()=>0);
  for(let n=0;n<budget;n++){
   const candidate=base.map((s,i)=>({s,i})).filter(x=>x.s.role==='attack'||x.s.role==='support');
@@ -76,8 +80,7 @@ export function upgradeSpells(spells,budget){
    const score=x=>{
     const orig=spells[x.i].power,now=x.s.power,next=strengthenedPower(orig,counts[x.i]+1);
     const gain=G.basePower(next)-G.basePower(now);
-    const extraMp=G.mpCost(next)-G.mpCost(now);
-    return (gain+.15)/(1+extraMp) / (counts[x.i]+1)**.25;
+    return (gain+.15)/(counts[x.i]+1)**.25;
    };
    return score(b)-score(a)||a.i-b.i;
   });
@@ -85,17 +88,18 @@ export function upgradeSpells(spells,budget){
   counts[i]++;
   base[i].power=strengthenedPower(spells[i].power,counts[i]);
  }
- return {spells:base,counts,costs:base.map(s=>G.mpCost(s.power))};
+ // Real circles retain their original basePower, hence their original MP cost.
+ return {spells:base,counts,costs:base.map(s=>G.spellMpCost(s))};
 }
-export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null}={}){
+export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
  const history=stones==='earned'?stoneLedger(seed+81,fromLayer-1):{stones:0};
- const budget=stones==='earned'?Math.min(16,Math.floor(history.stones*.12)):Math.max(0,Number(stones)||0);
+ const budget=stones==='earned'?Math.floor(history.stones*Math.max(0,Math.min(1,stoneUse))):Math.max(0,Number(stones)||0);
  const equipment=upgradeSpells(SPELLS[spells],budget);
  const hero=G.makeUnit(base,level,{},equipment.spells,'player');
  const first=(fromLayer-1)*5+1,last=toLayer*5;
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
-  startLevel:level,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,
+  startLevel:level,forecastLevelAtEntry:history.level??null,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,unspentStones:Math.max(0,history.stones-budget),upgradeCounts:equipment.counts,
   initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[]};
  for(let fight=first;fight<=last;fight++){
   const foe=enemyForFight(data.enemies,fight);
@@ -133,10 +137,10 @@ export const scenarios=[
  {name:'Lv5 / 1-3F / 3 circles / no items',level:5,fromLayer:1,toLayer:3,spells:'beginner'},
  {name:'Lv12 / 1-3F / 3 circles / no items',level:12,fromLayer:1,toLayer:3,spells:'three'},
  {name:'Lv19 / 1-10F / 5 circles / no items',level:19,fromLayer:1,toLayer:10,spells:'five'},
- {name:'Lv37 / 10-20F / 5 circles / no items',level:37,fromLayer:10,toLayer:20,spells:'five'},
+ {name:'Lv37 / 10-20F / 5 circles / no items / earned stones',level:37,fromLayer:10,toLayer:20,spells:'five',stones:'earned'},
  {name:'Lv55 / 20-30F / 5 circles / no items / earned stones',level:55,fromLayer:20,toLayer:30,spells:'five',stones:'earned'},
  {name:'Lv72 / 30-40F / 5 circles / no items / earned stones',level:72,fromLayer:30,toLayer:40,spells:'five',stones:'earned'},
-  {name:'Lv87 / 40-50F / 5 circles / no items',level:87,fromLayer:40,toLayer:50,spells:'five'},
+  {name:'Lv87 / 40-50F / 5 circles / no items / earned stones',level:87,fromLayer:40,toLayer:50,spells:'five',stones:'earned'},
  {name:'Lv102 / 50-60F / 5 circles / no items / earned stones',level:102,fromLayer:50,toLayer:60,spells:'five',stones:'earned'},
  {name:'Lv115 / 60-70F / 5 circles / no items / earned stones',level:115,fromLayer:60,toLayer:70,spells:'five',stones:'earned'},
  {name:'Lv128 / 70-80F / 5 circles / no items / earned stones',level:128,fromLayer:70,toLayer:80,spells:'five',stones:'earned'},
@@ -156,9 +160,32 @@ export function summarize(config,samples=32){
   avgMpPercent:wins.length?Math.round(100*avg(wins.map(x=>x.mp/x.initialMp))):null,
   avgStones:avg(runs.map(x=>x.availableStones)),
   avgSpentStones:avg(runs.map(x=>x.spentStones)),
+  avgUnspentStones:avg(runs.map(x=>x.unspentStones)),
+  forecastLevelAtEntry:avg(runs.map(x=>x.forecastLevelAtEntry??0)),
   lossByFight:Object.entries(runs.filter(x=>!x.win).reduce((a,x)=>{const f=x.clear+1;a[f]=(a[f]||0)+1;return a;},{}))};
 }
 for(const config of scenarios)console.log('PROGRESSION_SIM '+JSON.stringify(summarize(config)));
+
+// Economic baseline: one five-fight layer per expedition, always return at the boss.
+// This is a cumulative earned-stones forecast, NOT unspent inventory or a guaranteed
+// successful combat path. Death, repeated farming and replacing upgraded circles differ.
+const economyRuns=Array.from({length:128},(_,i)=>stoneLedger(47119+i*113,100));
+for(const layer of [10,20,30,40,50,60,70,80,90,100]){
+ const sorted=economyRuns.map(run=>run.returns[layer-1].stones).sort((a,b)=>a-b);
+ const example=economyRuns[0].returns[layer-1];
+ const mean=Math.round(sorted.reduce((a,b)=>a+b,0)/sorted.length*10)/10;
+ const expectedDrops=Math.round(economyRuns.reduce((a,run)=>a+run.returns.slice(Math.max(0,layer-10),layer).reduce((x,y)=>x+y.expectedGained,0),0)/economyRuns.length*10)/10;
+ console.log('STONE_ECONOMY '+JSON.stringify({layer,levelBefore:example.levelBefore,levelAfterReturn:example.level,
+  targetClearLevel:targetClearLevel(layer),meanEarned:mean,p10:sorted[12],median:sorted[64],p90:sorted[115],
+  meanExpectedDropsLast10Layers:expectedDrops,model:'single-clear;return-after-each-layer;no-spending'}));
+}
+for(const config of scenarios.filter(x=>x.stones==='earned'&&[37,55,87,150].includes(x.level))){
+ for(const stoneUse of [0,.5,1]){
+  const result=summarize({...config,stoneUse},32);
+  console.log('STONE_COMBAT_SENSITIVITY '+JSON.stringify({name:config.name,stoneUse,...result}));
+ }
+}
+
 // Every planned band is checked using the level intended for its final boss.
 for(const config of scenarios.filter(x=>x.toLayer>=10)){
  assert.equal(config.level,targetClearLevel(config.toLayer),'intended boss level '+config.toLayer);
@@ -176,6 +203,9 @@ console.log('MAGIC_STONE_LEDGER '+JSON.stringify({throughLayer:10,level:ledger.l
 assert.ok(scenarios.every(x=>x.fromLayer<=x.toLayer),'scenarios cover consecutive layer bands');
 assert.equal(simulate(1,{level:1,fromLayer:1,toLayer:1,spells:'beginner'}).spentStones,0);
 assert.ok(upgradeSpells(SPELLS.five,10).spells.every((s,i)=>s.power>=SPELLS.five[i].power));
+assert.ok(upgradeSpells(SPELLS.five,80).costs.every((mp,i)=>mp===G.mpCost(SPELLS.five[i].power)),'upgraded spells must retain original MP cost');
+assert.equal(G.magicStoneDropChance(targetClearLevel(30),30),.3);
+assert.equal(G.magicStoneDropChance(targetClearLevel(30)+1,30),.15);
 assert.equal(stoneLedger(1,0).stones,0);
 assert.ok(ledger.stones>0,'stones are banked across completed checkpoints');
 assert.ok(ledger.levels.every(x=>x.to>x.from),'level ups require accumulated XP');
