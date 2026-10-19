@@ -1652,6 +1652,7 @@ html,body{overflow-x:clip}
 .backup-sync-warning strong{color:inherit}
 #backupSetupDialog .buttons{margin-top:14px}
 #backupSetupDialog #backupSetupStatus{white-space:pre-line}
+#googleDriveConflictDialog [data-role="description"]{white-space:pre-line}
 .cloud-sync [role="status"]{white-space:pre-line}
 
 
