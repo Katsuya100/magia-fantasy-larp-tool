@@ -1122,6 +1122,7 @@
     return {
       faceCount, pointedFaces,
       roundedAreaShare: totalFaceArea ? roundedFaceArea / totalFaceArea : 0,
+      enclosedAreaFraction: totalFaceArea / Math.max(1, radius * radius),
       attackBoost: Math.min(3.2, Math.max(0, pointedFaces - 1) * .55),
     };
   }
@@ -1185,6 +1186,36 @@
       if ((longAxis + 1) / (shortAxis + 1) >= 8) straightStrokes++;
     }
     return straightStrokes;
+  }
+
+  // A connected network of open arrows is only one ink component, so PCA
+  // cannot count its individual strokes. Inspect a middle-radius sampling
+  // circle instead: long spokes create several narrow, separate ink crossings.
+  function countRadialStrokeCrossings(gray, width, height, cx, cy, radius) {
+    const samples = 288;
+    const hits = new Uint8Array(samples);
+    const probeDistances = [.595, .62, .645];
+    for (let i = 0; i < samples; i++) {
+      const theta = i * Math.PI * 2 / samples;
+      for (const fraction of probeDistances) {
+        const x = Math.round(cx + Math.cos(theta) * radius * fraction);
+        const y = Math.round(cy + Math.sin(theta) * radius * fraction);
+        if (x >= 0 && y >= 0 && x < width && y < height &&
+            gray[y * width + x] < 150) {
+          hits[i] = 1;
+          break;
+        }
+      }
+    }
+    let thinCrossings = 0;
+    for (let i = 0; i < samples; i++) {
+      if (!hits[i] || hits[(i + samples - 1) % samples]) continue;
+      let length = 0;
+      while (length < samples && hits[(i + length) % samples]) length++;
+      // Broad continuous arcs are not separate straight-line strokes.
+      if (length >= 1 && length <= 23) thinCrossings++;
+    }
+    return thinCrossings;
   }
 
   function analyzeSigilMetricsJs(buffer, width, height, paths) {
@@ -1340,12 +1371,17 @@
         + roundedAreaShare * 14 * closedContourWeight,
       debuff: missingRayRatio ** 2 * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
     };
-    // Only divert an open *main* glyph made from several straight strokes.
-    // Single open curved outlines are not enough; complete enclosed shapes
-    // bypass this override entirely.
+    // Respect dominant closed shapes, but do not let tiny triangles formed
+    // accidentally at line intersections hide an otherwise open glyph.
+    const sparseEnclosures = enclosedFaces.faceCount <= 6
+      && enclosedFaces.enclosedAreaFraction < .08;
     const openLinearStrokes = enclosedFaces.faceCount === 0
       ? countOpenLinearStrokes(image.gray, image.width, image.height, cx, cy, radius) : 0;
-    if (openLinearStrokes >= 3) {
+    const radialStrokeCrossings = sparseEnclosures
+      ? countRadialStrokeCrossings(image.gray, image.width, image.height, cx, cy, radius) : 0;
+    const openGlyphOverride = openLinearStrokes >= 3
+      || (sparseEnclosures && radialStrokeCrossings >= 5);
+    if (openGlyphOverride) {
       raw.attack *= .12;
       raw.defense *= .15;
       raw.support *= .15;
@@ -1355,7 +1391,7 @@
     const scores = { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
     return {
       scores,
-      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, radialLobes, ...enclosedFaces, openLinearStrokes, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
+      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, radialLobes, ...enclosedFaces, openLinearStrokes, radialStrokeCrossings, openGlyphOverride, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
       // Angular contour changes are a proxy for wobble in the drawn lines.
       lineStraightness: clamp(1 - roughness * 6),
     };

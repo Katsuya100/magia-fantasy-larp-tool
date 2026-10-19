@@ -61,6 +61,28 @@ const radialGap = Array.from({length: 9}, (_, index) => {
   return '<path d="M' + point(angle, 45) + ' L' + point(angle, 165) + '"/>';
 }).join('');
 
+
+// Diagram with open arrows and intersecting line segments. The small enclosed
+// triangles at the crossing should not turn the main open glyph into attack.
+// The actual user's photographs are intentionally NOT checked into Git.
+const crossingOpenArrows = '<path d="M91 214 L412 214 M91 214 L115 192 M91 214 L114 235 ' +
+  'M412 214 L390 194 M412 214 L389 235 M253 214 L253 406 ' +
+  'M253 406 L239 385 M253 406 L270 386 M253 214 L110 367 ' +
+  'M253 214 L391 366 M253 214 L263 101 M110 367 L133 347 ' +
+  'M391 366 L371 347"/>' +
+  '<path d="M232 214 L252 245 L273 214 Z M240 217 L253 238 L266 217 Z"/>';
+const detachedSmallTriangles =
+  '<path d="M174 159 L221 159 L197 199 Z M199 307 L248 307 L224 348 Z"/>';
+
+const peripheralOpenMarks = Array.from({length: 5}, (_, index) => {
+  const angle = (-90 + index * 72) * Math.PI / 180;
+  const x = 256 + Math.cos(angle) * 167, y = 256 + Math.sin(angle) * 167;
+  return '<path d="M' + (x - 9).toFixed(1) + ' ' + y.toFixed(1) +
+    ' L' + (x + 9).toFixed(1) + ' ' + y.toFixed(1) + ' M' +
+    x.toFixed(1) + ' ' + (y - 9).toFixed(1) + ' L' +
+    x.toFixed(1) + ' ' + (y + 9).toFixed(1) + '"/>';
+}).join('');
+
 const fixtures = [
   {name: 'standard sharp 6-point star', role: 'attack', shape: star(6)},
   {name: 'standard broad 6-corner hexagon', role: 'defense', shape: polygon(6, 155)},
@@ -70,6 +92,15 @@ const fixtures = [
     name: 'debuff: unclosed straight-letter ' + letter, role: 'debuff', shape,
   })),
   {name: 'debuff: nine separated radial strokes', role: 'debuff', shape: radialGap, expectOpenLinearOverride: true},
+  {name: 'debuff: open crossed arrows with tiny closed triangles', role: 'debuff',
+    shape: crossingOpenArrows, expectGlyphOverride: true},
+  {name: 'debuff: open crossed arrows and separated small markings', role: 'debuff',
+    shape: crossingOpenArrows + peripheralOpenMarks, expectGlyphOverride: true},
+  {name: 'debuff: narrow stroke open arrows with tiny triangles', role: 'debuff',
+    shape: crossingOpenArrows, stroke: 4, expectGlyphOverride: true},
+  {name: 'debuff: open arrows with two confirmed small enclosed faces', role: 'debuff',
+    shape: crossingOpenArrows + detachedSmallTriangles,
+    expectGlyphOverride: true, expectSparseFaces: true},
   {name: 'debuff: nine rays with a partial scan-rim circle', role: 'debuff',
     shape: radialGap + openRing(191, 25), expectOpenLinearOverride: true},
   {name: 'debuff: nine rays with a narrow-gap scan-rim arc', role: 'debuff',
@@ -133,19 +164,21 @@ const fixtures = [
 
 let passed = 0;
 const failures = [];
-for (const {name, role, shape, stroke = 7, expectPointedFaces = false, expectOpenLinearOverride = false, expectNoOverride = false} of fixtures) {
+for (const {name, role, shape, stroke = 7, expectPointedFaces = false, expectOpenLinearOverride = false, expectNoOverride = false, expectGlyphOverride = false, expectSparseFaces = false} of fixtures) {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><g fill="none" stroke="#111" stroke-width="' + stroke + '" stroke-linecap="round" stroke-linejoin="round">' + shape + '</g></svg>');
   const image = await sharp(svg).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { scores, features } = analyzeSigilMetricsJs(image.data, size, size, paths);
   const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   console.log(JSON.stringify({ name, expected: role, predicted: ranked[0][0], scores,
-    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, openLinearStrokes: features.openLinearStrokes, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
+    features: {enclosedFaceCount: features.faceCount, pointedFaces: features.pointedFaces, openLinearStrokes: features.openLinearStrokes, radialStrokeCrossings: features.radialStrokeCrossings, enclosedAreaFraction: features.enclosedAreaFraction, openGlyphOverride: features.openGlyphOverride, roundedAreaShare: features.roundedAreaShare, mean: features.mean, radialVariation: features.radialVariation,
       broadAngleRatio: features.broadAngleRatio, sharpTipCount: features.sharpTipCount,
       missingRayRatio: features.missingRayRatio, openPathStraightness: features.openPathStraightness, broadBendRuns: features.broadBendRuns} }));
   if (ranked[0][0] !== role || ranked[0][1] < .35 || ranked[0][1] - ranked[1][1] < .02 ||
     (expectPointedFaces && features.pointedFaces < 2) ||
     (expectOpenLinearOverride && features.openLinearStrokes < 3) ||
-    (expectNoOverride && features.openLinearStrokes !== 0)) {
+    (expectNoOverride && features.openGlyphOverride) ||
+    (expectGlyphOverride && !features.openGlyphOverride) ||
+    (expectSparseFaces && !(features.faceCount >= 1 && features.enclosedAreaFraction > .005 && features.enclosedAreaFraction < .08))) {
     failures.push(name + ': expected ' + role + ', got ' + ranked[0][0] + ', margin=' + (ranked[0][1] - ranked[1][1]).toFixed(3));
   } else passed++;
 }
