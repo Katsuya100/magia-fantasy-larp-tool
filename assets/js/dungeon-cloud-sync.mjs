@@ -22,7 +22,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   button.disabled=true;
   return {ready:false};
  }
- let client=null,drive=null,expires=0,busy=false,again=false,timer=null,restoring=false,stopped=false;
+ let client=null,drive=null,expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
  let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initializing=false;
  // A short-lived access token is kept only in an HTTPS, path-scoped cookie so
  // a page refresh can resume syncing. Never persist a Google refresh token.
@@ -39,7 +39,12 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(!raw)return null;
   try{
    const value=JSON.parse(decodeURIComponent(raw.slice(cookieName.length+1)));
-   if(typeof value.token==='string'&&value.token.length>0&&Number.isFinite(value.expires)&&value.expires>Date.now()+1000)return value;
+   if(typeof value.token==='string'&&value.token.length>0&&Number.isFinite(value.expires)){
+    if(value.expires>Date.now()+1000)return value;
+    // A present but stale cookie is positive evidence that authentication expired.
+    expireConnection();
+    return null;
+   }
   }catch{ /* A damaged or expired cookie cannot authorize Drive. */ }
   clearAuthCookie();
   return null;
@@ -76,13 +81,32 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   show('GoogleDrive同期済み');
  }
  function expireConnection(){
+  clearTimeout(expiryTimer);
+  expiryTimer=null;
   clearAuthCookie();
-  drive=null;
+  drive=null;expires=0;validatedDrive=null;
   reconnectPresentation('認証が切れました。再接続してください。');
   if(!expiryNoticeShown){
    expiryNoticeShown=true;
-   doc?.getElementById('googleDriveExpiredDialog')?.showModal?.();
+   const dialog=doc?.getElementById('googleDriveExpiredDialog');
+   if(dialog&&!dialog.open)dialog.showModal?.();
   }
+ }
+ // Expiry is an event; do not wait until the next save to discover it.
+ // Only the one-time notification flag is kept in memory.
+ function watchTokenExpiry(){
+  clearTimeout(expiryTimer);
+  expiryTimer=null;
+  if(!drive||!expires||stopped)return;
+  const remaining=expires-Date.now();
+  if(remaining<=0){expireConnection();return;}
+  expiryTimer=setTimeout(()=>{
+   expiryTimer=null;
+   if(!drive||stopped)return;
+   if(Date.now()>=expires)expireConnection();
+   else watchTokenExpiry();
+  },Math.min(remaining,2147483647));
+  expiryTimer?.unref?.();
  }
  function schedule(){
   if(!drive||stopped||restoring||choicePending)return;
@@ -195,6 +219,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    // An account previously confirmed as synced must have a real Drive file.
    if(!file&&meta?.fileId&&!meta?.blocked){
     // Allow a different Google account to be selected on the next connect.
+    clearAuthCookie();
+    clearTimeout(expiryTimer);expiryTimer=null;
     drive=null;expires=0;
     reconnectPresentation('同期エラー：Drive上にバックアップがありません。');
     return result;
@@ -333,6 +359,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   saveAuthCookie(result.access_token,expires);
   drive=createDungeonDrive(result.access_token,fetchImpl);
   validatedDrive=null;
+  watchTokenExpiry();
   // OAuth is not backup success. Only hide the risk once a real file is verified.
   button.hidden=true;
   if(setupButton)setupButton.hidden=true;
@@ -386,6 +413,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  setupButton?.addEventListener('click',connectOrCheck);
  // The caller explicitly disconnects before opening a local-only new game.
  function disconnect(){
+  clearTimeout(expiryTimer);expiryTimer=null;
   clearAuthCookie();
   drive=null;expires=0;validatedDrive=null;
   clearTimeout(timer);
@@ -399,6 +427,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   // On reload, verify Drive's actual bytes before displaying "同期済み".
   expires=savedAuth.expires;
   drive=createDungeonDrive(savedAuth.token,fetchImpl);
+  watchTokenExpiry();
   button.hidden=true;
   if(setupButton)setupButton.hidden=true;
   show('確認中…');
