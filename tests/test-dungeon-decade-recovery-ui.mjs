@@ -84,12 +84,14 @@ try{
  try{
   await import('../assets/js/dungeon-app.mjs?integration=decade-saved-mp-repair');
   await wait(() => el('battle').hidden===false,'previously corrupted battle loaded');
-  const fixed=await getProfile(oldDb);
-  assert.equal(fixed.run.hero.mp,fixed.run.hero.maxMp,'saved invalid MP is repaired on reload');
-  assert.equal(fixed.run.hero.hp,oldHero.hp,'fix does not refill unrelated HP');
-  assert.ok(spellReady(el('battleSpells').innerHTML),'saved battle can use magic immediately');
+  const beforeAction=await getProfile(oldDb);
+  assert.equal(beforeAction.run.hero.mp,undefined,'merely loading an existing save must not change its timestamp or stored fields');
+  assert.equal(beforeAction.run.hero.hp,oldHero.hp,'load does not refill unrelated HP');
+  assert.ok(spellReady(el('battleSpells').innerHTML),'the in-memory MP repair makes magic available immediately');
   await oldEnv.document.click(btn({cast:'0'}));
-  assert.ok((await getProfile(oldDb)).run,'previously broken expedition can continue');
+  const fixed=await getProfile(oldDb);
+  assert.ok(fixed.run,'previously broken expedition can continue');
+  assert.ok(Number.isFinite(fixed.run.hero.mp),'the first real game action persists the MP repair');
  }finally{oldEnv.restore();}
  const legitimateEmpty=G.makeUnit(oldProfile.base,30,{},spells);
  legitimateEmpty.mp=0;

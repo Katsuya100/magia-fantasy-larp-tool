@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261019.12">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261019.13">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,12 +19,12 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261019.12" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261019.13" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261019.12" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261019.13" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -51,6 +51,20 @@
       <button type="button" id="tab-home" data-view="home"><span class="tab-symbol" aria-hidden="true">♜</span><span>プロフィール</span></button>
     </nav>
 
+    <dialog id="backupSetupDialog" class="name-dialog" aria-labelledby="backupSetupTitle">
+      <div class="delete-data-dialog-inner">
+        <span class="dialog-sigil" aria-hidden="true">☁</span>
+        <h2 id="backupSetupTitle">冒険を始める前に、バックアップを設定</h2>
+        <p><strong>バックアップしない場合、ブラウザの都合やサイトデータの削除でセーブが予告なく消える可能性があります。</strong></p>
+        <p>Google Driveに接続すると、写真を含む冒険の記録を自動バックアップします。認証が切れた場合は再接続が必要です。</p>
+        <p>異なる端末・ブラウザで同じセーブを同時にプレイしないでください。最後に更新した記録が勝ち、進行が巻き戻ることがあります。</p>
+        <p id="backupSetupStatus" role="status" aria-live="polite">Google連携の準備中…</p>
+        <div class="buttons">
+          <button type="button" id="setupGoogleDrive" class="primary-action" disabled>Google Driveに接続して始める</button>
+          <button type="button" id="setupWithoutBackup" class="subtle">バックアップせずに始める</button>
+        </div>
+      </div>
+    </dialog>
     <dialog id="nameDialog" class="name-dialog" aria-labelledby="nameDialogTitle">
       <div class="name-dialog-inner">
         <span class="dialog-sigil" aria-hidden="true">✦</span>
@@ -96,16 +110,12 @@
       </div>
       <div class="profile-data-actions">
         <p>この端末に保存されている冒険のデータを管理します。</p>
-        <div class="save-persistence">
-          <p id="savePersistenceStatus" class="save-persistence-status" role="status" aria-live="polite">保存領域の保護状態を確認しています…</p>
-          <button type="button" id="enablePersistentSave" class="subtle">セーブデータを永続保存する</button>
-          <p class="save-persistence-note">永続保存が許可されると、ブラウザの容量不足による自動削除から保護されます（許可されない場合もあります）。※セーブデータはまずこの端末・ブラウザ内に保存されます。Google Driveへの接続・同期が完了していないデータは、端末故障やサイトデータ削除で失われる場合があります。</p>
-        </div>
         <div class="cloud-sync">
           <h3>☁ Google Drive 自動バックアップ</h3>
           <p id="googleDriveStatus" role="status" aria-live="polite">Google連携の状態を確認しています…</p>
           <button type="button" id="connectGoogleDrive" class="subtle" disabled>Google Driveに接続して自動同期</button>
-          <p class="cloud-sync-note">初回のGoogle認証後、接続中のセーブ変更は自動でバックアップします。写真も対象です。認証期限切れ・オフライン中は再接続や通信回復が必要です。競合時は上書きを停止します。</p>
+          <button type="button" id="repairMagicCirclePhotos" class="subtle" hidden>復元できなかった魔法陣画像を撮り直す</button>
+          <p class="cloud-sync-note">冒険データと魔法陣画像をバックアップします。起動・再接続時は保存日時で後勝ち判定し、同時プレイでは進行が巻き戻ることがあります。複数端末・ブラウザで同じセーブを同時にプレイしないでください。未接続・認証切れ・通信不可では自動バックアップが停止します。バックアップがない端末内セーブは予告なく消える可能性があります。</p>
         </div>
         <button type="button" id="deleteSaveData" class="danger" data-action="delete-data">冒険データをすべて削除</button>
       </div>
@@ -124,7 +134,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261019.12" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261019.13" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -309,14 +319,28 @@
         </div>
       </div>
     </dialog>
+    <dialog id="imageRepairDialog" class="name-dialog" aria-labelledby="imageRepairTitle">
+      <div class="delete-data-dialog-inner">
+        <span class="dialog-sigil" aria-hidden="true">◎</span>
+        <h2 id="imageRepairTitle">魔法陣の画像を復元できませんでした</h2>
+        <p>魔法陣の登録・強化・進行状況は残したまま、写真だけを撮り直せます。修復が終わるまでDriveへの上書きは停止します。</p>
+        <p id="imageRepairCircleName" role="status" aria-live="polite"></p>
+        <label for="imageRepairFile">撮り直した画像を選択（カメラ・写真ライブラリ）</label>
+        <input id="imageRepairFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <p id="imageRepairError" class="name-error" role="alert"></p>
+        <div class="buttons">
+          <button type="button" id="imageRepairLater" class="subtle">あとで撮り直す（同期を停止）</button>
+        </div>
+      </div>
+    </dialog>
     <dialog id="googleDriveConflictDialog" class="name-dialog" aria-labelledby="googleDriveConflictTitle">
       <div class="delete-data-dialog-inner">
-        <h2 id="googleDriveConflictTitle">どちらの冒険データを残しますか？</h2>
+        <h2 id="googleDriveConflictTitle">冒険データの復元・開始方法を選択</h2>
         <p data-role="description">端末とGoogle Driveのセーブが異なります。</p>
-        <p>この操作は元に戻せません。残したいデータを慎重に選んでください。</p>
+        <p>復元や上書きは取り消せません。写真と進行状況を含む記録を慎重に選んでください。</p>
         <div class="buttons">
           <button type="button" class="subtle" data-action="restore">Google Driveから復元（端末を上書き）</button>
-          <button type="button" class="danger" data-action="overwrite">端末データでバックアップを上書き</button>
+          <button type="button" class="danger" data-action="overwrite">端末の記録で新規開始／Driveを上書き</button>
           <button type="button" class="subtle" data-action="later">あとで決める</button>
         </div>
       </div>
@@ -346,7 +370,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.19.12</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.19.13</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -365,6 +389,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261019.12"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261019.13"></script>
 </body>
 </html>

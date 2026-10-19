@@ -1,3 +1,4 @@
+import {checkSnapshotShape,quickFingerprint,digestPhoto} from './dungeon-cloud-integrity.mjs';
 // Cloud payload deliberately includes the original magic-circle photos and raw game state.
 // Only plain data crosses the network. No OAuth information is included in the payload.
 const FORMAT='magia-dungeon-save-v1';
@@ -5,7 +6,7 @@ const MAX_PAYLOAD=100*1024*1024;
 const MAX_PHOTO=25*1024*1024;
 function toBase64(bytes){
  let result='';
- for(let i=0;i<bytes.length;i+=32768)result+=btoa(String.fromCharCode(...bytes.subarray(i,i+32768)));
+ for(let i=0;i<bytes.length;i+=32766)result+=btoa(String.fromCharCode(...bytes.subarray(i,i+32766)));
  return result;
 }
 function fromBase64(text){
@@ -15,22 +16,41 @@ function fromBase64(text){
  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
  return bytes;
 }
-function assertShape(snapshot){
- if(!snapshot||typeof snapshot!=='object'||!snapshot.profile||typeof snapshot.profile!=='object'||Array.isArray(snapshot.profile)||!Array.isArray(snapshot.circles)||snapshot.circles.length>500)throw Error('セーブデータの形式が不正です。');
- const ids=new Set();
- for(const circle of snapshot.circles){
-  if(!circle||typeof circle!=='object'||typeof circle.id!=='string'||!circle.id||ids.has(circle.id))throw Error('魔法陣データが不正です。');
-  ids.add(circle.id);
+const assertShape=checkSnapshotShape;
+// The profile can contain hidden photos in permadeath legacies, including
+// nested lost rewards. JSON.stringify(Blob) silently turns those into {}.
+async function encodeNested(value,depth=0){
+ if(depth>50)throw Error('バックアップの入れ子が深すぎます。');
+ if(value instanceof Blob){
+  await digestPhoto(value);
+  return {__magiaSavePhoto:true,type:value.type,base64:toBase64(new Uint8Array(await value.arrayBuffer()))};
  }
+ if(Array.isArray(value))return Promise.all(value.map(item=>encodeNested(item,depth+1)));
+ if(!value||typeof value!=='object')return value;
+ const entries=await Promise.all(Object.entries(value).map(async ([key,item])=>[key,await encodeNested(item,depth+1)]));
+ return Object.fromEntries(entries);
 }
+function decodeNested(value,depth=0){
+ if(depth>50)throw Error('バックアップの入れ子が深すぎます。');
+ if(!value||typeof value!=='object')return value;
+ if(value.__magiaSavePhoto===true){
+  if(typeof value.type!=='string')throw Error('遺物の画像形式が不正です。');
+  return new Blob([fromBase64(value.base64)],{type:value.type});
+ }
+ if(Array.isArray(value))return value.map(item=>decodeNested(item,depth+1));
+ return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,decodeNested(item,depth+1)]));
+}
+
 export async function serializeDungeonSnapshot(snapshot){
  assertShape(snapshot);
  const circles=await Promise.all(snapshot.circles.map(async circle=>{
   if(circle.image==null)return {...circle,image:null};
-  if(!(circle.image instanceof Blob)||circle.image.size>MAX_PHOTO)throw Error('魔法陣画像をバックアップできません。');
+   await digestPhoto(circle.image);
+  if(!(circle.image instanceof Blob)||circle.image.size>MAX_PHOTO||!/^image\/(jpeg|png|webp|gif)$/.test(circle.image.type))throw Error('魔法陣画像の形式をバックアップできません。');
   return {...circle,image:{blob:true,type:circle.image.type,base64:toBase64(new Uint8Array(await circle.image.arrayBuffer()))}};
  }));
- const text=JSON.stringify({format:FORMAT,profile:snapshot.profile,circles});
+ const payload={format:FORMAT,savedAt:Number(snapshot.savedAt)||0,profile:await encodeNested(snapshot.profile),circles};
+  const text=JSON.stringify({...payload,checksum:quickFingerprint(payload)});
  if(text.length>MAX_PAYLOAD)throw Error('バックアップ容量が上限を超えました。');
  return text;
 }
@@ -39,12 +59,15 @@ export function deserializeDungeonSnapshot(text){
  const data=JSON.parse(text);
  if(data?.format!==FORMAT)throw Error('未対応のバックアップ形式です。');
  assertShape(data);
+ const {checksum,...payload}=data;
+ if(checksum!==undefined&&checksum!==quickFingerprint(payload))throw Error('バックアップのチェックサムが一致しません。');
+ if(data.savedAt!==undefined&&(!Number.isFinite(data.savedAt)||data.savedAt<0))throw Error('バックアップの保存日時が不正です。');
  const circles=data.circles.map(circle=>{
   if(circle.image===null||circle.image===undefined)return {...circle,image:null};
   if(circle.image?.blob!==true||typeof circle.image.type!=='string')throw Error('画像形式が不正です。');
   return {...circle,image:new Blob([fromBase64(circle.image.base64)],{type:circle.image.type})};
  });
- return {profile:data.profile,circles};
+ return {profile:decodeNested(data.profile),circles,savedAt:Number(data.savedAt)||0,legacy:checksum===undefined};
 }
 export function isPristineDungeonSnapshot(snapshot){
  const p=snapshot.profile;

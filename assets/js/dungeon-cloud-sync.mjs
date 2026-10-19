@@ -1,173 +1,285 @@
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
 import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
-import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange} from './dungeon-store.mjs';
+import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,establishLegacyIntegrity} from './dungeon-store.mjs';
+import {verifyLocalSnapshot,digestPhoto} from './dungeon-cloud-integrity.mjs';
 
-export function decideCloudSync({file,meta,hash,pristine}){
- if(meta?.blocked)return 'blocked';
- if(!file)return 'upload';
- if(!meta?.fileId||meta.fileId!==file.id)return pristine?'download':'conflict';
- const localChanged=hash!==meta.hash;
- const remoteChanged=file.modifiedTime!==meta.modifiedTime;
- if(localChanged&&remoteChanged)return 'conflict';
- if(remoteChanged)return 'download';
- if(localChanged)return 'upload';
- return 'synced';
+// Last-write-wins: the timestamp belongs to the game save, not Drive metadata.
+// Equal timestamps are resolved in Drive's favor. Hash equality is a no-op.
+export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remoteSavedAt=0,pristine=false,blocked=false}){
+ if(blocked)return 'blocked';
+ if(!file)return pristine?'wait':'upload';
+ if(pristine)return 'choose';
+ if(localHash===remoteHash)return 'synced';
+ return Number(localSavedAt)>Number(remoteSavedAt)?'upload':'download';
 }
-
-// No credentials or user data are written to URLs, localStorage, GitHub, or logs.
-export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globalThis.fetch,windowImpl=globalThis.window}){
+export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=()=>{},onRepairImages=async()=>false,onImagesRestored=async()=>{},fetchImpl=globalThis.fetch,windowImpl=globalThis.window}){
  if(!GOOGLE_CLIENT_ID){
-  status.textContent='Google CloudのOAuth設定待ちです。現在は端末内のみ保存されます。';
+  windowImpl?.document?.getElementById('setupGoogleDrive')?.setAttribute('disabled','');
+  status.textContent='Google連携を利用できません。この端末内のセーブだけでは消失する可能性があります。';
   button.disabled=true;
   return {ready:false};
  }
- let token=null,expires=0,client=null,busy=false,again=false,timer=null,restoring=false;
- let drive=null,stopped=false,expiryNoticeShown=false,choicePending=false;
+ let client=null,drive=null,expires=0,busy=false,again=false,timer=null,restoring=false,stopped=false;
+ let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initializing=false;
+ const doc=windowImpl?.document;
+ const conflictDialog=doc?.getElementById('googleDriveConflictDialog');
+ const setupButton=doc?.getElementById('setupGoogleDrive');
+ const show=message=>{status.textContent=message;const setup=doc?.getElementById('backupSetupStatus');if(setup)setup.textContent=message;};
  function expireConnection(){
   drive=null;
-  show('Google認証が切れました。再接続すると自動同期が再開します。');
-  if(expiryNoticeShown)return;
-  expiryNoticeShown=true;
-  windowImpl?.document?.getElementById('googleDriveExpiredDialog')?.showModal?.();
+  show('Google認証の期限が切れました。再接続するまでバックアップは停止します。');
+  if(!expiryNoticeShown){
+   expiryNoticeShown=true;
+   doc?.getElementById('googleDriveExpiredDialog')?.showModal?.();
+  }
  }
- const show=message=>{status.textContent=message;};
  function schedule(){
   if(!drive||stopped||restoring||choicePending)return;
-  clearTimeout(timer);timer=setTimeout(()=>{void sync();},1800);
+  clearTimeout(timer);
+  timer=setTimeout(()=>{void sync(false);},1800);
  }
- async function sync(){
-  if(!drive||stopped||choicePending)return;
-  if(busy){again=true;return;}
-  if(Date.now()>=expires){expireConnection();return;}
+ function chooseCloud(description,{allowOverwrite=true}={}){
+  return new Promise(resolve=>{
+   if(!conflictDialog?.showModal){resolve('later');return;}
+   choicePending=true;
+   conflictDialog.querySelector('[data-role="description"]').textContent=description;
+   conflictDialog.querySelector('[data-action="overwrite"]').hidden=!allowOverwrite;
+   const finish=choice=>{
+    choicePending=false;
+    conflictDialog.close();
+    conflictDialog.removeEventListener('cancel',cancel);
+    for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.removeEventListener('click',handler);
+    resolve(choice);
+   };
+   const cancel=event=>{event.preventDefault();finish('later');};
+   const handlers=[['restore',()=>finish('restore')],['overwrite',()=>finish('overwrite')],['later',()=>finish('later')]];
+   for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.addEventListener('click',handler,{once:true});
+   conflictDialog.addEventListener('cancel',cancel);
+   conflictDialog.showModal();
+  });
+ }
+ async function checkedRemote(file,refresh=false){
+  if(!file)return {valid:false,data:null,invalidImages:[]};
+  if(!refresh&&validatedDrive?.id===file.id&&validatedDrive.modifiedTime===file.modifiedTime)return validatedDrive.result;
+  try{
+   const remoteText=await drive.download(file.id);
+   const data=deserializeDungeonSnapshot(remoteText);
+   const invalidImages=[];
+   for(const circle of data.circles){
+    if(!circle.image){invalidImages.push(circle.id);continue;}
+    try{await digestPhoto(circle.image);}catch{invalidImages.push(circle.id);}
+   }
+   const result={valid:invalidImages.length===0,data,invalidImages,text:remoteText,hash:await snapshotHash(remoteText),trusted:!data.legacy};
+   if(result.valid)validatedDrive={id:file.id,modifiedTime:file.modifiedTime,result};
+   return result;
+  }catch(error){
+   if(error instanceof DriveAuthError)throw error;
+   return {valid:false,data:null,invalidImages:[],error};
+  }
+ }
+ async function restore(remote,file,{explicit=false}={}){
+  if(!remote.valid)throw Error('破損したDriveバックアップは復元できません。');
+  const before=await readDungeonSnapshot(db);
+  if(before.profile?.run&&!isPristineDungeonSnapshot(before)&&!explicit){
+   show('探索中に新しいDriveデータが見つかりました。探索終了まで自動復元と上書きを停止しています。');
+   return 'deferred';
+  }
+  const current=await drive.metadata(file.id);
+  if(current.modifiedTime!==file.modifiedTime){again=true;return 'deferred';}
+  restoring=true;
+  await replaceDungeonSnapshot(db,remote.data);
+  await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
+  show('Google Driveの正常なセーブを復元しました。画面を読み込み直します。');
+  onRestore();
+  return 'restored';
+ }
+ async function upload(snapshot,file){
+  // The exact serialized, inspected bytes are uploaded; do not recompute
+  // a new checksum from damaged IndexedDB data after verification.
+  const verification=await verifyLocalSnapshot(snapshot);
+  if(isPristineDungeonSnapshot(snapshot))throw Error('空の冒険記録でDriveを上書きできません。');
+  if(verification.status!=='valid')throw Error('端末セーブの整合性を検証できないため、バックアップの上書きを中止しました。');
+  const text=await serializeDungeonSnapshot(snapshot);
+  // A concurrent game write must not make an earlier snapshot clobber a later one.
+  const latest=await readDungeonSnapshot(db);
+  if(latest.savedAt!==snapshot.savedAt) {again=true;return 'deferred';}
+  if(file){
+   const now=await drive.metadata(file.id);
+   if(now.modifiedTime!==file.modifiedTime){again=true;return 'deferred';}
+  }
+  const saved=await drive.upload(text,file?.id||null);
+  const hash=await snapshotHash(text);
+  validatedDrive={id:saved.id,modifiedTime:saved.modifiedTime,result:{valid:true,data:snapshot,hash,text,invalidImages:[],trusted:true}};
+  await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
+  show('Google Driveにバックアップ済み。変更時は接続中に自動更新します。');
+  return 'ready';
+ }
+ async function sync(initial=false){
+  if(!drive||stopped||choicePending)return 'deferred';
+  if(busy){again=true;return 'deferred';}
+  if(Date.now()>=expires){expireConnection();return 'deferred';}
   busy=true;
+  let result='deferred';
   try{
    const meta=await getCloudSyncState(db);
-   const snapshot=await readDungeonSnapshot(db);
-   const text=await serializeDungeonSnapshot(snapshot),hash=await snapshotHash(text);
+   let local=await readDungeonSnapshot(db);
+   let verification=await verifyLocalSnapshot(local);
    const files=await drive.list();
-   if(files.length>1){show('複数のクラウドセーブが見つかりました。安全のため自動上書きを停止しました。');return;}
+   if(files.length>1){show('Driveに複数のバックアップがあります。安全のため自動同期を停止しました。');return result;}
    const file=files[0]||null;
-   const decision=decideCloudSync({file,meta,hash,pristine:isPristineDungeonSnapshot(snapshot)});
-   if(decision==='blocked'||decision==='conflict'){
-    choicePending=true;
-    show('端末とGoogle Driveのセーブを確認してください。選択するまで同期は停止します。');
-    const dialog=windowImpl?.document?.getElementById('googleDriveConflictDialog');
-    if(!dialog?.showModal){show('セーブの選択画面を開けません。安全のため同期を停止しました。');return;}
-    const detail=dialog.querySelector('[data-role="description"]');
-    if(detail)detail.textContent=decision==='blocked'
-     ?'この端末で冒険データを削除しています。Google Driveのセーブを復元するか、現在の端末データでクラウドを上書きするか選んでください。'
-     :'端末とGoogle Driveに異なるセーブがあります。残す方を選んでください。選ばなかったデータは上書きされます。';
-    dialog.showModal();
-    return;
+   const remote=await checkedRemote(file,initial);
+   if(!file&&verification.status==='legacy'){
+    await establishLegacyIntegrity(db,local);
+    local=await readDungeonSnapshot(db);
+    verification=await verifyLocalSnapshot(local);
    }
-   if(decision==='synced'){show('Google Driveと同期済み。セーブ変更は自動でバックアップされます。');return;}
-   if(decision==='download'){
-    const remoteText=await drive.download(file.id);
-    const data=deserializeDungeonSnapshot(remoteText);
-    // Do not replace an active combat session with state from another device.
-    if(snapshot.profile?.run&&!isPristineDungeonSnapshot(snapshot)){
-     show('探索中はクラウドからの復元を保留しています。帰還後に確認します。');return;
+   if(meta?.blocked){
+    if(!file){await saveCloudSyncState(db,{});show('Driveにバックアップはありません。新しい冒険の記録を自動保存します。');return 'ready';}
+    const choice=await chooseCloud('この端末では以前の冒険データを削除しています。Driveから復元するか、新しい端末データでバックアップを置き換えるか選んでください。');
+    if(choice==='restore')return await restore(remote,file,{explicit:true});
+    if(choice==='overwrite'){
+     await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
+     show('新しい冒険を開始します。セーブ変更後にバックアップを更新します。');
+     return 'ready';
     }
-    restoring=true;
-    await replaceDungeonSnapshot(db,data);
-    await saveCloudSyncState(db,{fileId:file.id,modifiedTime:file.modifiedTime,hash:await snapshotHash(remoteText)});
-    show('Google Driveからセーブを復元しました。画面を再読み込みします。');
-    onRestore();
-    return;
+    show('選択を保留しました。Driveのバックアップは変更していません。');
+    return result;
    }
-   // Recheck the remote timestamp immediately before overwriting it.
-   if(file){
-    const newest=await drive.metadata(file.id);
-    if(newest.modifiedTime!==file.modifiedTime){again=true;return;}
+   if(verification.status==='corrupt'){
+    if(remote.valid&&remote.trusted){
+     const rescue=doc?.getElementById('backupSetupDialog')?.open;
+     return await restore(remote,file,{explicit:Boolean(rescue)});
+    }
+    if(remote.valid){
+     const choice=await chooseCloud('端末セーブの破損を検出しました。Driveの旧形式バックアップは完全性を確認できません。復元する場合は内容が古い可能性があります。',{allowOverwrite:false});
+     if(choice==='restore')return await restore(remote,file,{explicit:true});
+    }
+    show('端末のセーブが破損しています。確認済みのDriveバックアップがないため上書きを停止しました。');
+    return result;
    }
-   const saved=await drive.upload(text,file?.id||null);
-   await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash});
-   show('Google Driveへ自動バックアップ済み。今後の変更も自動で保存します。');
+   if(verification.status==='badImages'){
+    // A newer complete Drive save wins before any local image repair can advance savedAt.
+    if(initial&&remote.valid&&Number(remote.data.savedAt||0)>=Number(local.savedAt||0))return await restore(remote,file);
+    const restored=[];
+    if(remote.data){
+     for(const id of verification.badImageIds){
+      const localCircle=local.circles.find(c=>c.id===id);
+      const driveCircle=remote.data.circles.find(c=>c.id===id);
+      if(localCircle&&driveCircle?.image){
+       try{
+        await digestPhoto(driveCircle.image);
+        await putCircle(db,{...localCircle,image:driveCircle.image},{repairImage:true});
+        restored.push(id);
+       }catch{ /* The other Drive photos may still be individually usable. */ }
+      }
+     }
+    }
+    if(restored.length){
+     local=await readDungeonSnapshot(db);
+     verification=await verifyLocalSnapshot(local);
+     show(restored.length+'件の魔法陣画像をDriveから個別復旧しました。');
+     await onImagesRestored(restored);
+    }
+    if(verification.status==='badImages'){
+     const repaired=await onRepairImages(verification.badImageIds);
+     if(!repaired){
+      show('画像の撮り直し待ちです。修復までDriveへの上書きを停止します。');
+      return result;
+     }
+     local=await readDungeonSnapshot(db);
+     verification=await verifyLocalSnapshot(local);
+    }
+   }
+   if(verification.status==='legacy'){
+    if(remote.valid){
+     const choice=await chooseCloud('この端末は旧形式のセーブです。整合性と更新日時を比較できないため、自動上書きせず選択を待ちます。Driveから復元するか、バックアップを変更せず保留してください。',{allowOverwrite:false});
+     if(choice==='restore')return await restore(remote,file,{explicit:true});
+     return result;
+    }
+    if(file){
+     show('旧端末セーブを安全に検証できず、Driveも破損しています。自動上書きを停止しました。');
+     return result;
+    }
+   }
+   if(verification.status!=='valid'){
+    show('セーブの破損・画像欠損を検出しました。復旧するまで自動バックアップを停止します。');
+    return result;
+   }
+   const pristine=isPristineDungeonSnapshot(local);
+   if(file&&!remote.valid){
+    // A valid sealed local copy can replace a broken Drive copy.
+    if(pristine){show('Driveのバックアップが破損しています。端末データでの上書きは停止しました。');return result;}
+    return await upload(local,file);
+   }
+   if(!file&&pristine){
+    show('Google Driveに接続しました。冒険者作成後の変更から自動バックアップします。');
+    return 'ready';
+   }
+   const localText=await serializeDungeonSnapshot(local);
+   const decision=decideCloudSync({file,localHash:await snapshotHash(localText),remoteHash:remote.hash,
+    localSavedAt:local.savedAt,remoteSavedAt:remote.data?.savedAt||0,pristine});
+   if(meta?.freshStart&&!pristine){
+    if(decision==='upload')return await upload(local,file);
+    show('Drive側に新しい記録があります。バックアップの上書きは保留しています。');
+    return result;
+   }
+   if(decision==='choose'){
+    if(meta?.freshStart)return 'ready';
+    // Never silently overwrite a blank/new browser with Drive data, or vice versa.
+    const choice=await chooseCloud('Driveに以前の冒険の記録があります。「復元」でその記録を使用、「端末データ」で新しい冒険を開始します。新規開始するとDriveのバックアップは上書きされます。');
+    if(choice==='restore')return await restore(remote,file,{explicit:true});
+    if(choice==='overwrite'){
+     // Starting fresh must not replace a healthy older backup with an empty save.
+     await saveCloudSyncState(db,{freshStart:true,fileId:file.id});
+     show('新しい冒険を開始します。最初の進行が保存されるまでDriveは上書きしません。');
+     return 'ready';
+    }
+    show('バックアップを変更せず保留しました。');
+    return result;
+   }
+   if(decision==='synced'){show('Google Driveと同期済み。変更は自動バックアップされます。');return 'ready';}
+   if(decision==='download'){
+    if(!initial){show('Driveにより新しい記録があります。プレイ中は復元・上書きを保留します。再接続時に照合してください。');return result;}
+    return await restore(remote,file);
+   }
+   if(decision==='upload'){
+    if(pristine)return 'ready';
+    return await upload(local,file);
+   }
+   return 'ready';
   }catch(error){
    if(error instanceof DriveAuthError)expireConnection();
-   else show('クラウド同期に失敗しました。端末内のセーブは保持されています：'+error.message);
+   else show('バックアップ処理を停止しました（端末内のデータは保持）：'+error.message);
+   return 'deferred';
   }finally{
    busy=false;
    if(again&&!stopped){again=false;schedule();}
   }
  }
- const conflictDialog=windowImpl?.document?.getElementById('googleDriveConflictDialog');
- async function resolveChoice(mode){
-  if(!choicePending||busy||!drive)return;
-  const confirmMessage=mode==='restore'
-   ?'端末の現在の冒険データをGoogle Driveのセーブで上書きします。よろしいですか？'
-   :'Google Driveのバックアップを現在の端末データで上書きします。元のバックアップは失われます。よろしいですか？';
-  if(!windowImpl?.confirm?.(confirmMessage))return;
-  busy=true;
-  try{
-   if(Date.now()>=expires){expireConnection();return;}
-   const files=await drive.list();
-   if(files.length!==1)throw Error('クラウドセーブが変更されています。再度接続して確認してください。');
-   const file=files[0];
-   const snapshot=await readDungeonSnapshot(db);
-   if(mode==='restore'){
-    const text=await drive.download(file.id);
-    const data=deserializeDungeonSnapshot(text);
-    // Verify the remote file did not change while downloading.
-    const current=await drive.metadata(file.id);
-    if(current.modifiedTime!==file.modifiedTime)throw Error('クラウドセーブが更新されました。再度確認してください。');
-    restoring=true;
-    await replaceDungeonSnapshot(db,data);
-    await saveCloudSyncState(db,{fileId:file.id,modifiedTime:file.modifiedTime,hash:await snapshotHash(text)});
-    choicePending=false;
-    conflictDialog?.close();
-    show('Google Driveのセーブを復元しました。再読み込みします。');
-    onRestore();
-   }else{
-    const text=await serializeDungeonSnapshot(snapshot);
-    const current=await drive.metadata(file.id);
-    if(current.modifiedTime!==file.modifiedTime)throw Error('クラウドセーブが更新されました。再度確認してください。');
-    const saved=await drive.upload(text,file.id);
-    await saveCloudSyncState(db,{fileId:saved.id,modifiedTime:saved.modifiedTime,hash:await snapshotHash(text)});
-    choicePending=false;
-    conflictDialog?.close();
-    show('端末のデータでGoogle Driveを上書きしました。自動同期を再開します。');
-   }
-  }catch(error){
-   if(error instanceof DriveAuthError)expireConnection();
-   else show('セーブの選択処理に失敗しました：'+error.message);
-  }finally{busy=false;}
- }
- conflictDialog?.querySelector('[data-action="restore"]')?.addEventListener('click',()=>{void resolveChoice('restore');});
- conflictDialog?.querySelector('[data-action="overwrite"]')?.addEventListener('click',()=>{void resolveChoice('overwrite');});
- conflictDialog?.querySelector('[data-action="later"]')?.addEventListener('click',()=>{
-  conflictDialog.close();
-  show('セーブの選択を保留しています。Google Driveに再接続すると再表示できます。');
- });
- const unsubscribe=onDungeonDataChange(db,schedule);
- windowImpl?.addEventListener?.('online',schedule);
- windowImpl?.document?.addEventListener?.('visibilitychange',()=>{if(!windowImpl.document.hidden)schedule();});
  async function acceptGoogleToken(result){
   if(result.error||!result.access_token){show('Google連携が完了しませんでした。');return;}
   expiryNoticeShown=false;
-  windowImpl?.document?.getElementById('googleDriveExpiredDialog')?.close?.();
-  token=result.access_token;
+  doc?.getElementById('googleDriveExpiredDialog')?.close?.();
   expires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
-  choicePending=false;
-  conflictDialog?.close();
-  drive=createDungeonDrive(token,fetchImpl);
+  drive=createDungeonDrive(result.access_token,fetchImpl);
+  validatedDrive=null;
   button.textContent='Google Driveに再接続';
-  show('Google Driveとセーブデータを照合中…');
-  await sync();
+  show('Driveとセーブを検証・照合中…');
+  const outcome=await sync(true);
+  if(outcome==='ready')onInitialReady();
  }
  function loadIdentity(){
   return new Promise((resolve,reject)=>{
    if(globalThis.google?.accounts?.oauth2){resolve();return;}
-   const script=document.createElement('script');
+   const script=doc.createElement('script');
    script.src='https://accounts.google.com/gsi/client';
    script.async=true;
    script.onload=resolve;
    script.onerror=()=>reject(Error('Google認証ライブラリの読み込みに失敗しました。'));
-   document.head.append(script);
+   doc.head.append(script);
   });
  }
- // Start loading the library ahead of the user's click to preserve iOS Safari user activation.
  void loadIdentity().then(()=>{
   if(stopped)return;
   client=globalThis.google.accounts.oauth2.initTokenClient({
@@ -176,19 +288,20 @@ export function initDungeonCloudSync({db,button,status,onRestore,fetchImpl=globa
    error_callback:()=>show('Googleログインが中断されました。再度お試しください。')
   });
   button.disabled=false;
-  show('Google Driveに一度接続すると、接続中のセーブ変更は自動でバックアップされます。');
+  if(setupButton)setupButton.disabled=false;
+  show('Google Driveに接続すると、端末データの消失に備えて自動バックアップします。認証期限切れやオフライン中は停止します。');
  }).catch(error=>show(error.message));
  button.disabled=true;
- const expiredDialog=windowImpl?.document?.getElementById('googleDriveExpiredDialog');
+ const expiredDialog=doc?.getElementById('googleDriveExpiredDialog');
  expiredDialog?.querySelector('[data-action="reconnect"]')?.addEventListener('click',()=>{
   expiredDialog.close();
-  if(client)client.requestAccessToken({prompt:'consent'});
+  client?.requestAccessToken({prompt:'consent'});
  });
  expiredDialog?.querySelector('[data-action="later"]')?.addEventListener('click',()=>expiredDialog.close());
- button.addEventListener('click',()=>{
-  if(!client)return;
-  // Google requires a direct user gesture for this popup (not an awaited Promise).
-  client.requestAccessToken({prompt:'consent'});
- });
+ button.addEventListener('click',()=>{client?.requestAccessToken({prompt:'consent'});});
+ setupButton?.addEventListener('click',()=>{client?.requestAccessToken({prompt:'consent'});});
+ const unsubscribe=onDungeonDataChange(db,schedule);
+ windowImpl?.addEventListener?.('online',schedule);
+ doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
  return {ready:true,unsubscribe,sync};
 }

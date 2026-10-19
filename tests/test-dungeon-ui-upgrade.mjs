@@ -116,6 +116,9 @@ try{
  assert.equal((await allCircles(db)).length,0,'deletion clears the grimoire and images');
  assert.equal($('deleteDataDialog').open,false,'confirmation modal closes');
  assert.equal($('prepare').hidden,false,'reset returns to preparation');
- assert.equal($('nameDialog').open,true,'reset opens fresh adventurer naming dialog');
+ assert.equal($('backupSetupDialog').open,true,'reset returns to backup choice before new adventurer naming');
+ assert.equal($('nameDialog').open,false,'reset waits for backup choice before naming');
+ await $('setupWithoutBackup').fire('click');
+ assert.equal($('nameDialog').open,true,'local-only choice opens a fresh adventurer naming dialog');
  console.log('PASS confirmed magic-stone upgrades, dialog actions and irreversible profile reset');
 }finally{env.restore();}
