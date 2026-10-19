@@ -17,7 +17,7 @@ export function fakeDungeonBrowser(config={}){
    play:async()=>{},
    getContext:()=>({drawImage(...args){element.drawImageArgs=args;},clearRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},fillRect(){},strokeRect(){},arc(){},closePath(){},fillText(){},createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){return {addColorStop(){}};}}),
     getBoundingClientRect:()=>({left:0,top:0,width:320,height:320}),setPointerCapture(){},releasePointerCapture(){},
-   toBlob:callback=>callback(new Blob(['camera-capture'],{type:'image/png'})),
+   toBlob:callback=>callback(new Blob([Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0])],{type:'image/png'})),
    toDataURL:()=>'data:image/png;base64,ZmFrZQ=='
   };
   return element;
