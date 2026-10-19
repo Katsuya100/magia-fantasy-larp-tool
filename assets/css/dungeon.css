@@ -1695,3 +1695,48 @@ html,body{overflow-x:clip}
 @keyframes dungeon-mist-drift{
  to{background-position:80% 75%,15% 18%,center}
 }
+
+
+/* Post-capture ritual: only the photographed circle, its 相 and its 紋. */
+.capture-reveal-dialog{
+ --reveal-color:#e8bd80;width:min(420px,calc(100vw - 28px));
+ max-height:calc(100dvh - 28px);padding:0;overflow:auto;
+ border:1px solid var(--reveal-color);border-radius:16px;color:var(--pale);
+ background:radial-gradient(circle at 50% 18%,#413049,#131724 72%);
+ box-shadow:0 30px 110px #000d,0 0 30px color-mix(in srgb,var(--reveal-color) 25%,transparent)
+}
+.capture-reveal-dialog::backdrop{background:#080812d9;backdrop-filter:blur(6px)}
+.capture-reveal-dialog[data-attribute="flame"]{--reveal-color:#ffae70}
+.capture-reveal-dialog[data-attribute="bolt"]{--reveal-color:#f6df85}
+.capture-reveal-dialog[data-attribute="aqua"]{--reveal-color:#89deed}
+.capture-reveal-dialog[data-attribute="storm"]{--reveal-color:#9befd4}
+.capture-reveal-dialog[data-attribute="gravity"]{--reveal-color:#bca0ed}
+.capture-reveal-dialog[data-attribute="law"]{--reveal-color:#f2dcab}
+.capture-reveal-dialog[data-attribute="chaos"]{--reveal-color:#f4a4d7}
+.capture-reveal-body{padding:clamp(20px,5vw,30px);text-align:center}
+.capture-reveal-body h2{margin:0 0 24px;color:var(--gold);font-size:clamp(21px,5vw,26px)}
+.capture-reveal-image-wrap{
+ position:relative;width:min(62vw,240px);aspect-ratio:1/1;margin:0 auto 25px
+}
+.capture-reveal-image-wrap::before{
+ content:"";position:absolute;inset:-10px;border:2px solid var(--reveal-color);
+ border-radius:50%;box-shadow:0 0 24px var(--reveal-color);opacity:.75;pointer-events:none
+}
+.capture-reveal-image-wrap img{
+ position:relative;display:block;width:100%;height:100%;object-fit:cover;
+ border:1px solid #edcf99;border-radius:10px;box-shadow:0 0 24px #000b
+}
+.capture-reveal-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 24px}
+.capture-reveal-results>div{min-width:0;padding:14px 6px;border:1px solid #aa8a6755;background:#0d122590;border-radius:9px}
+.capture-reveal-results dt{font-size:12px;color:var(--soft);margin-bottom:6px}
+.capture-reveal-results dd{margin:0;color:var(--reveal-color);font-size:clamp(18px,4.3vw,23px);font-weight:800;overflow-wrap:anywhere}
+#closeCaptureReveal{width:100%;max-width:300px}
+.capture-reveal-dialog[open] .capture-reveal-image-wrap{animation:capture-circle-appear .8s ease-out both}
+.capture-reveal-dialog[open] .capture-reveal-results>div{animation:capture-symbol-appear .65s ease-out .3s both}
+.capture-reveal-dialog[open] .capture-reveal-results>div:nth-child(2){animation-delay:.5s}
+@keyframes capture-circle-appear{from{opacity:0;transform:scale(.8) rotate(-8deg);filter:brightness(1.7)}to{opacity:1;transform:scale(1) rotate(0);filter:brightness(1)}}
+@keyframes capture-symbol-appear{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){
+ .capture-reveal-dialog[open] .capture-reveal-image-wrap,
+ .capture-reveal-dialog[open] .capture-reveal-results>div{animation:none}
+}

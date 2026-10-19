@@ -109,6 +109,16 @@ assert.match(css,/viewfinder-circle-guide\{[^}]*border:2px dashed/,'camera ring 
 assert.doesNotMatch(page,/<canvas[^>]*>[^<]*viewfinder-circle-guide/,'guide does not paint onto captured image');
 assert.match(page,/id="cameraCapture" hidden/);
 assert.match(page,/id="cameraStop"[^>]* hidden/);
+const captureReveal=page.match(/<dialog id="captureRevealDialog"[\s\S]*?<\/dialog>/)?.[0];
+assert.ok(captureReveal,'successful photo registrations have a reveal dialog');
+assert.match(captureReveal,/id="captureRevealImage" alt="撮影した魔法陣"/,'the photographed circle is the main visual');
+assert.match(captureReveal,/<dt>相<\/dt><dd id="captureRevealAttribute"/,'show the identified 相');
+assert.match(captureReveal,/<dt>紋<\/dt><dd id="captureRevealRole"/,'show the identified 紋');
+assert.match(captureReveal,/id="closeCaptureReveal"[^>]*>閉じる<\/button>/,'the ritual has one simple exit');
+assert.doesNotMatch(captureReveal,/MP|威力|<input/,'do not reveal hidden power or add fields');
+assert.match(css,/@keyframes capture-circle-appear/,'circle appears with a short ritual animation');
+assert.match(css,/@keyframes capture-symbol-appear/,'相 and 紋 follow the photo');
+assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\s*\.capture-reveal-dialog/,'reduced motion is respected');
 assert.doesNotMatch(page,/id="circleName"/);
 assert.doesNotMatch(page,/id="cameraNameWrap"/);
 assert.match(page,/id="openGrimoireFromPicker"/);
@@ -292,6 +302,9 @@ assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 assert.ok(app.includes('circles=newestCirclesFirst([...circles,analyzed])'),'successful captures sort newest first');
 assert.ok(app.includes('await putCircle(db,analyzed)'),'save only after successful camera analysis');
+assert.match(app,/function showCaptureReveal\(circle\)\{[\s\S]*?circleDetails\(circle\)[\s\S]*?dialog\.showModal\(\)/,'reuse validated values in the reveal');
+assert.match(app,/await putCircle\(db,analyzed\);[\s\S]*?show\('library'\);\s*returnToCameraScroll\(\);\s*showCaptureReveal\(analyzed\)/,'only saved circles trigger the reveal');
+assert.match(app,/\$\('closeCaptureReveal'\)\.addEventListener\('click',[\s\S]*?\$\('captureRevealDialog'\)\.close\(\)/,'reveal can be dismissed');
 assert.match(app,/await analyzeCapturedCircle\(circle\)/,'camera opens analysis before registering');
 assert.match(app,/const analyzed=savePreanalysis\(circle,result\);[\s\S]*?await putCircle\(db,analyzed\)/,'save follows validation');
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
