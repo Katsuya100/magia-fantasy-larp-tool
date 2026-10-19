@@ -24,6 +24,33 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  }
  let client=null,drive=null,expires=0,busy=false,again=false,timer=null,restoring=false,stopped=false;
  let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initializing=false;
+ // A short-lived access token is kept only in an HTTPS, path-scoped cookie so
+ // a page refresh can resume syncing. Never persist a Google refresh token.
+ const cookieName='__Secure-magiaDungeonDriveToken';
+ const location=windowImpl?.location;
+ const cookiePath=location?.pathname?.slice(0,location.pathname.lastIndexOf('/')+1)||'/';
+ const canUseCookie=location?.protocol==='https:'&&Boolean(windowImpl?.document);
+ function clearAuthCookie(){
+  if(canUseCookie)doc.cookie=cookieName+'=; Path='+cookiePath+'; Secure; SameSite=Strict; Max-Age=0';
+ }
+ function readAuthCookie(){
+  if(!canUseCookie)return null;
+  const raw=String(doc.cookie||'').split(';').map(item=>item.trim()).find(item=>item.startsWith(cookieName+'='));
+  if(!raw)return null;
+  try{
+   const value=JSON.parse(decodeURIComponent(raw.slice(cookieName.length+1)));
+   if(typeof value.token==='string'&&value.token.length>0&&Number.isFinite(value.expires)&&value.expires>Date.now()+1000)return value;
+  }catch{ /* A damaged or expired cookie cannot authorize Drive. */ }
+  clearAuthCookie();
+  return null;
+ }
+ function saveAuthCookie(token,expiresAt){
+  if(!canUseCookie)return;
+  const ttl=Math.floor((expiresAt-Date.now())/1000);
+  if(ttl<=0){clearAuthCookie();return;}
+  doc.cookie=cookieName+'='+encodeURIComponent(JSON.stringify({token,expires:expiresAt}))
+   +'; Path='+cookiePath+'; Secure; SameSite=Strict; Max-Age='+ttl;
+ }
  const doc=windowImpl?.document;
  const conflictDialog=doc?.getElementById('googleDriveConflictDialog');
  const setupButton=doc?.getElementById('setupGoogleDrive');
@@ -49,6 +76,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   show('GoogleDrive同期済み');
  }
  function expireConnection(){
+  clearAuthCookie();
   drive=null;
   reconnectPresentation('認証が切れました。再接続してください。');
   if(!expiryNoticeShown){
@@ -302,6 +330,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   expiryNoticeShown=false;
   doc?.getElementById('googleDriveExpiredDialog')?.close?.();
   expires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
+  saveAuthCookie(result.access_token,expires);
   drive=createDungeonDrive(result.access_token,fetchImpl);
   validatedDrive=null;
   // OAuth is not backup success. Only hide the risk once a real file is verified.
@@ -332,7 +361,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   });
   button.disabled=false;
   if(setupButton)setupButton.disabled=false;
-  show('未接続');
+  if(!drive)show('未接続');
   void getCloudSyncState(db).then(meta=>{
    if(!drive&&meta?.fileId&&meta?.hash)show('未接続。再接続してください。');
   }).catch(()=>{});
@@ -357,6 +386,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  setupButton?.addEventListener('click',connectOrCheck);
  // The caller explicitly disconnects before opening a local-only new game.
  function disconnect(){
+  clearAuthCookie();
   drive=null;expires=0;validatedDrive=null;
   clearTimeout(timer);
   reconnectPresentation('未接続');
@@ -364,5 +394,17 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const unsubscribe=onDungeonDataChange(db,schedule);
  windowImpl?.addEventListener?.('online',schedule);
  doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
+ const savedAuth=readAuthCookie();
+ if(savedAuth){
+  // On reload, verify Drive's actual bytes before displaying "同期済み".
+  expires=savedAuth.expires;
+  drive=createDungeonDrive(savedAuth.token,fetchImpl);
+  button.hidden=true;
+  if(setupButton)setupButton.hidden=true;
+  show('確認中…');
+  void sync(true).then(outcome=>{
+   if(outcome==='ready'||outcome==='start-new')onInitialReady();
+  });
+ }
  return {ready:true,unsubscribe,sync,disconnect,syncNow:()=>{clearTimeout(timer);return sync(false);}};
 }
