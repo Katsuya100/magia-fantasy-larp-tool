@@ -25,6 +25,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  let client=null,drive=null,expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
  let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initializing=false,initialChoiceCommitted=false;
  let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
+ let disconnectPending=false,disconnectPromise=null,resolveDisconnect=null,pendingConfirmCancel=null;
  const isCurrent=epoch=>epoch===connectionEpoch&&Boolean(drive);
  const ensureCurrent=epoch=>{if(!isCurrent(epoch))throw Error('Drive同期は解除されました。');};
  // A short-lived access token is kept only in an HTTPS, path-scoped cookie so
@@ -81,6 +82,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   localOnlyButton.hidden=locked;
  }
  function completeInitialCheck(outcome){
+  if(disconnectPending||manuallyDisconnected)return;
   if(outcome==='ready'||outcome==='start-new')onInitialReady();
   else if(outcome!=='restored'&&!initialChoiceCommitted)lockLocalOnly(false);
  }
@@ -102,6 +104,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(message)show(message);
  }
  function syncedPresentation(){
+  if(disconnectPending)return;
   connectedPresentation();
   show('GoogleDrive同期済み');
  }
@@ -136,12 +139,36 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   expiryTimer?.unref?.();
  }
  function schedule(){
-  if(!drive||stopped||restoring||choicePending)return;
+  if(!drive||stopped||restoring||choicePending||disconnectPending)return;
   // One upload at a time; changes made during network IO only reserve one
   // follow-up pass, which will read the latest IndexedDB snapshot.
   if(busy){again=true;return;}
   clearTimeout(timer);
   timer=setTimeout(()=>{void sync(false);},1800);
+ }
+ function confirmOverwrite(){
+  return new Promise(resolve=>{
+   const dialog=doc?.getElementById('googleDriveOverwriteDialog');
+   if(!dialog?.showModal){resolve(false);return;}
+   const confirm=dialog.querySelector('[data-action="confirm"]');
+   const back=dialog.querySelector('[data-action="back"]');
+   const finish=accepted=>{
+    dialog.close();
+    confirm.removeEventListener('click',approve);
+    back.removeEventListener('click',reject);
+    dialog.removeEventListener('cancel',cancel);
+    pendingConfirmCancel=null;
+    resolve(accepted);
+   };
+   const approve=()=>finish(true);
+   const reject=()=>finish(false);
+   const cancel=event=>{event.preventDefault();finish(false);};
+   confirm.addEventListener('click',approve);
+   back.addEventListener('click',reject);
+   dialog.addEventListener('cancel',cancel);
+   pendingConfirmCancel=reject;
+   dialog.showModal();
+  });
  }
  function chooseCloud(description,{allowOverwrite=true,initialChoice=false}={}){
   return new Promise(resolve=>{
@@ -168,7 +195,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     resolve(choice);
    };
    const cancel=event=>{event.preventDefault();if(!initialChoice)finish('later');};
-   const handlers=[['restore',()=>finish('restore')],['overwrite',()=>finish('overwrite')],['later',()=>finish('later')]];
+   const handlers=[['restore',()=>finish('restore')],['overwrite',async()=>{if(await confirmOverwrite())finish('overwrite');}],['later',()=>finish('later')]];
    for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.addEventListener('click',handler,{once:true});
    conflictDialog.addEventListener('cancel',cancel);
    pendingChoiceCancel=()=>finish('later');
@@ -257,7 +284,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return 'ready';
  }
  async function sync(initial=false){
-  if(!drive||stopped||choicePending)return 'deferred';
+  if(!drive||stopped||choicePending||disconnectPending)return 'deferred';
   if(busy){again=true;return 'deferred';}
   if(Date.now()>=expires){expireConnection();return 'deferred';}
   busy=true;
@@ -424,7 +451,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    return 'deferred';
   }finally{
    busy=false;
-   if(again&&!stopped&&!restoring&&drive){
+   if(disconnectPending){
+    finishDisconnect();
+   }else if(again&&!stopped&&!restoring&&drive){
     // Keep the spinner up while draining the single pending save.
     // The queued pass starts immediately, not after another debounce.
     again=false;
@@ -458,7 +487,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   lockLocalOnly(true);
   show('確認中…');
   const outcome=await sync(true);
-  completeInitialCheck(outcome);
+  if(!disconnectPending&&!manuallyDisconnected)completeInitialCheck(outcome);
   // A failed Drive read or upload never opens the naming dialog.
  }
  function loadIdentity(){
@@ -498,6 +527,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const connectOrCheck=()=>{
   if(drive&&Date.now()<expires){
    void sync(true).then(outcome=>{
+    if(disconnectPending||manuallyDisconnected)return;
     if(outcome==='deferred')reconnectPresentation();
     if(outcome==='ready'||outcome==='start-new')onInitialReady();
    });
@@ -508,14 +538,15 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  };
  button.addEventListener('click',connectOrCheck);
  setupButton?.addEventListener('click',connectOrCheck);
- // The caller explicitly disconnects before opening a local-only new game.
- function disconnect(){
-  // Detach this browser only: leave IndexedDB and appDataFolder untouched.
+ // Only finalize after an in-flight Drive request has completed and readback
+ // has been checked. Aborting a resumable PUT could leave an uncertain backup.
+ function finishDisconnect(){
+  if(!disconnectPending)return;
+  disconnectPending=false;
   manuallyDisconnected=true;
   oauthPending=false;
   connectionEpoch++;
-  requestController?.abort();requestController=null;
-  pendingChoiceCancel?.(); // Do not apply a late restore/overwrite choice.
+  requestController=null; // No abort: all in-flight requests have settled.
   again=false;
   clearTimeout(expiryTimer);expiryTimer=null;
   clearTimeout(timer);timer=null;
@@ -523,10 +554,32 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   drive=null;expires=0;validatedDrive=null;
   setSyncing(false);
   if(!initialChoiceCommitted)lockLocalOnly(false);
+  if(disconnectButton)disconnectButton.disabled=false;
   doc?.getElementById('googleDriveExpiredDialog')?.close?.();
-  reconnectPresentation('Google Driveの同期を解除しました。端末のセーブとDriveのバックアップは残ります。');
+  reconnectPresentation('Google Driveの同期を解除しました。端末とDriveのデータは残ります。');
+  const done=resolveDisconnect;
+  resolveDisconnect=null;
+  disconnectPromise=null;
+  done?.();
  }
- disconnectButton?.addEventListener('click',disconnect);
+ function disconnect(){
+  if(disconnectPending)return disconnectPromise;
+  disconnectPending=true;
+  oauthPending=false;
+  again=false;
+  clearTimeout(timer);timer=null;
+  disconnectPromise=new Promise(resolve=>{resolveDisconnect=resolve;});
+  const completed=disconnectPromise;
+  // Cancel user decisions, not active Drive transfers.
+  pendingConfirmCancel?.();
+  pendingChoiceCancel?.();
+  if(busy){
+   if(disconnectButton)disconnectButton.disabled=true;
+   show('同期の完了後に解除します…');
+  }else finishDisconnect();
+  return completed;
+ }
+ disconnectButton?.addEventListener('click',()=>{void disconnect();});
  const unsubscribe=onDungeonDataChange(db,schedule);
  windowImpl?.addEventListener?.('online',schedule);
  doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
