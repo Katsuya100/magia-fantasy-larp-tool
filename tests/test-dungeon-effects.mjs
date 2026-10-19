@@ -169,6 +169,27 @@ const dryRes=G.resist(wet,'aqua');
 G.addStatus(wet,{id:'debuff_aqua',kind:'debuff',attribute:'aqua',effect:'soak',value:.5,turns:2});
 assert.ok(G.resist(wet,'aqua')>dryRes,'soaking degrades resistance buffs');
 
+// Values above 1000 still make a difference (including enhanced, already-powerful circles).
+assert.equal(num('debuff_power_max'),6);
+assert.equal(num('burn_max_hp_rate'),.3);
+for(const [lower,higher] of [[1000,2000],[2000,5000],[5000,10000]]){
+ assert.ok(G.debuffPowerFactor(burnSpell(higher))>G.debuffPowerFactor(burnSpell(lower)),
+  'status strength scales past power '+lower);
+ const weak=burnTarget(100000),strong=burnTarget(100000);
+ G.cast(burnCaster,weak,burnSpell(lower),buffs);
+ G.cast(burnCaster,strong,burnSpell(higher),buffs);
+ assert.ok(G.status(strong,'debuff_flame').value>G.status(weak,'debuff_flame').value,
+  'burn percent scales past power '+lower);
+}
+const vulnerableHigh=G.makeUnit({hp:100000,mag:12,def:10,res:0},1,{flame:2},[],'player');
+G.cast(burnCaster,vulnerableHigh,burnSpell(500000),buffs);
+const burnCapTicks=[];
+G.round(vulnerableHigh,unit(),-1,-1,buffs,()=>.99,e=>{
+ if(e.role==='burn'&&e.side==='hero')burnCapTicks.push(e.amount);
+});
+assert.deepEqual(burnCapTicks,[Math.round(vulnerableHigh.stats.hp*.30)],
+ 'extreme power and vulnerability cannot exceed 30% HP per burn tick');
+
 // Upgraded power also controls soak, dizzy, gravity, shock and seal.
 const curseCaster=unit();
 const lowSoak=unit(),highSoak=unit();
@@ -180,6 +201,11 @@ const lowDizzy=unit(),highDizzy=unit();
 G.cast(curseCaster,lowDizzy,spell('debuff','storm',270),buffs);
 G.cast(curseCaster,highDizzy,spell('debuff','storm',1000),buffs);
 assert.ok(G.status(highDizzy,'debuff_storm').value>G.status(lowDizzy,'debuff_storm').value);
+assert.ok(G.status(highDizzy,'debuff_storm').value<.45,'power 1000 stays below 45%');
+const twiceDizzy=unit();
+G.cast(curseCaster,twiceDizzy,spell('debuff','storm',2000),buffs);
+assert.ok(G.status(twiceDizzy,'debuff_storm').value>G.status(highDizzy,'debuff_storm').value,
+ 'dizzy grows above power 1000');
 assert.equal(num('dizzy_max_rate'),0.45,'dizzy failure chance is capped at 45%');
 const cappedDizzy=unit(),dizzyAttack=spell('attack','flame',500);
 G.cast(curseCaster,cappedDizzy,spell('debuff','storm',5000),buffs);
@@ -200,7 +226,7 @@ G.cast(curseCaster,lowGravity,spell('debuff','gravity',270),buffs);
 G.cast(curseCaster,highGravity,spell('debuff','gravity',1000),buffs);
 assert.ok(G.factor(highGravity,'output')<G.factor(lowGravity,'output'),'gravity reduces output more with power');
 const shockTarget=()=>unit([spell('attack','flame')]);
-for(const [power,extra] of [[270,1],[540,2],[1000,3]]){
+for(const [power,extra] of [[270,1],[1000,1],[2000,2],[5000,4],[10000,6]]){
  const victim=shockTarget();
  G.cast(curseCaster,victim,spell('debuff','bolt',power),buffs);
  assert.equal(G.status(victim,'debuff_bolt').shockExtra,extra,'shock tier '+power);
@@ -210,8 +236,11 @@ for(const [power,extra] of [[270,1],[540,2],[1000,3]]){
 const sealedTarget=()=>unit([spell('attack','flame'),spell('defense','flame'),spell('support','flame'),spell('debuff','flame')]);
 const lowSeal=sealedTarget(),highSeal=sealedTarget();
 G.cast(curseCaster,lowSeal,spell('debuff','law',270),buffs,()=>.99);
-G.cast(curseCaster,highSeal,spell('debuff','law',1000),buffs,()=>.99);
+G.cast(curseCaster,highSeal,spell('debuff','law',5000),buffs,()=>.99);
 assert.equal(G.status(lowSeal,'debuff_law').sealedRoles.length,1,'low-power seal blocks one role');
+const mediumSeal=sealedTarget();
+G.cast(curseCaster,mediumSeal,spell('debuff','law',1000),buffs,()=>.99);
+assert.equal(G.status(mediumSeal,'debuff_law').sealedRoles.length,1,'power 1000 is not a top-tier seal');
 const roles=G.status(highSeal,'debuff_law').sealedRoles;
 assert.equal(roles.length,2,'high-power seal blocks exactly two roles');
 assert.equal(new Set(roles).size,2,'sealed roles must differ');
