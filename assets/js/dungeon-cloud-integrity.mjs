@@ -30,7 +30,7 @@ export async function digestPhoto(blob,cryptoImpl=globalThis.crypto){
  // An existing image's exact bytes are authenticated by a trusted SHA-256
  // proof. Strict file signatures are not assumed: some camera/exporters add
  // metadata or encode noncanonical container variants.
- if(!(blob instanceof Blob)||blob.size<1||blob.size>25*1024*1024||!/^image\\/(jpeg|png|webp|gif)$/.test(blob.type))throw Error('魔法陣画像が欠損・破損しています。');
+ if(!(blob instanceof Blob)||blob.size<1||blob.size>25*1024*1024||!/^image\/(jpeg|png|webp|gif)$/.test(blob.type))throw Error('魔法陣画像が欠損・破損しています。');
  if(!cryptoImpl?.subtle?.digest)throw Error('HTTPSの安全な環境で開いてください。');
  const hash=new Uint8Array(await cryptoImpl.subtle.digest('SHA-256',await blob.arrayBuffer()));
  return [...hash].map(x=>x.toString(16).padStart(2,'0')).join('');
