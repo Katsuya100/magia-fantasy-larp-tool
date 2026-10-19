@@ -11,6 +11,14 @@ export function effectCaption(step){
  if(step.role==='support'||step.role==='item'||step.role==='revive')return symbol+' '+tag+(n?' +'+n:'');
  return symbol+' '+tag;
 }
+// Individual circle's invested stones (not unspent wallet balance).
+// Normal: 0-4; enhanced: 5-19; high: 20-54; ultimate: 55+.
+export function magicEffectTier(upgradeLevel,role='attack'){
+ if(!['attack','defense','support','debuff'].includes(role))return 1;
+ const count=Number(upgradeLevel);
+ if(!Number.isSafeInteger(count)||count<5)return 1;
+ return count>=55?4:count>=20?3:2;
+}
 export const COMBAT_EFFECT_MS=440;
 export const ENCOUNTER_EFFECT_MS=820;
 /* Only every fifth encounter is a layer boss; every tenth layer gains a
