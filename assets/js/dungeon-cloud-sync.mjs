@@ -201,8 +201,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     resolve(choice);
    };
    const cancel=event=>{event.preventDefault();if(!initialChoice)finish('later');};
-   const handlers=[['restore',()=>finish('restore')],['overwrite',async()=>{if(await confirmOverwrite())finish('overwrite');}],['later',()=>finish('later')]];
-   for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.addEventListener('click',handler,{once:true});
+   const handlers=[['restore',()=>finish('restore')],
+    ['overwrite',async()=>{if(pendingConfirmCancel)return;
+     if(await confirmOverwrite()&&!disconnectPending&&conflictDialog.open)finish('overwrite');}],
+    ['later',()=>finish('later')]];
+   // Keep the overwrite handler after Back: otherwise the real browser
+   // cannot open the second confirmation again (once:true would remove it).
+   for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.addEventListener('click',handler);
    conflictDialog.addEventListener('cancel',cancel);
    pendingChoiceCancel=()=>finish('later');
    conflictDialog.showModal();
