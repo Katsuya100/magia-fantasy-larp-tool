@@ -91,6 +91,7 @@ try{
  env.analyzerState.attribute='invalid';
  await $('cameraCapture').fire('click');
  assert.equal($('analyzing').hidden,true,'failed analysis closes the full-screen analysis view');
+ assert.equal($('captureRevealDialog').open,false,'failed analysis must not play the successful reveal');
  assert.equal($('library').hidden,false,'failed analysis returns to the grimoire');
  assert.ok(visitedAnalysis.includes(false),'photo analysis opens the visible screen');
  await wait(()=>$('cameraError').textContent.includes('保存していません'),'failed capture rejected');
@@ -102,6 +103,12 @@ try{
   assert.equal($('cameraCapture').hidden,false,'capture action stays available');
   assert.equal($('cameraPlaceholder').hidden,true,'camera feed stays visible after saving');
   assert.equal($('notice').textContent,'','no global log is displayed');
+  assert.equal($('captureRevealDialog').open,true,'a successful capture opens its result ritual');
+  assert.match($('captureRevealAttribute').textContent,/flame/,'the photographed 相 appears');
+  assert.match($('captureRevealRole').textContent,/攻撃/,'the photographed 紋 appears');
+  assert.match($('captureRevealImage').src,/^blob:mock-/,'the photographed ink appears in the ritual');
+  await $('closeCaptureReveal').fire('click');
+  assert.equal($('captureRevealDialog').open,false,'the one-button ritual can close');
  }
  assert.equal(env.opened,1,'camera stream opened once');
  assert.equal(env.closed,0,'camera stays active during five captures');

@@ -1956,3 +1956,41 @@ html,body{overflow-x:clip}
   scale:1!important;filter:none!important
  }
 }
+
+
+/* Ink-derived light, not a rectangular drop-shadow on the camera photo.
+   The pixels come from the profile card's exposure-balanced Sobel outline. */
+.magic-circle-image-frame>.magic-circle-glow,
+.capture-reveal-image-wrap>.magic-circle-glow{
+ position:absolute;inset:0;z-index:3;display:block;
+ width:100%;height:100%;pointer-events:none;opacity:0;
+ filter:drop-shadow(0 0 15px var(--spell-glow));
+ transform:translateZ(0)
+}
+.magic-details-dialog[data-enhancing="true"] .magic-circle-glow[data-ready="true"]{
+ animation:magic-ink-light 1.8s ease-out both
+}
+.capture-reveal-dialog[data-revealing="true"] .magic-circle-glow[data-ready="true"]{
+ animation:magic-ink-light 2.25s ease-out both
+}
+.capture-reveal-dialog[data-revealing="true"] #captureRevealImage{
+ animation:magic-ink-photo 2.25s ease-out both
+}
+@keyframes magic-ink-light{
+ 0%{opacity:0;transform:scale(.98)}
+ 22%,57%{opacity:1;transform:scale(1.015)}
+ 100%{opacity:0;transform:scale(1.055)}
+}
+@keyframes magic-ink-photo{
+ 0%,100%{filter:none}
+ 23%,60%{filter:brightness(.57) contrast(1.22)}
+}
+@keyframes circle-upgrade-glow{
+ 0%,100%{filter:none}
+ 23%,60%{filter:brightness(.58) contrast(1.25)}
+}
+@media(prefers-reduced-motion:reduce){
+ .magic-details-dialog[data-enhancing="true"] .magic-circle-glow,
+ .capture-reveal-dialog[data-revealing="true"] .magic-circle-glow{animation:none;opacity:0}
+ .capture-reveal-dialog[data-revealing="true"] #captureRevealImage{animation:none}
+}
