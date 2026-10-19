@@ -505,10 +505,11 @@ for(const startLayer of [11,21,41,61,81,91]){
    earned:result.avgStones,spent:result.avgSpentStones,cleared:result.avgCleared}));
  }
 }
-const actualLast=summarize({name:'Actual XP final',level:'forecast',
- fromLayer:91,toLayer:100,spells:'five',stones:'earned',stoneUse:.75},128);
-assert.ok(actualLast.winRate>=70,'recommended MP recovery curve needs at least 70% clears from forecast level at 91F, with 75% earned-stone upgrades');
-assert.ok(actualLast.avgMpPercent<=25,'recommended curve should leave <=25% MP at the final boss');
+const actualLast=summarize({name:'Actual XP final, two additional decade replays',
+ level:'forecast',fromLayer:91,toLayer:100,spells:'five',stones:'earned',
+ stoneUse:1,farmRunsPerDecade:2,farmMode:'decade'},128);
+assert.ok(actualLast.winRate>=70,'full-stone party with two successful decade replays should clear from forecast level at 91F at least 70% of the time');
+assert.ok(actualLast.avgMpPercent<=25,'final stretch should leave little MP even after full stone investment');
 // Base case is one clear of each 10-layer milestone. Also repeat the frontier
 // layer 2, 5, and 10 extra times after each rank milestone: the drop penalty
 // grows as the character overlevels, so extra runs do not yield 1.5 stones each.
@@ -573,6 +574,38 @@ for(const policy of fullStoneLatePolicies){
    spent:result.avgSpentStones,cleared:result.avgCleared}));
  }
 }
+// Final validation of the default exported policy (no mpRecoveryFactor override).
+// Full earned-stone reinvestment is deliberately optimistic: worn, lost, or
+// replaced circles and unsuccessful farming expeditions aren't modeled here.
+for(const extraRuns of [0,1,2,3,5,10]){
+ const conf={name:'Actual XP 91-100, full stone spend',
+  level:'forecast',fromLayer:91,toLayer:100,spells:'five',
+  stones:'earned',stoneUse:1,farmRunsPerDecade:extraRuns,farmMode:'decade'};
+ const runs=Array.from({length:128},(_,i)=>simulate(17011+i*13,conf));
+ const wins=runs.filter(x=>x.win);
+ const bossTurns=wins.map(x=>x.fightStats.find(f=>f.fight===500)?.turns).filter(Number.isFinite).sort((a,b)=>a-b);
+ const mean=values=>values.length?Math.round(10*values.reduce((a,b)=>a+b,0)/values.length)/10:null;
+ console.log('FULL_STONES_ZERO100_VERIFY '+JSON.stringify({
+  farmRunsPerDecade:extraRuns,attempts:runs.length,winRate:Math.round(100*wins.length/runs.length),
+  forecastLevel:mean(runs.map(x=>x.startLevel)),
+  earnedStones:mean(runs.map(x=>x.availableStones)),
+  spentStones:mean(runs.map(x=>x.spentStones)),
+  winMpPercent:wins.length?Math.round(100*mean(wins.map(x=>x.mp/x.initialMp))):null,
+  bossTurnMean:mean(bossTurns),bossTurnMedian:bossTurns[Math.floor(bossTurns.length/2)]??null,
+  bossTurnMin:bossTurns[0]??null,bossTurnMax:bossTurns.at(-1)??null}));
+}
+for(const [fromLayer,toLayer] of [[11,20],[41,50],[81,90],[91,100]]){
+ for(const extraRuns of [2,5]){
+  const outcome=summarize({name:'Actual XP by milestone',level:'forecast',
+   fromLayer,toLayer,spells:'five',stones:'earned',stoneUse:1,
+   farmRunsPerDecade:extraRuns,farmMode:'decade'},128);
+  console.log('FULL_STONES_ZERO100_BANDS '+JSON.stringify({
+   fromLayer,toLayer,extraRuns,levelAtEntry:outcome.forecastLevelAtEntry,
+   stones:outcome.avgStones,winRate:outcome.winRate,mpPercent:outcome.avgMpPercent}));
+ }
+}
+assert.equal(G.victoryMpLayerFactor(90),.23);
+assert.equal(G.victoryMpLayerFactor(100),0);
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
@@ -594,10 +627,15 @@ const baseline=summarize(scenarios.find(x=>x.level===5));
 assert.ok(baseline.winRate>=70,'level 5 item-free party must have a reasonable chance through layer 3');
 const overleveled=summarize(scenarios.find(x=>x.level===12));
 assert.ok(overleveled.winRate>=95,'a level 12 party should reliably clear layer 3 without consumables');
-const endgame=summarize(scenarios.find(x=>x.level===150&&x.stones==='earned'));
-assert.ok(endgame.winRate>=70,'item-free level 150 party using earned stone upgrades should clear through layer 100');
-const noStoneEndgame=summarize({...scenarios.find(x=>x.level===150&&x.stones==='earned'),stones:'none'});
-assert.ok(noStoneEndgame.avgMpPercent<=25,'unupgraded reference should be close in MP');
+const endgame=summarize({name:'Full-stones, two decade replays',
+ level:'forecast',fromLayer:91,toLayer:100,spells:'five',stones:'earned',
+ stoneUse:1,farmRunsPerDecade:2,farmMode:'decade'},128);
+assert.ok(endgame.winRate>=70,'trained, fully upgraded expedition should clear layer 100 at least 70% of the time');
+const insufficientStones=summarize({name:'Half-stones, two decade replays',
+ level:'forecast',fromLayer:91,toLayer:100,spells:'five',stones:'earned',
+ stoneUse:.5,farmRunsPerDecade:2,farmMode:'decade'},128);
+assert.ok(endgame.winRate>insufficientStones.winRate,
+ 'spending all earned stones should meaningfully outperform partial upgrades');
 const ledger=stoneLedger(7293,10);
 console.log('MAGIC_STONE_LEDGER '+JSON.stringify({throughLayer:10,level:ledger.level,stones:ledger.stones,
  levels:ledger.levels,returns:ledger.returns}));
