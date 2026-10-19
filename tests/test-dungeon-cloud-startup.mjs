@@ -134,6 +134,18 @@ try{
  emptyUi.get('setupCreatePlayer').click();
  assert.equal(namedWithoutBackup,1,'naming requires an explicit new-game choice');
 
+ // Local-only start must really disconnect, even if the user just signed in
+ // to inspect a Google account with no previous backup.
+ const localDb=await newDb(),localUi=fakeUi(),localApi=remoteApi();
+ const localSession=start(localDb,localUi,localApi.fetchImpl);
+ await wait(()=>!localUi.button.disabled,'local-only choice initialized');
+ localUi.get('setupGoogleDrive').click();
+ await wait(()=>!localUi.get('setupCreatePlayer').hidden,'local-only account checked');
+ localUi.get('setupWithoutBackup').click();
+ assert.equal(localUi.button.hidden,false,'explicit local-only play reveals a future connect action');
+ assert.match(localUi.status.textContent,/同期オフ/);
+ assert.equal(await localSession.sync(true),'deferred','local-only choice has disabled the live Drive session');
+
  // Only a verified, authenticated sync earns the "synced" label.
  const signedUi=fakeUi(),signedApi=remoteApi(await serializeDungeonSnapshot(await readDungeonSnapshot(seeded)));
  let existingNames=0;
