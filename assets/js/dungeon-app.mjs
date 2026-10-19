@@ -1,4 +1,4 @@
-import * as G from './dungeon-core.mjs?v=20261019.4';
+import * as G from './dungeon-core.mjs?v=20261019.5';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261019.4';
 import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261019.4';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261019.4';
@@ -529,7 +529,7 @@ if(run.hero.hp<=0){const dropped=run.loot.length,unusedCount=run.carry.filter(Bo
 ]);show('result');return;}
 if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
   const firstBossDefeat=Boolean(bossEnemyId&&!profile.defeatedBosses?.[bossEnemyId]);
-  const rewards=G.drops(masters.items,masters.collections,run.enemy.level,Math.random,{layer:layerForFight(run.floor),bossEnemyId,guaranteeBossCollection:firstBossDefeat});
+  const rewards=G.drops(masters.items,masters.collections,run.enemy.level,Math.random,{layer:layerForFight(run.floor),playerLevel:run.hero.level,bossEnemyId,guaranteeBossCollection:firstBossDefeat});
   if(bossEnemyId){profile.defeatedBosses??={};profile.defeatedBosses[bossEnemyId]=true;}
   const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot);
   if(badge)rewards.push(badge);

@@ -25,6 +25,7 @@ collection_drop_rolls,5,敵1体につきコレクションを抽選する回数�
 collection_drop_chance,0.36,コレクションの各抽選成功率
 magic_stone_drop_rolls,1,敵1体につき魔導石を抽選する回数（1層平均約1.5個）
 magic_stone_drop_chance,0.30,魔導石の各抽選成功率
+magic_stone_overlevel_factor_per_level,0.5,推奨レベル超過1ごとに魔導石ドロップ率へ乗じる係数
 consumable_drop_rolls,3,敵1体につき携行品を抽選する回数（1層平均約4個）
 consumable_drop_chance,0.27,携行品の各抽選成功率
 xp_base,35,撃破経験値固定値

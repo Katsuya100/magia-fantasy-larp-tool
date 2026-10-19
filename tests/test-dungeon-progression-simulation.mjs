@@ -50,7 +50,7 @@ export function stoneLedger(seed,throughLayer){
    const fight=(layer-1)*5+i+1;
    const foe=enemyForFight(data.enemies,fight);
    const enemyLevel=Number(data.floors[fight-1].enemy_level);
-   const drops=G.drops(data.items,data.collections,enemyLevel,r,{layer,bossEnemyId:i===4?foe.id:null});
+   const drops=G.drops(data.items,data.collections,enemyLevel,r,{layer,playerLevel:progress.level,bossEnemyId:i===4?foe.id:null});
    unconfirmedStones+=drops.filter(x=>x.type==='stone').length;
    unconfirmedXp+=G.fightExperience(enemyLevel,progress.level,layer);
   }
