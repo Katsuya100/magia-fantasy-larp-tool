@@ -272,7 +272,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  for(const a of actions){
   for(const s of a.u.statuses){
    if(s.effect==='burn'){
-    const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*num('burn_hp_rate')*s.value));
+    const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*Math.min(num('burn_max_hp_rate'),num('burn_hp_rate')*s.value)));
     const oldHp=a.u.hp;
     a.u.hp=Math.max(0,a.u.hp-d);
     const amount=oldHp-a.u.hp;
