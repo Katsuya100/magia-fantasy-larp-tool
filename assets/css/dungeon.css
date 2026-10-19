@@ -414,7 +414,8 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  100%{opacity:0;transform:scale(1.15)}
 }
 @keyframes circle-upgrade-glow{
- 0%,100%{filter:none}35%{filter:drop-shadow(0 0 22px #fbe08a) brightness(1.5)}
+ 0%,100%{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--spell-glow) 50%,transparent))}
+ 35%{filter:drop-shadow(0 0 14px var(--spell-glow)) drop-shadow(0 0 30px var(--spell-glow)) brightness(1.45)}
 }
 @media(prefers-reduced-motion:reduce){
  .magic-details-dialog[data-enhancing="true"] .magic-details-content:after,
@@ -1739,4 +1740,76 @@ html,body{overflow-x:clip}
 @media(prefers-reduced-motion:reduce){
  .capture-reveal-dialog[open] .capture-reveal-image-wrap,
  .capture-reveal-dialog[open] .capture-reveal-results>div{animation:none}
+}
+
+
+/* Portrait-style layered halo for photographed magic circles. */
+:where(.circle-grid .card,.loadout-tile,.circle-picker-grid .picker-option,.magic-details-dialog,.capture-reveal-dialog){
+ --spell-glow:#ead098
+}
+[data-attribute="flame"]{--spell-glow:#ffad70}
+[data-attribute="bolt"]{--spell-glow:#f5dc79}
+[data-attribute="aqua"]{--spell-glow:#83dbeb}
+[data-attribute="storm"]{--spell-glow:#a2efd4}
+[data-attribute="gravity"]{--spell-glow:#b49ae8}
+[data-attribute="law"]{--spell-glow:#f2d99d}
+[data-attribute="chaos"]{--spell-glow:#efa0d4}
+.circle-grid .card[data-attribute],.loadout-tile[data-attribute],
+.circle-picker-grid .picker-option[data-attribute]{isolation:isolate}
+.circle-grid .card[data-attribute]::after,.loadout-tile[data-attribute]::after,
+.circle-picker-grid .picker-option[data-attribute]::after{
+ content:"";position:absolute;pointer-events:none;z-index:0;left:12%;top:8%;width:76%;
+ aspect-ratio:1;border-radius:50%;
+ background:radial-gradient(circle,color-mix(in srgb,var(--spell-glow) 24%,transparent),transparent 72%);
+ box-shadow:0 0 0 5px color-mix(in srgb,var(--spell-glow) 5%,transparent),
+ 0 0 20px color-mix(in srgb,var(--spell-glow) 16%,transparent)
+}
+.loadout-tile[data-attribute]::after{inset:16%;width:auto;aspect-ratio:auto}
+.circle-picker-grid .picker-option[data-attribute]::after{top:7%;width:76%}
+.circle-grid .card[data-attribute] img,.loadout-tile[data-attribute] img,
+.circle-picker-grid .picker-option[data-attribute] img{
+ position:relative;z-index:1;
+ filter:drop-shadow(0 0 7px color-mix(in srgb,var(--spell-glow) 43%,transparent))
+}
+
+/* The enlarged photo glows even when the detail is reopened after upgrading. */
+.magic-circle-image-frame{
+ position:relative;isolation:isolate;width:min(100%,320px);aspect-ratio:1;
+ margin:18px auto 24px
+}
+.magic-circle-image-frame::before{
+ content:"";position:absolute;inset:-13px;z-index:-1;border-radius:50%;
+ background:radial-gradient(circle,color-mix(in srgb,var(--spell-glow) 27%,transparent),transparent 73%);
+ box-shadow:0 0 0 9px color-mix(in srgb,var(--spell-glow) 7%,transparent),
+ 0 0 34px color-mix(in srgb,var(--spell-glow) 35%,transparent)
+}
+.magic-circle-image-frame::after{
+ content:"";position:absolute;inset:-12px;border:1px solid color-mix(in srgb,var(--spell-glow) 65%,transparent);
+ border-radius:50%;pointer-events:none;
+ box-shadow:0 0 16px color-mix(in srgb,var(--spell-glow) 47%,transparent),
+ inset 0 0 18px color-mix(in srgb,var(--spell-glow) 13%,transparent)
+}
+.magic-details-content .magic-circle-image-frame img{
+ display:block;width:100%;height:100%;margin:0;object-fit:cover;
+ border:1px solid color-mix(in srgb,var(--spell-glow) 55%,transparent);
+ filter:drop-shadow(0 0 8px color-mix(in srgb,var(--spell-glow) 50%,transparent))
+}
+.magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{
+ animation:circle-upgrade-ring 1.8s ease-out both
+}
+@keyframes circle-upgrade-ring{
+ 0%{opacity:.5;transform:scale(.9)}
+ 35%{opacity:1;transform:scale(1.06);
+  box-shadow:0 0 26px 8px color-mix(in srgb,var(--spell-glow) 45%,transparent)}
+ 100%{opacity:1;transform:scale(1)}
+}
+.capture-reveal-dialog[data-attribute] .capture-reveal-image-wrap::before{
+ border-color:var(--spell-glow);
+ box-shadow:0 0 15px var(--spell-glow),0 0 32px color-mix(in srgb,var(--spell-glow) 52%,transparent)
+}
+.capture-reveal-dialog[data-attribute] #captureRevealImage{
+ filter:drop-shadow(0 0 12px color-mix(in srgb,var(--spell-glow) 70%,transparent))
+}
+@media(prefers-reduced-motion:reduce){
+ .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{animation:none}
 }
