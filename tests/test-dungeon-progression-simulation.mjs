@@ -64,11 +64,10 @@ export function stoneLedger(seed,throughLayer){
  }
  return {level:progress.level,stones:bank,levels,returns};
 }
-// Spend a modest fraction of acquired stones on the currently selected circles.
-// Most previously earned stones are assumed to have been spent on earlier gear
-// or saved. Upgrades use the same permanent 10%-of-base rule as the real game.
+// Model full reinvestment of the accumulated magic stones in the selected circles.
+// This is a best-case character build, not a forced in-game spending rule.
 export function upgradeSpells(spells,budget){
- const base=spells.map(s=>({...s}));
+ const base=spells.map(s=>({...s,basePower:s.basePower??s.power}));
  const counts=base.map(()=>0);
  for(let n=0;n<budget;n++){
   const candidate=base.map((s,i)=>({s,i})).filter(x=>x.s.role==='attack'||x.s.role==='support');
@@ -76,8 +75,7 @@ export function upgradeSpells(spells,budget){
    const score=x=>{
     const orig=spells[x.i].power,now=x.s.power,next=strengthenedPower(orig,counts[x.i]+1);
     const gain=G.basePower(next)-G.basePower(now);
-    const extraMp=G.mpCost(next)-G.mpCost(now);
-    return (gain+.15)/(1+extraMp) / (counts[x.i]+1)**.25;
+    return (gain+.15)/(counts[x.i]+1)**.25;
    };
    return score(b)-score(a)||a.i-b.i;
   });
@@ -85,12 +83,12 @@ export function upgradeSpells(spells,budget){
   counts[i]++;
   base[i].power=strengthenedPower(spells[i].power,counts[i]);
  }
- return {spells:base,counts,costs:base.map(s=>G.mpCost(s.power))};
+ return {spells:base,counts,costs:base.map(s=>G.spellMpCost(s))};
 }
 export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
  const history=stones==='earned'?stoneLedger(seed+81,fromLayer-1):{stones:0};
- const budget=stones==='earned'?Math.min(16,Math.floor(history.stones*.12)):Math.max(0,Number(stones)||0);
+ const budget=stones==='earned'?history.stones:Math.max(0,Number(stones)||0);
  const equipment=upgradeSpells(SPELLS[spells],budget);
  const hero=G.makeUnit(base,level,{},equipment.spells,'player');
  const first=(fromLayer-1)*5+1,last=toLayer*5;
@@ -116,7 +114,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
   if(!win)break;
   stats.clear=fight;
   hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
-  stats.mpRestored+=G.recoverVictoryMp(hero);
+  stats.mpRestored+=G.recoverVictoryMp(hero,Math.ceil(fight/5));
   if(fight%50===0&&fight<last){ // 10th/20th/... layer, after the boss
    hero.hp=hero.stats.hp;hero.mp=hero.maxMp;stats.restores++;
   }
@@ -176,6 +174,8 @@ console.log('MAGIC_STONE_LEDGER '+JSON.stringify({throughLayer:10,level:ledger.l
 assert.ok(scenarios.every(x=>x.fromLayer<=x.toLayer),'scenarios cover consecutive layer bands');
 assert.equal(simulate(1,{level:1,fromLayer:1,toLayer:1,spells:'beginner'}).spentStones,0);
 assert.ok(upgradeSpells(SPELLS.five,10).spells.every((s,i)=>s.power>=SPELLS.five[i].power));
+assert.ok(upgradeSpells(SPELLS.five,80).costs.every((mp,i)=>mp===G.mpCost(SPELLS.five[i].power)),
+ 'permanent stone upgrades retain the original MP cost');
 assert.equal(stoneLedger(1,0).stones,0);
 assert.ok(ledger.stones>0,'stones are banked across completed checkpoints');
 assert.ok(ledger.levels.every(x=>x.to>x.from),'level ups require accumulated XP');
