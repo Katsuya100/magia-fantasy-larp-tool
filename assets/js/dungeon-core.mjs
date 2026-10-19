@@ -269,13 +269,34 @@ export function repairInvalidMp(hero){
  hero.mp=hero.maxMp;
  return true;
 }
-export function recoverVictoryMp(hero){
+// Floor-scaled *multiplier* on the level-based victory MP reward.
+// An ordinary victory at 100F and deeper restores 0 MP; existing
+// tenth-layer checkpoints still use their separate full-recovery rules.
+export const VICTORY_MP_LAYER_CURVE=Object.freeze(
+ [[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],[60,.43],
+  [70,.34],[80,.32],[90,.23],[100,0]].map(point=>Object.freeze(point)));
+export function victoryMpLayerFactor(layer,policy=VICTORY_MP_LAYER_CURVE){
+ const floor=Number(layer);
+ if(!Number.isFinite(floor))return 1;
+ if(Array.isArray(policy)&&policy.length){
+  if(floor<=policy[0][0])return clamp(Number(policy[0][1]),0,1);
+  for(let i=1;i<policy.length;i++){
+   const [left,rate]=policy[i-1],[right,next]=policy[i];
+   if(floor<=right)
+    return clamp(Number(rate)+(Number(next)-Number(rate))*(floor-left)/Math.max(1,right-left),0,1);
+  }
+  return clamp(Number(policy.at(-1)[1]),0,1);
+ }
+ return 1;
+}
+export function recoverVictoryMp(hero,layer=1){
+ const floor=Number(layer);
  const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1);
  const middle=clamp((Number(hero.level)-40)/Math.max(1,num('level_max')-40),0,1);
  const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
   num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12)-
   num('victory_mp_middle_taper')*middle*(1-middle);
- const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*rate)));
+ const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*rate*victoryMpLayerFactor(floor))));
  hero.mp+=gained;
  return gained;
 }
