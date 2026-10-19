@@ -107,8 +107,15 @@ export async function allCircles(db){
  const upgrades=profile?.circleUpgrades||{};
  return circles.map(circle=>applySavedUpgrade(circle,upgrades[circle.id]));
 }
-export async function putCircle(db,circle){
+export async function putCircle(db,circle,{repairImage=false}={}){
  const proof=circle.image==null?null:await digestPhoto(circle.image);
+ const before=await readDungeonSnapshot(db);
+ const prior=before.integrity?.photos?.[circle.id];
+ // Regular record edits must never "bless" bytes that differ from the
+ // previously trusted photo. Explicit repair is limited to the recovery UI.
+ if(!repairImage&&typeof prior==='string'&&prior!=='unknown'&&proof!==prior)
+  throw Error('以前の画像検証記録と一致しません。画像復旧画面から撮り直してください。');
+ if(repairImage&&proof===null)throw Error('復旧画像がありません。');
  return mutate(db,(_settings,items)=>items.put(circle),{[circle.id]:proof});
 }
 export const deleteCircle=(db,id)=>mutate(db,(_settings,items)=>items.delete(id));
