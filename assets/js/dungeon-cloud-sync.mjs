@@ -155,7 +155,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
       const localCircle=local.circles.find(c=>c.id===id);
       const driveCircle=remote.data.circles.find(c=>c.id===id);
       if(localCircle&&driveCircle?.image){
-       await putCircle(db,{...localCircle,image:driveCircle.image});
+       await putCircle(db,{...localCircle,image:driveCircle.image},{repairImage:true});
        restored.push(id);
       }
      }
