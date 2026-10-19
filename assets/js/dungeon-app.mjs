@@ -78,7 +78,7 @@ async function recaptureMissingImages(ids){
    try{
     const id=remaining[0],original=circles.find(c=>c.id===id);
     if(!original)throw Error('魔法陣の記録が見つかりません。');
-    await putCircle(db,{...original,image:file});
+    await putCircle(db,{...original,image:file},{repairImage:true});
     circleImages.release(original.image);
     circles=circles.map(c=>c.id===id?{...c,image:file}:c);
     remaining.shift();
