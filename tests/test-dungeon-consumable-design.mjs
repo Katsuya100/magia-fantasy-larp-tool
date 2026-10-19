@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {CONSUMABLE_TIERS,rollConsumableTier,eligibleConsumables,enemyForFight,targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {CONSUMABLE_TIERS,rollConsumableTier,eligibleConsumables,bonusConsumable,enemyForFight,targetClearLevel} from '../assets/js/dungeon-design.mjs';
 
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/'+name+'.csv',import.meta.url),'utf8'));
 const [items,enemies,collections,buffs,balance,levels,floors,playerBase]=await Promise.all([
@@ -28,10 +28,12 @@ const initial=eligibleConsumables(items,1,'small');
 assert.deepEqual(initial.map(x=>x.id),['heal_s','mana_s']);
 assert.deepEqual(eligibleConsumables(items,19,'small').map(x=>x.id),initial.map(x=>x.id));
 assert.equal(eligibleConsumables(items,19,'extreme').length,2);
-assert.equal(eligibleConsumables(items,20,'small').length,11);
+assert.equal(eligibleConsumables(items,20,'small').length,10);
+assert.equal(eligibleConsumables(items,69,'small').length,11);
+assert.equal(eligibleConsumables(items,70,'small').length,12);
 assert.equal(eligibleConsumables(items,100,'extreme').length,13);
 assert.deepEqual(eligibleConsumables(items,101,'extreme').map(x=>x.id),eligibleConsumables(items,100,'extreme').map(x=>x.id));
-for(const layer of [1,2,10,19,20,50,75,99,100,101,300]){
+for(const layer of [1,2,10,19,20,50,69,70,75,99,100,101,300]){
  const allowed=eligibleConsumables(items,layer,layer>=100?'extreme':'small');
  assert.ok(allowed.length>0);
  assert.ok(allowed.every(item=>!['clear','clear_all','escape'].includes(item.kind)||layer>=20));
@@ -62,7 +64,7 @@ const early=G.drops(items,collections,1,()=>0,{layer:1});
 assert.equal(early.length,9);
 assert.equal(early.filter(x=>x.type==='use').length,3);
 assert.ok(early.filter(x=>x.type==='use').every(x=>['heal_s','mana_s'].includes(x.id)));
-const firstCleanser=G.drops(items,collections,35,scriptedRoll([1,1,1,1,1,1,0,1,1,1,1,1,.94,.5,.94]),{layer:20});
+const firstCleanser=G.drops(items,collections,35,scriptedRoll([1,1,1,1,1,1,0,1,1,1,1,1,.955,.5,.955]),{layer:20});
 assert.equal(firstCleanser.length,1);
 assert.equal(firstCleanser[0].id,'clear_chaos','cleansers become eligible at floor 20');
 const notYet=G.drops(items,collections,35,scriptedRoll([1,1,1,1,1,1,0,1,1,1,1,1,.94,.5,.94]),{layer:19});
@@ -112,10 +114,14 @@ assert.equal(G.rollPotionValue(items.find(x=>x.id==='clear_flame'),100,()=>0),0)
 const luna=items.find(x=>x.id==='luna_stone');
 assert.equal(luna?.name,'ルナストーン');
 assert.equal(luna?.kind,'clear_all');
-assert.equal(luna?.min_layer,'20');
+assert.equal(luna?.min_layer,'70');
 assert.equal(G.rollPotionValue(luna,100,()=>0),0);
-assert.ok(!eligibleConsumables(items,19,'small').some(x=>x.id==='luna_stone'));
-for(const tier of CONSUMABLE_TIERS)assert.ok(eligibleConsumables(items,20,tier).some(x=>x.id==='luna_stone'));
+for(const tier of CONSUMABLE_TIERS){
+ assert.ok(!eligibleConsumables(items,69,tier).some(x=>x.id==='luna_stone'),'no luna stone at layer 69, tier '+tier);
+ assert.ok(eligibleConsumables(items,70,tier).some(x=>x.id==='luna_stone'),'luna stone starts at layer 70, tier '+tier);
+}
+assert.equal(bonusConsumable(items,69,scriptedRoll([.999,.999,.999,.847])).id,'clear_chaos','layer 69 reward excludes luna stone');
+assert.equal(bonusConsumable(items,70,scriptedRoll([.999,.999,.999,.847])).id,'luna_stone','layer 70 reward can include luna stone');
 assert.equal(G.rollPotionValue(items.find(x=>x.id==='escape_scroll'),100,()=>0),0);
 assert.equal(G.rollPotionValue(items.find(x=>x.id==='life_ruby'),100,()=>0),0);
 for(const [id,tier,start,value] of [['elixir_s','small',30,35],['elixir_m','medium',55,65],['elixir_l','large',80,100]]){
