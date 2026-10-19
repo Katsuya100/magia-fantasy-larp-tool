@@ -5,7 +5,8 @@ import {circleCardInfo} from './dungeon-magic-knowledge.mjs?v=20261019.2';
 export function circleEffectBadges(circle,buffs=[],escapeText=x=>String(x),mpCost=()=>null){
  const d=circleCardInfo(circle,buffs,mpCost);
  return '<div class="circle-card-info">'
-  +'<span class="circle-card-symbols">'+escapeText(d.symbols)+'</span>'
+  +'<span class="circle-card-symbols">'+escapeText(d.symbols)
+    +(Number(circle?.legacyHp)>0?'<span class="inherited-flame" title="継承魔法：最大HP ±'+Math.floor(Number(circle.legacyHp))+'" aria-label="継承魔法">🔥</span>':'')+'</span>'
   +'<span class="circle-card-stats"><span class="circle-card-mp">MP:'+escapeText(d.mp)+'</span>'
   +'<span class="circle-card-power">威力:'+escapeText(d.power)+'</span></span>'
   +'</div>';

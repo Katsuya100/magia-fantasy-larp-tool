@@ -66,6 +66,23 @@ export function clearDungeonData(db){
  });
 }
 export const saveProfile=(db,p)=>request(db,'settings','readwrite',s=>s.put(p,'profile'));
+// One IndexedDB transaction prevents a lost/recovered photo and its owner from diverging.
+export function saveProfileWithCircles(db,profile,added=[],removed=[]){
+ validateDatabase(db);
+ return new Promise((resolve,reject)=>{
+  try{
+   const tx=db.transaction(STORES,'readwrite');
+   const photos=tx.objectStore('circles');
+   for(const id of removed)photos.delete(id);
+   for(const circle of added)photos.put(circle);
+   tx.objectStore('settings').put(profile,'profile');
+   tx.oncomplete=()=>resolve();
+   tx.onerror=()=>reject(tx.error||Error('遺物の保存に失敗しました'));
+   tx.onabort=()=>reject(tx.error||Error('遺物の保存が中断されました'));
+  }catch(error){reject(error);}
+ });
+}
+
 export async function getProfile(db){
   let p=await request(db,'settings','readonly',s=>s.get('profile'));
   if(!p){

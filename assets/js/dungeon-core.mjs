@@ -145,10 +145,46 @@ export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.i
   if(u.reviveArmed||u.reviveUsed||u.hp<=0)throw Error('生命の紅石はこの戦闘ですでに使用済みです');
   u.reviveArmed=true;
  }else throw Error('Potion kind');if(item.bonus){const b=buffs.find(x=>x.id===item.bonus);if(b)addStatus(u,{id:b.id,kind:'buff',attribute:row.attribute||'law',effect:b.effect,value:Number(b.value),turns:Number(b.duration)||2});}return amount;}
-export function cast(src,tgt,spell,buffs,r=Math.random){const a=spell.attribute,B=effectivePower(src,spell),q=strength(src,spell);if(!ATTRS.includes(a)||!ROLES.includes(spell.role))throw Error('Bad magic');if(spell.role==='attack'){const d=damage(src,tgt,spell,r);tgt.hp=Math.max(0,tgt.hp-d);return 'ダメージ '+d;}
- if(spell.role==='support'){const heal=Math.max(0,Math.min(src.stats.hp-src.hp,Math.round(B*factor(src,'heal')*factor(src,'output'))));src.hp+=heal;src.statuses=src.statuses.filter(x=>x.kind!=='debuff'||x.attribute!==a);return 'HP '+heal+'回復・'+a+'解除';}
- if(spell.role==='defense'){const duration=defenseDuration(spell);addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(num('defense_resistance_gain')*q,0,num('defense_resistance_cap')),turns:duration});const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:duration});return a+'耐性と強化';}
- const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);if(row){const law=status(tgt,'buff_law');const protection=law?Math.max(0,1-law.value):1;const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:clamp(Math.round(Number(row.duration)*power),num('debuff_min_duration'),num('debuff_max_duration')),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});}return a+'弱体付与';}
+// The blue-flame inheritance changes the recipient's maximum HP on every use.
+export function applyLegacyHp(src,tgt,spell){
+ const bonus=Math.floor(Number(spell?.legacyHp)||0);
+ if(src?.id!=='player'||bonus<=0)return '';
+ const self=spell.role==='support'||spell.role==='defense';
+ const unit=self?src:tgt;
+ const oldMax=unit.stats.hp;
+ unit.stats.hp=Math.max(1,oldMax+(self?bonus:-bonus));
+ unit.hp=Math.min(unit.hp,unit.stats.hp);
+ const changed=Math.abs(unit.stats.hp-oldMax);
+ return changed?'・最大HP'+(self?'+':'-')+changed:'';
+}
+export function cast(src,tgt,spell,buffs,r=Math.random){
+ const a=spell.attribute,B=effectivePower(src,spell),q=strength(src,spell);
+ if(!ATTRS.includes(a)||!ROLES.includes(spell.role))throw Error('Bad magic');
+ const legacy=applyLegacyHp(src,tgt,spell);
+ if(spell.role==='attack'){
+  const d=damage(src,tgt,spell,r);tgt.hp=Math.max(0,tgt.hp-d);
+  return 'ダメージ '+d+legacy;
+ }
+ if(spell.role==='support'){
+  const heal=Math.max(0,Math.min(src.stats.hp-src.hp,Math.round(B*factor(src,'heal')*factor(src,'output'))));
+  src.hp+=heal;src.statuses=src.statuses.filter(x=>x.kind!=='debuff'||x.attribute!==a);
+  return 'HP '+heal+'回復・'+a+'解除'+legacy;
+ }
+ if(spell.role==='defense'){
+  const duration=defenseDuration(spell);
+  addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(num('defense_resistance_gain')*q,0,num('defense_resistance_cap')),turns:duration});
+  const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);
+  if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:duration});
+  return a+'耐性と強化'+legacy;
+ }
+ const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);
+ if(row){
+  const law=status(tgt,'buff_law'),protection=law?Math.max(0,1-law.value):1;
+  const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);
+  addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:clamp(Math.round(Number(row.duration)*power),num('debuff_min_duration'),num('debuff_max_duration')),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});
+ }
+ return a+'弱体付与'+legacy;
+}
 // One fatal hit can trigger an armed life ruby; it cannot trigger again this fight.
 export function reviveOnFatal(unit){
  if(unit.hp>0||!unit.reviveArmed||unit.reviveUsed)return 0;
