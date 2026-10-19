@@ -247,6 +247,25 @@ for(const [key,rates] of Object.entries(boundaryCandidates)){
    toLayer:config.toLayer,rate,winRate:result.winRate,mpPercent:result.avgMpPercent}));
  }
 }
+const depthCurves=[
+ {name:'gentle',points:[[1,1],[10,1],[20,.74],[30,.68],[40,.62],[50,.53],[60,.48],[70,.39],[80,.34],[90,.25],[100,.22]]},
+ {name:'medium',points:[[1,1],[10,1],[20,.71],[30,.63],[40,.58],[50,.47],[60,.42],[70,.33],[80,.29],[90,.20],[100,.17]]},
+ {name:'hard',points:[[1,1],[10,1],[20,.68],[30,.60],[40,.55],[50,.43],[60,.37],[70,.30],[80,.25],[90,.17],[100,.14]]}
+];
+for(const curve of depthCurves){
+ for(const band of scenarios.filter(x=>x.stones==='earned')){
+  const result=summarize({...band,stoneUse:.5,mpRecoveryFactor:curve.points},32);
+  console.log('STONE_MP_DEPTH_CURVE '+JSON.stringify({curve:curve.name,level:band.level,
+   fromLayer:band.fromLayer,toLayer:band.toLayer,stoneUse:.5,
+   winRate:result.winRate,mpPercent:result.avgMpPercent,avgCleared:result.avgCleared}));
+ }
+}
+for(const band of scenarios.filter(x=>x.stones==='earned')){
+ const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
+ console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
+  fromLayer:band.fromLayer,toLayer:band.toLayer,stoneUse:.25,winRate:result.winRate,
+  mpPercent:result.avgMpPercent,avgCleared:result.avgCleared}));
+}
 for(const config of scenarios.filter(x=>x.stones==='earned'&&[37,55,87,150].includes(x.level))){
  for(const stoneUse of [0,.5,1]){
   const result=summarize({...config,stoneUse},32);
