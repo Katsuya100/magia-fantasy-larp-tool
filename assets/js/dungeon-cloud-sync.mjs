@@ -166,6 +166,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const file=files[0]||null;
    // An account previously confirmed as synced must have a real Drive file.
    if(!file&&meta?.fileId&&!meta?.blocked){
+    // Allow a different Google account to be selected on the next connect.
+    drive=null;expires=0;
     reconnectPresentation('同期エラー：Drive上にバックアップがありません。');
     return result;
    }
