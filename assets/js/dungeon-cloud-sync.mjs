@@ -65,6 +65,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const syncingIcons=[doc?.getElementById('backupSetupSpinner'),doc?.getElementById('googleDriveSpinner')];
  function setSyncing(active){
   for(const spinner of syncingIcons)if(spinner)spinner.hidden=!active;
+  const activity=doc?.getElementById('driveSyncActivity');
+  if(activity)activity.hidden=!active;
   status?.setAttribute?.('aria-busy',String(active));
   doc?.getElementById('backupSetupStatus')?.setAttribute?.('aria-busy',String(active));
  }
