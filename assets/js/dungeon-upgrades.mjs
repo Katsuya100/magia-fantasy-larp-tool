@@ -14,7 +14,9 @@ export function upgradeCircle(circle){
   analysis:{...circle.analysis,power:strengthenedPower(base,next)}};
 }
 export function combatSpell(circle){
- return circle?.analysis?{...circle.analysis,basePower:circle.basePower??circle.analysis.power,...(Number(circle.legacyHp)>0?{legacyHp:Number(circle.legacyHp)}:{})}:null;
+ return circle?.analysis?{...circle.analysis,basePower:circle.basePower??circle.analysis.power,
+  upgradeLevel:Number.isSafeInteger(circle.upgradeLevel)&&circle.upgradeLevel>0?circle.upgradeLevel:0,
+  ...(Number(circle.legacyHp)>0?{legacyHp:Number(circle.legacyHp)}:{})}:null;
 }
 // Avoid rewriting an already-saved photograph Blob for every power upgrade.
 export function savedUpgrade(circle){
