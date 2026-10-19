@@ -4,7 +4,8 @@ import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,saveProfile,putCircle,readDungeonSnapshot,replaceDungeonSnapshot,saveCloudSyncState,getCloudSyncState,onDungeonDataChange,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {createDungeonDrive,DRIVE_SCOPE,DriveAuthError} from '../assets/js/dungeon-cloud-drive.mjs';
-import {decideCloudSync} from '../assets/js/dungeon-cloud-sync.mjs';
+import {decideCloudSync,canAutoSyncPlay} from '../assets/js/dungeon-cloud-sync.mjs';
+import {createSuccessorProfile} from '../assets/js/dungeon-permadeath.mjs';
 import {verifyLocalSnapshot} from '../assets/js/dungeon-cloud-integrity.mjs';
 
 const db=await openStore(fakeIndexedDB());
@@ -17,6 +18,11 @@ await putCircle(db,{id:'sigil-1',name:'魔法陣',image:photo,analysis:{power:42
 assert.equal(changes,2);
 const original=await readDungeonSnapshot(db);
 assert.equal((await verifyLocalSnapshot(original)).status,'valid');
+assert.match(original.profile.playId,/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i,'a cryptographically random play ID is stored');
+const successor=createSuccessorProfile(original.profile,{slotIds:[],enemy:{id:'test'}},[],original.profile.base);
+assert.equal(successor.playId,original.profile.playId,'permadeath keeps the same play lineage even after the adventurer is replaced');
+const postDeath={...successor,name:'後継者二代目',level:1,xp:0};
+assert.equal(postDeath.playId,original.profile.playId,'name, level and XP do not define play identity');
 const encoded=await serializeDungeonSnapshot(original);
 assert.ok(original.savedAt>0);
 assert.match(encoded,/"checksum":"[0-9a-f]+"/);
@@ -61,6 +67,15 @@ assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:9,remoteSavedAt:10}),'download');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:10}),'download');
 assert.equal(decideCloudSync({file,blocked:true}),'blocked');
+const playOne='00000000-0000-4000-8000-000000000001',playTwo='00000000-0000-4000-8000-000000000002';
+assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playOne}),true,'one play permits automatic backup regardless of adventurer');
+assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playTwo}),false,'different play IDs prevent automatic overwrite and restore regardless of timestamps');
+assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null}),false,'missing cloud ID cannot silently be identified');
+assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null,fileId:'file',knownFileId:'file',knownHash:'hash',remoteHash:'hash'}),true,'verified prior file hash may bridge old-format cloud backup');
+assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null,fileId:'file',knownFileId:'file',knownHash:'other',remoteHash:'hash'}),false,'changed cloud cannot be adopted by reference alone');
+assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:null,identical:false}),false,'two unknown legacy plays cannot be assumed identical');
+assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:null,identical:true}),true,'exactly identical verified old bytes need no write');
+assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:playTwo}),false,'remote play cannot be restored automatically into unknown local game');
 
 // Simulate an unplanned IndexedDB record loss. The preexisting trusted seal
 // must detect it rather than creating a new valid checksum on the next save.
