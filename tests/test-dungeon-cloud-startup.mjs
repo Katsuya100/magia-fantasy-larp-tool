@@ -21,7 +21,7 @@ const wait=async(check,message)=>{
 };
 class Element{
  constructor(id){
-  this.id=id;this.hidden=id==='backupRollbackWarning';this.disabled=false;this.open=false;this.textContent='';
+  this.id=id;this.hidden=id==='backupRollbackWarning';this.disabled=false;this.open=false;this.textContent='';this.showModalCount=0;
   this.handlers=new Map();this.children=new Map();
  }
  addEventListener(name,handler){
@@ -30,7 +30,7 @@ class Element{
  }
  removeEventListener(name,handler){this.handlers.get(name)?.delete(handler);}
  click(){for(const handler of this.handlers.get('click')||[])handler();}
- showModal(){this.open=true;}
+ showModal(){this.open=true;this.showModalCount++;}
  close(){this.open=false;}
  querySelector(selector){
   if(!this.children.has(selector))this.children.set(selector,new Element(selector));
@@ -75,14 +75,15 @@ function fakeUi(cookies=createCookieJar()){
 }
 function mockGoogle(){
  const requests=[];
+ let tokenLifetime=3600;
  const original=globalThis.google;
  globalThis.google={accounts:{oauth2:{initTokenClient(config){
   return {requestAccessToken(args){
    requests.push(args);
-   queueMicrotask(()=>config.callback({access_token:'test-token',expires_in:3600}));
+   queueMicrotask(()=>config.callback({access_token:'test-token',expires_in:tokenLifetime}));
   }};
  }}}};
- return {requests,restore(){globalThis.google=original;}};
+ return {requests,setExpiresIn(seconds){tokenLifetime=seconds;},restore(){globalThis.google=original;}};
 }
 function remoteApi(initial=null,{tamperReadback=false}={}){
  const id='backup-1',modified=()=>new Date(Date.UTC(2026,9,19,10,0,version)).toISOString();
@@ -365,6 +366,8 @@ try{
  start(firstDb,expiredUi,expiredDrive.fetchImpl);
  await wait(()=>!expiredUi.get('setupGoogleDrive').disabled,'OAuth initialized without using the expired cookie');
  assert.equal(expiredUi.doc.cookie,'');
+ assert.equal(expiredUi.get('googleDriveExpiredDialog').open,true,'present but expired cookie shows the expiry dialog on refresh');
+ assert.equal(expiredUi.get('googleDriveExpiredDialog').showModalCount,1,'expired cookie raises exactly one modal');
  assert.notEqual(expiredUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(expiredUi.button.hidden,false);
  assert.equal(expiredDrive.downloads,0,'expired token never reads Drive');
@@ -379,12 +382,39 @@ try{
  assert.ok(!lostTokenUi.status.textContent.includes('同期済み'),'do not label a tokenless session synced');
  assert.deepEqual(lostTokenDrive.operations,[],'without OAuth, reload cannot touch Drive');
 
- // 15. A previously verified account loses synced status when authorization ends.
+ // 15. An idle tab proactively notifies at token expiry without waiting
+ // for another save. The dialog is one-shot until a fresh token is authorized.
+ auth.setExpiresIn(61.5); // 1.5 seconds beyond the standard 60s expiry safety margin.
+ const idleDb=await newDb(),idleUi=fakeUi(),idleDrive=remoteApi();
+ let idleReady=0;
+ const idleController=start(idleDb,idleUi,idleDrive.fetchImpl,{onInitialReady:()=>idleReady++});
+ await connect(idleUi);
+ await wait(()=>idleReady===1,'idle test starts with a verified Drive backup');
+ assert.equal(idleUi.status.textContent,'GoogleDrive同期済み');
+ await wait(()=>idleUi.get('googleDriveExpiredDialog').open,'idle timeout opens the expiry dialog without another sync');
+ assert.equal(idleUi.get('googleDriveExpiredDialog').showModalCount,1,'idle expiry dialog opens once');
+ assert.equal(idleUi.button.hidden,false,'expiry exposes the reconnect button');
+ assert.match(idleUi.status.textContent,/再接続/);
+ assert.equal(idleUi.doc.cookie,'','expiry clears the token cookie');
+ assert.equal(await idleController.syncNow(),'deferred','expired credentials never upload again');
+ assert.equal(idleUi.get('googleDriveExpiredDialog').showModalCount,1,'further save attempts cannot repeat the dialog');
+ auth.setExpiresIn(3600);
+ idleUi.get('googleDriveExpiredDialog').querySelector('[data-action="reconnect"]').click();
+ await wait(()=>idleUi.status.textContent==='GoogleDrive同期済み','dialog reconnect verifies Drive again');
+ assert.equal(idleUi.get('googleDriveExpiredDialog').open,false);
+ idleDrive.expire();
+ await idleController.sync(true);
+ assert.equal(idleUi.get('googleDriveExpiredDialog').showModalCount,2,'a new expired login can notify once again');
+
+ // 16. A previously verified account loses synced status when authorization ends.
  firstDrive.expire();
  await firstController.sync(true);
  assert.equal(firstUi.button.hidden,false,'expired auth reveals reconnect');
  assert.match(firstUi.status.textContent,/再接続/);
  assert.notEqual(firstUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(firstUi.get('googleDriveExpiredDialog').open,true);
- console.log('PASS Drive POST/PATCH, HTTPS cookie resume and rejection, name sync, restore/new, local-only, retries, readback and expiry');
+ assert.equal(firstUi.get('googleDriveExpiredDialog').showModalCount,1);
+ await firstController.sync(true);
+ assert.equal(firstUi.get('googleDriveExpiredDialog').showModalCount,1,'repeated failures do not show duplicate expiry modals');
+ console.log('PASS Drive POST/PATCH, cookie resume, proactive one-shot idle expiry, login renewal, name sync, restore/new, readback and 401 detection');
 }finally{auth.restore();}
