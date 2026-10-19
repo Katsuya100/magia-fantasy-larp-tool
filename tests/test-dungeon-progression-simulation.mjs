@@ -76,7 +76,7 @@ export function upgradeSpells(spells,budget){
    const score=x=>{
     const orig=spells[x.i].power,now=x.s.power,next=strengthenedPower(orig,counts[x.i]+1);
     const gain=G.basePower(next)-G.basePower(now);
-    const extraMp=G.mpCost(next)-G.mpCost(now);
+    const extraMp=0; // Permanent stone upgrades do not increase the original circle's MP cost.
     return (gain+.15)/(1+extraMp) / (counts[x.i]+1)**.25;
    };
    return score(b)-score(a)||a.i-b.i;
