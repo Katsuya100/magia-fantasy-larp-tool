@@ -42,7 +42,7 @@ function heroAction(hero,enemy){
 // Rewards and XP are gathered fight-by-fight but committed only on boss return.
 // The ledger is a plausible *supply forecast*, not a guarantee that the fights
 // were winnable; the combat simulator validates survivability separately.
-export function stoneLedger(seed,throughLayer){
+export function stoneLedger(seed,throughLayer,returnEvery=1){
  const r=rng(seed),progress={level:1,xp:0},levels=[],returns=[];
  let unconfirmedXp=0,unconfirmedStones=0,bank=0,lastLevel=1;
  for(let layer=1;layer<=throughLayer;layer++){
@@ -56,15 +56,20 @@ export function stoneLedger(seed,throughLayer){
    unconfirmedStones+=drops.filter(x=>x.type==='stone').length;
    unconfirmedXp+=G.fightExperience(enemyLevel,progress.level,layer);
   }
-  // Model one completed 5-fight layer, followed by an immediate successful return.
-  // All stones and XP become permanent only at this point.
-  bank+=unconfirmedStones;
-  G.experience(progress,unconfirmedXp);
-  if(progress.level>lastLevel)levels.push({from:lastLevel,to:progress.level,stones:bank,layer});
-  lastLevel=progress.level;
+  // Both policies settle loot/XP only when the party returns after a layer boss.
+  // A decade-return policy more closely matches the unlockable 11,21,... entries,
+  // but ignores the 80% HP+MP requirement for earning those rank badges.
+  const settled=layer%returnEvery===0||layer===throughLayer;
+  const earned=unconfirmedStones;
+  if(settled){
+   bank+=unconfirmedStones;
+   G.experience(progress,unconfirmedXp);
+   if(progress.level>lastLevel)levels.push({from:lastLevel,to:progress.level,stones:bank,layer});
+   lastLevel=progress.level;
+   unconfirmedStones=0;unconfirmedXp=0;
+  }
   returns.push({layer,levelBefore,level:progress.level,stones:bank,
-   gained:unconfirmedStones,expectedGained:5*chance});
-  unconfirmedStones=0;unconfirmedXp=0;
+   gained:earned,expectedGained:5*chance,settled,pendingStones:unconfirmedStones});
  }
  return {level:progress.level,stones:bank,levels,returns};
 }
@@ -93,13 +98,14 @@ export function upgradeSpells(spells,budget){
 }
 export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,stoneUse=.5}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
- const history=stones==='earned'?stoneLedger(seed+81,fromLayer-1):{stones:0};
+ const history=stones==='earned'?stoneLedger(seed+81,fromLayer-1,10):{stones:0};
  const budget=stones==='earned'?Math.floor(history.stones*Math.max(0,Math.min(1,stoneUse))):Math.max(0,Number(stones)||0);
  const equipment=upgradeSpells(SPELLS[spells],budget);
- const hero=G.makeUnit(base,level,{},equipment.spells,'player');
+ const effectiveLevel=level==='forecast'?(history.level||1):level;
+ const hero=G.makeUnit(base,effectiveLevel,{},equipment.spells,'player');
  const first=(fromLayer-1)*5+1,last=toLayer*5;
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
-  startLevel:level,forecastLevelAtEntry:history.level??null,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,unspentStones:Math.max(0,history.stones-budget),upgradeCounts:equipment.counts,
+  startLevel:effectiveLevel,forecastLevelAtEntry:history.level??null,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,unspentStones:Math.max(0,history.stones-budget),upgradeCounts:equipment.counts,
   initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[]};
  for(let fight=first;fight<=last;fight++){
   const foe=enemyForFight(data.enemies,fight);
@@ -170,6 +176,7 @@ for(const config of scenarios)console.log('PROGRESSION_SIM '+JSON.stringify(summ
 // This is a cumulative earned-stones forecast, NOT unspent inventory or a guaranteed
 // successful combat path. Death, repeated farming and replacing upgraded circles differ.
 const economyRuns=Array.from({length:128},(_,i)=>stoneLedger(47119+i*113,100));
+const decadeEconomyRuns=Array.from({length:128},(_,i)=>stoneLedger(47119+i*113,100,10));
 for(const layer of [10,20,30,40,50,60,70,80,90,100]){
  const sorted=economyRuns.map(run=>run.returns[layer-1].stones).sort((a,b)=>a-b);
  const example=economyRuns[0].returns[layer-1];
@@ -178,6 +185,23 @@ for(const layer of [10,20,30,40,50,60,70,80,90,100]){
  console.log('STONE_ECONOMY '+JSON.stringify({layer,levelBefore:example.levelBefore,levelAfterReturn:example.level,
   targetClearLevel:targetClearLevel(layer),meanEarned:mean,p10:sorted[12],median:sorted[64],p90:sorted[115],
   meanExpectedDropsLast10Layers:expectedDrops,model:'single-clear;return-after-each-layer;no-spending'}));
+}
+
+// The player cannot actually select 2,3,... as starting layers: compare a
+// ten-layer expedition plus return, assuming a badge was earned each decade.
+for(const layer of [10,20,30,40,50,60,70,80,90,100]){
+ const sorted=decadeEconomyRuns.map(run=>run.returns[layer-1].stones).sort((a,b)=>a-b);
+ const example=decadeEconomyRuns[0].returns[layer-1];
+ const mean=Math.round(sorted.reduce((a,b)=>a+b,0)/sorted.length*10)/10;
+ console.log('STONE_ECONOMY_DECADE '+JSON.stringify({layer,levelBefore:example.levelBefore,
+  levelAfterReturn:example.level,targetClearLevel:targetClearLevel(layer),
+  meanEarned:mean,p10:sorted[12],median:sorted[64],p90:sorted[115],
+  model:'return-at-10/20/...;rank-unlock-assumed;no-spending'}));
+}
+for(const target of [20,30,50,70,90,100]){
+ const result=summarize({name:'On-curve / '+(target-9)+'-'+target+' layers',level:'forecast',
+  fromLayer:target-9,toLayer:target,spells:'five',stones:'earned',stoneUse:.5},32);
+ console.log('STONE_ON_CURVE_COMBAT '+JSON.stringify(result));
 }
 for(const config of scenarios.filter(x=>x.stones==='earned'&&[37,55,87,150].includes(x.level))){
  for(const stoneUse of [0,.5,1]){
@@ -207,6 +231,7 @@ assert.ok(upgradeSpells(SPELLS.five,80).costs.every((mp,i)=>mp===G.mpCost(SPELLS
 assert.equal(G.magicStoneDropChance(targetClearLevel(30),30),.3);
 assert.equal(G.magicStoneDropChance(targetClearLevel(30)+1,30),.15);
 assert.equal(stoneLedger(1,0).stones,0);
+assert.equal(stoneLedger(1,10,10).returns.filter(x=>x.settled).length,1,'ten-layer return policy settles exactly once');
 assert.ok(ledger.stones>0,'stones are banked across completed checkpoints');
 assert.ok(ledger.levels.every(x=>x.to>x.from),'level ups require accumulated XP');
 assert.ok(ledger.levels.every((x,i)=>i===0||x.stones>=ledger.levels[i-1].stones),'stone bank is never debited before upgrades');
