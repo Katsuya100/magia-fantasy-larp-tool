@@ -212,6 +212,20 @@ try{
  assert.equal(firstUi.get('googleDriveConflictDialog').open,false,'naming never reopens the restore/new chooser');
  assert.ok(firstDrive.downloads>=2,'both uploads were verified with Drive downloads');
 
+ // Real autosave, not just an explicit syncNow(): a local edit schedules
+ // a nonblocking backup after the 1.8s debounce and the spinner stays visible.
+ const autoProfile=await getProfile(firstDb);
+ autoProfile.magicStones=Number(autoProfile.magicStones||0)+1;
+ const beforeAutoUploads=firstDrive.uploads;
+ const releaseAutoList=firstDrive.pauseNextList();
+ await saveProfile(firstDb,autoProfile);
+ await wait(()=>!firstUi.get('driveSyncActivity').hidden,'automatic edit-triggered backup starts visibly without a syncNow call');
+ assert.equal(firstDrive.uploads,beforeAutoUploads,'background sync is still waiting on the remote API');
+ releaseAutoList();
+ await wait(()=>firstDrive.uploads===beforeAutoUploads+1,'automatic backup uploads after local edit');
+ await wait(()=>firstUi.get('driveSyncActivity').hidden&&firstUi.status.textContent==='GoogleDrive同期済み','automatic progress disappears only after verification');
+ assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.magicStones,autoProfile.magicStones,'automatic backup preserves the changed resource');
+
  // 2. Fresh local browser + existing named cloud backup: require only two
  // choices, never a name form until the user chooses a new game.
  const recoveringDb=await newDb(),recoveringUi=fakeUi(),recoveringDrive=remoteApi(firstDrive.current);
@@ -380,7 +394,7 @@ try{
  assert.equal(refreshUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(refreshUi.button.hidden,true);
  assert.ok(firstDrive.downloads>beforeRefreshDownloads,'cookie reloading still verifies the remote backup');
- assert.deepEqual(firstDrive.operations,['POST','PATCH'],'refresh must not create or overwrite a matching backup');
+ assert.deepEqual(firstDrive.operations,['POST','PATCH','PATCH'],'refresh must not create or overwrite a matching backup');
 
  // 12. If that cached token is revoked, reconnection is required and the
  // cookie must be discarded instead of repeatedly claiming the user is synced.
