@@ -48,32 +48,7 @@ export async function photoEvidence(circles){
  return Object.fromEntries(pairs);
 }
 // Images in permadeath legacies and nested rewards also belong to the save.
-function nestedPhotos(value,path='
- try{checkSnapshotShape(snapshot);}catch(error){return {status:'corrupt',message:error.message,badImageIds:[]};}
- const proof=snapshot.integrity;
- if(!proof||proof.version!==1||proof.legacy||Object.values(proof.photos||{}).some(x=>x==='unknown'))return {status:'legacy',badImageIds:[]};
- if(proof.records!==recordFingerprint(snapshot)||proof.savedAt!==snapshot.savedAt)return {status:'corrupt',message:'セーブ本体の整合性が一致しません。',badImageIds:[]};
- let nestedHashes;
- try{nestedHashes=await profilePhotoEvidence(snapshot.profile);}
- catch(error){return {status:'corrupt',message:error.message,badImageIds:[]};}
- const baseline=proof.profilePhotos||{};
- if(Object.keys(nestedHashes).length!==Object.keys(baseline).length||
-    Object.entries(nestedHashes).some(([path,hash])=>baseline[path]!==hash))
-  return {status:'corrupt',message:'遺物の写真データが検証記録と一致しません。',badImageIds:[]};
- const descriptors=photoDescriptors(snapshot.circles);
- const ids=snapshot.circles.map(c=>c.id);
- if(ids.length!==Object.keys(proof.photos||{}).length||ids.some(id=>!(id in proof.photos)))return {status:'corrupt',message:'魔法陣の記録数が一致しません。',badImageIds:[]};
- const badImageIds=[];
- for(const circle of snapshot.circles){
-  const expected=proof.photos[circle.id];
-  if(circle.image==null){badImageIds.push(circle.id);continue;}
-  try{
-   if(typeof expected!=='string'||!(circle.image instanceof Blob)||!circle.image.type||!descriptors[circle.id]||await digestPhoto(circle.image)!==expected)badImageIds.push(circle.id);
-  }catch{badImageIds.push(circle.id);}
- }
- return {status:badImageIds.length?'badImages':'valid',badImageIds};
-}
-,result={},depth=0,parents=new Set()){
+function nestedPhotos(value,path='profile',result={},depth=0,parents=new Set()){
  if(depth>50)throw Error('セーブ内の入れ子が深すぎます。');
  if(value instanceof Blob){result[path]=value;return result;}
  if(!value||typeof value!=='object')return result;
@@ -92,17 +67,28 @@ export async function profilePhotoEvidence(profile){
 export async function verifyLocalSnapshot(snapshot){
  try{checkSnapshotShape(snapshot);}catch(error){return {status:'corrupt',message:error.message,badImageIds:[]};}
  const proof=snapshot.integrity;
- if(!proof||proof.version!==1||proof.legacy||Object.values(proof.photos||{}).some(x=>x==='unknown'))return {status:'legacy',badImageIds:[]};
- if(proof.records!==recordFingerprint(snapshot)||proof.savedAt!==snapshot.savedAt)return {status:'corrupt',message:'セーブ本体の整合性が一致しません。',badImageIds:[]};
+ if(!proof||proof.version!==1||proof.legacy||Object.values(proof.photos||{}).some(x=>x==='unknown'))
+  return {status:'legacy',badImageIds:[]};
+ if(proof.records!==recordFingerprint(snapshot)||proof.savedAt!==snapshot.savedAt)
+  return {status:'corrupt',message:'セーブ本体の整合性が一致しません。',badImageIds:[]};
+ let nestedHashes;
+ try{nestedHashes=await profilePhotoEvidence(snapshot.profile);}
+ catch(error){return {status:'corrupt',message:error.message,badImageIds:[]};}
+ const baseline=proof.profilePhotos||{};
+ if(Object.keys(nestedHashes).length!==Object.keys(baseline).length||
+    Object.entries(nestedHashes).some(([path,hash])=>baseline[path]!==hash))
+  return {status:'corrupt',message:'遺物の写真データが検証記録と一致しません。',badImageIds:[]};
  const descriptors=photoDescriptors(snapshot.circles);
  const ids=snapshot.circles.map(c=>c.id);
- if(ids.length!==Object.keys(proof.photos||{}).length||ids.some(id=>!(id in proof.photos)))return {status:'corrupt',message:'魔法陣の記録数が一致しません。',badImageIds:[]};
+ if(ids.length!==Object.keys(proof.photos||{}).length||ids.some(id=>!(id in proof.photos)))
+  return {status:'corrupt',message:'魔法陣の記録数が一致しません。',badImageIds:[]};
  const badImageIds=[];
  for(const circle of snapshot.circles){
   const expected=proof.photos[circle.id];
   if(circle.image==null){badImageIds.push(circle.id);continue;}
   try{
-   if(typeof expected!=='string'||!(circle.image instanceof Blob)||!circle.image.type||!descriptors[circle.id]||await digestPhoto(circle.image)!==expected)badImageIds.push(circle.id);
+   if(typeof expected!=='string'||!(circle.image instanceof Blob)||!circle.image.type||
+    !descriptors[circle.id]||await digestPhoto(circle.image)!==expected)badImageIds.push(circle.id);
   }catch{badImageIds.push(circle.id);}
  }
  return {status:badImageIds.length?'badImages':'valid',badImageIds};
