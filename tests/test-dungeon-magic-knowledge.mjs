@@ -51,7 +51,11 @@ assert.equal(circleEffectDetails(revealOnUse(debuff),buffs,()=>4).duration,'4タ
 assert.equal(circleEffectDetails(attack,buffs).statusName,'');
 assert.equal(circleEffectDetails(support,buffs).statusName,'');
 const chaos=savePreanalysis(circle,{attribute:'chaos',role:'debuff',power:512});
-assert.equal(circleEffectDetails(chaos,buffs).statusName,'ランダム弱体');
+assert.equal(circleEffectDetails(chaos,buffs).statusName,'弱体');
+const chaosNamedBuffs=[...buffs,{id:'debuff_chaos',name:'暴走',duration:2}];
+assert.equal(circleEffectDetails(chaos,chaosNamedBuffs).statusName,'暴走');
+assert.match(spellEffect(chaos.analysis,chaosNamedBuffs),/暴走/);
+assert.match(circleEffectDetails(chaos,chaosNamedBuffs).statusDescription,/暴走/);
 assert.equal(circleEffectDetails(revealOnUse(chaos),buffs,()=>6).duration,'6ターン（威力連動）');
 assert.equal(isRevealed({analysis:pending.analysis}),true,'legacy analyzed circles retain visible power');
 assert.match(spellEffect({...pending.analysis,role:'debuff'},buffs),/🕸️火傷/);

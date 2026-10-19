@@ -112,15 +112,38 @@ export function drops(items,collections,l,r=Math.random,context={}){
 export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
+export const debuffPowerFactor=spell=>clamp(Math.sqrt(Math.max(0,Number(spell?.power)||0)/num('debuff_power_reference')),num('debuff_power_min'),num('debuff_power_max'));
 export const status=(actor,id)=>actor.statuses.find(s=>s.id===id);
-export function addStatus(actor,s){const old=status(actor,s.id);if(old&&s.id==='debuff_chaos'){Object.assign(old,s);return;}if(old){old.turns=Math.max(old.turns,s.turns);if(Math.abs(s.value)>Math.abs(old.value))old.value=s.value;return;}actor.statuses.push(s);}
-export function resist(actor,attr){let r=actor.resists[attr]??1;const buff=status(actor,'resist_'+attr);const soak=status(actor,'debuff_aqua');if(buff)r*=1-buff.value*(soak?Math.max(0,1-soak.value):1);return clamp(r,num('status_min_resistance'),num('status_max_resistance'));}
+export function addStatus(actor,s){
+ const old=status(actor,s.id);
+ if(old&&s.id==='debuff_chaos'){Object.assign(old,s);return;}
+ if(old){
+  old.turns=Math.max(old.turns,s.turns);
+  if(Math.abs(s.value)>Math.abs(old.value))old.value=s.value;
+  if(s.effect==='shock')old.shockExtra=Math.max(old.shockExtra??num('shock_cooldown_extra'),s.shockExtra??0);
+  if(s.effect==='seal'){
+   const previous=old.sealedRoles??(old.sealedRole?[old.sealedRole]:[]);
+   const incoming=s.sealedRoles??(s.sealedRole?[s.sealedRole]:[]);
+   old.sealedRoles=[...new Set([...previous,...incoming])].slice(0,2);
+   old.sealedRole=old.sealedRoles[0]??null;
+  }
+  return;
+ }
+ actor.statuses.push(s);
+}
+export function resist(actor,attr){
+ let r=actor.resists[attr]??1;
+ const buff=status(actor,'resist_'+attr),soak=status(actor,'debuff_aqua');
+ if(buff)r*=1-buff.value*(soak?Math.max(0,1-soak.value):1);
+ if(soak)r*=1+Math.max(0,soak.value)*num('soak_vulnerability_rate');
+ return clamp(r,num('status_min_resistance'),num('status_max_resistance'));
+}
 export function factor(actor,effect){return clamp(actor.statuses.filter(x=>x.effect===effect).reduce((n,x)=>n*(1+x.value),1),num('modifier_min'),num('modifier_max'));}
 export const armor=actor=>Math.ceil(Math.max(0,actor.stats.def+actor.statuses.filter(x=>x.effect==='def').reduce((n,x)=>n+x.value,0)));
 export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debuff_storm');if(dizzy&&r()<clamp(dizzy.value,0,num('dizzy_max_rate')))return 0;return Math.max(0,Math.round(effectivePower(src,spell)*resist(tgt,spell.attribute)*factor(src,'attack')*factor(src,'output')*factor(tgt,'incoming')*num('def_divisor')/(num('def_divisor')+armor(tgt))));}
-export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=spellMpCost(s)&&!u.cooldowns[i]&&!u.statuses.some(x=>x.effect==='seal'&&x.sealedRole===s.role));}
+export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=spellMpCost(s)&&!u.cooldowns[i]&&!u.statuses.some(x=>x.effect==='seal'&&(x.sealedRoles?x.sealedRoles.includes(s.role):x.sealedRole===s.role)));}
 export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
-export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=spellMpCost(sp);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
+export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=spellMpCost(sp);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=shock.shockExtra??num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
 // Whether a carried item currently has a usable primary effect (or bonus).
 // Escape scrolls are always usable; revival can only be armed once per fight.
 export function canUseBattleItem(hero,item,items,buffs=[]){
@@ -181,12 +204,22 @@ export function cast(src,tgt,spell,buffs,r=Math.random){
   if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:duration});
   return a+'耐性と強化'+legacy;
  }
- const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);
+ const row=buffs.find(x=>x.id==='debuff_'+a);
  if(row){
   const law=status(tgt,'buff_law'),protection=law?Math.max(0,1-law.value):1;
-  // Attribute/RES/law protection changes strength, not duration.
-   const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);
-  addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:statusDuration(spell),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});
+  const targetFactor=resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);
+  // Power upgrades now affect debuff intensity as well as duration.
+  const value=Number(row.value)*q*debuffPowerFactor(spell)*targetFactor;
+  const shockExtra=row.effect==='shock'
+   ?clamp(num('shock_cooldown_extra')+Math.floor(Number(spell.power)*targetFactor/num('shock_power_step')),num('shock_cooldown_extra'),num('shock_cooldown_max_extra')):undefined;
+  let sealedRoles=null;
+  if(row.effect==='seal'){
+   const count=Number(spell.power)*targetFactor>=num('seal_two_roles_power')?2:1;
+   const pool=[...ROLES];
+   sealedRoles=Array.from({length:count},()=>pool.splice(roll(0,pool.length-1,r),1)[0]);
+  }
+  addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value,shockExtra,
+   sealedRoles,sealedRole:sealedRoles?.[0]??null,turns:statusDuration(spell)});
  }
  return a+'弱体付与'+legacy;
 }
@@ -217,7 +250,9 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
      // Compare armor against the same base-level HP scale; otherwise
      // high-level defense growth makes ordinary attacks obsolete.
      const relativeArmor=armor(a.t)/Math.max(1,a.t.stats.hp/Math.max(1,a.t.base.hp));
-     const d=Math.max(1,Math.round(num('basic_attack')*a.u.stats.hp*
+     const dizzy=status(a.u,'debuff_storm');
+     const missed=dizzy&&r()<clamp(dizzy.value,0,num('dizzy_max_rate'));
+     const d=missed?0:Math.max(1,Math.round(num('basic_attack')*a.u.stats.hp*
       factor(a.u,'attack')*factor(a.u,'output')*factor(a.t,'incoming')*
       num('def_divisor')/(num('def_divisor')+relativeArmor)));
     a.t.hp=Math.max(0,a.t.hp-d);

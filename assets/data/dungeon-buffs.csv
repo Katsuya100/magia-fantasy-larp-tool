@@ -12,7 +12,7 @@ debuff_aqua,浸水,debuff,soak,0.5,2
 debuff_storm,目眩,debuff,dizzy,0.35,2
 debuff_gravity,重圧,debuff,output,-0.22,2
 debuff_law,封印,debuff,seal,1,2
-debuff_chaos,混乱,debuff,confused,1,2
+debuff_chaos,暴走,debuff,confused,1,2
 resist_flame,flame耐性上昇,buff,resist,0.25,2
 resist_bolt,bolt耐性上昇,buff,resist,0.25,2
 resist_aqua,aqua耐性上昇,buff,resist,0.25,2

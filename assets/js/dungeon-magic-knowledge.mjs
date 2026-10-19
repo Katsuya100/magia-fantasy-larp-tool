@@ -27,7 +27,7 @@ export function spellEffect(a,buffs=[]){
  case 'attack':return '⚔️属性攻撃';
  case 'defense':return attribute==='chaos'?'🛡️属性耐性＋ランダム強化':'🛡️属性耐性＋'+(match('buff_'+attribute)||'強化');
  case 'support':return '✚HP回復＋'+(ATTRIBUTES[attribute]?.label||attribute)+'の🕸️弱体解除';
- case 'debuff':return '🕸️'+(attribute==='chaos'?'ランダム弱体':(match('debuff_'+attribute)||'弱体'));
+ case 'debuff':return '🕸️'+(match('debuff_'+attribute)||'弱体');
  default:return '未解析';
  }
 }
@@ -56,13 +56,13 @@ const BUFF_DETAILS={
  chaos:'七属性からランダムに強化効果を選んで付与します。'
 };
 const DEBUFF_DETAILS={
- flame:'火傷：ターン終了時に最大HPに応じた継続ダメージを受けます。',
- bolt:'感電：次に使った魔法の再使用待ち時間が延びます。',
- aqua:'浸水：属性耐性を高める加護の効果が弱まります。',
- storm:'目眩：攻撃が失敗することがあります。',
- gravity:'重圧：魔法の出力が下がり、与えるダメージや回復などが弱まります。',
- law:'封印：攻撃・防御・回復・弱体のうち一種類の魔法を一時的に使えなくします。',
- chaos:'混乱：次に使おうとした魔法が、別の装備魔法に変わることがあります。'
+ flame:'火傷：威力に応じた最大HP割合の継続ダメージを毎ターン受けます。',
+ bolt:'感電：威力に応じて次の魔法の再使用待ちが延びます。',
+ aqua:'浸水：威力に応じて属性耐性が低下し、耐性の加護も弱まります。',
+ storm:'目眩：威力に応じた確率で攻撃魔法や通常攻撃が失敗します。',
+ gravity:'重圧：威力に応じて魔法の出力が下がり、攻撃や回復が弱まります。',
+ law:'封印：威力に応じて最大二種類の紋を一時的に使えなくします。',
+ chaos:'暴走：次に使用する魔法陣をランダムに選び直します。'
 };
 export function circleAttributeEffects(circle,buffs=[]){
  const a=circle?.analysis;
@@ -72,7 +72,7 @@ export function circleAttributeEffects(circle,buffs=[]){
  const debuff=buffs.find(x=>x.id==='debuff_'+attribute);
  return {
   buff:chaos?'ランダム強化':buff?.name||'強化',
-  debuff:chaos?'ランダム弱体':debuff?.name||'弱体',
+  debuff:debuff?.name||'弱体',
   buffActive:role==='defense',debuffActive:role==='debuff',
   buffDescription:BUFF_DETAILS[attribute],debuffDescription:DEBUFF_DETAILS[attribute],
   buffDuration:buff?.duration||'変動',debuffDuration:debuff?.duration||'変動'
@@ -101,7 +101,7 @@ export function circleEffectDetails(circle,buffs=[],statusDuration=null){
   duration:isRevealed(circle)&&typeof statusDuration==='function'?statusDuration(a)+'ターン（威力連動）':'2〜6ターン（威力連動）'
  };
  return {
-  effect:'敵に'+ATTRIBUTES[attribute].label+'属性の🕸️弱体効果を与えます。持続時間は魔法の威力で決まり、強さは相手の耐性などで変わります。',
+  effect:'敵に'+ATTRIBUTES[attribute].label+'属性の🕸️弱体効果を与えます。持続時間と強さは魔法の威力に応じて変わり、相手の耐性でも変化します。',
   statusName:info.debuff,
   statusDescription:info.debuffDescription,
   duration:isRevealed(circle)&&typeof statusDuration==='function'?statusDuration(a)+'ターン（威力連動）':'2〜6ターン（威力連動）'
