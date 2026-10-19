@@ -83,15 +83,16 @@ export function upgradeSpells(spells,budget){
   });
   const {i}=candidate[0];
   counts[i]++;
+  base[i].basePower=spells[i].basePower??spells[i].power;
   base[i].power=strengthenedPower(spells[i].power,counts[i]);
  }
- return {spells:base,counts,costs:base.map(s=>G.mpCost(s.power))};
+ return {spells:base,counts,costs:base.map(s=>G.spellMpCost(s))};
 }
-export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null}={}){
+export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,spellLoadout=null}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
  const history=stones==='earned'?stoneLedger(seed+81,fromLayer-1):{stones:0};
  const budget=stones==='earned'?Math.min(16,Math.floor(history.stones*.12)):Math.max(0,Number(stones)||0);
- const equipment=upgradeSpells(SPELLS[spells],budget);
+ const equipment=upgradeSpells(spellLoadout??SPELLS[spells],budget);
  const hero=G.makeUnit(base,level,{},equipment.spells,'player');
  const first=(fromLayer-1)*5+1,last=toLayer*5;
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
