@@ -207,9 +207,25 @@ export function cast(src,tgt,spell,buffs,r=Math.random){
  const row=buffs.find(x=>x.id==='debuff_'+a);
  if(row){
   const law=status(tgt,'buff_law'),protection=law?Math.max(0,1-law.value):1;
-  const targetFactor=resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);
-  // Power upgrades now affect debuff intensity as well as duration.
-  const value=Number(row.value)*q*debuffPowerFactor(spell)*targetFactor;
+  // Power sets the base curse; level-scaled MAG and RES are compared as a ratio.
+  // This avoids weakening deep-floor debuffs solely because both sides leveled up.
+  const mag=Math.max(0,Number(src.stats.mag)||0),res=Math.max(0,Number(tgt.stats.res)||0);
+  const ratio=mag+res>0?clamp(2*mag/(mag+res),num('debuff_mag_res_min'),num('debuff_mag_res_max')):1;
+  const targetFactor=resist(tgt,a)*protection*ratio;
+  const S=debuffPowerFactor(spell);
+  // Preserve the legacy burn-status multiplier in ongoing saved expeditions.
+  const magnitude=row.effect==='burn'
+   ?(Number(row.value)+num('burn_growth_hp_rate')*S)/num('burn_hp_rate')
+   :row.effect==='soak'?Number(row.value)+num('soak_growth_rate')*S
+   :row.effect==='dizzy'?Number(row.value)+num('dizzy_growth_rate')*S
+   :row.effect==='output'?Number(row.value)-num('gravity_growth_rate')*S
+   :Number(row.value);
+  const adjusted=magnitude*targetFactor;
+  const value=row.effect==='burn'?clamp(adjusted,0,num('burn_max_hp_rate')/num('burn_hp_rate'))
+   :row.effect==='soak'?clamp(adjusted,0,num('soak_max_rate'))
+   :row.effect==='dizzy'?clamp(adjusted,0,num('dizzy_max_rate'))
+   :row.effect==='output'?clamp(adjusted,-num('gravity_max_rate'),0)
+   :adjusted;
   const shockExtra=row.effect==='shock'
    ?clamp(num('shock_cooldown_extra')+Math.floor(Number(spell.power)*targetFactor/num('shock_power_step')),num('shock_cooldown_extra'),num('shock_cooldown_max_extra')):undefined;
   let sealedRoles=null;
@@ -272,7 +288,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  for(const a of actions){
   for(const s of a.u.statuses){
    if(s.effect==='burn'){
-    const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*num('burn_hp_rate')*s.value));
+    const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*Math.min(num('burn_max_hp_rate'),num('burn_hp_rate')*s.value)));
     const oldHp=a.u.hp;
     a.u.hp=Math.max(0,a.u.hp-d);
     const amount=oldHp-a.u.hp;
