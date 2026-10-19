@@ -72,6 +72,13 @@ const fixtures = [
   {name: 'debuff: nine separated radial strokes', role: 'debuff', shape: radialGap, expectOpenLinearOverride: true},
   {name: 'debuff: nine rays with a partial scan-rim circle', role: 'debuff',
     shape: radialGap + openRing(191, 25), expectOpenLinearOverride: true},
+  {name: 'debuff: branched straight arrows with tiny crossing pockets', role: 'debuff',
+    shape: '<path d="M140 187 L372 187 M140 187 L157 174 M140 187 L157 202 M372 187 L355 172 M372 187 L355 202"/>'
+      + '<path d="M256 187 L256 373 M256 373 L240 355 M256 373 L273 355"/>'
+      + '<path d="M256 187 L150 356 M256 187 L362 356"/>'
+      + '<path d="M238 187 L256 221 L276 187 M244 187 L256 236 L268 187"/>'
+      + '<path d="M145 362 l-10 -10 m10 10 l11 -12 M361 362 l-10 -10 m10 10 l11 -12"/>',
+    expectDebuff: true},
   {name: 'debuff: nine rays with a narrow-gap scan-rim arc', role: 'debuff',
     shape: radialGap + openRing(191, 14), expectOpenLinearOverride: true},
   {name: 'support: smooth interrupted circle without spokes', role: 'support',
