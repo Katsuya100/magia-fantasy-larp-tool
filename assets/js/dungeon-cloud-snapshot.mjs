@@ -76,3 +76,11 @@ export async function snapshotHash(text,cryptoImpl=globalThis.crypto){
  const digest=new Uint8Array(await cryptoImpl.subtle.digest('SHA-256',bytes));
  return Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
 }
+
+/** Validate checksum before accepting remote content. Old backups without a checksum remain readable. */
+export async function verifyDungeonBackup(text){
+ const data=JSON.parse(text);
+ const {integrity,...payload}=data;
+ if(integrity&&await snapshotHash(JSON.stringify(payload))!==integrity)throw Error('バックアップの整合性検証に失敗しました。');
+ return deserializeDungeonSnapshot(text);
+}
