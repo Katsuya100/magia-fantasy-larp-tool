@@ -303,6 +303,20 @@ for(const stoneUse of [.5,.75,1]){
    avgSpentStones:result.avgSpentStones,avgCleared:result.avgCleared}));
  }
 }
+const lateZeroOnsets=[96,97,98,99];
+for(const zeroFrom of lateZeroOnsets){
+ const points=[[1,1],[10,1],[20,.72],[30,.65],[40,.58],[50,.49],
+  [60,.43],[70,.34],[80,.29],[90,.23],[zeroFrom,0],[100,0]];
+ for(const stoneUse of [.5,.75,1]){
+  for(const level of [139,150]){
+   const band=scenarios.find(x=>x.level===level&&x.stones==='earned');
+   const result=summarize({...band,stoneUse,mpRecoveryFactor:points},128);
+   console.log('STONE_MP_ZERO_FINE '+JSON.stringify({zeroFrom,stoneUse,level,
+    winRate:result.winRate,mpPercent:result.avgMpPercent,avgCleared:result.avgCleared,
+    avgSpentStones:result.avgSpentStones}));
+  }
+ }
+}
 for(const band of scenarios.filter(x=>x.stones==='earned')){
  const result=summarize({...band,stoneUse:.25,mpRecoveryFactor:depthCurves[1].points},32);
  console.log('STONE_MP_DEPTH_STRESS '+JSON.stringify({curve:'medium',level:band.level,
