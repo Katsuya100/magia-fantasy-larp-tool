@@ -800,7 +800,7 @@ try{
  await connect(unknownUi);
  await wait(()=>unknownUi.get('googleDriveConflictDialog').open,'only real unknown-timestamp conflicts require a choice');
  assert.equal((await readDungeonSnapshot(unknownLegacy.db)).savedAt,0,'migration does not invent a timestamp');
- assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(unknownLegacy.db))).status,'legacy','unrelated unknown-timestamp save must not be silently trusted or migrated');
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(unknownLegacy.db))).status,'valid','legacy seal is checked and converted before manual cross-play choice');
  assert.equal(unknownUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').hidden,true);
  assert.equal(unknownUi.get('googleDriveOverwriteWarning').hidden,true,'disallowed overwrite warning must not mislead');
  assert.ok(!unknownUi.get('googleDriveConflictDialog').querySelector('[data-role="description"]').textContent.includes('旧形式'),'old-format dialog is replaced by an actual conflict explanation');
@@ -812,16 +812,16 @@ try{
  const photoUi=fakeUi(),photoDrive=remoteApi(newerRemote);
  start(photoLegacy.db,photoUi,photoDrive.fetchImpl);
  await connect(photoUi);
- await wait(()=>photoUi.get('googleDriveConflictDialog').open,'unrelated legacy save requires a human decision before any image repair');
- assert.equal(photoUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').hidden,true,'unverified legacy photos cannot authorize Drive overwrite');
+ await wait(()=>photoUi.status.textContent.includes('画像が不足'),'legacy image gaps block both automatic and explicit overwrite');
  assert.deepEqual(photoDrive.operations,[],'missing photo never overwrites Drive');
+ assert.equal(photoUi.get('googleDriveConflictDialog').open,false,'broken photos never open an unsafe overwrite choice');
  const corruptLegacy=await legacyDevice('記録改ざん',{tampered:true});
  const corruptUi=fakeUi(),corruptDrive=remoteApi(newerRemote);
  start(corruptLegacy.db,corruptUi,corruptDrive.fetchImpl);
  await connect(corruptUi);
- await wait(()=>corruptUi.get('googleDriveConflictDialog').open,'unrelated corrupted legacy save requires explicit restoration');
- assert.equal(corruptUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').hidden,true,'unknown lineage cannot overwrite unverified local save');
+ await wait(()=>corruptUi.status.textContent.includes('整合性'),'tampered legacy seal blocks migration before cloud overwrites');
  assert.deepEqual(corruptDrive.operations,[],'corrupt local record never overwrites the healthy remote');
+ assert.equal(corruptUi.get('googleDriveConflictDialog').open,false,'corrupt local proof never enables overwrite chooser');
 
  // 15. An idle tab proactively notifies at token expiry without waiting
  // for another save. The dialog is one-shot until a fresh token is authorized.
