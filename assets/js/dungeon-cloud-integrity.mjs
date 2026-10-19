@@ -10,6 +10,7 @@ export function checkSnapshotShape(snapshot){
  const p=snapshot?.profile,c=snapshot?.circles;
  if(!p||typeof p!=='object'||Array.isArray(p)||!Array.isArray(c)||c.length>500)throw Error('セーブデータの形式が不正です。');
  if(p.name!==undefined&&typeof p.name!=='string')throw Error('冒険者名が不正です。');
+ if(p.playId!==undefined&&(typeof p.playId!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.playId)))throw Error('プレイ識別子が不正です。');
  if(p.level!==undefined&&(!Number.isFinite(p.level)||p.level<1))throw Error('レベルが不正です。');
  if(p.inventory!==undefined&&!Array.isArray(p.inventory))throw Error('所持品データが不正です。');
  if(p.run!==undefined&&p.run!==null&&(typeof p.run!=='object'||Array.isArray(p.run)))throw Error('探索データが不正です。');
