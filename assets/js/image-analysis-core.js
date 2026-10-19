@@ -1121,6 +1121,9 @@
     // strokes, not a single angular shield. Saturate to limit false boosts.
     return {
       faceCount, pointedFaces,
+      // Ignore incidental tiny pockets created by crossing otherwise open
+      // lines. A genuinely enclosed main shape covers far more of the disc.
+      faceAreaRatio: totalFaceArea / (radius * radius),
       roundedAreaShare: totalFaceArea ? roundedFaceArea / totalFaceArea : 0,
       attackBoost: Math.min(3.2, Math.max(0, pointedFaces - 1) * .55),
     };
@@ -1185,6 +1188,39 @@
       if ((longAxis + 1) / (shortAxis + 1) >= 8) straightStrokes++;
     }
     return straightStrokes;
+  }
+
+
+  // Branched arrowheads and intersecting strokes may form a single ink
+  // component, defeating the independent-strokes check. Count separate narrow
+  // radial ink runs instead; no contour skeleton or OCR is needed.
+  function countOpenRadialSpokes(gray, width, height, cx, cy, radius) {
+    const bins = 144;
+    const occupied = new Uint8Array(bins);
+    for (let index = 0; index < bins; index++) {
+      const theta = index / bins * Math.PI * 2;
+      const cos = Math.cos(theta), sin = Math.sin(theta);
+      let dark = 0;
+      for (let step = 0; step < 40; step++) {
+        const distance = radius * (.27 + .41 * step / 39);
+        const x = Math.round(cx + cos * distance);
+        const y = Math.round(cy + sin * distance);
+        if (x < 0 || y < 0 || x >= width || y >= height) continue;
+        if (gray[y * width + x] < 150) dark++;
+      }
+      occupied[index] = dark >= 9 ? 1 : 0;
+    }
+    if (occupied.every(Boolean)) return 0;
+    const firstGap = occupied.indexOf(0);
+    let narrowSpokes = 0, length = 0;
+    for (let i = 1; i <= bins; i++) {
+      if (occupied[(firstGap + i) % bins]) length++;
+      else if (length) {
+        if (length <= 7) narrowSpokes++;
+        length = 0;
+      }
+    }
+    return narrowSpokes;
   }
 
   function analyzeSigilMetricsJs(buffer, width, height, paths) {
@@ -1343,9 +1379,12 @@
     // Only divert an open *main* glyph made from several straight strokes.
     // Single open curved outlines are not enough; complete enclosed shapes
     // bypass this override entirely.
-    const openLinearStrokes = enclosedFaces.faceCount === 0
+    const lacksDominantClosedFace = enclosedFaces.faceAreaRatio < .075;
+    const openLinearStrokes = lacksDominantClosedFace
       ? countOpenLinearStrokes(image.gray, image.width, image.height, cx, cy, radius) : 0;
-    if (openLinearStrokes >= 3) {
+    const openRadialSpokes = lacksDominantClosedFace
+      ? countOpenRadialSpokes(image.gray, image.width, image.height, cx, cy, radius) : 0;
+    if (openLinearStrokes >= 3 || (openRadialSpokes >= 6 && openPathStraightness >= .68)) {
       raw.attack *= .12;
       raw.defense *= .15;
       raw.support *= .15;
@@ -1355,7 +1394,7 @@
     const scores = { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
     return {
       scores,
-      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, radialLobes, ...enclosedFaces, openLinearStrokes, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
+      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, radialLobes, ...enclosedFaces, openLinearStrokes, openRadialSpokes, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
       // Angular contour changes are a proxy for wobble in the drawn lines.
       lineStraightness: clamp(1 - roughness * 6),
     };
