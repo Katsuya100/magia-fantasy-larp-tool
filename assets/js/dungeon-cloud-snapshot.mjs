@@ -6,7 +6,7 @@ const MAX_PAYLOAD=100*1024*1024;
 const MAX_PHOTO=25*1024*1024;
 function toBase64(bytes){
  let result='';
- for(let i=0;i<bytes.length;i+=32768)result+=btoa(String.fromCharCode(...bytes.subarray(i,i+32768)));
+ for(let i=0;i<bytes.length;i+=32766)result+=btoa(String.fromCharCode(...bytes.subarray(i,i+32766)));
  return result;
 }
 function fromBase64(text){
@@ -35,6 +35,9 @@ export function deserializeDungeonSnapshot(text){
  const data=JSON.parse(text);
  if(data?.format!==FORMAT)throw Error('未対応のバックアップ形式です。');
  assertShape(data);
+ const {checksum,...payload}=data;
+ if(checksum!==undefined&&checksum!==quickFingerprint(payload))throw Error('バックアップのチェックサムが一致しません。');
+ if(data.savedAt!==undefined&&(!Number.isFinite(data.savedAt)||data.savedAt<0))throw Error('バックアップの保存日時が不正です。');
  const circles=data.circles.map(circle=>{
   if(circle.image===null||circle.image===undefined)return {...circle,image:null};
   if(circle.image?.blob!==true||typeof circle.image.type!=='string')throw Error('画像形式が不正です。');
