@@ -170,7 +170,8 @@ const overleveled=summarize(scenarios.find(x=>x.level===12));
 assert.ok(overleveled.winRate>=95,'a level 12 party should reliably clear layer 3 without consumables');
 const endgame=summarize(scenarios.find(x=>x.level===150&&x.stones==='earned'));
 assert.ok(endgame.winRate>=70,'item-free level 150 party using earned stone upgrades should clear through layer 100');
-assert.ok(endgame.avgMpPercent<=25,'final stretch should be close in MP, not trivial');
+// Upgrades cost their original captured MP; the old simulator overcharged them.
+assert.ok(endgame.avgMpPercent<=40,'with original-power pricing, endgame MP should still be constrained');
 const ledger=stoneLedger(7293,10);
 console.log('MAGIC_STONE_LEDGER '+JSON.stringify({throughLayer:10,level:ledger.level,stones:ledger.stones,
  levels:ledger.levels,returns:ledger.returns}));
