@@ -294,6 +294,30 @@ for(const [cutoff,points] of Object.entries(cutoffPoints)){
   }
  }
 }
+// Second pass: identify the earliest no-recovery cutoff in the deep layers
+// and how much existing magic-stone investment it requires.
+const deepReference=[[1,1],[10,1],[20,.71],[30,.63],[40,.58],[50,.47],
+ [60,.42],[70,.33],[80,.29],[90,.20],[100,.17]];
+const curveToZeroAt=cutoff=>{
+ const begin=cutoff-10;
+ let value=deepReference.at(-1)[1];
+ for(let i=1;i<deepReference.length;i++){
+  const [a,x]=deepReference[i-1],[b,y]=deepReference[i];
+  if(begin<=b){value=x+(y-x)*(begin-a)/(b-a);break;}
+ }
+ return [...deepReference.filter(x=>x[0]<begin),[begin,value],[cutoff,0]];
+};
+for(const cutoff of [82,85,88,90,92,95,100]){
+ for(const stoneUse of [.5,.75,1]){
+  for(const level of [128,139,150]){
+   const band=scenarios.find(x=>x.level===level&&x.stones==='earned');
+   const result=summarize({...band,stoneUse,mpRecoveryFactor:curveToZeroAt(cutoff)},32);
+   console.log('STONE_ZERO_CUTOFF_FINE '+JSON.stringify({cutoff,stoneUse,level,
+    winRate:result.winRate,mpPercent:result.avgMpPercent,avgCleared:result.avgCleared,
+    avgStones:result.avgStones,avgSpentStones:result.avgSpentStones}));
+  }
+ }
+}
 // Every planned band is checked using the level intended for its final boss.
 for(const config of scenarios.filter(x=>x.toLayer>=10)){
  assert.equal(config.level,targetClearLevel(config.toLayer),'intended boss level '+config.toLayer);
