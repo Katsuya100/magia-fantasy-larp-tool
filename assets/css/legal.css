@@ -1,0 +1,24 @@
+:root{--ink:#f8edcf;--muted:#d5c59f;--gold:#f5d879;--line:rgba(245,216,121,.3);--panel:rgba(28,17,28,.88)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:ui-sans-serif,system-ui,"Yu Gothic",sans-serif;background:radial-gradient(circle at 20% 8%,rgba(201,124,43,.23),transparent 27%),radial-gradient(circle at 82% 14%,rgba(96,69,143,.28),transparent 30%),linear-gradient(135deg,#0b080e,#261518 48%,#09070b)}
+a{color:var(--gold);text-underline-offset:4px}
+a:focus-visible{outline:3px solid var(--gold);outline-offset:4px;border-radius:3px}
+.legal-shell{max-width:880px;margin:0 auto;padding:26px 20px 72px}
+.legal-nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:0 0 40px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+.legal-nav a{display:inline-flex;align-items:center;min-height:48px;padding:11px 16px;border:1px solid var(--line);border-radius:12px;color:var(--ink);background:rgba(24,18,30,.7);text-decoration:none;font-weight:650}
+.legal-nav a:hover{border-color:var(--gold);background:rgba(245,216,121,.1)}
+.eyebrow{margin:0 0 10px;color:var(--gold);font-size:13px;font-weight:700;letter-spacing:.16em}
+h1{font-family:ui-serif,Georgia,"Yu Mincho",serif;font-size:clamp(29px,6vw,44px);margin:0;line-height:1.3}
+.lead{color:var(--muted);font-size:17px;line-height:1.9}
+.meta{color:var(--muted);font-size:14px;margin:22px 0 36px}
+article{padding:28px 34px;background:var(--panel);border:1px solid var(--line);border-radius:20px}
+section+section{border-top:1px solid rgba(245,216,121,.18);margin-top:30px;padding-top:24px}
+h2{font-size:22px;line-height:1.4;margin:0 0 14px;color:var(--gold)}
+p,li{font-size:16px;line-height:1.95}
+p{margin:10px 0}
+ul{padding-left:1.5em;margin:12px 0}
+li+li{margin-top:8px}
+code{overflow-wrap:anywhere;font-size:.94em;color:#f4e5b8}
+footer{margin:30px 0 0;text-align:center;color:var(--muted);font-size:14px}
+@media(max-width:520px){.legal-shell{padding:16px 14px 50px}.legal-nav{margin-bottom:28px;gap:8px}.legal-nav a{min-height:48px;padding:9px 12px;font-size:15px}article{padding:22px 17px}h2{font-size:20px}.lead{font-size:16px}}
