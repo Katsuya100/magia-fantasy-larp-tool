@@ -51,15 +51,14 @@ assert.equal(rewards[0].type,'use');assert.equal(rewards[0].value,G.rollPotionVa
 let rolls=0;
 const stoneRewards=G.drops(items,collections,1,()=>++rolls===6?0:1);
 assert.deepEqual(stoneRewards,[{type:'stone',id:'magic_stone'}],'stone drops independently of collections and consumables');
-assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'boss_l010',guaranteeBossCollection:true}),
- [{type:'collection',id:'relic_boss_010'}],'first defeat always awards its legendary boss trophy despite zero ordinary drops');
 assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'boss_l010'}),[],
- 'repeated bosses have no guaranteed trophy');
-const withBoss=G.drops(items,collections,19,()=>0,{layer:10,bossEnemyId:'boss_l010',guaranteeBossCollection:true});
-assert.equal(withBoss.filter(x=>x.type==='use').length,3,'boss trophy cannot replace consumable rewards');
-assert.equal(withBoss.filter(x=>x.type==='stone').length,1,'boss trophy cannot replace magic stones');
-assert.equal(withBoss.filter(x=>x.type==='collection').length,5,'boss trophy replaces a regular collection slot');
-assert.equal(withBoss.filter(x=>x.id==='relic_boss_010').length,1);
+ 'boss trophies are no longer guaranteed when no item is rolled');
+const withBoss=G.drops(items,collections,19,()=>0,{layer:10,bossEnemyId:'boss_l010',favoredCollectionIds:['relic_boss_010']});
+assert.equal(withBoss.filter(x=>x.type==='use').length,3);
+assert.equal(withBoss.filter(x=>x.type==='stone').length,1);
+assert.equal(withBoss.filter(x=>x.type==='collection').length,5);
+assert.equal(withBoss.filter(x=>x.id==='relic_boss_010').length,0,
+ 'common rarity draws cannot produce a legendary trophy');
 const rng=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 // Fixed-seed probability check: five independent encounters make one layer.
 const trials=40000,random=rng(20261018);
@@ -73,10 +72,7 @@ for(let simulation=0;simulation<trials;simulation++){
   if(Object.values(counts).every(x=>x===0))zeroFights++;
   for(const type of Object.keys(layer))layer[type]+=counts[type];
  }
- // For a first-clear boss, the trophy replaces a random collection, or
- // provides a collection if none was rolled in the fifth fight.
- // The probability of that exception is low; simulated base counts are
- // slightly conservative for collection rewards.
+ // Bosses use the same collection-count rolls as ordinary encounters.
  for(const type of Object.keys(layer))sums[type]+=layer[type];
  if(layer.collection>=8&&layer.collection<=10)normal.collection++;
  if(layer.stone>=1&&layer.stone<=2)normal.stone++;
