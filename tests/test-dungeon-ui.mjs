@@ -352,7 +352,7 @@ try{
  assert.equal(p.run.checkpointBattleScrollY,428,'the boss battle saves its exact vertical scroll position');
  assert.equal(tabScrolls.length,2,'the boss checkpoint retains its previous navigation behavior');
  assert.equal(window.scrollY,96,'the checkpoint may scroll to the navigation');
-  assert.ok(p.run.loot.some(item=>item.id==='relic_boss_001'),'boss grants its dedicated epic trophy on the first victory');
+  assert.equal(p.run.loot.some(item=>item.id==='relic_boss_001'),false,'boss cannot guarantee an epic trophy on a common-only drop');
    assert.equal(p.defeatedBosses.boss_l001,true,'first boss defeat is saved before returning');
  assert.ok(cinematicEvents.some(x=>x.event==='encounter'&&x.tier==='boss'),'fifth encounter plays layer-boss entrance');
  assert.ok(cinematicEvents.some(x=>x.event==='enemy-death'&&x.tier==='boss'),'fifth encounter plays layer-boss defeat');
@@ -370,7 +370,7 @@ try{
  assert.doesNotMatch($('checkpointInfo').textContent,/続行して敗北すると失われる/,'warning is removed');
  assert.equal($('deeper').textContent,'2層へ進む');
  assert.equal($('checkpoint').hidden,false);
- assert.ok(p.run.loot.length>=1&&p.run.loot.length<=46,'one layer has independent category drops and a guaranteed first-clear boss trophy');
+ assert.ok(p.run.loot.length>=1&&p.run.loot.length<=46,'one layer has independent reward categories without guaranteed boss trophies');
  const loot=p.run.loot.length;
  const collectionCount=p.run.loot.filter(item=>item.type==='collection').length;
  const distinctCollected=new Set(p.run.loot.filter(item=>item.type==='collection').map(item=>item.id)).size;
@@ -393,7 +393,7 @@ try{
  assert.equal($('returnShowcase').hidden,false,'the dungeon tab resumes pending rewards');
  assert.equal($('returnSceneTitle').textContent,'コレクション報酬','tab browsing cannot skip the first reward step');
  assert.equal($('returnSceneTitle').textContent,'コレクション報酬');
- assert.match($('returnCollections').innerHTML,/赤角鬼王の霊石/);
+ assert.doesNotMatch($('returnCollections').innerHTML,/赤角鬼王の霊石/,'unrolled boss trophy stays absent from return rewards');
  await $('returnNext').fire('click');
  assert.equal($('returnSceneTitle').textContent,'アイテム報酬');
  assert.ok($('returnRewards').innerHTML.length>0);
@@ -427,20 +427,21 @@ try{
  assert.match($('playerStats').innerHTML,/最深:1層/,'profile reports deepest layer instead of battle count');
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
- assert.match($('collectionGrid').innerHTML,/赤角鬼王の霊石/);
+ assert.doesNotMatch($('collectionGrid').innerHTML,/赤角鬼王の霊石/,'undropped boss trophy remains hidden');
  assert.match($('collectionProgress').innerHTML,new RegExp(distinctCollected+' \\/ 300'),'all distinct collected relics count toward discovery');
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card locked"/g).length,300-distinctCollected);
  assert.equal($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g).length,distinctCollected);
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-rarity"/g)||[]).length,distinctCollected,'each discovered relic has one rarity label');
- assert.match($('collectionGrid').innerHTML,/<span class="relic-rarity">✦ エピック<\/span>/,'discovered normal boss trophy shows epic rarity');
+ assert.doesNotMatch($('collectionGrid').innerHTML,/<span class="relic-rarity" aria-hidden="true">(?:✴︎){4}<\/span>/,'ordinary early drops do not reveal an epic');
+ assert.doesNotMatch($('collectionGrid').innerHTML,/aria-label="赤角鬼王の霊石・エピック"/,'undropped trophy does not leak its rarity');
  assert.equal($('magicStoneBalance').textContent,'✦ 魔導石：'+p.magicStones+'個','stone balance remains concise as loot changes');
  $('collectionDiscoveryFilter').value='found';await $('collectionDiscoveryFilter').fire('change');
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,distinctCollected,
   'collection discovery filter shows all found relics');
  assert.doesNotMatch($('collectionGrid').innerHTML,/class="relic-card locked"/);
  $('collectionRarityFilter').value='epic';await $('collectionRarityFilter').fire('change');
- assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,1,
-  'epic filter shows the normal boss trophy');
+ assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,0,
+  'epic filter hides an undropped boss trophy');
  $('collectionRarityFilter').value='legendary';await $('collectionRarityFilter').fire('change');
  assert.equal(($('collectionGrid').innerHTML.match(/class="relic-card discovered"/g)||[]).length,0,
   'legendary filter excludes the normal boss trophy');
@@ -575,7 +576,7 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   assert.equal(defeated.carrySlots[1],savedBeforeAttack.carrySlots[1],'first unused potion returns to its saved slot');
   assert.equal(defeated.carrySlots[2],savedBeforeAttack.carrySlots[2],'second unused potion returns to its saved slot');
   assert.equal(defeated.name,'暁の旅人','player name persists across reload');
-  assert.equal(defeated.collection.relic_boss_001,1,'boss collection survives defeat');
+  assert.equal(defeated.collection.relic_boss_001||0,0,'undropped boss trophy is not added on defeat');
   assert.equal(newestCirclesFirst(await allCircles(await openStore(env2.factory)))[0].analysis.power,5000);
  }finally{env2.restore();}
  const env3=fakeDungeonBrowser({factory:env.factory}),doc3=env3.document,el3=id=>doc3.getElementById(id);

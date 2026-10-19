@@ -71,12 +71,28 @@ export function clearDungeonData(db){
    transaction.onerror=()=>reject(transaction.error||Error('保存データの削除に失敗しました。'));
    transaction.onabort=()=>reject(transaction.error||Error('保存データの削除が中断されました。'));
    for(const name of STORES)transaction.objectStore(name).clear();
-   // A local wipe must not silently resurrect an old cloud backup.
    transaction.objectStore('settings').put({blocked:true},'cloudSyncState');
   }catch(error){reject(error);}
  });
 }
 export const saveProfile=(db,p)=>request(db,'settings','readwrite',s=>s.put(p,'profile'));
+// One IndexedDB transaction prevents a lost/recovered photo and its owner from diverging.
+export function saveProfileWithCircles(db,profile,added=[],removed=[]){
+ validateDatabase(db);
+ return new Promise((resolve,reject)=>{
+  try{
+   const tx=db.transaction(STORES,'readwrite');
+   const photos=tx.objectStore('circles');
+   for(const id of removed)photos.delete(id);
+   for(const circle of added)photos.put(circle);
+   tx.objectStore('settings').put(profile,'profile');
+   tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve();};
+   tx.onerror=()=>reject(tx.error||Error('遺物の保存に失敗しました'));
+   tx.onabort=()=>reject(tx.error||Error('遺物の保存が中断されました'));
+  }catch(error){reject(error);}
+ });
+}
+
 export async function getProfile(db){
   let p=await request(db,'settings','readonly',s=>s.get('profile'));
   if(!p){
@@ -119,5 +135,5 @@ export function replaceDungeonSnapshot(db,{profile,circles}){
   }catch(error){reject(error);}
  });
 }
-export const getCloudSyncState=db=>request(db,'settings','readonly',store=>store.get('cloudSyncState'));
-export const saveCloudSyncState=(db,state)=>request(db,'settings','readwrite',store=>store.put(state,'cloudSyncState'),{silent:true});
+export const getCloudSyncState=db=>request(db,'settings','readonly',s=>s.get('cloudSyncState'));
+export const saveCloudSyncState=(db,state)=>request(db,'settings','readwrite',s=>s.put(state,'cloudSyncState'),{silent:true});

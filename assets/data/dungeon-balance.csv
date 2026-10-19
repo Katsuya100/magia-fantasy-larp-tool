@@ -9,8 +9,8 @@ magic_magnitude_divisor,35,状態効果強度の基準
 magic_magnitude_min,0.5,効果強度の最小倍率
 magic_magnitude_max,1.5,効果強度の最大倍率
 def_divisor,100,防御計算の基準値
-basic_attack,6,通常攻撃の基礎威力
-defense_resistance_gain,0.3,防御魔法による耐性補正
+basic_attack,0.14,通常攻撃の係数（推奨帯の雑魚敵HP約5分の1）
+defense_resistance_gain,0.18,防御魔法による耐性補正
 defense_resistance_cap,0.75,防御魔法の補正上限
 status_min_resistance,0.05,属性倍率の下限
 status_max_resistance,2,属性倍率の上限
@@ -25,6 +25,7 @@ collection_drop_rolls,5,敵1体につきコレクションを抽選する回数�
 collection_drop_chance,0.36,コレクションの各抽選成功率
 magic_stone_drop_rolls,1,敵1体につき魔導石を抽選する回数（1層平均約1.5個）
 magic_stone_drop_chance,0.30,魔導石の各抽選成功率
+magic_stone_overlevel_factor_per_level,0.5,推奨レベル超過1ごとに魔導石ドロップ率へ乗じる係数
 consumable_drop_rolls,3,敵1体につき携行品を抽選する回数（1層平均約4個）
 consumable_drop_chance,0.27,携行品の各抽選成功率
 xp_base,35,撃破経験値固定値
@@ -38,7 +39,7 @@ enemy_attack_preference,0.65,敵が攻撃優先する確率
 mag_reference,10,MAG係数基準値
 base_resistance,1,プレイヤーの基礎属性被ダメージ倍率
 status_tick_min_damage,1,火傷の継続最小ダメージ
-resistance_buff_duration,2,属性耐性強化の持続ラウンド
+resistance_buff_duration,4,属性耐性強化の持続ラウンド
 debuff_min_duration,1,弱体の最短持続ラウンド
 debuff_max_duration,4,弱体の最長持続ラウンド
 enemy_hp_scale_early,0.84,序盤の敵最大HP倍率
@@ -47,6 +48,10 @@ enemy_mag_scale_early,0.82,序盤の敵魔力倍率
 enemy_mag_scale_late,0.92,深層の敵魔力倍率
 victory_mp_restore_rate_early,0.09,序盤の戦闘勝利時MP回復率
 victory_mp_restore_rate_late,0.025,深層の戦闘勝利時MP回復率
+victory_mp_middle_taper,0.015,中盤の戦闘勝利時MP回復率の抑制幅
 victory_mp_beginner_bonus,0.045,序盤で魔法陣3個を編成した際のMP消耗を緩和
 xp_growth_per_10_levels,1.8,10レベルごとの必要経験値の増加倍率
 xp_overlevel_factor_per_level,0.5,格下の敵に対する超過レベル1ごとの経験値倍率
+defense_duration_base,2,防御魔法持続の下限
+defense_duration_cap,6,防御魔法持続の上限
+defense_duration_power_step,250,威力何点ごとに1ターン延長（0で無効）

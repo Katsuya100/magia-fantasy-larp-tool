@@ -173,19 +173,18 @@ for(let layer=1;layer<=100;layer++){
  assert.equal(new Set(ids).size,5,'distinct enemy kinds at layer '+layer);
  const bossId=ids[4],trophy=bossUniqueCollection(collections,bossId);
  assert.equal(trophy.rarity,layer%10===0?'legendary':'epic','boss trophy rarity for layer '+layer);
- const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,guaranteeBossCollection:true});
- assert.ok(rewards.length>=1&&rewards.length<=9);
- assert.equal(rewards.filter(x=>x.id===trophy.id).length,1,'boss trophy guaranteed on first victory at layer '+layer);
-  const repeats=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId});
-  assert.equal(repeats.filter(x=>x.id===trophy.id).length,0,'repeat boss wins no longer guarantee the trophy at layer '+layer);
-  // The optional repeat drop rolls in the trophy's actual rarity bucket.
-  const weights=rarityWeights(layer),totalWeight=weights.reduce((sum,n)=>sum+n,0);
-  const epicTicket=(weights[0]+weights[1]+weights[2]+weights[3]/2)/totalWeight;
-  const picks=[trophy.rarity==='legendary'?.999:epicTicket,.999];
-  assert.equal(rollCollection(collections,layer,()=>picks.shift(),bossId).id,trophy.id,
-   'repeat boss trophy can still roll by its rarity at layer '+layer);
-  assert.equal(rollCollection(collections,layer,()=>.999).boss_enemy_id,'',
-   'ordinary drops do not reveal boss-specific trophies');
+ const favored=enemies.find(x=>x.id===bossId).favored_collection_ids.split('|');
+ assert.ok(favored.includes(trophy.id),'boss favors its own unique trophy at layer '+layer);
+ const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,favoredCollectionIds:favored});
+ assert.ok(rewards.length<=9);
+ assert.equal(rewards.filter(x=>x.id===trophy.id).length,0,'common rolls never give epic or legendary trophies');
+ const weights=rarityWeights(layer),totalWeight=weights.reduce((sum,n)=>sum+n,0);
+ const epicTicket=(weights[0]+weights[1]+weights[2]+weights[3]/2)/totalWeight;
+ const picks=[trophy.rarity==='legendary'?.999:epicTicket,0,0];
+ assert.equal(rollCollection(collections,layer,()=>picks.shift()??0,bossId,[trophy.id]).id,trophy.id,
+  'named boss trophy can be favored inside its own rarity');
+ assert.equal(rollCollection(collections,layer,()=>.999).boss_enemy_id,'',
+  'ordinary enemies cannot find boss-exclusive trophies');
  const hero=G.makeUnit(base,expected,{},[attack]);
  const boss=G.fromEnemy(enemies.find(x=>x.id===bossId),expected);
  const outgoing=G.damage(hero,boss,attack,()=>.99),incoming=G.damage(boss,hero,boss.spells[0],()=>.99);
@@ -195,7 +194,7 @@ for(let layer=1;layer<=100;layer++){
  assert.equal(profile.level,expected,'level after five fights fits layer '+layer);
  if(layer<100)G.experience(profile,5*G.fightExperience(expected,profile.level,layer));
 }
-assert.equal(level(150).carry_limit,'15');
+assert.equal(level(150).carry_limit,'18');
 for(let i=0;i<500;i++)assert.equal(enemyForFight(enemies,501,()=>(i+.5)/500).id,enemies[i].id);
 for(let i=0;i<100;i++){
  const boss=enemyForFight(enemies,505,()=>(i+.5)/100);

@@ -10,12 +10,34 @@ const [enemies,items,collections,buffs,balance,levels,floors,playerBase]=await P
  'dungeon-balance.csv','dungeon-levels.csv','dungeon-floors.csv','dungeon-player-base.csv'].map(get));
 configure({balance,levels,floors,playerBase});
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
-assert.equal(G.capacity(1),3);assert.equal(G.capacity(5),4);assert.equal(G.capacity(49),15);
+for(const [lvl,slots] of [[1,3],[9,3],[10,4],[19,4],[20,5],[49,7],[50,8],[150,18]])
+ assert.equal(G.capacity(lvl),slots,'carry slot increases each 10 levels');
 assert.equal(G.nextXp(1),108);assert.equal(floor(5).boss,'1');
 assert.deepEqual(G.startingBase(()=>0),{hp:90,mag:8,def:5,res:5});
 assert.deepEqual(G.startingBase(()=>.99999),{hp:110,mag:12,def:10,res:10});
 const base={hp:100,mag:10,def:7,res:7};
 assert.deepEqual(G.stats(base,1),base);assert.ok(G.stats(base,20).hp>G.stats(base,10).hp);
+for(const lvl of [1,20,50]){
+ for(const row of enemies.filter(row=>row.min_level==='1'&&row.boss_only==='0').slice(0,4)){
+  const hero=G.makeUnit(base,lvl),foe=G.fromEnemy(row,lvl),before=foe.hp;
+  G.round(hero,foe,-1,-1,buffs,()=>.999);
+  const ratio=(before-foe.hp)/before;
+  assert.ok(ratio>=.13&&ratio<=.27,'normal attack near 1/5 recommended normal foe HP at level '+lvl+' '+row.id+' '+ratio);
+ }
+}
+assert.equal(G.magicStoneDropChance(1,1),.30,'at recommended level, keep full stone drop rate');
+assert.equal(G.magicStoneDropChance(2,1),.15,'one level above halves the stone drop rate');
+assert.equal(G.magicStoneDropChance(3,1),.075,'two levels above quarters the stone drop rate');
+assert.equal(G.magicStoneDropChance(2,2),.30,'below recommended level, keep full stone drop rate');
+assert.equal(G.magicStoneDropChance(3,2),.30,'at another layer recommended level, keep full rate');
+assert.equal(G.magicStoneDropChance(150,100),.30,'final designed layer remains eligible');
+assert.equal(G.magicStoneDropChance(150,101),.30,'endless layers remain eligible');
+assert.equal(G.magicStoneDropChance(11,1),.30/1024,'ten extra levels make stones extremely rare');
+assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:1}),{collection:5,stone:1,use:3});
+assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2}),{collection:5,stone:0,use:3},'overlevel only reduces stones');
+assert.deepEqual(G.dropCounts(1,()=>.1,{layer:1,playerLevel:2}),{collection:5,stone:1,use:3},'reduced rate is nonzero');
+assert.equal(G.drops(items,collections,1,()=>.2,{layer:1,playerLevel:2}).filter(x=>x.type==='stone').length,0,'actual rewards apply the overlevel penalty');
+assert.equal(G.drops(items,collections,3,()=>.2,{layer:2,playerLevel:2}).filter(x=>x.type==='stone').length,1,'non-overlevelled rewards retain original chance');
 assert.deepEqual(G.dropCounts(1,()=>0),{collection:5,stone:1,use:3});
 assert.deepEqual(G.dropCounts(100,()=>.9999),{collection:0,stone:0,use:0});
 assert.equal(G.dropCount(1,()=>0),9);
@@ -29,15 +51,14 @@ assert.equal(rewards[0].type,'use');assert.equal(rewards[0].value,G.rollPotionVa
 let rolls=0;
 const stoneRewards=G.drops(items,collections,1,()=>++rolls===6?0:1);
 assert.deepEqual(stoneRewards,[{type:'stone',id:'magic_stone'}],'stone drops independently of collections and consumables');
-assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'boss_l010',guaranteeBossCollection:true}),
- [{type:'collection',id:'relic_boss_010'}],'first defeat always awards its legendary boss trophy despite zero ordinary drops');
 assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'boss_l010'}),[],
- 'repeated bosses have no guaranteed trophy');
-const withBoss=G.drops(items,collections,19,()=>0,{layer:10,bossEnemyId:'boss_l010',guaranteeBossCollection:true});
-assert.equal(withBoss.filter(x=>x.type==='use').length,3,'boss trophy cannot replace consumable rewards');
-assert.equal(withBoss.filter(x=>x.type==='stone').length,1,'boss trophy cannot replace magic stones');
-assert.equal(withBoss.filter(x=>x.type==='collection').length,5,'boss trophy replaces a regular collection slot');
-assert.equal(withBoss.filter(x=>x.id==='relic_boss_010').length,1);
+ 'boss trophies are no longer guaranteed when no item is rolled');
+const withBoss=G.drops(items,collections,19,()=>0,{layer:10,bossEnemyId:'boss_l010',favoredCollectionIds:['relic_boss_010']});
+assert.equal(withBoss.filter(x=>x.type==='use').length,3);
+assert.equal(withBoss.filter(x=>x.type==='stone').length,1);
+assert.equal(withBoss.filter(x=>x.type==='collection').length,5);
+assert.equal(withBoss.filter(x=>x.id==='relic_boss_010').length,0,
+ 'common rarity draws cannot produce a legendary trophy');
 const rng=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 // Fixed-seed probability check: five independent encounters make one layer.
 const trials=40000,random=rng(20261018);
@@ -51,10 +72,7 @@ for(let simulation=0;simulation<trials;simulation++){
   if(Object.values(counts).every(x=>x===0))zeroFights++;
   for(const type of Object.keys(layer))layer[type]+=counts[type];
  }
- // For a first-clear boss, the trophy replaces a random collection, or
- // provides a collection if none was rolled in the fifth fight.
- // The probability of that exception is low; simulated base counts are
- // slightly conservative for collection rewards.
+ // Bosses use the same collection-count rolls as ordinary encounters.
  for(const type of Object.keys(layer))sums[type]+=layer[type];
  if(layer.collection>=8&&layer.collection<=10)normal.collection++;
  if(layer.stone>=1&&layer.stone<=2)normal.stone++;
@@ -74,6 +92,16 @@ assert.ok(lucky.collection>0&&lucky.stone>0&&lucky.use>0,
 assert.ok(zeroFights>0,'individual enemies can still have no rewards at all');
 assert.equal(G.basePower(300),35);assert.ok(G.mpCost(300)>0);
 const sp={role:'attack',attribute:'flame',power:300};
+const enhancedSpell={...sp,power:200,basePower:100};
+const originalMpCost=G.mpCost(100);
+assert.ok(G.mpCost(200)>originalMpCost,'upgraded power would otherwise increase MP cost');
+assert.equal(G.spellMpCost(enhancedSpell),originalMpCost,'enhanced spell costs its original MP');
+assert.equal(G.spellMpCost(sp),G.mpCost(300),'ordinary and enemy spells retain normal costs');
+const enhancedCaster=G.makeUnit(base,1,{},[enhancedSpell]);
+enhancedCaster.mp=originalMpCost;
+assert.equal(G.canCast(enhancedCaster,0),true,'exact original MP suffices for upgraded spells');
+assert.equal(G.prepare(enhancedCaster,0).power,200,'upgraded effect power is preserved');
+assert.equal(enhancedCaster.mp,0,'casting deducts only the original MP cost');
 const a=G.makeUnit(base,1,{},[sp], 'a'),b=G.makeUnit(base,1,{},[sp], 'b');
 assert.equal(G.damage(a,b,sp),G.damage(b,a,sp));
 const originalHp=b.hp;G.cast(a,b,sp,buffs);assert.ok(b.hp<originalHp);assert.equal(b.statuses.length,0);
@@ -94,6 +122,17 @@ const mpAfter=heroMp.mp;
 assert.ok(G.recoverVictoryMp(heroMp)>0&&heroMp.mp>mpAfter,'MP recovery persists across sequential wins');
 heroMp.mp=heroMp.maxMp;
 assert.equal(G.recoverVictoryMp(heroMp),0,'recovery never overflows max MP');
+const victoryMpRate=level=>{
+ const unit=G.makeUnit(base,level);
+ unit.mp=0;
+ return G.recoverVictoryMp(unit)/unit.maxMp;
+};
+assert.ok(victoryMpRate(1)>=.13&&victoryMpRate(1)<=.145,'beginner victory MP recovery remains generous');
+assert.ok(victoryMpRate(30)>.075&&victoryMpRate(30)<.08,'early recovery remains suitable for initial layers');
+assert.ok(victoryMpRate(75)<.056,'mid-depth MP recovery is meaningfully reduced');
+assert.ok(victoryMpRate(150)>=.024&&victoryMpRate(150)<=.027,'deepest battles retain the playtested minimum recovery');
+assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75)&&victoryMpRate(75)>victoryMpRate(150),
+ 'victory MP recovery decreases with level');
 const weak=G.enemyScaling(1),deep=G.enemyScaling(150);
 assert.ok(weak.hp<1&&weak.mag<1&&deep.hp<1&&deep.mag<1,'enemy tuning softens all levels');
 assert.ok(weak.hp<deep.hp&&weak.mag<deep.mag,'late bosses remain relatively tougher');

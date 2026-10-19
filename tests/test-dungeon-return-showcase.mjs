@@ -85,6 +85,9 @@ try{
   const displayedCollections=$h('returnCollections').innerHTML;
   assert.ok(displayedCollections.indexOf(newCollection.name)<displayedCollections.indexOf(oldCollection.name),'first-ever collections come before already known ones');
   assert.equal((displayedCollections.match(/class="return-new"/g)||[]).length,1,'only first-ever collection receives NEW');
+   assert.equal((displayedCollections.match(/class="return-treasure relic-card discovered"/g)||[]).length,2);
+   assert.equal((displayedCollections.match(/class="relic-rarity"/g)||[]).length,2,'both new and held trophies show rarity marks');
+   assert.match(displayedCollections,/✴︎/);
   await $h('returnNext').fire('click');
   assert.equal($h('returnSceneTitle').textContent,'アイテム報酬');
   const displayedRewards=$h('returnRewards').innerHTML;

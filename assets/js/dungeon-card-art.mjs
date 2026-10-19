@@ -55,7 +55,7 @@ export function circleOutlinePixels({width,height,data},attribute){
  }
  return out;
 }
-// Additive screen glow over the card, with an unblurred contour on top.
+// Controlled glow with a separately antialiased, gently translucent center line.
 export function paintCircleArt(ctx,artwork){
  if(!artwork?.image||typeof document==='undefined')return false;
  try{
@@ -69,17 +69,38 @@ export function paintCircleArt(ctx,artwork){
   result.data.set(pixels);
   sctx.clearRect(0,0,size,size);
   sctx.putImageData(result,0,0);
+  // Mild Gaussian preblur removes pixel edges from glow without washing out ink.
+  const glowBase=document.createElement('canvas');
+  glowBase.width=size;glowBase.height=size;
+  const gctx=glowBase.getContext('2d');
+  if(!gctx)return false;
+  gctx.filter='blur(2px)';
+  gctx.drawImage(source,0,0);
+  gctx.filter='none';
+  // The central stroke has a separate subpixel softening pass; never draw raw
+  // thresholded Sobel pixels directly onto the card at enlarged dimensions.
+  const coreBase=document.createElement('canvas');
+  coreBase.width=size;coreBase.height=size;
+  const cctx=coreBase.getContext('2d');
+  if(!cctx)return false;
+  cctx.filter='blur(0.8px)';
+  cctx.drawImage(source,0,0);
+  cctx.filter='none';
   // Let the outline visually reach the decorative rim without covering the card text.
   const cx=920,cy=328,diameter=468;
   ctx.save();
   ctx.beginPath();ctx.arc(cx,cy,229,0,Math.PI*2);ctx.clip();
   ctx.globalCompositeOperation='lighter';
-  ctx.filter='blur(19px)';ctx.globalAlpha=.85;
-  ctx.drawImage(source,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='blur(6px)';ctx.globalAlpha=.95;
-  ctx.drawImage(source,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='none';ctx.globalAlpha=1;
-  ctx.drawImage(source,cx-diameter/2,cy-diameter/2,diameter,diameter);
+  ctx.imageSmoothingEnabled=true;
+  if('imageSmoothingQuality' in ctx)ctx.imageSmoothingQuality='high';
+  ctx.filter='blur(16px)';ctx.globalAlpha=.56;
+  ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
+  ctx.filter='blur(6px)';ctx.globalAlpha=.70;
+  ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
+  ctx.filter='blur(1.5px)';ctx.globalAlpha=.82;
+  ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
+  ctx.filter='none';ctx.globalAlpha=.72;
+  ctx.drawImage(coreBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
   ctx.restore();
   return true;
  }catch(error){

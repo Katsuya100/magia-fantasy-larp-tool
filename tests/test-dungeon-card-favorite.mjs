@@ -58,31 +58,50 @@ const gradient=circleOutlinePixels({width:sw,height:sh,data:plain},'aqua');
 assert.equal(gradient[(32*sw+32)*4+3],0,'gradual lighting variation stays transparent');
 
 
-const drawCalls=[],clipCircles=[],saveCalls=[];
+const drawCalls=[],offscreenDraws=[],canvases=[],clipCircles=[],saveCalls=[];
 const originalDocument=globalThis.document;
 try{
  globalThis.document={createElement(tag){
   assert.equal(tag,'canvas');
-  return {getContext:()=>({
-   drawImage(){},
+  const canvas={width:0,height:0};
+  canvases.push(canvas);
+  canvas.getContext=()=>({
+   filter:'none',
+   drawImage(...args){offscreenDraws.push({canvas,filter:this.filter,args});},
    getImageData:()=>({width:256,height:256,data:new Uint8ClampedArray(256*256*4)}),
    createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)}),
    clearRect(){},putImageData(){}
-  })};
+  });
+  return canvas;
  }};
  const ctx={
+  filter:'none',globalAlpha:1,globalCompositeOperation:'source-over',
   save(){saveCalls.push('save');},restore(){saveCalls.push('restore');},
   beginPath(){},arc(...args){clipCircles.push(args);},clip(){},
-  drawImage(...args){drawCalls.push(args);}
+  drawImage(...args){drawCalls.push({args,filter:this.filter,alpha:this.globalAlpha,composite:this.globalCompositeOperation});}
  };
  assert.equal(paintCircleArt(ctx,{image:{},attribute:'aqua'}),true);
 }finally{
  if(originalDocument===undefined)delete globalThis.document;
  else globalThis.document=originalDocument;
 }
+assert.equal(canvases.length,3,'original contour, glow, and antialiased core canvases');
+assert.deepEqual(canvases.flatMap(canvas=>[canvas.width,canvas.height]),[256,256,256,256,256,256]);
+const glowPreblur=offscreenDraws.find(call=>call.canvas===canvases[1]);
+const corePreblur=offscreenDraws.find(call=>call.canvas===canvases[2]);
+assert.equal(glowPreblur?.filter,'blur(2px)','glow preblur is reduced to preserve detail');
+assert.equal(glowPreblur?.args[0],canvases[0],'glow derives from extracted outline');
+assert.equal(corePreblur?.filter,'blur(0.8px)','core is antialiased by a tiny Gaussian blur');
+assert.equal(corePreblur?.args[0],canvases[0],'core derives from extracted outline');
 assert.deepEqual(clipCircles[0].slice(0,3),[920,328,229],'artwork slightly overlaps the decorative frame');
-assert.equal(drawCalls.length,3,'two blurred layers and one crisp contour retained');
-assert.ok(drawCalls.every(args=>args[3]===468&&args[4]===468),'all artwork layers use enlarged 468px diameter');
+assert.equal(drawCalls.length,4,'three tighter glows and a softly antialiased core');
+assert.deepEqual(drawCalls.map(call=>call.filter),['blur(16px)','blur(6px)','blur(1.5px)','none'],'blur reduction followed by already antialiased core');
+assert.ok(drawCalls.slice(0,3).every(call=>call.args[0]===canvases[1]),'glow passes use softer glow canvas');
+assert.equal(drawCalls[3].args[0],canvases[2],'core draws antialiased canvas, not raw outline');
+assert.ok(drawCalls.every(call=>call.args[0]!==canvases[0]),'jagged unprocessed outline is never painted directly');
+assert.ok(drawCalls.every(call=>call.args[3]===468&&call.args[4]===468),'all artwork layers use enlarged 468px diameter');
+assert.ok(drawCalls.every(call=>call.composite==='lighter'),'all layers retain additive blending');
+assert.ok(drawCalls[3].alpha>.6&&drawCalls[3].alpha<.8,'core remains visible without overwhelming the glows');
 assert.deepEqual(saveCalls,['save','restore'],'glow compositing state restored');
 
 const factory=fakeIndexedDB(),db=await openStore(factory),profile=await getProfile(db);

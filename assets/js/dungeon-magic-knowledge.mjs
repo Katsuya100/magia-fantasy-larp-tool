@@ -33,13 +33,13 @@ export function spellEffect(a,buffs=[]){
 }
 export function circleSummary(circle,buffs=[],mpCost=()=>null){
  const d=circleCardInfo(circle,buffs,mpCost);
- return [d.symbols,d.statusName,'MP:'+d.mp+' / 威力:'+d.power].filter(Boolean).join(' / ');
+ return [d.symbols,'MP:'+d.mp+' / 威力:'+d.power].filter(Boolean).join(' / ');
 }
 export function circleDetails(circle,buffs=[],mpCost=()=>null){
  const a=circle?.analysis;
  if(!a)return {attribute:'？？？',role:'未解析',effect:'未解析',mp:'?',power:'?'};
  const at=ATTRIBUTES[a.attribute],known=isRevealed(circle);
- const mp=known?mpCost(a.power):null;
+ const mp=known?mpCost(circle.basePower??a.power):null;
  return {attribute:(at?.icon||'✦')+' '+(at?.label||a.attribute),role:ROLES[a.role]||a.role,
  effect:spellEffect(a,buffs),mp:known&&Number.isFinite(mp)?String(mp):'?',power:known?String(a.power):'?'};
 }
@@ -80,18 +80,16 @@ export function circleAttributeEffects(circle,buffs=[]){
 }
 export function circleCardInfo(circle,buffs=[],mpCost=()=>null){
  const a=circle?.analysis;
- if(!a)return {symbols:'？ / ？',statusName:'',mp:'?',power:'?'};
- const at=ATTRIBUTES[a.attribute],effects=circleAttributeEffects(circle,buffs);
- const statusName=a.role==='defense'?effects?.buff:a.role==='debuff'?effects?.debuff:'';
- const revealed=isRevealed(circle),mp=revealed?mpCost(a.power):null;
+ if(!a)return {symbols:'？ / ？',mp:'?',power:'?'};
+ const at=ATTRIBUTES[a.attribute];
+ const revealed=isRevealed(circle),mp=revealed?mpCost(circle.basePower??a.power):null;
  return {
   symbols:(at?.icon||'✦')+' / '+(ROLE_ICONS[a.role]||'？'),
-  statusName:statusName||'',
   mp:revealed&&Number.isFinite(mp)?String(mp):'?',
   power:revealed?String(a.power):'?'
  };
 }
-export function circleEffectDetails(circle,buffs=[]){
+export function circleEffectDetails(circle,buffs=[],defenseDuration=null){
  const a=circle?.analysis;if(!a)return {effect:'解析されていません。',statusName:'',statusDescription:'',duration:''};
  const {attribute,role}=a,info=circleAttributeEffects(circle,buffs);
  if(role==='attack')return {effect:'敵に'+ATTRIBUTES[attribute].label+'属性の魔法ダメージを与えます。ダメージは属性相性・相手の防御力・状態効果で変わります。',statusName:'',statusDescription:'',duration:''};
@@ -100,7 +98,7 @@ export function circleEffectDetails(circle,buffs=[]){
   effect:'自分に'+ATTRIBUTES[attribute].label+'属性への耐性を付与し、追加で🛡️強化効果を得ます。',
   statusName:info.buff,
   statusDescription:info.buffDescription,
-  duration:attribute==='chaos'?'選ばれた強化の設定ターン数に従います。':'基本'+info.buffDuration+'ターン。耐性効果は別途持続します。強化量は魔法の威力によって変わります。'
+  duration:isRevealed(circle)&&typeof defenseDuration==='function'?defenseDuration(a)+'ターン（威力連動）':'2〜6ターン（威力連動）'
  };
  return {
   effect:'敵に'+ATTRIBUTES[attribute].label+'属性の🕸️弱体効果を与えます。付与の強さと持続時間は魔法の威力・相手の耐性で変化します。',

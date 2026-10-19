@@ -263,6 +263,21 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .picker-circle-wrap{min-width:0;display:flex;flex-direction:column;gap:5px}
 .picker-circle-wrap .picker-option{flex:1}
 .picker-circle-wrap .magic-expand{font-size:13px!important}
+/* Three columns with tall cards: large square photo, compact circle stats, details.
+   The separate item picker keeps its original layout. */
+.picker-grid.circle-picker-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.circle-picker-grid .picker-circle-wrap{display:flex;flex-direction:column;gap:5px;min-width:0}
+.circle-picker-grid .picker-circle-wrap .picker-option{
+ display:block;flex:none;width:100%;height:auto;aspect-ratio:1 / 1;min-height:0;
+ padding:4px!important;overflow:hidden
+}
+.circle-picker-grid .picker-circle-wrap .picker-option img{
+ display:block;width:100%;height:100%;max-width:none;aspect-ratio:1 / 1;object-fit:cover;border:0
+}
+.circle-picker-grid .picker-circle-wrap .magic-expand{
+ position:static;width:100%;min-height:32px!important;padding:4px 6px!important;
+ font-size:11px!important
+}
 .prepare-spell-frame{min-width:0;display:flex;flex-direction:column;gap:4px}
 .prepare-spell-frame .loadout-tile{width:100%;flex:none}
 .prepare-spell-frame .magic-expand{font-size:11px!important;min-height:42px;padding:4px 0!important}
@@ -284,20 +299,18 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 @media(prefers-reduced-motion:reduce){#battleArena .enemy-unit[data-entering="true"],#battleArena .unit[data-dying="true"] .enemy-portrait,#battleArena .unit[data-dying="true"] .hero-portrait{animation:none!important}}
 
 
-/* A magic circle's own thumbnail: attribute/type icons, applicable status, unknown cost/power. */
+/* A magic circle's compact thumbnail: attribute/type icons and cost/power. */
 .circle-card-info{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;width:100%;min-width:0;padding:7px 4px 5px;border:1px solid #b9986259;border-radius:5px;background:linear-gradient(145deg,#251f2e,#15202a);color:var(--pale);text-align:center;line-height:1.4}
 .circle-card-symbols{font-size:clamp(15px,2.5vw,24px);font-weight:700;letter-spacing:.01em;white-space:nowrap}
-.circle-card-status{display:block;max-width:100%;font-size:clamp(11px,1.35vw,15px);font-weight:650;overflow-wrap:anywhere;color:#f5dca9}
 .circle-card-stats{display:block;max-width:100%;font-size:clamp(10px,1.18vw,13px);line-height:1.4;overflow-wrap:anywhere;color:#d3dce3;font-variant-numeric:tabular-nums}
-.prepare-spell-frame .circle-card-info,.battle-spell-frame .circle-card-info{min-height:62px}
+.prepare-spell-frame .circle-card-info,.battle-spell-frame .circle-card-info{min-height:48px}
 .picker-circle-wrap .circle-card-info{margin:0}
 .circle-grid .card>.circle-card-info{margin-top:10px}
 .magic-details-stats dd{font-size:clamp(16px,2.7vw,19px);line-height:1.65;overflow-wrap:anywhere}
 @media(max-width:630px){
  .loadout-grid{gap:5px}
- .prepare-spell-frame .circle-card-info,.battle-spell-frame .circle-card-info{padding:5px 1px;min-height:64px;gap:3px}
+ .prepare-spell-frame .circle-card-info,.battle-spell-frame .circle-card-info{padding:5px 1px;min-height:48px;gap:3px}
  .circle-card-symbols{font-size:clamp(12px,3vw,17px)}
- .circle-card-status{font-size:clamp(10px,2.45vw,13px)}
  .circle-card-stats{font-size:clamp(9px,2.2vw,12px)}
 }
 
@@ -882,7 +895,7 @@ html,body{overflow-x:clip}
 .effects,.tile-title,.picker-label,.picker-label small,
 .battle-spells .tile-cooldown,.battle-items .tile-detail,
 .battle-spells .tile-detail,.camera-actions,.regulation-sample figcaption,
-.circle-card-status,.circle-card-stats,.name-error,.battle-basic .basic-attack{
+.circle-card-stats,.name-error,.battle-basic .basic-attack{
  font-size:14px
 }
 .card-actions button,.character-name-row button,.inner-nav,
@@ -897,7 +910,6 @@ html,body{overflow-x:clip}
 .list-controls select{font-size:15px;min-height:44px}
 .circle-card-stats{font-size:clamp(12px,1.5vw,15px)}
 .circle-card-mp,.circle-card-power{font-size:inherit;letter-spacing:-.035em}
-.circle-card-status{font-size:14px}
 #battleArena .combatant-fx strong{font-size:14px}
 #battleArena .battle-ceremony span{font-size:14px}
 #battleArena .battle-ceremony[data-event="encounter"] strong{font-size:17px}
@@ -917,7 +929,6 @@ html,body{overflow-x:clip}
  .battle-spells .tile-detail,.battle-items .tile-detail,.battle-spells .tile-cooldown{font-size:12px}
  .prepare-spell-frame .magic-expand,.battle-spell-frame .magic-expand{font-size:13px!important;min-height:44px}
  .circle-card-stats,.circle-card-mp,.circle-card-power{font-size:clamp(11px,3vw,13px);letter-spacing:-.04em}
- .circle-card-status{font-size:13px}
  .circle-card-info{padding:7px 2px;overflow-wrap:anywhere}
  .circle-card-mp,.circle-card-power{white-space:normal;overflow-wrap:anywhere}
  .picker-label,.picker-label small{font-size:14px}
@@ -1565,21 +1576,22 @@ html,body{overflow-x:clip}
 
 /* Profile actions are deliberate, equally weighted controls above save management. */
 .profile-support{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;max-width:760px;margin:24px auto 0;padding-top:18px;border-top:1px solid var(--border)}
-.profile-support .profile-action{display:flex;align-items:center;justify-content:center;gap:12px;min-width:0;min-height:74px;padding:13px 15px;border:1px solid #d7b37e91;border-radius:12px;background:linear-gradient(145deg,#6847295e,#32283a 55%,#17283b);box-shadow:inset 0 1px 0 #fff3d324,0 6px 16px #0003;color:#f7e1b3;font-size:clamp(13px,2vw,16px);font-family:inherit;font-weight:700;line-height:1.4;text-align:center;text-decoration:none;transition:background .16s,border-color .16s,transform .16s,box-shadow .16s;cursor:pointer}
-.profile-support .profile-action:hover{border-color:#ffe1ac;background:linear-gradient(145deg,#80553188,#49324b 57%,#1b3547);box-shadow:inset 0 1px 0 #ffecd43d,0 9px 25px #0006;transform:translateY(-1px)}
-.profile-support .profile-action:focus-visible,.support-prompt-actions a:focus-visible{outline:2px solid #9ae3db;outline-offset:4px}
-.profile-support .profile-action-icon{display:grid;flex:none;place-items:center;width:34px;height:34px;border:1px solid #f1c88f75;border-radius:50%;background:#1719288c;color:#f4d6a0;font-size:21px;font-weight:500;line-height:1}
+.profile-support .profile-action,.milestone-choice-actions .profile-action{display:flex;align-items:center;justify-content:center;gap:12px;min-width:0;min-height:74px;padding:13px 15px;border:1px solid #d7b37e91;border-radius:12px;background:linear-gradient(145deg,#6847295e,#32283a 55%,#17283b);box-shadow:inset 0 1px 0 #fff3d324,0 6px 16px #0003;color:#f7e1b3;font-size:clamp(13px,2vw,16px);font-family:inherit;font-weight:700;line-height:1.4;text-align:center;text-decoration:none;transition:background .16s,border-color .16s,transform .16s,box-shadow .16s;cursor:pointer}
+.profile-support .profile-action:hover,.milestone-choice-actions .profile-action:hover{border-color:#ffe1ac;background:linear-gradient(145deg,#80553188,#49324b 57%,#1b3547);box-shadow:inset 0 1px 0 #ffecd43d,0 9px 25px #0006;transform:translateY(-1px)}
+.profile-support .profile-action:focus-visible,.milestone-choice-actions .profile-action:focus-visible,.support-prompt-actions .support-share-action:focus-visible{outline:2px solid #9ae3db;outline-offset:4px}
+.profile-support .profile-action-icon,.milestone-choice-actions .profile-action-icon{display:grid;flex:none;place-items:center;width:34px;height:34px;border:1px solid #f1c88f75;border-radius:50%;background:#1719288c;color:#f4d6a0;font-size:21px;font-weight:500;line-height:1}
 @media(max-width:540px){.profile-support{grid-template-columns:minmax(0,1fr);gap:10px}.profile-support .profile-action{min-height:63px;padding:12px 14px}}
-.support-prompt-actions a{color:var(--gold);font-size:13px;text-underline-offset:4px}
-.support-prompt-actions a:hover{color:var(--pale)}
+.support-prompt-actions .support-share-action{display:inline-flex;flex:1 1 0;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:46px;padding:11px 10px;border:1px solid #d7b37e91;border-radius:10px;background:linear-gradient(145deg,#6847295e,#32283a 55%,#17283b);box-shadow:inset 0 1px 0 #fff3d324,0 6px 16px #0003;color:#f7e1b3;font-family:inherit;font-size:clamp(11px,2.4vw,14px);font-weight:700;line-height:1.35;text-align:center;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,box-shadow .16s}
+.support-prompt-actions .support-share-action:hover:enabled,.support-prompt-actions a.support-share-action:hover{border-color:#ffe1ac;background:linear-gradient(145deg,#80553188,#49324b 57%,#1b3547);box-shadow:inset 0 1px 0 #ffecd43d,0 9px 25px #0006;color:#ffe5b8}
+.support-prompt-actions .support-share-action[hidden]{display:none}
+.support-prompt-actions .share-mark{flex:none;width:16px;height:16px}
 .support-prompt-inner{text-align:center;padding:30px 24px}
 .support-prompt-inner h2{font-size:23px;color:var(--gold);margin:0 0 14px}
 .support-prompt-inner p{font-size:14px;color:var(--soft);margin:9px 0}
-.support-prompt-actions{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:25px}
+.support-prompt-actions{display:flex;align-items:stretch;justify-content:center;gap:10px;margin-top:25px}
 .support-prompt-dialog{width:min(580px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
 #adventurerShareCanvas{display:block;width:100%;height:auto;aspect-ratio:1200 / 675;border:1px solid #c5a06a70;margin:17px auto 7px}
 .support-share-help{font-size:11px!important;line-height:1.5;color:var(--soft)!important}
-.support-prompt-actions{gap:12px 27px}
 .support-card-tools{display:flex;gap:9px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:16px}
 .support-card-tools button{min-width:0;padding:8px 12px!important;font-size:12px!important}
 .support-card-tools #supportNativeShare,.support-card-tools #supportSaveImage{background:transparent!important;color:var(--gold)!important;border:1px solid var(--border)!important;box-shadow:none!important}
@@ -1598,6 +1610,32 @@ html,body{overflow-x:clip}
 .circle-grid .card[data-favorite="true"]{border-color:#f5d58a;box-shadow:0 0 0 1px #cbaa69,0 0 22px #ffcf6c33}
 .circle-grid .card[data-favorite="true"]::before{content:"★";z-index:2;top:7px;right:15px;color:#ffdc83;font-size:22px;text-shadow:0 0 10px #ffd786}
 .favorite-hint{margin:0;color:var(--soft);font-size:11px;text-align:right}
+
+/* Reward trophies share the collection-book rarity ink, aura and stars. */
+.return-treasure.relic-card.discovered{min-height:125px;padding:12px 5px;gap:4px}
+.return-treasure.relic-card.discovered .return-treasure-art{margin:4px auto 8px}
+.return-treasure.relic-card.discovered .relic-rarity{margin:0 auto 3px;padding:0 4px}
+.return-treasure.relic-card.discovered strong{color:var(--rarity-ink)}
+@media(max-width:630px){
+ .return-treasure.relic-card.discovered{min-height:108px;padding:9px 3px;gap:3px}
+ .return-treasure.relic-card.discovered .return-treasure-art{margin:2px auto 4px}
+}
+.tutorial-sheet #tutorialHint,.tutorial-sheet #tutorialDetails,.tutorial-sheet #tutorialFreedom{white-space:pre-line}
+.tutorial-sheet #tutorialAttributes{margin:0 0 9px;color:var(--gold);font-weight:700;line-height:1.7;letter-spacing:.02em}
+
+/* On a tenth-layer victory, offer two choices before opening the full card. */
+.milestone-choice-dialog{width:min(620px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
+.milestone-choice-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:24px auto 16px;width:100%}
+.milestone-choice-actions .profile-action{text-decoration:none}
+.milestone-choice-actions .profile-action-icon .share-mark,.profile-support .profile-action-icon .share-mark{width:20px;height:20px;stroke:currentColor}
+.milestone-choice-optional{font-size:12px!important;line-height:1.5}
+.milestone-choice-dialog #milestoneClose{min-width:105px;margin-top:8px}
+@media(max-width:540px){.milestone-choice-actions{grid-template-columns:minmax(0,1fr);gap:10px}.milestone-choice-actions .profile-action{min-height:63px;padding:12px 14px}}
+
+/* A compact blue flame sits immediately after an inherited spell's symbols. */
+.inherited-flame{display:inline-block;margin-inline-start:.25em;filter:hue-rotate(165deg) saturate(2.4);vertical-align:middle}
+.permadeath-choice{display:flex;align-items:center;justify-content:center;gap:.55rem;margin:.7rem 0;cursor:pointer}
+.permadeath-choice input{width:1.05rem;height:1.05rem;accent-color:#76b6ed}
 
 /* Google Drive cloud backup, separate from browser storage permissions. */
 .cloud-sync{margin:18px 0;padding:17px;border:1px solid var(--border);background:#0c1723a8}

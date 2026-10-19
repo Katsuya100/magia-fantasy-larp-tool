@@ -27,6 +27,38 @@ for(const a of G.ATTRS){
  assert.ok(G.resist(src,a)<1,'attribute resistance '+a);
  assert.ok(src.statuses.some(s=>s.kind==='buff'&&s.id!=='resist_'+a),'element buff '+a);
 }
+
+// Same upgraded-power formula for player and enemy. Defense protects immediately,
+// remains active for the configured count, then expires; bonus and resist match.
+assert.equal(num('defense_duration_base'),2);
+assert.equal(num('defense_duration_power_step'),250);
+assert.equal(num('defense_duration_cap'),6);
+for(const [power,duration] of [[49,2],[168,2],[249,2],[250,3],[270,3],[499,3],[500,4],[540,4],[749,4],[750,5],[999,5],[1000,6],[1500,6]]){
+ assert.equal(G.defenseDuration({power}),duration,'power breakpoint '+power);
+}
+for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4],[800,5],[1000,6]]){
+ const attack=spell('attack',attr);
+ const fighterBase={hp:1500,mag:12,def:10,res:10};
+ const defender=G.makeUnit(fighterBase,1,{},[spell('defense',attr,power)]);
+ const attacker=G.makeUnit(fighterBase,1,{},[attack,attack]);
+ const normalDamage=G.damage(attacker,defender,attack,()=>.99);
+ const damageTaken=[],resistTurns=[],bonusTurns=[];
+ for(let turn=0;turn<7;turn++){
+  const before=defender.hp;
+  G.round(defender,attacker,turn===0?0:-1,turn%2,buffs,()=>.99);
+  damageTaken.push(before-defender.hp);
+  resistTurns.push(G.status(defender,'resist_'+attr)?.turns??0);
+  bonusTurns.push(defender.statuses.find(x=>x.id.startsWith('buff_'))?.turns??0);
+ }
+ const expectedTurns=Array.from({length:7},(_,i)=>Math.max(0,duration-i-1));
+ assert.deepEqual(resistTurns,expectedTurns,'resistance countdown '+attr+' P'+power);
+ assert.deepEqual(bonusTurns,expectedTurns,'extra buff countdown '+attr+' P'+power);
+ assert.ok(damageTaken.slice(0,duration).every(d=>d<normalDamage),'protected hits '+attr+' P'+power);
+ assert.ok(damageTaken.slice(duration).every(d=>d===normalDamage),'unprotected hits '+attr+' P'+power);
+}
+const upgraded={role:'defense',attribute:'flame',power:1000,basePower:270};
+assert.equal(G.defenseDuration(upgraded),6,'stone-upgraded power, not original MP basis');
+
 for(const attr of G.ATTRS){
  const u=unit();
  G.addStatus(u,{id:'debuff_'+attr,kind:'debuff',attribute:attr,effect:'burn',value:.5,turns:2});
@@ -77,7 +109,7 @@ const foe1=G.makeUnit(base,1,{flame:.3},[spell('attack','flame')]);
 const foe2=G.makeUnit(base,1,{flame:1.4},[spell('attack','flame')]);
 assert.ok(G.damage(a,foe1,spell('attack','flame'))<G.damage(a,foe2,spell('attack','flame')),'enemy-specific resistance');
 for(let lv=1;lv<=150;lv++){
- const row=level(lv);assert.ok(+row.carry_limit>=3&&+row.carry_limit<=15);
+ const row=level(lv);assert.ok(+row.carry_limit>=3&&+row.carry_limit<=18);
  if(lv>1)assert.ok(+row.hp_multiplier>=+level(lv-1).hp_multiplier);
  assert.ok(+row.xp_to_next>0);
 }

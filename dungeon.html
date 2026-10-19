@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261018.36">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261019.8">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,12 +19,12 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261018.36" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261019.8" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261018.36" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261019.8" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -59,6 +59,7 @@
         <form id="nameForm">
           <label for="playerNameInput">冒険者名</label>
           <input id="playerNameInput" name="playerName" type="text" maxlength="20" required autocomplete="nickname" placeholder="名前を入力">
+          <label id="permadeathChoice" class="permadeath-choice"><input id="permadeathInput" type="checkbox"> パーマデスモード</label>
           <p id="nameError" class="name-error" role="alert"></p>
           <button type="submit" id="savePlayerName" class="primary-action">この名で冒険する <span aria-hidden="true">⟶</span></button>
         </form>
@@ -82,7 +83,7 @@
         <div id="playerStats" class="stats-sheet"></div>
       </div>
       <div class="profile-support" aria-label="冒険者の記録を共有・作者を応援">
-        <button type="button" id="openAdventurerShare" class="profile-action"><span class="profile-action-icon" aria-hidden="true">↗</span><span>冒険者カードをシェア</span></button>
+        <button type="button" id="openAdventurerShare" class="profile-action"><span class="profile-action-icon" aria-hidden="true"><svg class="share-mark" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 13.5 6.6 3.9m0-10.8L8.7 10.5"/></svg></span><span>冒険者カードをシェア</span></button>
         <a class="profile-action" href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer"><span class="profile-action-icon" aria-hidden="true">♡</span><span>作者を応援</span></a>
       </div>
       <div class="profile-data-actions">
@@ -115,7 +116,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261018.36" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261019.8" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -133,7 +134,7 @@
         <p id="cameraError" class="inline-error" hidden role="alert"></p>
       </div>
       <p id="magicStoneBalance" class="magic-stone-balance">✦ 魔導石：0個</p>
-      <p class="favorite-hint">写真を長押しで★</p>
+      <p class="favorite-hint">魔法陣の写真を長押し → ★お気に入り登録（もう一度長押しで解除）</p>
       <div class="list-controls" role="group" aria-label="魔導書のソートとフィルター">
         <label>役割<select id="libraryRoleFilter"><option value="all">すべて</option><option value="attack">⚔️攻撃</option><option value="defense">🛡️防御</option><option value="support">✚回復</option><option value="debuff">🕸️弱体</option></select></label>
         <label>属性<select id="libraryAttributeFilter"><option value="all">すべて</option><option value="flame">🔥炎</option><option value="bolt">⚡雷</option><option value="aqua">💧水</option><option value="storm">🌪️風</option><option value="gravity">🪨重力</option><option value="law">⚖️秩序</option><option value="chaos">🌀混沌</option></select></label>
@@ -170,7 +171,7 @@
           </div>
         </div>
       </dialog>
-      <div class="rank-start"><label for="startLayer">探索開始階層</label><select id="startLayer"><option value="1">1層から</option></select><p id="startLayerHint">10層ごとの冒険者章を獲得すると開始階層が増えます。</p></div>
+      <div class="rank-start"><label for="startLayer">探索開始階層</label><select id="startLayer"><option value="1">1層から</option></select></div>
        <div class="entry-actions"><button type="button" id="startAttack" class="primary-action" disabled>迷宮へ潜る</button></div>
     </section>
 
@@ -271,6 +272,19 @@
         </div>
       </div>
     </dialog>
+    <dialog id="milestoneChoiceDialog" class="name-dialog milestone-choice-dialog" aria-labelledby="milestoneChoiceTitle" aria-describedby="milestoneChoiceMessage">
+      <div class="support-prompt-inner">
+        <h2 id="milestoneChoiceTitle"></h2>
+        <p id="milestoneChoiceMessage"></p>
+        <p class="milestone-choice-invite">冒険を楽しんでいただき、ありがとうございます。シェアや応援をいただけると励みになります。</p>
+        <div class="milestone-choice-actions">
+          <button type="button" id="milestoneShare" class="profile-action"><span class="profile-action-icon" aria-hidden="true"><svg class="share-mark" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 13.5 6.6 3.9m0-10.8L8.7 10.5"/></svg></span><span>冒険者カードをシェア</span></button>
+          <a id="milestoneDonate" class="profile-action" href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer"><span class="profile-action-icon" aria-hidden="true">♡</span><span>作者を応援</span></a>
+        </div>
+        <p class="milestone-choice-optional">シェアも応援も任意です。</p>
+        <button type="button" id="milestoneClose" class="subtle">閉じる</button>
+      </div>
+    </dialog>
     <dialog id="supportPromptDialog" class="name-dialog support-prompt-dialog" aria-labelledby="supportPromptTitle" aria-describedby="supportPromptMessage">
       <div class="support-prompt-inner">
         <h2 id="supportPromptTitle"></h2>
@@ -278,10 +292,10 @@
         <canvas id="adventurerShareCanvas" width="1200" height="675" role="img" aria-label="冒険者等級・レベル・最深帰還のカード"></canvas>
         <p id="supportShareHelp" class="support-share-help">Xの投稿には本文が入ります。画像は保存して添付できます。</p>
         <div class="support-prompt-actions">
-          <a id="supportXLink" href="#" target="_blank" rel="noopener noreferrer">Xでシェア ↗</a>
+          <a id="supportXLink" class="support-share-action" href="#" target="_blank" rel="noopener noreferrer">Xでシェア <svg class="share-mark" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 13.5 6.6 3.9m0-10.8L8.7 10.5"/></svg></a>
+          <button type="button" id="supportNativeShare" class="support-share-action" hidden>画像付きでシェア <svg class="share-mark" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 13.5 6.6 3.9m0-10.8L8.7 10.5"/></svg></button>
         </div>
         <div class="support-card-tools">
-          <button type="button" id="supportNativeShare" hidden>画像を共有</button>
           <button type="button" id="supportSaveImage">画像を保存</button>
           <button type="button" id="supportPromptClose" class="subtle">閉じる</button>
         </div>
@@ -302,17 +316,18 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.18.36</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.19.8</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
-      <div class="tutorial-top"><span id="tutorialCounter" aria-live="polite">1 / 4</span><button type="button" id="tutorialSkip" class="subtle">スキップ</button></div>
-      <h2 id="tutorialTitle">外円を描く</h2>
-      <p id="tutorialHint">紙に大きな円を描こう。</p>
-      <figure class="tutorial-animation">
-        <img id="tutorialAnimation" src="assets/images/tutorial-outer.gif?v=20261018.36" alt="外円を描くアニメーション" width="320" height="320">
+      <div class="tutorial-top"><span id="tutorialCounter" aria-live="polite">1 / 5</span><button type="button" id="tutorialSkip" class="subtle">スキップ</button></div>
+      <h2 id="tutorialTitle">準備しましょう</h2>
+      <p id="tutorialHint">最初にお手元に紙とペンをご用意ください。</p>
+      <figure id="tutorialFigure" class="tutorial-animation" hidden>
+        <img id="tutorialAnimation" alt="" width="320" height="320">
       </figure>
-      <p id="tutorialDetails">線をつないで閉じよう。</p>
+      <p id="tutorialDetails">ペンは、できれば太めの油性ペンをお使いください。</p>
+       <p id="tutorialAttributes" hidden></p>
       <p id="tutorialFreedom" hidden></p>
       <div class="tutorial-actions">
         <button type="button" id="tutorialPrevious" class="subtle" hidden>戻る</button>
@@ -320,6 +335,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261018.36"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261019.8"></script>
 </body>
 </html>

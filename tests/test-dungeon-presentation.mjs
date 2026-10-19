@@ -132,6 +132,13 @@ assert.match(page,/🔥flame\s*\/\s*⚡️bolt\s*\/\s*💧aqua/);
 assert.match(page,/🌪️storm\s*\/\s*🪨gravity\s*\/\s*⚖️law\s*\/\s*🌀chaos/);
 assert.match(page,/<dialog id="loadoutDialog"/);
 assert.match(page,/id="loadoutOptions" class="picker-grid"/);
+assert.match(css,/\.picker-grid\.circle-picker-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'circle picker has exactly three columns');
+assert.match(css,/\.circle-picker-grid \.picker-circle-wrap\{[^}]*display:flex;flex-direction:column;gap:5px/,'circle picker cards are tall, vertically stacked');
+assert.doesNotMatch(css,/\.circle-picker-grid \.picker-circle-wrap\{[^}]*aspect-ratio:1\s*\/\s*1/,'circle picker cards no longer have a forced square ratio');
+assert.match(css,/\.circle-picker-grid \.picker-circle-wrap \.picker-option\{[^}]*aspect-ratio:1\s*\/\s*1/,'only the photo button remains square');
+assert.match(css,/\.circle-picker-grid \.picker-circle-wrap \.picker-option img\{[^}]*width:100%;height:100%/,'circle image fills the photo button');
+assert.match(css,/\.circle-picker-grid \.picker-circle-wrap \.magic-expand\{[^}]*position:static;width:100%/,'details button follows the statistics rather than covering the photo');
+assert.doesNotMatch(page,/id="startLayerHint"|10層ごとの冒険者章を獲得すると開始階層が増えます。/,'misleading start layer hint is removed from static HTML');
 assert.match(css,/\.loadout-grid\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
 assert.match(css,/\.loadout-tile\{[^}]*aspect-ratio:1\s*\/\s*1/);
 assert.match(page,/<div class="portrait-seal">\s*<svg class="portrait-crest"/);
@@ -174,6 +181,8 @@ assert.doesNotMatch(page,/<option value="default">レアリティ順<\/option>/,
 assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is concise');
 assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!important;/,'selected choice border does not change the button box size');
 const app=await read('assets/js/dungeon-app.mjs');
+assert.doesNotMatch(app,/startLayerHint|10層ごとの冒険者章を獲得すると開始階層が増えます。/,'hint must not reappear after JS starts');
+assert.match(app,/className=picker\.kind==='circle'\?'picker-grid circle-picker-grid':'picker-grid'/,'item picker keeps its layout');
 assert.match(app,/run\.checkpointBattleScrollY=window\.scrollY/,'boss victory captures the battle scroll before showing checkpoint');
 assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing deeper restores the original battle scroll');
 assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
@@ -214,7 +223,7 @@ assert.match(app,/await animateBattle\(steps\)/);
 assert.ok(app.includes('await playCombatSequence(steps,phase=>'));
 assert.ok(app.includes('for(const step of phase)'),'both fighters are painted within one phase');
 assert.ok(app.includes("treasureChestMarkup(drops)"),'drop count controls number of chests');
-assert.ok(app.includes("rewards.length?rewards.length+'個 · 未確定':'次の戦いへ',rewards.length"));
+assert.ok(app.includes("dropCount?dropCount+'個 · 未確定':'次の戦いへ',dropCount"),'loot ceremony counts ordinary rewards and recovered legacies');
 assert.ok(app.includes("await ceremony('encounter'"),'battle begins with an encounter');
 assert.ok(app.includes("onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death'"),'fatal ceremony overlaps the last attack');
 assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
@@ -249,12 +258,14 @@ assert.match(page,/<p id="magicStoneBalance"[^>]*>✦ 魔導石：0個<\/p>/,'in
 assert.doesNotMatch(page,/魔法陣の強化に使用/,'no redundant magic-stone explanation in static HTML');
 assert.match(app,/magicStoneBalance'\)\.textContent='✦ 魔導石：'\+profile\.magicStones\+'個'/,'all player balances render only the item count');
 assert.doesNotMatch(app,/個（魔法陣の強化に使用）/,'no redundant explanation in dynamic JS');
-for(const [rarity,mark] of [['common','○ コモン'],['uncommon','◇ アンコモン'],
- ['rare','◆ レア'],['epic','✦ エピック'],['legendary','★ レジェンダリー']]){
- assert.ok(app.includes(rarity+":'"+mark+"'"),rarity+' retains its legible rarity text');
- assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--rarity-ink:#[0-9a-f]{6};--rarity-glow:#[0-9a-f]{8}'),rarity+' has a distinct solid hue and visible glow');
+for(const [rarity,name] of [['common','コモン'],['uncommon','アンコモン'],
+ ['rare','レア'],['epic','エピック'],['legendary','レジェンダリー']]){
+ assert.ok(app.includes(rarity+":'"+name+"'"),rarity+' keeps a readable accessibility name');
+ assert.match(css,new RegExp('\\.relic-card\\.discovered\\[data-rarity="'+rarity+'"\\]\\{[\\s\\S]*?--rarity-ink:#[0-9a-f]{6};--rarity-glow:#[0-9a-f]{8}'),rarity+' keeps its colored rarity aura');
 }
-assert.match(app,/\+\(found\?'<span class="relic-rarity">'/,'rarity names are only shown for discovered collectibles');
+assert.match(app,/collectionRarityMarks\(rarity\)/,'collection rarity is displayed as asterisks instead of names');
+assert.match(app,/\+\(found\?'<span class="relic-rarity" aria-hidden="true">'/,'stars only appear for discovered collectibles');
+assert.match(page,/<select id="collectionRarityFilter"><option value="all">すべて<\/option><option value="common">コモン<\/option><option value="uncommon">アンコモン<\/option><option value="rare">レア<\/option><option value="epic">エピック<\/option><option value="legendary">レジェンダリー<\/option><\/select>/,'rarity dropdown options remain unchanged');
 assert.ok(app.includes(`data-rarity="'+(found?rarity:'unknown')`),'unfound relics still hide their rarity');
 assert.equal(css.includes('/* Color-vision accessibility:'),false,'previous flat, no-glow frame redesign must be removed');
 assert.match(css,/\.relic-card\.discovered \.relic-art\{[\s\S]*?box-shadow:0 0 0 9px var\(--rarity-halo\),[\s\S]*?0 0 32px var\(--rarity-glow\)/,'original luminous halo and bloom are restored');
@@ -348,13 +359,14 @@ for(const [key,label] of [['attack','⚔️攻撃'],['defense','🛡️防御'],
 assert.doesNotMatch(page,/id="attributeEffects"/,'remove global attribute effect legend');
 assert.doesNotMatch(page,/7属性の強化・🕸️弱体効果/,'effect names belong to their individual circles');
 assert.match(app,/circleEffectBadges\(c,masters\.buffs,esc,G\.mpCost\)/);
-assert.match(app,/circleEffectDetails\(circle,masters\.buffs\)/);
+assert.match(app,/circleEffectDetails\(circle,masters\.buffs,G\.defenseDuration\)/,'magic-circle detail shows power-derived duration');
 assert.match(app,/\['追加効果の詳細',info\.statusDescription\]/);
 assert.match(css,/\.circle-card-info\{[^}]*display:flex/);
 assert.match(css,/\.circle-card-stats\{[^}]*font-size:/);
 const thumbnails=await read('assets/js/dungeon-preparation-ui.mjs');
 assert.match(thumbnails,/class="circle-card-symbols"/);
-assert.match(thumbnails,/class="circle-card-status"/);
+assert.doesNotMatch(thumbnails,/class="circle-card-status"/,'named effects are detail-only');
+assert.doesNotMatch(css,/\.circle-card-status/,'obsolete status-row styling removed');
 assert.match(thumbnails,/class="circle-card-mp">MP:/);
 assert.match(thumbnails,/class="circle-card-power">威力:/);
 assert.match(css,/\.circle-grid \.card-actions\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'grimoire detail and delete side-by-side');

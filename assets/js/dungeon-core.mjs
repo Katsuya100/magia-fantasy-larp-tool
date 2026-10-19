@@ -21,8 +21,17 @@ export function fightExperience(enemyLevel,playerLevel,layer){
  const gap=Math.max(0,Number(playerLevel)-Number(enemyLevel));
  return Math.max(1,Math.round(full*Math.pow(num('xp_overlevel_factor_per_level'),gap)));
 }
+// Identical rules for both sides: use raw power after UGC/stone upgrades.
+export function defenseDuration(spell){
+ const step=num('defense_duration_power_step');
+ if(step<=0)return num('resistance_buff_duration'); // Retain existing duration overrides and tests.
+ const base=num('defense_duration_base'),cap=num('defense_duration_cap');
+ const power=Math.max(0,Number(spell?.power)||0);
+ return clamp(base+Math.floor(power/step),1,cap);
+}
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
 export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
+export const spellMpCost=spell=>mpCost(spell.basePower??spell.power);
 const levelRow=l=>level(l);
 const growthKeys=['hp','mag','def','res'];
 export const startingBase=(r=Math.random)=>Object.fromEntries(growthKeys.map(k=>[k,roll(...range(k),r)]));
@@ -68,18 +77,25 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-export function dropCounts(_enemyLevel,r=Math.random){
+export function magicStoneDropChance(playerLevel,layer){
+ const overlevel=Math.max(0,Number(playerLevel)-targetClearLevel(layer));
+ return num('magic_stone_drop_chance')*Math.pow(num('magic_stone_overlevel_factor_per_level'),overlevel);
+}
+export function dropCounts(_enemyLevel,r=Math.random,context={}){
+ const stoneChance=context.playerLevel==null
+  ?num('magic_stone_drop_chance')
+  :magicStoneDropChance(context.playerLevel,context.layer??1);
  return {
   collection:countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r),
-  stone:countSuccesses(num('magic_stone_drop_rolls'),num('magic_stone_drop_chance'),r),
+  stone:countSuccesses(num('magic_stone_drop_rolls'),stoneChance,r),
   use:countSuccesses(num('consumable_drop_rolls'),num('consumable_drop_chance'),r)
  };
 }
-export function dropCount(l,r=Math.random){
- return Object.values(dropCounts(l,r)).reduce((total,count)=>total+count,0);
+export function dropCount(l,r=Math.random,context={}){
+ return Object.values(dropCounts(l,r,context)).reduce((total,count)=>total+count,0);
 }
 export function drops(items,collections,l,r=Math.random,context={}){
- const layer=context.layer??1,{collection,stone,use}=dropCounts(l,r),rewards=[];
+ const layer=context.layer??1,{collection,stone,use}=dropCounts(l,r,context),rewards=[];
  for(let i=0;i<use;i++){
   const tier=rollConsumableTier(layer,r);
   const x=weighted(eligibleConsumables(items,layer,tier),r);
@@ -88,17 +104,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
  }
  for(let i=0;i<stone;i++)rewards.push({type:'stone',id:'magic_stone'});
  for(let i=0;i<collection;i++)
-  rewards.push({type:'collection',id:rollCollection(collections,layer,r,context.bossEnemyId??null).id});
- if(context.bossEnemyId&&context.guaranteeBossCollection){
-  const id=bossUniqueCollection(collections,context.bossEnemyId).id;
-  const existing=rewards.findIndex(item=>item.type==='collection'&&item.id===id);
-  if(existing<0){
-   // Replace only a collection so fixed trophies do not reduce stone/item drops.
-   const slot=rewards.findIndex(item=>item.type==='collection');
-   if(slot>=0)rewards[slot]={type:'collection',id};
-   else rewards.push({type:'collection',id});
-  }
- }
+  rewards.push({type:'collection',id:rollCollection(collections,layer,r,context.bossEnemyId??null,context.favoredCollectionIds).id});
  return rewards;
 }
 export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
@@ -110,9 +116,9 @@ export function resist(actor,attr){let r=actor.resists[attr]??1;const buff=statu
 export function factor(actor,effect){return clamp(actor.statuses.filter(x=>x.effect===effect).reduce((n,x)=>n*(1+x.value),1),num('modifier_min'),num('modifier_max'));}
 export const armor=actor=>Math.ceil(Math.max(0,actor.stats.def+actor.statuses.filter(x=>x.effect==='def').reduce((n,x)=>n+x.value,0)));
 export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debuff_storm');if(dizzy&&r()<clamp(dizzy.value,0,num('dizzy_max_rate')))return 0;return Math.max(0,Math.round(effectivePower(src,spell)*resist(tgt,spell.attribute)*factor(src,'attack')*factor(src,'output')*factor(tgt,'incoming')*num('def_divisor')/(num('def_divisor')+armor(tgt))));}
-export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=mpCost(s.power)&&!u.cooldowns[i]&&!u.statuses.some(x=>x.effect==='seal'&&x.sealedRole===s.role));}
+export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=spellMpCost(s)&&!u.cooldowns[i]&&!u.statuses.some(x=>x.effect==='seal'&&x.sealedRole===s.role));}
 export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
-export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=mpCost(sp.power);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
+export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=spellMpCost(sp);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
 // Whether a carried item currently has a usable primary effect (or bonus).
 // Escape scrolls are always usable; revival can only be armed once per fight.
 export function canUseBattleItem(hero,item,items,buffs=[]){
@@ -139,10 +145,46 @@ export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.i
   if(u.reviveArmed||u.reviveUsed||u.hp<=0)throw Error('生命の紅石はこの戦闘ですでに使用済みです');
   u.reviveArmed=true;
  }else throw Error('Potion kind');if(item.bonus){const b=buffs.find(x=>x.id===item.bonus);if(b)addStatus(u,{id:b.id,kind:'buff',attribute:row.attribute||'law',effect:b.effect,value:Number(b.value),turns:Number(b.duration)||2});}return amount;}
-export function cast(src,tgt,spell,buffs,r=Math.random){const a=spell.attribute,B=effectivePower(src,spell),q=strength(src,spell);if(!ATTRS.includes(a)||!ROLES.includes(spell.role))throw Error('Bad magic');if(spell.role==='attack'){const d=damage(src,tgt,spell,r);tgt.hp=Math.max(0,tgt.hp-d);return 'ダメージ '+d;}
- if(spell.role==='support'){const heal=Math.max(0,Math.min(src.stats.hp-src.hp,Math.round(B*factor(src,'heal')*factor(src,'output'))));src.hp+=heal;src.statuses=src.statuses.filter(x=>x.kind!=='debuff'||x.attribute!==a);return 'HP '+heal+'回復・'+a+'解除';}
- if(spell.role==='defense'){addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(num('defense_resistance_gain')*q,0,num('defense_resistance_cap')),turns:num('resistance_buff_duration')});const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:Number(row.duration)});return a+'耐性と強化';}
- const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);if(row){const law=status(tgt,'buff_law');const protection=law?Math.max(0,1-law.value):1;const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:clamp(Math.round(Number(row.duration)*power),num('debuff_min_duration'),num('debuff_max_duration')),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});}return a+'弱体付与';}
+// The blue-flame inheritance changes the recipient's maximum HP on every use.
+export function applyLegacyHp(src,tgt,spell){
+ const bonus=Math.floor(Number(spell?.legacyHp)||0);
+ if(src?.id!=='player'||bonus<=0)return '';
+ const self=spell.role==='support'||spell.role==='defense';
+ const unit=self?src:tgt;
+ const oldMax=unit.stats.hp;
+ unit.stats.hp=Math.max(1,oldMax+(self?bonus:-bonus));
+ unit.hp=Math.min(unit.hp,unit.stats.hp);
+ const changed=Math.abs(unit.stats.hp-oldMax);
+ return changed?'・最大HP'+(self?'+':'-')+changed:'';
+}
+export function cast(src,tgt,spell,buffs,r=Math.random){
+ const a=spell.attribute,B=effectivePower(src,spell),q=strength(src,spell);
+ if(!ATTRS.includes(a)||!ROLES.includes(spell.role))throw Error('Bad magic');
+ const legacy=applyLegacyHp(src,tgt,spell);
+ if(spell.role==='attack'){
+  const d=damage(src,tgt,spell,r);tgt.hp=Math.max(0,tgt.hp-d);
+  return 'ダメージ '+d+legacy;
+ }
+ if(spell.role==='support'){
+  const heal=Math.max(0,Math.min(src.stats.hp-src.hp,Math.round(B*factor(src,'heal')*factor(src,'output'))));
+  src.hp+=heal;src.statuses=src.statuses.filter(x=>x.kind!=='debuff'||x.attribute!==a);
+  return 'HP '+heal+'回復・'+a+'解除'+legacy;
+ }
+ if(spell.role==='defense'){
+  const duration=defenseDuration(spell);
+  addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(num('defense_resistance_gain')*q,0,num('defense_resistance_cap')),turns:duration});
+  const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);
+  if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:duration});
+  return a+'耐性と強化'+legacy;
+ }
+ const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='debuff_'+chosen);
+ if(row){
+  const law=status(tgt,'buff_law'),protection=law?Math.max(0,1-law.value):1;
+  const power=q*resist(tgt,a)*protection*num('debuff_res_base')/(num('debuff_res_base')+tgt.stats.res);
+  addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value:Number(row.value)*power,turns:clamp(Math.round(Number(row.duration)*power),num('debuff_min_duration'),num('debuff_max_duration')),sealedRole:row.effect==='seal'?ROLES[roll(0,3,r)]:null});
+ }
+ return a+'弱体付与'+legacy;
+}
 // One fatal hit can trigger an armed life ruby; it cannot trigger again this fight.
 export function reviveOnFatal(unit){
  if(unit.hp>0||!unit.reviveArmed||unit.reviveUsed)return 0;
@@ -165,7 +207,14 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
    const oldHp=role==='support'?a.u.hp:a.t.hp;
    let message;
    if(role==='basic'){
-    const d=Math.max(1,Math.round(num('basic_attack')*a.u.stats.mag/num('mag_reference')*num('def_divisor')/(num('def_divisor')+armor(a.t))));
+    // HP scaling approximates one fifth of an ordinary enemy in the recommended level band.
+     // It does not adapt to the current target, so bosses keep their HP advantage.
+     // Compare armor against the same base-level HP scale; otherwise
+     // high-level defense growth makes ordinary attacks obsolete.
+     const relativeArmor=armor(a.t)/Math.max(1,a.t.stats.hp/Math.max(1,a.t.base.hp));
+     const d=Math.max(1,Math.round(num('basic_attack')*a.u.stats.hp*
+      factor(a.u,'attack')*factor(a.u,'output')*factor(a.t,'incoming')*
+      num('def_divisor')/(num('def_divisor')+relativeArmor)));
     a.t.hp=Math.max(0,a.t.hp-d);
     message=a.name+'：通常攻撃 '+d;
    }else message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
@@ -219,8 +268,10 @@ export function repairInvalidMp(hero){
 }
 export function recoverVictoryMp(hero){
  const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1);
+ const middle=clamp((Number(hero.level)-40)/Math.max(1,num('level_max')-40),0,1);
  const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
-  num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12);
+  num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12)-
+  num('victory_mp_middle_taper')*middle*(1-middle);
  const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*rate)));
  hero.mp+=gained;
  return gained;

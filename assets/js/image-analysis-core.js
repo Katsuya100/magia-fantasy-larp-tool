@@ -1004,6 +1004,189 @@
     return { outer: restore(best.outer), inner: restore(best.inner), circleAccuracy: best.circleAccuracy, confidence: best.circleAccuracy };
   }
 
+
+  // Enclosed spaces between ink strokes form independent polygonal faces.
+  // Their corners are less sensitive to overlapped stars than a single
+  // radial "outermost ink pixel" silhouette. Ignore open or rim-touching
+  // regions: a shield with one sharp tip must not become an attack spell.
+  function enclosedSigilFaces(gray, width, height, cx, cy, radius) {
+    const limit = radius * .97, limitSq = limit * limit;
+    const rimSq = (radius * .965) ** 2;
+    const minArea = Math.max(35, radius * radius * .007);
+    const visited = new Uint8Array(gray.length);
+    const queue = new Int32Array(gray.length);
+    const xMin = Math.max(0, Math.floor(cx - limit)), xMax = Math.min(width - 1, Math.ceil(cx + limit));
+    const yMin = Math.max(0, Math.floor(cy - limit)), yMax = Math.min(height - 1, Math.ceil(cy + limit));
+    const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const inDisk = (x, y) => (x - cx) ** 2 + (y - cy) ** 2 < limitSq;
+    const isWhite = (x, y) =>
+      x >= xMin && x <= xMax && y >= yMin && y <= yMax &&
+      inDisk(x, y) && gray[y * width + x] >= 150;
+    const cross = (o, a, b) =>
+      (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    function convexHull(points) {
+      const sorted = points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const unique = [];
+      for (const p of sorted)
+        if (!unique.length || p[0] !== unique.at(-1)[0] || p[1] !== unique.at(-1)[1])
+          unique.push(p);
+      if (unique.length < 3) return unique;
+      const lower = [];
+      for (const p of unique) {
+        while (lower.length >= 2 && cross(lower.at(-2), lower.at(-1), p) <= 0) lower.pop();
+        lower.push(p);
+      }
+      const upper = [];
+      for (let i = unique.length - 1; i >= 0; i--) {
+        const p = unique[i];
+        while (upper.length >= 2 && cross(upper.at(-2), upper.at(-1), p) <= 0) upper.pop();
+        upper.push(p);
+      }
+      return lower.slice(0, -1).concat(upper.slice(0, -1));
+    }
+    function simplifyHull(points, tolerance) {
+      let poly = points;
+      for (let pass = 0; pass < 3 && poly.length > 3; pass++) {
+        const kept = [];
+        for (let i = 0; i < poly.length; i++) {
+          const a = poly[(i + poly.length - 1) % poly.length];
+          const b = poly[i], c = poly[(i + 1) % poly.length];
+          const base = Math.hypot(c[0] - a[0], c[1] - a[1]);
+          const altitude = base ? Math.abs(cross(a, b, c)) / base : 0;
+          if (altitude > tolerance) kept.push(b);
+        }
+        if (kept.length < 3 || kept.length === poly.length) break;
+        poly = kept;
+      }
+      return poly;
+    }
+    let faceCount = 0, pointedFaces = 0, totalFaceArea = 0, roundedFaceArea = 0;
+    for (let y = yMin; y <= yMax; y++) for (let x = xMin; x <= xMax; x++) {
+      const start = y * width + x;
+      if (visited[start] || !isWhite(x, y)) continue;
+      let head = 0, tail = 1, area = 0, touchesRim = false;
+      const edge = [];
+      queue[0] = start;
+      visited[start] = 1;
+      while (head < tail) {
+        const pos = queue[head++], py = Math.floor(pos / width), px = pos - py * width;
+        area++;
+        if ((px - cx) ** 2 + (py - cy) ** 2 >= rimSq) touchesRim = true;
+        let boundary = false;
+        for (const [dx, dy] of neighbors) {
+          const nx = px + dx, ny = py + dy;
+          if (!isWhite(nx, ny)) { boundary = true; continue; }
+          const next = ny * width + nx;
+          if (!visited[next]) { visited[next] = 1; queue[tail++] = next; }
+        }
+        if (boundary) edge.push([px, py]);
+      }
+      if (touchesRim || area < minArea || area > radius * radius * 2 || edge.length < 9) continue;
+      const poly = simplifyHull(convexHull(edge), Math.max(1.3, Math.sqrt(area) * .015));
+      if (poly.length < 3) continue;
+      let acute = 0;
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[(i + poly.length - 1) % poly.length], b = poly[i];
+        const c = poly[(i + 1) % poly.length];
+        const v0 = [a[0] - b[0], a[1] - b[1]];
+        const v1 = [c[0] - b[0], c[1] - b[1]];
+        const magnitude = Math.hypot(...v0) * Math.hypot(...v1);
+        const angle = magnitude
+          ? Math.acos(clamp((v0[0] * v1[0] + v0[1] * v1[1]) / magnitude, -1, 1))
+          : Math.PI;
+        if (angle < Math.PI * 98 / 180) acute++;
+      }
+      // Count large, smoothly enclosed faces by their area, rather than
+      // letting a few sharp corners in a small decoration dominate healing.
+      // At least 8 convex-hull vertices excludes straight-edged shields.
+      const perimeter = poly.reduce((length, point, index) => {
+        const next = poly[(index + 1) % poly.length];
+        return length + Math.hypot(next[0] - point[0], next[1] - point[1]);
+      }, 0);
+      const circularity = perimeter > 0 ? 4 * Math.PI * area / (perimeter * perimeter) : 0;
+      // Straight polygon edges can have high circularity (a hexagon is ~.91).
+      // Reject faces whose perimeter is predominantly long straight hull edges.
+      const straightPerimeter = poly.reduce((length, point, index) => {
+        const next = poly[(index + 1) % poly.length];
+        const edgeLength = Math.hypot(next[0] - point[0], next[1] - point[1]);
+        return length + (edgeLength > Math.sqrt(area) * .22 ? edgeLength : 0);
+      }, 0);
+      const straightShare = perimeter ? straightPerimeter / perimeter : 1;
+      totalFaceArea += area;
+      if (poly.length >= 8 && acute <= 1 && circularity >= .795 && straightShare < .6) roundedFaceArea += area;
+      faceCount++;
+      if (acute >= 2) pointedFaces++;
+    }
+    // Multiple distinct acute-faced enclosures indicate intersecting star
+    // strokes, not a single angular shield. Saturate to limit false boosts.
+    return {
+      faceCount, pointedFaces,
+      roundedAreaShare: totalFaceArea ? roundedFaceArea / totalFaceArea : 0,
+      attackBoost: Math.min(3.2, Math.max(0, pointedFaces - 1) * .55),
+    };
+  }
+
+
+  // Count independent long, straight ink components well INSIDE the circle.
+  // Outer/inner circular guide rings can dominate radial silhouette sampling;
+  // the open linework inside those rings remains a better debuff cue.
+  // This is only consulted if there are no enclosed inner shapes, so polygon,
+  // shield, star and rounded support classification is left unchanged.
+  function countOpenLinearStrokes(gray, width, height, cx, cy, radius) {
+    const insetRadius = radius * .8;
+    const insetSquared = insetRadius ** 2;
+    const xMin = Math.max(0, Math.floor(cx - insetRadius));
+    const xMax = Math.min(width - 1, Math.ceil(cx + insetRadius));
+    const yMin = Math.max(0, Math.floor(cy - insetRadius));
+    const yMax = Math.min(height - 1, Math.ceil(cy + insetRadius));
+    const visited = new Uint8Array(width * height);
+    const queue = new Int32Array(width * height);
+    const minPixels = Math.max(12, Math.round(radius * .16));
+    const inside = (x, y) =>
+      x >= xMin && x <= xMax && y >= yMin && y <= yMax &&
+      (x - cx) ** 2 + (y - cy) ** 2 < insetSquared;
+    const isInk = (x, y) => inside(x, y) && gray[y * width + x] < 150;
+    let straightStrokes = 0;
+    const offsets = [-1, 0, 1];
+    for (let y = yMin; y <= yMax; y++) for (let x = xMin; x <= xMax; x++) {
+      const seed = y * width + x;
+      if (visited[seed] || !isInk(x, y)) continue;
+      visited[seed] = 1;
+      queue[0] = seed;
+      let head = 0, tail = 1;
+      let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+      let minRadius = Infinity, maxRadius = 0;
+      while (head < tail) {
+        const pos = queue[head++];
+        const py = Math.floor(pos / width), px = pos - py * width;
+        sx += px; sy += py;
+        sxx += px * px; syy += py * py; sxy += px * py;
+        const distance = Math.hypot(px - cx, py - cy);
+        minRadius = Math.min(minRadius, distance);
+        maxRadius = Math.max(maxRadius, distance);
+        for (const dy of offsets) for (const dx of offsets) {
+          if (!dx && !dy) continue;
+          const nx = px + dx, ny = py + dy;
+          if (!isInk(nx, ny)) continue;
+          const next = ny * width + nx;
+          if (visited[next]) continue;
+          visited[next] = 1;
+          queue[tail++] = next;
+        }
+      }
+      if (tail < minPixels || maxRadius - minRadius < radius * .14) continue;
+      const meanX = sx / tail, meanY = sy / tail;
+      const xx = sxx / tail - meanX ** 2;
+      const yy = syy / tail - meanY ** 2;
+      const xy = sxy / tail - meanX * meanY;
+      const discriminant = Math.sqrt(Math.max(0, (xx - yy) ** 2 + 4 * xy ** 2));
+      const longAxis = (xx + yy + discriminant) / 2;
+      const shortAxis = Math.max(0, (xx + yy - discriminant) / 2);
+      if ((longAxis + 1) / (shortAxis + 1) >= 8) straightStrokes++;
+    }
+    return straightStrokes;
+  }
+
   function analyzeSigilMetricsJs(buffer, width, height, paths) {
     const image = makeGrayImage(buffer, width, height);
     if (!paths?.inner) {
@@ -1102,6 +1285,24 @@
         lastSharpTip = index;
       }
     }
+    // Broad star tips are not always sharp enough for the interior-angle test.
+    // Count pronounced, separated radial lobes independently of point angles.
+    // A rounded circle/oval has no such repeating protrusions.
+    let radialLobes = 0;
+    let firstLobe = -1;
+    let lastLobe = -samples;
+    for (let index = 0; index < samples; index += 1) {
+      if (index - lastLobe < 20) continue;
+      const at = offset => contour[(index + offset + samples) % samples];
+      const localMaximum = Math.max(...Array.from({length: 15}, (_, offset) => at(offset - 7)));
+      const shoulder = (at(-12) + at(12)) / 2;
+      if (contour[index] >= localMaximum - .002 && contour[index] - shoulder > .018) {
+        radialLobes++;
+        if (firstLobe < 0) firstLobe = index;
+        lastLobe = index;
+      }
+    }
+    if (radialLobes > 1 && firstLobe + samples - lastLobe < 20) radialLobes--;
     const angularity = clamp(turns / 24 + contourRoughness * 2);
     const lineDensity = clamp(dark * 6 + contourRoughness * 1.4);
     const missingRayRatio = radii.filter(value => value === 0).length / samples;
@@ -1112,23 +1313,49 @@
     const broadCornerScore = measuredCorners ? broadCorners / measuredCorners * cornerCountFactor : 0;
     const sharpCornerScore = measuredCorners ? sharpCorners / measuredCorners * cornerCountFactor : 0;
     const radialVariation = Math.sqrt(variance);
-    // Score the contour's measured interior angles: sharp points, broad bends,
-    // and repeated rounded arcs are separate signals. Open, straight runs only
-    // contribute to debuff when the contour has actual gaps.
+    // Rounded outlines should score as recovery, but merely drawing a large
+    // closed symbol must not overpower broad-corner shields or pointed attacks.
+    // A shield has strong radial variation with broad bends; an oval does not.
+    const enclosedFaces = enclosedSigilFaces(image.gray, image.width, image.height, cx, cy, radius);
     const closedContourWeight = closedness ** 4;
+    // A lone regular polygon may have a nearly circular convex hull, yet its
+    // repeated broad corners distinguish it from a genuinely rounded motif.
+    const polygonalFace = enclosedFaces.faceCount === 1
+      && broadBendRuns >= 4 && broadAngleRatio > .13 && radialVariation < .06;
+    const roundedAreaShare = polygonalFace ? 0 : enclosedFaces.roundedAreaShare;
+    const repeatedLobes = radialVariation > .055 && broadAngleRatio < .14
+      ? Math.max(0, radialLobes - 3) : 0;
+    const shieldSilhouette = broadBendRuns > 0 && sharpTipCount <= 2 && repeatedLobes === 0
+      ? Math.max(0, radialVariation - .05) * 8
+      : 0;
     const raw = {
-      attack: Math.max(0, (Math.max(0, sharpTipCount - 2) * .7 + sharpAngleRatio * .5 + sharpCornerScore) * closedContourWeight),
-      defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5) * closedContourWeight
-        * Math.max(0, 1 - sharpTipCount / 8),
-      support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 6.2)
-        / (1 + broadBendRuns * .3 * (1 - mean)) * closedContourWeight,
-      debuff: missingRayRatio * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
+      attack: Math.max(0, (Math.max(0, sharpTipCount - 1) * .85 + sharpAngleRatio * .65 + sharpCornerScore + repeatedLobes * .75) * closedContourWeight
+        + enclosedFaces.attackBoost * clamp((radialVariation - .035) / .06))
+        * Math.max(.2, 1 - roundedAreaShare),
+      defense: (broadBendRuns * .3 + broadAngleRatio * 1.5 + broadCornerScore + radialVariation * 1.5
+        + shieldSilhouette) * closedContourWeight * Math.max(0, 1 - sharpTipCount / 8),
+      support: (roundedAngleRatio * .5 + Math.exp(-radialVariation * 6) * .7 + mean ** 3 * 2.4)
+        / (1 + broadBendRuns * .3 * (1 - mean)) * closedContourWeight
+        * Math.max(.35, 1 - sharpTipCount * .12)
+        + roundedAreaShare * 14 * closedContourWeight,
+      debuff: missingRayRatio ** 2 * openPathStraightness * 8 + (1 - openPathStraightness) * missingRayRatio,
     };
+    // Only divert an open *main* glyph made from several straight strokes.
+    // Single open curved outlines are not enough; complete enclosed shapes
+    // bypass this override entirely.
+    const openLinearStrokes = enclosedFaces.faceCount === 0
+      ? countOpenLinearStrokes(image.gray, image.width, image.height, cx, cy, radius) : 0;
+    if (openLinearStrokes >= 3) {
+      raw.attack *= .12;
+      raw.defense *= .15;
+      raw.support *= .15;
+      raw.debuff += 6;
+    }
     const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
     const scores = { attack: raw.attack / total, defense: raw.defense / total, support: raw.support / total, debuff: raw.debuff / total };
     return {
       scores,
-      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
+      features: { mean, roughness, angularity, radialVariation, lineDensity, missingRayRatio, closedness, solidContour, compactness, sharpTipCount, radialLobes, ...enclosedFaces, openLinearStrokes, sharpAngleRatio, broadAngleRatio, roundedAngleRatio, broadBendRuns, openPathStraightness, cornerCountFactor, broadCornerScore, sharpCornerScore },
       // Angular contour changes are a proxy for wobble in the drawn lines.
       lineStraightness: clamp(1 - roughness * 6),
     };
