@@ -4,11 +4,11 @@ const API='https://www.googleapis.com/drive/v3/files';
 const UPLOAD='https://www.googleapis.com/upload/drive/v3/files';
 const FILE_NAME='magia-dungeon-save-v1.json';
 export class DriveAuthError extends Error{}
-export function createDungeonDrive(token,fetchImpl=globalThis.fetch){
+export function createDungeonDrive(token,fetchImpl=globalThis.fetch,{signal}={}){
  if(!token)throw Error('Google認証が必要です。');
  const headers={Authorization:'Bearer '+token};
  async function request(url,options={}){
-  const response=await fetchImpl(url,{...options,headers:{...headers,...options.headers}});
+  const response=await fetchImpl(url,{...options,signal,headers:{...headers,...options.headers}});
   if(response.status===401)throw new DriveAuthError('Google認証の期限が切れました。再接続してください。');
   if(!response.ok)throw Error('Google Driveへの通信に失敗しました (HTTP '+response.status+')');
   return response;
