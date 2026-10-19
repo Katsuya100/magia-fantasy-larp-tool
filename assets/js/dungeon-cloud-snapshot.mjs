@@ -22,7 +22,7 @@ export async function serializeDungeonSnapshot(snapshot){
  const circles=await Promise.all(snapshot.circles.map(async circle=>{
   if(circle.image==null)return {...circle,image:null};
    await digestPhoto(circle.image);
-  if(!(circle.image instanceof Blob)||circle.image.size>MAX_PHOTO)throw Error('魔法陣画像をバックアップできません。');
+  if(!(circle.image instanceof Blob)||circle.image.size>MAX_PHOTO||!/^image\/(jpeg|png|webp|gif)$/.test(circle.image.type))throw Error('魔法陣画像の形式をバックアップできません。');
   return {...circle,image:{blob:true,type:circle.image.type,base64:toBase64(new Uint8Array(await circle.image.arrayBuffer()))}};
  }));
  const payload={format:FORMAT,savedAt:Number(snapshot.savedAt)||0,profile:snapshot.profile,circles};
