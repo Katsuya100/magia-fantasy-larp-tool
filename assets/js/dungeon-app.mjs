@@ -982,6 +982,31 @@ async function leave(mode='checkpoint'){
  show('returnShowcase');
 }
 
+const ANALYSIS_STAGES={ready:1,'image-ready':2,'analysis-start':3,'spell-reading':3,'structure-ready':4,complete:5};
+function resetAnalysisProgress(){
+ $('analysisProgress').value=0;
+ $('analysisProgress').setAttribute('aria-valuenow','0');
+ $('analysisProgressCount').textContent='0/5';
+ $('analysisError').textContent='';$('analysisError').hidden=true;
+}
+function onAnalysisMessage(event){
+ const request=activeAnalysis;
+ if(!request||event.origin!==location.origin||event.source!==$('analyzerFrame').contentWindow)return;
+ const {type,stage,detail}=event.data||{};
+ if(type!=='magia-dungeon-analysis')return;
+ if(stage==='error'){
+  const message=String(detail||'解析処理に失敗しました。');
+  $('analysisError').textContent=message;$('analysisError').hidden=false;
+  request.fail?.(Error(message));
+  return;
+ }
+ const next=ANALYSIS_STAGES[stage];
+ if(!next)return;
+ const progress=Math.max(Number($('analysisProgress').value)||0,next);
+ $('analysisProgress').value=progress;
+ $('analysisProgress').setAttribute('aria-valuenow',String(progress));
+ $('analysisProgressCount').textContent=progress+'/5';
+}
 async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
 async function parseCircleImage(circle,frame,valid,request=null){
  return new Promise((resolve,reject)=>{
@@ -991,7 +1016,7 @@ async function parseCircleImage(circle,frame,valid,request=null){
    settled=true;frame.onload=null;frame.src='about:blank';
    if(error)reject(error);else resolve(result);
   };
-  if(request)request.cancel=()=>finish(Error('解析が中断されました'));
+  if(request){request.cancel=()=>finish(Error('解析が中断されました'));request.fail=error=>finish(error);}
   frame.onload=async()=>{
    try{
     const doc=frame.contentDocument;
@@ -1010,7 +1035,7 @@ async function parseCircleImage(circle,frame,valid,request=null){
     }));
    }catch(e){finish(e);}
   };
-  frame.src='magia-circle.html';
+  frame.src='magia-circle.html?dungeon=1';
  });
 }
 
@@ -1021,6 +1046,7 @@ async function analyzeCapturedCircle(circle){
  activeAnalysis=request;
  rememberCameraScroll();
  show('analyzing');
+ resetAnalysisProgress();
  note('');
  const valid=()=>activeAnalysis===request&&!profile.run&&request.epoch===photoAnalysisEpoch;
  try{
@@ -1034,13 +1060,13 @@ async function analyzeCapturedCircle(circle){
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
-  await playCircleReveal(analyzed,imageUrl(analyzed.image));
+  await revealThumbnail(analyzed);
  }catch(e){
   if(!valid())return;
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
-  $('cameraError').textContent='魔法陣を解明できませんでした。写真は保存していません。もう一度撮影してください。';
+  $('cameraError').textContent='解明失敗：'+String(e?.message||e)+'（写真は保存していません）';
   $('cameraError').hidden=false;
  }
 }
@@ -1048,7 +1074,7 @@ async function analyzeUnknown(index){
  const run=profile.run,circle=circles.find(x=>x.id===run?.slotIds[index]);
  if(!circle){note('魔法陣が見つからない');return;}
  const request={id:circle.id,index};
- activeAnalysis=request;show('analyzing');note('');
+ activeAnalysis=request;show('analyzing');resetAnalysisProgress();note('');
  const valid=()=>activeAnalysis===request&&profile.run===run;
  (async()=>{
   try{
@@ -1058,7 +1084,7 @@ async function analyzeUnknown(index){
    await putCircle(db,circle);
    if(!valid())return;
    run.hero.spells[index]=combatSpell(circle);await persist();
-   activeAnalysis=null;note('');show('battle');await playCircleReveal(circle,imageUrl(circle.image));await takeTurn(index);
+   activeAnalysis=null;note('');show('battle');await revealThumbnail(circle);await takeTurn(index);
   }catch(e){
    if(!valid())return;
    activeAnalysis=null;note('解明できませんでした：'+e.message);
@@ -1150,6 +1176,8 @@ function openMagicDetails(id){
  const relicTitle=$('magicDetailsLegacyTitle');
  relicTitle.hidden=!isRelic;
  relicTitle.textContent=isRelic?(history.originName||'名を失った冒険者')+'の残した遺物':'';
+ const previous=circles.find(c=>c.id===$('magicDetailsDialog').dataset.circleId);
+ if(previous&&previous.id!==id){$('magicDetailsImage').removeAttribute('src');circleImages.release(previous.image);}
  $('magicDetailsDialog').dataset.circleId=id;
  $('magicDetailsImage').dataset.circlePhotoId=id;
  $('repairSelectedCircleImage').hidden=!failedPhotoIds.has(id)&&circle.image instanceof Blob&&circle.image.size>0;
@@ -1394,6 +1422,7 @@ function wireFavoriteHold(){
  });
 }
 function wire(){
+ window.addEventListener('message',onAnalysisMessage);
  document.addEventListener('error',onCirclePhotoError,true);
  document.addEventListener('load',onCirclePhotoLoad,true);
  wireFavoriteHold();
@@ -1492,6 +1521,11 @@ function wire(){
  }).catch(error=>note('写真の修復に失敗しました：'+error.message));});
  $('backupSetupDialog').addEventListener('cancel',event=>event.preventDefault());
  $('closeMagicDetails').addEventListener('click',()=>$('magicDetailsDialog').close());
+ $('magicDetailsDialog').addEventListener('close',()=>{
+  const circle=circles.find(c=>c.id===$('magicDetailsDialog').dataset.circleId);
+  $('magicDetailsImage').removeAttribute('src');
+  if(circle)circleImages.release(circle.image);
+ });
  $('repairSelectedCircleImage').addEventListener('click',()=>exclusive(async()=>{
   if(profile.run)return;
   const id=$('magicDetailsDialog').dataset.circleId;
