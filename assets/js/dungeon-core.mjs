@@ -141,7 +141,8 @@ export function resist(actor,attr){
 export function factor(actor,effect){return clamp(actor.statuses.filter(x=>x.effect===effect).reduce((n,x)=>n*(1+x.value),1),num('modifier_min'),num('modifier_max'));}
 export const armor=actor=>Math.ceil(Math.max(0,actor.stats.def+actor.statuses.filter(x=>x.effect==='def').reduce((n,x)=>n+x.value,0)));
 export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debuff_storm');if(dizzy&&r()<clamp(dizzy.value,0,num('dizzy_max_rate')))return 0;return Math.max(0,Math.round(effectivePower(src,spell)*resist(tgt,spell.attribute)*factor(src,'attack')*factor(src,'output')*factor(tgt,'incoming')*num('def_divisor')/(num('def_divisor')+armor(tgt))));}
-export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=spellMpCost(s)&&!u.cooldowns[i]&&!u.statuses.some(x=>x.effect==='seal'&&(x.sealedRoles?x.sealedRoles.includes(s.role):x.sealedRole===s.role)));}
+export function isSpellSealed(u,s){return Boolean(s&&u.statuses.some(x=>x.effect==='seal'&&(x.sealedRoles?x.sealedRoles.includes(s.role):x.sealedRole===s.role)));}
+export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=spellMpCost(s)&&!u.cooldowns[i]&&!isSpellSealed(u,s));}
 export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
 export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=spellMpCost(sp);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=shock.shockExtra??num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
 // Whether a carried item currently has a usable primary effect (or bonus).
