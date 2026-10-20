@@ -909,11 +909,21 @@ async function leave(mode='checkpoint'){
  carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
  const rewards=[...recoveredCards,...badges,...(stones?[{type:'stone',count:stones}]:[]),...[...items.values()].sort((a,b)=>Number(b.isNew)-Number(a.isNew))];
  const restored=[...new Map(restoredPhotos.map(circle=>[circle.id,circle])).values()].filter(circle=>!circles.some(owned=>owned.id===circle.id));
+ // Preserve PR #140's recovery guarantee independently from disposable thumbnails.
+ const saveReturn=async()=>{
+  if(!restored.length){await persist();return;}
+  await saveProfileWithCircles(db,profile,restored);
+  const snapshot=await readDungeonSnapshot(db);
+  const recoveredIds=new Set(restored.map(circle=>circle.id));
+  const persisted=snapshot.circles.filter(circle=>recoveredIds.has(circle.id));
+  if(persisted.length!==recoveredIds.size||persisted.some(circle=>!(circle.image instanceof Blob)||!circle.image.size))
+   throw Error('遺物の魔法陣の写真を保存できませんでした。');
+  circles=newestCirclesFirst([...circles,...persisted]);
+ };
  const steps=[...(found.size?['collections']:[]),...(rewards.length?['rewards']:[]),...(run.xp>0?['xp']:[])];
  if(!steps.length){
   profile.pendingReturn=null;
-   if(restored.length)await saveProfileWithCircles(db,profile,restored);else await persist();
-   if(restored.length)circles=newestCirclesFirst([...circles,...restored]);
+   await saveReturn();
    render();
   show('home');
   showMilestoneChoice(supportPrompt);
@@ -921,8 +931,7 @@ async function leave(mode='checkpoint'){
  }
  returnFlow={steps,step:0,collections:[...found.values()].sort((a,b)=>Number(b.isNew)-Number(a.isNew)),rewards,before,gained:run.xp,supportPrompt};
  profile.pendingReturn=returnFlow;
- if(restored.length)await saveProfileWithCircles(db,profile,restored);else await persist();
- if(restored.length)circles=newestCirclesFirst([...circles,...restored]);
+ await saveReturn();
  render();
  renderReturnStep();
  show('returnShowcase');
