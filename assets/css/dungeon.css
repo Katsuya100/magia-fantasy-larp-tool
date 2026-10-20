@@ -407,7 +407,8 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 }
 .circle-ritual--reveal{
  position:fixed;inset:0;z-index:5000;display:grid;place-items:center;
- isolation:isolate;overflow:hidden
+ isolation:isolate;overflow:hidden;pointer-events:auto;
+ background:radial-gradient(ellipse at center,#101827 0%,#02040b 76%)
 }
 .circle-ritual__physical{
  grid-area:1/1;position:relative;z-index:0;
@@ -466,13 +467,34 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  animation:circle-ritual-labels var(--ritual-duration) ease-out both
 }
 .circle-ritual__label{padding:5px 9px;white-space:nowrap;letter-spacing:.06em}
+/* The entire screen becomes the continue target only after the reveal finishes. */
+.circle-ritual--reveal .circle-ritual__continue{
+ position:absolute;inset:0;z-index:5;width:100%;height:100%;
+ display:flex;justify-content:center;align-items:flex-end;
+ padding:18px 14px max(30px,env(safe-area-inset-bottom))!important;
+ border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+ color:#fff0ce!important;cursor:pointer
+}
+.circle-ritual--reveal .circle-ritual__continue:disabled{opacity:1;cursor:default}
+.circle-ritual__hint{
+ opacity:0;pointer-events:none;letter-spacing:.14em;
+ font-size:clamp(12px,3vw,14px);font-weight:600;
+ text-shadow:0 0 12px var(--ritual-ink);
+ transition:opacity .18s ease
+}
+.circle-ritual--reveal[data-ready="true"] .circle-ritual__hint{opacity:.9}
+.circle-ritual--reveal[data-ready="true"] .circle-ritual__physical{
+ box-shadow:0 0 0 1px #e8cba875,0 0 36px color-mix(in srgb,var(--ritual-ink) 35%,transparent)
+}
+
 @keyframes circle-ritual-veil{
  0%,58%{opacity:1}100%{opacity:0}
 }
 @keyframes circle-ritual-physical{
  0%,48%{opacity:0;transform:scale(.92)}
  65%,87%{opacity:1;transform:scale(1)}
- 100%{opacity:0;transform:scale(1.03)}
+ 100%{opacity:1;transform:scale(1)}
 }
 @keyframes circle-ritual-ring-in{
  0%{opacity:0;transform:scale(1.65) rotate(-25deg)}
@@ -500,11 +522,15 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 @keyframes circle-ritual-labels{
  0%,17%{opacity:0;transform:translateY(12px)}
  36%,86%{opacity:1;transform:translateY(0)}
- 100%{opacity:0;transform:translateY(-5px)}
+ 100%{opacity:1;transform:translateY(0)}
 }
 @media(max-width:440px){.circle-ritual__labels{gap:0}.circle-ritual__label{padding:4px 6px}}
 @media(prefers-reduced-motion:reduce){
- .circle-ritual{display:none!important}
+ .circle-ritual--upgrade{display:none!important}
+ .circle-ritual--reveal .circle-ritual__veil,.circle-ritual--reveal .circle-ritual__focus{display:none}
+ .circle-ritual--reveal .circle-ritual__physical,.circle-ritual--reveal .circle-ritual__labels{
+  animation:none!important;opacity:1;transform:none
+ }
 }
 
 /* Responsive combat timing: one brief rush, held contact, and elastic recoil. */
