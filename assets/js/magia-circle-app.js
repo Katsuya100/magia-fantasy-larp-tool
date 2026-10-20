@@ -12,7 +12,14 @@
 
   const SPELL_PLACEHOLDER = '写し絵を選ぶと、刻まれた呪文がここへ現れます。';
   const ATTRIBUTES = global.AttributeScoringCore.attributes;
-  const diagnosticsEnabled = Boolean(global.location?.search && new URLSearchParams(global.location.search).has('diagnostics'));
+  const query=new URLSearchParams(global.location?.search||'');
+  const dungeonMode=query.get('dungeon')==='1';
+  // Signal actual parser milestones to the host dungeon. No synthetic timer.
+  function reportDungeonStage(stage,detail=''){
+    if(!dungeonMode||global.parent===global||!global.parent?.postMessage)return;
+    global.parent.postMessage({type:'magia-dungeon-analysis',stage,detail},global.location.origin);
+  }
+  const diagnosticsEnabled = Boolean(global.location?.search && query.has('diagnostics'));
   const diagnosticSession = global.MagiaCircleDiagnostics.create({
     config: core.config,
     enabled: diagnosticsEnabled,
@@ -1180,6 +1187,7 @@
             },
           });
           analyzeButton.disabled = false;
+          reportDungeonStage('image-ready');
           setImageBusy(false);
           setStatus(cameraStatus, '写し絵を表示しました。');
           setStatus(modelStatus, '「陣を読み解く」を押すと、文字と紋を読み取ります。');
@@ -1221,6 +1229,7 @@
     const previousRuns = Promise.all([activeOcrRun, activeAttributeRun]);
     const job = beginAnalysisJob({ name: selectedImageName });
     recordAnalysisStage(job, 'analysis-start');
+    reportDungeonStage('analysis-start');
     resetResults({ preserveCaptureCanvas: true, preserveSelection: true });
     showCaptureCanvas(true);
     analyzeButton.disabled = true;
@@ -1235,6 +1244,7 @@
       const pipelineTask = imagePipeline.run({
         recognizeSpell: async attempt => {
           setStatus(modelStatus, '環の呪文を読み取っています…', 'busy');
+          reportDungeonStage('spell-reading');
           return recognizeSpell(captureCanvas, job, attempt);
         },
         correctSpell: recognition => applyVocabularyCorrection(recognition, job),
@@ -1258,6 +1268,7 @@
         analyzeStructure: async analysis => {
           const result = await analyzeImageInWorker(job, analysis);
           recordAnalysisStage(job, 'structure-analysis-done');
+          reportDungeonStage('structure-ready');
           return result;
         },
         getMasterImage: () => {
@@ -1338,6 +1349,7 @@
       structureReady = true;
       spellReady = true;
       updateResultVisibility();
+      reportDungeonStage('complete');
       setImageBusy(false);
       setStatus(cameraStatus, structure.error
         ? '陣の一部を読み取れませんでした。得られた情報で威力を計算しました。'
@@ -1362,6 +1374,7 @@
         structureReady = false;
         spellReady = false;
         updateResultVisibility();
+        reportDungeonStage('error',error.message);
         setImageBusy(false);
         spellOutput.textContent = error.spellText || error.message;
         setStatus(cameraStatus, '封じられた言霊を検知したため、解析結果を破棄しました。', 'error');
@@ -1375,6 +1388,7 @@
         structureReady = false;
         spellReady = false;
         updateResultVisibility();
+        reportDungeonStage('error',error.message);
         setImageBusy(false);
         setStatus(cameraStatus, '画像解析を完了できませんでした。', 'error');
         setStatus(modelStatus, '呪文の読み取り中にエラーが発生しました。', 'error');
@@ -1394,6 +1408,7 @@
       structureReady = true;
       spellReady = true;
       updateResultVisibility();
+      reportDungeonStage('complete');
       setImageBusy(false);
       setStatus(cameraStatus, '写し絵の一部を読み取れず、得られた情報で威力に反映しました。');
       setStatus(modelStatus, '読み取り結果から相を選び、結果を表示しました。');
@@ -1429,9 +1444,10 @@
         setStatus(preloadStatus, preloadIssues.length
           ? `外典は開いた。${preloadIssues.join('。')}。画像解析は利用できる。`
           : '魔導司書が外典を整えた。次に頁を開くときは、書架の控えが応える。', preloadIssues.length ? '' : 'good');
-        await loadInitialImage();
+        if(!dungeonMode)await loadInitialImage(); // No unnecessary sample decode for the dungeon iframe.
         fileInput.disabled = false;
         cameraButton.disabled = false;
+        reportDungeonStage('ready');
       } catch (error) {
         console.error('外典の準備に失敗しました。', error);
         busyMask.classList.add('is-error');
@@ -1441,6 +1457,7 @@
         retryModels.hidden = false;
         retryModels.focus();
         setStatus(preloadStatus, '外典の扉が開くまで、頁は静かに閉じている。', 'error');
+        reportDungeonStage('error',error.message);
       }
     })();
     try { await startupPromise; }
