@@ -6,7 +6,7 @@ const version=expectedHtml.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 if(!version)throw Error('Missing current release marker');
 const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs','assets/js/dungeon-progress.mjs',
  'assets/js/dungeon-tutorial.mjs',
- 'assets/js/dungeon-combat-fx.mjs','assets/js/dungeon-store.mjs',
+ 'assets/js/dungeon-combat-fx.mjs','assets/js/dungeon-store.mjs','assets/js/dungeon-legacy-cache.mjs',
  'assets/js/dungeon-upgrades.mjs','assets/js/dungeon-share.mjs',
  'assets/js/dungeon-card-art.mjs','assets/js/dungeon-preparation-ui.mjs',
  'assets/js/dungeon-list-view.mjs',
