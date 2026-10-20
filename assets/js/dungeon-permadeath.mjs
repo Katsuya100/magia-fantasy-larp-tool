@@ -2,7 +2,7 @@
 // Each circle stores its first creator and the names of deceased inheritors.
 const recordedName=value=>typeof value==='string'?value.trim().slice(0,20):'';
 const inheritedNames=circle=>Array.isArray(circle?.legacyHeirNames)
- ?circle.legacyHeirNames.map(recordedName).filter(Boolean):[];
+ ?[...new Set(circle.legacyHeirNames.map(recordedName).filter(Boolean))]:[];
 // Each deceased owner contributes once. Old saves with only legacyHp keep that bonus.
 export function circleLegacyHpSources(circle){
  const sources=Array.isArray(circle?.legacyHpSources)?circle.legacyHpSources:[];
@@ -36,7 +36,7 @@ function circleLostWithOwner(circle,currentName){
  // Never pretend the latest heir created an already-recovered, old relic.
  const origin=recordedName(circle.legacyOriginName)||(circle.legacyHp?'':current);
  const heirs=inheritedNames(circle);
- if(current&&current!==origin&&heirs.at(-1)!==current)heirs.push(current);
+ if(current&&current!==origin&&!heirs.includes(current))heirs.push(current);
  return {...circle,legacyOriginName:origin,legacyHeirNames:heirs};
 }
 function recoveredCircle(circle,legacyName){
