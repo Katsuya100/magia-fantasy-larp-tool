@@ -1329,23 +1329,26 @@ function closeLoadoutPicker(){
 async function chooseLoadout(choice){
  if(!picker||profile.run)return;
  const {kind,index}=picker;
+ const previous=kind==='circle'?slots:carry;
  if(kind==='circle'){
-  if(choice!==null){
-   const circle=circles[choice];if(!circle)return;
-   slots=setSlot(slots,index,circle.id);
-  }else slots=setSlot(slots,index,null);
+  if(choice!==null&&!circles[choice])return;
+  slots=setSlot(slots,index,choice===null?null:circles[choice].id);
   profile.slots=[...slots];
-  await persist();
  }else{
-  if(choice!==null){
-   if(!profile.inventory[choice])return;
-   carry=setSlot(carry,index,choice);
-  }else carry=setSlot(carry,index,null);
+  if(choice!==null&&!profile.inventory[choice])return;
+  carry=setSlot(carry,index,choice);
   profile.carrySlots=saveCarrySlots(carry,profile.inventory);
-  await persist();
  }
+ // Do not keep the picker open while IndexedDB verifies and saves the profile.
  closeLoadoutPicker();
  render();
+ try{await persist();}
+ catch(error){
+  if(kind==='circle'){slots=previous;profile.slots=[...slots];}
+  else{carry=previous;profile.carrySlots=saveCarrySlots(carry,profile.inventory);}
+  render();
+  note('編成の保存に失敗しました：'+error.message);
+ }
 }
 function openDeleteDataDialog(){
  if(profile.run||activeAnalysis)return;
