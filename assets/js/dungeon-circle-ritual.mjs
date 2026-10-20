@@ -1,4 +1,4 @@
-import {circleOutlinePixels} from './dungeon-card-art.mjs';
+import {circleOutlinePixels,ATTRIBUTE_GLOW} from './dungeon-card-art.mjs';
 
 // Purely visual. A failed photo decode must never block saving or casting.
 export const CIRCLE_RITUAL_DURATION_MS=800;
@@ -25,7 +25,7 @@ async function circleOutline(image,attribute){
  try{
   if(typeof createImageBitmap==='function'){
    source=await createImageBitmap(image);
-  }else if(typeof Image!=='undefined'&&typeof URL?.createObjectURL==='function'){
+  }else if(typeof Image!=='undefined'&&typeof URL!=='undefined'&&typeof URL.createObjectURL==='function'){
    url=URL.createObjectURL(image);
    source=new Image();
    source.src=url;
@@ -56,6 +56,7 @@ function addGlow(stage,outline){
 }
 function stageFor(mode,analysis,outline){
  const root=element('div','circle-ritual circle-ritual--'+mode);
+ root.style.setProperty('--ritual-ink',ATTRIBUTE_GLOW[analysis?.attribute]||'#ffe3a7');
  if(mode==='reveal'){
   const veil=element('div','circle-ritual__veil');
   veil.setAttribute('aria-hidden','true');
@@ -84,14 +85,15 @@ function stageFor(mode,analysis,outline){
 }
 export async function playCircleReveal(circle){
  if(typeof document==='undefined'||!document.body||reducedMotion())return;
- // Pre-decode while the analyzer scene is still covered, then reveal the saved photo underneath.
- const outline=await circleOutline(circle?.image,circle?.analysis?.attribute);
- const previous=document.querySelector?.('.circle-ritual--reveal');
- previous?.remove();
- const root=stageFor('reveal',circle?.analysis,outline);
- document.body.appendChild(root);
- try{await sleep(CIRCLE_RITUAL_DURATION_MS);}
- finally{root.remove();}
+ // A visual failure must not be treated as a failed analysis after the photo has been saved.
+ try{
+  const outline=await circleOutline(circle?.image,circle?.analysis?.attribute);
+  document.querySelector?.('.circle-ritual--reveal')?.remove();
+  const root=stageFor('reveal',circle?.analysis,outline);
+  document.body.appendChild(root);
+  try{await sleep(CIRCLE_RITUAL_DURATION_MS);}
+  finally{root.remove();}
+ }catch{/* Save and battle continuation always win over presentation. */}
 }
 export async function playCircleUpgrade(circle,host){
  if(!host||typeof document==='undefined'||reducedMotion())return;
