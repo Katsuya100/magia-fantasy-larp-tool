@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {createLostLegacy,createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory} from '../assets/js/dungeon-permadeath.mjs';
+import {createLostLegacy,createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyHpSources} from '../assets/js/dungeon-permadeath.mjs';
 import {openStore,getProfile,putCircle,allCircles,saveProfileWithCircles} from '../assets/js/dungeon-store.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {combatSpell} from '../assets/js/dungeon-upgrades.mjs';
@@ -105,4 +105,57 @@ assert.equal(foe.hp,1,'current HP is capped after reducing max');
 const hostile=G.makeUnit(base,1);
 G.cast(hostile,hero,{attribute:'flame',role:'attack',power:0,legacyHp:50},[]);
 assert.equal(hero.stats.hp,100,'enemies never get the heir-only bonus');
+// Inheritance HP is the sum of distinct deceased owners, including the creator.
+let family=markCircleCreator(lost,'A');
+for(const [name,level] of [['A',5],['B',7],['C',9]]){
+ const legacy=createLostLegacy({...pack,name,level},nextRun,[family]);
+ family=legacyContents(legacy).circles[0];
+}
+assert.deepEqual(circleRelicHistory(family),{originName:'A',heirNames:['B','C']});
+assert.deepEqual(circleLegacyHpSources(family),[{name:'A',hp:10},{name:'B',hp:14},{name:'C',hp:18}]);
+assert.equal(family.legacyHp,42,'A + B + C is accumulated, not the highest level');
+const again=legacyContents(createLostLegacy({...pack,name:'B',level:99},nextRun,[family])).circles[0];
+assert.equal(again.legacyHp,42,'the same owner B cannot add their HP a second time');
+assert.deepEqual(circleRelicHistory(again).heirNames,['B','C'],'history has no duplicate names');
+assert.equal(combatSpell(family).legacyHp,42);
+assert.deepEqual(combatSpell(family).legacyHpSources,circleLegacyHpSources(family));
+
+// Previously saved relics have only a total and sometimes only a creator's name.
+const oldCircle={...lost,id:'old-circle',legacyOriginName:'old',legacyHp:24};
+const migrated=legacyContents({name:'new',level:5,circles:[oldCircle],items:[],loot:[]}).circles[0];
+assert.equal(migrated.legacyHp,34,'old relic total is preserved when a new owner adds 10');
+assert.deepEqual(circleLegacyHpSources(migrated),[{name:'old',hp:24},{name:'new',hp:10}]);
+
+// Repeated casts (AA) and overlapping owners across spells (ABBC) must not stack.
+const single=(name,hp,role='support')=>({attribute:'flame',role,power:0,legacyHp:hp,legacyHpSources:[{name,hp}]});
+const sharedHero=G.makeUnit(base,1,{},[],'player'),sharedEnemy=G.makeUnit(base,1);
+G.cast(sharedHero,sharedEnemy,single('A',10),[]);
+G.cast(sharedHero,sharedEnemy,single('A',10),[]);
+assert.equal(sharedHero.stats.hp,110,'AA only grants A once');
+G.cast(sharedHero,sharedEnemy,{attribute:'flame',role:'defense',power:0,legacyHp:24,
+ legacyHpSources:[{name:'A',hp:10},{name:'B',hp:14},{name:'B',hp:14}]},[]);
+assert.equal(sharedHero.stats.hp,124,'AB grants only the previously unused B');
+G.cast(sharedHero,sharedEnemy,{attribute:'flame',role:'support',power:0,legacyHp:32,
+ legacyHpSources:[{name:'B',hp:14},{name:'C',hp:18}]},[]);
+assert.equal(sharedHero.stats.hp,142,'ABC is allowed, ABBC is not');
+G.cast(sharedHero,sharedEnemy,{...combatSpell(family),role:'support'},[]);
+assert.equal(sharedHero.stats.hp,142,'the full three-owner relic never stacks with the earlier casts');
+assert.deepEqual(sharedHero.legacyHpApplied,['A','B','C']);
+
+// Enemy max HP reduction follows the same once-per-owner rule for both offensive roles.
+const weakeningHero=G.makeUnit(base,1,{},[],'player'),weakeningEnemy=G.makeUnit(base,1);
+G.cast(weakeningHero,weakeningEnemy,single('A',10,'attack'),[]);
+G.cast(weakeningHero,weakeningEnemy,single('A',10,'debuff'),[]);
+G.cast(weakeningHero,weakeningEnemy,{...combatSpell(family),role:'debuff',power:0},[]);
+assert.equal(weakeningEnemy.stats.hp,58,'A then ABC only reduces maximum HP by 42');
+assert.equal(weakeningHero.stats.hp,100);
+assert.equal(combatSpell(family).legacyHpSources.length,3);
+const newEnemy=G.makeUnit(base,1);
+G.cast(weakeningHero,newEnemy,single('A',10,'attack'),[]);
+assert.equal(newEnemy.stats.hp,90,'a new enemy may be affected once again');
+const legacyOnly=G.makeUnit(base,1,{},[],'player');
+G.cast(legacyOnly,G.makeUnit(base,1),{attribute:'flame',role:'support',power:0,legacyHp:20},[]);
+G.cast(legacyOnly,G.makeUnit(base,1),{attribute:'flame',role:'support',power:0,legacyHp:20},[]);
+assert.equal(legacyOnly.stats.hp,120,'legacy numeric-only spells do not stack indefinitely');
+
 console.log('PASS dungeon permadeath, heir inheritance, enemy-bound relics and blue-flame max HP effects');
