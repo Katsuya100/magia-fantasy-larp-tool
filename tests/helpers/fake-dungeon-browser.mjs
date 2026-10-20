@@ -47,7 +47,7 @@ export function fakeDungeonBrowser(config={}){
  const iframe=document.getElementById('analyzerFrame');iframe.contentDocument=analyzer;
  const captureFrame=document.getElementById('captureAnalyzerFrame');captureFrame.contentDocument=analyzer;
  let frameSource='';
- Object.defineProperty(iframe,'src',{get(){return frameSource;},set(s){frameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>iframe.onload?.());}}});
+ Object.defineProperty(iframe,'src',{get(){return frameSource;},set(s){frameSource=s;if(s.startsWith('magia-circle.html?dungeon=1')){analyze.disabled=true;altar.hidden=true;setImmediate(()=>iframe.onload?.());}}});
  let captureFrameSource='';
  Object.defineProperty(captureFrame,'src',{get(){return captureFrameSource;},set(s){captureFrameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>captureFrame.onload?.());}}});
  const video=document.getElementById('cameraVideo');video.videoWidth=960;video.videoHeight=720;
