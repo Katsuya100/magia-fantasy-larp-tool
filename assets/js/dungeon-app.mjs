@@ -33,6 +33,51 @@ const listView={
 };
 const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'default'}};
 const circleImages=createCircleImageUrls();
+const retriedPhotoIds=new Set(),failedPhotoIds=new Set();
+function circleFromPhotoUrl(url){
+ const blob=circleImages.findBlob(url);
+ return blob?circles.find(circle=>circle.image===blob):null;
+}
+function onMagicPhotoError(event){
+ const img=event.target,url=img?.getAttribute?.('src')||img?.src||'';
+ if(!url.startsWith('blob:'))return;
+ const circle=circleFromPhotoUrl(url);
+ if(!circle)return;
+ if(!retriedPhotoIds.has(circle.id)){
+  // Only replace the object URL; never overwrite or delete saved photo bytes.
+  retriedPhotoIds.add(circle.id);
+  const next=circleImages.refresh(circle.image);
+  const images=Array.from(document.querySelectorAll?.('img[src]')||[]);
+  if(!images.includes(img))images.push(img);
+  for(const current of images){
+   if((current.getAttribute?.('src')||current.src)===url){
+    current.dataset.photoRetry='true';
+    current.src=next;
+   }
+  }
+  return;
+ }
+ failedPhotoIds.add(circle.id);
+ const container=img.closest?.('.card,.loadout-tile,.picker-option,.magic-circle-image-frame');
+ if(container)container.dataset.photoFailed='true';
+ img.alt='写真を表示できません。詳細から写真を復旧できます。';
+ if($('magicDetailsDialog').dataset.circleId===circle.id)
+  $('repairSelectedCircleImage').hidden=false;
+}
+function onMagicPhotoLoad(event){
+ const img=event.target,url=img?.getAttribute?.('src')||img?.src||'';
+ const circle=circleFromPhotoUrl(url);
+ if(!circle)return;
+ failedPhotoIds.delete(circle.id);
+ const container=img.closest?.('.card,.loadout-tile,.picker-option,.magic-circle-image-frame');
+ if(container)delete container.dataset.photoFailed;
+ if($('magicDetailsDialog').dataset.circleId===circle.id)
+  $('repairSelectedCircleImage').hidden=true;
+}
+function wireCirclePhotoRecovery(){
+ document.addEventListener('error',onMagicPhotoError,true);
+ document.addEventListener('load',onMagicPhotoLoad,true);
+}
 let dungeonView='prepare';
 let busyAction=false,playingEffects=false;
 let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null;
@@ -63,6 +108,7 @@ async function refreshRepairStatus(){
 }
 async function handleDriveImageRepair(){
  circleImages.releaseAll();
+ retriedPhotoIds.clear();failedPhotoIds.clear();
  circles=newestCirclesFirst(await allCircles(db));
  slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));
  await refreshRepairStatus();
@@ -97,6 +143,7 @@ async function recaptureMissingImages(ids){
     if(!original)throw Error('魔法陣の記録が見つかりません。');
     await putCircle(db,{...original,image:file},{repairImage:true});
     circleImages.release(original.image);
+    retriedPhotoIds.delete(id);failedPhotoIds.delete(id);
     circles=circles.map(c=>c.id===id?{...c,image:file}:c);
     remaining.shift();
     await refreshRepairStatus();
@@ -1071,6 +1118,7 @@ function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
  detailGlowEpoch++;
  $('magicDetailsDialog').dataset.circleId=id;
+ $('repairSelectedCircleImage').hidden=!failedPhotoIds.has(id);
  $('magicDetailsDialog').dataset.attribute=circle.analysis?.attribute||'unknown';
  $('upgradeFeedback').textContent='';
  $('magicStoneStock').textContent='所持魔導石：'+profile.magicStones+'個 / 強化1回につき1個';
@@ -1141,6 +1189,7 @@ async function confirmCircleAction(){
     profile.circleUpgrades=upgrades;
    }
    circleImages.release(circle.image);
+   retriedPhotoIds.delete(circle.id);failedPhotoIds.delete(circle.id);
    if(profile.favoriteCircleId===circle.id)profile.favoriteCircleId=null;
    circles=circles.filter(c=>c.id!==circle.id);
    slots=slots.map(id=>id===circle.id?null:id);
@@ -1314,6 +1363,7 @@ function wireFavoriteHold(){
 }
 function wire(){
  wireFavoriteHold();
+ wireCirclePhotoRecovery();
  tutorial=initCircleTutorial(document,async toCamera=>{
   profile.tutorialDone=true;
   try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}
@@ -1391,6 +1441,14 @@ function wire(){
  $('closeCaptureReveal').addEventListener('click',()=>$('captureRevealDialog').close());
  $('captureRevealDialog').addEventListener('close',()=>{captureGlowEpoch++;$('captureRevealDialog').dataset.revealing='false';});
  $('closeMagicDetails').addEventListener('click',()=>$('magicDetailsDialog').close());
+ $('repairSelectedCircleImage').addEventListener('click',()=>exclusive(async()=>{
+  if(profile.run)return;
+  const id=$('magicDetailsDialog').dataset.circleId;
+  if(!circles.some(c=>c.id===id))return;
+  if($('magicDetailsDialog').open)$('magicDetailsDialog').close();
+  const restored=await recaptureMissingImages([id]);
+  if(restored)openMagicDetails(id);
+ }).catch(e=>note('写真の復旧に失敗しました：'+e.message)));
  $('upgradeCircle').addEventListener('click',()=>askCircleAction('upgrade',$('magicDetailsDialog').dataset.circleId));
  $('cancelCircleAction').addEventListener('click',()=>{$('circleActionDialog').close();pendingCircleAction=null;});
  $('circleActionDialog').addEventListener('close',()=>{pendingCircleAction=null;});
