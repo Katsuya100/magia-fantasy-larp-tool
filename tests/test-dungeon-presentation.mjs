@@ -306,6 +306,9 @@ assert.match(app,/battleImageUrl\(c\.image,c\.id\)/,'combat spells request lazy 
 assert.match(app,/data-circle-id.*?data-favorite.*?data-attribute/,'library retains favorite layout and adds attribute glow');
 assert.match(app,/data-attribute.*?data-cast/,'battle tile receives the same elemental halo');
 assert.match(css,/\.circle-grid \.card\[data-attribute\]::after,\.loadout-tile\[data-attribute\]::after/,'thumbnail halos stay behind the image');
+assert.doesNotMatch(css,/\.circle-picker-grid \.picker-option\[data-attribute\]::after/,'selection dialog photo must not gain a decorative halo');
+assert.doesNotMatch(css,/\.circle-picker-grid \.picker-option\[data-attribute\] img\{/,'selection dialog photo must not gain new glow filter');
+assert.match(css,/\.picker-option\.picker-selected\{/,'chosen circle still keeps its original selected-frame highlight');
 assert.match(css,/\.capture-reveal-dialog\[data-attribute\] \.capture-reveal-image-wrap::after/,'reveal rings use elemental glow colors');
 assert.match(app,/Math\.max\(G\.capacity\(profile\.level\),run\.carry\.findLastIndex\(Boolean\)\+1\)/,'combat item slots follow equipped capacity and retain occupied legacy slots');
 assert.match(app,/renderHeroName\(hero\)/,'life ruby readiness appears beside the player name');
