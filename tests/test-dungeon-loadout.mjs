@@ -67,7 +67,7 @@ assert.equal((spellHtml.match(/class="loadout-tile empty"/g)||[]).length,5);
 assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/data-open-slot="0"/);
 assert.doesNotMatch(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/魔法陣\s*0[1-9]|魔法陣0/);
 assert.doesNotMatch(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/魔法陣0/,'legacy names remain hidden');
-assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/<img alt=""[^>]* src="blob:mock"/);
+assert.match(spellGrid(['a',null,null,null,null],circles,makeImg,esc),/<img alt="" src="blob:mock"/);
 const itemName=x=>x.id;
 const beforeReturn=itemGrid(prepareItems([],3,3),inventory,3,false,itemName,esc);
 assert.equal((beforeReturn.match(/data-open-item=/g)||[]).length,0,'no locked item slots show before the first return');
