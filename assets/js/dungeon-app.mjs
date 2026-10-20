@@ -22,6 +22,7 @@ import {supportPromptForReturn} from './dungeon-support.mjs?v=20261020.21';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261020.21';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261020.21';
 import {selectCardCircle} from './dungeon-card-art.mjs?v=20261020.21';
+import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261020.22';
 import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory} from './dungeon-permadeath.mjs?v=20261020.21';
 let cloudSyncController;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -55,7 +56,7 @@ function onCirclePhotoLoad(event){
 }
 let dungeonView='prepare';
 let busyAction=false,playingEffects=false,savingName=false;
-let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null;
+let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null,upgradeRitualEpoch=0;
 let returnFlow=null,returnAnimationToken=0,tutorial=null;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){
@@ -1015,6 +1016,7 @@ async function analyzeCapturedCircle(circle){
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
+  await playCircleReveal(analyzed);
  }catch(e){
   if(!valid())return;
   activeAnalysis=null;
@@ -1038,7 +1040,7 @@ async function analyzeUnknown(index){
    await putCircle(db,circle);
    if(!valid())return;
    run.hero.spells[index]=combatSpell(circle);await persist();
-   activeAnalysis=null;note('');show('battle');await takeTurn(index);
+   activeAnalysis=null;note('');show('battle');await playCircleReveal(circle);await takeTurn(index);
   }catch(e){
    if(!valid())return;
    activeAnalysis=null;note('解明できませんでした：'+e.message);
@@ -1185,9 +1187,10 @@ async function confirmCircleAction(){
    openMagicDetails(circle.id);
    $('upgradeFeedback').textContent='✦ 強化成功！\n威力 '+enhanced.analysis.power+' ✦';
    const dialog=$('magicDetailsDialog');
-   dialog.dataset.enhancing='false';
-   void dialog.offsetWidth;
    dialog.dataset.enhancing='true';
+   const epoch=++upgradeRitualEpoch;
+   void playCircleUpgrade(circle,$('magicUpgradeEffect')).catch(()=>{});
+   setTimeout(()=>{if(epoch===upgradeRitualEpoch)dialog.dataset.enhancing='false';},CIRCLE_RITUAL_DURATION_MS);
   }else if(action.type==='remove'){
    await deleteCircle(db,circle.id);
    if(profile.circleUpgrades){
@@ -1480,7 +1483,6 @@ function wire(){
  $('cancelCircleAction').addEventListener('click',()=>{$('circleActionDialog').close();pendingCircleAction=null;});
  $('circleActionDialog').addEventListener('close',()=>{pendingCircleAction=null;});
  $('confirmCircleAction').addEventListener('click',()=>exclusive(confirmCircleAction));
- $('magicDetailsDialog').addEventListener('animationend',e=>{if(e.animationName==='circle-upgrade-aura')$('magicDetailsDialog').dataset.enhancing='false';});
  $('closeLoadoutDialog').addEventListener('click',closeLoadoutPicker);
  $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>exclusive(()=>chooseLoadout(null)));
