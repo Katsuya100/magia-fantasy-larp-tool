@@ -953,8 +953,7 @@ async function leave(mode='checkpoint'){
   for(const owned of contents.items){profile.inventory.push(owned);recoveredItemIds.add(owned.id);}
   for(const reward of contents.loot)applyReward(reward,false);
   if(contents.rank)acquireAdventurerRank(profile,contents.rank);
-  for(const circle of contents.circles)restoredPhotos.push({...circle,
-   legacyHp:Math.max(Number(circle.legacyHp)||0,Number(legacy.level)*2)});
+  restoredPhotos.push(...contents.circles);
   const pending=[legacy];
   while(pending.length){
    const recovered=pending.shift();
@@ -1215,7 +1214,7 @@ function openMagicDetails(id){
  if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
  rows.push(['MP',d.mp],['威力',d.power]);
  if(isRevealed(circle)&&circle.upgradeLevel)rows.push(['強化', '+'+(circle.upgradeLevel*10)+'%']);
- if(circle.legacyHp)rows.push(['🔵🔥 継承','自分の最大HP+'+circle.legacyHp+' / 敵の最大HP-'+circle.legacyHp]);
+ if(circle.legacyHp)rows.push(['🔵🔥 継承',(circle.analysis?.role==='support'||circle.analysis?.role==='defense'?'自分の最大HP+':'敵の最大HP-')+circle.legacyHp]);
  $('magicDetailsStats').innerHTML=rows.map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(oneSentencePerLine(value))+'</dd>').join('')
   +(isRelic?'<dt class="legacy-heirs-label">過去の継承者達</dt><dd class="legacy-heirs-value">'
    +(history.heirNames.length?history.heirNames.map(name=>'<span class="legacy-heir-name">'+esc(name)+'</span>').join('')
