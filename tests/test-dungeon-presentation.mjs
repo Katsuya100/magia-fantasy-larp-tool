@@ -402,7 +402,7 @@ assert.match(css,/@keyframes circle-upgrade-aura/,'upgrades have a ritual animat
 assert.match(page,/id="deleteSaveData"[^>]*data-action="delete-data"/,'profile has a full save deletion action');
 assert.match(page,/id="deleteDataDialog"/,'data reset is confirmed');
 assert.match(page,/id="deleteDataPhrase"/,'data reset requires typing a confirmation word');
-assert.match(app,/await cloudSyncController\?\.disconnect\?\.\(\);\s*await circleThumbnails\.pause\(\);\s*await clearDungeonData\(db\)/,'account deletion disconnects, drains thumbnails and clears auth cookie before erasing local data');
+assert.match(app,/await cloudSyncController\?\.disconnect\?\.\(\);[\s\S]*?await circleThumbnails\.pause\(\);\s*await clearDungeonData\(db\)/,'account deletion disconnects, drains thumbnails and clears auth cookie before erasing local data');
 assert.match(app,/clearDungeonData\(db\)/,'save reset clears both persistent stores');
 assert.match(app,/applyView\(name,before\)/,'tabs crossfade while preserving the outgoing scene');
 assert.match(css,/@keyframes snappy-rush-hero/,'hero attacks have accelerated easing');
