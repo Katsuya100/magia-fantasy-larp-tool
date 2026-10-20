@@ -15,13 +15,13 @@ for(const [attribute,text] of Object.entries(attributes))
  assert.equal(circleRitualLabels({attribute,role:'attack'})[0],text);
 for(const [role,text] of Object.entries(roles))
  assert.equal(circleRitualLabels({attribute:'flame',role})[1],text);
-assert.match(source,/show\('library'\);\s*returnToCameraScroll\(\);\s*await playCircleReveal\(analyzed,imageUrl\(analyzed.image\)\)/,'photo realization is after saved circle and visible library');
-assert.match(source,/show\('battle'\);await playCircleReveal\(circle,imageUrl\(circle.image\)\);await takeTurn\(index\)/,'dungeon analysis has its own reveal before casting');
+assert.match(source,/show\('library'\);\s*returnToCameraScroll\(\);\s*await revealThumbnail\(analyzed\)/,'photo realization is after saved circle and visible library');
+assert.match(source,/show\('battle'\);await revealThumbnail\(circle\);await takeTurn\(index\)/,'dungeon analysis has its own reveal before casting');
 assert.match(source,/saveProfile\(db,nextProfile\)[\s\S]*?playCircleUpgrade\(circle,\$\('magicUpgradeEffect'\)\)/,'upgrade effect starts only after profile saving');
 assert.match(html,/<div class="magic-details-art"><img id="magicDetailsImage"[^>]*><div id="magicUpgradeEffect"/,'new glow overlays the existing real photo');
 assert.match(css,/\.circle-ritual__veil[\s\S]*?circle-ritual-veil var\(--ritual-duration\)/,'reveal includes black backdrop');
 assert.match(css,/@keyframes circle-ritual-physical/,'photo solidifies under the fading black');
-assert.match(css,/\.circle-ritual__physical\{/,'real saved photo exists behind glow');
+assert.match(css,/\.circle-ritual__physical\{/,'saved circle art is displayed behind glow');
 for(const animation of ['circle-ritual-ring-in','circle-upgrade-aura','circle-ritual-ink','circle-ritual-veil']){
  assert.ok(css.includes('@keyframes '+animation),'missing '+animation);
 }
@@ -34,8 +34,8 @@ await playCircleUpgrade({analysis:{attribute:'law',role:'support'}},null);
 assert.match(css,/\.circle-ritual--reveal\{[\s\S]*?pointer-events:auto/,'fullscreen overlay intercepts page taps');
 assert.match(css,/\.circle-ritual--reveal\[data-ready="true"\] \.circle-ritual__hint\{opacity:/,'tap hint only appears after the animation');
 assert.match(css,/100%\{opacity:1;transform:scale\(1\)\}/,'the physical circle remains visible after realization');
-assert.match(source,/await playCircleReveal\(analyzed,imageUrl\(analyzed.image\)\)/);
-assert.match(source,/await playCircleReveal\(circle,imageUrl\(circle.image\)\);await takeTurn\(index\)/);
+assert.match(source,/await revealThumbnail\(analyzed\)/);
+assert.match(source,/await revealThumbnail\(circle\);await takeTurn\(index\)/);
 
 const originalDocument=globalThis.document,originalWindow=globalThis.window;
 let doc;
