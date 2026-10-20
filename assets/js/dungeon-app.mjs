@@ -53,6 +53,7 @@ function onCirclePhotoError(event){
  const src=img.getAttribute?.('src')||img.src;
  if(!src)return;
  if(img!==$('magicDetailsImage')){img.alt='縮小画像を表示できません。';return;}
+ if(!$('magicDetailsDialog').open)return;
  if(src!==circleImages.get(circle.image))return;
  // No automatic URL retry, decoder restart, or save mutation.
  failedPhotoIds.add(id);
@@ -61,7 +62,7 @@ function onCirclePhotoError(event){
 }
 function onCirclePhotoLoad(event){
  const img=event.target;
- if(img!==$('magicDetailsImage'))return;
+ if(img!==$('magicDetailsImage')||!$('magicDetailsDialog').open)return;
  const id=img.dataset?.circlePhotoId,circle=id&&circles.find(item=>item.id===id);
  if(!circle||img.src!==circleImages.get(circle.image))return;
  failedPhotoIds.delete(id);
