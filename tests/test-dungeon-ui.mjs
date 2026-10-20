@@ -202,13 +202,22 @@ try{
  assert.equal($('loadoutDialog').open,false);
  assert.equal($('library').hidden,false,'picker links directly to the grimoire');
  await doc.click(btn({view:'prepare'}));
- // Selection feedback must precede asynchronous IndexedDB persistence.
+ // Two fast selections must both work while the first local save is pending.
  await doc.click(btn({openSlot:'0'}));
  const pendingSelection=doc.click(btn({chooseCircle:'0'}));
  assert.equal($('loadoutDialog').open,false,'circle picker closes immediately, before the save resolves');
  assert.equal(($('slotCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,1,'equipped circle is visible immediately');
- await pendingSelection;
- assert.equal((await getProfile(db)).slots[0],circles[0].id,'the immediate selection also persists');
+ await doc.click(btn({openSlot:'1'}));
+ assert.equal($('loadoutDialog').open,true,'another slot opens while the first save is pending');
+ $('loadoutDialog').fire('close');
+ assert.equal($('loadoutDialog').open,true,'the delayed close event does not close a newly opened picker');
+ const secondSelection=doc.click(btn({chooseCircle:'1'}));
+ assert.equal($('loadoutDialog').open,false,'second picker closes without waiting for the previous save');
+ assert.equal(($('slotCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,2,'second equipped circle appears immediately');
+ await Promise.all([pendingSelection,secondSelection]);
+ assert.deepEqual((await getProfile(db)).slots.slice(0,2),[circles[0].id,circles[1].id],'rapid selections persist in order');
+ await doc.click(btn({openSlot:'1'}));
+ await $('clearLoadoutSlot').fire('click');
  await doc.click(btn({openSlot:'0'}));
  await $('clearLoadoutSlot').fire('click');
  for(let i=0;i<circles.length;i++){
