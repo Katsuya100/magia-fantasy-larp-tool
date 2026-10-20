@@ -45,7 +45,7 @@ class FakeElement{
   this.attributes={};this.handlers=new Map();this.style={setProperty(){}};
   this.disabled=false;this.textContent='';
  }
- get isConnected(){return this.parent?.isConnected||false;}
+ get isConnected(){return this.tagName==='body'||this.parent?.isConnected||false;}
  get firstChild(){return this.children[0]||null;}
  append(...items){for(const item of items)this.appendChild(item);}
  appendChild(item){item.parent=this;this.children.push(item);return item;}
@@ -58,7 +58,7 @@ class FakeElement{
  click(){if(!this.disabled)this.handlers.get('click')?.({target:this});}
 }
 try{
- const body=new FakeElement('body');body.isConnected=true; // Override the connection root.
+ const body=new FakeElement('body');
  const prior={isConnected:true,focus(){doc.activeElement=this;}};
  doc={body,activeElement:prior,createElement:tag=>new FakeElement(tag)};
  globalThis.document=doc;
