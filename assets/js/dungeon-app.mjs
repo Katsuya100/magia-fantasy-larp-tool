@@ -13,7 +13,7 @@ import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=2
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261020.24';
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261020.24';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261020.24';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261020.24';
+import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261020.25';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261020.24';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261020.24';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261020.24';
@@ -33,14 +33,27 @@ const listView={
  pickerFilter:'all',pickerSort:'newest'
 };
 const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'default'}};
-const circleImages=createCircleImageUrls();
+const circleImages=createDungeonPhotoManager(()=>db,id=>circles.find(c=>c.id===id));
+function refreshCirclePhotos(){
+ circleImages.refresh([...sceneIds.filter(id=>!$(id).hidden).map(id=>$(id)),
+  ...($('loadoutDialog').open?[$('loadoutDialog')]:[])]);
+}
+async function revealThumbnail(circle){
+ try{
+  const thumb=await circleImages.thumbnail(circle),url=URL.createObjectURL(thumb);
+  try{await playCircleReveal({...circle,image:thumb},url);}
+  finally{URL.revokeObjectURL(url);}
+ }catch{await playCircleReveal({...circle,image:null});}
+}
 const failedPhotoIds=new Set();
 function onCirclePhotoError(event){
  const img=event.target,id=img?.dataset?.circlePhotoId;
  const circle=id&&circles.find(item=>item.id===id);
  if(!circle||img.isConnected===false)return;
  const src=img.getAttribute?.('src')||img.src;
- if(!src||src!==imageUrl(circle.image))return;
+ if(!src)return;
+ if(img!==$('magicDetailsImage')){img.alt='縮小画像を表示できません。';return;}
+ if(src!==circleImages.get(circle.image))return;
  // No automatic URL retry, decoder restart, or save mutation.
  failedPhotoIds.add(id);
  img.alt='写真を表示できません。詳細から撮り直せます。';
@@ -50,7 +63,7 @@ function onCirclePhotoLoad(event){
  const img=event.target;
  if(img!==$('magicDetailsImage'))return;
  const id=img.dataset?.circlePhotoId,circle=id&&circles.find(item=>item.id===id);
- if(!circle||img.src!==imageUrl(circle.image))return;
+ if(!circle||img.src!==circleImages.get(circle.image))return;
  failedPhotoIds.delete(id);
  if($('magicDetailsDialog').dataset.circleId===id)$('repairSelectedCircleImage').hidden=true;
 }
@@ -118,7 +131,7 @@ async function recaptureMissingImages(ids){
     const id=remaining[0],original=circles.find(c=>c.id===id);
     if(!original)throw Error('魔法陣の記録が見つかりません。');
     await putCircle(db,{...original,image:file},{repairImage:true});
-    circleImages.release(original.image);
+    circleImages.forget(id,original.image);
     failedPhotoIds.delete(id);
     circles=circles.map(c=>c.id===id?{...c,image:file}:c);
     remaining.shift();
@@ -266,6 +279,7 @@ function applyView(name,retained=null){
  }
  if(['home','library','prepare','collection'].includes(name))render();
  if(name==='battle'&&profile?.run&&!playingEffects)renderRun();
+ refreshCirclePhotos();
 }
 function show(requested){
  // Crossfade just the scene stack. Root View Transitions resize the whole page
@@ -299,6 +313,7 @@ function show(requested){
   delete $(before).dataset.exiting;
   delete $(name).dataset.entering;
   sceneFadeTimer=null;
+  refreshCirclePhotos();
  },180);
 }
 function scrollToDungeonTabs(){
@@ -311,8 +326,8 @@ function restoreContinuedBattleScroll(top){
  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(restore));
  else restore();
 }
-function imageUrl(blob){return circleImages.get(blob);}
-function battleImageUrl(blob){return circleImages.get(blob);}
+function imageUrl(){return '';}
+function battleImageUrl(){return '';}
 function renderHeroName(hero){
  const name=$('heroName'),displayName=profile.name?.trim()||'名もなき冒険者';
  name.textContent=displayName+(hero.reviveArmed?' 🪽':'');
@@ -378,7 +393,7 @@ function render(){
   const circleIndexes=circleListIndexes(circles,{
    role:listView.libraryRole,attribute:listView.libraryAttribute,sort:listView.librarySort
   });
-  $('libraryCards').innerHTML=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'" data-favorite="'+(profile.favoriteCircleId===c.id)+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'"><img alt="魔法陣" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'" role="button" tabindex="0" aria-label="長押しでお気に入りを切り替え" aria-pressed="'+(profile.favoriteCircleId===c.id)+'" src="'+imageUrl(c.image,c.id)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
+  $('libraryCards').innerHTML=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'" data-favorite="'+(profile.favoriteCircleId===c.id)+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'"><img alt="魔法陣" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'" role="button" tabindex="0" aria-label="長押しでお気に入りを切り替え" aria-pressed="'+(profile.favoriteCircleId===c.id)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run,masters.buffs,G.mpCost);
  const unlocked=profile.returns>0||profile.inventory.length>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
@@ -390,6 +405,7 @@ function render(){
  $('startAttack').disabled=!canDepartWithCircles(slots)||Boolean(profile.run);
  $('deleteSaveData').disabled=Boolean(profile.run);
  $('circleCounter').textContent='魔法陣 '+slots.filter(Boolean).length+' / 3〜5 個';
+ refreshCirclePhotos();
 }
 function rewardLedgerMarkup(run){
  return '<div class="battle-stat" data-kind="loot">'
@@ -430,7 +446,7 @@ function renderRun(){
   const disabled=Boolean(s&&!G.canCast(hero,i)),sealed=G.isSpellSealed(hero,s);
   return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleLabel(c):'未解析')+(sealed?' 封印':'')+'" '+(disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
-    +'<span class="battle-spell-photo"><img alt="" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'" src="'+battleImageUrl(c.image)+'">'
+    +'<span class="battle-spell-photo"><img alt="" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'">'
     +(sealed?'<span class="battle-spell-seal" aria-hidden="true">封</span>':'')+'</span>'
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
     +circleEffectBadges(c,masters.buffs,esc,G.mpCost)
@@ -452,6 +468,7 @@ function renderRun(){
  $('battleInfo').innerHTML=rewardLedgerMarkup(run)
   +(hero.reviveArmed?'<div class="battle-revival">🪽 生命の紅石 · 復活待機中</div>':hero.reviveUsed?'<div class="battle-revival">🪽 生命の紅石 · 発動済み</div>':'');
  $('battleLog').innerHTML=run.log.slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');
+ refreshCirclePhotos();
 }
 function clearCombatEffects(){
  $('battleArena').dataset.shake='false';
@@ -640,7 +657,7 @@ if(run.hero.hp<=0){
    const lost=successor.legacies.at(-1);
    await saveProfileWithCircles(db,successor,[],lost.circles.map(circle=>circle.id));
    profile=successor;
-   for(const circle of lost.circles)circleImages.release(circle.image);
+   for(const circle of lost.circles)circleImages.forget(circle.id,circle.image);
    const removed=new Set(lost.circles.map(circle=>circle.id));
    circles=circles.filter(circle=>!removed.has(circle.id));
    slots=prepareCircles(profile.slots,circles.map(circle=>circle.id),num('spell_slots'));
@@ -1142,7 +1159,7 @@ function openMagicDetails(id){
  $('upgradeCircle').disabled=Boolean(profile.run)||!isRevealed(circle)||profile.magicStones<1;
  $('upgradeHint').textContent=!isRevealed(circle)?'威力は初回使用後に強化できます。':profile.magicStones<1?'魔導石を入手すると強化できます。':'初期威力の10%分ずつ、何度でも強化できます。';
  const d=circleDetails(circle,masters.buffs,G.mpCost);
- $('magicDetailsImage').src=imageUrl(circle.image);
+ $('magicDetailsImage').src=circleImages.get(circle.image);
  const info=circleEffectDetails(circle,masters.buffs,G.statusDuration);
  const rows=[['属性',d.attribute],['種別',d.role],['効果の詳細',info.effect]];
  if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
@@ -1199,7 +1216,7 @@ async function confirmCircleAction(){
     delete upgrades[circle.id];
     profile.circleUpgrades=upgrades;
    }
-   circleImages.release(circle.image);
+   circleImages.forget(circle.id,circle.image);
    failedPhotoIds.delete(circle.id);
    if(profile.favoriteCircleId===circle.id)profile.favoriteCircleId=null;
    circles=circles.filter(c=>c.id!==circle.id);
@@ -1226,6 +1243,7 @@ function renderLoadoutChoices(){
   $('loadoutOptions').innerHTML=indexes.length?itemChoices(profile.inventory,carry,itemName,esc,indexes,picker.index)
    :'<p class="collection-empty">条件に合うアイテムはありません。</p>';
  }
+ refreshCirclePhotos();
 }
 function openLoadoutPicker(kind,index){
  if(profile.run)return;
@@ -1252,6 +1270,7 @@ function openLoadoutPicker(kind,index){
  $('clearLoadoutSlot').hidden=kind==='circle'?slots[index]===null:carry[index]===null;
  $('openGrimoireFromPicker').hidden=kind!=='circle';
  if(!dialog.open)dialog.showModal();
+ refreshCirclePhotos();
 }
 function closeLoadoutPicker(){
  const dialog=$('loadoutDialog');
@@ -1487,7 +1506,7 @@ function wire(){
  $('closeLoadoutDialog').addEventListener('click',closeLoadoutPicker);
  $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>exclusive(()=>chooseLoadout(null)));
- $('loadoutDialog').addEventListener('close',()=>{picker=null;});
+ $('loadoutDialog').addEventListener('close',()=>{picker=null;refreshCirclePhotos();});
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
   $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
