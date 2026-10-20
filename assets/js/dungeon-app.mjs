@@ -1359,11 +1359,14 @@ async function eraseSaveData(){
   // Finish active upload and verification before clearing local data.
   // Unlinking removes the auth cookie and prevents the restore chooser.
   await cloudSyncController?.disconnect?.();
+  // Drain the one possible thumbnail write before wiping derived cache bytes.
+  await circleThumbnails.pause();
   await clearDungeonData(db);
   stopCamera();
   circleImages.releaseAll();
   circleThumbnails.releaseAll();
   await circleThumbnails.clearCache();
+  circleThumbnails.resume();
   photoAnalysisEpoch++;
   lastCaptureRegistration=0;
   cameraReturnScroll=null;
@@ -1379,6 +1382,7 @@ async function eraseSaveData(){
   show('prepare');
   openBackupSetup();
  }catch(e){
+  circleThumbnails.resume();
   $('deleteDataError').textContent='データの削除に失敗しました：'+e.message;
  }
 }
