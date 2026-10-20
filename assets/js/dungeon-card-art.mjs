@@ -74,7 +74,7 @@ export function paintCircleArt(ctx,artwork){
   glowBase.width=size;glowBase.height=size;
   const gctx=glowBase.getContext('2d');
   if(!gctx)return false;
-  gctx.filter='blur(2px)';
+  gctx.filter='blur(4px)';
   gctx.drawImage(source,0,0);
   gctx.filter='none';
   // The central stroke has a separate subpixel softening pass; never draw raw
@@ -87,19 +87,21 @@ export function paintCircleArt(ctx,artwork){
   cctx.drawImage(source,0,0);
   cctx.filter='none';
   // Let the outline visually reach the decorative rim without covering the card text.
-  const cx=920,cy=328,diameter=468;
+  const cx=920,cy=328,diameter=500;
   ctx.save();
   ctx.beginPath();ctx.arc(cx,cy,229,0,Math.PI*2);ctx.clip();
   ctx.globalCompositeOperation='lighter';
   ctx.imageSmoothingEnabled=true;
   if('imageSmoothingQuality' in ctx)ctx.imageSmoothingQuality='high';
-  ctx.filter='blur(16px)';ctx.globalAlpha=.56;
+  ctx.filter='blur(26px)';ctx.globalAlpha=.72;
   ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='blur(6px)';ctx.globalAlpha=.70;
+  ctx.filter='blur(14px)';ctx.globalAlpha=.82;
   ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='blur(1.5px)';ctx.globalAlpha=.82;
+  ctx.filter='blur(6px)';ctx.globalAlpha=.88;
   ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
-  ctx.filter='none';ctx.globalAlpha=.72;
+  ctx.filter='blur(2px)';ctx.globalAlpha=.92;
+  ctx.drawImage(glowBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
+  ctx.filter='none';ctx.globalAlpha=.78;
   ctx.drawImage(coreBase,cx-diameter/2,cy-diameter/2,diameter,diameter);
   ctx.restore();
   return true;

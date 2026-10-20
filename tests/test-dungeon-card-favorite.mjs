@@ -89,19 +89,19 @@ assert.equal(canvases.length,3,'original contour, glow, and antialiased core can
 assert.deepEqual(canvases.flatMap(canvas=>[canvas.width,canvas.height]),[256,256,256,256,256,256]);
 const glowPreblur=offscreenDraws.find(call=>call.canvas===canvases[1]);
 const corePreblur=offscreenDraws.find(call=>call.canvas===canvases[2]);
-assert.equal(glowPreblur?.filter,'blur(2px)','glow preblur is reduced to preserve detail');
+assert.equal(glowPreblur?.filter,'blur(4px)','stronger glow preblur creates a broader halo');
 assert.equal(glowPreblur?.args[0],canvases[0],'glow derives from extracted outline');
 assert.equal(corePreblur?.filter,'blur(0.8px)','core is antialiased by a tiny Gaussian blur');
 assert.equal(corePreblur?.args[0],canvases[0],'core derives from extracted outline');
 assert.deepEqual(clipCircles[0].slice(0,3),[920,328,229],'artwork slightly overlaps the decorative frame');
-assert.equal(drawCalls.length,4,'three tighter glows and a softly antialiased core');
-assert.deepEqual(drawCalls.map(call=>call.filter),['blur(16px)','blur(6px)','blur(1.5px)','none'],'blur reduction followed by already antialiased core');
-assert.ok(drawCalls.slice(0,3).every(call=>call.args[0]===canvases[1]),'glow passes use softer glow canvas');
-assert.equal(drawCalls[3].args[0],canvases[2],'core draws antialiased canvas, not raw outline');
+assert.equal(drawCalls.length,5,'four brighter glows and a softly antialiased core');
+assert.deepEqual(drawCalls.map(call=>call.filter),['blur(26px)','blur(14px)','blur(6px)','blur(2px)','none'],'broader glow stack followed by already antialiased core');
+assert.ok(drawCalls.slice(0,4).every(call=>call.args[0]===canvases[1]),'glow passes use softer glow canvas');
+assert.equal(drawCalls[4].args[0],canvases[2],'core draws antialiased canvas, not raw outline');
 assert.ok(drawCalls.every(call=>call.args[0]!==canvases[0]),'jagged unprocessed outline is never painted directly');
-assert.ok(drawCalls.every(call=>call.args[3]===468&&call.args[4]===468),'all artwork layers use enlarged 468px diameter');
+assert.ok(drawCalls.every(call=>call.args[3]===500&&call.args[4]===500),'all artwork layers use enlarged 500px diameter');
 assert.ok(drawCalls.every(call=>call.composite==='lighter'),'all layers retain additive blending');
-assert.ok(drawCalls[3].alpha>.6&&drawCalls[3].alpha<.8,'core remains visible without overwhelming the glows');
+assert.deepEqual(drawCalls.map(call=>call.alpha),[.72,.82,.88,.92,.78],'four stronger glows and a visible antialiased core');
 assert.deepEqual(saveCalls,['save','restore'],'glow compositing state restored');
 
 const factory=fakeIndexedDB(),db=await openStore(factory),profile=await getProfile(db);
