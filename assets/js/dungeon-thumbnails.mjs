@@ -48,7 +48,7 @@ export function createCircleThumbnails({
     catch{/* Cache quota is optional. */}}
   }
   // Deletion, restoration or page reset may have invalidated this decode.
-  if(run!==generation||tokens.get(circle.id)!==token||!pending.has(circle.id))return '';
+  if(run!==generation||(tokens.get(circle.id)||0)!==token||!pending.has(circle.id))return '';
   const url=createUrl(photo);
   live.set(circle.id,{url,source:circle.image});
   return url;
