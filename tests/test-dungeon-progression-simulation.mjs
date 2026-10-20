@@ -21,15 +21,7 @@ const SPELLS={
  five:[{role:'attack',attribute:'flame',power:360},{role:'attack',attribute:'bolt',power:420},{role:'attack',attribute:'gravity',power:540},
   {role:'support',attribute:'aqua',power:320},{role:'defense',attribute:'law',power:270}]
 };
-function enemyAction(unit,r){
- const ids=G.available(unit);
- if(!ids.length)return -1;
- const heal=ids.find(i=>unit.spells[i].role==='support');
- if(unit.hp<unit.stats.hp*num('enemy_heal_threshold')&&heal!==undefined)return heal;
- const offense=ids.filter(i=>unit.spells[i].role==='attack');
- return offense.length&&r()<num('enemy_attack_preference')
-  ?offense[Math.floor(r()*offense.length)]:ids[Math.floor(r()*ids.length)];
-}
+function enemyAction(unit,r){return G.chooseEnemySpell(unit,r);}
 function heroAction(hero,enemy){
  const ids=G.available(hero);
  if(!ids.length)return -1;
