@@ -26,7 +26,7 @@ import {paintCircleGlow} from './dungeon-circle-glow.mjs?v=20261020.16';
 import {createSuccessorProfile,legacyContents,reclaimLegacies} from './dungeon-permadeath.mjs?v=20261020.16';
 let cloudSyncController;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
+let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
  libraryRole:'all',libraryAttribute:'all',librarySort:'newest',
  collectionDiscovery:'all',collectionRarity:'all',collectionSort:'common',
@@ -144,29 +144,30 @@ async function handleDriveImageRepair(){
  if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}
 }
 async function recaptureMissingImages(ids){
- const dialog=$('imageRepairDialog'),input=$('imageRepairFile'),message=$('imageRepairCircleName'),error=$('imageRepairError');
+ const dialog=$('imageRepairDialog'),video=$('imageRepairVideo'),canvas=$('imageRepairCanvas');
+ const message=$('imageRepairCircleName'),error=$('imageRepairError'),button=$('imageRepairCapture');
  const remaining=[...new Set(ids)];
  if(!remaining.length)return true;
  return new Promise(resolve=>{
   let done=false,working=false;
   const finish=ok=>{
    if(done)return;
-   done=true;input.onchange=null;$('imageRepairLater').onclick=null;
+   done=true;button.onclick=null;$('imageRepairStart').onclick=null;$('imageRepairLater').onclick=null;dialog.oncancel=null;
+   stopRepairCamera();
    if(dialog.open)dialog.close();
    resolve(ok);
   };
   const display=()=>{
    const id=remaining[0],circle=circles.find(c=>c.id===id);
-   message.textContent=(circle?.name||'魔法陣')+'（'+(ids.length-remaining.length+1)+' / '+ids.length+'）の写真を選択してください。';
+   message.textContent=(circle?.name||'魔法陣')+'（'+(ids.length-remaining.length+1)+' / '+ids.length+'）';
    error.textContent='';
-   input.value='';
   };
-  input.onchange=async()=>{
-   if(working||!remaining.length)return;
-   const file=input.files?.[0];
-   if(!file)return;
-   working=true;input.disabled=true;
+  button.onclick=async()=>{
+   if(done||working||!remaining.length||!repairStream)return;
+   working=true;button.disabled=true;
    try{
+    const file=await cameraPhotoBlob(video,canvas);
+    if(!file)throw Error('撮影画像を作成できません。');
     const id=remaining[0],original=circles.find(c=>c.id===id);
     if(!original)throw Error('魔法陣の記録が見つかりません。');
     await putCircle(db,{...original,image:file},{repairImage:true});
@@ -179,13 +180,15 @@ async function recaptureMissingImages(ids){
     render();
     if(!remaining.length)finish(true);
     else display();
-   }catch(e){error.textContent='画像を保存できませんでした：'+e.message;}
-   finally{working=false;input.disabled=false;}
+   }catch(e){error.textContent='写真を保存できませんでした：'+e.message;}
+   finally{working=false;button.disabled=false;}
   };
+  $('imageRepairStart').onclick=()=>{void startRepairCamera();};
   $('imageRepairLater').onclick=()=>{if(!working)finish(false);};
-  dialog.addEventListener('cancel',event=>{event.preventDefault();if(!working)finish(false);},{once:true});
+  dialog.oncancel=event=>{event.preventDefault();if(!working)finish(false);};
   display();
   dialog.showModal();
+  void startRepairCamera();
  });
 }
 function startupStage(message){$('startupDetail').textContent=message;}
@@ -1158,27 +1161,67 @@ function syncCameraUi(active){
  $('cameraCapture').hidden=!active;
  $('cameraStop').hidden=!active;
 }
+async function openCamera(video){
+ if(!navigator.mediaDevices?.getUserMedia)throw Error('HTTPSまたはlocalhostのカメラ対応ブラウザが必要です。');
+ const active=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});
+ video.srcObject=active;
+ video.hidden=false;
+ try{await video.play();}
+ catch(error){active.getTracks().forEach(t=>t.stop());video.srcObject=null;throw error;}
+ return active;
+}
+async function cameraPhotoBlob(video,canvas){
+ if(!video.videoWidth)return null;
+ const side=Math.min(video.videoWidth,video.videoHeight),max=1280,scale=Math.min(1,max/side);
+ canvas.width=Math.round(side*scale);canvas.height=canvas.width;
+ canvas.getContext('2d').drawImage(video,(video.videoWidth-side)/2,(video.videoHeight-side)/2,side,side,0,0,canvas.width,canvas.height);
+ return new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));
+}
 async function startCamera(){
  if(stream){syncCameraUi(true);return;}
- if(!navigator.mediaDevices?.getUserMedia){note('HTTPSまたはlocalhostのカメラ対応ブラウザが必要です。');return;}
- try{
-  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'}}});
-  $('cameraVideo').srcObject=stream;
-  $('cameraVideo').hidden=false;
-  await $('cameraVideo').play();
-  syncCameraUi(true);note('');
- }catch(e){stopCamera();note('カメラを起動できません：'+e.message);}
+ try{stream=await openCamera($('cameraVideo'));syncCameraUi(true);note('');}
+ catch(e){stopCamera();note('カメラを起動できません：'+e.message);}
 }
 function stopCamera(){
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
  $('cameraVideo').srcObject=null;syncCameraUi(false);
 }
+function syncRepairCameraUi(active){
+ $('imageRepairPlaceholder').hidden=active;
+ $('imageRepairVideo').hidden=!active;
+ $('imageRepairStart').hidden=active;
+ $('imageRepairCapture').hidden=!active;
+}
+async function startRepairCamera(){
+ if(repairStream){syncRepairCameraUi(true);return;}
+ const epoch=++repairCameraEpoch,video=$('imageRepairVideo');
+ $('imageRepairStart').disabled=true;
+ try{
+  const active=await openCamera(video);
+  if(epoch!==repairCameraEpoch){
+   active.getTracks().forEach(t=>t.stop());
+   if(video.srcObject===active)video.srcObject=null;
+   return;
+  }
+  repairStream=active;syncRepairCameraUi(true);$('imageRepairError').textContent='';
+ }catch(e){
+  if(epoch!==repairCameraEpoch)return;
+  syncRepairCameraUi(false);
+  $('imageRepairError').textContent='カメラを起動できません：'+e.message;
+ }finally{
+  if(epoch===repairCameraEpoch)$('imageRepairStart').disabled=false;
+ }
+}
+function stopRepairCamera(){
+ repairCameraEpoch++;
+ if(repairStream){repairStream.getTracks().forEach(t=>t.stop());repairStream=null;}
+ $('imageRepairVideo').srcObject=null;
+ $('imageRepairStart').disabled=false;
+ syncRepairCameraUi(false);
+}
 async function capture(){
  if(!stream||!$('cameraVideo').videoWidth)return;
- const v=$('cameraVideo'),canvas=$('cameraCanvas'),side=Math.min(v.videoWidth,v.videoHeight),max=1280,scale=Math.min(1,max/side);
- canvas.width=Math.round(side*scale);canvas.height=canvas.width;
- canvas.getContext('2d').drawImage(v,(v.videoWidth-side)/2,(v.videoHeight-side)/2,side,side,0,0,canvas.width,canvas.height);
- const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));
+ const blob=await cameraPhotoBlob($('cameraVideo'),$('cameraCanvas'));
  if(!blob){note('撮影画像を作成できません');return;}
  lastCaptureRegistration=Math.max(nextCircleRegistration(circles),lastCaptureRegistration+1);
  const circle=newCapturedCircle(crypto.randomUUID(),blob,lastCaptureRegistration);
@@ -1577,6 +1620,6 @@ function wire(){
   if(capture){show('library');returnToCameraScroll();}
   else {renderRun();show('battle');}
  });
- window.addEventListener('beforeunload',()=>{stopCamera();circleImages.releaseAll();circleThumbnails.releaseAll();});
+ window.addEventListener('beforeunload',()=>{stopCamera();stopRepairCamera();circleImages.releaseAll();circleThumbnails.releaseAll();});
 }
 load().catch(failStartup);
