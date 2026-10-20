@@ -51,6 +51,7 @@ item_per_round,1,ラウンドあたりの無料使用上限
 level_max,150,レベル上限
 enemy_heal_threshold,0.45,敵が回復を優先するHP比率
 enemy_attack_preference,0.65,敵が攻撃優先する確率
+enemy_debuff_specialist_preference,0.78,弱体魔法を持つ敵がその魔法を優先して使う確率
 mag_reference,10,MAG係数基準値
 base_resistance,1,プレイヤーの基礎属性被ダメージ倍率
 status_tick_min_damage,1,火傷の継続最小ダメージ
