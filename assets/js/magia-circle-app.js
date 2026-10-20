@@ -1444,7 +1444,8 @@
         setStatus(preloadStatus, preloadIssues.length
           ? `外典は開いた。${preloadIssues.join('。')}。画像解析は利用できる。`
           : '魔導司書が外典を整えた。次に頁を開くときは、書架の控えが応える。', preloadIssues.length ? '' : 'good');
-        if(!dungeonMode)await loadInitialImage(); // No unnecessary sample decode for the dungeon iframe.
+        // Preserve the same startup order as the pre-optimization analyzer.
+        await loadInitialImage();
         fileInput.disabled = false;
         cameraButton.disabled = false;
         reportDungeonStage('ready');
