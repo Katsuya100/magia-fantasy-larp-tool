@@ -84,13 +84,20 @@ export async function verifyLocalSnapshot(snapshot){
  if(ids.length!==Object.keys(proof.photos||{}).length||ids.some(id=>!(id in proof.photos)))
   return {status:'corrupt',message:'魔法陣の記録数が一致しません。',badImageIds:[]};
  const badImageIds=[];
- for(const circle of snapshot.circles){
-  const expected=proof.photos[circle.id];
-  if(circle.image==null){badImageIds.push(circle.id);continue;}
-  try{
-   if(typeof expected!=='string'||!(circle.image instanceof Blob)||!circle.image.type||
-    !descriptors[circle.id]||await digestPhoto(circle.image)!==expected)badImageIds.push(circle.id);
-  }catch{badImageIds.push(circle.id);}
+ // Hash a small bounded group of photos concurrently. Sequential hashing of
+ // every image kept the whole grimoire blank during startup on mobile devices.
+ // Keep the full verification barrier: do not display or modify untrusted data.
+ for(let start=0;start<snapshot.circles.length;start+=3){
+  const batch=snapshot.circles.slice(start,start+3);
+  const results=await Promise.all(batch.map(async circle=>{
+   const expected=proof.photos[circle.id];
+   if(circle.image==null)return circle.id;
+   try{
+    return typeof expected==='string'&&circle.image instanceof Blob&&circle.image.type&&
+     descriptors[circle.id]&&await digestPhoto(circle.image)===expected?null:circle.id;
+   }catch{return circle.id;}
+  }));
+  for(const id of results)if(id!==null)badImageIds.push(id);
  }
  return {status:badImageIds.length?'badImages':'valid',badImageIds};
 }
