@@ -38,8 +38,10 @@ for(let layer=51;layer<=100;layer++){
  previousMinimum=lower;
 }
 assert.equal(previousMinimum,750);
-assert.equal(Math.max(...data.enemies.slice(495,500).map(enemy=>
- Number(enemy.spells.split('|').find(spell=>spell.startsWith('debuff:')).split(':')[2]))),780);
+assert.equal(Math.max(...data.enemies.slice(495,500).flatMap(enemy=>{
+ const curse=enemy.spells.split('|').find(spell=>spell.startsWith('debuff:'));
+ return curse?[Number(curse.split(':')[2])]:[];
+})),780);
 
 const SPELLS=[
  {role:'attack',attribute:'flame',power:360},
