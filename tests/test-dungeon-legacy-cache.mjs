@@ -28,7 +28,10 @@ try{
   if(Date.now()>end)throw Error('Dungeon startup timed out');
   await new Promise(resolve=>setTimeout(resolve,20));
  }
- assert.ok(env.createdImageUrls.length>0,'original saved circle is displayed before account deletion');
+ assert.equal(env.createdImageUrls.length,0,'startup does not allocate original photo URLs');
+ await env.document.click({dataset:{circleDetail:'cache-proof-photo'},closest(){return this;}});
+ assert.ok(env.createdImageUrls.length>0,'the original photo is loaded only by details');
+ $('magicDetailsDialog').close();
  $('deleteDataPhrase').value='削除';
  await $('confirmDeleteData').fire('click');
  assert.equal($('deleteDataDialog').open,false,'successful deletion closes confirmation');
