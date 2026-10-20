@@ -97,8 +97,9 @@ assert.match(css,/#gearCards \.loadout-grid,\.battle-items\{grid-template-column
 assert.match(css,/\.battle-spells \.battle-tile img\{[^}]*aspect-ratio:1\s*\/\s*1/);
 assert.doesNotMatch(page,/鑑定/);
 assert.match(page,/id="collectionProgress"/);
-assert.equal((page.match(/<input[^>]*type="file"/g)||[]).length,1,'only damaged photo recovery has a file selector');
- assert.match(page,/<input id="imageRepairFile" type="file"/,'file selection is limited to recapturing broken saves');
+assert.equal((page.match(/<input[^>]*type="file"/g)||[]).length,0,'camera retakes never offer file selection');
+assert.match(page,/<video id="imageRepairVideo" autoplay muted playsinline hidden>/,'retakes use a live camera feed');
+assert.match(page,/id="imageRepairCapture" hidden>撮影して保存<\/button>/,'retakes save a fresh camera shot');
 assert.match(page,/id="cameraStart"/);
 assert.match(page,/id="cameraPane" class="capture-pane"(?! hidden)/);
 assert.match(page,/<div class="camera-viewfinder"[^>]*>[\s\S]*?id="cameraPlaceholder"[\s\S]*?<video id="cameraVideo"[^>]* hidden/);
