@@ -39,12 +39,13 @@ function refreshCirclePhotos(){
  circleImages.refresh([...sceneIds.filter(id=>!$(id).hidden).map(id=>$(id)),
   ...($('loadoutDialog').open?[$('loadoutDialog')]:[])]);
 }
-async function revealThumbnail(circle){
- try{
-  const thumb=await circleImages.thumbnail(circle),url=URL.createObjectURL(thumb);
-  try{await playCircleReveal({...circle,image:thumb},url);}
-  finally{URL.revokeObjectURL(url);}
- }catch{await playCircleReveal({...circle,image:null});}
+async function revealOriginal(circle){
+ // Full-resolution photo Blob is the same one used by the magic details screen.
+ // Only the grimoire/preparation/battle cards should request thumbnails.
+ let originalUrl='';
+ try{originalUrl=circleImages.get(circle.image);}
+ catch{/* A missing photo URL should not prevent viewing analysis results. */}
+ await playCircleReveal(circle,originalUrl);
 }
 const failedPhotoIds=new Set();
 function onCirclePhotoError(event){
@@ -1081,7 +1082,7 @@ async function analyzeCapturedCircle(circle){
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
-  await revealThumbnail(analyzed);
+  await revealOriginal(analyzed);
  }catch(e){
   if(!valid())return;
   activeAnalysis=null;
@@ -1105,7 +1106,7 @@ async function analyzeUnknown(index){
    await putCircle(db,circle);
    if(!valid())return;
    run.hero.spells[index]=combatSpell(circle);await persist();
-   activeAnalysis=null;note('');show('battle');await revealThumbnail(circle);await takeTurn(index);
+   activeAnalysis=null;note('');show('battle');await revealOriginal(circle);await takeTurn(index);
   }catch(e){
    if(!valid())return;
    activeAnalysis=null;note('解明できませんでした：'+e.message);
