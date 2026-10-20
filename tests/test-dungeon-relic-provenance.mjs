@@ -44,7 +44,7 @@ try{
  assert.deepEqual(backup.circles.find(c=>c.id===relic.id).legacyHeirNames,['二代目','三代目'],'cloud backup includes all names');
  await env.document.click(button(summed.id));
  const totals=$('magicDetailsStats').innerHTML;
- assert.match(totals,/自分の最大HP\\+60（合計Lv.60）/,'details show sum of all three levels');
+ assert.match(totals,/自分の最大HP\+60（合計Lv.60）/,'details show sum of all three levels');
  assert.match(totals,/A Lv.10/);
  assert.match(totals,/B Lv.20/);
  assert.match(totals,/C Lv.30/);
