@@ -6,7 +6,11 @@ async function shrink(photo){
  let bitmap;
  try{
   try{bitmap=await createImageBitmap(photo,{resizeWidth:SIZE,resizeQuality:'medium'});}
-  catch{bitmap=await createImageBitmap(photo);}
+  catch(error){
+   // Never retry a failed memory allocation with a much larger full-size bitmap.
+   if(error instanceof RangeError||/out of memory|allocation|wasm|not enough memory/i.test(String(error?.message||error)))throw error;
+   bitmap=await createImageBitmap(photo);
+  }
   const canvas=document.createElement('canvas');
   canvas.width=SIZE;canvas.height=SIZE;
   const ctx=canvas.getContext('2d');
