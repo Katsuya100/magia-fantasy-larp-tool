@@ -45,7 +45,8 @@ try{
  assert.equal($('magicDetailsLegacyTitle').hidden,false,'recovered relic shows the inscription');
  assert.match($('magicDetailsImage').src,/^blob:mock-/,'detail lazily displays the intact original');
  assert.equal($('magicDetailsLegacyTitle').textContent,'先代の残した遺物','earliest character name is recovered from older legacy records');
- assert.match($('magicDetailsStats').innerHTML,/<dt>🔵🔥 継承<\/dt>/);
+ assert.match($('magicDetailsStats').innerHTML,/<dt>🔵🔥 継承<\/dt><dd>敵の最大HP-24<\/dd>/,'attack-only inheritance reduces enemy HP');
+ assert.doesNotMatch($('magicDetailsStats').innerHTML,/自分の最大HP\+/,'attack must never list defensive inheritance');
  assert.match($('magicDetailsStats').innerHTML,/<dt class="legacy-heirs-label">過去の継承者達<\/dt>/);
  assert.match($('magicDetailsStats').innerHTML,/まだ名を残した継承者はいない/);
  assert.equal((await allCircles(db))[0].image.size,image.size);
