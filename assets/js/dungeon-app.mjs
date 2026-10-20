@@ -14,6 +14,7 @@ import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readD
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261020.13';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261020.13';
 import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261020.13';
+import {createCircleThumbnails} from './dungeon-thumbnails.mjs?v=20261020.14';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261020.13';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261020.13';
 import {statusBadges} from './dungeon-status-ui.mjs?v=20261020.13';
@@ -33,6 +34,30 @@ const listView={
 };
 const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'default'}};
 const circleImages=createCircleImageUrls();
+const circleThumbnails=createCircleThumbnails();
+const thumbnailMode=typeof IntersectionObserver==='function'&&typeof createImageBitmap==='function';
+const thumbnailPlaceholder='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+const thumbnailObserver=thumbnailMode?new IntersectionObserver(entries=>{
+ for(const entry of entries){
+  if(!entry.isIntersecting)continue;
+  const img=entry.target,id=img.dataset.circleThumb;
+  thumbnailObserver.unobserve(img);
+  const circle=circles.find(c=>c.id===id);
+  if(!circle)continue;
+  void circleThumbnails.get(circle).then(url=>{
+   if(url&&img.isConnected&&img.dataset.circleThumb===id)img.src=url;
+  }).catch(error=>{console.warn('サムネイルを表示できませんでした',error);img.alt='魔法陣の写真は詳細から確認できます';});
+ }
+},{rootMargin:'100px'}):null;
+function observeThumbnails(){
+ if(!thumbnailObserver)return;
+ for(const img of document.querySelectorAll('img[data-circle-thumb]')){
+  if(img.dataset.thumbObserved!=='true'){
+   img.dataset.thumbObserved='true';
+   thumbnailObserver.observe(img);
+  }
+ }
+}
 const retriedPhotoIds=new Set(),failedPhotoIds=new Set();
 function circleFromPhotoUrl(url){
  const blob=circleImages.findBlob(url);
@@ -109,6 +134,9 @@ async function refreshRepairStatus(){
 }
 async function handleDriveImageRepair(){
  circleImages.releaseAll();
+ circleThumbnails.releaseAll();
+ const restoredSnapshot=await readDungeonSnapshot(db);
+ circleThumbnails.setProofs(restoredSnapshot.integrity?.photos||{});
  retriedPhotoIds.clear();failedPhotoIds.clear();
  circles=newestCirclesFirst(await allCircles(db));
  slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));
@@ -144,6 +172,7 @@ async function recaptureMissingImages(ids){
     if(!original)throw Error('魔法陣の記録が見つかりません。');
     await putCircle(db,{...original,image:file},{repairImage:true});
     circleImages.release(original.image);
+    circleThumbnails.forget(id);circleThumbnails.setProof(id,'');
     retriedPhotoIds.delete(id);failedPhotoIds.delete(id);
     circles=circles.map(c=>c.id===id?{...c,image:file}:c);
     remaining.shift();
@@ -194,7 +223,9 @@ async function load(){
  G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);
  startupStage('冒険者の記録を整えている…');
  profile=await getProfile(db);
- const initialHealth=await verifyLocalSnapshot(await readDungeonSnapshot(db));
+ const initialSnapshot=await readDungeonSnapshot(db);
+ const initialHealth=await verifyLocalSnapshot(initialSnapshot);
+ circleThumbnails.setProofs(initialHealth.status==='valid'?initialSnapshot.integrity?.photos||{}:{});
  if(initialHealth.status==='corrupt'){
   // Do not start the game or create new integrity evidence from corrupt data.
   // Require a healthy Drive recovery before any player interaction is allowed.
@@ -332,8 +363,10 @@ function restoreContinuedBattleScroll(top){
  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(restore));
  else restore();
 }
-function imageUrl(blob){return circleImages.get(blob);}
-function battleImageUrl(blob){return circleImages.get(blob);}
+function imageUrl(blob,id){
+ return id&&thumbnailMode?thumbnailPlaceholder:circleImages.get(blob);
+}
+function battleImageUrl(blob,id){return imageUrl(blob,id);}
 function renderHeroName(hero){
  const name=$('heroName'),displayName=profile.name?.trim()||'名もなき冒険者';
  name.textContent=displayName+(hero.reviveArmed?' 🪽':'');
@@ -399,11 +432,12 @@ function render(){
   const circleIndexes=circleListIndexes(circles,{
    role:listView.libraryRole,attribute:listView.libraryAttribute,sort:listView.librarySort
   });
-  const libraryMarkup=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'" data-favorite="'+(profile.favoriteCircleId===c.id)+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'"><img alt="魔法陣" role="button" tabindex="0" aria-label="長押しでお気に入りを切り替え" aria-pressed="'+(profile.favoriteCircleId===c.id)+'" src="'+imageUrl(c.image)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
+  const libraryMarkup=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'" data-favorite="'+(profile.favoriteCircleId===c.id)+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'"><img alt="魔法陣" loading="lazy" decoding="async" data-circle-thumb="'+esc(c.id)+'" role="button" tabindex="0" aria-label="長押しでお気に入りを切り替え" aria-pressed="'+(profile.favoriteCircleId===c.id)+'" src="'+imageUrl(c.image,c.id)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
  // Tab changes should not discard images that are still decoding.
  if(libraryMarkup!==lastLibraryCardsMarkup){$('libraryCards').innerHTML=libraryMarkup;lastLibraryCardsMarkup=libraryMarkup;}
  const slotMarkup=spellGrid(slots,circles,imageUrl,esc,!profile.run,masters.buffs,G.mpCost);
  if(slotMarkup!==lastSlotCardsMarkup){$('slotCards').innerHTML=slotMarkup;lastSlotCardsMarkup=slotMarkup;}
+ observeThumbnails();
  const unlocked=profile.returns>0||profile.inventory.length>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
  $('gearCounter').textContent=unlocked?'携行品 '+pickedValues(carry.slice(0,limit)).length+' / '+limit+' 個':'携行品：最初の帰還後に解放';
@@ -454,11 +488,12 @@ function renderRun(){
   const disabled=Boolean(s&&!G.canCast(hero,i));
   return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleLabel(c):'未解析')+'" '+(disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
-    +'<img alt="" src="'+battleImageUrl(c.image)+'">'
+    +'<img alt="" loading="lazy" decoding="async" data-circle-thumb="'+esc(c.id)+'" src="'+battleImageUrl(c.image,c.id)+'">'
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
     +circleEffectBadges(c,masters.buffs,esc,G.mpCost)
     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button></div>';
  }).join('');
+ observeThumbnails();
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
  // Match the prepared-item capacity, but keep extra occupied legacy slots visible.
  const maxSlots=Math.max(G.capacity(profile.level),run.carry.findLastIndex(Boolean)+1);
@@ -1221,6 +1256,7 @@ async function confirmCircleAction(){
     profile.circleUpgrades=upgrades;
    }
    circleImages.release(circle.image);
+   circleThumbnails.forget(circle.id);
    retriedPhotoIds.delete(circle.id);failedPhotoIds.delete(circle.id);
    if(profile.favoriteCircleId===circle.id)profile.favoriteCircleId=null;
    circles=circles.filter(c=>c.id!==circle.id);
@@ -1242,6 +1278,7 @@ function renderLoadoutChoices(){
   const indexes=circleListIndexes(circles,{role,attribute,sort:pickerView.circle.sort});
   $('loadoutOptions').innerHTML=indexes.length?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost,indexes,picker.index)
    :'<p class="collection-empty">条件に合う魔法陣はありません。</p>';
+  observeThumbnails();
  }else{
   const indexes=itemListIndexes(profile.inventory,masters.items,{kind:pickerView.item.filter,sort:pickerView.item.sort});
   $('loadoutOptions').innerHTML=indexes.length?itemChoices(profile.inventory,carry,itemName,esc,indexes,picker.index)
@@ -1316,6 +1353,8 @@ async function eraseSaveData(){
   await clearDungeonData(db);
   stopCamera();
   circleImages.releaseAll();
+  circleThumbnails.releaseAll();
+  await circleThumbnails.clearCache();
   photoAnalysisEpoch++;
   lastCaptureRegistration=0;
   cameraReturnScroll=null;
@@ -1516,6 +1555,6 @@ function wire(){
   if(capture){show('library');returnToCameraScroll();}
   else {renderRun();show('battle');}
  });
- window.addEventListener('beforeunload',()=>{stopCamera();circleImages.releaseAll();});
+ window.addEventListener('beforeunload',()=>{stopCamera();circleImages.releaseAll();circleThumbnails.releaseAll();});
 }
 load().catch(failStartup);
