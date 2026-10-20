@@ -151,7 +151,7 @@ try{
  doc.emit('error',failedPhoto);
  doc.emit('error',failedPhoto);
  assert.equal($('repairSelectedCircleImage').hidden,false,'retake appears after two display failures');
- await $('repairSelectedCircleImage').fire('click');
+ void $('repairSelectedCircleImage').fire('click');
  await wait(()=>$('imageRepairDialog').open&&!$('imageRepairCapture').hidden,'repair camera opens immediately');
  assert.equal(env.opened,2,'retake opens the direct camera without a file picker');
  assert.equal($('magicDetailsDialog').open,false,'details close for the camera');
