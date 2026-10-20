@@ -395,30 +395,114 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .circle-action-inner h2{color:var(--gold);font-size:22px}
 .circle-action-inner p{color:var(--pale);line-height:1.8}
 .circle-action-inner .buttons{justify-content:center;margin-top:20px}
-.magic-details-content{position:relative}
-.magic-details-dialog[data-enhancing="true"] .magic-details-content:after{
- content:"✦ 強化成功 ✦";position:sticky;bottom:10px;left:10%;display:block;
- width:80%;margin:0 auto;text-align:center;padding:15px 8px;z-index:2;
- font-weight:900;font-size:21px;letter-spacing:.1em;color:#fff2c9;
- background:radial-gradient(ellipse,#b28047e8,#5f325dcc 68%,transparent);
- border:1px solid #fff0b6;border-radius:12px;pointer-events:none;
- animation:circle-upgrade-aura 1.8s ease-out both
+/* The saved photo stays in the detail view; only its light is animated. */
+.magic-details-art{position:relative;width:min(100%,320px);margin:12px auto;aspect-ratio:1;isolation:isolate}
+.magic-details-art #magicDetailsImage{width:100%;height:100%;margin:0;object-fit:cover}
+#magicUpgradeEffect{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.circle-ritual{
+ --ritual-ink:#ffe3a7;--ritual-duration:.8s;
+ pointer-events:none;color:var(--ritual-ink)
 }
-.magic-details-dialog[data-enhancing="true"] #magicDetailsImage{
- animation:circle-upgrade-glow 1.8s ease-out
+.circle-ritual--reveal{
+ position:fixed;inset:0;z-index:5000;display:grid;place-items:center;
+ isolation:isolate;overflow:hidden
+}
+.circle-ritual__physical{
+ grid-area:1/1;position:relative;z-index:0;
+ width:min(78vw,54dvh,390px);aspect-ratio:1;object-fit:cover;
+ border-radius:50%;border:2px solid #e8cba875;
+ box-shadow:0 0 24px #000a,inset 0 0 24px #0009;
+ animation:circle-ritual-physical var(--ritual-duration) ease-in-out both
+}
+.circle-ritual__veil{
+ position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse at 50% 42%,#07111b,#010207 65%);
+ animation:circle-ritual-veil var(--ritual-duration) linear both
+}
+.circle-ritual--reveal>.circle-ritual__focus{grid-area:1/1;z-index:2}
+
+.circle-ritual__focus{
+ position:relative;width:min(78vw,54dvh,390px);aspect-ratio:1;
+ z-index:1;isolation:isolate;filter:drop-shadow(0 0 12px color-mix(in srgb,var(--ritual-ink) 30%,transparent))
+}
+.circle-ritual--upgrade{position:absolute;inset:0;z-index:2;isolation:isolate;overflow:visible}
+.circle-ritual--upgrade .circle-ritual__focus{width:100%;height:100%;filter:none}
+.circle-ritual__bloom,.circle-ritual__ink{
+ position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+ mix-blend-mode:screen;animation:circle-ritual-ink var(--ritual-duration) ease-in-out both
+}
+.circle-ritual__bloom{
+ filter:blur(8px) drop-shadow(0 0 14px var(--ritual-ink));
+ animation-name:circle-ritual-bloom
+}
+.circle-ritual__ink{filter:drop-shadow(0 0 5px var(--ritual-ink))}
+.circle-ritual__ring{
+ position:absolute;inset:-3%;border-radius:50%;z-index:3;
+ border:2px solid color-mix(in srgb,var(--ritual-ink) 90%,white);
+ box-shadow:0 0 12px var(--ritual-ink),inset 0 0 10px var(--ritual-ink),0 0 34px color-mix(in srgb,var(--ritual-ink) 38%,transparent);
+}
+.circle-ritual__ring:before{
+ content:"";position:absolute;inset:9%;border:1px dashed currentColor;
+ border-radius:50%;opacity:.72
+}
+.circle-ritual__ring:after{
+ content:"✦";position:absolute;inset:21%;border-radius:50%;
+ border:1px dotted currentColor;display:grid;place-items:start center;
+ font-size:clamp(9px,2vw,15px);text-shadow:0 0 12px currentColor;opacity:.8
+}
+.circle-ritual__ring--in{animation:circle-ritual-ring-in var(--ritual-duration) cubic-bezier(.2,.8,.2,1) both}
+.circle-ritual__ring--out{animation:circle-upgrade-aura var(--ritual-duration) cubic-bezier(.15,.75,.2,1) both}
+.circle-ritual__light{
+ position:absolute;inset:-15%;z-index:0;border-radius:50%;
+ background:radial-gradient(circle,color-mix(in srgb,var(--ritual-ink) 48%,white) 0 2%,color-mix(in srgb,var(--ritual-ink) 20%,transparent) 15%,transparent 62%);
+ animation:circle-ritual-flare var(--ritual-duration) ease-out both
+}
+.circle-ritual__labels{
+ position:absolute;z-index:2;top:calc(50% + min(39vw,27dvh,195px) + 8px);
+ left:0;right:0;display:flex;gap:14px;justify-content:center;align-items:center;
+ text-align:center;font-weight:800;font-size:clamp(14px,3.6vw,19px);
+ color:#ffefd0;text-shadow:0 0 14px var(--ritual-ink);
+ animation:circle-ritual-labels var(--ritual-duration) ease-out both
+}
+.circle-ritual__label{padding:5px 9px;white-space:nowrap;letter-spacing:.06em}
+@keyframes circle-ritual-veil{
+ 0%,58%{opacity:1}100%{opacity:0}
+}
+@keyframes circle-ritual-physical{
+ 0%,48%{opacity:0;transform:scale(.92)}
+ 65%,87%{opacity:1;transform:scale(1)}
+ 100%{opacity:0;transform:scale(1.03)}
+}
+@keyframes circle-ritual-ring-in{
+ 0%{opacity:0;transform:scale(1.65) rotate(-25deg)}
+ 12%{opacity:.95}39%{opacity:.6;transform:scale(.68) rotate(12deg)}
+ 51%,100%{opacity:0;transform:scale(.58) rotate(16deg)}
 }
 @keyframes circle-upgrade-aura{
- 0%{opacity:0;transform:scale(.45) rotate(-8deg);filter:brightness(3)}
- 25%{opacity:1;transform:scale(1.06) rotate(0);filter:brightness(1.5)}
- 65%{opacity:1;transform:scale(1);filter:brightness(1)}
- 100%{opacity:0;transform:scale(1.15)}
+ 0%,31%{opacity:0;transform:scale(.55) rotate(-16deg)}
+ 46%{opacity:1}72%{opacity:.72}100%{opacity:0;transform:scale(1.45) rotate(27deg)}
 }
-@keyframes circle-upgrade-glow{
- 0%,100%{filter:none}35%{filter:drop-shadow(0 0 22px #fbe08a) brightness(1.5)}
+@keyframes circle-ritual-ink{
+ 0%,22%{opacity:0;transform:scale(.8) rotate(-9deg)}
+ 49%,58%{opacity:.95;transform:scale(1) rotate(0)}
+ 100%{opacity:0;transform:scale(1.06) rotate(3deg)}
 }
+@keyframes circle-ritual-bloom{
+ 0%,22%{opacity:0;transform:scale(.82)}
+ 45%,60%{opacity:.94;transform:scale(1.02)}
+ 100%{opacity:0;transform:scale(1.12)}
+}
+@keyframes circle-ritual-flare{
+ 0%,25%{opacity:0;transform:scale(.6)}
+ 49%{opacity:.9}75%{opacity:.28}100%{opacity:0;transform:scale(1.35)}
+}
+@keyframes circle-ritual-labels{
+ 0%,17%{opacity:0;transform:translateY(12px)}
+ 36%,86%{opacity:1;transform:translateY(0)}
+ 100%{opacity:0;transform:translateY(-5px)}
+}
+@media(max-width:440px){.circle-ritual__labels{gap:0}.circle-ritual__label{padding:4px 6px}}
 @media(prefers-reduced-motion:reduce){
- .magic-details-dialog[data-enhancing="true"] .magic-details-content:after,
- .magic-details-dialog[data-enhancing="true"] #magicDetailsImage{animation:none}
+ .circle-ritual{display:none!important}
 }
 
 /* Responsive combat timing: one brief rush, held contact, and elastic recoil. */
