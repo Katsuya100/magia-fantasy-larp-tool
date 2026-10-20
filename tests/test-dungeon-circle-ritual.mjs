@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {CIRCLE_RITUAL_DURATION_MS,circleRitualLabels,playCircleReveal,playCircleUpgrade} from '../assets/js/dungeon-circle-ritual.mjs';
+import {CIRCLE_RITUAL_DURATION_MS,CIRCLE_REVEAL_DURATION_MS,circleRitualLabels,playCircleReveal,playCircleUpgrade} from '../assets/js/dungeon-circle-ritual.mjs';
 
 const source=await readFile(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
+const ritualSource=await readFile(new URL('../assets/js/dungeon-circle-ritual.mjs',import.meta.url),'utf8');
 const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
-assert.equal(CIRCLE_RITUAL_DURATION_MS,800,'both sequences must last 0.8 seconds');
+assert.equal(CIRCLE_RITUAL_DURATION_MS,800,'upgrade animation remains 0.8 seconds');
+assert.equal(CIRCLE_REVEAL_DURATION_MS,1000,'reveal animation lasts 1 second');
 const attributes={
  flame:'🔥 炎の相',bolt:'⚡ 雷の相',aqua:'💧 水の相',storm:'🌪️ 風の相',
  gravity:'🪨 重力の相',law:'⚖️ 秩序の相',chaos:'🌀 混沌の相'
@@ -25,7 +27,10 @@ assert.match(css,/\.circle-ritual__physical\{/,'real saved photo exists behind g
 for(const animation of ['circle-ritual-ring-in','circle-upgrade-aura','circle-ritual-ink','circle-ritual-veil']){
  assert.ok(css.includes('@keyframes '+animation),'missing '+animation);
 }
-assert.match(css,/--ritual-duration:\.8s/,'CSS duration stays synchronized with JS');
+assert.match(css,/--ritual-duration:\.8s/,'upgrade CSS remains 0.8 seconds');
+assert.match(css,/\.circle-ritual--reveal\{\s*--ritual-duration:1s;/,'reveal CSS uses a 1-second animation');
+assert.match(ritualSource,/else timer=setTimeout\(ready,CIRCLE_REVEAL_DURATION_MS\)/,'tap-to-continue unlocks after the full reveal, not after upgrade timing');
+assert.match(ritualSource,/await sleep\(CIRCLE_RITUAL_DURATION_MS\)/,'upgrade still waits only 0.8 seconds');
 assert.doesNotMatch(css,/circle-upgrade-glow|data-enhancing="true"\] \.magic-details-content:after/,'old long upgrade animation is removed without changing combat timing');
 assert.match(css,/\.circle-ritual--upgrade\{/,'upgrades share ritual glow without a black backdrop');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\s*\.circle-ritual--upgrade\{display:none!important\}/,'reduced-motion keeps static result but disables upgrade animation');
@@ -73,11 +78,11 @@ try{
  assert.equal(modal.attributes['aria-modal'],'true');
  assert.equal(modal.children[0].src,'blob:real-photo','original photo is on the overlay');
  assert.equal(advance.tagName,'button');
- assert.equal(advance.disabled,true,'accidental taps during the 0.8s animation are ignored');
+ assert.equal(advance.disabled,true,'accidental taps during the 1s reveal are ignored');
  advance.click();
  assert.equal(settled,false);
- await new Promise(resolve=>setTimeout(resolve,CIRCLE_RITUAL_DURATION_MS+60));
- assert.equal(settled,false,'the reveal never auto-advances after 0.8s');
+ await new Promise(resolve=>setTimeout(resolve,CIRCLE_REVEAL_DURATION_MS+60));
+ assert.equal(settled,false,'the reveal never auto-advances after 1s');
  assert.equal(body.children.length,1,'the overlay remains visible until a tap');
  assert.equal(advance.disabled,false);
  assert.equal(modal.dataset.ready,'true');
@@ -91,7 +96,7 @@ try{
  const reduced=playCircleReveal(circle,'blob:real-photo');
  await new Promise(resolve=>setImmediate(resolve));
  const instant=body.children[0],reducedAdvance=instant.children.at(-1);
- assert.equal(reducedAdvance.disabled,false,'reduced motion still requires a tap, without waiting 0.8s');
+ assert.equal(reducedAdvance.disabled,false,'reduced motion still requires a tap, without waiting 1s');
  assert.equal(instant.dataset.ready,'true');
  reducedAdvance.click();
  await reduced;
@@ -100,4 +105,4 @@ try{
  globalThis.document=originalDocument;
  globalThis.window=originalWindow;
 }
-console.log('PASS fullscreen tap-to-continue circle reveal, seven aspects, four sigils and 800ms upgrade');
+console.log('PASS 1000ms fullscreen tap-to-continue circle reveal, seven aspects, four sigils and 800ms upgrade');

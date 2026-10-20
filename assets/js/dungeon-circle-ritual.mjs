@@ -1,7 +1,8 @@
 import {circleOutlinePixels,ATTRIBUTE_GLOW} from './dungeon-card-art.mjs';
 
 // Purely visual. A failed photo decode must never block saving or casting.
-export const CIRCLE_RITUAL_DURATION_MS=800;
+export const CIRCLE_RITUAL_DURATION_MS=800; // Upgrade only.
+export const CIRCLE_REVEAL_DURATION_MS=1000;
 const ATTRIBUTES={
  flame:['🔥','炎'],bolt:['⚡','雷'],aqua:['💧','水'],storm:['🌪️','風'],
  gravity:['🪨','重力'],law:['⚖️','秩序'],chaos:['🌀','混沌']
@@ -99,7 +100,7 @@ export async function playCircleReveal(circle,photoUrl=''){
   }
   const advance=element('button','circle-ritual__continue');
   advance.type='button';
-  advance.disabled=true; // Prevent a stray tap from dismissing the 0.8-second animation.
+  advance.disabled=true; // Prevent a stray tap from dismissing the 1-second reveal.
   advance.setAttribute('aria-label','魔法陣の解明結果を閉じて進む');
   const hint=element('span','circle-ritual__hint');
   hint.textContent='タップして進む';
@@ -128,7 +129,7 @@ export async function playCircleReveal(circle,photoUrl=''){
     advance.focus?.({preventScroll:true});
    };
    if(reducedMotion())ready();
-   else timer=setTimeout(ready,CIRCLE_RITUAL_DURATION_MS);
+   else timer=setTimeout(ready,CIRCLE_REVEAL_DURATION_MS);
   });
  }catch{/* A display failure must never undo analysis, saving or battle progress. */}
 }
