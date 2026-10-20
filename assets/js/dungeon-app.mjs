@@ -427,10 +427,11 @@ function renderRun(){
   if(!c?.image)return '<div class="battle-spell-frame"><div class="loadout-tile battle-tile battle-spell-tile unavailable" aria-label="魔法陣の編成枠 '+(i+1)+' 画像が見つかりません">'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +'<span class="tile-empty-icon" aria-hidden="true">！</span><span class="tile-title">画像なし</span></div></div>';
-  const disabled=Boolean(s&&!G.canCast(hero,i));
-  return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleLabel(c):'未解析')+'" '+(disabled?'disabled':'')+'>'
+  const disabled=Boolean(s&&!G.canCast(hero,i)),sealed=G.isSpellSealed(hero,s);
+  return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleLabel(c):'未解析')+(sealed?' 封印':'')+'" '+(disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
-    +'<img alt="" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'" src="'+battleImageUrl(c.image)+'">'
+    +'<span class="battle-spell-photo"><img alt="" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'" src="'+battleImageUrl(c.image)+'">'
+    +(sealed?'<span class="battle-spell-seal" aria-hidden="true">封</span>':'')+'</span>'
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
     +circleEffectBadges(c,masters.buffs,esc,G.mpCost)
     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button></div>';
