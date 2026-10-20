@@ -216,6 +216,14 @@ try{
  assert.equal(($('slotCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,2,'second equipped circle appears immediately');
  await Promise.all([pendingSelection,secondSelection]);
  assert.deepEqual((await getProfile(db)).slots.slice(0,2),[circles[0].id,circles[1].id],'rapid selections persist in order');
+ await doc.click(btn({openSlot:'0'}));await doc.click(btn({chooseCircle:'1'}));
+ $('librarySort').value='equipped';await $('librarySort').fire('change');
+ assert.deepEqual([...$('libraryCards').innerHTML.matchAll(/data-circle-id="([^"]+)"/g)].map(x=>x[1]),
+  [circles[1].id,circles[0].id,...circles.slice(2).map(c=>c.id)],
+  'grimoire uses slot order first and keeps unequipped circles visible afterward');
+ assert.deepEqual((await getProfile(db)).slots.slice(0,2),[circles[1].id,circles[0].id],
+  'library sort does not rewrite the equipped slots');
+ $('librarySort').value='newest';await $('librarySort').fire('change');
  await doc.click(btn({openSlot:'1'}));
  await $('clearLoadoutSlot').fire('click');
  await doc.click(btn({openSlot:'0'}));

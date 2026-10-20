@@ -7,6 +7,13 @@ const circles=[photo('a',40,'flame','attack',33,true),photo('b',30,'aqua','suppo
  photo('c',20,'bolt','defense',22,true),photo('d',10,'flame','debuff',99,true)];
 assert.deepEqual(circleListIndexes(circles),[0,1,2,3],'default newest');
 assert.deepEqual(circleListIndexes(circles,{sort:'oldest'}),[3,2,1,0],'oldest sort');
+assert.deepEqual(circleListIndexes(circles,{sort:'equipped',slots:['d',null,'b']}),[3,1,0,2],
+ 'equipped circles follow the slot order, with unequipped circles still in newest order');
+assert.deepEqual(circleListIndexes(circles,{sort:'equipped',slots:['missing','d','d']}),[3,0,1,2],
+ 'missing IDs and duplicated slots cannot remove or duplicate cards');
+assert.deepEqual(circleListIndexes(circles,{sort:'equipped',slots:['d','b'],attribute:'flame'}),[3,0],
+ 'equipped order works together with the attribute filter');
+assert.deepEqual(circles.map(c=>c.id),['a','b','c','d'],'sorting cannot modify saved circle order');
 assert.deepEqual(circleListIndexes(circles,{attribute:'flame'}),[0,3],'attribute filter');
 assert.deepEqual(circleListIndexes(circles,{role:'support'}),[1],'role filter');
 assert.deepEqual(circleListIndexes(circles,{role:'attack',attribute:'bolt'}),[],'combined filters');

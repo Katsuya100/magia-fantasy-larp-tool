@@ -5,13 +5,19 @@ const validNumber=v=>Number.isFinite(Number(v))?Number(v):0;
 const circlePower=c=>c?.revealed===false||!c?.analysis?null:validNumber(c.analysis.power);
 export const itemKind=(item,masterItems=[])=>masterItems.find(row=>row.id===item?.id)?.kind||(
  item?.id==='life_ruby'?'revive':item?.id?.startsWith('elixir_')?'elixir':item?.id?.startsWith('heal_')?'heal':item?.id?.startsWith('mana_')?'mana':item?.id?.startsWith('clear_')?'clear':'other');
-export function circleListIndexes(circles,{role='all',attribute='all',sort='newest'}={}){
+export function circleListIndexes(circles,{role='all',attribute='all',sort='newest',slots=[]}={}){
+ const equipped=new Map();
+ if(sort==='equipped')slots.forEach((id,index)=>{if(id&&!equipped.has(id))equipped.set(id,index);});
  return circles.map((circle,index)=>({circle,index})).filter(({circle})=>
   (role==='all'||circle.analysis?.role===role)&&(attribute==='all'||circle.analysis?.attribute===attribute)
  ).sort((a,b)=>{
   const x=a.circle,y=b.circle;
   let order=0;
-  if(sort==='oldest')order=validNumber(x.registeredAt)-validNumber(y.registeredAt);
+  if(sort==='equipped'){
+   const aSlot=equipped.get(x.id)??Infinity,bSlot=equipped.get(y.id)??Infinity;
+   order=aSlot===bSlot?0:aSlot-bSlot;
+  }
+  else if(sort==='oldest')order=validNumber(x.registeredAt)-validNumber(y.registeredAt);
   else if(sort==='role')order=compareText(x.analysis?.role,y.analysis?.role);
   else if(sort==='attribute')order=compareText(x.analysis?.attribute,y.analysis?.attribute);
   else if(sort==='power'){
