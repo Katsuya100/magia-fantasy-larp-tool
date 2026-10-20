@@ -222,7 +222,7 @@ assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing de
 assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
 assert.match(app,/shuffledLayerEnemyIds\(masters\.enemies,layer,Math\.random,slot\)/,'game assigns and saves a random order for each new layer');
 assert.match(app,/run\.layerEnemyOrder=\{layer,ids:/,'the order is stored in the active expedition');
-assert.match(app,/finishStartup\(\);\s*if\(!profile\.name\)openBackupSetup\(\)/,'backup setup appears before first-player name dialog');
+assert.match(app,/finishStartup\(\);\s*if\(profile\.awaitingHeir\)openNameDialog\(true\);\s*else if\(!profile\.name\)openBackupSetup\(\)/,'successors resume naming immediately; new players see backup setup first');
 assert.match(page,/<dialog id="backupSetupDialog"/,'backup setup dialog exists');
 
 const copyWarning='バックアップがない端末内セーブは予告なく消える可能性があります。';
@@ -245,7 +245,7 @@ assert.match(cloudSyncSource,/await establishLegacyIntegrity\(db,local\);\s*loca
 assert.match(cloudSyncSource,/if\(overwriteWarning\)overwriteWarning.hidden=!allowOverwrite/,'non-overwrite flows conceal misleading warning');
 assert.match(app,/void cloudSyncController\?\.syncNow\?\.\(\)/,'name submission queues Drive upload without holding the local action lock');
 assert.doesNotMatch(app,/await cloudSyncController\?\.syncNow\?\.\(\)/,'network uploads never block the rename form');
-assert.match(app,/await persist\(\);\$\('nameDialog'\)\.close\(\);render\(\);[\s\S]*?void cloudSyncController\?\.syncNow\?\.\(\)/,'name change is persisted locally and dialog closes before the Drive request starts');
+assert.match(app,/await saveProfile\(db,next\);\s*profile=next;\s*\$\('nameDialog'\)\.close\(\);\s*render\(\);[\s\S]*?void cloudSyncController\?\.syncNow\?\.\(\)/,'name change is persisted locally and dialog closes before the Drive request starts');
 assert.equal(page.split('システム上 <strong>'+concurrentWarning+'</strong>。').length-1,2,'both backup surfaces show the same explicit rollback warning');
 assert.ok(page.indexOf('<p class="backup-sync-warning">'+copyWarning+'</p>')<page.indexOf('id="backupSetupStatus"'),'the initial warning precedes connection status');
 const cloudMarkup=page.match(/<div class="cloud-sync">([\s\S]*?)<\/div>/)?.[1];
