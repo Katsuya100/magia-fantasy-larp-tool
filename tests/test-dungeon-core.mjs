@@ -173,6 +173,25 @@ assert.ok(G.resist(cured,'flame')<1);
 G.addStatus(cured,{id:'debuff_chaos',kind:'debuff',attribute:'chaos',effect:'shock',value:1,turns:2});
 G.addStatus(cured,{id:'debuff_chaos',kind:'debuff',attribute:'chaos',effect:'seal',value:1,turns:2});
 assert.equal(G.status(cured,'debuff_chaos').effect,'seal');
+const sealedHero=G.makeUnit(base,1,{},[
+ {role:'attack',attribute:'flame',power:10},
+ {role:'support',attribute:'aqua',power:10},
+ {role:'defense',attribute:'law',power:10}
+]);
+assert.equal(G.isSpellSealed(sealedHero,sealedHero.spells[0]),false,'normal circle has no seal mark');
+sealedHero.mp=0;sealedHero.cooldowns[0]=2;
+assert.equal(G.isSpellSealed(sealedHero,sealedHero.spells[0]),false,'MP shortage and cooldown are not seals');
+sealedHero.mp=sealedHero.maxMp;sealedHero.cooldowns[0]=0;
+sealedHero.statuses.push({effect:'seal',sealedRoles:['attack','defense'],turns:2});
+assert.equal(G.isSpellSealed(sealedHero,sealedHero.spells[0]),true,'sealed attack is marked');
+assert.equal(G.isSpellSealed(sealedHero,sealedHero.spells[1]),false,'unsealed role is not marked');
+assert.equal(G.isSpellSealed(sealedHero,sealedHero.spells[2]),true,'second sealed role is marked');
+assert.equal(G.canCast(sealedHero,0),false,'sealed attack stays uncastable');
+sealedHero.statuses=[{effect:'seal',sealedRole:'support',turns:1}];
+assert.equal(G.isSpellSealed(sealedHero,sealedHero.spells[1]),true,'legacy single-role seals are marked');
+assert.equal(G.isSpellSealed(sealedHero,sealedHero.spells[0]),false,'legacy seal does not affect other roles');
+sealedHero.statuses=[];
+assert.equal(G.isSpellSealed(sealedHero,sealedHero.spells[1]),false,'expired seal mark disappears');
 // Elixirs heal both resources by the same percentage without ever overflowing.
 const elixirUser=G.makeUnit(base,60);
 elixirUser.hp=1;elixirUser.mp=1;
