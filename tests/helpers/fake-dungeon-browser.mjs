@@ -4,9 +4,9 @@ export function fakeDungeonBrowser(config={}){
  const factory=config.factory||fakeIndexedDB(config.storage),dom=new Map(),listeners=new Map(),downloads=[],nativeShares=[];
  const make=(id)=>{
   const handlers=new Map();
-  const element={id,hidden:['library','prepare','collection','battle','checkpoint','analyzing','result','cameraCanvas','cameraVideo','cameraCapture','cameraStop','pageError','battleError','cameraError','notice','tutorialOverlay','tutorialExample','tutorialPad','tutorialRetry','tutorialFinger'].includes(id),disabled:false,open:false,attributes:{},innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
+  const element={id,hidden:['library','prepare','collection','battle','checkpoint','analyzing','result','cameraCanvas','cameraVideo','imageRepairCanvas','imageRepairVideo','imageRepairCapture','cameraCapture','cameraStop','pageError','battleError','cameraError','notice','tutorialOverlay','tutorialExample','tutorialPad','tutorialRetry','tutorialFinger'].includes(id),disabled:false,open:false,attributes:{},innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
    addEventListener(name,fn){handlers.set(name,fn);},
-   fire(name,data={}){return handlers.get(name)?.({target:element,preventDefault(){this.defaultPrevented=true;},...data});},
+   fire(name,data={}){const event={target:element,preventDefault(){this.defaultPrevented=true;},...data};return handlers.has(name)?handlers.get(name)(event):element['on'+name]?.(event);},
    setAttribute(name,value){this.attributes[name]=String(value);},
    removeAttribute(name){delete this.attributes[name];},
    showModal(){this.open=true;},close(){this.open=false;},
@@ -26,7 +26,8 @@ export function fakeDungeonBrowser(config={}){
   getElementById(id){if(!dom.has(id))dom.set(id,make(id));return dom.get(id);},
   createElement(tag){if(tag!=='a')throw Error('Unsupported fake element '+tag);return {href:'',download:'',click(){downloads.push({href:this.href,download:this.download});}};},
   addEventListener(name,fn){listeners.set(name,fn);},
-  click(button){return listeners.get('click')?.({target:button});}
+  click(button){return listeners.get('click')?.({target:button});},
+  emit(name,target){return listeners.get(name)?.({target});}
  };
  const input=make('analyzer-input'),analyze=make('analyzer-button'),altar={hidden:true};
  input.addEventListener('change',()=>{analyze.disabled=false;});
