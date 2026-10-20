@@ -326,6 +326,7 @@ try{
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
  assert.doesNotMatch($('battleSpells').innerHTML,/魔法陣\s*0[1-9]/,'battle also has no generated circle name');
  assert.equal(($('battleSpells').innerHTML.match(/<img alt=""[^>]* src="blob:/g)||[]).length,5,'all five spells display their original photos with optional native lazy decoding');
+ assert.doesNotMatch($('battleSpells').innerHTML,/battle-spell-seal/,'unsealed spells have no seal text');
  assert.equal(($('battleItems').innerHTML.match(/class="loadout-tile battle-tile battle-item-tile empty"/g)||[]).length,3,'the initial battle shows the same three unlocked item slots as preparation');
  assert.match($('battleBasic').innerHTML,/data-cast="-1"/,'basic attack remains available');
  await doc.click(btn({view:'collection'}));
