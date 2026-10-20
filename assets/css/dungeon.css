@@ -402,20 +402,19 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  font-weight:900;font-size:21px;letter-spacing:.1em;color:#fff2c9;
  background:radial-gradient(ellipse,#b28047e8,#5f325dcc 68%,transparent);
  border:1px solid #fff0b6;border-radius:12px;pointer-events:none;
- animation:circle-upgrade-aura 1.26s ease-out both
+ animation:circle-upgrade-aura 1.8s ease-out both
 }
 .magic-details-dialog[data-enhancing="true"] #magicDetailsImage{
- animation:circle-upgrade-glow 1.26s ease-out
+ animation:circle-upgrade-glow 1.8s ease-out
 }
 @keyframes circle-upgrade-aura{
- 0%{opacity:0;transform:scale(.45);filter:brightness(3)}
- 25%{opacity:1;transform:scale(1.06);filter:brightness(1.5)}
+ 0%{opacity:0;transform:scale(.45) rotate(-8deg);filter:brightness(3)}
+ 25%{opacity:1;transform:scale(1.06) rotate(0);filter:brightness(1.5)}
  65%{opacity:1;transform:scale(1);filter:brightness(1)}
  100%{opacity:0;transform:scale(1.15)}
 }
 @keyframes circle-upgrade-glow{
- 0%,100%{filter:none}
- 35%{filter:drop-shadow(0 0 14px var(--spell-glow)) drop-shadow(0 0 30px var(--spell-glow)) brightness(1.45)}
+ 0%,100%{filter:none}35%{filter:drop-shadow(0 0 22px #fbe08a) brightness(1.5)}
 }
 @media(prefers-reduced-motion:reduce){
  .magic-details-dialog[data-enhancing="true"] .magic-details-content:after,
@@ -1697,135 +1696,6 @@ html,body{overflow-x:clip}
  to{background-position:80% 75%,15% 18%,center}
 }
 
-
-/* Post-capture ritual: only the photographed circle, its 相 and its 紋. */
-.capture-reveal-dialog{
- --reveal-color:#e8bd80;width:min(420px,calc(100vw - 28px));
- max-height:calc(100dvh - 28px);padding:0;overflow:auto;
- border:1px solid var(--reveal-color);border-radius:16px;color:var(--pale);
- background:radial-gradient(circle at 50% 18%,#413049,#131724 72%);
- box-shadow:0 30px 110px #000d,0 0 30px color-mix(in srgb,var(--reveal-color) 25%,transparent)
-}
-.capture-reveal-dialog::backdrop{background:#080812d9;backdrop-filter:blur(6px)}
-.capture-reveal-dialog[data-attribute="flame"]{--reveal-color:#ffae70}
-.capture-reveal-dialog[data-attribute="bolt"]{--reveal-color:#f6df85}
-.capture-reveal-dialog[data-attribute="aqua"]{--reveal-color:#89deed}
-.capture-reveal-dialog[data-attribute="storm"]{--reveal-color:#9befd4}
-.capture-reveal-dialog[data-attribute="gravity"]{--reveal-color:#bca0ed}
-.capture-reveal-dialog[data-attribute="law"]{--reveal-color:#f2dcab}
-.capture-reveal-dialog[data-attribute="chaos"]{--reveal-color:#f4a4d7}
-.capture-reveal-body{padding:clamp(20px,5vw,30px);text-align:center}
-.capture-reveal-body h2{margin:0 0 24px;color:var(--gold);font-size:clamp(21px,5vw,26px)}
-.capture-reveal-image-wrap{
- position:relative;isolation:isolate;width:min(62vw,240px);aspect-ratio:1/1;margin:0 auto 25px
-}
-.capture-reveal-image-wrap::before{
- content:"";position:absolute;inset:0;z-index:1;border-radius:10px;
- background:#010205;opacity:0;pointer-events:none
-}
-.capture-reveal-image-wrap::after,.capture-reveal-ring{
- content:"";position:absolute;inset:-12%;z-index:4;border:2px solid var(--reveal-color);
- border-radius:50%;opacity:0;transform:scale(1.36);pointer-events:none;
- box-shadow:0 0 16px 3px color-mix(in srgb,var(--reveal-color) 65%,transparent),
- inset 0 0 20px color-mix(in srgb,var(--reveal-color) 27%,transparent)
-}
-.capture-reveal-ring{
- inset:3%;z-index:5;border-width:1px;transform:scale(1.46);
- box-shadow:0 0 13px 2px color-mix(in srgb,var(--reveal-color) 78%,transparent)
-}
-.capture-reveal-image-wrap img{
- position:relative;z-index:0;display:block;width:100%;height:100%;object-fit:cover;
- border:1px solid #edcf99;border-radius:10px;box-shadow:0 0 24px #000b
-}
-.capture-reveal-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 24px}
-.capture-reveal-results>div{min-width:0;padding:14px 6px;border:1px solid #aa8a6755;background:#0d122590;border-radius:9px}
-.capture-reveal-results dt{font-size:12px;color:var(--soft);margin-bottom:6px}
-.capture-reveal-results dd{margin:0;color:var(--reveal-color);font-size:clamp(18px,4.3vw,23px);font-weight:800;overflow-wrap:anywhere}
-#closeCaptureReveal{width:100%;max-width:300px}
-.capture-reveal-dialog[open] .capture-reveal-results>div{animation:capture-symbol-appear .455s ease-out .21s both}
-.capture-reveal-dialog[open] .capture-reveal-results>div:nth-child(2){animation-delay:.35s}
-@keyframes capture-symbol-appear{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
-@media(prefers-reduced-motion:reduce){
- .capture-reveal-dialog[open] .capture-reveal-results>div{animation:none}
-}
-
-
-/* Portrait-style layered halo for photographed magic circles. */
-:where(.circle-grid .card,.loadout-tile,.magic-details-dialog,.capture-reveal-dialog){
- --spell-glow:#ead098
-}
-[data-attribute="flame"]{--spell-glow:#ffad70}
-[data-attribute="bolt"]{--spell-glow:#f5dc79}
-[data-attribute="aqua"]{--spell-glow:#83dbeb}
-[data-attribute="storm"]{--spell-glow:#a2efd4}
-[data-attribute="gravity"]{--spell-glow:#b49ae8}
-[data-attribute="law"]{--spell-glow:#f2d99d}
-[data-attribute="chaos"]{--spell-glow:#efa0d4}
-.circle-grid .card[data-attribute],.loadout-tile[data-attribute]{isolation:isolate}
-.circle-grid .card[data-attribute]::after,.loadout-tile[data-attribute]::after{
- content:"";position:absolute;pointer-events:none;z-index:0;left:12%;top:8%;width:76%;
- aspect-ratio:1;border-radius:50%;
- background:radial-gradient(circle,color-mix(in srgb,var(--spell-glow) 24%,transparent),transparent 72%);
- box-shadow:0 0 0 5px color-mix(in srgb,var(--spell-glow) 5%,transparent),
- 0 0 20px color-mix(in srgb,var(--spell-glow) 16%,transparent)
-}
-.loadout-tile[data-attribute]::after{inset:16%;width:auto;aspect-ratio:auto}
-.circle-grid .card[data-attribute] img,.loadout-tile[data-attribute] img{
- position:relative;z-index:1;
- filter:drop-shadow(0 0 7px color-mix(in srgb,var(--spell-glow) 43%,transparent))
-}
-
-/* The enlarged photo has a one-shot ritual glow after upgrades, not a permanent halo. */
-.magic-circle-image-frame{
- position:relative;isolation:isolate;width:min(100%,320px);aspect-ratio:1;
- margin:18px auto 24px
-}
-.magic-circle-image-frame::before{
- content:"";position:absolute;inset:-13px;z-index:-1;border-radius:50%;opacity:0;
- background:radial-gradient(circle,color-mix(in srgb,var(--spell-glow) 27%,transparent),transparent 73%);
- box-shadow:0 0 0 9px color-mix(in srgb,var(--spell-glow) 7%,transparent),
- 0 0 34px color-mix(in srgb,var(--spell-glow) 35%,transparent)
-}
-.magic-circle-image-frame::after{
- content:"";position:absolute;inset:-12px;border:1px solid color-mix(in srgb,var(--spell-glow) 65%,transparent);
- border-radius:50%;pointer-events:none;opacity:0;
- box-shadow:0 0 16px color-mix(in srgb,var(--spell-glow) 47%,transparent),
- inset 0 0 18px color-mix(in srgb,var(--spell-glow) 13%,transparent)
-}
-.magic-details-content .magic-circle-image-frame img{
- display:block;width:100%;height:100%;margin:0;object-fit:cover;
- border:1px solid var(--border);filter:none
-}
-.magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::before{
- animation:circle-upgrade-halo 1.26s ease-out both
-}
-.magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{
- animation:circle-upgrade-ring 1.26s ease-out both
-}
-@keyframes circle-upgrade-halo{
- 0%{opacity:0;transform:scale(.85)}
- 30%{opacity:1;transform:scale(1.03)}
- 65%{opacity:.6;transform:scale(1.1)}
- 100%{opacity:0;transform:scale(1.16)}
-}
-@keyframes circle-upgrade-ring{
- 0%{opacity:0;transform:scale(1.32)}
- 35%{opacity:1;transform:scale(1.02);
-  box-shadow:0 0 26px 8px color-mix(in srgb,var(--spell-glow) 45%,transparent)}
- 100%{opacity:0;transform:scale(.93)}
-}
-.capture-reveal-dialog[data-attribute] .capture-reveal-image-wrap::after,
-.capture-reveal-dialog[data-attribute] .capture-reveal-ring{
- border-color:var(--spell-glow);
- box-shadow:0 0 15px var(--spell-glow),0 0 32px color-mix(in srgb,var(--spell-glow) 52%,transparent)
-}
-.capture-reveal-dialog[data-attribute] #captureRevealImage{filter:none}
-@media(prefers-reduced-motion:reduce){
- .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::before,
- .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{animation:none}
- .magic-details-dialog[data-enhancing="true"] .magic-details-content:after{display:none}
-}
-
 /* Stone-investment visual tiers (0-4 / 5-19 / 20-54 / 55+).
    Each fighter/projectile has independent data-tier; incoming hits have their
    own data-incoming-tier. Never move the arena, viewport or combat UI. */
@@ -1957,70 +1827,6 @@ html,body{overflow-x:clip}
  #battleArena :is(.unit,.spell-projectile) :is(.element-flare,.element-trail,.combatant-ring,.combatant-burst){
   scale:1!important;filter:none!important
  }
-}
-
-
-/* Ink-derived light uses the exact profile-image contour extraction.
-   Normal photo stays behind a black veil that dissolves with the glowing ink. */
-.magic-circle-image-frame>.magic-circle-glow,
-.capture-reveal-image-wrap>.magic-circle-glow{
- position:absolute;inset:0;z-index:3;display:block;
- width:100%;height:100%;pointer-events:none;opacity:0;
- filter:drop-shadow(0 0 15px var(--spell-glow));
- transform:translateZ(0)
-}
-.magic-details-dialog[data-enhancing="true"] .magic-circle-glow[data-ready="true"]{
- animation:magic-ink-light 1.26s ease-out both
-}
-.capture-reveal-dialog[data-revealing="true"] .capture-reveal-image-wrap::before{
- animation:capture-black-veil 1.575s ease-in-out both
-}
-.capture-reveal-dialog[data-revealing="true"] .magic-circle-glow[data-ready="true"]{
- animation:capture-ink-light 1.575s ease-in-out both
-}
-.capture-reveal-dialog[data-revealing="true"] .capture-reveal-image-wrap::after{
- animation:capture-outer-ring 1.575s ease-out both
-}
-.capture-reveal-dialog[data-revealing="true"] .capture-reveal-ring{
- animation:capture-inner-ring 1.575s ease-out both
-}
-@keyframes capture-black-veil{
- 0%{opacity:0}
- 15%,57%{opacity:1}
- 100%{opacity:0}
-}
-@keyframes capture-ink-light{
- 0%{opacity:0;transform:scale(1)}
- 22%,58%{opacity:1;transform:scale(1)}
- 100%{opacity:0;transform:scale(1)}
-}
-@keyframes capture-outer-ring{
- 0%{opacity:0;transform:scale(1.36)}
- 19%{opacity:1;transform:scale(1.05)}
- 52%{opacity:.55;transform:scale(.98)}
- 100%{opacity:0;transform:scale(.88)}
-}
-@keyframes capture-inner-ring{
- 0%{opacity:0;transform:scale(1.46)}
- 32%{opacity:.95;transform:scale(1.04)}
- 68%{opacity:.4;transform:scale(.98)}
- 100%{opacity:0;transform:scale(.90)}
-}
-@keyframes magic-ink-light{
- 0%{opacity:0;transform:scale(.98)}
- 22%,57%{opacity:1;transform:scale(1.015)}
- 100%{opacity:0;transform:scale(1.055)}
-}
-@keyframes circle-upgrade-glow{
- 0%,100%{filter:none}
- 23%,60%{filter:brightness(.58) contrast(1.25)}
-}
-@media(prefers-reduced-motion:reduce){
- .magic-details-dialog[data-enhancing="true"] .magic-circle-glow,
- .capture-reveal-dialog[data-revealing="true"] .magic-circle-glow{animation:none;opacity:0}
- .capture-reveal-dialog[data-revealing="true"] .capture-reveal-image-wrap::before,
- .capture-reveal-dialog[data-revealing="true"] .capture-reveal-image-wrap::after,
- .capture-reveal-dialog[data-revealing="true"] .capture-reveal-ring{animation:none;opacity:0}
 }
 
 /* Honest five-step analysis: advance only after the iframe confirms a stage. */

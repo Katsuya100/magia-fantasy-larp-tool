@@ -84,8 +84,6 @@ export async function verifyLocalSnapshot(snapshot){
  if(ids.length!==Object.keys(proof.photos||{}).length||ids.some(id=>!(id in proof.photos)))
   return {status:'corrupt',message:'魔法陣の記録数が一致しません。',badImageIds:[]};
  const badImageIds=[];
- // Keep photo hashing strictly serial. Parallel Blob reads compete with the
- // carefully budgeted WebAssembly OCR runtimes on memory-constrained devices.
  for(const circle of snapshot.circles){
   const expected=proof.photos[circle.id];
   if(circle.image==null){badImageIds.push(circle.id);continue;}

@@ -21,7 +21,7 @@ try{
  await $('startAttack').fire('click');
  assert.equal($('battle').hidden,false);
  const battleBefore=$('battleSpells').innerHTML,urlsBefore=imageUrls(battleBefore);
- assert.equal(urlsBefore.length,3,'only three equipped circles have thumbnails');
+ assert.equal(urlsBefore.length,3,'only three equipped circles render original photos');
  assert.equal((battleBefore.match(/data-cast="\d"/g)||[]).length,3,'only equipped spell slots are cast controls');
  assert.equal((battleBefore.match(/class="loadout-tile battle-tile battle-spell-tile empty"/g)||[]).length,2,'04/05 use empty tile state');
  assert.equal((battleBefore.match(/>未装備<\/span>/g)||[]).length,2,'04/05 visibly say not equipped');
@@ -31,10 +31,10 @@ try{
   await doc.click(button({cast:'0'}));
   await wait(async()=>{const p=await getProfile(db);return p.run?.floor===round+2;},'round '+(round+1));
   const current=$('battleSpells').innerHTML;
-  assert.deepEqual(imageUrls(current),urlsBefore,'all thumbnails keep identical non-revoked URLs after round '+(round+1));
+  assert.deepEqual(imageUrls(current),urlsBefore,'all original photos keep identical non-revoked URLs after round '+(round+1));
   assert.equal(env.revokedImageUrls.length,0,'casting never revokes active thumbnails');
   assert.equal((current.match(/>未装備<\/span>/g)||[]).length,2,'empty slots remain correct after redrawing');
  }
  assert.equal(new Set(urlsBefore).size,3,'each saved photograph has its own source');
- console.log('PASS 3 equipped/2 empty battle slots, repeated casts and permanent valid thumbnail URLs');
+ console.log('PASS 3 equipped/2 empty battle slots, repeated casts and permanent original-photo URLs');
 }finally{Math.random=oldRandom;env.restore();}

@@ -92,7 +92,6 @@ try{
  env.analyzerState.attribute='invalid';
  await $('cameraCapture').fire('click');
  assert.equal($('analyzing').hidden,true,'failed analysis closes the full-screen analysis view');
- assert.equal($('captureRevealDialog').open,false,'failed analysis must not play the successful reveal');
  assert.equal($('library').hidden,false,'failed analysis returns to the grimoire');
  assert.ok(visitedAnalysis.includes(false),'photo analysis opens the visible screen');
  await wait(()=>$('cameraError').textContent.includes('保存していません'),'failed capture rejected');
@@ -104,12 +103,6 @@ try{
   assert.equal($('cameraCapture').hidden,false,'capture action stays available');
   assert.equal($('cameraPlaceholder').hidden,true,'camera feed stays visible after saving');
   assert.equal($('notice').textContent,'','no global log is displayed');
-  assert.equal($('captureRevealDialog').open,true,'a successful capture opens its result ritual');
-  assert.match($('captureRevealAttribute').textContent,/flame/,'the photographed 相 appears');
-  assert.match($('captureRevealRole').textContent,/攻撃/,'the photographed 紋 appears');
-  assert.match($('captureRevealImage').src,/^blob:mock-/,'the photographed ink appears in the ritual');
-  await $('closeCaptureReveal').fire('click');
-  assert.equal($('captureRevealDialog').open,false,'the one-button ritual can close');
  }
  assert.equal(env.opened,1,'camera stream opened once');
  assert.equal(env.closed,0,'camera stays active during five captures');
@@ -148,8 +141,12 @@ try{
  assert.doesNotMatch(page,/id="imageRepairFile"/,'retake never exposes a file picker');
  await doc.click(btn({circleDetail:circles[0].id}));
  const failedPhoto=$('magicDetailsImage'),beforeRepair=(await allCircles(db)).find(c=>c.id===circles[0].id);
+ const sourceUrl=failedPhoto.src;
+ assert.ok(beforeRepair.image instanceof Blob&&beforeRepair.image.size>0,'an intact Blob can still fail to decode');
  doc.emit('error',failedPhoto);
+ assert.equal($('repairSelectedCircleImage').hidden,false,'one real image error exposes repair');
  doc.emit('error',failedPhoto);
+ assert.equal(failedPhoto.src,sourceUrl,'photo failure does not retry or overwrite the saved Blob');
  assert.equal($('repairSelectedCircleImage').hidden,false,'retake appears after two display failures');
  void $('repairSelectedCircleImage').fire('click');
  await wait(()=>$('imageRepairDialog').open&&!$('imageRepairCapture').hidden,'repair camera opens immediately');
@@ -328,7 +325,7 @@ try{
  assert.match($('battleSpells').innerHTML,/data-circle-detail=/,'touch expansion is available during battle');
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
  assert.doesNotMatch($('battleSpells').innerHTML,/魔法陣\s*0[1-9]/,'battle also has no generated circle name');
- assert.equal(($('battleSpells').innerHTML.match(/<img alt=""[^>]* src="blob:/g)||[]).length,5,'all five spells have photo thumbnails');
+ assert.equal(($('battleSpells').innerHTML.match(/<img alt=""[^>]* src="blob:/g)||[]).length,5,'all five spells display their original photos with optional native lazy decoding');
  assert.equal(($('battleItems').innerHTML.match(/class="loadout-tile battle-tile battle-item-tile empty"/g)||[]).length,3,'the initial battle shows the same three unlocked item slots as preparation');
  assert.match($('battleBasic').innerHTML,/data-cast="-1"/,'basic attack remains available');
  await doc.click(btn({view:'collection'}));

@@ -27,7 +27,7 @@ export function fakeDungeonBrowser(config={}){
   createElement(tag){if(tag!=='a')throw Error('Unsupported fake element '+tag);return {href:'',download:'',click(){downloads.push({href:this.href,download:this.download});}};},
   addEventListener(name,fn){listeners.set(name,fn);},
   click(button){return listeners.get('click')?.({target:button});},
-   emit(name,target){return listeners.get(name)?.({target});}
+  emit(name,target){return listeners.get(name)?.({target});}
  };
  const input=make('analyzer-input'),analyze=make('analyzer-button'),altar={hidden:true};
  input.addEventListener('change',()=>{analyze.disabled=false;});
@@ -48,7 +48,7 @@ export function fakeDungeonBrowser(config={}){
  const iframe=document.getElementById('analyzerFrame');iframe.contentDocument=analyzer;
  const captureFrame=document.getElementById('captureAnalyzerFrame');captureFrame.contentDocument=analyzer;
  let frameSource='';
- Object.defineProperty(iframe,'src',{get(){return frameSource;},set(s){frameSource=s;if(s.startsWith('magia-circle.html?dungeon=1')){analyze.disabled=true;altar.hidden=true;setImmediate(()=>iframe.onload?.());}}});
+ Object.defineProperty(iframe,'src',{get(){return frameSource;},set(s){frameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>iframe.onload?.());}}});
  let captureFrameSource='';
  Object.defineProperty(captureFrame,'src',{get(){return captureFrameSource;},set(s){captureFrameSource=s;if(s==='magia-circle.html'){analyze.disabled=true;altar.hidden=true;setImmediate(()=>captureFrame.onload?.());}}});
  const video=document.getElementById('cameraVideo');video.videoWidth=960;video.videoHeight=720;

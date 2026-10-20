@@ -4,7 +4,6 @@ import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,saveProfile,getProfile,readDungeonSnapshot,allCircles} from '../assets/js/dungeon-store.mjs';
 import {verifyLocalSnapshot,digestPhoto} from '../assets/js/dungeon-cloud-integrity.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
-import {displayCircleThumbnail,restoreOriginalOnThumbnailError} from '../assets/js/dungeon-thumbnails.mjs';
 
 const image=new Blob([Uint8Array.from([255,216,255,224,1,2,3,4,255,217])],{type:'image/jpeg'});
 const circle={id:'fallen-relic-circle',image,analysis:{attribute:'flame',role:'attack',power:120},revealed:true,registeredAt:1,basePower:120};
@@ -49,18 +48,6 @@ try{
  assert.match($('magicDetailsStats').innerHTML,/まだ名を残した継承者はいない/);
  assert.equal((await allCircles(db))[0].image.size,image.size);
 }finally{env.restore();}
-const img={isConnected:true,dataset:{circleThumb:circle.id},src:'',alt:''};
-await displayCircleThumbnail(img,circle,{get:async()=>{throw Error('simulated bitmap decode failure');}},()=> 'blob:original');
-assert.equal(img.src,'blob:original','decode failure displays original instead of transparent placeholder');
-assert.equal(img.dataset.circleImageSource,'original');
-await displayCircleThumbnail(img,circle,{get:async()=>''},()=> 'blob:original-second');
-assert.equal(img.src,'blob:original-second','cancelled thumbnail generation uses original');
-await displayCircleThumbnail(img,circle,{get:async()=> 'blob:derived'},()=> 'blob:original');
-assert.equal(img.src,'blob:derived');
-assert.equal(restoreOriginalOnThumbnailError(img,circle,()=> 'blob:original-third'),true);
-assert.equal(img.src,'blob:original-third','undecodable cached thumbnail falls back to original');
-assert.equal(restoreOriginalOnThumbnailError(img,circle,()=> 'blob:unused'),false,'original error does not loop');
-const detached={isConnected:false,dataset:{circleThumb:circle.id},src:'untouched'};
-await displayCircleThumbnail(detached,circle,{get:async()=>''},()=> 'blob:unexpected');
-assert.equal(detached.src,'untouched','stale elements do not receive recycled URLs');
-console.log('PASS recovered relic photo IndexedDB bytes, reload, cloud snapshot and thumbnail fallback');
+// The recovered original Blob is displayed directly; no derived cache is required.
+assert.equal((await allCircles(db))[0].image.size,image.size);
+console.log('PASS PR140: relic photo persisted/read back, reload, cloud snapshot, original Blob display without thumbnail caching');
