@@ -841,13 +841,18 @@ function showSupportPrompt(prompt){
   canvas.hidden=false;
   $('supportSaveImage').disabled=true;
   $('supportPromptDialog').showModal();
-  const image=new Image();
-  image.onload=()=>{
+  void circleImages.thumbnail(selected).then(thumb=>{
    if(generation!==shareImageGeneration||!$('supportPromptDialog').open)return;
-   draw({image,attribute:selected.analysis?.attribute});
-  };
-  image.onerror=()=>draw(null);
-  image.src=imageUrl(selected.image);
+   const image=new Image(),url=URL.createObjectURL(thumb);
+   const cleanup=()=>{image.onload=null;image.onerror=null;URL.revokeObjectURL(url);};
+   image.onload=()=>{
+    cleanup();
+    if(generation!==shareImageGeneration||!$('supportPromptDialog').open)return;
+    draw({image,attribute:selected.analysis?.attribute});
+   };
+   image.onerror=()=>{cleanup();draw(null);};
+   image.src=url;
+  }).catch(()=>draw(null));
  }else{
   draw(null);
   $('supportPromptDialog').showModal();
@@ -1550,6 +1555,7 @@ function wire(){
   $('milestoneClose').addEventListener('click',()=>$('milestoneChoiceDialog').close());
   $('supportPromptClose').addEventListener('click',()=>$('supportPromptDialog').close());
   $('supportXLink').addEventListener('click',()=>$('supportPromptDialog').close());
+ $('supportPromptDialog').addEventListener('close',()=>{shareImageGeneration++;shareImageFile=null;});
   $('supportSaveImage').addEventListener('click',downloadAdventurerCard);
   $('supportNativeShare').addEventListener('click',shareAdventurerCardImage);
  for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)));
