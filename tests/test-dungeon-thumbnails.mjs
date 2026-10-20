@@ -6,12 +6,13 @@ globalThis.document={baseURI:'https://example.test/magia-fantasy-larp-tool/'};
 const store=new Map(),created=[],revoked=[],started=[];
 let running=0,peak=0,releaseFirst=null;
 const gate=new Promise(resolve=>releaseFirst=resolve);
-let productionCount=0;
+let productionCount=0,notifyStarted;
+const firstStarted=new Promise(resolve=>notifyStarted=resolve);
 const factory=()=>createCircleThumbnails({
  makeThumbnail:async source=>{
   const call=++productionCount;
   started.push(call);running++;peak=Math.max(peak,running);
-  if(call===1)await gate;
+  if(call===1){notifyStarted();await gate;}
   const result=new Blob(['thumb:'+await source.text()],{type:'image/jpeg'});
   running--;return result;
  },
@@ -28,9 +29,7 @@ try{
  const proofs={a:'a'.repeat(64),b:'b'.repeat(64)};
  const thumbs=factory();thumbs.setProofs(proofs);
  const a=thumbs.get(first),b=thumbs.get(second);
- // Cache opening and matching are asynchronous; wait until the first decode
- // actually starts rather than assuming it finishes within one microtask.
- for(let i=0;i<100&&started.length===0;i++)await new Promise(resolve=>setTimeout(resolve,0));
+ await firstStarted;
  assert.equal(started.length,1,'never begin a second decode while one is active');
  const pause=thumbs.pause();
  releaseFirst();
