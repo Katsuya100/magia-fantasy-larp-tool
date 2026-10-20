@@ -86,15 +86,20 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
  const first=(fromLayer-1)*5+1,last=toLayer*5;
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
   startLevel:level,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,
-  initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[]};
+  initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[],
+  enemyDebuffCasts:0,enemyDebuffFights:0,fightsReached:0};
  for(let fight=first;fight<=last;fight++){
   const foe=enemyForFight(data.enemies,fight);
   const enemy=G.fromEnemy(foe,+data.floors[fight-1].enemy_level);
   const hpBefore=hero.hp,mpBefore=hero.mp;
-  let turns=0,win=false;
+  let turns=0,win=false,debuffInFight=false;
+  stats.fightsReached++;
   for(;turns<80;turns++){
    const pick=heroAction(hero,enemy);
    const enemyPick=enemyAction(enemy,r);
+   if(enemyPick>=0&&enemy.spells[enemyPick].role==='debuff'){
+    stats.enemyDebuffCasts++;debuffInFight=true;
+   }
    if(pick===-1)stats.normalAttacks++;
    G.round(hero,enemy,pick,enemyPick,data.buffs,r);
    stats.turns++;
@@ -102,6 +107,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
    if(hero.hp<=0)break;
    if(enemy.hp<=0){win=true;break;}
   }
+  if(debuffInFight)stats.enemyDebuffFights++;
   stats.fightStats.push({fight,layer:Math.ceil(fight/5),win,turns:turns+1,hpBefore,hpAfter:hero.hp,mpBefore,mpAfter:hero.mp});
   if(!win)break;
   stats.clear=fight;
