@@ -496,8 +496,8 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  49%{opacity:.9}75%{opacity:.28}100%{opacity:0;transform:scale(1.35)}
 }
 @keyframes circle-ritual-labels{
- 0%,32%{opacity:0;transform:translateY(12px)}
- 53%,72%{opacity:1;transform:translateY(0)}
+ 0%,17%{opacity:0;transform:translateY(12px)}
+ 36%,86%{opacity:1;transform:translateY(0)}
  100%{opacity:0;transform:translateY(-5px)}
 }
 @media(max-width:440px){.circle-ritual__labels{gap:0}.circle-ritual__label{padding:4px 6px}}
