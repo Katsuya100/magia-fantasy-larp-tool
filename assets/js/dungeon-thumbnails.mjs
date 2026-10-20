@@ -105,3 +105,36 @@ export function createCircleThumbnails({
   }
  };
 }
+
+/** Thumbnail conversion is optional; the original saved Blob remains authoritative. */
+export async function displayCircleThumbnail(img,circle,thumbnails,originalUrl){
+ const current=()=>img.isConnected&&img.dataset.circleThumb===circle.id;
+ try{
+  const url=await thumbnails.get(circle);
+  if(!current())return;
+  if(url){
+   img.dataset.circleImageSource='thumbnail';
+   img.src=url;
+   return;
+  }
+ }catch(error){
+  console.warn('サムネイルを作成できませんでした。元画像を表示します',error);
+ }
+ if(!current())return;
+ if(circle.image instanceof Blob&&circle.image.size>0){
+  try{
+   img.dataset.circleImageSource='original';
+   img.src=originalUrl(circle.image);
+   return;
+  }catch(error){console.warn('元画像のURLを作成できませんでした',error);}
+ }
+ img.dataset.photoFailed='true';
+ img.alt='魔法陣の元画像を確認できません。写真を復旧してください。';
+}
+/** Try the authoritative photo if a generated/cached thumbnail cannot decode. */
+export function restoreOriginalOnThumbnailError(img,circle,originalUrl){
+ if(img?.dataset?.circleImageSource!=='thumbnail'||!(circle?.image instanceof Blob)||!circle.image.size)return false;
+ img.dataset.circleImageSource='original';
+ img.src=originalUrl(circle.image);
+ return true;
+}
