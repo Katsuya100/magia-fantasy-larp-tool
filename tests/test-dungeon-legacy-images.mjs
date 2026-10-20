@@ -27,7 +27,7 @@ try{
  assert.ok(after[0].image instanceof Blob,'recovered relic must remain a real Blob');
  assert.equal(after[0].image.type,'image/jpeg');
  assert.equal(await digestPhoto(after[0].image),await digestPhoto(image),'original photo bytes survive return');
- assert.equal(after[0].legacyHp,24,'relic powers are restored');
+ assert.equal(after[0].legacyHp,12,'one level 12 owner contributes 12 HP');
  assert.equal((await getProfile(db)).run,null);
  assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(db))).status,'valid','relic save stays authenticated');
  const exported=await serializeDungeonSnapshot(await readDungeonSnapshot(db));
@@ -45,10 +45,10 @@ try{
  assert.equal($('magicDetailsLegacyTitle').hidden,false,'recovered relic shows the inscription');
  assert.match($('magicDetailsImage').src,/^blob:mock-/,'detail lazily displays the intact original');
  assert.equal($('magicDetailsLegacyTitle').textContent,'先代の残した遺物','earliest character name is recovered from older legacy records');
- assert.match($('magicDetailsStats').innerHTML,/<dt>🔵🔥 継承<\/dt><dd>敵の最大HP-24<\/dd>/,'attack-only inheritance reduces enemy HP');
+ assert.match($('magicDetailsStats').innerHTML,/<dt>🔵🔥 継承<\/dt><dd>敵の最大HP-12（合計Lv.12）<\/dd>/,'attack uses level sum');
  assert.doesNotMatch($('magicDetailsStats').innerHTML,/自分の最大HP\+/,'attack must never list defensive inheritance');
  assert.match($('magicDetailsStats').innerHTML,/<dt class="legacy-heirs-label">過去の継承者達<\/dt>/);
- assert.match($('magicDetailsStats').innerHTML,/まだ名を残した継承者はいない/);
+ assert.match($('magicDetailsStats').innerHTML,/先代 Lv.12/,'details show contributor and level');
  assert.equal((await allCircles(db))[0].image.size,image.size);
 }finally{env.restore();}
 // The recovered original Blob is displayed directly; no derived cache is required.
