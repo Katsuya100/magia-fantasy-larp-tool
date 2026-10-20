@@ -7,9 +7,12 @@ export async function createCircleThumbnail(blob,size=192){
   else{
    url=URL.createObjectURL(blob);
    image=new Image();
-   image.src=url;
-   if(typeof image.decode==='function')await image.decode();
-   else await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('写真を読み込めません。'));});
+   if(typeof image.decode==='function'){image.src=url;await image.decode();}
+   else await new Promise((resolve,reject)=>{
+    image.onload=resolve;
+    image.onerror=()=>reject(Error('写真を読み込めません。'));
+    image.src=url;
+   });
   }
   if(typeof document==='undefined')throw Error('画像を縮小できません。');
   canvas=document.createElement('canvas');
