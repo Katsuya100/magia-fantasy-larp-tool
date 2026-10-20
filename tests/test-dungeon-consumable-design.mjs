@@ -85,10 +85,10 @@ for(let fight=1;fight<=95;fight++){
  const roles=G.fromEnemy(enemy,+enemy.min_level).spells.map(x=>x.role);
  assert.ok(!roles.includes('debuff'),'no early debuff enemy at fight '+fight);
 }
-for(let fight=96;fight<=500;fight++){
- const enemy=enemyForFight(enemies,fight);
- assert.ok(G.fromEnemy(enemy,+enemy.min_level).spells.some(x=>x.role==='debuff'),
-  'debuff enemy available from layer 20: '+fight);
+for(let layer=20;layer<=100;layer++){
+ const party=enemies.slice((layer-1)*5,layer*5);
+ assert.equal(party.filter(enemy=>G.fromEnemy(enemy,+enemy.min_level).spells.some(x=>x.role==='debuff')).length,2,
+  'exactly two dedicated debuff specialists at layer '+layer);
 }
 // At every recommended level, even the weakest legal tier restores at least
 // 75% of the largest possible hero's HP/MP, with no dependence on a lucky roll.

@@ -144,6 +144,21 @@ export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debu
 export function isSpellSealed(u,s){return Boolean(s&&u.statuses.some(x=>x.effect==='seal'&&(x.sealedRoles?x.sealedRoles.includes(s.role):x.sealedRole===s.role)));}
 export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=spellMpCost(s)&&!u.cooldowns[i]&&!isSpellSealed(u,s));}
 export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
+// Shared dungeon enemy AI. A flavor-designated curse specialist (one of its
+// five spells has role 'debuff') prioritizes that spell when available. Enemies
+// without debuffs retain the exact legacy random attack/other spell choice.
+export function chooseEnemySpell(unit,r=Math.random){
+ const ids=available(unit);
+ if(!ids.length)return -1;
+ const heal=ids.find(i=>unit.spells[i].role==='support');
+ if(heal!==undefined&&unit.hp<unit.stats.hp*num('enemy_heal_threshold'))return heal;
+ const curse=ids.find(i=>unit.spells[i].role==='debuff');
+ if(curse!==undefined&&r()<num('enemy_debuff_specialist_preference'))return curse;
+ const offense=ids.filter(i=>unit.spells[i].role==='attack');
+ return offense.length&&r()<num('enemy_attack_preference')
+  ?offense[Math.floor(r()*offense.length)]:ids[Math.floor(r()*ids.length)];
+}
+
 export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=spellMpCost(sp);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=shock.shockExtra??num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
 // Whether a carried item currently has a usable primary effect (or bonus).
 // Escape scrolls are always usable; revival can only be armed once per fight.
