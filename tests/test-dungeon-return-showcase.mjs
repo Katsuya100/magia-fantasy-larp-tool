@@ -123,8 +123,8 @@ try{
  
  // A nested loss returns multiple generations but must not merge their labels.
  const nested=await create(0,true),nestedProfile=await getProfile(nested.db);
- const first={name:'世代1',level:8,circles:[{id:'relic-generation-1',image:new Blob(['first']),analysis:attack}],items:[],loot:[],rank:0};
- const second={name:'世代2',level:9,circles:[{id:'relic-generation-2',image:new Blob(['second']),analysis:attack}],items:[],loot:[{type:'legacy',legacy:first}],rank:0};
+ const first={name:'世代1',level:8,circles:[{id:'relic-generation-1',image:new Blob(['photo']),analysis:attack}],items:[],loot:[],rank:0};
+ const second={name:'世代2',level:9,circles:[{id:'relic-generation-2',image:new Blob(['photo']),analysis:attack}],items:[],loot:[{type:'legacy',legacy:first}],rank:0};
  nestedProfile.run.loot=[{type:'legacy',legacy:second}];
  await saveProfile(nested.db,nestedProfile);
  const nestedEnv=fakeDungeonBrowser({factory:nested.factory}),$n=id=>nestedEnv.document.getElementById(id);
