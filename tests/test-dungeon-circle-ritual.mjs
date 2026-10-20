@@ -24,7 +24,7 @@ for(const animation of ['circle-ritual-ring-in','circle-upgrade-aura','circle-ri
  assert.ok(css.includes('@keyframes '+animation),'missing '+animation);
 }
 assert.match(css,/--ritual-duration:\.8s/,'CSS duration stays synchronized with JS');
-assert.doesNotMatch(css,/1\.8s/,'old 1.8 second upgrade effect is removed');
+assert.doesNotMatch(css,/circle-upgrade-glow|data-enhancing="true"\] \.magic-details-content:after/,'old long upgrade animation is removed without changing combat timing');
 assert.match(css,/\.circle-ritual--upgrade\{/,'upgrades share ritual glow without a black backdrop');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\s*\.circle-ritual\{display:none!important\}/,'reduced motion bypass');
 await playCircleReveal({analysis:{attribute:'law',role:'support'},image:new Blob(['photo'])});
