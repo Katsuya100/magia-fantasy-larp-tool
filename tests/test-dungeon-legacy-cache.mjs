@@ -36,7 +36,7 @@ try{
  assert.deepEqual(deletes,[LEGACY_THUMBNAIL_CACHE_NAME],'the legacy cache is deleted once');
  assert.deepEqual(opens,[],'no cache is opened and no thumbnails are generated');
  assert.equal((await allCircles(db)).length,0,'original saved photos are removed by the explicit save deletion operation');
- assert.equal((await getProfile(db)).name,'','the save data is reset only after user confirmation');
+ assert.equal((await getProfile(db)).name,undefined,'the named save has been removed after user confirmation');
  for(const image of env.createdImageUrls)assert.ok(env.revokedImageUrls.includes(image.url),'live original-photo URLs are released');
  assert.equal(await clearLegacyThumbnailCache(null),false,'missing Cache Storage needs no cleanup');
 }finally{
