@@ -24,7 +24,7 @@ import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261020.30';
 import {selectCardCircle} from './dungeon-card-art.mjs?v=20261020.30';
 import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261020.30';
 import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261020.30';
-import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory} from './dungeon-permadeath.mjs?v=20261020.30';
+import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261020.30';
 let cloudSyncController;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -220,7 +220,15 @@ async function load(){
   const circle=circles.find(c=>c.id===id);
   if(activeSpells[index]&&circle?.basePower>0)activeSpells[index].basePower=circle.basePower;
   // Refresh FX investment in expeditions saved before tiered animation was added.
-  if(activeSpells[index]&&circle)activeSpells[index].upgradeLevel=Number.isSafeInteger(circle.upgradeLevel)?circle.upgradeLevel:0;
+  if(activeSpells[index]&&circle){
+   activeSpells[index].upgradeLevel=Number.isSafeInteger(circle.upgradeLevel)?circle.upgradeLevel:0;
+   // Refresh old spell totals in an unfinished expedition.
+   const inherited=combatSpell(circle);
+   if(inherited?.legacyHp>0){
+    activeSpells[index].legacyHp=inherited.legacyHp;
+    activeSpells[index].legacyHpSources=inherited.legacyHpSources;
+   }
+  }
  }
  slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));
  ensureItemInstances(profile);
@@ -1193,8 +1201,9 @@ async function capture(){
 function oneSentencePerLine(value){return String(value).replace(/([。！？])\s*(?=\S)/gu,'$1\n');}
 function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
- const isRelic=Number(circle.legacyHp)>0;
+ const inheritedLevel=totalLegacyLevel(circle),isRelic=inheritedLevel>0;
  const history=isRelic?circleRelicHistory(circle):null;
+ const sources=isRelic?circleLegacyLevelSources(circle):[];
  const relicTitle=$('magicDetailsLegacyTitle');
  relicTitle.hidden=!isRelic;
  relicTitle.textContent=isRelic?(history.originName||'名を失った冒険者')+'の残した遺物':'';
@@ -1215,11 +1224,14 @@ function openMagicDetails(id){
  if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
  rows.push(['MP',d.mp],['威力',d.power]);
  if(isRevealed(circle)&&circle.upgradeLevel)rows.push(['強化', '+'+(circle.upgradeLevel*10)+'%']);
- if(circle.legacyHp)rows.push(['🔵🔥 継承',(circle.analysis?.role==='support'||circle.analysis?.role==='defense'?'自分の最大HP+':'敵の最大HP-')+circle.legacyHp]);
+ if(isRelic)rows.push(['🔵🔥 継承',(circle.analysis?.role==='support'||circle.analysis?.role==='defense'?'自分の最大HP+':'敵の最大HP-')+inheritedLevel+'（合計Lv.'+inheritedLevel+'）']);
  $('magicDetailsStats').innerHTML=rows.map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(oneSentencePerLine(value))+'</dd>').join('')
   +(isRelic?'<dt class="legacy-heirs-label">過去の継承者達</dt><dd class="legacy-heirs-value">'
-   +(history.heirNames.length?history.heirNames.map(name=>'<span class="legacy-heir-name">'+esc(name)+'</span>').join('')
-    :'<span class="legacy-heirs-empty">まだ名を残した継承者はいない</span>')
+   +[...new Set([history.originName,...history.heirNames,...sources.map(source=>source.name)].filter(Boolean))]
+    .map(name=>{
+     const level=sources.find(source=>source.name===name)?.level;
+     return '<span class="legacy-heir-name">'+esc(name)+(level?' Lv.'+level:'')+'</span>';
+    }).join('')
    +'</dd>':'');
  if(!$('magicDetailsDialog').open)$('magicDetailsDialog').showModal();
 }
