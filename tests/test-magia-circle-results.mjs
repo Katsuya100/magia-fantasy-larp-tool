@@ -64,9 +64,11 @@ assert.equal(statuses.at(-1)[2], 'error');
 
 const html = await readFile(new URL('../magia-circle.html', import.meta.url), 'utf8');
 const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(match => match[1]);
+const appIndex = scripts.findIndex(src => /^assets\/js\/magia-circle-app\.js(?:\?v=[\d.]+)?$/.test(src));
+assert.ok(appIndex >= 0, 'the versioned analyzer app must be included');
 for (const name of ['magia-circle-diagnostics', 'magia-circle-diagnostic-view', 'magia-circle-results']) {
   assert.ok(scripts.includes(`assets/js/${name}.js`), `${name} must be included by the static page.`);
-  assert.ok(scripts.indexOf(`assets/js/${name}.js`) < scripts.indexOf('assets/js/magia-circle-app.js'), `${name} must load before the app.`);
+  assert.ok(scripts.indexOf(`assets/js/${name}.js`) < appIndex, `${name} must load before the app.`);
 }
 assert.ok(scripts.indexOf('assets/js/analysis-diagnostics.js') < scripts.indexOf('assets/js/magia-circle-diagnostics.js'));
 console.log('PASS_MAGIA_CIRCLE_RESULTS (shared power, 7 attributes, 4 sigils, fallback, safe error text, script order)');
