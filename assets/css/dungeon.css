@@ -1842,3 +1842,35 @@ html,body{overflow-x:clip}
 
 /* The successor naming dialog must never display game-mode controls. */
 #permadeathChoice[hidden]{display:none!important}
+
+/* Engraved golden provenance inscription and predecessor nameplates. */
+.legacy-provenance{
+ margin:15px 0 21px;padding:17px 15px 19px;text-align:center;
+ border-block:1px solid #d7af68a6;border-radius:5px;
+ background:radial-gradient(ellipse at 50% 0%,#906d3a2b,transparent 78%),
+ linear-gradient(90deg,transparent,#a77a4219 14%,#a77a4219 86%,transparent);
+ color:#f5d7a0;font-family:"Yu Mincho","Hiragino Mincho ProN","Noto Serif JP",serif;
+ font-size:clamp(17px,3.6vw,23px);font-weight:700;letter-spacing:.07em;
+ line-height:1.7;overflow-wrap:anywhere;
+ text-shadow:0 0 18px #ebad6159,0 1px 2px #000;
+}
+.legacy-provenance::before,.legacy-provenance::after{
+ content:"✦";display:block;color:#f0bd73;font-size:13px;line-height:1;
+ letter-spacing:0;text-shadow:0 0 15px #e8a75b;
+}
+.legacy-provenance::before{margin-bottom:10px}
+.legacy-provenance::after{margin-top:11px}
+.legacy-provenance[hidden]{display:none!important}
+.magic-details-stats .legacy-heirs-label,
+.magic-details-stats .legacy-heirs-value{border-top:1px solid #cb9f584e;padding-top:15px}
+.magic-details-stats .legacy-heirs-label{color:#efc88e}
+.magic-details-stats .legacy-heirs-value{
+ display:flex;flex-wrap:wrap;gap:6px 9px;align-items:center;
+ font-size:clamp(14px,2.6vw,17px);color:#f1dfc0
+}
+.legacy-heir-name{
+ display:inline-block;border:1px solid #c99a5770;border-radius:999px;
+ padding:1px 10px;background:#ba925120;box-shadow:inset 0 0 10px #d8a76710;
+ overflow-wrap:anywhere;max-width:100%
+}
+.legacy-heirs-empty{color:var(--soft);font-size:13px}
