@@ -164,7 +164,7 @@ const u=G.makeUnit(base,1,{},[sp]),v=G.makeUnit(base,1,{},[sp]);
 const logs=G.round(u,v,0,0,buffs,()=>.7);assert.ok(logs.length===2);assert.ok(u.hp<100&&v.hp<100);
 const profile={level:1,xp:0};G.experience(profile,G.nextXp(1));assert.equal(profile.level,2);
 const page=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
-assert.match(page,/id="cameraStart"/);assert.match(page,/id="imageRepairFile" type="file"/,"Only recovery offers gallery upload");
+assert.match(page,/id="cameraStart"/);assert.match(page,/id="imageRepairVideo"/,"Recovery uses a direct camera");assert.doesNotMatch(page,/id="imageRepairFile"/,"No gallery upload in the retake flow");
 const cured=G.makeUnit(base,1);
 G.addStatus(cured,{id:'debuff_flame',kind:'debuff',attribute:'flame',effect:'burn',value:.6,turns:2});
 G.potion(cured,{id:'clear_flame',value:0,bonus:'resist_flame'},items,buffs);
