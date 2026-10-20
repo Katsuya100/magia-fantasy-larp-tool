@@ -150,6 +150,8 @@ G.cast(weakeningHero,weakeningEnemy,{...combatSpell(family),role:'debuff',power:
 assert.equal(weakeningEnemy.stats.hp,58,'A then ABC only reduces maximum HP by 42');
 assert.equal(weakeningHero.stats.hp,100);
 assert.equal(combatSpell(family).legacyHpSources.length,3);
+assert.match(circleEffectBadges(family),/継承：最大HP-42/,'attack tooltip only shows reduction');
+assert.match(circleEffectBadges({...family,analysis:{...family.analysis,role:'defense'}}),/継承：最大HP\+42/,'defense tooltip only shows increase');
 const newEnemy=G.makeUnit(base,1);
 G.cast(weakeningHero,newEnemy,single('A',10,'attack'),[]);
 assert.equal(newEnemy.stats.hp,90,'a new enemy may be affected once again');
