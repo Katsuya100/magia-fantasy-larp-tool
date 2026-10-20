@@ -155,7 +155,7 @@ assert.match(css,/#slotCards \.loadout-tile,#gearCards \.loadout-tile\{[^}]*aspe
 assert.match(css,/#slotCards \.loadout-grid\{[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
 assert.match(css,/#gearCards \.loadout-grid\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 assert.match(css,/\.camera-viewfinder\{[^}]*aspect-ratio:1\s*\/\s*1/);
-assert.match(css,/#cameraVideo\{[^}]*object-fit:cover/);
+assert.match(css,/#cameraVideo,#imageRepairVideo\{[^}]*object-fit:cover/,'both camera previews cover the viewfinder');
 assert.match(css,/\.card img\{[^}]*aspect-ratio:1\s*\/\s*1/);
 assert.doesNotMatch(css,/\.card img\{height:105px\}/);
 assert.match(css,/\.collection-grid\s*\{display:grid;/);
