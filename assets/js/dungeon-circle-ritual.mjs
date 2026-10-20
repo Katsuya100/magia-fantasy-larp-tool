@@ -83,13 +83,18 @@ function stageFor(mode,analysis,outline){
  }else root.setAttribute('aria-hidden','true');
  return root;
 }
-export async function playCircleReveal(circle){
+export async function playCircleReveal(circle,photoUrl=''){
  if(typeof document==='undefined'||!document.body||reducedMotion())return;
  // A visual failure must not be treated as a failed analysis after the photo has been saved.
  try{
   const outline=await circleOutline(circle?.image,circle?.analysis?.attribute);
   document.querySelector?.('.circle-ritual--reveal')?.remove();
   const root=stageFor('reveal',circle?.analysis,outline);
+  if(photoUrl){
+   const physical=element('img','circle-ritual__physical');
+   physical.src=photoUrl;physical.alt='';physical.setAttribute('aria-hidden','true');
+   root.insertBefore(physical,root.firstChild);
+  }
   document.body.appendChild(root);
   try{await sleep(CIRCLE_RITUAL_DURATION_MS);}
   finally{root.remove();}
