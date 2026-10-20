@@ -5,6 +5,13 @@ const DB_NAME='magia-dungeon-v1';
 const DB_VERSION=2;
 const STORES=['circles','settings'];
 const changes=new WeakMap();
+// A successor name is stored separately so naming never rewrites large Blob
+// values nested inside permadeath legacies. The signed profile is assembled
+// from the canonical profile plus this small overlay when read.
+const HEIR_NAME_KEY='heirNameOverride';
+function applyHeirName(profile,overlay){
+ return profile&&overlay?{...profile,...overlay}:profile;
+}
 // One random identity for the entire save history, including permadeath heirs.
 function withPlayId(profile){
  if(!profile.playId){
@@ -61,7 +68,7 @@ function request(db,store,mode,op,{silent=false}={}){
 }
 // Read and verify the previous seal BEFORE applying writes. A missing record
 // cannot be silently legitimized by a later (unrelated) profile update.
-function mutate(db,perform,overrides={},profileHashes=null){
+function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false}={}){
  validateDatabase(db);
  return new Promise((resolve,reject)=>{
   let tx;
@@ -69,20 +76,24 @@ function mutate(db,perform,overrides={},profileHashes=null){
    tx=db.transaction(STORES,'readwrite');
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
    const previousProfile=settings.get('profile'),previousCircles=items.getAll(),previousSeal=settings.get('integrity');
+   const previousName=settings.get(HEIR_NAME_KEY);
    let reads=0;
    const ready=()=>{
-    if(++reads!==3)return;
+    if(++reads!==4)return;
     try{
-     const p=previousProfile.result,c=previousCircles.result,seal=previousSeal.result;
+     const p=applyHeirName(previousProfile.result,previousName.result),c=previousCircles.result,seal=previousSeal.result;
      if(seal?.version===1){
       if(!p||seal.records!==recordFingerprint({profile:p,circles:c})||seal.savedAt===undefined)throw Error('保存データの整合性が一致しません。復元が必要です。');
      }
      perform(settings,items);
+     // A subsequent normal profile write incorporates the virtual name.
+     // Delete the overlay atomically so stale names never override it.
+     if(writesProfile)settings.delete(HEIR_NAME_KEY);
      const nextProfile=settings.get('profile'),nextCircles=items.getAll();
      let after=0;
      const stamp=()=>{
       if(++after!==2)return;
-      const next={profile:nextProfile.result,circles:nextCircles.result};
+      const next={profile:applyHeirName(nextProfile.result,writesProfile?null:previousName.result),circles:nextCircles.result};
       if(!next.profile)return;
       const desc=photoDescriptors(next.circles),old=seal?.photos||{};
       const photos=Object.fromEntries(next.circles.map(circle=>[circle.id,
@@ -100,7 +111,7 @@ function mutate(db,perform,overrides={},profileHashes=null){
      reject(error);
     }
    };
-   previousProfile.onsuccess=ready;previousCircles.onsuccess=ready;previousSeal.onsuccess=ready;
+   previousProfile.onsuccess=ready;previousCircles.onsuccess=ready;previousSeal.onsuccess=ready;previousName.onsuccess=ready;
    tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve();};
    tx.onerror=()=>reject(tx.error||Error('セーブの保存に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブの整合性を確認できませんでした。'));
@@ -156,7 +167,7 @@ async function trustedProfileHashes(db,profile){
 export async function saveProfile(db,p){
  withPlayId(p);
  const hashes=await trustedProfileHashes(db,p);
- return mutate(db,settings=>settings.put(p,'profile'),{},hashes);
+ return mutate(db,settings=>settings.put(p,'profile'),{},hashes,{writesProfile:true});
 }
 // One IndexedDB transaction prevents a lost/recovered photo and its owner from diverging.
 export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
@@ -166,11 +177,56 @@ export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
   for(const id of removed)items.delete(id);
   for(const circle of added)items.put(circle);
   settings.put(profile,'profile');
- },hashes,profileHashes);
+ },hashes,profileHashes,{writesProfile:true});
+}
+// Commit a successor name and its new integrity seal in one small transaction.
+// No legacy photograph is re-serialized or copied by this path.
+export function saveHeirName(db,name){
+ const trimmed=typeof name==='string'?name.trim():'';
+ if(!trimmed||trimmed.length>20)return Promise.reject(Error('1〜20文字の名前を入力してください。'));
+ validateDatabase(db);
+ return new Promise((resolve,reject)=>{
+  try{
+   const tx=db.transaction(STORES,'readwrite');
+   const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
+   const p=settings.get('profile'),c=items.getAll(),sealRequest=settings.get('integrity'),overlay=settings.get(HEIR_NAME_KEY);
+   let nextName=null,reads=0;
+   const ready=()=>{
+    if(++reads!==4)return;
+    try{
+     const raw=p.result,previous=applyHeirName(raw,overlay.result),seal=sealRequest.result;
+     if(!previous?.awaitingHeir)throw Error('後継者名の入力状態が変更されました。画面を再読み込みしてください。');
+     if(seal?.version===1&&(!raw||seal.records!==recordFingerprint({profile:previous,circles:c.result})||seal.savedAt===undefined))
+      throw Error('保存データの整合性が一致しません。復元が必要です。');
+     const next={...previous,name:trimmed,awaitingHeir:false,permadeath:true};
+     withPlayId(next);
+     const nameOverlay={name:trimmed,awaitingHeir:false,permadeath:true};
+     if(!raw.playId)nameOverlay.playId=next.playId;
+     const savedAt=Math.max(Date.now(),Number(seal?.savedAt||0)+1);
+     settings.put(nameOverlay,HEIR_NAME_KEY);
+     settings.put({version:1,records:recordFingerprint({profile:next,circles:c.result}),
+      photos:seal?.photos||{},profilePhotos:seal?.profilePhotos||{},savedAt,
+      legacy:Boolean(seal?.legacy||!seal)},'integrity');
+     nextName=next;
+    }catch(error){
+     try{tx.abort?.();}catch{}
+     reject(error);
+    }
+   };
+   p.onsuccess=ready;c.onsuccess=ready;sealRequest.onsuccess=ready;overlay.onsuccess=ready;
+   tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve(nextName);};
+   tx.onerror=()=>reject(tx.error||Error('後継者名の保存に失敗しました。'));
+   tx.onabort=()=>reject(tx.error||Error('後継者名の保存が中断されました。'));
+  }catch(error){reject(error);}
+ });
 }
 
 export async function getProfile(db){
-  let p=await request(db,'settings','readonly',s=>s.get('profile'));
+  const [raw,nameOverride]=await Promise.all([
+   request(db,'settings','readonly',s=>s.get('profile')),
+   request(db,'settings','readonly',s=>s.get(HEIR_NAME_KEY))
+  ]);
+  let p=applyHeirName(raw,nameOverride);
   if(!p){
     p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,tutorialDone:false,inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReturnedLayer:0,magicStones:0,run:null};
     const seal=await request(db,'settings','readonly',s=>s.get('integrity'));
@@ -188,8 +244,8 @@ export function readDungeonSnapshot(db){
  return new Promise((resolve,reject)=>{
   try{
    const tx=db.transaction(STORES,'readonly');
-   let profile,circles,integrity;
-   tx.oncomplete=()=>resolve({profile,circles,savedAt:integrity?.savedAt||0,integrity});
+   let profile,circles,integrity,nameOverride;
+   tx.oncomplete=()=>resolve({profile:applyHeirName(profile,nameOverride),circles,savedAt:integrity?.savedAt||0,integrity});
    tx.onerror=()=>reject(tx.error||Error('セーブの読み出しに失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブの読み出しが中断されました。'));
    const p=tx.objectStore('settings').get('profile');
@@ -198,6 +254,8 @@ export function readDungeonSnapshot(db){
    c.onsuccess=()=>{circles=c.result;};
    const i=tx.objectStore('settings').get('integrity');
    i.onsuccess=()=>{integrity=i.result;};
+   const n=tx.objectStore('settings').get(HEIR_NAME_KEY);
+   n.onsuccess=()=>{nameOverride=n.result;};
   }catch(error){reject(error);}
  });
 }
