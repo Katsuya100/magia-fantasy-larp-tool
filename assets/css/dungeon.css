@@ -1742,7 +1742,7 @@ html,body{overflow-x:clip}
 @media(max-width:540px){.milestone-choice-actions{grid-template-columns:minmax(0,1fr);gap:10px}.milestone-choice-actions .profile-action{min-height:63px;padding:12px 14px}}
 
 /* A compact blue flame sits immediately after an inherited spell's symbols. */
-.inherited-flame{display:inline-block;margin-inline-start:.25em;filter:hue-rotate(165deg) saturate(2.4);vertical-align:middle}
+.inherited-flame{display:inline-block;margin-inline-start:.12em;font-size:.8em;line-height:1;filter:hue-rotate(165deg) saturate(2.4);vertical-align:.1em}
 .permadeath-choice{display:flex;align-items:center;justify-content:center;gap:.55rem;margin:.7rem 0;cursor:pointer}
 .permadeath-choice input{width:1.05rem;height:1.05rem;accent-color:#76b6ed}
 
