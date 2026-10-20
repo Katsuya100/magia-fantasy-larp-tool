@@ -131,6 +131,7 @@ export const scenarios=[
  {name:'Lv5 / 1-3F / 3 circles / no items',level:5,fromLayer:1,toLayer:3,spells:'beginner'},
  {name:'Lv12 / 1-3F / 3 circles / no items',level:12,fromLayer:1,toLayer:3,spells:'three'},
  {name:'Lv19 / 1-10F / 5 circles / no items',level:19,fromLayer:1,toLayer:10,spells:'five'},
+ {name:'Lv28 / 10-15F / 5 circles / no items',level:28,fromLayer:10,toLayer:15,spells:'five'},
  {name:'Lv37 / 10-20F / 5 circles / no items',level:37,fromLayer:10,toLayer:20,spells:'five'},
  {name:'Lv55 / 20-30F / 5 circles / no items / earned stones',level:55,fromLayer:20,toLayer:30,spells:'five',stones:'earned'},
  {name:'Lv72 / 30-40F / 5 circles / no items / earned stones',level:72,fromLayer:30,toLayer:40,spells:'five',stones:'earned'},
@@ -163,6 +164,15 @@ for(const config of scenarios.filter(x=>x.toLayer>=10)){
 }
 const baseline=summarize(scenarios.find(x=>x.level===5));
 assert.ok(baseline.winRate>=70,'level 5 item-free party must have a reasonable chance through layer 3');
+// Consecutive fights with no consumables: by layer 10 MP should be a
+// comfortable reserve, not a near-empty survival resource.
+for(const target of [3,5,19]){
+ const early=summarize(scenarios.find(x=>x.level===target));
+ assert.equal(early.winRate,100,'early recommended-level band should remain fully clearable at Lv'+target);
+ assert.ok(early.avgMpPercent>=80,'early band must finish with >=80% MP at Lv'+target+': '+early.avgMpPercent);
+}
+const firstTen=summarize(scenarios.find(x=>x.level===19));
+assert.equal(firstTen.avgRestores,0,'10-layer MP target must be reached without a milestone full restore');
 const overleveled=summarize(scenarios.find(x=>x.level===12));
 assert.ok(overleveled.winRate>=95,'a level 12 party should reliably clear layer 3 without consumables');
 const endgame=summarize(scenarios.find(x=>x.level===150&&x.stones==='earned'));

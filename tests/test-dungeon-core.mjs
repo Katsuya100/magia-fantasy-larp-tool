@@ -127,10 +127,33 @@ const victoryMpRate=level=>{
  unit.mp=0;
  return G.recoverVictoryMp(unit)/unit.maxMp;
 };
-assert.ok(victoryMpRate(1)>=.13&&victoryMpRate(1)<=.145,'beginner victory MP recovery remains generous');
-assert.ok(victoryMpRate(30)>.075&&victoryMpRate(30)<.08,'early recovery remains suitable for initial layers');
-assert.ok(victoryMpRate(75)<.056,'mid-depth MP recovery is meaningfully reduced');
-assert.ok(victoryMpRate(150)>=.024&&victoryMpRate(150)<=.027,'deepest battles retain the playtested minimum recovery');
+assert.ok(victoryMpRate(1)>=.18&&victoryMpRate(1)<=.20,'early layers grant generous beginner MP recovery');
+assert.ok(victoryMpRate(30)>.12&&victoryMpRate(30)<.14,'early-layer victory MP recovery also helps established adventurers');
+assert.ok(victoryMpRate(75)>.09&&victoryMpRate(75)<.115,'the early-layer bonus does not erase level scaling');
+assert.ok(victoryMpRate(150)>.069&&victoryMpRate(150)<.085,'high-level heroes only receive the early-layer bonus at low depth');
+// Added recovery applies only to layers 1-19. The baseline is mathematically
+// identical at layer 20 and beyond, regardless of the adventurer's level.
+for(let layer=1;layer<=10;layer++)assert.equal(G.earlyVictoryMpBonusRate(layer),num('victory_mp_early_layer_bonus'));
+for(let layer=11;layer<20;layer++){
+ assert.ok(G.earlyVictoryMpBonusRate(layer)<G.earlyVictoryMpBonusRate(layer-1));
+ assert.ok(G.earlyVictoryMpBonusRate(layer)>0);
+}
+for(const layer of [20,21,30,50,100,110])assert.equal(G.earlyVictoryMpBonusRate(layer),0);
+for(const playerLevel of [1,5,19,37,55,150]){
+ const actor=G.makeUnit(base,playerLevel);
+ const t=G.clamp((playerLevel-1)/Math.max(1,num('level_max')-1),0,1);
+ const middle=G.clamp((playerLevel-40)/Math.max(1,num('level_max')-40),0,1);
+ const originalRate=num('victory_mp_restore_rate_early')+
+  (num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
+  num('victory_mp_beginner_bonus')*Math.max(0,(13-playerLevel)/12)-
+  num('victory_mp_middle_taper')*middle*(1-middle);
+ for(const layer of [20,21,30,50,100,110]){
+  actor.mp=0;
+  assert.equal(G.recoverVictoryMp(actor,layer),
+   Math.round(actor.maxMp*originalRate*G.victoryMpLayerFactor(layer)),
+   'layer 20+ must retain the exact historical recovery at layer '+layer+' and Lv'+playerLevel);
+ }
+}
 assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75)&&victoryMpRate(75)>victoryMpRate(150),
  'victory MP recovery decreases with level');
 

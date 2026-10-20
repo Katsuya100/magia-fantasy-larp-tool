@@ -354,6 +354,12 @@ export function victoryMpLayerFactor(layer,policy=VICTORY_MP_LAYER_CURVE){
  }
  return 1;
 }
+// Bonus stays flat through layer 10, then linearly disappears at layer 20.
+// From layer 20 onward the pre-existing victory recovery is unchanged.
+export function earlyVictoryMpBonusRate(layer){
+ const floor=Number(layer);
+ return Number.isFinite(floor)?num('victory_mp_early_layer_bonus')*clamp((20-floor)/10,0,1):0;
+}
 export function recoverVictoryMp(hero,layer=1){
  const floor=Number(layer);
  const t=clamp((Number(hero.level)-1)/Math.max(1,num('level_max')-1),0,1);
@@ -361,7 +367,7 @@ export function recoverVictoryMp(hero,layer=1){
  const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
   num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12)-
   num('victory_mp_middle_taper')*middle*(1-middle);
- const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*rate*victoryMpLayerFactor(floor))));
+ const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*(rate*victoryMpLayerFactor(floor)+earlyVictoryMpBonusRate(floor)))));
  hero.mp+=gained;
  return gained;
 }
