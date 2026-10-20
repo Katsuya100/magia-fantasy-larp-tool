@@ -245,7 +245,7 @@ assert.match(cloudSyncSource,/await establishLegacyIntegrity\(db,local\);\s*loca
 assert.match(cloudSyncSource,/if\(overwriteWarning\)overwriteWarning.hidden=!allowOverwrite/,'non-overwrite flows conceal misleading warning');
 assert.match(app,/void cloudSyncController\?\.syncNow\?\.\(\)/,'name submission queues Drive upload without holding the local action lock');
 assert.doesNotMatch(app,/await cloudSyncController\?\.syncNow\?\.\(\)/,'network uploads never block the rename form');
-assert.match(app,/await persist\(\);\$\('nameDialog'\)\.close\(\);render\(\);[\s\S]*?void cloudSyncController\?\.syncNow\?\.\(\)/,'name change is persisted locally and dialog closes before the Drive request starts');
+assert.match(app,/await saveProfile\(db,next\);\s*profile=next;\s*\$\('nameDialog'\)\.close\(\);\s*render\(\);[\s\S]*?void cloudSyncController\?\.syncNow\?\.\(\)/,'name change is persisted locally and dialog closes before the Drive request starts');
 assert.equal(page.split('システム上 <strong>'+concurrentWarning+'</strong>。').length-1,2,'both backup surfaces show the same explicit rollback warning');
 assert.ok(page.indexOf('<p class="backup-sync-warning">'+copyWarning+'</p>')<page.indexOf('id="backupSetupStatus"'),'the initial warning precedes connection status');
 const cloudMarkup=page.match(/<div class="cloud-sync">([\s\S]*?)<\/div>/)?.[1];
