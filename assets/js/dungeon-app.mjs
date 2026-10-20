@@ -944,7 +944,12 @@ async function leave(mode='checkpoint'){
   if(contents.rank)acquireAdventurerRank(profile,contents.rank);
   for(const circle of contents.circles)restoredPhotos.push({...circle,
    legacyHp:Math.max(Number(circle.legacyHp)||0,Number(legacy.level)*2)});
-  recoveredCards.push({type:'legacy',name:legacy.name+'の遺物',count:1,isNew:true});
+  const pending=[legacy];
+  while(pending.length){
+   const recovered=pending.shift();
+   recoveredCards.push({type:'legacy',name:recovered.name+'の遺物',count:1,isNew:true});
+   pending.unshift(...(recovered.loot||[]).filter(reward=>reward.type==='legacy').map(reward=>reward.legacy));
+  }
  }
  const before={level:profile.level,xp:profile.xp};
  G.experience(profile,run.xp);
