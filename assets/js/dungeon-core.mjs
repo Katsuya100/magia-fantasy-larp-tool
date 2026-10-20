@@ -173,12 +173,21 @@ export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.i
   if(u.reviveArmed||u.reviveUsed||u.hp<=0)throw Error('生命の紅石はこの戦闘ですでに使用済みです');
   u.reviveArmed=true;
  }else throw Error('Potion kind');if(item.bonus){const b=buffs.find(x=>x.id===item.bonus);if(b)addStatus(u,{id:b.id,kind:'buff',attribute:row.attribute||'law',effect:b.effect,value:Number(b.value),turns:Number(b.duration)||2});}return amount;}
-// The blue-flame inheritance changes the recipient's maximum HP on every use.
+// An inheritor's HP change can be applied only once per recipient, even across spells.
 export function applyLegacyHp(src,tgt,spell){
- const bonus=Math.floor(Number(spell?.legacyHp)||0);
- if(src?.id!=='player'||bonus<=0)return '';
- const self=spell.role==='support'||spell.role==='defense';
- const unit=self?src:tgt;
+ if(src?.id!=='player')return '';
+ const sources=Array.isArray(spell?.legacyHpSources)&&spell.legacyHpSources.length
+  ?spell.legacyHpSources:[{name:'legacy:old',hp:spell?.legacyHp}];
+ const self=spell.role==='support'||spell.role==='defense',unit=self?src:tgt;
+ const used=new Set(unit.legacyHpApplied||[]);
+ let bonus=0;
+ for(const source of sources){
+  const name=String(source?.name||''),hp=Math.floor(Number(source?.hp)||0);
+  if(!name||!Number.isFinite(hp)||hp<=0||used.has(name))continue;
+  used.add(name);bonus+=hp;
+ }
+ if(!bonus)return '';
+ unit.legacyHpApplied=[...used];
  const oldMax=unit.stats.hp;
  unit.stats.hp=Math.max(1,oldMax+(self?bonus:-bonus));
  unit.hp=Math.min(unit.hp,unit.stats.hp);
