@@ -8,6 +8,7 @@ export function createDungeonPhotoManager(getDatabase,findCircle){
  const displayed=new Map(),pending=new Map();
  let queue=Promise.resolve(),observer=null,visible=new Set();
  function thumbnail(circle){
+  if(displayed.has(circle.id))return Promise.resolve(displayed.get(circle.id));
   let task=pending.get(circle.id);
   if(!task){
    task=queue.then(()=>getCircleThumbnail(getDatabase(),circle,createCircleThumbnail));
@@ -34,12 +35,11 @@ export function createDungeonPhotoManager(getDatabase,findCircle){
  function refresh(roots){
   observer?.disconnect();
   const images=roots.flatMap(root=>[...(root?.querySelectorAll?.('img[data-circle-photo-id]')||[])]);
-  visible=new Set(images);
+  const next=new Set(images);
+  for(const img of visible)if(!next.has(img))img.removeAttribute?.('src');
+  visible=next;
   const ids=new Set(images.map(img=>img.dataset.circlePhotoId));
   for(const [id,blob] of displayed)if(!ids.has(id)){
-   // Detach old DOM sources before revoking their URL.
-   for(const root of roots)for(const img of root?.querySelectorAll?.('img[data-circle-photo-id]')||[])
-    if(img.dataset.circlePhotoId===id)img.removeAttribute('src');
    thumbUrls.release(blob);displayed.delete(id);
   }
   const load=img=>{
@@ -59,10 +59,13 @@ export function createDungeonPhotoManager(getDatabase,findCircle){
   const thumb=displayed.get(id);
   if(thumb)thumbUrls.release(thumb);
   displayed.delete(id);
+  for(const img of visible)if(img.dataset.circlePhotoId===id)img.removeAttribute?.('src');
   originals.release(original);
  }
  function releaseAll(){
-  observer?.disconnect();observer=null;visible.clear();displayed.clear();pending.clear();
+  observer?.disconnect();observer=null;
+  for(const img of visible)img.removeAttribute?.('src');
+  visible.clear();displayed.clear();pending.clear();
   originals.releaseAll();thumbUrls.releaseAll();
  }
  return {get:blob=>originals.get(blob),release:blob=>originals.release(blob),thumbnail,refresh,forget,releaseAll};
