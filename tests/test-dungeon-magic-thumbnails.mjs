@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {circleEffectBadges,spellGrid,circleChoices} from '../assets/js/dungeon-preparation-ui.mjs';
 import {circleCardInfo,circleEffectDetails} from '../assets/js/dungeon-magic-knowledge.mjs';
 const buffs=[
@@ -25,6 +26,11 @@ for(const [circle,symbols,effect] of [
  assert.match(html,/<span class="circle-card-mp">MP:\?<\/span><span class="circle-card-power">威力:\?<\/span>/,'unknown MP and power always use separate rows');
  assert.doesNotMatch(html,/512|MP:6|属性攻撃|属性防御|属性弱体/,'no extra effect heading or secret numbers');
 }
+const inherited=circleEffectBadges({...attack,legacyHp:15},buffs,escapeText,mpCost);
+assert.match(inherited,/class="inherited-flame"[^>]*>🔥<\/span>/,'legacy flame remains visible next to the spell symbols');
+assert.doesNotMatch(circleEffectBadges(attack,buffs,escapeText,mpCost),/inherited-flame/,'ordinary spells have no legacy flame');
+const dungeonCss=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+assert.match(dungeonCss,/\.inherited-flame\{[^}]*font-size:\.8em;line-height:1;[^}]*vertical-align:\.1em\}/,'legacy flame is smaller and raised without changing other symbols');
 const activated=circleEffectBadges({...defense,revealed:true},buffs,escapeText,mpCost);
 assert.match(activated,/<span class="circle-card-mp">MP:6<\/span><span class="circle-card-power">威力:512<\/span>/);
 assert.deepEqual(circleCardInfo(debuff,buffs,mpCost),{symbols:'🔥 / 🕸️',mp:'?',power:'?'});
