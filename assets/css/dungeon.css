@@ -1750,70 +1750,29 @@ html,body{overflow-x:clip}
 }
 
 
-/* Portrait-style layered halo for photographed magic circles. */
-:where(.circle-grid .card,.loadout-tile,.magic-details-dialog,.capture-reveal-dialog){
- --spell-glow:#ead098
-}
-[data-attribute="flame"]{--spell-glow:#ffad70}
-[data-attribute="bolt"]{--spell-glow:#f5dc79}
-[data-attribute="aqua"]{--spell-glow:#83dbeb}
-[data-attribute="storm"]{--spell-glow:#a2efd4}
-[data-attribute="gravity"]{--spell-glow:#b49ae8}
-[data-attribute="law"]{--spell-glow:#f2d99d}
-[data-attribute="chaos"]{--spell-glow:#efa0d4}
-.circle-grid .card[data-attribute],.loadout-tile[data-attribute]{isolation:isolate}
-.circle-grid .card[data-attribute]::after,.loadout-tile[data-attribute]::after{
- content:"";position:absolute;pointer-events:none;z-index:0;left:12%;top:8%;width:76%;
- aspect-ratio:1;border-radius:50%;
- background:radial-gradient(circle,color-mix(in srgb,var(--spell-glow) 24%,transparent),transparent 72%);
- box-shadow:0 0 0 5px color-mix(in srgb,var(--spell-glow) 5%,transparent),
- 0 0 20px color-mix(in srgb,var(--spell-glow) 16%,transparent)
-}
-.loadout-tile[data-attribute]::after{inset:16%;width:auto;aspect-ratio:auto}
-.circle-grid .card[data-attribute] img,.loadout-tile[data-attribute] img{
- position:relative;z-index:1;
- filter:drop-shadow(0 0 7px color-mix(in srgb,var(--spell-glow) 43%,transparent))
-}
+/* Attribute colours are scoped to the two intentional ritual dialogs.
+   No passive halo should ever be rendered on a library card, loadout tile,
+   combat slot, or circle picker. */
+:where(.magic-details-dialog,.capture-reveal-dialog){--spell-glow:#ead098}
+:where(.magic-details-dialog,.capture-reveal-dialog)[data-attribute="flame"]{--spell-glow:#ffad70}
+:where(.magic-details-dialog,.capture-reveal-dialog)[data-attribute="bolt"]{--spell-glow:#f5dc79}
+:where(.magic-details-dialog,.capture-reveal-dialog)[data-attribute="aqua"]{--spell-glow:#83dbeb}
+:where(.magic-details-dialog,.capture-reveal-dialog)[data-attribute="storm"]{--spell-glow:#a2efd4}
+:where(.magic-details-dialog,.capture-reveal-dialog)[data-attribute="gravity"]{--spell-glow:#b49ae8}
+:where(.magic-details-dialog,.capture-reveal-dialog)[data-attribute="law"]{--spell-glow:#f2d99d}
+:where(.magic-details-dialog,.capture-reveal-dialog)[data-attribute="chaos"]{--spell-glow:#efa0d4}
 
-/* The enlarged photo has a one-shot ritual glow after upgrades, not a permanent halo. */
+/* The details photo only needs a positioned frame for its short-lived
+   contour canvas; the legacy always-available halo layers are removed. */
 .magic-circle-image-frame{
- position:relative;isolation:isolate;width:min(100%,320px);aspect-ratio:1;
+ position:relative;width:min(100%,320px);aspect-ratio:1;
  margin:18px auto 24px
-}
-.magic-circle-image-frame::before{
- content:"";position:absolute;inset:-13px;z-index:-1;border-radius:50%;opacity:0;
- background:radial-gradient(circle,color-mix(in srgb,var(--spell-glow) 27%,transparent),transparent 73%);
- box-shadow:0 0 0 9px color-mix(in srgb,var(--spell-glow) 7%,transparent),
- 0 0 34px color-mix(in srgb,var(--spell-glow) 35%,transparent)
-}
-.magic-circle-image-frame::after{
- content:"";position:absolute;inset:-12px;border:1px solid color-mix(in srgb,var(--spell-glow) 65%,transparent);
- border-radius:50%;pointer-events:none;opacity:0;
- box-shadow:0 0 16px color-mix(in srgb,var(--spell-glow) 47%,transparent),
- inset 0 0 18px color-mix(in srgb,var(--spell-glow) 13%,transparent)
 }
 .magic-details-content .magic-circle-image-frame img{
  display:block;width:100%;height:100%;margin:0;object-fit:cover;
  border:1px solid var(--border);filter:none
 }
-.magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::before{
- animation:circle-upgrade-halo 1.26s ease-out both
-}
-.magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{
- animation:circle-upgrade-ring 1.26s ease-out both
-}
-@keyframes circle-upgrade-halo{
- 0%{opacity:0;transform:scale(.85)}
- 30%{opacity:1;transform:scale(1.03)}
- 65%{opacity:.6;transform:scale(1.1)}
- 100%{opacity:0;transform:scale(1.16)}
-}
-@keyframes circle-upgrade-ring{
- 0%{opacity:0;transform:scale(1.32)}
- 35%{opacity:1;transform:scale(1.02);
-  box-shadow:0 0 26px 8px color-mix(in srgb,var(--spell-glow) 45%,transparent)}
- 100%{opacity:0;transform:scale(.93)}
-}
+/* Only the explicitly requested post-capture effect retains shrinking rings. */
 .capture-reveal-dialog[data-attribute] .capture-reveal-image-wrap::after,
 .capture-reveal-dialog[data-attribute] .capture-reveal-ring{
  border-color:var(--spell-glow);
@@ -1821,8 +1780,6 @@ html,body{overflow-x:clip}
 }
 .capture-reveal-dialog[data-attribute] #captureRevealImage{filter:none}
 @media(prefers-reduced-motion:reduce){
- .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::before,
- .magic-details-dialog[data-enhancing="true"] .magic-circle-image-frame::after{animation:none}
  .magic-details-dialog[data-enhancing="true"] .magic-details-content:after{display:none}
 }
 
