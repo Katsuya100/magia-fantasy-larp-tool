@@ -76,7 +76,9 @@ await saveProfileWithCircles(db,remembered,[inherited]);
 assert.equal((await allCircles(db)).find(c=>c.id==='lost-circle').legacyHp,24);
 assert.match(circleEffectBadges(inherited),/inherited-flame/);
 assert.equal(combatSpell(inherited).legacyHp,24);
-const later={...snapshot,name:'別の冒険者',level:3,loot:[{type:'legacy',legacy:snapshot}]};
+const later={...snapshot,name:'別の冒険者',level:3,
+ circles:[{...snapshot.circles[0],id:'later-circle',legacyOriginName:'別の冒険者'}],
+ loot:[{type:'legacy',legacy:snapshot}]};
 const nested=legacyContents(later);
 assert.equal(nested.circles[0].legacyOriginName,'別の冒険者','outer legacy keeps its own creator');
 assert.equal(nested.circles[1].legacyOriginName,'ミラ','nested legacy keeps the earlier creator');
