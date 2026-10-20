@@ -58,9 +58,9 @@ export function spellGrid(slots,circles,imageUrl,escapeText,active=true,buffs=[]
  return '<div class="loadout-grid" role="group" aria-label="魔法陣の編成">'
   +slots.map((id,index)=>{
    const c=byId.get(id);
-   return '<div class="prepare-spell-frame"><button type="button" class="loadout-tile '+(c?'equipped':'empty')+'" '+(c?'data-attribute="'+escapeText(c.analysis?.attribute||'unknown')+'" ':'')+'data-open-slot="'+index+'" aria-label="魔法陣 '+(index+1)+'枠目 '+(c?'装備中':'未装備')+'" '+(active?'':'disabled')+'>'
+   return '<div class="prepare-spell-frame"><button type="button" class="loadout-tile '+(c?'equipped':'empty')+'" data-open-slot="'+index+'" aria-label="魔法陣 '+(index+1)+'枠目 '+(c?'装備中':'未装備')+'" '+(active?'':'disabled')+'>'
    +'<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span>'
-   +(c?'<img alt="" loading="lazy" decoding="async" data-circle-thumb="'+escapeText(c.id)+'" src="'+imageUrl(c.image,c.id)+'">':'<span class="tile-empty-icon" aria-hidden="true">＋</span>')
+   +(c?'<img alt="" src="'+imageUrl(c.image)+'">':'<span class="tile-empty-icon" aria-hidden="true">＋</span>')
    +(c?'':'<span class="tile-title">未装備</span>')
    +'</button>'+(c?circleEffectBadges(c,buffs,escapeText,mpCost)
     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">詳細</button>':'')+'</div>';
@@ -87,8 +87,8 @@ export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[]
  if(!circles.length)return '<p class="collection-empty">魔導書に魔法陣を登録してください。</p>';
  return indexes.map(i=>[circles[i],i]).map(([c,i])=>{
   const selectedSlot=slots.indexOf(c.id),selected=selectedSlot>=0,current=selected&&selectedSlot===editingSlot;
-  return '<div class="picker-circle-wrap"><button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-attribute="'+escapeText(c.analysis?.attribute||'unknown')+'" data-choose-circle="'+i+'" aria-pressed="'+selected+'" aria-label="魔法陣の候補 '+(i+1)+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
-   +'<img alt="" loading="lazy" decoding="async" data-circle-thumb="'+escapeText(c.id)+'" src="'+imageUrl(c.image,c.id)+'">'
+  return '<div class="picker-circle-wrap"><button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-circle="'+i+'" aria-pressed="'+selected+'" aria-label="魔法陣の候補 '+(i+1)+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
+   +'<img alt="" src="'+imageUrl(c.image)+'">'
    +'</button>'
    +circleEffectBadges(c,buffs,escapeText,mpCost)
    +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'" aria-label="魔法陣の詳細">詳細</button></div>';
