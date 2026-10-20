@@ -407,10 +407,19 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  position:fixed;inset:0;z-index:5000;display:grid;place-items:center;
  isolation:isolate;overflow:hidden
 }
+.circle-ritual__physical{
+ grid-area:1/1;position:relative;z-index:0;
+ width:min(78vw,54dvh,390px);aspect-ratio:1;object-fit:cover;
+ border-radius:50%;border:2px solid #e8cba875;
+ box-shadow:0 0 24px #000a,inset 0 0 24px #0009;
+ animation:circle-ritual-physical var(--ritual-duration) ease-in-out both
+}
 .circle-ritual__veil{
- position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,#07111b,#010207 65%);
+ position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse at 50% 42%,#07111b,#010207 65%);
  animation:circle-ritual-veil var(--ritual-duration) linear both
 }
+.circle-ritual--reveal>.circle-ritual__focus{grid-area:1/1;z-index:2}
+
 .circle-ritual__focus{
  position:relative;width:min(78vw,54dvh,390px);aspect-ratio:1;
  z-index:1;isolation:isolate;filter:drop-shadow(0 0 12px color-mix(in srgb,var(--ritual-ink) 30%,transparent))
@@ -457,6 +466,11 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .circle-ritual__label{padding:5px 9px;white-space:nowrap;letter-spacing:.06em}
 @keyframes circle-ritual-veil{
  0%,58%{opacity:1}100%{opacity:0}
+}
+@keyframes circle-ritual-physical{
+ 0%,48%{opacity:0;transform:scale(.92)}
+ 65%,87%{opacity:1;transform:scale(1)}
+ 100%{opacity:0;transform:scale(1.03)}
 }
 @keyframes circle-ritual-ring-in{
  0%{opacity:0;transform:scale(1.65) rotate(-25deg)}
