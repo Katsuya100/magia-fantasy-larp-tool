@@ -15,13 +15,15 @@ export async function createCircleThumbnail(blob,size=192){
    });
   }
   if(typeof document==='undefined')throw Error('画像を縮小できません。');
+  const width=image.width||image.naturalWidth,height=image.height||image.naturalHeight;
+  if(!width||!height)throw Error('画像の大きさを取得できません。');
+  const scale=Math.min(1,size/Math.max(width,height));
   canvas=document.createElement('canvas');
-  canvas.width=size;canvas.height=size;
+  canvas.width=Math.max(1,Math.round(width*scale));
+  canvas.height=Math.max(1,Math.round(height*scale));
   const ctx=canvas.getContext('2d');
   if(!ctx)throw Error('画像を縮小できません。');
-  const width=image.width||image.naturalWidth,height=image.height||image.naturalHeight;
-  const side=Math.min(width,height);
-  ctx.drawImage(image,(width-side)/2,(height-side)/2,side,side,0,0,size,size);
+  ctx.drawImage(image,0,0,canvas.width,canvas.height);
   const reduced=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.75));
   if(!(reduced instanceof Blob)||!reduced.size)throw Error('縮小画像を作成できません。');
   return reduced;
