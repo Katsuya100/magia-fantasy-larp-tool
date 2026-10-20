@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
-import {openStore,getProfile,putCircle,deleteCircle,readDungeonSnapshot,getCircleThumbnail} from '../assets/js/dungeon-store.mjs';
+import {openStore,saveProfile,putCircle,deleteCircle,readDungeonSnapshot,getCircleThumbnail} from '../assets/js/dungeon-store.mjs';
 import {verifyLocalSnapshot,digestPhoto} from '../assets/js/dungeon-cloud-integrity.mjs';
 import {createCircleThumbnail} from '../assets/js/dungeon-thumbnails.mjs';
 import {createDungeonPhotoManager} from '../assets/js/dungeon-photo-manager.mjs';
 
 const db=await openStore(fakeIndexedDB());
-await getProfile(db);
+await saveProfile(db,{name:'縮小画像検証',level:1,xp:0,base:{hp:100,mag:10,def:8,res:8},
+ returns:0,attempts:0,inventory:[],collection:{},run:null});
 const original=new Blob([Uint8Array.from([255,216,255,224,1,2,3,4,5,6,7,8,255,217])],{type:'image/jpeg'});
 const circle={id:'thumbnail-test',image:original,registeredAt:1,analysis:{attribute:'flame',role:'attack',power:100},revealed:false};
 await putCircle(db,circle);
@@ -51,7 +52,8 @@ try{
 }finally{globalThis.document=oldDocument;globalThis.createImageBitmap=oldBitmap;}
 
 const uiDb=await openStore(fakeIndexedDB());
-await getProfile(uiDb);
+await saveProfile(uiDb,{name:'画面検証',level:1,xp:0,base:{hp:100,mag:10,def:8,res:8},
+ returns:0,attempts:0,inventory:[],collection:{},run:null});
 await putCircle(uiDb,circle);
 let observer=null;
 const oldObserver=globalThis.IntersectionObserver;
