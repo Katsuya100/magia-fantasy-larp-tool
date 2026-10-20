@@ -1059,6 +1059,7 @@ function oneSentencePerLine(value){return String(value).replace(/([。！？])\s
 function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
  $('magicDetailsDialog').dataset.circleId=id;
+ $('repairSelectedCircleImage').hidden=circle.image instanceof Blob&&circle.image.size>0;
  $('upgradeFeedback').textContent='';
  $('magicStoneStock').textContent='所持魔導石：'+profile.magicStones+'個 / 強化1回につき1個';
  $('upgradeCircle').hidden=Boolean(profile.run);
@@ -1380,6 +1381,13 @@ function wire(){
  }).catch(error=>note('写真の修復に失敗しました：'+error.message));});
  $('backupSetupDialog').addEventListener('cancel',event=>event.preventDefault());
  $('closeMagicDetails').addEventListener('click',()=>$('magicDetailsDialog').close());
+ $('repairSelectedCircleImage').addEventListener('click',()=>exclusive(async()=>{
+  if(profile.run)return;
+  const id=$('magicDetailsDialog').dataset.circleId;
+  if(!circles.some(c=>c.id===id))return;
+  if($('magicDetailsDialog').open)$('magicDetailsDialog').close();
+  if(await recaptureMissingImages([id]))openMagicDetails(id);
+ }).catch(error=>note('写真の復旧に失敗しました：'+error.message)));
  $('upgradeCircle').addEventListener('click',()=>askCircleAction('upgrade',$('magicDetailsDialog').dataset.circleId));
  $('cancelCircleAction').addEventListener('click',()=>{$('circleActionDialog').close();pendingCircleAction=null;});
  $('circleActionDialog').addEventListener('close',()=>{pendingCircleAction=null;});
