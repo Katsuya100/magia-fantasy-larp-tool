@@ -1,4 +1,4 @@
-import {circleLegacyHpSources} from './dungeon-permadeath.mjs';
+import {circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs';
 // Each stone increases power by 10% of the original, never compounding.
 // Round the final effective power upward and suppress representation noise.
 export function strengthenedPower(base,level){
@@ -17,7 +17,7 @@ export function upgradeCircle(circle){
 export function combatSpell(circle){
  return circle?.analysis?{...circle.analysis,basePower:circle.basePower??circle.analysis.power,
   upgradeLevel:Number.isSafeInteger(circle.upgradeLevel)&&circle.upgradeLevel>0?circle.upgradeLevel:0,
-  ...(Number(circle.legacyHp)>0?{legacyHp:Number(circle.legacyHp),legacyHpSources:circleLegacyHpSources(circle)}:{})}:null;
+  ...(totalLegacyLevel(circle)>0?{legacyHp:totalLegacyLevel(circle),legacyHpSources:circleLegacyLevelSources(circle).map(({name,level})=>({name,hp:level}))}:{})}:null;
 }
 // Avoid rewriting an already-saved photograph Blob for every power upgrade.
 export function savedUpgrade(circle){
