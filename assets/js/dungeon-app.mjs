@@ -845,11 +845,11 @@ function showSupportPrompt(prompt){
   void circleImages.thumbnail(selected).then(thumb=>{
    if(generation!==shareImageGeneration||!$('supportPromptDialog').open)return;
    const image=new Image(),url=URL.createObjectURL(thumb);
-   const cleanup=()=>{image.onload=null;image.onerror=null;URL.revokeObjectURL(url);};
+   const cleanup=()=>{image.onload=null;image.onerror=null;image.src='';URL.revokeObjectURL(url);};
    image.onload=()=>{
+    if(generation===shareImageGeneration&&$('supportPromptDialog').open)
+     draw({image,attribute:selected.analysis?.attribute});
     cleanup();
-    if(generation!==shareImageGeneration||!$('supportPromptDialog').open)return;
-    draw({image,attribute:selected.analysis?.attribute});
    };
    image.onerror=()=>{cleanup();draw(null);};
    image.src=url;
