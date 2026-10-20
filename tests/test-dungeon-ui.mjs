@@ -202,6 +202,34 @@ try{
  assert.equal($('loadoutDialog').open,false);
  assert.equal($('library').hidden,false,'picker links directly to the grimoire');
  await doc.click(btn({view:'prepare'}));
+ // A slow IndexedDB commit must not leave the selection dialog over stale slots.
+ const originalTransaction=db.transaction.bind(db);
+ let finishSlowSave;
+ db.transaction=(stores,mode)=>{
+  const tx=originalTransaction(stores,mode);
+  if(mode==='readwrite'&&Array.isArray(stores)&&stores.includes('settings')){
+   let completed;
+   Object.defineProperty(tx,'oncomplete',{
+    get:()=>()=>{finishSlowSave=completed;},
+    set:fn=>{completed=fn;}
+   });
+  }
+  return tx;
+ };
+ await doc.click(btn({openSlot:'0'}));
+ const pendingSelection=doc.click(btn({chooseCircle:'0'}));
+ try{
+  assert.equal($('loadoutDialog').open,false,'circle picker closes before saving finishes');
+  assert.equal(($('slotCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,1,'equipped circle is visible immediately');
+  await wait(()=>typeof finishSlowSave==='function','delayed IndexedDB save reached completion');
+  assert.equal($('loadoutDialog').open,false,'picker stays closed while the save is pending');
+ }finally{
+  db.transaction=originalTransaction;
+  finishSlowSave?.();
+ }
+ await pendingSelection;
+ await doc.click(btn({openSlot:'0'}));
+ await $('clearLoadoutSlot').fire('click');
  for(let i=0;i<circles.length;i++){
   await doc.click(btn({openSlot:String(i)}));
   assert.equal($('loadoutDialog').open,true,'opens the spell picker for each slot');
