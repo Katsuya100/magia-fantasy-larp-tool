@@ -16,6 +16,7 @@ function reducedMotion(){
  return typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;
 }
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+let dismissActiveCircleReveal=null;
 function element(tag,className){
  const node=document.createElement(tag);node.className=className;return node;
 }
@@ -78,27 +79,58 @@ function stageFor(mode,analysis,outline){
    label.textContent=value;labels.appendChild(label);
   }
   root.appendChild(labels);
-  root.setAttribute('role','status');
+  root.setAttribute('role','dialog');
+  root.setAttribute('aria-modal','true');
   root.setAttribute('aria-label',circleRitualLabels(analysis).join('、'));
  }else root.setAttribute('aria-hidden','true');
  return root;
 }
 export async function playCircleReveal(circle,photoUrl=''){
- if(typeof document==='undefined'||!document.body||reducedMotion())return;
- // A visual failure must not be treated as a failed analysis after the photo has been saved.
+ if(typeof document==='undefined'||!document.body)return;
+ // Keep the full-screen result on screen until an explicit tap, without affecting saved data.
  try{
   const outline=await circleOutline(circle?.image,circle?.analysis?.attribute);
-  document.querySelector?.('.circle-ritual--reveal')?.remove();
+  dismissActiveCircleReveal?.();
   const root=stageFor('reveal',circle?.analysis,outline);
   if(photoUrl){
    const physical=element('img','circle-ritual__physical');
    physical.src=photoUrl;physical.alt='';physical.setAttribute('aria-hidden','true');
    root.insertBefore(physical,root.firstChild);
   }
+  const advance=element('button','circle-ritual__continue');
+  advance.type='button';
+  advance.disabled=true; // Prevent a stray tap from dismissing the 0.8-second animation.
+  advance.setAttribute('aria-label','魔法陣の解明結果を閉じて進む');
+  const hint=element('span','circle-ritual__hint');
+  hint.textContent='タップして進む';
+  advance.appendChild(hint);
+  root.appendChild(advance);
+  const priorFocus=document.activeElement;
   document.body.appendChild(root);
-  try{await sleep(CIRCLE_RITUAL_DURATION_MS);}
-  finally{root.remove();}
- }catch{/* Save and battle continuation always win over presentation. */}
+  await new Promise(resolve=>{
+   let finished=false,timer=null;
+   const finish=()=>{
+    if(finished)return;
+    finished=true;
+    if(timer!==null)clearTimeout(timer);
+    advance.removeEventListener('click',finish);
+    root.remove();
+    if(dismissActiveCircleReveal===finish)dismissActiveCircleReveal=null;
+    if(priorFocus?.isConnected)priorFocus.focus?.({preventScroll:true});
+    resolve();
+   };
+   dismissActiveCircleReveal=finish;
+   advance.addEventListener('click',finish);
+   const ready=()=>{
+    if(finished)return;
+    root.dataset.ready='true';
+    advance.disabled=false;
+    advance.focus?.({preventScroll:true});
+   };
+   if(reducedMotion())ready();
+   else timer=setTimeout(ready,CIRCLE_RITUAL_DURATION_MS);
+  });
+ }catch{/* A display failure must never undo analysis, saving or battle progress. */}
 }
 export async function playCircleUpgrade(circle,host){
  if(!host||typeof document==='undefined'||reducedMotion())return;
