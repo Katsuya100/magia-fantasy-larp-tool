@@ -1,29 +1,27 @@
-import * as G from './dungeon-core.mjs?v=20261020.16';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261020.16';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261020.16';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261020.16';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261020.16';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261020.16';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261020.16';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261020.16';
+import * as G from './dungeon-core.mjs?v=20261020.17';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261020.17';
+import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261020.17';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261020.17';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261020.17';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261020.17';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261020.17';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261020.17';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261020.16';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261020.16';
-import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261020.16';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles} from './dungeon-store.mjs?v=20261020.16';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261020.16';
-import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261020.16';
-import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261020.16';
-import {createCircleThumbnails} from './dungeon-thumbnails.mjs?v=20261020.16';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261020.16';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261020.16';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261020.16';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261020.16';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261020.16';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261020.16';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261020.16';
-import {paintCircleGlow} from './dungeon-circle-glow.mjs?v=20261020.16';
-import {createSuccessorProfile,legacyContents,reclaimLegacies} from './dungeon-permadeath.mjs?v=20261020.16';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261020.17';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261020.17';
+import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261020.17';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles} from './dungeon-store.mjs?v=20261020.17';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261020.17';
+import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261020.17';
+import {createCircleImageUrls} from './dungeon-image-urls.mjs?v=20261020.17';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261020.17';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261020.17';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261020.17';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261020.17';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261020.17';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261020.17';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261020.17';
+import {createSuccessorProfile,legacyContents,reclaimLegacies} from './dungeon-permadeath.mjs?v=20261020.17';
 let cloudSyncController;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -34,79 +32,9 @@ const listView={
 };
 const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'default'}};
 const circleImages=createCircleImageUrls();
-const circleThumbnails=createCircleThumbnails();
-const thumbnailMode=typeof IntersectionObserver==='function'&&typeof createImageBitmap==='function';
-const thumbnailPlaceholder='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
-const thumbnailObserver=thumbnailMode?new IntersectionObserver(entries=>{
- for(const entry of entries){
-  if(!entry.isIntersecting)continue;
-  const img=entry.target,id=img.dataset.circleThumb;
-  thumbnailObserver.unobserve(img);
-  const circle=circles.find(c=>c.id===id);
-  if(!circle)continue;
-  void circleThumbnails.get(circle).then(url=>{
-   if(url&&img.isConnected&&img.dataset.circleThumb===id)img.src=url;
-  }).catch(error=>{console.warn('サムネイルを表示できませんでした',error);img.alt='魔法陣の写真は詳細から確認できます';});
- }
-},{rootMargin:'100px'}):null;
-function observeThumbnails(){
- if(!thumbnailObserver)return;
- for(const img of document.querySelectorAll('img[data-circle-thumb]')){
-  if(img.dataset.thumbObserved!=='true'){
-   img.dataset.thumbObserved='true';
-   thumbnailObserver.observe(img);
-  }
- }
-}
-const retriedPhotoIds=new Set(),failedPhotoIds=new Set();
-function circleFromPhotoUrl(url){
- const blob=circleImages.findBlob(url);
- return blob?circles.find(circle=>circle.image===blob):null;
-}
-function onMagicPhotoError(event){
- const img=event.target,url=img?.getAttribute?.('src')||img?.src||'';
- if(!url.startsWith('blob:'))return;
- const circle=circleFromPhotoUrl(url);
- if(!circle)return;
- if(!retriedPhotoIds.has(circle.id)){
-  // Only replace the object URL; never overwrite or delete saved photo bytes.
-  retriedPhotoIds.add(circle.id);
-  const next=circleImages.refresh(circle.image);
-  const images=Array.from(document.querySelectorAll?.('img[src]')||[]);
-  if(!images.includes(img))images.push(img);
-  for(const current of images){
-   if((current.getAttribute?.('src')||current.src)===url){
-    current.dataset.photoRetry='true';
-    current.src=next;
-   }
-  }
-  return;
- }
- failedPhotoIds.add(circle.id);
- const container=img.closest?.('.card,.loadout-tile,.picker-option,.magic-circle-image-frame');
- if(container)container.dataset.photoFailed='true';
- img.alt='写真を表示できません。詳細から写真を復旧できます。';
- if($('magicDetailsDialog').dataset.circleId===circle.id)
-  $('repairSelectedCircleImage').hidden=false;
-}
-function onMagicPhotoLoad(event){
- const img=event.target,url=img?.getAttribute?.('src')||img?.src||'';
- const circle=circleFromPhotoUrl(url);
- if(!circle)return;
- failedPhotoIds.delete(circle.id);
- const container=img.closest?.('.card,.loadout-tile,.picker-option,.magic-circle-image-frame');
- if(container)delete container.dataset.photoFailed;
- if($('magicDetailsDialog').dataset.circleId===circle.id)
-  $('repairSelectedCircleImage').hidden=true;
-}
-function wireCirclePhotoRecovery(){
- document.addEventListener('error',onMagicPhotoError,true);
- document.addEventListener('load',onMagicPhotoLoad,true);
-}
 let dungeonView='prepare';
 let busyAction=false,playingEffects=false,savingName=false;
 let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null;
-let captureGlowEpoch=0,detailGlowEpoch=0;
 let returnFlow=null,returnAnimationToken=0,tutorial=null;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 function note(message){
@@ -133,10 +61,6 @@ async function refreshRepairStatus(){
 }
 async function handleDriveImageRepair(){
  circleImages.releaseAll();
- circleThumbnails.releaseAll();
- const restoredSnapshot=await readDungeonSnapshot(db);
- circleThumbnails.setProofs(restoredSnapshot.integrity?.photos||{});
- retriedPhotoIds.clear();failedPhotoIds.clear();
  circles=newestCirclesFirst(await allCircles(db));
  slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));
  await refreshRepairStatus();
@@ -171,8 +95,6 @@ async function recaptureMissingImages(ids){
     if(!original)throw Error('魔法陣の記録が見つかりません。');
     await putCircle(db,{...original,image:file},{repairImage:true});
     circleImages.release(original.image);
-    circleThumbnails.forget(id);circleThumbnails.setProof(id,'');
-    retriedPhotoIds.delete(id);failedPhotoIds.delete(id);
     circles=circles.map(c=>c.id===id?{...c,image:file}:c);
     remaining.shift();
     await refreshRepairStatus();
@@ -224,7 +146,6 @@ async function load(){
  profile=await getProfile(db);
  const initialSnapshot=await readDungeonSnapshot(db);
  const initialHealth=await verifyLocalSnapshot(initialSnapshot);
- circleThumbnails.setProofs(initialHealth.status==='valid'?initialSnapshot.integrity?.photos||{}:{});
  if(initialHealth.status==='corrupt'){
   // Do not start the game or create new integrity evidence from corrupt data.
   // Require a healthy Drive recovery before any player interaction is allowed.
@@ -363,10 +284,8 @@ function restoreContinuedBattleScroll(top){
  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>requestAnimationFrame(restore));
  else restore();
 }
-function imageUrl(blob,id){
- return id&&thumbnailMode?thumbnailPlaceholder:circleImages.get(blob);
-}
-function battleImageUrl(blob,id){return imageUrl(blob,id);}
+function imageUrl(blob){return circleImages.get(blob);}
+function battleImageUrl(blob){return circleImages.get(blob);}
 function renderHeroName(hero){
  const name=$('heroName'),displayName=profile.name?.trim()||'名もなき冒険者';
  name.textContent=displayName+(hero.reviveArmed?' 🪽':'');
@@ -432,9 +351,8 @@ function render(){
   const circleIndexes=circleListIndexes(circles,{
    role:listView.libraryRole,attribute:listView.libraryAttribute,sort:listView.librarySort
   });
-  $('libraryCards').innerHTML=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'" data-favorite="'+(profile.favoriteCircleId===c.id)+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'"><img alt="魔法陣" loading="lazy" decoding="async" data-circle-thumb="'+esc(c.id)+'" role="button" tabindex="0" aria-label="長押しでお気に入りを切り替え" aria-pressed="'+(profile.favoriteCircleId===c.id)+'" src="'+imageUrl(c.image,c.id)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
+  $('libraryCards').innerHTML=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'" data-favorite="'+(profile.favoriteCircleId===c.id)+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'"><img alt="魔法陣" role="button" tabindex="0" aria-label="長押しでお気に入りを切り替え" aria-pressed="'+(profile.favoriteCircleId===c.id)+'" src="'+imageUrl(c.image,c.id)+'">'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<1?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
  $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run,masters.buffs,G.mpCost);
- observeThumbnails();
  const unlocked=profile.returns>0||profile.inventory.length>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
  $('gearCounter').textContent=unlocked?'携行品 '+pickedValues(carry.slice(0,limit)).length+' / '+limit+' 個':'携行品：最初の帰還後に解放';
@@ -485,12 +403,11 @@ function renderRun(){
   const disabled=Boolean(s&&!G.canCast(hero,i));
   return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleLabel(c):'未解析')+'" '+(disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
-    +'<img alt="" loading="lazy" decoding="async" data-circle-thumb="'+esc(c.id)+'" src="'+battleImageUrl(c.image,c.id)+'">'
+    +'<img alt="" src="'+battleImageUrl(c.image,c.id)+'">'
     +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
     +circleEffectBadges(c,masters.buffs,esc,G.mpCost)
     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button></div>';
  }).join('');
- observeThumbnails();
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
  // Match the prepared-item capacity, but keep extra occupied legacy slots visible.
  const maxSlots=Math.max(G.capacity(profile.level),run.carry.findLastIndex(Boolean)+1);
@@ -1010,54 +927,28 @@ async function leave(mode='checkpoint'){
  renderReturnStep();
  show('returnShowcase');
 }
-function updateAnalysisProgress(step,label){
- const progress=$('analysisProgress');
- progress.value=step;
- $('analysisProgressCount').textContent=step+' / 5';
- $('analysisProgressText').textContent=label;
-}
+
 async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
 async function parseCircleImage(circle,frame,valid,request=null){
  return new Promise((resolve,reject)=>{
   let settled=false;
   const finish=(error,result)=>{
    if(settled)return;
-   settled=true;
-   window.removeEventListener?.('message',onMessage);
-   frame.onload=null;frame.src='about:blank';
+   settled=true;frame.onload=null;frame.src='about:blank';
    if(error)reject(error);else resolve(result);
   };
-  const onMessage=event=>{
-   if(settled||event.source!==frame.contentWindow||event.origin!==window.location?.origin)return;
-   const message=event.data;
-   if(message?.type!=='magia-dungeon-analysis')return;
-   if(!valid())return;
-   switch(message.stage){
-    case 'ready':updateAnalysisProgress(2,'撮影画像を読み込む準備ができました');break;
-    case 'image-ready':updateAnalysisProgress(3,'輪郭と紋を解析しています');break;
-    case 'analysis-start':updateAnalysisProgress(3,'輪郭と紋を解析しています');break;
-    case 'structure-ready':updateAnalysisProgress(4,'呪文と相を判定しています');break;
-    case 'spell-reading':updateAnalysisProgress(4,'呪文と相を判定しています');break;
-    case 'complete':updateAnalysisProgress(5,'結果を確定しています');break;
-    case 'error':finish(Error(message.detail||'解析器の準備・実行に失敗しました'));break;
-   }
-  };
-  window.addEventListener?.('message',onMessage);
   if(request)request.cancel=()=>finish(Error('解析が中断されました'));
   frame.onload=async()=>{
    try{
     const doc=frame.contentDocument;
     const input=await waitUntil(()=>{const el=doc?.getElementById('fileInput');return el&&!el.disabled?el:null;},valid);
-    updateAnalysisProgress(2,'撮影画像を受け渡しています');
     const transfer=new DataTransfer();
     transfer.items.add(new File([circle.image],'circle.jpg',{type:circle.image.type||'image/jpeg'}));
     input.files=transfer.files;
     input.dispatchEvent(new Event('change',{bubbles:true}));
     const analyze=await waitUntil(()=>{const el=doc?.getElementById('analyzeButton');return el&&!el.disabled?el:null;},valid);
-    updateAnalysisProgress(3,'輪郭と紋を解析しています');
     analyze.click();
     await waitUntil(()=>!doc.getElementById('altarSection')?.hidden,valid);
-    updateAnalysisProgress(5,'結果を確定しています');
     finish(null,normalizeAnalysisResult({
      attribute:doc.querySelector('#attributeResult .altar-value')?.textContent?.trim(),
      role:doc.querySelector('#shapeResult .altar-value')?.textContent?.trim(),
@@ -1065,43 +956,20 @@ async function parseCircleImage(circle,frame,valid,request=null){
     }));
    }catch(e){finish(e);}
   };
-  frame.src='magia-circle.html?dungeon=1&release=20261020.16';
+  frame.src='magia-circle.html';
  });
 }
-function showCaptureReveal(circle){
- const dialog=$('captureRevealDialog'),details=circleDetails(circle),epoch=++captureGlowEpoch;
- const photo=$('captureRevealImage'),glow=$('captureRevealGlow');
- dialog.dataset.revealing='false';
- glow.dataset.ready='false';
- photo.src=imageUrl(circle.image);
- $('captureRevealAttribute').textContent=details.attribute;
- $('captureRevealRole').textContent=details.role;
- dialog.dataset.attribute=circle.analysis.attribute;
- // Open immediately after successful persistence; the optional image treatment
- // must never prevent the 相/紋 reveal from appearing.
- if(!dialog.open)dialog.showModal();
- void paintCircleGlow(glow,photo,circle.analysis.attribute).then(painted=>{
-  if(epoch!==captureGlowEpoch||!dialog.open)return;
-  glow.dataset.ready=String(painted);
-  dialog.dataset.revealing='false';
-  void dialog.offsetWidth;
-  dialog.dataset.revealing='true';
- });
-}
+
 async function analyzeCapturedCircle(circle){
  // Reveal the real analyzer for each photo. The live camera remains active
  // in the grimoire, so another photo can be taken immediately after returning.
  const request={id:circle.id,type:'capture',epoch:photoAnalysisEpoch};
  activeAnalysis=request;
  rememberCameraScroll();
- updateAnalysisProgress(1,'解析器を起動しています');
  show('analyzing');
  note('');
  const valid=()=>activeAnalysis===request&&!profile.run&&request.epoch===photoAnalysisEpoch;
  try{
-  // Do not allocate a thumbnail bitmap while OCR is starting or running.
-  await circleThumbnails.pause();
-  if(!valid())return;
   const result=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
   if(!valid())return;
   const analyzed=savePreanalysis(circle,result);
@@ -1112,29 +980,23 @@ async function analyzeCapturedCircle(circle){
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
-  showCaptureReveal(analyzed);
  }catch(e){
   if(!valid())return;
-  console.error('撮影した魔法陣の解明・登録に失敗しました',e);
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
-  $('cameraError').textContent='魔法陣を解明できませんでした：'+(e?.message||'再撮影してください')+'。写真は保存していません。';
+  $('cameraError').textContent='魔法陣を解明できませんでした。写真は保存していません。もう一度撮影してください。';
   $('cameraError').hidden=false;
- }finally{
-  circleThumbnails.resume();
  }
 }
 async function analyzeUnknown(index){
  const run=profile.run,circle=circles.find(x=>x.id===run?.slotIds[index]);
  if(!circle){note('魔法陣が見つからない');return;}
  const request={id:circle.id,index};
- activeAnalysis=request;updateAnalysisProgress(1,'解析器を起動しています');show('analyzing');note('');
+ activeAnalysis=request;show('analyzing');note('');
  const valid=()=>activeAnalysis===request&&profile.run===run;
  (async()=>{
   try{
-   await circleThumbnails.pause();
-   if(!valid())return;
    const analysis=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
    if(!valid())return;
    Object.assign(circle,savePreanalysis(circle,analysis));
@@ -1146,8 +1008,6 @@ async function analyzeUnknown(index){
    if(!valid())return;
    activeAnalysis=null;note('解明できませんでした：'+e.message);
    renderRun();show('battle');
-  }finally{
-   circleThumbnails.resume();
   }
  })();
 }
@@ -1189,10 +1049,7 @@ async function capture(){
 function oneSentencePerLine(value){return String(value).replace(/([。！？])\s*(?=\S)/gu,'$1\n');}
 function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
- detailGlowEpoch++;
  $('magicDetailsDialog').dataset.circleId=id;
- $('repairSelectedCircleImage').hidden=!failedPhotoIds.has(id);
- $('magicDetailsDialog').dataset.attribute=circle.analysis?.attribute||'unknown';
  $('upgradeFeedback').textContent='';
  $('magicStoneStock').textContent='所持魔導石：'+profile.magicStones+'個 / 強化1回につき1個';
  $('upgradeCircle').hidden=Boolean(profile.run);
@@ -1240,20 +1097,10 @@ async function confirmCircleAction(){
    render();
    openMagicDetails(circle.id);
    $('upgradeFeedback').textContent='✦ 強化成功！\n威力 '+enhanced.analysis.power+' ✦';
-   const dialog=$('magicDetailsDialog'),glow=$('magicDetailsGlow'),epoch=detailGlowEpoch;
+   const dialog=$('magicDetailsDialog');
    dialog.dataset.enhancing='false';
-   glow.dataset.ready='false';
-   // Do not start the 1.8s ceremony before the extracted ink has been painted.
-   // The detailed photo and the saved upgraded stats appear immediately.
-   if(!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
-    void paintCircleGlow(glow,$('magicDetailsImage'),circle.analysis?.attribute).then(painted=>{
-     if(epoch!==detailGlowEpoch||!dialog.open||dialog.dataset.circleId!==circle.id)return;
-     glow.dataset.ready=String(painted);
-     dialog.dataset.enhancing='false';
-     void dialog.offsetWidth;
-     dialog.dataset.enhancing='true';
-    });
-   }
+   void dialog.offsetWidth;
+   dialog.dataset.enhancing='true';
   }else if(action.type==='remove'){
    await deleteCircle(db,circle.id);
    if(profile.circleUpgrades){
@@ -1262,8 +1109,6 @@ async function confirmCircleAction(){
     profile.circleUpgrades=upgrades;
    }
    circleImages.release(circle.image);
-   circleThumbnails.forget(circle.id);
-   retriedPhotoIds.delete(circle.id);failedPhotoIds.delete(circle.id);
    if(profile.favoriteCircleId===circle.id)profile.favoriteCircleId=null;
    circles=circles.filter(c=>c.id!==circle.id);
    slots=slots.map(id=>id===circle.id?null:id);
@@ -1284,7 +1129,6 @@ function renderLoadoutChoices(){
   const indexes=circleListIndexes(circles,{role,attribute,sort:pickerView.circle.sort});
   $('loadoutOptions').innerHTML=indexes.length?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost,indexes,picker.index)
    :'<p class="collection-empty">条件に合う魔法陣はありません。</p>';
-  observeThumbnails();
  }else{
   const indexes=itemListIndexes(profile.inventory,masters.items,{kind:pickerView.item.filter,sort:pickerView.item.sort});
   $('loadoutOptions').innerHTML=indexes.length?itemChoices(profile.inventory,carry,itemName,esc,indexes,picker.index)
@@ -1356,12 +1200,9 @@ async function eraseSaveData(){
   // Finish active upload and verification before clearing local data.
   // Unlinking removes the auth cookie and prevents the restore chooser.
   await cloudSyncController?.disconnect?.();
-  await circleThumbnails.pause();
   await clearDungeonData(db);
   stopCamera();
   circleImages.releaseAll();
-  circleThumbnails.releaseAll();
-  await circleThumbnails.clearCache();
   photoAnalysisEpoch++;
   lastCaptureRegistration=0;
   cameraReturnScroll=null;
@@ -1378,8 +1219,6 @@ async function eraseSaveData(){
   openBackupSetup();
  }catch(e){
   $('deleteDataError').textContent='データの削除に失敗しました：'+e.message;
- }finally{
-  circleThumbnails.resume();
  }
 }
 function updateGameModeDescription(){
@@ -1443,7 +1282,6 @@ function wireFavoriteHold(){
 }
 function wire(){
  wireFavoriteHold();
- wireCirclePhotoRecovery();
  tutorial=initCircleTutorial(document,async toCamera=>{
   profile.tutorialDone=true;
   try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}
@@ -1532,23 +1370,12 @@ function wire(){
   await refreshRepairStatus();
  }).catch(error=>note('写真の修復に失敗しました：'+error.message));});
  $('backupSetupDialog').addEventListener('cancel',event=>event.preventDefault());
- $('closeCaptureReveal').addEventListener('click',()=>$('captureRevealDialog').close());
- $('captureRevealDialog').addEventListener('close',()=>{captureGlowEpoch++;$('captureRevealDialog').dataset.revealing='false';});
  $('closeMagicDetails').addEventListener('click',()=>$('magicDetailsDialog').close());
- $('repairSelectedCircleImage').addEventListener('click',()=>exclusive(async()=>{
-  if(profile.run)return;
-  const id=$('magicDetailsDialog').dataset.circleId;
-  if(!circles.some(c=>c.id===id))return;
-  if($('magicDetailsDialog').open)$('magicDetailsDialog').close();
-  const restored=await recaptureMissingImages([id]);
-  if(restored)openMagicDetails(id);
- }).catch(e=>note('写真の復旧に失敗しました：'+e.message)));
  $('upgradeCircle').addEventListener('click',()=>askCircleAction('upgrade',$('magicDetailsDialog').dataset.circleId));
  $('cancelCircleAction').addEventListener('click',()=>{$('circleActionDialog').close();pendingCircleAction=null;});
  $('circleActionDialog').addEventListener('close',()=>{pendingCircleAction=null;});
  $('confirmCircleAction').addEventListener('click',()=>exclusive(confirmCircleAction));
  $('magicDetailsDialog').addEventListener('animationend',e=>{if(e.animationName==='circle-upgrade-aura')$('magicDetailsDialog').dataset.enhancing='false';});
- $('magicDetailsDialog').addEventListener('close',()=>{detailGlowEpoch++;$('magicDetailsDialog').dataset.enhancing='false';});
  $('closeLoadoutDialog').addEventListener('click',closeLoadoutPicker);
  $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>exclusive(()=>chooseLoadout(null)));
@@ -1577,6 +1404,6 @@ function wire(){
   if(capture){show('library');returnToCameraScroll();}
   else {renderRun();show('battle');}
  });
- window.addEventListener('beforeunload',()=>{stopCamera();circleImages.releaseAll();circleThumbnails.releaseAll();});
+ window.addEventListener('beforeunload',()=>{stopCamera();circleImages.releaseAll();});
 }
 load().catch(failStartup);
