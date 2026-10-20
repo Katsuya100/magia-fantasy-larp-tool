@@ -1,9 +1,14 @@
 // Minimal asynchronous IndexedDB test double: preserves transactions, stores and Blobs.
-export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false}={}){
+export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectProfileBlobRewrite=false}={}){
+ const containsBlob=value=>{
+  if(value instanceof Blob)return true;
+  if(!value||typeof value!=='object')return false;
+  return Object.values(value).some(containsBlob);
+ };
  const databases=new Map();
  const schema=new Map();
  const factory={
-  opens:0,databases,
+  opens:0,databases,failProfileBlobWrites:false,
   open(name,version){
    factory.opens++;
    if(onOpen==='throw')throw Error('Storage denied');
@@ -43,7 +48,7 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false}={}){
        return {
         get:key=>request(()=>structuredClone(table.get(key))),
         getAll:()=>request(()=>structuredClone([...table.values()])),
-        put:(value,key)=>request(()=>{const id=key??value[keyPath];if(id===undefined)throw Error('Missing key');if(rejectBlobRewrite&&store==='circles'&&table.has(id)&&value?.image instanceof Blob)throw Error('Error preparing Blob/File data to be stored in object store');table.set(id,structuredClone(value));return id;}),
+        put:(value,key)=>request(()=>{const id=key??value[keyPath];if(id===undefined)throw Error('Missing key');if(rejectBlobRewrite&&store==='circles'&&table.has(id)&&value?.image instanceof Blob)throw Error('Error preparing Blob/File data to be stored in object store');if(store==='settings'&&id==='profile'&&(rejectProfileBlobRewrite||factory.failProfileBlobWrites)&&containsBlob(value))throw Error('Error preparing Blob/File data to be stored in object store');table.set(id,structuredClone(value));return id;}),
         delete:key=>request(()=>{table.delete(key);return undefined;}),
         clear:()=>request(()=>{table.clear();})
        };
