@@ -29,15 +29,7 @@ const spells=mode=>[
  {role:'support',attribute:'aqua',power:320},
  {role:'defense',attribute:mode.attr,power:defensePower(mode),basePower:270}
 ];
-function enemyChoice(u,r){
- const ids=G.available(u);
- if(!ids.length)return -1;
- const heal=ids.find(i=>u.spells[i].role==='support');
- if(u.hp<u.stats.hp*num('enemy_heal_threshold')&&heal!==undefined)return heal;
- const attacks=ids.filter(i=>u.spells[i].role==='attack');
- return attacks.length&&r()<num('enemy_attack_preference')
-  ?attacks[Math.floor(r()*attacks.length)]:ids[Math.floor(r()*ids.length)];
-}
+function enemyChoice(unit,r){return G.chooseEnemySpell(unit,r);}
 function heroChoice(hero,enemy,style,casts){
  const ids=G.available(hero);
  if(!ids.length)return -1;
