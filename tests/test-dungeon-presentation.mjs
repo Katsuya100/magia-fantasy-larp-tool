@@ -466,6 +466,8 @@ assert.match(page,/id="analyzerFrame" title="マギアサークル解析"/,'capt
 assert.match(page,/class="analyzing-sigil" aria-hidden="true">◎</,'the original magic sigil remains above the progress bar');
 assert.match(page,/id="analysisProgress" value="1" max="5"/,'five-stage native progress bar in the visible analysis panel');
 assert.match(app,/const thumbnailMode=typeof IntersectionObserver/,'native intersection observation prevents eagerly decoding all photos');
+assert.doesNotMatch(app,/lastLibraryCardsMarkup|lastSlotCardsMarkup/,'unproven DOM retention optimization stays reverted');
+assert.match(app,/async function waitUntil\(check,valid,maxMs=150000\)/,'original analyzer wait limit is restored');
 assert.match(app,/await circleThumbnails\.pause\(\)/,'thumbnail generation is blocked while OCR runs');
 assert.match(app,/circleThumbnails\.resume\(\)/,'thumbnail generation resumes only after OCR is finished');
 assert.match(page,/id="analysisProgressCount">1 \/ 5</,'the counter starts at one of five stages');
@@ -475,9 +477,6 @@ assert.match(app,/function updateAnalysisProgress\(step,label\)/,'host reports a
 assert.match(app,/frame\.src='magia-circle\.html\?dungeon=1&release=/,'analysis iframe runs in optimized dungeon mode');
 assert.match(app,/event\.source!==frame\.contentWindow/,'progress events are bound to the current analyzer iframe');
 assert.match(app,/case 'error':finish\(Error\(message\.detail/,'analyzer failures leave the progress screen immediately');
-assert.match(app,/const libraryMarkup=circleIndexes/,'library markup is memoized so photo decodes are not repeatedly cancelled');
-assert.match(app,/if\(libraryMarkup!==lastLibraryCardsMarkup\)/,'re-entering the grimoire preserves decoding image elements');
-assert.match(app,/if\(slotMarkup!==lastSlotCardsMarkup\)/,'preparation photos also stay mounted');
 assert.match(page,/id="repairSelectedCircleImage"/,'only failed photographs expose a safe manual repair path');
 assert.match(app,/show\('analyzing'\)/,'captures visibly transition to analysis');
 assert.match(app,/await analyzeCapturedCircle\(circle\)/,'camera waits until analysis settles');
