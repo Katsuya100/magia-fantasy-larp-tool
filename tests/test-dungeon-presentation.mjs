@@ -435,7 +435,7 @@ assert.match(thumbnails,/class="circle-card-mp">MP:/);
 assert.match(thumbnails,/class="circle-card-power">威力:/);
 assert.match(css,/\.circle-grid \.card-actions\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'grimoire detail and delete side-by-side');
 assert.match(css,/\.circle-card-mp,\.circle-card-power\{[^}]*white-space:nowrap/,'stats stay on their own lines');
-assert.match(app,/createCircleImageUrls\(\)/,'photo URLs persist through repeated turns');
+assert.match(app,/createDungeonPhotoManager\(/,'photo manager keeps visible thumbnail URLs through repeated turns');
 assert.doesNotMatch(app,/releaseBattleUrls\(\)|freeUrls\(\)/,'no premature object URL revocation');
 assert.match(app,/if\(!id\)return '<div class="battle-spell-frame"/,'empty slots render without a cast button');
 assert.doesNotMatch(thumbnails,/効果を大きく見る|効果を拡大/);
