@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261020.17">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261020.19">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,13 +19,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261020.17" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261020.19" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261020.17" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261020.19" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -137,7 +137,7 @@
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
           <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
         </ol>
-        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261020.17" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
+        <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261020.19" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
       <div id="cameraPane" class="capture-pane">
         <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
@@ -273,7 +273,7 @@
       <div class="magic-details-content">
         <div class="chooser-header"><h3 id="magicDetailsTitle">魔法陣の効果</h3><button type="button" id="closeMagicDetails" class="subtle" aria-label="詳細を閉じる">✕</button></div>
         <img id="magicDetailsImage" alt="選択した魔法陣の画像">
-        <button type="button" id="repairSelectedCircleImage" class="subtle" hidden>保存写真がない場合は撮り直す</button>
+        <button type="button" id="repairSelectedCircleImage" class="subtle" hidden>写真が表示されない場合は撮り直す</button>
         <dl id="magicDetailsStats" class="magic-details-stats"></dl>
         <div class="magic-upgrade-controls">
           <p id="magicStoneStock"></p>
@@ -325,15 +325,21 @@
     </dialog>
     <dialog id="imageRepairDialog" class="name-dialog" aria-labelledby="imageRepairTitle">
       <div class="delete-data-dialog-inner">
-        <span class="dialog-sigil" aria-hidden="true">◎</span>
-        <h2 id="imageRepairTitle">魔法陣の画像を復元できませんでした</h2>
-        <p>魔法陣の登録・強化・進行状況は残したまま、写真だけを撮り直せます。修復が終わるまでDriveへの上書きは停止します。</p>
+        <h2 id="imageRepairTitle">写真を撮り直す</h2>
+        <p>写真だけを更新します。</p>
         <p id="imageRepairCircleName" role="status" aria-live="polite"></p>
-        <label for="imageRepairFile">撮り直した画像を選択（カメラ・写真ライブラリ）</label>
-        <input id="imageRepairFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
+          <div id="imageRepairPlaceholder" class="camera-placeholder" aria-hidden="true"><span>◎</span></div>
+          <video id="imageRepairVideo" autoplay muted playsinline hidden></video>
+          <span class="viewfinder-circle-guide" aria-hidden="true"></span>
+          <span class="viewfinder-corners" aria-hidden="true"></span>
+        </div>
+        <canvas id="imageRepairCanvas" hidden></canvas>
         <p id="imageRepairError" class="name-error" role="alert"></p>
-        <div class="buttons">
-          <button type="button" id="imageRepairLater" class="subtle">あとで撮り直す（同期を停止）</button>
+        <div class="buttons camera-actions">
+          <button type="button" id="imageRepairStart" class="camera-trigger">カメラを起動</button>
+          <button type="button" id="imageRepairCapture" hidden>撮影して保存</button>
+          <button type="button" id="imageRepairLater" class="subtle">あとで</button>
         </div>
       </div>
     </dialog>
@@ -384,7 +390,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.20.17</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.20.19</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -403,6 +409,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261020.17"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261020.19"></script>
 </body>
 </html>
