@@ -9,6 +9,10 @@ const photo=new Blob([Uint8Array.from([255,216,255,217])],{type:'image/jpeg'});
 const relic={id:'family-relic',image:photo,registeredAt:1,
  analysis:{attribute:'flame',role:'attack',power:120},revealed:true,basePower:120,
  legacyHp:36,legacyOriginName:'<初代>',legacyHeirNames:['二代目','三代目']};
+const summed={id:'summed-relic',image:photo,registeredAt:3,
+ analysis:{attribute:'aqua',role:'support',power:120},revealed:true,basePower:120,
+ legacyHp:60,legacyOriginName:'A',legacyHeirNames:['B','C'],
+ legacyLevelSources:[{name:'A',level:10},{name:'B',level:20},{name:'C',level:30}]};
 const normal={id:'new-circle',image:photo,registeredAt:2,
  analysis:{attribute:'aqua',role:'support',power:120},revealed:true,basePower:120};
 const wait=async predicate=>{
@@ -21,7 +25,7 @@ try{
  returns:1,attempts:1,tutorialDone:true,inventory:[],obtainedItemIds:[],
  collection:{},defeatedBosses:{},adventurerRank:0,deepestReturnedLayer:1,magicStones:0,
  slots:[relic.id,normal.id,null,null,null],permadeath:true,legacies:[],run:null});
- await putCircle(db,relic);await putCircle(db,normal);
+ await putCircle(db,relic);await putCircle(db,normal);await putCircle(db,summed);
  await import('../assets/js/dungeon-app.mjs?integration=relic-provenance');
  await wait(()=>$('libraryCards').innerHTML.includes(relic.id));
  const button=id=>({dataset:{circleDetail:id},closest(){return this;}});
@@ -38,6 +42,13 @@ try{
  assert.equal((await verifyLocalSnapshot(snapshot)).status,'valid');
  const backup=deserializeDungeonSnapshot(await serializeDungeonSnapshot(snapshot));
  assert.deepEqual(backup.circles.find(c=>c.id===relic.id).legacyHeirNames,['二代目','三代目'],'cloud backup includes all names');
+ await env.document.click(button(summed.id));
+ const totals=$('magicDetailsStats').innerHTML;
+ assert.match(totals,/自分の最大HP\\+60（合計Lv.60）/,'details show sum of all three levels');
+ assert.match(totals,/A Lv.10/);
+ assert.match(totals,/B Lv.20/);
+ assert.match(totals,/C Lv.30/);
+ assert.doesNotMatch(totals,/敵の最大HP-/);
  await env.document.click(button(normal.id));
  assert.equal($('magicDetailsLegacyTitle').hidden,true,'normal spell has no relic inscription');
  assert.doesNotMatch($('magicDetailsStats').innerHTML,/過去の継承者達/,'normal spell has no inherited names');
