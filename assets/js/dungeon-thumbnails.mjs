@@ -24,13 +24,13 @@ export function createCircleThumbnails({
  createUrl=blob=>URL.createObjectURL(blob),revokeUrl=url=>URL.revokeObjectURL(url)
 }={}){
  let proofs={},paused=false,busy=false,current=Promise.resolve(),generation=0;
- const queued=[],pending=new Map(),live=new Map();
+ const queued=[],pending=new Map(),live=new Map(),tokens=new Map();
  function cacheKey(id){
   const proof=proofs[id];
   if(typeof proof!=='string'||!/^[a-f\d]{64}$/.test(proof))return null;
   return new URL('assets/dungeon-thumbnails/'+encodeURIComponent(id)+'-'+proof+'.jpg',document.baseURI).href;
  }
- async function produce(circle,run){
+ async function produce(circle,run,token){
   const key=cacheKey(circle.id);
   let photo=null;
   if(key){
@@ -44,7 +44,7 @@ export function createCircleThumbnails({
     catch{/* Cache quota is optional. */}}
   }
   // Deletion, restoration or page reset may have invalidated this decode.
-  if(run!==generation||!pending.has(circle.id))return '';
+  if(run!==generation||tokens.get(circle.id)!==token||!pending.has(circle.id))return '';
   const url=createUrl(photo);
   live.set(circle.id,{url,source:circle.image});
   return url;
@@ -55,7 +55,7 @@ export function createCircleThumbnails({
   if(!pending.has(item.circle.id)){drain();return;}
   busy=true;
   const run=generation;
-  current=produce(item.circle,run)
+  current=produce(item.circle,run,item.token)
    .then(url=>item.resolve(url),error=>item.reject(error))
    .finally(()=>{
     if(pending.get(item.circle.id)===item.promise)pending.delete(item.circle.id);
@@ -73,7 +73,7 @@ export function createCircleThumbnails({
    let resolve,reject;
    const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});
    pending.set(circle.id,promise);
-   queued.push({circle,promise,resolve,reject});
+   queued.push({circle,promise,resolve,reject,token:tokens.get(circle.id)||0});
    drain();
    return promise;
   },
@@ -81,10 +81,11 @@ export function createCircleThumbnails({
   resume(){paused=false;drain();},
   forget(id){
    const old=live.get(id);if(old){revokeUrl(old.url);live.delete(id);}
-   // A pending decode can finish, but cannot publish its result after a reset.
-   generation++;
-   for(const item of queued.splice(0))item.resolve('');
-   pending.clear();
+   tokens.set(id,(tokens.get(id)||0)+1);
+   pending.delete(id);
+   for(let index=queued.length-1;index>=0;index--){
+    if(queued[index].circle.id===id)queued.splice(index,1)[0].resolve('');
+   }
   },
   releaseAll(){
    generation++;
@@ -92,6 +93,7 @@ export function createCircleThumbnails({
    pending.clear();
    for(const {url} of live.values())revokeUrl(url);
    live.clear();
+   tokens.clear();
   },
   async clearCache(){
    try{await globalThis.caches?.delete(CACHE_NAME);}
