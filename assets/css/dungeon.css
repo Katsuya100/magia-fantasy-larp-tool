@@ -1751,7 +1751,7 @@ html,body{overflow-x:clip}
 
 
 /* Portrait-style layered halo for photographed magic circles. */
-:where(.circle-grid .card,.loadout-tile,.circle-picker-grid .picker-option,.magic-details-dialog,.capture-reveal-dialog){
+:where(.circle-grid .card,.loadout-tile,.magic-details-dialog,.capture-reveal-dialog){
  --spell-glow:#ead098
 }
 [data-attribute="flame"]{--spell-glow:#ffad70}
@@ -1761,10 +1761,8 @@ html,body{overflow-x:clip}
 [data-attribute="gravity"]{--spell-glow:#b49ae8}
 [data-attribute="law"]{--spell-glow:#f2d99d}
 [data-attribute="chaos"]{--spell-glow:#efa0d4}
-.circle-grid .card[data-attribute],.loadout-tile[data-attribute],
-.circle-picker-grid .picker-option[data-attribute]{isolation:isolate}
-.circle-grid .card[data-attribute]::after,.loadout-tile[data-attribute]::after,
-.circle-picker-grid .picker-option[data-attribute]::after{
+.circle-grid .card[data-attribute],.loadout-tile[data-attribute]{isolation:isolate}
+.circle-grid .card[data-attribute]::after,.loadout-tile[data-attribute]::after{
  content:"";position:absolute;pointer-events:none;z-index:0;left:12%;top:8%;width:76%;
  aspect-ratio:1;border-radius:50%;
  background:radial-gradient(circle,color-mix(in srgb,var(--spell-glow) 24%,transparent),transparent 72%);
@@ -1772,9 +1770,7 @@ html,body{overflow-x:clip}
  0 0 20px color-mix(in srgb,var(--spell-glow) 16%,transparent)
 }
 .loadout-tile[data-attribute]::after{inset:16%;width:auto;aspect-ratio:auto}
-.circle-picker-grid .picker-option[data-attribute]::after{top:7%;width:76%}
-.circle-grid .card[data-attribute] img,.loadout-tile[data-attribute] img,
-.circle-picker-grid .picker-option[data-attribute] img{
+.circle-grid .card[data-attribute] img,.loadout-tile[data-attribute] img{
  position:relative;z-index:1;
  filter:drop-shadow(0 0 7px color-mix(in srgb,var(--spell-glow) 43%,transparent))
 }
