@@ -66,7 +66,7 @@ const html = await readFile(new URL('../magia-circle.html', import.meta.url), 'u
 const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(match => match[1]);
 for (const name of ['magia-circle-diagnostics', 'magia-circle-diagnostic-view', 'magia-circle-results']) {
   assert.ok(scripts.includes(`assets/js/${name}.js`), `${name} must be included by the static page.`);
-  assert.ok(scripts.indexOf(`assets/js/${name}.js`) < scripts.findIndex(src=>src.startsWith('assets/js/magia-circle-app.js')), `${name} must load before the app, even when cache-busted.`);
+  assert.ok(scripts.indexOf(`assets/js/${name}.js`) < scripts.indexOf('assets/js/magia-circle-app.js'), `${name} must load before the app.`);
 }
 assert.ok(scripts.indexOf('assets/js/analysis-diagnostics.js') < scripts.indexOf('assets/js/magia-circle-diagnostics.js'));
 console.log('PASS_MAGIA_CIRCLE_RESULTS (shared power, 7 attributes, 4 sigils, fallback, safe error text, script order)');
