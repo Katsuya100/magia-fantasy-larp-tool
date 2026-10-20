@@ -406,6 +406,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  pointer-events:none;color:var(--ritual-ink)
 }
 .circle-ritual--reveal{
+ --ritual-duration:1s;
  position:fixed;inset:0;z-index:5000;display:grid;place-items:center;
  isolation:isolate;overflow:hidden;pointer-events:auto;
  background:radial-gradient(ellipse at center,#101827 0%,#02040b 76%)
