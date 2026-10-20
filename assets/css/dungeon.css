@@ -2037,3 +2037,6 @@ html,body{overflow-x:clip}
 #analysisProgress::-webkit-progress-value{background:linear-gradient(90deg,#72d1cc,#f1cd88);border-radius:999px;transition:width .16s ease}
 #analysisProgress::-moz-progress-bar{background:linear-gradient(90deg,#72d1cc,#f1cd88);border-radius:999px}
 @media(prefers-reduced-motion:reduce){#analysisProgress::-webkit-progress-value{transition:none}}
+
+/* The successor naming dialog must never display game-mode controls. */
+#permadeathChoice[hidden]{display:none!important}

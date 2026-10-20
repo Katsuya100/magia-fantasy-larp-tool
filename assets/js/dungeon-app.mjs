@@ -1345,7 +1345,7 @@ function openNameDialog(required){
  const dialog=$('nameDialog');
  $('playerNameInput').value=profile.name||'';
  $('nameDialogTitle').textContent=profile.awaitingHeir?'後継者':'冒険者の名を刻む';
- $('permadeathChoice').hidden=!required;
+ $('permadeathChoice').hidden=!required||Boolean(profile.awaitingHeir);
  $('permadeathInput').value=profile.permadeath?'permadeath':'casual';
  updateGameModeDescription();
  $('nameError').textContent='';
@@ -1444,7 +1444,8 @@ function wire(){
    if(!name||name.length>20){$('nameError').textContent='1〜20文字で入力してください';return;}
    const firstLesson=!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run;
    await exclusive(async()=>{
-    if(!profile.name||profile.awaitingHeir)profile.permadeath=$('permadeathInput').value==='permadeath';
+    if(profile.awaitingHeir)profile.permadeath=true;
+    else if(!profile.name)profile.permadeath=$('permadeathInput').value==='permadeath';
     profile.name=name;profile.awaitingHeir=false;
     await persist();$('nameDialog').close();render();
     // Release the local action lock after IndexedDB commits, without waiting
