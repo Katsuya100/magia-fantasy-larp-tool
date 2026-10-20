@@ -39,9 +39,11 @@ try{
  const $=id=>env.document.getElementById(id);
  await import('../assets/js/dungeon-app.mjs?integration=legacy-relic-reload');
  await wait(()=>$('libraryCards').innerHTML.includes('fallen-relic-circle'));
- assert.match($('libraryCards').innerHTML,/src="blob:mock-/,'saved relic is renderable after restart');
+ assert.match($('libraryCards').innerHTML,/data-circle-photo-id="fallen-relic-circle"/,'saved relic is listed without eagerly decoding its original');
+ assert.doesNotMatch($('libraryCards').innerHTML,/src="blob:mock-/,'grimoire does not eagerly load the original');
  await env.document.click({dataset:{circleDetail:circle.id},closest(){return this;}});
  assert.equal($('magicDetailsLegacyTitle').hidden,false,'recovered relic shows the inscription');
+ assert.match($('magicDetailsImage').src,/^blob:mock-/,'detail lazily displays the intact original');
  assert.equal($('magicDetailsLegacyTitle').textContent,'先代の残した遺物','earliest character name is recovered from older legacy records');
  assert.match($('magicDetailsStats').innerHTML,/<dt>🔵🔥 継承<\/dt>/);
  assert.match($('magicDetailsStats').innerHTML,/<dt class="legacy-heirs-label">過去の継承者達<\/dt>/);

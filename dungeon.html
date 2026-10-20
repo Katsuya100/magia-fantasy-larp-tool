@@ -247,6 +247,11 @@
 
     <section id="analyzing" class="panel analyzing-panel" hidden>
       <div class="analyzing-sigil" aria-hidden="true">◎</div><h2>魔法陣の力を解明中</h2>
+      <div class="analysis-status" aria-live="polite">
+        <div class="analysis-status-head"><span>解明進捗</span><strong id="analysisProgressCount">0/5</strong></div>
+        <progress id="analysisProgress" max="5" value="0" aria-label="魔法陣の解明進捗"></progress>
+        <p id="analysisError" class="name-error" role="alert" hidden></p>
+      </div>
       <iframe id="analyzerFrame" title="マギアサークル解析"></iframe>
       <button type="button" id="cancelAnalyze" class="subtle">解明を中止</button>
     </section>

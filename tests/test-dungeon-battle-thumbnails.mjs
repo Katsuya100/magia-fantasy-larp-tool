@@ -4,7 +4,7 @@ import {openStore,getProfile,putCircle,saveProfile} from '../assets/js/dungeon-s
 const oldRandom=Math.random;Math.random=()=>.01;
 const env=fakeDungeonBrowser(),doc=env.document,$=id=>doc.getElementById(id);
 const button=dataset=>({dataset,disabled:false,closest(){return this;}});
-const imageUrls=markup=>[...markup.matchAll(/<img alt=""[^>]* src="(blob:mock-\d+)"/g)].map(m=>m[1]);
+const photoIds=markup=>[...markup.matchAll(/<img alt=""[^>]*data-circle-photo-id="([^"]+)"/g)].map(m=>m[1]);
 const wait=async(predicate,label)=>{const limit=Date.now()+9000;while(Date.now()<limit){if(await predicate())return;await new Promise(resolve=>setTimeout(resolve,25));}throw Error('Timeout: '+label);};
 try{
  const db=await openStore(env.factory);
@@ -20,8 +20,9 @@ try{
  assert.equal(($('slotCards').innerHTML.match(/<img alt=""/g)||[]).length,3);
  await $('startAttack').fire('click');
  assert.equal($('battle').hidden,false);
- const battleBefore=$('battleSpells').innerHTML,urlsBefore=imageUrls(battleBefore);
- assert.equal(urlsBefore.length,3,'only three equipped circles render original photos');
+ const battleBefore=$('battleSpells').innerHTML,idsBefore=photoIds(battleBefore);
+ assert.deepEqual(idsBefore,['a','b','c'],'only equipped circles have deferred thumbnail targets');
+ assert.doesNotMatch(battleBefore,/src="blob:mock-/,'battle never allocates original URLs eagerly');
  assert.equal((battleBefore.match(/data-cast="\d"/g)||[]).length,3,'only equipped spell slots are cast controls');
  assert.equal((battleBefore.match(/class="loadout-tile battle-tile battle-spell-tile empty"/g)||[]).length,2,'04/05 use empty tile state');
  assert.equal((battleBefore.match(/>未装備<\/span>/g)||[]).length,2,'04/05 visibly say not equipped');
@@ -31,10 +32,10 @@ try{
   await doc.click(button({cast:'0'}));
   await wait(async()=>{const p=await getProfile(db);return p.run?.floor===round+2;},'round '+(round+1));
   const current=$('battleSpells').innerHTML;
-  assert.deepEqual(imageUrls(current),urlsBefore,'all original photos keep identical non-revoked URLs after round '+(round+1));
+  assert.deepEqual(photoIds(current),idsBefore,'all equipped circle thumbnail targets survive round '+(round+1));
   assert.equal(env.revokedImageUrls.length,0,'casting never revokes active thumbnails');
   assert.equal((current.match(/>未装備<\/span>/g)||[]).length,2,'empty slots remain correct after redrawing');
  }
- assert.equal(new Set(urlsBefore).size,3,'each saved photograph has its own source');
- console.log('PASS 3 equipped/2 empty battle slots, repeated casts and permanent original-photo URLs');
+ assert.equal(new Set(idsBefore).size,3,'each saved photograph keeps its distinct identity');
+ console.log('PASS 3 equipped/2 empty battle slots and deferred photos during repeated casts');
 }finally{Math.random=oldRandom;env.restore();}

@@ -9,6 +9,7 @@ const changes=new WeakMap();
 // values nested inside permadeath legacies. The signed profile is assembled
 // from the canonical profile plus this small overlay when read.
 const HEIR_NAME_KEY='heirNameOverride';
+const thumbnailKey=id=>'circleThumbnail:'+id;
 function applyHeirName(profile,overlay){
  return profile&&overlay?{...profile,...overlay}:profile;
 }
@@ -135,9 +136,26 @@ export async function putCircle(db,circle,{repairImage=false}={}){
  if(!repairImage&&typeof prior==='string'&&prior!=='unknown'&&proof!==prior)
   throw Error('以前の画像検証記録と一致しません。画像復旧画面から撮り直してください。');
  if(repairImage&&proof===null)throw Error('復旧画像がありません。');
- return mutate(db,(_settings,items)=>items.put(circle),{[circle.id]:proof});
+ return mutate(db,(settings,items)=>{items.put(circle);if(repairImage)settings.delete(thumbnailKey(circle.id));},{[circle.id]:proof});
 }
-export const deleteCircle=(db,id)=>mutate(db,(_settings,items)=>items.delete(id));
+export const deleteCircle=(db,id)=>mutate(db,(settings,items)=>{items.delete(id);settings.delete(thumbnailKey(id));});
+// Derived photos are not part of the sealed save or Drive backup.
+export async function getCircleThumbnail(db,circle,createThumbnail){
+ const [saved,integrity]=await Promise.all([
+  request(db,'settings','readonly',s=>s.get(thumbnailKey(circle.id))),
+  request(db,'settings','readonly',s=>s.get('integrity'))
+ ]);
+ const proof=integrity?.photos?.[circle.id];
+ if(typeof proof==='string'&&saved?.proof===proof&&saved.image instanceof Blob&&saved.image.size)return saved.image;
+ const image=await createThumbnail(circle.image);
+ if(typeof proof==='string'){
+  // A full local-storage quota must not prevent viewing an existing photo.
+  try{await request(db,'settings','readwrite',s=>s.put({proof,image},thumbnailKey(circle.id)),{silent:true});}
+  catch(error){console.warn('縮小画像のキャッシュを保存できませんでした',error);}
+ }
+ return image;
+}
+
 // Atomically erase only this dungeon game's own IndexedDB data.
 // Keeping both stores in one transaction prevents a partially erased profile.
 export function clearDungeonData(db){
@@ -174,7 +192,7 @@ export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
  withPlayId(profile);
  const hashes=await photoEvidence(added),profileHashes=await trustedProfileHashes(db,profile);
  return mutate(db,(settings,items)=>{
-  for(const id of removed)items.delete(id);
+  for(const id of removed){items.delete(id);settings.delete(thumbnailKey(id));}
   for(const circle of added)items.put(circle);
   settings.put(profile,'profile');
  },hashes,profileHashes,{writesProfile:true});
