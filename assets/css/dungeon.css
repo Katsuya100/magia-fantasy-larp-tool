@@ -2026,3 +2026,14 @@ html,body{overflow-x:clip}
  .capture-reveal-dialog[data-revealing="true"] .capture-reveal-image-wrap::after,
  .capture-reveal-dialog[data-revealing="true"] .capture-reveal-ring{animation:none;opacity:0}
 }
+
+/* Honest five-step analysis: advance only after the iframe confirms a stage. */
+.analyzing-panel h2{margin:10px 0 24px}
+.analysis-status{width:min(100%,430px);margin:0 auto 22px;text-align:left}
+.analysis-status-head{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:12px;font-size:14px;color:var(--pale)}
+.analysis-status-head strong{flex:none;white-space:nowrap;color:var(--gold);font-variant-numeric:tabular-nums}
+#analysisProgress{display:block;width:100%;height:13px;border:1px solid #c9ac7990;border-radius:999px;overflow:hidden;background:#0a111e;appearance:none}
+#analysisProgress::-webkit-progress-bar{background:#0a111e}
+#analysisProgress::-webkit-progress-value{background:linear-gradient(90deg,#72d1cc,#f1cd88);border-radius:999px;transition:width .16s ease}
+#analysisProgress::-moz-progress-bar{background:linear-gradient(90deg,#72d1cc,#f1cd88);border-radius:999px}
+@media(prefers-reduced-motion:reduce){#analysisProgress::-webkit-progress-value{transition:none}}
