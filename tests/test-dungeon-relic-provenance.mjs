@@ -17,11 +17,11 @@ const wait=async predicate=>{
 };
 try{
  const db=await openStore(env.factory);
- await putCircle(db,relic);await putCircle(db,normal);
  await saveProfile(db,{name:'四代目',level:1,xp:0,base:{hp:100,mag:10,def:8,res:8},
  returns:1,attempts:1,tutorialDone:true,inventory:[],obtainedItemIds:[],
  collection:{},defeatedBosses:{},adventurerRank:0,deepestReturnedLayer:1,magicStones:0,
  slots:[relic.id,normal.id,null,null,null],permadeath:true,legacies:[],run:null});
+ await putCircle(db,relic);await putCircle(db,normal);
  await import('../assets/js/dungeon-app.mjs?integration=relic-provenance');
  await wait(()=>$('libraryCards').innerHTML.includes(relic.id));
  const button=id=>({dataset:{circleDetail:id},closest(){return this;}});
