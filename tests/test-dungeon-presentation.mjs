@@ -468,6 +468,18 @@ assert.doesNotMatch(app,/document\.startViewTransition/,'no root View Transition
 assert.match(css,/dialog\[open\]\{opacity:1/,'dialogs fade in and out');
 assert.doesNotMatch(page,/id="captureAnalyzerFrame"/,'photo analysis must not run in a hidden iframe');
 assert.match(page,/id="analyzerFrame" title="マギアサークル解析"/,'capture analysis uses visible screen');
+assert.match(page,/id="analysisProgress" value="1" max="5"/,'five-stage native progress bar in the visible analysis panel');
+assert.match(page,/id="analysisProgressCount">1 \/ 5</,'the counter starts at one of five stages');
+assert.match(page,/id="analysisProgressText"/,'actual stage label accompanies the counter');
+assert.match(css,/\.analysis-status\{width:min\(100%,430px\)/,'analysis progress is compact');
+assert.match(app,/function updateAnalysisProgress\(step,label\)/,'host reports actual stage progression');
+assert.match(app,/frame\.src='magia-circle\.html\?dungeon=1&release=/,'analysis iframe runs in optimized dungeon mode');
+assert.match(app,/event\.source!==frame\.contentWindow/,'progress events are bound to the current analyzer iframe');
+assert.match(app,/case 'error':finish\(Error\(message\.detail/,'analyzer failures leave the progress screen immediately');
+assert.match(app,/const libraryMarkup=circleIndexes/,'library markup is memoized so photo decodes are not repeatedly cancelled');
+assert.match(app,/if\(libraryMarkup!==lastLibraryCardsMarkup\)/,'re-entering the grimoire preserves decoding image elements');
+assert.match(app,/if\(slotMarkup!==lastSlotCardsMarkup\)/,'preparation photos also stay mounted');
+assert.match(page,/id="repairSelectedCircleImage"/,'only failed photographs expose a safe manual repair path');
 assert.match(app,/show\('analyzing'\)/,'captures visibly transition to analysis');
 assert.match(app,/await analyzeCapturedCircle\(circle\)/,'camera waits until analysis settles');
 assert.match(page,/3〜5 SIGILS/);
