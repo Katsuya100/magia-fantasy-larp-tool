@@ -121,6 +121,24 @@ try{
   assert.doesNotMatch($r('returnRewards').innerHTML,/class="return-new"/,'used-up, previously acquired item does not get NEW');
  }finally{repeated.restore();}
  
+ // A nested loss returns multiple generations but must not merge their labels.
+ const nested=await create(0,true),nestedProfile=await getProfile(nested.db);
+ const first={name:'世代1',level:8,circles:[{id:'relic-generation-1',image:new Blob(['first']),analysis:attack}],items:[],loot:[],rank:0};
+ const second={name:'世代2',level:9,circles:[{id:'relic-generation-2',image:new Blob(['second']),analysis:attack}],items:[],loot:[{type:'legacy',legacy:first}],rank:0};
+ nestedProfile.run.loot=[{type:'legacy',legacy:second}];
+ await saveProfile(nested.db,nestedProfile);
+ const nestedEnv=fakeDungeonBrowser({factory:nested.factory}),$n=id=>nestedEnv.document.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=return-nested-generations');
+  await wait(()=>$n('checkpoint').hidden===false);
+  await $n('returnHome').fire('click');
+  assert.equal($n('returnSceneTitle').textContent,'アイテム報酬');
+  const html=$n('returnRewards').innerHTML;
+  assert.equal((html.match(/class="return-reward"/g)||[]).length,2,'each generation has a separate reward card');
+  assert.ok(html.indexOf('<strong>世代2の遺物</strong>')<html.indexOf('<strong>世代1の遺物</strong>'),'each card keeps its own owner');
+  assert.deepEqual((await getProfile(nested.db)).pendingReturn.rewards.map(reward=>reward.name),['世代2の遺物','世代1の遺物'],'reward names survive a reload');
+ }finally{nestedEnv.restore();}
+
  const xpOnly=await create(45,true),env3=fakeDungeonBrowser({factory:xpOnly.factory}),$3=id=>env3.document.getElementById(id);
  try{
   await import('../assets/js/dungeon-app.mjs?integration=return-xp-only');
