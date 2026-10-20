@@ -202,6 +202,15 @@ try{
  assert.equal($('loadoutDialog').open,false);
  assert.equal($('library').hidden,false,'picker links directly to the grimoire');
  await doc.click(btn({view:'prepare'}));
+ // Selection feedback must precede asynchronous IndexedDB persistence.
+ await doc.click(btn({openSlot:'0'}));
+ const pendingSelection=doc.click(btn({chooseCircle:'0'}));
+ assert.equal($('loadoutDialog').open,false,'circle picker closes immediately, before the save resolves');
+ assert.equal(($('slotCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,1,'equipped circle is visible immediately');
+ await pendingSelection;
+ assert.equal((await getProfile(db)).slots[0],circles[0].id,'the immediate selection also persists');
+ await doc.click(btn({openSlot:'0'}));
+ await $('clearLoadoutSlot').fire('click');
  for(let i=0;i<circles.length;i++){
   await doc.click(btn({openSlot:String(i)}));
   assert.equal($('loadoutDialog').open,true,'opens the spell picker for each slot');
