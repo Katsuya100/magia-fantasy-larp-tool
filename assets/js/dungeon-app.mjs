@@ -1102,6 +1102,9 @@ async function analyzeCapturedCircle(circle){
  note('');
  const valid=()=>activeAnalysis===request&&!profile.run&&request.epoch===photoAnalysisEpoch;
  try{
+  // Do not allocate a thumbnail bitmap while OCR is starting or running.
+  await circleThumbnails.pause();
+  if(!valid())return;
   const result=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
   if(!valid())return;
   const analyzed=savePreanalysis(circle,result);
@@ -1121,6 +1124,8 @@ async function analyzeCapturedCircle(circle){
   returnToCameraScroll();
   $('cameraError').textContent='魔法陣を解明できませんでした：'+(e?.message||'再撮影してください')+'。写真は保存していません。';
   $('cameraError').hidden=false;
+ }finally{
+  circleThumbnails.resume();
  }
 }
 async function analyzeUnknown(index){
@@ -1131,6 +1136,8 @@ async function analyzeUnknown(index){
  const valid=()=>activeAnalysis===request&&profile.run===run;
  (async()=>{
   try{
+   await circleThumbnails.pause();
+   if(!valid())return;
    const analysis=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
    if(!valid())return;
    Object.assign(circle,savePreanalysis(circle,analysis));
@@ -1142,6 +1149,8 @@ async function analyzeUnknown(index){
    if(!valid())return;
    activeAnalysis=null;note('解明できませんでした：'+e.message);
    renderRun();show('battle');
+  }finally{
+   circleThumbnails.resume();
   }
  })();
 }
