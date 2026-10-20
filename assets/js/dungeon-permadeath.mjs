@@ -3,26 +3,33 @@
 const recordedName=value=>typeof value==='string'?value.trim().slice(0,20):'';
 const inheritedNames=circle=>Array.isArray(circle?.legacyHeirNames)
  ?[...new Set(circle.legacyHeirNames.map(recordedName).filter(Boolean))]:[];
-// Each deceased owner contributes once. Old saves with only legacyHp keep that bonus.
-export function circleLegacyHpSources(circle){
- const sources=Array.isArray(circle?.legacyHpSources)?circle.legacyHpSources:[];
+// Inheritance is the sum of unique deceased owners' levels (no multiplier).
+// Older saves stored HP = level * 2. Retain their known total without inventing missing levels.
+export function circleLegacyLevelSources(circle){
+ const current=Array.isArray(circle?.legacyLevelSources)?circle.legacyLevelSources:null;
+ const previous=Array.isArray(circle?.legacyHpSources)?circle.legacyHpSources:null;
+ const entries=current??previous?.map(source=>({name:source.name,level:Number(source.hp)/2}))??[];
  const seen=new Set(),result=[];
- for(const source of sources){
-  const name=recordedName(source?.name),hp=Math.floor(Number(source?.hp)||0);
-  if(!name||!Number.isFinite(hp)||hp<=0||seen.has(name))continue;
-  seen.add(name);result.push({name,hp});
+ for(const entry of entries){
+  const name=recordedName(entry?.name),level=Math.floor(Number(entry?.level));
+  if(!name||!Number.isSafeInteger(level)||level<=0||seen.has(name))continue;
+  seen.add(name);result.push({name,level});
  }
- if(!result.length){
-  const hp=Math.floor(Number(circle?.legacyHp)||0);
-  if(Number.isFinite(hp)&&hp>0)result.push({name:recordedName(circle?.legacyOriginName)||'unknown:'+circle?.id,hp});
+ if(!result.length&&Number(circle?.legacyHp)>0){
+  const level=Math.floor(Number(circle.legacyHp)/2);
+  if(Number.isSafeInteger(level)&&level>0){
+   const name=inheritedNames(circle).length?'旧記録':recordedName(circle.legacyOriginName)||'旧記録';
+   result.push({name,level});
+  }
  }
  return result;
 }
-function withLegacyHp(circle,name,level){
- const sources=circleLegacyHpSources(circle),heir=recordedName(name);
- const hp=Math.floor(Number(level)*2);
- if(heir&&Number.isFinite(hp)&&hp>0&&!sources.some(source=>source.name===heir))sources.push({name:heir,hp});
- return {...circle,legacyHpSources:sources,legacyHp:sources.reduce((total,source)=>total+source.hp,0)};
+export const totalLegacyLevel=circle=>circleLegacyLevelSources(circle).reduce((sum,source)=>sum+source.level,0);
+function withLegacyLevel(circle,name,level){
+ const sources=circleLegacyLevelSources(circle),owner=recordedName(name),value=Math.floor(Number(level));
+ if(owner&&Number.isSafeInteger(value)&&value>0&&!sources.some(source=>source.name===owner))sources.push({name:owner,level:value});
+ const {legacyHpSources,...saved}=circle;
+ return {...saved,legacyLevelSources:sources,legacyHp:sources.reduce((sum,source)=>sum+source.level,0)};
 }
 export function markCircleCreator(circle,name){
  const creator=recordedName(name);
@@ -71,7 +78,7 @@ export function createSuccessorProfile(profile,run,circles,newBase){
 }
 // A recovered bundle can contain an earlier bundle if another heir died before returning.
 export function legacyContents(legacy){
- const result={circles:(legacy.circles||[]).map(circle=>recoveredCircle(withLegacyHp(circle,legacy.name,legacy.level),legacy.name)),items:[...(legacy.items||[])],
+ const result={circles:(legacy.circles||[]).map(circle=>recoveredCircle(withLegacyLevel(circle,legacy.name,legacy.level),legacy.name)),items:[...(legacy.items||[])],
   loot:[],rank:Number(legacy.rank)||0};
  for(const reward of legacy.loot||[]){
   if(reward.type!=='legacy'){result.loot.push(reward);continue;}
