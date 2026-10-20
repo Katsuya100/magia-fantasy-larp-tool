@@ -1,6 +1,6 @@
 import * as G from './dungeon-core.mjs?v=20261020.26';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261020.26';
-import {canDepartWithCircles,circleSummary,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261020.26';
+import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261020.26';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261020.26';
 import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261020.26';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261020.26';
@@ -22,6 +22,7 @@ import {supportPromptForReturn} from './dungeon-support.mjs?v=20261020.26';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261020.26';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261020.26';
 import {selectCardCircle} from './dungeon-card-art.mjs?v=20261020.26';
+import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261020.27';
 import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261020.26';
 import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory} from './dungeon-permadeath.mjs?v=20261020.26';
 let cloudSyncController;
@@ -356,7 +357,6 @@ function rowUnit(unit){
   +vital('MP',unit.mp,unit.maxMp,mp,'mp')+attrs+effects;
 }
 const roles={attack:'⚔️攻撃',defense:'🛡️防御',support:'✚回復',debuff:'🕸️弱体'};
-function circleLabel(circle){return esc(circleSummary(circle,masters.buffs,G.mpCost));}
 function itemName(item){return masters.items.find(x=>x.id===item.id)?.name||item.id;}
 function roleText(text){return String(text).replace(/通常攻撃|攻撃|防御|弱体|回復/g,word=>({'通常攻撃':'⚔️通常攻撃',攻撃:'⚔️攻撃',防御:'🛡️防御',弱体:'🕸️弱体',回復:'✚回復'})[word]);}
 function render(){
@@ -435,24 +435,34 @@ function renderRun(){
  renderHeroName(hero);
  $('enemyStats').innerHTML=rowUnit(enemy);
  $('heroStats').innerHTML=rowUnit(hero);
- $('battleSpells').innerHTML=run.slotIds.map((id,i)=>{
-  const c=circles.find(x=>x.id===id),s=hero.spells[i],waiting=hero.cooldowns[i]||0;
+ const spellStates=run.slotIds.map((id,i)=>{
+  const c=circles.find(x=>x.id===id);
+  if(!id||!c?.image)return null;
+  const s=hero.spells[i],waiting=hero.cooldowns[i]||0;
+  const disabled=Boolean(s&&!G.canCast(hero,i)),sealed=G.isSpellSealed(hero,s);
+  const info=circleCardInfo(c,masters.buffs,G.mpCost);
+  return {disabled,sealed,
+   label:'魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleSummary(c,masters.buffs,G.mpCost):'未解析')+(sealed?' 封印':''),
+   cooldown:waiting?'待機 '+waiting:'発動',mp:'MP:'+info.mp,power:'威力:'+info.power};
+ });
+ const layout=JSON.stringify(run.slotIds.map((id,i)=>[id,Boolean(spellStates[i])]));
+ renderBattleCards($('battleSpells'),layout,()=>run.slotIds.map((id,i)=>{
+  const c=circles.find(x=>x.id===id),state=spellStates[i];
   // Empty slots must not look castable; a missing saved photo is an explicit error.
   if(!id)return '<div class="battle-spell-frame"><div class="loadout-tile battle-tile battle-spell-tile empty" aria-label="魔法陣の編成枠 '+(i+1)+' 未装備">'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +'<span class="tile-empty-icon" aria-hidden="true">＋</span><span class="tile-title">未装備</span></div></div>';
-  if(!c?.image)return '<div class="battle-spell-frame"><div class="loadout-tile battle-tile battle-spell-tile unavailable" aria-label="魔法陣の編成枠 '+(i+1)+' 画像が見つかりません">'
+  if(!state)return '<div class="battle-spell-frame"><div class="loadout-tile battle-tile battle-spell-tile unavailable" aria-label="魔法陣の編成枠 '+(i+1)+' 画像が見つかりません">'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +'<span class="tile-empty-icon" aria-hidden="true">！</span><span class="tile-title">画像なし</span></div></div>';
-  const disabled=Boolean(s&&!G.canCast(hero,i)),sealed=G.isSpellSealed(hero,s);
-  return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(disabled?'unavailable':'equipped')+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'" data-cast="'+i+'" aria-label="魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleLabel(c):'未解析')+(sealed?' 封印':'')+'" '+(disabled?'disabled':'')+'>'
+  return '<div class="battle-spell-frame"><button type="button" class="loadout-tile battle-tile battle-spell-tile '+(state.disabled?'unavailable':'equipped')+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'" data-cast="'+i+'" aria-label="'+esc(state.label)+'" '+(state.disabled?'disabled':'')+'>'
     +'<span class="tile-index">'+String(i+1).padStart(2,'0')+'</span>'
     +'<span class="battle-spell-photo"><img alt="" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'">'
-    +(sealed?'<span class="battle-spell-seal" aria-hidden="true">封</span>':'')+'</span>'
-    +'<span class="tile-cooldown">'+(waiting?'待機 '+waiting:'発動')+'</span></button>'
+    +(state.sealed?'<span class="battle-spell-seal" aria-hidden="true">封</span>':'')+'</span>'
+    +'<span class="tile-cooldown">'+state.cooldown+'</span></button>'
     +circleEffectBadges(c,masters.buffs,esc,G.mpCost)
     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button></div>';
- }).join('');
+ }).join(''),spellStates);
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
  // Match the prepared-item capacity, but keep extra occupied legacy slots visible.
  const maxSlots=Math.max(G.capacity(profile.level),run.carry.findLastIndex(Boolean)+1);
