@@ -25,14 +25,16 @@ for(let layer=51;layer<=100;layer++){
  assert.equal(five.length,5);
  const powers=five.map(enemy=>{
   const debuffs=enemy.spells.split('|').filter(spell=>spell.startsWith('debuff:'));
-  assert.equal(debuffs.length,1,'one original debuff slot per enemy');
-  return Number(debuffs[0].split(':')[2]);
+  assert.ok(debuffs.length<=1,'at most one debuff slot per enemy');
+  return debuffs.length?Number(debuffs[0].split(':')[2]):null;
  });
- const lower=Math.min(...powers),upper=Math.max(...powers);
+ const castPowers=powers.filter(Number.isFinite);
+ assert.equal(castPowers.length,2,'exactly two specialists per layer '+layer);
+ const lower=Math.min(...castPowers),upper=Math.max(...castPowers);
  assert.equal(lower,Math.round(250+(layer-51)*500/49),'minimum debuff power floor '+layer);
  assert.equal(upper-lower,30,'preserve a 30-point per-layer spread');
  assert.ok(lower>=previousMinimum,'minimum strength must grow monotonically');
- assert.ok(powers.every(power=>G.statusDuration({power})===Math.min(6,2+Math.floor(power/250))));
+ assert.ok(castPowers.every(power=>G.statusDuration({power})===Math.min(6,2+Math.floor(power/250))));
  previousMinimum=lower;
 }
 assert.equal(previousMinimum,750);
@@ -61,15 +63,7 @@ function upgradeSpells(budget){
  }
  return spells;
 }
-function enemyChoice(unit,random){
- const ids=G.available(unit);
- if(!ids.length)return -1;
- const heal=ids.find(i=>unit.spells[i].role==='support');
- if(heal!==undefined&&unit.hp<unit.stats.hp*num('enemy_heal_threshold'))return heal;
- const offense=ids.filter(i=>unit.spells[i].role==='attack');
- return offense.length&&random()<num('enemy_attack_preference')
-  ?offense[Math.floor(random()*offense.length)]:ids[Math.floor(random()*ids.length)];
-}
+function enemyChoice(unit,r){return G.chooseEnemySpell(unit,r);}
 function heroChoice(hero,enemy){
  const ids=G.available(hero);
  if(!ids.length)return -1;
@@ -90,6 +84,7 @@ function cleanseLoadout(band){
  const capacity=G.capacity(band.level),frequency=new Map();
  for(let layer=band.from;layer<=band.to;layer++)for(const enemy of data.enemies.slice((layer-1)*5,layer*5)){
   const spell=enemy.spells.split('|').find(x=>x.startsWith('debuff:'));
+  if(!spell)continue;
   const attr=spell.split(':')[1];
   frequency.set(attr,(frequency.get(attr)||0)+1);
  }
