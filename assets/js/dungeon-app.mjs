@@ -978,27 +978,54 @@ async function leave(mode='checkpoint'){
  renderReturnStep();
  show('returnShowcase');
 }
-async function waitUntil(check,valid,maxMs=150000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
+function updateAnalysisProgress(step,label){
+ const progress=$('analysisProgress');
+ progress.value=step;
+ $('analysisProgressCount').textContent=step+' / 5';
+ $('analysisProgressText').textContent=label;
+}
+async function waitUntil(check,valid,maxMs=120000){const end=Date.now()+maxMs;while(Date.now()<end){if(!valid())throw Error('解析が中断されました');const value=check();if(value)return value;await new Promise(r=>setTimeout(r,250));}throw Error('解析が完了しませんでした。カメラと通信環境を確認してください');}
 async function parseCircleImage(circle,frame,valid,request=null){
  return new Promise((resolve,reject)=>{
   let settled=false;
   const finish=(error,result)=>{
    if(settled)return;
-   settled=true;frame.onload=null;frame.src='about:blank';
+   settled=true;
+   window.removeEventListener?.('message',onMessage);
+   frame.onload=null;frame.src='about:blank';
    if(error)reject(error);else resolve(result);
   };
+  const onMessage=event=>{
+   if(settled||event.source!==frame.contentWindow||event.origin!==window.location?.origin)return;
+   const message=event.data;
+   if(message?.type!=='magia-dungeon-analysis')return;
+   if(!valid())return;
+   switch(message.stage){
+    case 'ready':updateAnalysisProgress(2,'撮影画像を読み込む準備ができました');break;
+    case 'image-ready':updateAnalysisProgress(3,'輪郭と紋を解析しています');break;
+    case 'analysis-start':updateAnalysisProgress(3,'輪郭と紋を解析しています');break;
+    case 'structure-ready':updateAnalysisProgress(4,'呪文と相を判定しています');break;
+    case 'spell-reading':updateAnalysisProgress(4,'呪文と相を判定しています');break;
+    case 'complete':updateAnalysisProgress(5,'結果を確定しています');break;
+    case 'error':finish(Error(message.detail||'解析器の準備・実行に失敗しました'));break;
+   }
+  };
+  window.addEventListener?.('message',onMessage);
   if(request)request.cancel=()=>finish(Error('解析が中断されました'));
   frame.onload=async()=>{
    try{
     const doc=frame.contentDocument;
     const input=await waitUntil(()=>{const el=doc?.getElementById('fileInput');return el&&!el.disabled?el:null;},valid);
+    updateAnalysisProgress(2,'撮影画像を受け渡しています');
     const transfer=new DataTransfer();
     transfer.items.add(new File([circle.image],'circle.jpg',{type:circle.image.type||'image/jpeg'}));
     input.files=transfer.files;
     input.dispatchEvent(new Event('change',{bubbles:true}));
     const analyze=await waitUntil(()=>{const el=doc?.getElementById('analyzeButton');return el&&!el.disabled?el:null;},valid);
+    updateAnalysisProgress(3,'輪郭と紋を解析しています');
     analyze.click();
     await waitUntil(()=>!doc.getElementById('altarSection')?.hidden,valid);
+    updateAnalysisProgress(5,'結果を確定しています');
     finish(null,normalizeAnalysisResult({
      attribute:doc.querySelector('#attributeResult .altar-value')?.textContent?.trim(),
      role:doc.querySelector('#shapeResult .altar-value')?.textContent?.trim(),
@@ -1006,7 +1033,7 @@ async function parseCircleImage(circle,frame,valid,request=null){
     }));
    }catch(e){finish(e);}
   };
-  frame.src='magia-circle.html';
+  frame.src='magia-circle.html?dungeon=1';
  });
 }
 function showCaptureReveal(circle){
@@ -1035,6 +1062,7 @@ async function analyzeCapturedCircle(circle){
  const request={id:circle.id,type:'capture',epoch:photoAnalysisEpoch};
  activeAnalysis=request;
  rememberCameraScroll();
+ updateAnalysisProgress(1,'解析器を起動しています');
  show('analyzing');
  note('');
  const valid=()=>activeAnalysis===request&&!profile.run&&request.epoch===photoAnalysisEpoch;
@@ -1064,7 +1092,7 @@ async function analyzeUnknown(index){
  const run=profile.run,circle=circles.find(x=>x.id===run?.slotIds[index]);
  if(!circle){note('魔法陣が見つからない');return;}
  const request={id:circle.id,index};
- activeAnalysis=request;show('analyzing');note('');
+ activeAnalysis=request;updateAnalysisProgress(1,'解析器を起動しています');show('analyzing');note('');
  const valid=()=>activeAnalysis===request&&profile.run===run;
  (async()=>{
   try{
