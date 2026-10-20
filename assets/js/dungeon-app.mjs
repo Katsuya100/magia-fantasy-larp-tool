@@ -1016,7 +1016,7 @@ async function analyzeCapturedCircle(circle){
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
-  await playCircleReveal(analyzed);
+  await playCircleReveal(analyzed,imageUrl(analyzed.image));
  }catch(e){
   if(!valid())return;
   activeAnalysis=null;
@@ -1040,7 +1040,7 @@ async function analyzeUnknown(index){
    await putCircle(db,circle);
    if(!valid())return;
    run.hero.spells[index]=combatSpell(circle);await persist();
-   activeAnalysis=null;note('');show('battle');await playCircleReveal(circle);await takeTurn(index);
+   activeAnalysis=null;note('');show('battle');await playCircleReveal(circle,imageUrl(circle.image));await takeTurn(index);
   }catch(e){
    if(!valid())return;
    activeAnalysis=null;note('解明できませんでした：'+e.message);
