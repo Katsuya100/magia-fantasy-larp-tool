@@ -1,6 +1,6 @@
 import {createCircleImageUrls} from './dungeon-image-urls.mjs';
 import {createCircleThumbnail} from './dungeon-thumbnails.mjs';
-import {getCircleThumbnail} from './dungeon-store.mjs';
+import {getCircleThumbnail} from './dungeon-store.mjs?v=20261020.25';
 
 // UI thumbnails are disposable, never part of the signed game save.
 export function createDungeonPhotoManager(getDatabase,findCircle){
