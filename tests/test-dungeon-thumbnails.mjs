@@ -28,7 +28,9 @@ try{
  const proofs={a:'a'.repeat(64),b:'b'.repeat(64)};
  const thumbs=factory();thumbs.setProofs(proofs);
  const a=thumbs.get(first),b=thumbs.get(second);
- await Promise.resolve();
+ // Cache opening and matching are asynchronous; wait until the first decode
+ // actually starts rather than assuming it finishes within one microtask.
+ for(let i=0;i<100&&started.length===0;i++)await new Promise(resolve=>setTimeout(resolve,0));
  assert.equal(started.length,1,'never begin a second decode while one is active');
  const pause=thumbs.pause();
  releaseFirst();
