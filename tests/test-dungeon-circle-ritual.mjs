@@ -15,11 +15,13 @@ for(const [attribute,text] of Object.entries(attributes))
  assert.equal(circleRitualLabels({attribute,role:'attack'})[0],text);
 for(const [role,text] of Object.entries(roles))
  assert.equal(circleRitualLabels({attribute:'flame',role})[1],text);
-assert.match(source,/show\('library'\);\s*returnToCameraScroll\(\);\s*await playCircleReveal\(analyzed\)/,'photo realization is after saved circle and visible library');
-assert.match(source,/show\('battle'\);await playCircleReveal\(circle\);await takeTurn\(index\)/,'dungeon analysis has its own reveal before casting');
+assert.match(source,/show\('library'\);\s*returnToCameraScroll\(\);\s*await playCircleReveal\(analyzed,imageUrl\(analyzed.image\)\)/,'photo realization is after saved circle and visible library');
+assert.match(source,/show\('battle'\);await playCircleReveal\(circle,imageUrl\(circle.image\)\);await takeTurn\(index\)/,'dungeon analysis has its own reveal before casting');
 assert.match(source,/saveProfile\(db,nextProfile\)[\s\S]*?playCircleUpgrade\(circle,\$\('magicUpgradeEffect'\)\)/,'upgrade effect starts only after profile saving');
 assert.match(html,/<div class="magic-details-art"><img id="magicDetailsImage"[^>]*><div id="magicUpgradeEffect"/,'new glow overlays the existing real photo');
 assert.match(css,/\.circle-ritual__veil[\s\S]*?circle-ritual-veil var\(--ritual-duration\)/,'reveal includes black backdrop');
+assert.match(css,/@keyframes circle-ritual-physical/,'photo solidifies under the fading black');
+assert.match(css,/\.circle-ritual__physical\{/,'real saved photo exists behind glow');
 for(const animation of ['circle-ritual-ring-in','circle-upgrade-aura','circle-ritual-ink','circle-ritual-veil']){
  assert.ok(css.includes('@keyframes '+animation),'missing '+animation);
 }
