@@ -5,8 +5,10 @@ import {openStore,getProfile,saveProfile,putCircle,allCircles} from '../assets/j
 import {clearLegacyThumbnailCache,LEGACY_THUMBNAIL_CACHE_NAME} from '../assets/js/dungeon-legacy-cache.mjs';
 
 const factory=fakeIndexedDB(),db=await openStore(factory);
-const profile=await getProfile(db);
-await saveProfile(db,{...profile,name:'キャッシュ削除テスト'});
+// Seed a valid legacy profile before the app has loaded its CSV tunables.
+await saveProfile(db,{name:'キャッシュ削除テスト',level:1,xp:0,base:{hp:100,mag:10,def:8,res:8},returns:0,attempts:0,tutorialDone:true,
+ inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReturnedLayer:0,
+ magicStones:0,slots:[null,null,null,null,null],permadeath:false,awaitingHeir:false,legacies:[],run:null});
 await putCircle(db,{id:'cache-proof-photo',image:new Blob([Uint8Array.from([255,216,255,217])],{type:'image/jpeg'}),analysis:{attribute:'flame',role:'attack',power:100},revealed:true,registeredAt:1});
 assert.equal((await allCircles(db)).length,1);
 const names=new Set([LEGACY_THUMBNAIL_CACHE_NAME,'unrelated-cache']);
