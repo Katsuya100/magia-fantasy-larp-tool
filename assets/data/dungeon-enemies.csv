@@ -403,7 +403,7 @@ foe_l081_1,ヴォイドレイス,78,8,4,6,1,1,1,1.2,1,1,0.8,attack:chaos:143|def
 foe_l081_2,冥王ビホルダー,88,10,5,8,1,1,1,1.2,1,1,0.8,attack:chaos:155|defense:chaos:124|support:gravity:101|debuff:chaos:556|attack:gravity:140,10,129,0,relic_010|relic_110|relic_151|sealed_eye
 foe_l081_3,漆黒の竜騎士,97,9,9,10,1,1,1,1.2,1,1,0.8,attack:chaos:167|defense:chaos:134|support:gravity:109|defense:chaos:575|attack:gravity:150,10,129,0,relic_021|relic_121|relic_171
 foe_l081_4,黒曜リッチ,83,12,4,12,1,1,1,1.2,1,1,0.8,attack:chaos:179|defense:chaos:143|support:gravity:116|debuff:chaos:586|attack:gravity:161,10,129,0,relic_096|obsidian|relic_171|relic_182
-boss_l081,災厄の黒龍,103,10,10,10,1,1,1,1.2,1,1.3,0.95,attack:chaos:180|defense:chaos:144|support:gravity:117|defense:chaos:586|attack:gravity:162,1,129,1,relic_046|moon_scale|relic_169|relic_185|relic_boss_081
+boss_l081,災厄の黒龍,112,10,10,10,1,1,1,1.2,1,1.3,0.95,attack:chaos:180|defense:chaos:144|support:gravity:117|defense:chaos:586|attack:gravity:162,1,129,1,relic_046|moon_scale|relic_169|relic_185|relic_boss_081
 foe_l082_1,予言の星喰い,80,8,4,6,1.2,1,1,1,1,0.8,1.05,attack:law:149|defense:law:119|support:gravity:97|defense:law:566|attack:gravity:134,10,130,0,relic_075|relic_115|relic_135|relic_155
 foe_l082_2,禁忌の占星師,90,10,5,8,1.2,1,1,1,1,0.8,1,attack:law:161|defense:law:129|support:gravity:105|debuff:law:566|attack:gravity:145,10,130,0,relic_075|relic_142|relic_167|relic_175
 foe_l082_3,終末の聖職者,99,9,9,10,1.2,1,1,1,1,0.8,1,attack:law:173|defense:law:138|support:gravity:112|defense:law:583|attack:gravity:156,10,130,0,relic_028|relic_133|relic_153
