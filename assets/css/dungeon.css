@@ -1362,7 +1362,7 @@ html,body{overflow-x:clip}
    The portrait and two-line name have separate space on both sides,
    so long enemy names never touch icons or displace HP/MP below them. */
 #battleArena .unit{
- height:270px;min-height:270px;max-height:270px;
+ height:288px;min-height:288px;max-height:288px;
  padding:12px 10px;overflow:visible
 }
 #battleArena .unit .enemy-portrait,#battleArena .unit .hero-portrait{
@@ -1372,7 +1372,13 @@ html,body{overflow-x:clip}
 }
 #battleArena .unit-info{
  width:100%;min-width:0;min-height:0;flex:1;
- display:grid;grid-template-rows:38px minmax(0,1fr);gap:4px
+ display:grid;grid-template-rows:56px minmax(0,1fr);gap:4px
+}
+#battleArena .combatant-heading{
+ min-width:0;display:grid;grid-template-rows:38px 18px;text-align:center
+}
+#battleArena .combatant-level{
+ display:block;min-width:0;font:600 12px/18px var(--roman);color:var(--gold)
 }
 #battleArena .unit-info h3{
  margin:0;max-width:100%;min-width:0;height:38px;min-height:38px;
@@ -1415,13 +1421,13 @@ html,body{overflow-x:clip}
 }
 @media(max-width:630px){
  #battleArena .unit{
-  height:232px;min-height:232px;max-height:232px;padding:8px 6px
+  height:250px;min-height:250px;max-height:250px;padding:8px 6px
  }
  #battleArena .unit .enemy-portrait,#battleArena .unit .hero-portrait{
   height:44px;flex-basis:44px;margin-bottom:12px;font-size:36px
  }
  #battleArena .unit-info{
-  grid-template-rows:38px minmax(0,1fr);gap:3px
+  grid-template-rows:56px minmax(0,1fr);gap:3px
  }
  #battleArena .unit-info h3{
   height:38px;min-height:38px;font-size:14px;line-height:1.3

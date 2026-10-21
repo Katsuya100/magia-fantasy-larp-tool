@@ -317,6 +317,9 @@ try{
  assert.equal($('tab-dungeon').hidden,false,'dungeon tab replaces preparation tabs');
  assert.equal($('tab-dungeon').attributes['aria-current'],'page');
  assert.equal($('heroName').textContent,'暁の旅人','battle uses the saved adventurer name');
+ assert.equal($('heroLevel').textContent,'Lv.'+p.run.hero.level,'battle shows the hero level below the name');
+ assert.equal($('enemyName').textContent,p.run.enemyName,'enemy name does not include the level');
+ assert.equal($('enemyLevel').textContent,'Lv.'+p.run.enemy.level,'battle shows the enemy level below the name');
  assert.equal(($('enemyStats').innerHTML.match(/class="battle-vital"/g)||[]).length,2,'enemy HP and MP render as fixed aligned rows');
  assert.equal(($('heroStats').innerHTML.match(/class="battle-vital"/g)||[]).length,2,'hero HP and MP render as fixed aligned rows');
  for(const side of ['enemy','hero']){
@@ -621,6 +624,9 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   assert.equal(el('prepare').hidden,true,'active dungeon takes priority over first-view preparation');
   assert.equal(el('tab-dungeon').attributes['aria-current'],'page','battle is under the dungeon tab');
   assert.equal(el('heroName').textContent,'暁の旅人','reloaded dungeon restores saved name');
+  assert.equal(el('heroLevel').textContent,'Lv.'+resumable.hero.level,'reloaded dungeon restores the hero level');
+  assert.equal(el('enemyName').textContent,resumable.enemyName,'reloaded dungeon keeps the enemy name separate from its level');
+  assert.equal(el('enemyLevel').textContent,'Lv.'+resumable.enemy.level,'reloaded dungeon restores the enemy level');
   assert.equal(el('floorLabel').textContent,'2層 地下の亜人砦','reloading preserves the layer name');
   assert.equal(el('battleEncounterLabel').textContent,'1戦目','reloading preserves the encounter');
   assert.equal((await getProfile(await openStore(env2.factory))).deepestReturnedLayer,1,'reload keeps only the deepest successful return');
