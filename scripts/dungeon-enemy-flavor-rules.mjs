@@ -33,10 +33,11 @@ export const tuneEnemyRows = function tuneEnemyRows(input){
    party[protectedIndex][field]='0.95';
    party[donorIndex][field]='1.05';
   }
-  // Transfer a little DEF to recognizable constructs, without changing total DEF.
+  // Transfer DEF conservatively; 51-60F MAG/DEF reallocations are held to protect historical sortie win rates.
+  // Total DEF and MAG for every other four-encounter layer are unchanged.
   const tank=party.findIndex(e=>sturdy.test(e.name)&&Number(e.def)<=5);
   const armorDonor=party.findIndex((e,i)=>i!==tank&&!sturdy.test(e.name)&&Number(e.def)>=8);
-  if(tank>=0&&armorDonor>=0){
+  if((layer<51||layer>60)&&tank>=0&&armorDonor>=0){
    const amount=Math.min(3,7-Number(party[tank].def),Number(party[armorDonor].def)-5);
    if(amount>0){
     party[tank].def=String(Number(party[tank].def)+amount);
@@ -46,7 +47,7 @@ export const tuneEnemyRows = function tuneEnemyRows(input){
   // Likewise: move at most 2 MAG to an explicit spellcaster from a noncaster.
   const mage=party.findIndex(e=>caster.test(e.name)&&Number(e.mag)<=9);
   const magicDonor=party.findIndex((e,i)=>i!==mage&&!caster.test(e.name)&&Number(e.mag)>=11);
-  if(mage>=0&&magicDonor>=0){
+  if((layer<51||layer>60)&&mage>=0&&magicDonor>=0){
    const amount=Math.min(2,10-Number(party[mage].mag),Number(party[magicDonor].mag)-9);
    if(amount>0){
     party[mage].mag=String(Number(party[mage].mag)+amount);
