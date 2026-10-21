@@ -191,15 +191,9 @@ for(let to=10;to<=100;to+=10){
   console.log('DUNGEON_DEFAULT_BALANCE_LAYER '+JSON.stringify(layerRow));
  }
 }
-// Legacy-only reference: immediately preceding main before normal-foe affinity
-// correction (257e11713b6a71710f244e234ce4702fc47e684a).
-// Historical values were recorded with the same 128 seeds in main CI 39530340261.
-// These values used hardcoded attack attributes and a damage-maximizing hero AI.
-// The neutral-first loadout is intentionally incomparable, so report the old
-// reference without asserting parity; strict win/MP balance targets still run.
-// A previously failing band was allowed to become PASS, even if that exceeds
-// the historical win-rate difference budget. A PASS must never become FAIL.
-// HP/MP median parity remains mandatory in all cases.
+// The historical 128-seed benchmark used fixed elemental counters and a
+// damage-maximizing hero AI. Its numbers are not a regression baseline for
+// neutral-first circles. Keep the reference visible without false parity.
 if(SAMPLES===128){
  const baseline={
   '1-10':[100,56.9,73.2], '11-20':[100,11.8,71.7],
@@ -209,27 +203,6 @@ if(SAMPLES===128){
   '81-90':[100,9.2,77.4], '91-100':[94.5,2.8,80.5]
  };
  console.log('DUNGEON_BALANCE_LEGACY_REFERENCE '+JSON.stringify(baseline));
- /* Legacy fixture parity (intentionally not applicable to selected neutral sets):
- const acceptedImprovements=[];
- for(const row of report){
-  const old=baseline[row.band];
-  assert.ok(old,'historical 128-seed band '+row.band);
-  const start=Number(row.band.split('-')[0]),winLower=start<=20?99:90,winUpper=start<=20?100:97;
-  const mpLower=start<=10?50:0,mpUpper=start<=10?100:15;
-  const oldPassed=old[0]>=winLower&&old[0]<=winUpper&&old[1]>=mpLower&&old[1]<=mpUpper;
-  assert.ok(!oldPassed||row.passed,'previously passing sortie must not fail: '+row.band);
-  const becamePass=!oldPassed&&row.passed;
-  if(becamePass)acceptedImprovements.push({band:row.band,winBefore:old[0],winAfter:row.winRate});
-  else assert.ok(Math.abs(row.winRate-old[0])<=2,
-    'sortie win-rate regression exceeds 2pp without turning a fail into pass in '+row.band+': '+old[0]+' -> '+row.winRate);
-  assert.ok(Math.abs(row.medianMp-old[1])<=5,
-   'sortie median MP regression exceeds 5pp in '+row.band+': '+old[1]+' -> '+row.medianMp);
-  assert.ok(Math.abs(row.medianHp-old[2])<=5,
-   'sortie median HP regression exceeds 5pp in '+row.band+': '+old[2]+' -> '+row.medianHp);
- }
- console.log('DUNGEON_BALANCE_ACCEPTED_IMPROVEMENTS '+JSON.stringify(acceptedImprovements));
- console.log('PASS immediate-pre-boss 128-seed sortie parity, permitting FAIL->PASS without relaxing HP/MP');
- */
 }
 
 // Do not silently redefine balance targets to force a green build.
