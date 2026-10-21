@@ -1585,6 +1585,7 @@ function wire(){
    if(savingName)return;
    const name=$('playerNameInput').value.trim();
    if(!name||name.length>20){$('nameError').textContent='1〜20文字で入力してください';return;}
+   if(isDungeonNameBlocked(name)){$('nameError').textContent='この名前は使用できません。別の名前を入力してください';return;}
    const firstLesson=!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run;
    const button=$('savePlayerName');
    savingName=true;
