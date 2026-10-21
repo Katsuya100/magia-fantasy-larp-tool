@@ -392,7 +392,7 @@ export function recoverVictoryMp(hero,layer=1){
 // magic roles remain unchanged. HP adjustments obey the same species bounds
 // used by the enemy durability review; boss adjustments are separate.
 export function enemyCombatCoefficients(row){
- const match=String(row.id||'').match(/_l(\\d{3})(?:_|$)/);
+ const match=String(row.id||'').match(/_l(\d{3})(?:_|$)/);
  if(!match)return {hp:1,mag:1};
  const floor=Number(match[1]),start=10*Math.floor((floor-1)/10)+1;
  const finalThree=floor>=start+7,finalBoss=finalThree&&floor===start+9&&row.boss_only==='1';
