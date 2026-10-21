@@ -119,7 +119,8 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,
    };
    previousProfile.onsuccess=ready;previousCircles.onsuccess=ready;previousSeal.onsuccess=ready;previousName.onsuccess=ready;
    for(const key of photoWrites.keys()){
-    const existing=settings.get(key);
+    // getKey does not deserialize an existing Blob (critical on mobile Safari).
+    const existing=settings.getKey(key);
     existing.onsuccess=()=>{if(existing.result===undefined)missingPhotos.add(key);ready();};
    }
    tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve();};
@@ -182,8 +183,9 @@ export function clearDungeonData(db){
 }
 async function trustedProfileHashes(db,profile){
  const hashes=await profilePhotoEvidence(profile);
- const existing=await readDungeonSnapshot(db);
- const seal=existing.integrity;
+ const seal=await request(db,'settings','readonly',s=>s.get('integrity'));
+ // The write transaction independently validates this seal against the
+ // current stored profile and circles before committing any modification.
  if(seal?.version===1&&!seal.legacy){
   const trusted=new Set([...Object.values(seal.photos||{}),...Object.values(seal.profilePhotos||{})].filter(x=>typeof x==='string'));
   if(Object.values(hashes).some(hash=>!trusted.has(hash)))
