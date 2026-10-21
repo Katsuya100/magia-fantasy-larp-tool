@@ -54,10 +54,16 @@ assert.ok(nameLabel&&levelLabel&&rankLabel&&reachedLabel&&returnedLabel);
 assert.ok(nameLabel[2]<levelLabel[2]&&nameLabel[3]===levelLabel[3],'first row: name on left, level on right');
 assert.ok(rankLabel[2]<reachedLabel[2]&&reachedLabel[2]<returnedLabel[2],'second row: rank, reached and returned');
 assert.ok(rankLabel[3]>nameLabel[3],'second row is below the name and level');
-assert.ok(namePaint&&levelPaint&&namePaint[3]===levelPaint[3]&&namePaint[2]<levelPaint[2],'large name and level share first row');
-assert.ok(rankPaint&&rankPaint[3]>namePaint[3],'grade belongs to second row');
-assert.ok(crownPaint&&crownPaint[2]>namePaint[2]&&crownPaint[2]<levelPaint[2],'crown stays immediately to the right of name');
-assert.equal(crownPaint[3],namePaint[3],'name and crown share the baseline');
+const nameTranslation=drawOps.find(([kind])=>kind==='translate');
+const nameStretch=drawOps.find(([kind])=>kind==='scale');
+assert.ok(nameTranslation&&nameStretch&&nameTranslation[1]===98&&nameTranslation[2]===321,
+ 'name uses the canvas transform from the top-left plate');
+assert.ok(namePaint&&levelPaint&&namePaint[2]===0&&namePaint[3]===0&&nameTranslation[2]===levelPaint[3],
+ 'large stretched name and level share first-row baseline');
+assert.ok(rankPaint&&rankPaint[3]>nameTranslation[2],'grade belongs to second row');
+assert.ok(crownPaint&&crownPaint[2]>nameTranslation[1]&&crownPaint[2]<levelPaint[2],
+ 'crown stays immediately to the right of stretched name');
+assert.equal(crownPaint[3],nameTranslation[2],'name and crown share the baseline');
 assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===250&&w===420&&h===101),'wider upper name plate is drawn');
 assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===514&&y===250&&w===174&&h===101),'level plate is beside name');
 assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===397&&w===258&&h===104),'rank moves to second row');
