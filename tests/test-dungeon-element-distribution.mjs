@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {parseCsv,ATTRS} from '../assets/js/dungeon-core.mjs';
 import {nameAffinities} from '../scripts/dungeon-normal-enemy-affinities.mjs';
-import {applyElementDistribution,combatBalanceResistCalibrations,combatBalanceMagOverrides} from '../scripts/dungeon-element-distribution.mjs';
+import {applyElementDistribution,combatBalanceResistCalibrations,combatBalanceMagOverrides,combatBalanceSupplementalCounters} from '../scripts/dungeon-element-distribution.mjs';
 const read=path=>parseCsv(readFileSync(new URL(path,import.meta.url),'utf8'));
 const base=read('./fixtures/dungeon-enemies-before-distribution.csv');
 const master=read('../assets/data/dungeon-enemies.csv');
@@ -48,11 +48,11 @@ for(let i=0;i<500;i++){
   if(tags.length)assert.ok(tags.some(t=>Number(b['resist_'+t])<1),'named innate affinity must resist '+b.id);
  }
 }
-assert.equal(Object.keys(combatBalanceResistCalibrations).length,85,'all targeted resistance budgets are reviewed');
+assert.equal(Object.keys(combatBalanceResistCalibrations).length,89,'all targeted resistance budgets are reviewed');
 for(const [id,shift] of Object.entries(combatBalanceResistCalibrations)){
  const before=base.find(r=>r.id===id),after=master.find(r=>r.id===id);
  assert.ok(before&&after,'calibrated enemy exists '+id);
- assert.ok(shift>=-0.2&&shift<=0.35&&shift!==0,'bounded authored shift only '+id);
+ assert.ok(shift>=-0.3&&shift<=0.35&&shift!==0,'bounded authored shift only '+id);
  assert.equal(before.hp,after.hp,'combat retune preserves HP '+id);
 }
 const ratio=(n,total)=>100*n/total;
@@ -65,6 +65,7 @@ assert.equal(Object.values(primary).reduce((a,b)=>a+b),500);
 assert.equal(Object.values(magic).reduce((a,b)=>a+b),2500);
 assert.equal(renames,0,'no existing character was replaced or renamed');
 assert.equal(Object.keys(combatBalanceMagOverrides).length,4,'exactly four late-game magical-pressure overrides');
+assert.equal(Object.keys(combatBalanceSupplementalCounters).length,5,'all five 70F foes have a second readable counter');
 assert.ok(primaryChanges>100&&secondaryChanges>150);
 for(let layer=1;layer<=100;layer++){
  const c=concepts[layer-1],enemies=master.slice((layer-1)*5,layer*5);

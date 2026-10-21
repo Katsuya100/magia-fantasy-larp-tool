@@ -86,14 +86,45 @@ export const combatBalanceResistCalibrations=Object.freeze({
  "foe_l069_2": 0.12,
  "foe_l070_2": 0.25,
  "boss_l070": 0.35,
- "boss_l065": -0.2,
- "boss_l066": -0.2,
- "boss_l067": -0.2,
- "boss_l068": -0.2,
+ "boss_l065": -0.3,
+ "boss_l066": -0.3,
+ "boss_l067": -0.3,
+ "boss_l068": -0.3,
  "foe_l070_1": 0.25,
  "foe_l070_3": 0.25,
  "foe_l070_4": 0.25,
- "boss_l069": 0.25
+ "boss_l069": 0.25,
+ "foe_l061_1": -0.27,
+ "foe_l062_2": -0.27,
+ "foe_l063_1": -0.27,
+ "foe_l064_1": -0.27
+});
+export const combatBalanceSupplementalCounters=Object.freeze({
+ "foe_l070_1": [
+  "bolt",
+  "aqua",
+  0.2
+ ],
+ "foe_l070_2": [
+  "bolt",
+  "chaos",
+  0.2
+ ],
+ "foe_l070_3": [
+  "bolt",
+  "chaos",
+  0.2
+ ],
+ "foe_l070_4": [
+  "bolt",
+  "chaos",
+  0.2
+ ],
+ "boss_l070": [
+  "bolt",
+  "aqua",
+  0.2
+ ]
 });
 export const combatBalanceMagOverrides=Object.freeze({"foe_l069_3":10,"foe_l070_2":11,"boss_l069":11,"boss_l070":12});
 
@@ -166,6 +197,13 @@ export function applyElementDistribution(source,plan,concepts){
    if(!alternate)throw Error('No alternate elemental counter for '+before.id);
    output['resist_'+guarded]=fmt(Number(output['resist_'+guarded])-balanceShift);
    output['resist_'+alternate]=fmt(Number(output['resist_'+alternate])+balanceShift);
+  }
+  const secondCounter=combatBalanceSupplementalCounters[before.id];
+  if(secondCounter){
+   const [guard,alternate,shift]=secondCounter;
+   if(protectedAttrs.has(alternate))throw Error('Secondary counter clashes with innate affinity '+before.id);
+   output['resist_'+guard]=fmt(Number(output['resist_'+guard])-shift);
+   output['resist_'+alternate]=fmt(Number(output['resist_'+alternate])+shift);
   }
   if(Object.hasOwn(combatBalanceMagOverrides,before.id))
    output.mag=String(combatBalanceMagOverrides[before.id]);
