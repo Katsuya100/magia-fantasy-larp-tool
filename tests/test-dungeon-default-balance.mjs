@@ -186,41 +186,49 @@ for(let to=10;to<=100;to+=10){
  }
 }
 
+
 if(STRICT&&SAMPLES===128){
  const master=csv('enemies');
- const variations=[
-  ['baseline',0,0,0,0,0],['hp+3',3,0,0,0,0],['hp+6',6,0,0,0,0],
-  ['hp+9',9,0,0,0,0],['hp+12',12,0,0,0,0],['hp+18',18,0,0,0,0],['hp+27',27,0,0,0,0],
-  ['mag+1',0,1,0,0,0],['mag+2',0,2,0,0,0],['mag+3',0,3,0,0,0],
-  ['mag+4',0,4,0,0,0],['mag+5',0,5,0,0,0],
-  ['hp+6Mag+2',6,2,0,0,0],['hp+12Mag+2',12,2,0,0,0],
-  ['hp+18Mag+3',18,3,0,0,0],
-  ['guardsMag+1',0,0,1,0,0],['guardsHp+6',0,0,0,6,0],
-  ['mag+2GuardsMag+1',0,2,1,0,0],['hp+9GuardsHp+6',9,0,0,6,0],
-  ['attack2+30%',0,0,0,0,.3],['attack2+60%',0,0,0,0,.6]
+ const variants=[
+  ['current',0,0,0,0,0],
+  ['bossMag+4',4,0,0,0,0],
+  ['bossMag+4_allEarlyMag-1',4,1,1,0,0],
+  ['bossMag+4_allEarlyMag-2',4,2,2,0,0],
+  ['bossMag+4_earlyNormalsMag-1',4,1,0,0,0],
+  ['bossMag+4_earlyNormalsMag-2',4,2,0,0,0],
+  ['bossMag+4_earlyBossMag-1',4,0,1,0,0],
+  ['bossMag+4_earlyBossMag-2',4,0,2,0,0],
+  ['bossMag+4_earlyNormalsHp-4',4,0,0,4,0],
+  ['bossMag+4_earlyNormalsHp-8',4,0,0,8,0],
+  ['bossMag+4_earlyNormalsMag-1Hp-4',4,1,0,4,0],
+  ['bossMag+4_allEarlyMag-1Hp-4',4,1,1,4,0],
+  ['bossMag+4_earlyNormalsMag-1Hp-8',4,1,0,8,0],
+  ['bossMag+4_earlyNormalsMag-2Hp-4',4,2,0,4,0],
+  ['bossMag+3_earlyNormalsMag-1Hp-4',3,1,0,4,0],
+  ['bossMag+4_earlyNormalsMag-1Hp-4BossHp+6',4,1,0,4,6],
+  ['bossMag+4_earlyNormalsMag-1Hp-4BossHp-6',4,1,0,4,-6]
  ];
- for(const [name,moreHp,moreMag,guardMag,guardHp,attackBoost] of variations){
+ for(const [name,finalMagGain,regularMagCut,bossMagCut,regularHpCut,finalHpGain] of variants){
   const enemies=master.map(r=>({...r}));
   for(const e of enemies){
+   const n=Number(e.id.match(/_l(\d+)/)?.[1]??0);
    if(e.id==='boss_l070'){
-    e.hp=String(Number(e.hp)+moreHp);
-    e.mag=String(Number(e.mag)+moreMag);
-    if(attackBoost){
-     const sp=e.spells.split('|'),last=sp[4].split(':');
-     last[2]=String(Math.round(Number(last[2])*(1+attackBoost)));
-     sp[4]=last.join(':');e.spells=sp.join('|');
-    }
-   }else if(/^foe_l070_/.test(e.id)){
-    e.hp=String(Number(e.hp)+guardHp);
-    e.mag=String(Number(e.mag)+guardMag);
+    e.mag=String(Number(e.mag)+finalMagGain);
+    e.hp=String(Number(e.hp)+finalHpGain);
+   }else if(n>=61&&n<=68){
+    if(e.boss_only==='0'){
+     e.mag=String(Math.max(3,Number(e.mag)-regularMagCut));
+     e.hp=String(Math.max(30,Number(e.hp)-regularHpCut));
+    }else e.mag=String(Math.max(3,Number(e.mag)-bossMagCut));
    }
   }
   const trials=Array.from({length:128},(_,i)=>deepRun(seed(i),{from:61,to:70,level:115},true,enemies));
-  const winners=trials.filter(x=>x.win);
+  const w=trials.filter(x=>x.win);
+  const medianMp=percentile(median(w.map(x=>x.mp/x.maxMp*100)));
+  const medianHp=percentile(median(w.map(x=>x.hp/x.maxHp*100)));
   console.log('DUNGEON_61_VARIANT '+JSON.stringify({
-   name,wins:winners.length,medianMp:percentile(median(winners.map(x=>x.mp/x.maxMp*100))),
-   medianHp:percentile(median(winners.map(x=>x.hp/x.maxHp*100))),
-   failedSeeds:trials.map((r,i)=>r.win?null:i).filter(i=>i!==null)
+   name,wins:w.length,medianMp,medianHp,
+   passes:w.length>=116&&w.length<=124&&medianMp>=4.5&&medianMp<=14.5&&medianHp>=75.2&&medianHp<=85.2
   }));
  }
 }
