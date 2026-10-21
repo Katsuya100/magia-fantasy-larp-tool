@@ -192,7 +192,7 @@ assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing de
 assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
 assert.match(app,/shuffledLayerEnemyIds\(masters\.enemies,layer,Math\.random,slot\)/,'game assigns and saves a random order for each new layer');
 assert.match(app,/run\.layerEnemyOrder=\{layer,ids:/,'the order is stored in the active expedition');
-assert.match(app,/finishStartup\(\);\s*if\(profile\.awaitingHeir\)openNameDialog\(true\);\s*else if\(!profile\.name\)openBackupSetup\(\)/,'successors resume naming immediately; new players see backup setup first');
+assert.match(app,/finishStartup\(\);\s*if\(profile\.run\?\.stage==='checkpoint'&&profile\.run\.creatorCongratulationsPending\)showCreatorCongratulations\(\);\s*if\(profile\.awaitingHeir\)openNameDialog\(true\);\s*else if\(!profile\.name\)openBackupSetup\(\)/,'successors resume naming immediately; new players see backup setup first');
 assert.match(page,/<dialog id="backupSetupDialog"/,'backup setup dialog exists');
 
 const copyWarning='バックアップがない端末内セーブは予告なく消える可能性があります。';
