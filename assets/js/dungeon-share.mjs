@@ -86,7 +86,7 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.font='34px sans-serif';
  const crownWidth=data.crowned?Math.min(39,ctx.measureText?.('👑')?.width??34):0;
  const crownGap=data.crowned?7:0;
- const nameWidth=fitFont(heroName,72,nameW-32-crownWidth-crownGap,'800');
+ const nameWidth=fitFont(heroName,60,nameW-32-crownWidth-crownGap,'800');
  const nameLeft=nameX+(nameW-nameWidth-crownWidth-crownGap)/2;
  const nameBaseline=325;
  ctx.fillStyle='#fff2db';ctx.shadowColor='#e9ba7d99';ctx.shadowBlur=10;
