@@ -65,15 +65,16 @@ assert.ok([nameLabel,levelLabel,rankLabel,reachedLabel,returnedLabel].every(labe
 assert.ok(nameLabel[2]<levelLabel[2]&&nameLabel[3]===levelLabel[3],'first row: name on left, level on right');
 assert.ok(rankLabel[2]<reachedLabel[2]&&reachedLabel[2]<returnedLabel[2],'second row: rank, reached and returned');
 assert.ok(rankLabel[3]>nameLabel[3],'second row is below the name and level');
-assert.ok(namePaint&&namePaint[2]>=82+16&&namePaint[3]===325,'the name is painted in the upper panel');
-assert.ok(levelPaint&&levelPaint[2]===601&&levelPaint[3]===326&&levelPaint.at(-1)==='center',
- 'the bare level number is centered in its panel');
+assert.ok(namePaint&&namePaint[2]===nameLabel[2]&&namePaint[3]===308&&namePaint.at(-1)==='start',
+ 'the name aligns with its heading and moves upward');
+assert.ok(levelPaint&&levelPaint[2]===601&&levelPaint[3]===308&&levelPaint.at(-1)==='center',
+ 'the bare level number remains centered horizontally but moves upward');
 assert.ok(rankPaint&&rankPaint[2]===211&&rankPaint[3]===467&&rankPaint.at(-1)==='center',
  'grade is horizontally centered in its panel');
-assert.ok(reachedPaint&&reachedPaint[2]===431&&reachedPaint[3]===467&&reachedPaint.at(-1)==='center',
- 'deepest reached is horizontally centered');
-assert.ok(returnedPaint&&returnedPaint[2]===605&&returnedPaint[3]===467&&returnedPaint.at(-1)==='center',
- 'deepest returned is horizontally centered');
+assert.ok(reachedPaint&&reachedPaint[2]===431&&reachedPaint[3]===450&&reachedPaint.at(-1)==='center',
+ 'deepest reached moves upward while staying centered horizontally');
+assert.ok(returnedPaint&&returnedPaint[2]===605&&returnedPaint[3]===450&&returnedPaint.at(-1)==='center',
+ 'deepest returned moves upward to match reached');
 assert.ok(crownPaint&&crownPaint[2]>namePaint[2]&&crownPaint[2]<levelPaint[2],
  'crown stays to the right of the name on the same row');
 assert.equal(crownPaint[3],namePaint[3],'name and crown share the baseline');
@@ -87,8 +88,9 @@ for(const [x,y,w,h] of [[82,250,420,101],[514,250,174,101],[352,397,158,104],[52
 }
 const hasDivider=(x1,y1,x2,y2)=>drawOps.some((op,i)=>op[0]==='moveTo'&&op[1]===x1&&op[2]===y1
  &&drawOps[i+1]?.[0]==='lineTo'&&drawOps[i+1][1]===x2&&drawOps[i+1][2]===y2);
-assert.ok(hasDivider(352,366,688,366),'horizontal partition separates level from reached/returned records');
-assert.ok(hasDivider(516,397,516,501),'vertical partition separates reached and returned records');
+assert.ok(hasDivider(504,212,504,327),'vertical partition separates adventurer name and level');
+assert.ok(!hasDivider(352,366,688,366),'horizontal partition below the level is removed');
+assert.ok(hasDivider(516,403,516,483),'inset vertical partition separates reached and returned records');
 assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===397&&w===258&&h===104),
  'metallic rank plate remains in the second row');
 assert.ok(!drawOps.some(([kind,text,x,y])=>kind==='fillText'&&text===profile.name&&y>548),'name is not in footer');
@@ -121,6 +123,8 @@ const renderFor=(name,crowned=true,rank='オリハルコン級')=>{
 const short=renderFor('勇者');
 const shortName=short.paints.find(op=>op.text==='勇者');
 assert.ok(shortName&&shortName.font==='800 60.00px sans-serif','short name caps at the same 60px size as the level');
+assert.equal(shortName.x,82+9,'short name is left-aligned with its heading');
+assert.equal(shortName.y,308,'short name baseline moves up');
 const levelNameFont=Number(shortName.font.match(/(\d+(?:\.\d+)?)px/)?.[1]);
 assert.equal(levelNameFont,60,'name maximum font matches the level number maximum');
 assert.equal(shortName.maxWidth,undefined,'short name is not non-uniformly stretched');
@@ -134,15 +138,15 @@ const longFontSize=Number(longName.font.match(/(\d+(?:\.\d+)?)px/)?.[1]);
 assert.ok(longFontSize>=17&&longFontSize<=18,'20-character name fits the width by reducing the full font size proportionally');
 assert.equal(longName.maxWidth,undefined,'long name is not squashed via maxWidth');
 assert.equal(long.scales.length,0,'long name has no horizontal-only stretch');
-assert.ok(longName.x>=82+16&&longName.x+20*longFontSize<=502-16,
- 'long name entirely fits the top-left panel without overlapping level');
+assert.ok(longName.x===82+9&&longName.x+20*longFontSize<=502-16,
+ 'long name remains left-aligned and does not overlap the level divider');
 assert.ok(long.paints.some(op=>op.text==='👑'&&op.x>longName.x&&op.x<502&&op.y===longName.y),
  'crown follows the fitted long name');
 assert.ok(long.paints.some(op=>op.text==='オリハルコン級'&&op.x===211&&op.y===467&&op.align==='center'),
  'longest rank stays centered in the bottom-left panel');
 const longCrown=long.paints.find(op=>op.text==='👑');
-assert.ok(longCrown&&Math.abs((longName.x+longCrown.x+34)/2-(82+420/2))<1,
- 'player name and crown are centered together as one group');
+assert.ok(longCrown&&Math.abs(longCrown.x-(longName.x+20*longFontSize+7))<1&&longCrown.x+34<=502-16,
+ 'crown follows the left-aligned long name without crossing the divider');
 const shortRank=renderFor('勇者',false,'鉛級');
 const longRank=renderFor('勇者',false,'アダマンタイト級');
 const shortRankText=shortRank.paints.find(op=>op.text==='鉛級');
