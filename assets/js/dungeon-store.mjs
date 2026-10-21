@@ -88,7 +88,7 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,
      if(seal?.version===1){
       if(!p||seal.records!==recordFingerprint({profile:p,circles:c})||seal.savedAt===undefined)throw Error('保存データの整合性が一致しません。復元が必要です。');
      }
-     perform(settings,items);
+     perform(settings,items,c);
      // Store only newly encountered historical photos, atomically with the
      // metadata and integrity seal. Ordinary equipment saves never rewrite them.
      for(const [id,{circle}] of photoWrites)if(missingPhotos.has(id))items.put(circle);
@@ -216,12 +216,22 @@ export async function saveProfile(db,p){
 export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
  withPlayId(profile);
  const hashes=await photoEvidence(added),profileHashes=await trustedProfileHashes(db,profile);
+ if(added.length){
+  profile.magicOverrides={...(profile.magicOverrides||{})};
+  for(const circle of added){
+   const {image,...metadata}=circle;
+   profile.magicOverrides[circle.id]=metadata;
+  }
+ }
  const prepared=await prepareProfilePhotoRefs(profile);
  const lost=lostCircleIds(profile);
- return mutate(db,(settings,items)=>{
+ return mutate(db,(settings,items,previousCircles)=>{
+  const present=new Set(previousCircles.map(circle=>circle.id));
   // A lost magic circle is inactive, NOT deleted from its one shared save.
   for(const id of removed)if(!lost.has(id)){items.delete(id);settings.delete(thumbnailKey(id));}
-  for(const circle of added)items.put(circle);
+  // Upgraded/reclaimed magic is represented by metadata above; do not touch
+  // existing Blob records. Only a previously unseen ID needs a first write.
+  for(const circle of added)if(!present.has(circle.id))items.put(circle);
   settings.put(prepared.profile,'profile');
  },hashes,profileHashes,{writesProfile:true,photoWrites:prepared.photos});
 }
