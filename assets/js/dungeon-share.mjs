@@ -48,7 +48,7 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.fillStyle='#ddbe85';ctx.font='600 22px Georgia, serif';ctx.fillText('MAGIA CIRCLE  /  DUNGEON ATTACK',82,101);
  ctx.fillStyle='#f6e4c2';ctx.font='600 34px sans-serif';ctx.fillText('マギアサークル - ダンジョンアタック',82,157,630);
  ctx.strokeStyle='#ae8b5866';ctx.beginPath();ctx.moveTo(82,184);ctx.lineTo(688,184);ctx.stroke();
- // Top row: name (proportional contain fit) and centered level.
+ // Top row: left-aligned name (proportional contain fit) and centered level.
  // Bottom row: centered rank, deepest reached and deepest returned.
  // Keep the entire information area clear of the magic-circle illustration.
  const bottomY=397,bottomH=104;
@@ -73,13 +73,13 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  label('冒険者名',nameX,234);
  label('LEVEL',levelX,234);
  const heroName=data.name||'名もなき冒険者';
- // Center the whole "name + crown" unit, not just the name glyphs.
+ // Align the name and optional crown with the name heading.
  ctx.font='34px sans-serif';
  const crownWidth=data.crowned?Math.min(39,ctx.measureText?.('👑')?.width??34):0;
  const crownGap=data.crowned?7:0;
  const nameWidth=fitFont(heroName,60,nameW-32-crownWidth-crownGap,'800');
- const nameLeft=nameX+(nameW-nameWidth-crownWidth-crownGap)/2;
- const nameBaseline=325;
+ const nameLeft=nameX+9;
+ const nameBaseline=308;
  ctx.fillStyle='#fff2db';ctx.shadowColor='#e9ba7d99';ctx.shadowBlur=10;
  ctx.textAlign='start';
  ctx.fillText(heroName,nameLeft,nameBaseline);
@@ -91,25 +91,25 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  const levelText=String(data.level);
  fitFont(levelText,60,levelW-28,'800');
  ctx.fillStyle='#fce9bf';ctx.textAlign='center';
- ctx.fillText(levelText,levelX+levelW/2,326);
+ ctx.fillText(levelText,levelX+levelW/2,308);
  ctx.textAlign='start';
 
  label('冒険者等級',rankX,381);
  label('最深到達階層',reachedX,381);
  label('最深帰還階層',returnedX,381);
- // Separate the level from depth records, and the two depth records from each other.
- // Leave their backgrounds and outlines clear; the metallic rank plaque is unchanged.
- ctx.strokeStyle='#c9a46b88';ctx.lineWidth=2;ctx.beginPath();
- ctx.moveTo(reachedX,366);ctx.lineTo(returnedX+returnedW,366);
- ctx.moveTo(reachedX+reachedW+6,bottomY);ctx.lineTo(reachedX+reachedW+6,bottomY+bottomH);
+ // Use subtle vertical dividers: between name and level, and between the depth records.
+ // No horizontal partition or individual frames; the metallic rank plaque stays unchanged.
+ ctx.strokeStyle='#c9a46b99';ctx.lineWidth=2;ctx.beginPath();
+ ctx.moveTo(levelX-10,212);ctx.lineTo(levelX-10,327);
+ ctx.moveTo(reachedX+reachedW+6,bottomY+6);ctx.lineTo(reachedX+reachedW+6,bottomY+bottomH-18);
  ctx.stroke();
  ctx.fillStyle='#f7e6c7';ctx.textAlign='center';
  const reachedText=data.deepestReached?data.deepestReached+'層':'未到達';
  const returnedText=data.deepestReturned?data.deepestReturned+'層':'未到達';
  fitFont(reachedText,38,reachedW-22);
- ctx.fillText(reachedText,reachedX+reachedW/2,467);
+ ctx.fillText(reachedText,reachedX+reachedW/2,450);
  fitFont(returnedText,38,returnedW-22);
- ctx.fillText(returnedText,returnedX+returnedW/2,467);
+ ctx.fillText(returnedText,returnedX+returnedW/2,450);
  ctx.textAlign='start';
  // Metallic rank plaque stays in the bottom-left corner.
  const metal=rankMetalPalette(data.rankLayer);
