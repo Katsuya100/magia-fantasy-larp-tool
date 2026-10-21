@@ -1999,7 +1999,9 @@ html,body{overflow-x:clip}
  background:repeating-conic-gradient(from 12deg,var(--affinity-color) 0deg 13deg,transparent 15deg 35deg);
  -webkit-mask:radial-gradient(circle,transparent 0 43%,#000 48% 71%,transparent 75%);
  mask:radial-gradient(circle,transparent 0 43%,#000 48% 71%,transparent 75%);
- filter:drop-shadow(0 0 15px var(--affinity-color));
+ filter:drop-shadow(0 0 15px var(--affinity-color))
+}
+#battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .affinity-hit::before{
  animation:affinity-ring .44s ease-out both
 }
 #battleArena .affinity-hit::after{
@@ -2009,7 +2011,9 @@ html,body{overflow-x:clip}
  background:linear-gradient(120deg,#0b1222ed,#101729ef);
  border:1px solid var(--affinity-color);border-radius:3px;
  box-shadow:0 0 18px var(--affinity-color),inset 0 0 13px var(--affinity-glow);
- text-shadow:0 0 9px var(--affinity-color),0 1px 2px #000;
+ text-shadow:0 0 9px var(--affinity-color),0 1px 2px #000
+}
+#battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .affinity-hit::after{
  animation:affinity-word .44s cubic-bezier(.16,1,.32,1) both
 }
 #battleArena .unit[data-affinity="resist"] .affinity-hit{
