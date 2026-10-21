@@ -29,7 +29,7 @@ export const alignNormalRows = function alignNormalRows(input){
   const set=(a,v)=>row['resist_'+a]=String(Number(v.toFixed(2)));
   const chooseWeak=()=>{
    const ordered=[...counter[tags[0]],...attrs];
-   return ordered.find(a=>!tags.includes(a)&&get(a)<1.2)??attrs.find(a=>!tags.includes(a)&&get(a)<1.2);
+   return ordered.find(a=>!tags.includes(a)&&get(a)<=1)??attrs.find(a=>!tags.includes(a)&&get(a)<=1);
   };
   // A creature may NEVER be weak to a named innate element.
   for(const tag of tags){
@@ -38,13 +38,13 @@ export const alignNormalRows = function alignNormalRows(input){
    const value=get(tag);
    set(tag,get(newWeak));set(newWeak,value);
   }
-  // One innate element must visibly resist damage. Move the authored .8
-  // to the earliest explicit name cue when the original floor template disagrees.
+  // Keep the original floor-identity resistance .8, but make an
+  // explicit innate named element resistant (.95) as a second affinity.
+  // Neutral-donor shifts conserve each individual monster's seven-element sum.
   if(tags.every(a=>get(a)>=1)){
-   const strongest=attrs.reduce((best,a)=>get(a)<get(best)?a:best,attrs[0]);
-   if(get(strongest)>=1)throw Error('no innate resistance at '+row.id);
-   const target=tags[0],value=get(target);
-   set(target,get(strongest));set(strongest,value);
+   const target=tags[0],donor=attrs.find(a=>!tags.includes(a)&&get(a)===1);
+   if(!donor)throw Error('no neutral donor for '+row.id);
+   set(target,.95);set(donor,1.05);
   }
   // For two-element creature names, make the second element slightly
   // resistant too; compensate on an untagged neutral element.
