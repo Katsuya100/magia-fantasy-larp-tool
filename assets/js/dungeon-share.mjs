@@ -48,54 +48,66 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.fillStyle='#ddbe85';ctx.font='600 22px Georgia, serif';ctx.fillText('MAGIA CIRCLE  /  DUNGEON ATTACK',82,101);
  ctx.fillStyle='#f6e4c2';ctx.font='600 34px sans-serif';ctx.fillText('マギアサークル - ダンジョンアタック',82,157,630);
  ctx.strokeStyle='#ae8b5866';ctx.beginPath();ctx.moveTo(82,184);ctx.lineTo(688,184);ctx.stroke();
- // Reserve a dedicated name panel to the LEFT of the rank plaque.
- // Both panels remain inside the original 82–688 layout, clear of the magic seal.
- const nameX=82,nameW=248,rankX=342,rankW=346,plaqueY=260,plaqueH=106;
- ctx.fillStyle='#adabb8';ctx.font='600 21px sans-serif';
- ctx.fillText('冒険者名',nameX+10,242);
- ctx.fillText('冒険者等級',rankX+10,242);
- const namePlate=ctx.createLinearGradient(nameX,plaqueY,nameX+nameW,plaqueY+plaqueH);
- namePlate.addColorStop(0,'#38293e');namePlate.addColorStop(1,'#162335');
- ctx.fillStyle=namePlate;ctx.fillRect(nameX,plaqueY,nameW,plaqueH);
- ctx.strokeStyle='#c9a46b';ctx.lineWidth=2;ctx.strokeRect(nameX,plaqueY,nameW,plaqueH);
- ctx.strokeStyle='#f1d6a457';ctx.lineWidth=1;ctx.strokeRect(nameX+6,plaqueY+6,nameW-12,plaqueH-12);
- // Use up to three centered lines; preserve the last line's space for a crown.
+ // Row 1: prominently stretched adventurer name + level.
+ // Row 2: adventurer rank, deepest reached and deepest returned.
+ // All information remains in the left half, clear of the circle artwork.
+ const topY=250,topH=101,bottomY=397,bottomH=104;
+ const nameX=82,nameW=420,levelX=514,levelW=174;
+ const rankX=82,rankW=258,reachedX=352,reachedW=158,returnedX=522,returnedW=166;
+ const label=(text,x,y)=>{ctx.fillStyle='#bbadbd';ctx.font='600 20px sans-serif';ctx.fillText(text,x+9,y);};
+ const panel=(x,y,w,h,edge='#c9a46b')=>{
+  const bg=ctx.createLinearGradient(x,y,x+w,y+h);
+  bg.addColorStop(0,'#38293e');bg.addColorStop(1,'#162335');
+  ctx.fillStyle=bg;ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle=edge;ctx.lineWidth=2;ctx.strokeRect(x,y,w,h);
+  ctx.strokeStyle='#f1d6a457';ctx.lineWidth=1;ctx.strokeRect(x+6,y+6,w-12,h-12);
+ };
+ label('冒険者名',nameX,234);
+ label('LEVEL',levelX,234);
+ panel(nameX,topY,nameW,topH);
+ panel(levelX,topY,levelW,topH);
  const heroName=data.name||'名もなき冒険者';
- const nameTextWidth=data.crowned?186:220;
- let nameFont=26,nameLines=[];
- const nameMeasure=value=>ctx.measureText?.(value)?.width??[...value].length*nameFont;
- for(;nameFont>=18;nameFont--){
-  ctx.font='700 '+nameFont+'px sans-serif';
-  nameLines=[''];
-  for(const char of [...heroName]){
-   const last=nameLines.length-1;
-   if(nameLines[last]&&nameMeasure(nameLines[last]+char)>nameTextWidth)
-    nameLines.push(char);
-   else nameLines[last]+=char;
-  }
-  if(nameLines.length<=3)break;
- }
- const lineGap=nameFont+5,firstBaseline=320-(nameLines.length-1)*lineGap/2;
- ctx.fillStyle='#fff0d4';ctx.shadowColor='#e9ba7d7a';ctx.shadowBlur=7;
- for(const [index,line] of nameLines.entries())
-  ctx.fillText(line,nameX+14,firstBaseline+index*lineGap,nameTextWidth);
+ const codepoints=[...heroName].length;
+ const nameFont=codepoints>15?34:codepoints>10?39:codepoints>6?44:50;
+ const availableNameWidth=nameW-34-(data.crowned?45:0),nameStart=nameX+16,nameBaseline=321;
+ ctx.font='800 '+nameFont+'px sans-serif';
+ const naturalWidth=ctx.measureText?.(heroName)?.width??codepoints*nameFont;
+ // Stretch a short name horizontally (up to 1.8x); fit long names on one line.
+ const horizontalScale=Math.min(1.8,availableNameWidth/Math.max(1,naturalWidth));
+ const stretchedWidth=naturalWidth*horizontalScale;
+ ctx.save?.();
+ ctx.translate?.(nameStart,nameBaseline);
+ ctx.scale?.(horizontalScale,1);
+ ctx.fillStyle='#fff2db';ctx.shadowColor='#e9ba7d99';ctx.shadowBlur=10;
+ if(ctx.save&&ctx.translate&&ctx.scale&&ctx.restore)ctx.fillText(heroName,0,0);
+ else ctx.fillText(heroName,nameStart,nameBaseline,availableNameWidth);
  ctx.shadowBlur=0;
+ ctx.restore?.();
  if(data.crowned){
-  const last=nameLines.at(-1)||'',lastWidth=nameMeasure(last);
-  ctx.font='29px sans-serif';
-  ctx.fillText('👑',Math.min(nameX+nameW-37,nameX+19+lastWidth),
-   firstBaseline+(nameLines.length-1)*lineGap,30);
+  ctx.fillStyle='#ffe6ad';ctx.font='34px sans-serif';
+  ctx.fillText('👑',nameStart+Math.min(stretchedWidth,availableNameWidth)+6,nameBaseline,38);
  }
- // The rank plaque mirrors the profile's --rank-light/mid/deep/glow insignia.
+ ctx.fillStyle='#fce9bf';ctx.font='800 52px sans-serif';
+ ctx.fillText('Lv.'+data.level,levelX+14,321,levelW-28);
+
+ label('冒険者等級',rankX,381);
+ label('最深到達階層',reachedX,381);
+ label('最深帰還階層',returnedX,381);
+ panel(reachedX,bottomY,reachedW,bottomH);
+ panel(returnedX,bottomY,returnedW,bottomH);
+ ctx.fillStyle='#f7e6c7';ctx.font='700 33px sans-serif';
+ ctx.fillText(data.deepestReached?data.deepestReached+'層':'未到達',reachedX+10,467,reachedW-20);
+ ctx.fillText(data.deepestReturned?data.deepestReturned+'層':'未到達',returnedX+10,467,returnedW-20);
+ // The rank plaque retains its metallic palette even in its new position.
  const metal=rankMetalPalette(data.rankLayer);
- const plate=ctx.createLinearGradient(rankX,plaqueY,rankX+rankW,plaqueY+plaqueH);
- plate.addColorStop(0,metal.deep);plate.addColorStop(.48,'#151422');plate.addColorStop(1,metal.deep);
- ctx.fillStyle=plate;ctx.fillRect(rankX,plaqueY,rankW,plaqueH);
- ctx.lineWidth=3;ctx.strokeStyle=metal.mid;ctx.strokeRect(rankX,plaqueY,rankW,plaqueH);
- const shine=ctx.createLinearGradient(0,265,0,358);
+ const metalPlate=ctx.createLinearGradient(rankX,bottomY,rankX+rankW,bottomY+bottomH);
+ metalPlate.addColorStop(0,metal.deep);metalPlate.addColorStop(.48,'#151422');metalPlate.addColorStop(1,metal.deep);
+ ctx.fillStyle=metalPlate;ctx.fillRect(rankX,bottomY,rankW,bottomH);
+ ctx.strokeStyle=metal.mid;ctx.lineWidth=3;ctx.strokeRect(rankX,bottomY,rankW,bottomH);
+ const shine=ctx.createLinearGradient(0,bottomY,0,bottomY+bottomH);
  shine.addColorStop(0,'#ffffff33');shine.addColorStop(.4,'#ffffff0a');shine.addColorStop(1,'#ffffff00');
- ctx.fillStyle=shine;ctx.fillRect(rankX+3,plaqueY+3,rankW-6,plaqueH-7);
- const lettering=ctx.createLinearGradient(rankX+20,0,rankX+rankW-20,0);
+ ctx.fillStyle=shine;ctx.fillRect(rankX+3,bottomY+3,rankW-6,bottomH-7);
+ const lettering=ctx.createLinearGradient(rankX+16,0,rankX+rankW-16,0);
  if(data.rankLayer===90){
   for(const [at,color] of [[0,'#a28df9'],[.34,'#ebd2ff'],[.52,'#ffffff'],[.72,'#baa4ff'],[1,'#8ddce9']])lettering.addColorStop(at,color);
  }else if(data.rankLayer===100){
@@ -103,26 +115,10 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  }else{
   for(const [at,color] of [[0,metal.mid],[.31,metal.light],[.49,'#fffdf3'],[.68,metal.light],[1,metal.mid]])lettering.addColorStop(at,color);
  }
- ctx.shadowColor=metal.glow;ctx.shadowBlur=14;
- ctx.fillStyle=lettering;
- let rankFont=56;
- while(rankFont>32){
-  ctx.font='800 '+rankFont+'px sans-serif';
-  const width=ctx.measureText?.(data.rank)?.width??[...data.rank].length*rankFont;
-  if(width<=rankW-40)break;
-  rankFont-=2;
- }
- ctx.fillText(data.rank,rankX+20,335,rankW-40);
+ ctx.shadowColor=metal.glow;ctx.shadowBlur=12;ctx.fillStyle=lettering;
+ ctx.font='800 44px sans-serif';
+ ctx.fillText(data.rank,rankX+12,466,rankW-24);
  ctx.shadowBlur=0;
- ctx.fillStyle='#adabb8';ctx.font='600 20px sans-serif';
- ctx.fillText('LEVEL',83,411);
- ctx.fillText('最深到達階層',255,411);
- ctx.fillText('最深帰還階層',466,411);
- ctx.fillStyle='#fbebcb';ctx.font='700 42px sans-serif';
- ctx.fillText('Lv.'+data.level,83,483,145);
- ctx.fillText(data.deepestReached?data.deepestReached+'層':'未到達',255,483,190);
- ctx.fillText(data.deepestReturned?data.deepestReturned+'層':'未到達',466,483,172);
- ctx.strokeStyle='#a8845566';ctx.beginPath();ctx.moveTo(237,393);ctx.lineTo(237,490);ctx.moveTo(454,393);ctx.lineTo(454,490);ctx.stroke();
  // Prefer extracted photo contours; retain the geometric seal as the fallback.
  if(!paintCircleArt(ctx,artwork)){
  const cx=917,cy=335;
