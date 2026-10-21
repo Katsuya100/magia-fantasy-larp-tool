@@ -113,7 +113,9 @@ const renderFor=(name,crowned=true,rank='オリハルコン級')=>{
 };
 const short=renderFor('勇者');
 const shortName=short.paints.find(op=>op.text==='勇者');
-assert.ok(shortName&&shortName.font==='800 72.00px sans-serif','short name fits by height at a large, uniform 72px');
+assert.ok(shortName&&shortName.font==='800 60.00px sans-serif','short name caps at the same 60px size as the level');
+const levelNameFont=Number(shortName.font.match(/(\d+(?:\.\d+)?)px/)?.[1]);
+assert.equal(levelNameFont,60,'name maximum font matches the level number maximum');
 assert.equal(shortName.maxWidth,undefined,'short name is not non-uniformly stretched');
 assert.equal(short.scales.length,0,'short name has no horizontal-only stretch');
 assert.equal(short.translations.length,0,'short name uses ordinary canvas coordinates');
