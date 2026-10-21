@@ -498,4 +498,4 @@ foe_l100_1,storm,bolt
 foe_l100_2,storm,aqua
 foe_l100_3,gravity,flame
 foe_l100_4,bolt,flame
-boss_l100,bolt,gravity
+boss_l100,law,chaos

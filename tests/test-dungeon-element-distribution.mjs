@@ -63,6 +63,16 @@ for(let layer=1;layer<=100;layer++){
  assert.ok(c.concept.length>=5&&c.interpretation.includes(enemies[4].name),
   'every floor has an authored named concept tied to its boss '+layer);
 }
+const finalBoss=master.find(r=>r.id==='boss_l100');
+assert.equal(plan.find(r=>r.id==='boss_l100').primary,'law');
+assert.equal(plan.find(r=>r.id==='boss_l100').secondary,'chaos');
+assert.equal(finalBoss.spells.split('|')[0].split(':')[1],'law','final boss uses Law as primary');
+assert.equal(finalBoss.spells.split('|')[2].split(':')[1],'chaos','final boss uses Chaos as secondary');
+assert.equal(finalBoss.resist_law,'0.95','final boss cannot be weak to its own Law');
+assert.ok(Number(finalBoss.resist_chaos)<=1,'final boss cannot be weak to its own Chaos');
+assert.equal(finalBoss.resist_aqua,'1.35','water purification becomes its thematic weakness');
+for(const [element,multiplier] of [['flame','1.2'],['bolt','0.95'],['gravity','1']])
+ assert.equal(finalBoss['resist_'+element],multiplier,'preserve benchmark attack matchup '+element);
 const layer41=master.slice(40*5,41*5);
 assert.ok(layer41.filter(r=>r.spells.split('|')[0].split(':')[1]==='gravity').length<=2,
  '41F should not have an all-gravity primary lineup');

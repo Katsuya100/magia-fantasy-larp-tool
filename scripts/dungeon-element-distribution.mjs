@@ -56,6 +56,13 @@ export function applyElementDistribution(source,plan,concepts){
    else throw Error('Name has no protected resistance '+before.id);
   }
   for(const a of ELEMENTS)output['resist_'+a]=fmt(transfer[a]);
+  if(before.id==='boss_l100'){
+   // The throne binds Chaos under Law. Purifying water takes over the old
+   // Law weakness; keep flame/bolt/gravity combat calibration untouched.
+   output.resist_bolt='0.95';
+   output.resist_aqua='1.35';
+   output.resist_gravity='1';
+  }
   const sum=x=>ELEMENTS.reduce((s,a)=>s+Number(x['resist_'+a]),0);
   if(Math.abs(sum(before)-sum(output))>1e-8)throw Error('Changed resistance budget '+before.id);
   return output;
