@@ -82,8 +82,23 @@ function note(message){
  if(!message||!/できません|失敗|不足|見つからない|不正|中断|対応ブラウザ|開けません|起動できません|してください/.test(message))return;
  const target=/カメラ|撮影|HTTPS|localhost/.test(message)?'cameraError':profile?.run?'battleError':'pageError';
  $(target).textContent=message;$(target).hidden=false;
+ // Save errors must stay visible until explicitly acknowledged.
+ if(/保存|セーブ|整合性|破損/.test(message)){
+  $('saveErrorMessage').textContent=message;
+  const dialog=$('saveErrorDialog');
+  if(!dialog.open)dialog.showModal();
+ }
 }
-async function persist(){await loadoutSaveQueue;await saveProfile(db,profile);}
+async function persist(){
+ try{await loadoutSaveQueue;await saveProfile(db,profile);}
+ catch(error){note('セーブの保存に失敗しました：'+String(error?.message||error));throw error;}
+}
+// Registered photo bytes are immutable. Analysis/reveal changes live only in
+// profile metadata, and one ordinary profile save seals their update.
+function rememberCircleMetadata(circle){
+ const {image,...metadata}=circle;
+ profile.magicOverrides={...(profile.magicOverrides||{}),[circle.id]:metadata};
+}
 function openBackupSetup(){
  if(profile.name)return;
  $('backupSetupStatus').textContent=$('googleDriveStatus').textContent;
@@ -681,13 +696,16 @@ async function takeTurn(index){
  if(circle?.analysis&&!run.hero.spells[index])run.hero.spells[index]=combatSpell(circle);
  const spell=index>=0?run.hero.spells[index]:null;
  if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
- if(circle?.analysis&&!isRevealed(circle)){Object.assign(circle,revealOnUse(circle));await putCircle(db,circle);}
+ if(circle?.analysis&&!isRevealed(circle)){
+  Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);await persist();
+ }
  await animateBattle(steps);
 if(run.hero.hp<=0){
   if(profile.permadeath){
    const successor=createSuccessorProfile(profile,run,circles,G.startingBase());
    const lost=successor.legacies.at(-1);
-   await saveProfileWithCircles(db,successor,[],lost.circles.map(circle=>circle.id));
+   try{await saveProfile(db,successor);}
+   catch(error){note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
    profile=successor;
    for(const circle of lost.circles)circleImages.forget(circle.id,circle.image);
    const removed=new Set(lost.circles.map(circle=>circle.id));
@@ -1020,14 +1038,22 @@ async function leave(mode='checkpoint'){
  const restored=[...new Map(restoredPhotos.map(circle=>[circle.id,circle])).values()].filter(circle=>!circles.some(owned=>owned.id===circle.id));
  // Preserve PR #140's recovery guarantee independently from disposable thumbnails.
  const saveReturn=async()=>{
-  if(!restored.length){await persist();return;}
-  await saveProfileWithCircles(db,profile,restored);
+  // Relic recovery changes ownership and stats, not the registered photo.
+  if(restored.length){
+   profile.magicOverrides={...(profile.magicOverrides||{})};
+   for(const circle of restored){
+    const {image,...metadata}=circle;
+    profile.magicOverrides[circle.id]=metadata;
+   }
+  }
+  await persist();
+  if(!restored.length)return;
   const snapshot=await readDungeonSnapshot(db);
   const recoveredIds=new Set(restored.map(circle=>circle.id));
   const persisted=snapshot.circles.filter(circle=>recoveredIds.has(circle.id));
   if(persisted.length!==recoveredIds.size||persisted.some(circle=>!(circle.image instanceof Blob)||!circle.image.size))
    throw Error('遺物の魔法陣の写真を保存できませんでした。');
-  circles=newestCirclesFirst([...circles,...persisted]);
+  circles=newestCirclesFirst([...circles,...persisted.map(circle=>({...circle,...(profile.magicOverrides?.[circle.id]||{})}))]);
  };
  const steps=[...(found.size?['collections']:[]),...(rewards.length?['rewards']:[]),...(run.xp>0?['xp']:[])];
  if(!steps.length){
@@ -1145,9 +1171,9 @@ async function analyzeUnknown(index){
    const analysis=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
    if(!valid())return;
    Object.assign(circle,savePreanalysis(circle,analysis));
-   await putCircle(db,circle);
    if(!valid())return;
-   run.hero.spells[index]=combatSpell(circle);await persist();
+   run.hero.spells[index]=combatSpell(circle);
+   rememberCircleMetadata(circle);await persist();
    activeAnalysis=null;note('');show('battle');await revealOriginal(circle);await takeTurn(index);
   }catch(e){
    if(!valid())return;
@@ -1306,19 +1332,20 @@ async function confirmCircleAction(){
    void playCircleUpgrade(circle,$('magicUpgradeEffect')).catch(()=>{});
    setTimeout(()=>{if(epoch===upgradeRitualEpoch)dialog.dataset.enhancing='false';},CIRCLE_RITUAL_DURATION_MS);
   }else if(action.type==='remove'){
-   await deleteCircle(db,circle.id);
-   if(profile.circleUpgrades){
-    const upgrades={...profile.circleUpgrades};
-    delete upgrades[circle.id];
-    profile.circleUpgrades=upgrades;
-   }
+   const nextSlots=slots.map(id=>id===circle.id?null:id);
+   const nextProfile={...profile,
+    slots:[...nextSlots],
+    favoriteCircleId:profile.favoriteCircleId===circle.id?null:profile.favoriteCircleId,
+    circleUpgrades:Object.fromEntries(Object.entries(profile.circleUpgrades||{}).filter(([id])=>id!==circle.id)),
+    magicOverrides:Object.fromEntries(Object.entries(profile.magicOverrides||{}).filter(([id])=>id!==circle.id))};
+   await loadoutSaveQueue;
+   await saveProfileWithCircles(db,nextProfile,[],[circle.id]);
+   profile=nextProfile;
    circleImages.forget(circle.id,circle.image);
    failedPhotoIds.delete(circle.id);
-   if(profile.favoriteCircleId===circle.id)profile.favoriteCircleId=null;
    circles=circles.filter(c=>c.id!==circle.id);
-   slots=slots.map(id=>id===circle.id?null:id);
-   profile.slots=[...slots];
-   await persist();render();
+   slots=nextSlots;
+   render();
   }
   $('circleActionDialog').close();
   pendingCircleAction=null;
@@ -1394,7 +1421,7 @@ async function chooseLoadout(choice){
   try{await saveProfile(db,snapshot);}
   catch(error){
    // A later selection will save its own snapshot; never overwrite its UI.
-   if(revision!==loadoutSaveRevision)return;
+   if(revision!==loadoutSaveRevision){note('編成の保存に失敗しました：'+String(error?.message||error));return;}
    try{
     const stored=await getProfile(db);
     if(revision!==loadoutSaveRevision)return;
@@ -1404,7 +1431,7 @@ async function chooseLoadout(choice){
     profile.carrySlots=saveCarrySlots(carry,profile.inventory);
     render();
    }catch(readError){console.error('保存済みの編成を読み込めませんでした',readError);}
-   note('編成の保存に失敗しました：'+error.message);
+   note('編成の保存に失敗しました：'+String(error?.message||error));
   }
  });
  loadoutSaveQueue=save;
@@ -1581,13 +1608,15 @@ function wire(){
    }catch(error){
     console.error('冒険者名の保存に失敗しました',error);
     $('nameError').textContent='名前を保存できませんでした：'+String(error?.message||error);
+     note('冒険者名の保存に失敗しました：'+String(error?.message||error));
    }finally{
     savingName=false;
     button.disabled=false;
    }
    if(saved&&firstLesson)tutorial.open();
  });
- $('cancelNameDialog').addEventListener('click',()=>$('nameDialog').close());
+ $('closeSaveError').addEventListener('click',()=>$('saveErrorDialog').close());
+  $('cancelNameDialog').addEventListener('click',()=>$('nameDialog').close());
  $('nameDialog').addEventListener('cancel',event=>{if(!profile.name)event.preventDefault();});
  $('deleteDataPhrase').addEventListener('input',()=>{
   $('confirmDeleteData').disabled=$('deleteDataPhrase').value.trim()!=='削除';
