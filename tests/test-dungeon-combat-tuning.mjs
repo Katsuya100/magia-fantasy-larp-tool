@@ -13,6 +13,10 @@ assert.equal(data.floors.length,500);
 assert.equal(data.balance.filter(r=>/^enemy_(?:hp|mag)_(?:band|last3|boss|scale_early|scale_late)/.test(r.key)).length,0);
 assert.equal(typeof G.enemyScaling,'undefined');
 assert.equal(typeof G.enemyCombatCoefficients,'undefined');
+// All encounter HP are canonical RPG base stats, with no secondary combat-time scale.
+const authored=G.parseCsv(readFileSync(new URL('./fixtures/dungeon-enemies-before-distribution.csv',import.meta.url),'utf8'));
+assert.deepEqual(data.enemies.map(e=>[e.id,e.hp]),authored.map(e=>[e.id,e.hp]),
+ 'canonical HP is directly authored and identical to the verified 500-enemy fixture');
 for(let i=0;i<500;i++){
  const row=data.enemies[i],lv=Number(data.floors[i].enemy_level),kind=row.boss_only==='1'?'boss':'normal';
  const base={hp:+row.hp,mag:+row.mag,def:+row.def,res:+row.res};
