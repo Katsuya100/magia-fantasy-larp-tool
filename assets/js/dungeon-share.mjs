@@ -51,20 +51,13 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  // Top row: name (proportional contain fit) and centered level.
  // Bottom row: centered rank, deepest reached and deepest returned.
  // Keep the entire information area clear of the magic-circle illustration.
- const topY=250,topH=101,bottomY=397,bottomH=104;
+ const bottomY=397,bottomH=104;
  const nameX=82,nameW=420,levelX=514,levelW=174;
  const rankX=82,rankW=258,reachedX=352,reachedW=158,returnedX=522,returnedW=166;
  const label=(text,x,y)=>{
   ctx.fillStyle='#bbadbd';ctx.font='600 20px sans-serif';
   ctx.textAlign='start';
   ctx.fillText(text,x+9,y);
- };
- const panel=(x,y,w,h,edge='#c9a46b')=>{
-  const bg=ctx.createLinearGradient(x,y,x+w,y+h);
-  bg.addColorStop(0,'#38293e');bg.addColorStop(1,'#162335');
-  ctx.fillStyle=bg;ctx.fillRect(x,y,w,h);
-  ctx.strokeStyle=edge;ctx.lineWidth=2;ctx.strokeRect(x,y,w,h);
-  ctx.strokeStyle='#f1d6a457';ctx.lineWidth=1;ctx.strokeRect(x+6,y+6,w-12,h-12);
  };
  // Adjust the font size uniformly, never stretch or squeeze a glyph on one axis.
  // Avoid fillText(maxWidth): Canvas may condense the text non-proportionally.
@@ -79,8 +72,6 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  };
  label('冒険者名',nameX,234);
  label('LEVEL',levelX,234);
- panel(nameX,topY,nameW,topH);
- panel(levelX,topY,levelW,topH);
  const heroName=data.name||'名もなき冒険者';
  // Center the whole "name + crown" unit, not just the name glyphs.
  ctx.font='34px sans-serif';
@@ -106,8 +97,12 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  label('冒険者等級',rankX,381);
  label('最深到達階層',reachedX,381);
  label('最深帰還階層',returnedX,381);
- panel(reachedX,bottomY,reachedW,bottomH);
- panel(returnedX,bottomY,returnedW,bottomH);
+ // Separate the level from depth records, and the two depth records from each other.
+ // Leave their backgrounds and outlines clear; the metallic rank plaque is unchanged.
+ ctx.strokeStyle='#c9a46b88';ctx.lineWidth=2;ctx.beginPath();
+ ctx.moveTo(reachedX,366);ctx.lineTo(returnedX+returnedW,366);
+ ctx.moveTo(reachedX+reachedW+6,bottomY);ctx.lineTo(reachedX+reachedW+6,bottomY+bottomH);
+ ctx.stroke();
  ctx.fillStyle='#f7e6c7';ctx.textAlign='center';
  const reachedText=data.deepestReached?data.deepestReached+'層':'未到達';
  const returnedText=data.deepestReturned?data.deepestReturned+'層':'未到達';
