@@ -7,7 +7,7 @@ import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarity
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261021.13';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261021.13';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,combatTunedEnemy,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261021.13';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261021.13';
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261021.13';
 import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261021.13';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261021.13';
@@ -643,7 +643,6 @@ function createEnemy(fight,run){
    run.layerEnemyOrder={layer,ids:shuffledLayerEnemyIds(masters.enemies,layer,Math.random,slot)};
   row=masters.enemies.find(enemy=>enemy.id===run.layerEnemyOrder.ids[slot]);
   if(!row||row.boss_only==='1')throw Error('階層の敵順が不正');
-  row=combatTunedEnemy(row);
  }else row=enemyForFight(masters.enemies,fight);
  if(Number(row.min_level)>level||(isLayerBoss(fight)&&row.boss_only!=='1'))throw Error('敵の設定が不正');
  if(spec.boss_enemy_id&&row.id!==spec.boss_enemy_id)throw Error('ボスの設定が不正');
