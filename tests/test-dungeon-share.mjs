@@ -31,7 +31,10 @@ const ctx={createLinearGradient:gradient,createRadialGradient:gradient,
  fillRect(...args){drawOps.push(['fillRect',...args]);},
  strokeRect(...args){drawOps.push(['strokeRect',...args]);},
  beginPath(){},arc(){},moveTo(){},lineTo(){},closePath(){},stroke(){},
- fillText(...args){drawTexts.push(args[0]);drawOps.push(['fillText',...args]);}};
+ save(){drawOps.push(['save']);},restore(){drawOps.push(['restore']);},
+ translate(...args){drawOps.push(['translate',...args]);},
+ scale(...args){drawOps.push(['scale',...args]);},
+ fillText(...args){drawTexts.push(args[0]);drawOps.push(['fillText',...args,this.font]);}};
 const canvas={width:0,height:0,getContext:()=>ctx};
 assert.equal(paintAdventurerCard(canvas,data),canvas);
 assert.deepEqual([canvas.width,canvas.height],[1200,675]);
@@ -43,13 +46,18 @@ const rankLabel=drawOps.find(([kind,text])=>kind==='fillText'&&text==='冒険者
 const namePaint=drawOps.find(([kind,text])=>kind==='fillText'&&text===profile.name);
 const crownPaint=drawOps.find(([kind,text])=>kind==='fillText'&&text==='👑');
 const rankPaint=drawOps.find(([kind,text])=>kind==='fillText'&&text===data.rank);
-assert.ok(nameLabel&&rankLabel&&nameLabel[2]<rankLabel[2],'name label is left of grade label');
-assert.ok(namePaint&&rankPaint&&namePaint[2]<rankPaint[2],'player name sits to the LEFT of the grade');
-assert.ok(namePaint[3]>260&&namePaint[3]<366,'name sits in the new name panel, not in the footer');
-assert.ok(crownPaint&&crownPaint[2]>namePaint[2]&&crownPaint[2]<rankPaint[2],'crown stays beside the name on the left');
-assert.equal(crownPaint[3],namePaint[3],'name and crown share the baseline');
-assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===260&&w===248&&h===106),'dedicated name panel is drawn');
-assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===342&&y===260&&w===346&&h===106),'rank panel is shifted right');
+const nameIndex=drawOps.findIndex(([kind,text])=>kind==='fillText'&&text===profile.name);
+const translate=drawOps.slice(0,nameIndex).findLast(([kind])=>kind==='translate');
+const scale=drawOps.slice(0,nameIndex).findLast(([kind])=>kind==='scale');
+assert.ok(nameLabel&&rankLabel&&nameLabel[2]<rankLabel[2],'name label stays left of grade');
+assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===260&&w===300&&h===106),'wider name panel is drawn');
+assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===394&&y===260&&w===294&&h===106),'rank panel remains on the right');
+assert.ok(namePaint&&namePaint[2]===0&&namePaint[3]===340,'name is drawn in one line within the panel');
+assert.match(namePaint[4],/800 68px/,'name headline is 68 px tall');
+assert.ok(translate&&translate[1]===98,'name starts inside the left panel');
+assert.ok(scale&&scale[1]>0&&scale[1]<1,'longer sample name stretches horizontally to fit');
+assert.ok(rankPaint&&rankPaint[2]===414,'rank text remains to the right');
+assert.ok(crownPaint&&crownPaint[2]===331&&crownPaint[3]===340,'crown stays to the right of name on same baseline');
 assert.ok(!drawOps.some(([kind,text,x,y])=>kind==='fillText'&&text===profile.name&&y>548),'footer no longer carries the name');
 assert.ok(drawTexts.includes('12層')&&drawTexts.includes('10層'),'both deep records appear on card');
 assert.ok(drawOps.some(([kind])=>kind==='strokeRect'),'card has decorative border');
@@ -58,28 +66,42 @@ assert.ok(stops.some(([,color])=>color===rankMetalPalette(10).light),'card text 
 assert.ok(stops.some(([,color])=>color===rankMetalPalette(10).deep),'card plate uses profile rank metal');
 assert.equal(rankMetalPalette(100).mid,'#f0bf75','highest rank keeps special metallic tone');
 
-// Maximum-length Japanese name must wrap inside its left-side panel without
-// colliding with the 100-layer rank plaque; place the crown after the final line.
+// Maximum-length Japanese names must remain a single large headline. They
+// compress horizontally rather than shrink their font or wrap.
 const longestName='あいうえおかきくけこさしすせそたちつてと';
-const longPaint=[];
+const longOps=[];
 const measuredCtx={...ctx,
  measureText(text){
-  const fontSize=Number(this.font?.match(/(\d+)px/)?.[1])||26;
+  const fontSize=Number(this.font?.match(/(\\d+)px/)?.[1])||68;
   return {width:[...text].length*fontSize};
  },
- fillText(...args){longPaint.push({text:args[0],x:args[1],y:args[2],maxWidth:args[3],font:this.font});}
+ save(){longOps.push(['save']);},restore(){longOps.push(['restore']);},
+ translate(...args){longOps.push(['translate',...args]);},
+ scale(...args){longOps.push(['scale',...args]);},
+ fillText(...args){longOps.push(['fillText',...args,this.font]);}
 };
-paintAdventurerCard({getContext:()=>measuredCtx}, {...data,name:longestName,rank:'オリハルコン級',rankLayer:100});
-const nameLines=longPaint.filter(({x,y})=>x===96&&y>260&&y<366);
-assert.ok(nameLines.length>=2&&nameLines.length<=3,'long Japanese name wraps over at most three rows');
-assert.equal(nameLines.map(x=>x.text).join(''),longestName,'every character of a long name remains present');
-assert.ok(nameLines.every(line=>line.x>=94&&line.x<330&&line.y<366),'all name lines remain inside left panel');
-assert.ok(nameLines.every(line=>measuredCtx.measureText.call({font:line.font},line.text).width<=186),'name rows fit beside crown');
-const longCrown=longPaint.find(x=>x.text==='👑'),longRank=longPaint.find(x=>x.text==='オリハルコン級');
-assert.ok(longCrown&&longCrown.x>96&&longCrown.x<330,'crown follows long name inside left panel');
-assert.equal(longCrown.y,nameLines.at(-1).y,'crown is beside the last name line');
-assert.ok(longRank&&longRank.x===362&&longRank.maxWidth===306,'longest rank stays in the right plaque');
-assert.ok(!longPaint.some(({text,y})=>text===longestName&&y>548),'long name is not placed in footer');
+const longCard={getContext:()=>measuredCtx};
+paintAdventurerCard(longCard,{...data,name:longestName,rank:'オリハルコン級',rankLayer:100});
+const longNameOps=longOps.filter(([op,value])=>op==='fillText'&&value===longestName);
+assert.equal(longNameOps.length,1,'20-character name stays on exactly one line');
+assert.match(longNameOps[0][4],/800 68px/,'maximum-length name keeps the large font');
+const longStretch=longOps.find(([op,value])=>op==='scale'&&typeof value==='number');
+assert.ok(longStretch&&Math.abs(longStretch[1]-228/(20*68))<1e-9,'20-character name is horizontally condensed to crowned name width');
+const longCrown=longOps.find(([op,value])=>op==='fillText'&&value==='👑');
+const longRank=longOps.find(([op,value])=>op==='fillText'&&value==='オリハルコン級');
+assert.ok(longCrown&&longCrown[2]===331&&longCrown[3]===340,'crown is to the right of long name');
+assert.ok(longRank&&longRank[2]===414&&longRank[4]===254,'maximum grade remains inside right plaque');
+assert.equal(longCard.width,1200,'card export width is unchanged');
+
+const shortOps=[];
+const shortCtx={...measuredCtx,
+ scale(...args){shortOps.push(['scale',...args]);},
+ fillText(...args){shortOps.push(['fillText',...args,this.font]);}
+};
+paintAdventurerCard({getContext:()=>shortCtx},{...data,name:'勇者',crowned:false});
+const shortStretch=shortOps.find(([op,value])=>op==='scale'&&typeof value==='number');
+assert.ok(shortStretch&&shortStretch[1]>1,'short names are stretched to fill the wider available space');
+assert.ok(!shortOps.some(([op,value])=>op==='fillText'&&value==='👑'),'no crown before the 100F boss clear');
 
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const profileHtml=html.slice(html.indexOf('<section id="home"'),html.indexOf('<section id="library"'));
