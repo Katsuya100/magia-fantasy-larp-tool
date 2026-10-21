@@ -33,6 +33,7 @@
 
 | データ | 出典・ライセンス | 変更・追加確認事項 |
 | --- | --- | --- |
+| ダンジョンアタック冒険者名NGワード | [MosasoM/inappropriate-words-ja](https://github.com/MosasoM/inappropriate-words-ja) の `Offensive.txt` と `Sexual.txt`、MIT、Copyright (c) 2020 K Hashimoto | 固定commit `e24de6e185135f92c3491ef61931c26905bd3b1f` の語を統合・重複排除。短い脅迫語を追加。短語の誤検出を避ける一致方式。MIT全文を同梱 |
 | profanity-list / en.txt | [dsojevic/profanity-list](https://github.com/dsojevic/profanity-list)、MIT | 英字だけの単語を禁止語Setへ加工。原文MIT表示を同梱 |
 | dictionary-word-list / SCOWL系一般英単語 | [nlile/dictionary-word-list](https://github.com/nlile/dictionary-word-list)、著作権・許諾表示を保持するSCOWLの条件 | 原文著作権表示を同梱。**この配布辞書のSCOWL生成バージョン・全source noticesとの対応は要確認**。SCOWL上流のfull copyrightも参考として別ファイルに保持 |
 | word-freq-top5000.csv | [filiph/english_words](https://github.com/filiph/english_words)、リポジトリはMIT、Copyright (c) 2017 Filip Hracek | 元アプリと同じ正規化・重複排除・順位付け。**CSVの上流頻度コーパスについて独立した利用条件がないか要確認** |
