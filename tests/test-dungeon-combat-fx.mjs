@@ -155,6 +155,14 @@ const arenaMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleArena"'),
 assert.equal((arenaMarkup.match(/class="affinity-hit"/g)||[]).length,2,'one hit FX per combatant');
 assert.match(cinematicCss,/data-affinity="resist"/,'resistance shield styling');
 assert.match(cinematicCss,/data-affinity="weak"/,'weakness burst styling');
+assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::before\{[\s\S]*?radial-gradient\(circle[\s\S]*?animation:weak-shockwave \.72s/,'weakness uses an expanding circular shockwave');
+assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::after\{[\s\S]*?animation:weak-damped-shudder \.72s/,'only WEAK uses damped vibration');
+const weakShake=cinematicCss.match(/@keyframes weak-damped-shudder\{([\s\S]*?)\n\}/)?.[1];
+assert.ok(weakShake,'damped WEAK keyframes exist');
+const alternatingOffsets=[...weakShake.matchAll(/translate\((-?(?:\d+\.?\d*|\.\d+))px,(-?(?:\d+\.?\d*|\.\d+))px\)/g)].map(x=>Number(x[1]));
+assert.deepEqual(alternatingOffsets,[-9,7,-5,3,-2,1,-.5],'vibration alternates and decays steadily to zero');
+assert.match(weakShake,/66%,86%\{opacity:1;transform:translate\(-50%,-50%\) rotate\(0deg\)/,'WEAK settles completely before fading');
+assert.match(cinematicCss,/@keyframes weak-shockwave\{[\s\S]*?scale\(\.2\)[\s\S]*?scale\(3\.2\)/,'shockwave expands as it fades');
 assert.match(cinematicCss,/\.affinity-hit::before\{\s*animation:affinity-ring \.72s/,'shield/burst lasts 720ms');
 assert.match(cinematicCss,/\.affinity-hit::after\{\s*animation:affinity-word \.72s/,'affinity text lasts 720ms');
 assert.match(cinematicCss,/\.combatant-fx::before\{\s*animation-duration:\.72s/,'impact glow matches affinity duration');
