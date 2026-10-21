@@ -22,7 +22,9 @@ const rng=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4
 const early=data.enemies.slice(0,95).filter(row=>row.boss_only==='0');
 const reference=G.parseCsv(readFileSync(new URL('./fixtures/dungeon-enemies-before-flavor.csv',import.meta.url),'utf8'))
  .slice(0,95).filter(row=>row.boss_only==='0');
-assert.deepEqual(early,reference,'early 76 ordinary foes must remain unchanged');
+for(let i=0;i<early.length;i++)for(const key of Object.keys(reference[i]))
+ if(!key.startsWith('resist_'))
+  assert.equal(early[i][key],reference[i][key],'early foe identity/abilities and core stats remain '+early[i].id+' '+key);
 let previousMinimum=0;
 for(let layer=51;layer<=100;layer++){
  const five=data.enemies.slice((layer-1)*5,layer*5);

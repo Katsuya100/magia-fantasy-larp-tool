@@ -4,11 +4,13 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 import {tuneEnemyRows} from '../scripts/dungeon-enemy-flavor-rules.mjs';
+import {nameAffinities} from '../scripts/dungeon-normal-enemy-affinities.mjs';
 
 // GitHub Actions (npm test) is the only required test execution environment.
 const csv=url=>G.parseCsv(readFileSync(new URL(url,import.meta.url),'utf8'));
 const old=csv('./fixtures/dungeon-enemies-before-flavor.csv');
 const now=csv('../assets/data/dungeon-enemies.csv');
+const priorNormals=csv('./fixtures/dungeon-enemies-pre-readable-affinities.csv');
 const attrs=G.ATTRS, keys=Object.keys(old[0]);
 assert.equal(old.length,500);
 assert.equal(now.length,500);
@@ -19,7 +21,17 @@ for(let i=0;i<500;i++){
   if(!['hp','mag','def','res',...attrs.map(attr=>'resist_'+attr)].includes(field))
    assert.equal(a[field],b[field],b.id+' stable '+field);
  }
- if(layer<20&&slot!==4)assert.deepEqual(a,b,b.id+' protected early regular encounter');
+ if(slot!==4){
+  const prior=priorNormals[i],tags=nameAffinities(a.name);
+  for(const field of keys)if(!field.startsWith('resist_'))assert.equal(a[field],prior[field],a.id+' stable non-elemental stat '+field);
+  const total=row=>attrs.reduce((s,k)=>s+Number(row['resist_'+k]),0);
+  assert.ok(Math.abs(total(a)-total(prior))<1e-8,'all-element budget unchanged per foe '+a.id);
+  if(!tags.length)assert.deepEqual(a,prior,'no explicit innate element '+a.id);
+  if(tags.length){
+   assert.ok(tags.every(k=>Number(a['resist_'+k])<=1),'named attribute must not be weakness '+a.id);
+   assert.ok(tags.some(k=>Number(a['resist_'+k])<1),'named attribute must include real resistance '+a.id);
+  }
+ }
  if(slot===4){
   const main=b.spells.split('|')[0].split(':')[1];
   if(layer===80){
@@ -39,16 +51,17 @@ for(let i=0;i<500;i++){
  if(Number(a.def)!==Number(b.def))assert.ok(Math.abs(a.def-b.def)<=3,'DEF bound '+b.id);
  for(const attr of attrs){
   const key='resist_'+attr,diff=Number(a[key])-Number(b[key]);
-  if(slot!==4)assert.ok(Math.abs(diff)<=.050000001,'regular resistance bound '+key+' '+b.id);
-  if(slot!==4&&Number(b[key])!==1)assert.equal(a[key],b[key],'normal foe primary/weakness preserved '+b.id);
+  if(slot!==4)assert.ok(Math.abs(diff)<=.4+1e-8,'regular resistance reallocation bound '+key+' '+b.id);
  }
 }
 const sum=(rows,key)=>rows.reduce((n,e)=>n+Number(e[key]),0);
 for(let layer=1;layer<=100;layer++){
  const start=(layer-1)*5,previous=old.slice(start,start+4),current=now.slice(start,start+4);
- for(const key of ['hp','mag','def','res',...attrs.map(attr=>'resist_'+attr)])
+ for(const key of ['hp','mag','def','res'])
   assert.ok(Math.abs(sum(previous,key)-sum(current,key))<1e-9,
-   'same four-encounter stat/resistance budget at layer '+layer+' '+key);
+   'same four-encounter stat budget at layer '+layer+' '+key);
+ assert.ok(Math.abs(attrs.reduce((s,k)=>s+sum(previous,'resist_'+k)-sum(current,'resist_'+k),0))<1e-8,
+  'total seven-element encounter budget must be conserved at layer '+layer);
 }
 configure({
  balance:csv('../assets/data/dungeon-balance.csv'),

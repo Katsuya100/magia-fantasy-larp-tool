@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,floor,level,num} from '../assets/js/dungeon-tuning.mjs';
+import {nameAffinities} from '../scripts/dungeon-normal-enemy-affinities.mjs';
 import {targetClearLevel,enemyForFight,shuffledLayerEnemyIds,legendaryDropRate,rarityWeights,rollRarity,rollCollection,bossUniqueCollection} from '../assets/js/dungeon-design.mjs';
 
 const get=async file=>G.parseCsv(await readFile(new URL('../assets/data/'+file,import.meta.url),'utf8'));
@@ -89,8 +90,18 @@ for(let layer=1;layer<=100;layer++){
    'one shared primary element per layer '+layer);
   assert.ok(spells[slot].every(spell=>spell.attribute===dominant||
    spell.attribute===spells[slot][2].attribute),'no off-theme spells in layer '+layer);
-  assert.equal(Number(party[slot]['resist_'+dominant]),slot===4?(layer===80?1.25:0.95):0.8,
-   'elemental resistance follows theme while keeping boss/normal tuning '+layer);
+  if(slot===4)assert.equal(Number(party[slot]['resist_'+dominant]),layer===80?1.25:0.95,
+   'boss primary resistance as designed '+layer);
+  else{
+   const tags=nameAffinities(party[slot].name);
+   if(tags.length){
+    assert.ok(tags.every(attr=>Number(party[slot]['resist_'+attr])<=1),
+     'normal foe name must not advertise an elemental weakness '+party[slot].name);
+    assert.ok(tags.some(attr=>Number(party[slot]['resist_'+attr])<1),
+     'normal foe name must predict actual elemental resistance '+party[slot].name);
+   }else assert.equal(Number(party[slot]['resist_'+dominant]),.8,
+    'unmarked ordinary foe retains original layer attribute '+layer);
+  }
  }
 }
 
