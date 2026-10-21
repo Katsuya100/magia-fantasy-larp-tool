@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
-import {durabilityArchetype,durabilityRanges,tuneDurability} from '../scripts/dungeon-enemy-durability-rules.mjs';
+import {durabilityArchetype,durabilityRanges,tuneDurability,curatedDurabilityFixes} from '../scripts/dungeon-enemy-durability-rules.mjs';
 import {alignNormalRows} from '../scripts/dungeon-normal-enemy-affinities.mjs';
 
 const load=x=>parseCsv(readFileSync(new URL(x,import.meta.url),'utf8'));
@@ -34,5 +34,23 @@ assert.ok(Object.keys(categories).length>=10,'named monsters use distinct profil
 assert.ok(changed.ordinary>=300&&changed.boss>=75,'both boss and normal survival anomalies addressed');
 const report=readFileSync(new URL('../docs/DUNGEON-ENEMY-DURABILITY-REVIEW.md',import.meta.url),'utf8');
 for(const row of now)assert.ok(report.includes('| '+row.name+' |'),'every named monster appears in the review table '+row.id);
+
+const approvedCuratedIds=["foe_l023_2","foe_l041_2","foe_l052_2","foe_l053_3","foe_l059_4","foe_l068_3","foe_l071_2","foe_l084_4","foe_l085_4","foe_l088_2","foe_l095_2","foe_l100_2"];
+const deferredMicroTuningIds=["foe_l002_2","foe_l005_3","foe_l010_4","foe_l011_2","foe_l017_2","foe_l019_4","foe_l021_2","foe_l021_3","foe_l022_4","boss_l022","foe_l026_4","foe_l029_2","foe_l031_4","foe_l040_2","foe_l042_4","foe_l050_4","foe_l051_4","foe_l054_4","foe_l057_2","foe_l061_4","foe_l065_2","foe_l070_4","foe_l081_4"];
+assert.deepEqual(Object.keys(curatedDurabilityFixes).sort(),approvedCuratedIds.slice().sort(),
+ 'only the 12 explicitly requested fixes are curated');
+const lookup=new Map(now.map(x=>[x.id,x]));
+const oldLookup=new Map(prior.map(x=>[x.id,x]));
+for(const id of approvedCuratedIds){
+ const row=lookup.get(id),expected=curatedDurabilityFixes[id];
+ assert.ok(row,'approved correction exists '+id);
+ for(const key of ['hp','def','res'])assert.equal(Number(row[key]),expected[key],'approved corrected stat '+id+' '+key);
+}
+for(const id of deferredMicroTuningIds){
+ assert.ok(lookup.has(id),'deferred review candidate exists '+id);
+ for(const key of ['hp','def','res'])
+  assert.equal(lookup.get(id)[key],oldLookup.get(id)[key],'deferred candidate must be unchanged '+id+' '+key);
+}
+
 console.log('DUNGEON_DURABILITY_STATIC '+JSON.stringify({count:500,changed,categories,playthroughRun:false}));
 console.log('PASS all 500 enemies classified; magic/MAG unchanged; no simulation');

@@ -110,7 +110,7 @@ foe_l022_3,双牙の猟犬,99,9,8,10,1,1,1,0.8,1,1,1.2,attack:storm:173|defense:
 foe_l022_4,影野犬,85,12,4,12,1.05,1,1,0.8,1,1.2,0.95,attack:storm:185|defense:storm:148|support:bolt:120|defense:storm:139|attack:bolt:167,10,41,0,relic_072
 boss_l022,双頭の魔狼,124,11,9,12,1,1,1,0.95,1.3,1,1.2,attack:storm:190|defense:storm:152|support:bolt:124|debuff:storm:143|attack:bolt:171,1,41,1,fang|relic_116|relic_boss_022
 foe_l023_1,ストーンジャイアント,105,8,9,7,1,1.2,1,1,0.8,1,1,attack:gravity:155|defense:gravity:124|support:law:101|defense:gravity:116|attack:law:140,10,43,0,relic_074|relic_117
-foe_l023_2,岩オーガ,92,10,5,8,1,1.2,1,1,0.8,1,1,attack:gravity:167|defense:gravity:134|support:law:109|defense:gravity:125|attack:law:150,10,43,0,relic_077|obsidian
+foe_l023_2,岩オーガ,105,10,9,8,1,1.2,1,1,0.8,1,1,attack:gravity:167|defense:gravity:134|support:law:109|defense:gravity:125|attack:law:150,10,43,0,relic_077|obsidian
 foe_l023_3,アイアンゴーレム,101,9,9,10,1,1.2,1,1,0.8,1,1,attack:gravity:179|defense:gravity:143|support:law:116|debuff:gravity:134|attack:law:161,10,43,0,relic_004|relic_104
 foe_l023_4,鉄ワーム,87,12,5,11,1,1.2,1,1,0.8,1,1,attack:gravity:191|defense:gravity:153|support:law:124|defense:gravity:143|attack:law:172,10,43,0,relic_079
 boss_l023,大地を砕く巨兵,126,12,11,12,1,1.2,1.3,1,0.95,1,1,attack:gravity:200|defense:gravity:160|support:law:130|debuff:gravity:150|attack:law:180,1,43,1,relic_044|relic_124|relic_boss_023
@@ -200,7 +200,7 @@ foe_l040_3,沼の水精,95,9,5,11,1.2,1,0.8,1,1,1,1,attack:aqua:161|defense:aqua
 foe_l040_4,毒大ガマ,85,12,5,11,1.2,1,0.8,1,1,1,0.95,attack:aqua:173|defense:aqua:138|support:storm:112|defense:aqua:130|attack:storm:156,10,72,0,relic_007|relic_107
 boss_l040,沼底の呪王,128,11,6,12,1.2,1.35,0.95,1,1,1,0.95,attack:aqua:170|defense:aqua:136|support:storm:111|debuff:aqua:128|attack:storm:153,1,72,1,relic_050|relic_130|relic_boss_040
 foe_l041_1,サイクロプス,105,8,9,7,1,1.2,1,1,0.8,1,1,attack:gravity:143|defense:gravity:114|support:law:93|defense:gravity:107|attack:law:129,10,73,0,relic_043|relic_136|relic_157
-foe_l041_2,赤オーガ,92,10,5,8,1,1.2,1,1,0.8,1,1,attack:gravity:155|defense:gravity:124|support:law:101|defense:gravity:116|attack:law:140,10,73,0,relic_088|relic_138
+foe_l041_2,赤オーガ,108,10,9,8,1,1.2,1,1,0.8,1,1,attack:gravity:155|defense:gravity:124|support:law:101|defense:gravity:116|attack:law:140,10,73,0,relic_088|relic_138
 foe_l041_3,ベルセルク,101,9,8,10,1,1.2,1,1,0.8,1,1,attack:gravity:167|defense:gravity:134|support:law:109|debuff:gravity:125|attack:law:150,10,73,0,relic_045|relic_139
 foe_l041_4,岩ゴブリン,87,12,5,11,1,1.2,1,1,0.8,1,1,attack:gravity:179|defense:gravity:143|support:law:116|defense:gravity:134|attack:law:161,10,73,0,copper_sigil|obsidian
 boss_l041,巨斧の破壊王,126,12,11,11,1,1.2,1.3,1,0.95,1,1,attack:gravity:180|defense:gravity:144|support:law:117|debuff:gravity:135|attack:law:162,1,73,1,relic_070|relic_110|relic_boss_041
@@ -255,13 +255,13 @@ foe_l051_3,黄金の使徒,95,9,5,11,1,1,1,1,1.2,0.8,1,attack:law:179|defense:la
 foe_l051_4,銀ノーム,83,12,4,12,1,1,1,1,1.2,0.8,1,attack:law:191|defense:law:153|support:gravity:124|defense:law:280|attack:gravity:172,10,89,0,relic_089|relic_148
 boss_l051,黄金の魔人,110,10,8,13,1,1,1,1,1.2,0.95,1.3,attack:law:180|defense:law:144|support:gravity:117|debuff:law:280|attack:gravity:162,1,89,1,relic_060|relic_135|relic_160|relic_boss_051
 foe_l052_1,ファイアリザード,85,8,5,7,0.8,1,1,1,1.05,1.2,1,attack:flame:137|defense:flame:110|support:storm:89|defense:flame:260|attack:storm:123,10,90,0,relic_087|relic_128|relic_168
-foe_l052_2,炎岩トカゲ,90,10,5,8,0.8,1,1,1,0.95,1.2,1,attack:flame:149|defense:flame:119|support:storm:97|defense:flame:267|attack:storm:134,10,90,0,relic_008|obsidian
+foe_l052_2,炎岩トカゲ,94,10,8,8,0.8,1,1,1,0.95,1.2,1,attack:flame:149|defense:flame:119|support:storm:97|defense:flame:267|attack:storm:134,10,90,0,relic_008|obsidian
 foe_l052_3,マグマワーム,99,9,8,10,0.8,1,1,1,1,1.2,1,attack:flame:161|defense:flame:129|support:storm:105|debuff:flame:260|attack:storm:145,10,90,0,relic_038|relic_138|relic_163|relic_174
 foe_l052_4,灼熱火スライム,85,12,4,12,0.8,1,1,1,1,1.2,1,attack:flame:173|defense:flame:138|support:storm:112|defense:flame:280|attack:storm:156,10,90,0,slime_core|relic_113
 boss_l052,熔岩城の城主,112,11,10,10,0.95,1,1.35,1,0.95,1.2,1,attack:flame:190|defense:flame:152|support:storm:124|debuff:flame:290|attack:storm:171,1,90,1,relic_027|obsidian|relic_152|relic_boss_052
 foe_l053_1,ウッドスピリット,82,8,4,11,1.05,1,0.8,1,0.95,1,1.2,attack:aqua:143|defense:aqua:114|support:storm:93|defense:aqua:270|attack:storm:129,10,92,0,relic_092|relic_136|relic_170
 foe_l053_2,森ドライアド,93,10,6,9,1,1,0.8,1,1,1,1.2,attack:aqua:155|defense:aqua:124|support:storm:101|defense:aqua:276|attack:storm:140,10,92,0,relic_059|relic_119
-foe_l053_3,フェアリードラゴン,101,9,9,10,1,1,0.8,1,1,1,1.2,attack:aqua:167|defense:aqua:134|support:storm:109|debuff:aqua:270|attack:storm:150,10,92,0,relic_093|relic_137|relic_172|relic_175
+foe_l053_3,フェアリードラゴン,88,9,5,12,1,1,0.8,1,1,1,1.2,attack:aqua:167|defense:aqua:134|support:storm:109|debuff:aqua:270|attack:storm:150,10,92,0,relic_093|relic_137|relic_172|relic_175
 foe_l053_4,翡翠マンドラゴラ,93,12,6,12,1,1,0.8,1,1,1,1.2,attack:aqua:179|defense:aqua:143|support:storm:116|defense:aqua:289|attack:storm:161,10,92,0,relic_031|relic_131
 boss_l053,森羅の守護精霊,128,12,8,12,1,1.3,0.95,1,1,1,1.2,attack:aqua:200|defense:aqua:160|support:storm:130|debuff:aqua:300|attack:storm:180,1,92,1,relic_043|relic_143|relic_168|relic_boss_053
 foe_l054_1,キマイラ,85,8,5,7,1.2,1,1,0.8,1,1,1.05,attack:storm:149|defense:storm:119|support:bolt:97|debuff:storm:281|attack:bolt:134,10,93,0,relic_095|relic_140|lightning_crystal
@@ -292,7 +292,7 @@ boss_l058,深海の妖姫,120,11,8,12,1,1.3,0.95,1,1.2,1,1,attack:aqua:200|defen
 foe_l059_1,デュラハン,92,8,8,7,1,1,1,1,1.05,1.2,0.8,attack:chaos:155|defense:chaos:124|support:gravity:101|defense:chaos:332|attack:gravity:140,10,100,0,relic_020|relic_109|relic_159
 foe_l059_2,闇リビングアーマー,92,10,8,8,1,1,1,1,0.95,1.2,0.8,attack:chaos:167|defense:chaos:134|support:gravity:109|defense:chaos:338|attack:gravity:150,10,100,0,relic_051|relic_126
 foe_l059_3,ブラックレイス,100,9,5,10,1,1,1,1,1,1.2,0.8,attack:chaos:179|defense:chaos:143|support:gravity:116|debuff:chaos:332|attack:gravity:161,10,100,0,relic_022|relic_111|relic_161|relic_180
-foe_l059_4,鉄スケルトン兵,87,12,4,12,1,1,1,1,1,1.2,0.8,attack:chaos:191|defense:chaos:153|support:gravity:124|defense:chaos:351|attack:gravity:172,10,100,0,bone|relic_146
+foe_l059_4,鉄スケルトン兵,96,12,9,10,1,1,1,1,1,1.2,0.8,attack:chaos:191|defense:chaos:153|support:gravity:124|defense:chaos:351|attack:gravity:172,10,100,0,bone|relic_146
 boss_l059,闇を纏う剣聖,114,12,10,13,1,1,1,1,1,1.5,0.95,attack:chaos:210|defense:chaos:168|support:gravity:137|debuff:chaos:362|attack:gravity:189,1,100,1,relic_033|relic_114|relic_164|relic_boss_059
 foe_l060_1,デーモン,75,8,4,10,1.05,1,1.05,0.8,1,1.2,0.95,attack:storm:137|defense:storm:110|support:bolt:89|defense:storm:342|attack:bolt:123,10,102,0,relic_023|relic_115|relic_162
 foe_l060_2,毒大グモ,85,10,5,8,1.05,1,1,0.8,1,1.2,0.95,attack:storm:149|defense:storm:119|support:bolt:97|defense:storm:352|attack:bolt:134,10,102,0,relic_057|relic_132
@@ -336,7 +336,7 @@ foe_l067_4,灼熱スライム,79,12,4,12,0.8,1,1,1,1,1,1.2,attack:flame:191|defe
 boss_l067,紅玉の大魔導師,108,11,8,13,0.95,1,1.3,1,1,1,1.2,attack:flame:190|defense:flame:152|support:storm:124|debuff:flame:443|attack:storm:171,1,111,1,relic_066|ancient_scroll|relic_162|relic_boss_067
 foe_l068_1,ホーンドデビル,76,8,4,10,1.2,1,1,1.05,1.05,1,0.8,attack:chaos:137|defense:chaos:110|support:gravity:89|debuff:chaos:423|attack:gravity:123,10,113,0,relic_067|relic_143|relic_164
 foe_l068_2,影魔導人形,94,10,9,8,1.2,1,1,1,1,1,0.8,attack:chaos:149|defense:chaos:119|support:gravity:97|defense:chaos:429|attack:gravity:134,10,113,0,relic_044|relic_144|relic_164
-foe_l068_3,リビングシールド,95,9,9,10,1.2,1,1,1,0.95,1,0.8,attack:chaos:161|defense:chaos:129|support:gravity:105|defense:chaos:434|attack:gravity:145,10,113,0,relic_068|relic_147|relic_166|relic_177
+foe_l068_3,リビングシールド,99,9,11,10,1.2,1,1,1,0.95,1,0.8,attack:chaos:161|defense:chaos:129|support:gravity:105|defense:chaos:434|attack:gravity:145,10,113,0,relic_068|relic_147|relic_166|relic_177
 foe_l068_4,霧骸骨剣士,81,12,4,12,1.2,1,1,0.95,1,1,0.8,attack:chaos:173|defense:chaos:138|support:gravity:112|defense:chaos:440|attack:gravity:156,10,113,0,bone|relic_111|relic_172
 boss_l068,黄昏の処刑騎士,118,12,10,10,1.2,1,1,1,1,1.3,0.95,attack:chaos:200|defense:chaos:160|support:gravity:130|debuff:chaos:453|attack:gravity:180,1,113,1,copper_sigil|relic_141|relic_161|relic_boss_068
 foe_l069_1,ネザーロード,78,8,4,10,1,1.2,1,1,1.05,1,0.8,attack:chaos:143|defense:chaos:114|support:gravity:93|defense:chaos:434|attack:gravity:129,10,114,0,relic_070|relic_148|relic_167
@@ -350,7 +350,7 @@ foe_l070_3,背徳の聖騎士,99,9,9,10,1,1,1.2,1,1,0.8,1,attack:law:173|defense
 foe_l070_4,金ピクシー,85,12,4,12,1,1,1.2,1,1,0.8,1,attack:law:185|defense:law:148|support:gravity:120|defense:law:474|attack:gravity:167,10,115,0,relic_073|relic_105|relic_170|relic_179
 boss_l070,聖域の堕天使,100,11,8,12,1,1,1.2,1,1,0.95,1.3,attack:law:170|defense:law:136|support:gravity:111|debuff:law:474|attack:gravity:153,1,115,1,relic_003|relic_128|relic_153|relic_boss_070
 foe_l071_1,ドラゴニュート,101,8,8,9,1,1,1,1.2,0.8,1,1,attack:gravity:155|defense:gravity:124|support:law:101|defense:gravity:454|attack:law:140,10,117,0,relic_080|relic_107|relic_108|labyrinth_key
-foe_l071_2,鉄リザードマン,92,10,5,8,1,1,1,1.2,0.8,1,1,attack:gravity:167|defense:gravity:134|support:law:109|defense:gravity:464|attack:law:150,10,117,0,relic_046|relic_146|relic_171|relic_179
+foe_l071_2,鉄リザードマン,98,10,9,8,1,1,1,1.2,0.8,1,1,attack:gravity:167|defense:gravity:134|support:law:109|defense:gravity:464|attack:law:150,10,117,0,relic_046|relic_146|relic_171|relic_179
 foe_l071_3,ワイバーンライダー,101,9,9,10,1,1,1,0.8,1.2,1,1,attack:gravity:179|defense:gravity:143|support:law:116|debuff:gravity:454|attack:law:161,10,117,0,relic_081|relic_112|relic_150
 foe_l071_4,岩飛びトカゲ,87,12,4,11,1.05,1,1.2,0.95,0.8,1,1,attack:gravity:191|defense:gravity:153|support:law:124|defense:gravity:484|attack:law:172,10,117,0,relic_040|moon_scale|relic_154|relic_177
 boss_l071,鉄壁の竜騎将,124,12,10,13,1,1,1.3,1.2,0.95,1,1,attack:gravity:180|defense:gravity:144|support:law:117|debuff:gravity:484|attack:law:162,1,117,1,relic_071|moon_scale|relic_171|relic_boss_071
@@ -417,12 +417,12 @@ boss_l083,天喰らう巨神,126,12,11,12,1,1.2,1.3,1,0.95,1,1,attack:gravity:20
 foe_l084_1,天罰の使徒,76,8,4,11,1,1,1.2,1,1,0.8,1.05,attack:law:137|defense:law:110|support:gravity:89|defense:law:587|attack:gravity:123,10,133,0,relic_078|relic_103|relic_128|relic_153
 foe_l084_2,冥府の裁判官,82,10,5,10,1,1,1.2,1,1,0.8,0.95,attack:law:149|defense:law:119|support:gravity:97|debuff:law:587|attack:gravity:134,10,133,0,relic_085|relic_126|relic_151|relic_176
 foe_l084_3,裁きの天秤兵,94,9,9,10,1,1,1.2,1,1,0.8,1,attack:law:161|defense:law:129|support:gravity:105|defense:law:597|attack:gravity:145,10,133,0,relic_003|relic_124|relic_164
-foe_l084_4,亡者の執行人,77,12,4,12,1.05,1,1.2,1,1,0.8,0.95,attack:law:173|defense:law:138|support:gravity:112|defense:law:602|attack:gravity:156,10,133,0,relic_020|relic_137|labyrinth_key|relic_174
+foe_l084_4,亡者の執行人,98,12,9,10,1.05,1,1.2,1,1,0.8,0.95,attack:law:173|defense:law:138|support:gravity:112|defense:law:602|attack:gravity:156,10,133,0,relic_020|relic_137|labyrinth_key|relic_174
 boss_l084,冥界の裁定者,101,10,6,12,1,1,1.2,1,1,0.95,1.3,attack:law:210|defense:law:168|support:gravity:137|debuff:law:617|attack:gravity:189,1,133,1,relic_026|relic_126|relic_160|relic_185|relic_boss_084
 foe_l085_1,無明の番人,92,8,8,7,1,1,1,1.2,1,1,0.8,attack:chaos:143|defense:chaos:114|support:gravity:93|defense:chaos:597|attack:gravity:129,10,134,0,relic_036|relic_116|relic_136|labyrinth_key|relic_176
 foe_l085_2,漆黒スペルイーター,84,10,5,11,1,1,1,1.2,1,1,0.8,attack:chaos:155|defense:chaos:124|support:gravity:101|debuff:chaos:597|attack:gravity:140,10,134,0,relic_094|relic_146|relic_169|relic_177
 foe_l085_3,霊廟の司祭,93,9,5,11,1,1,1,1.2,1,1,0.8,attack:chaos:167|defense:chaos:134|support:gravity:109|debuff:chaos:627|attack:gravity:150,10,134,0,relic_047|relic_147|relic_167|relic_176
-foe_l085_4,堕天の護衛,79,12,4,12,1,1,1,1.2,1,1,0.8,attack:chaos:179|defense:chaos:143|support:gravity:116|defense:chaos:627|attack:gravity:161,10,134,0,relic_028|relic_103|relic_156|relic_178
+foe_l085_4,堕天の護衛,99,12,9,10,1,1,1,1.2,1,1,0.8,attack:chaos:179|defense:chaos:143|support:gravity:116|defense:chaos:627|attack:gravity:161,10,134,0,relic_028|relic_103|relic_156|relic_178
 boss_l085,霊廟の堕天王,104,11,8,12,1,1,1,1.2,1,1.3,0.95,attack:chaos:170|defense:chaos:136|support:gravity:111|defense:chaos:620|attack:gravity:153,1,134,1,relic_068|relic_118|relic_168|relic_178|forgotten_crown|relic_boss_085
 foe_l086_1,月蝕の竜騎兵,101,8,8,9,1,0.8,1,1,1.2,1,1.05,attack:bolt:149|defense:bolt:119|support:storm:97|defense:bolt:607|attack:storm:134,10,135,0,relic_042|relic_117|relic_142|relic_167|relic_180
 foe_l086_2,虚無の兵士,86,10,5,10,1,0.8,1,1,1.2,1,0.95,attack:bolt:161|defense:bolt:129|support:storm:105|defense:bolt:617|attack:storm:145,10,135,0,relic_084|relic_124|relic_157|relic_184
@@ -435,7 +435,7 @@ foe_l087_3,骸骨の魔導皇,97,9,5,10,1,1,1,1,1,1.2,0.8,attack:chaos:179|defen
 foe_l087_4,幽界の巨人,105,12,9,10,1,1,1,1,0.95,1.2,0.8,attack:chaos:191|defense:chaos:153|support:gravity:124|defense:chaos:647|attack:gravity:172,10,136,0,relic_072|relic_122|relic_172|relic_176
 boss_l087,不滅の骸帝,112,10,8,13,1,1,1,1,1,1.5,0.95,attack:chaos:190|defense:chaos:152|support:gravity:124|debuff:chaos:647|attack:gravity:171,1,136,1,relic_025|relic_102|relic_170|relic_174|relic_boss_087
 foe_l088_1,星霜の魔人,80,8,4,11,1,1,0.95,1,1,0.8,1.2,attack:law:137|defense:law:110|support:gravity:89|debuff:law:628|attack:gravity:123,10,137,0,relic_100|relic_125|relic_120|relic_150|relic_175
-foe_l088_2,神域の聖獣,90,10,5,8,1,1,1.05,1,1,0.8,1.2,attack:law:149|defense:law:119|support:gravity:97|defense:law:634|attack:gravity:134,10,137,0,relic_039|relic_108|relic_158|relic_183|relic_187
+foe_l088_2,神域の聖獣,111,10,8,11,1,1,1.05,1,1,0.8,1.2,attack:law:149|defense:law:119|support:gravity:97|defense:law:634|attack:gravity:134,10,137,0,relic_039|relic_108|relic_158|relic_183|relic_187
 foe_l088_3,悠久の守護竜,101,9,9,10,1,1,1,1,1,0.8,1.2,attack:law:161|defense:law:129|support:gravity:105|defense:law:639|attack:gravity:145,10,137,0,relic_009|relic_109|relic_169|relic_180
 foe_l088_4,神木の霊獣,93,12,6,12,1.05,1,1,1,0.95,0.8,1.2,attack:law:173|defense:law:138|support:gravity:112|defense:law:645|attack:gravity:156,10,137,0,relic_041|relic_141|relic_166|relic_177
 boss_l088,無窮の神獣,116,11,9,10,1,1,1,1,1,0.95,1.5,attack:law:200|defense:law:160|support:gravity:130|debuff:law:658|attack:gravity:180,1,137,1,relic_030|relic_130|relic_155|relic_180|relic_boss_088
@@ -470,7 +470,7 @@ foe_l094_3,黄泉ペガサス,99,9,5,10,1,1,1.2,0.95,1,0.8,1,attack:law:173|defe
 foe_l094_4,転生の番兵,92,12,8,11,1,1,1.2,1,1,0.8,1,attack:law:185|defense:law:148|support:gravity:120|defense:law:707|attack:gravity:167,10,144,0,relic_064|relic_124|labyrinth_key|relic_184
 boss_l094,輪廻の執行者,105,11,8,12,1,1,1.2,1,1,0.95,1.3,attack:law:210|defense:law:168|support:gravity:137|debuff:law:719|attack:gravity:189,1,144,1,relic_058|relic_138|relic_152|relic_179|relic_boss_094
 foe_l095_1,因果の剣兵,92,8,8,7,1,1,1,1,1,0.8,1.2,attack:law:155|defense:law:124|support:gravity:101|defense:law:699|attack:gravity:140,10,145,0,relic_084|relic_139|relic_145|relic_154|relic_182
-foe_l095_2,断絶の剣鬼,92,10,5,8,1,1,1,1,1,0.8,1.2,attack:law:167|defense:law:134|support:gravity:109|defense:law:709|attack:gravity:150,10,145,0,relic_063|relic_148|relic_156|relic_183|relic_188
+foe_l095_2,断絶の剣鬼,104,10,8,8,1,1,1,1,1,0.8,1.2,attack:law:167|defense:law:134|support:gravity:109|defense:law:709|attack:gravity:150,10,145,0,relic_063|relic_148|relic_156|relic_183|relic_188
 foe_l095_3,蒼天の魔将,101,9,8,10,1,1,1,1,1,0.8,1.2,attack:law:179|defense:law:143|support:gravity:116|defense:law:719|attack:gravity:161,10,145,0,relic_053|relic_128|relic_153|relic_178
 foe_l095_4,業を断つ剣霊,92,12,8,11,1,1,1,1,1,0.8,1.2,attack:law:191|defense:law:153|support:gravity:124|debuff:law:729|attack:gravity:172,10,145,0,relic_051|relic_101|relic_151|relic_176
 boss_l095,因果を断つ剣皇,112,12,10,13,1,1,1,1,1,0.95,1.5,attack:law:170|defense:law:136|support:gravity:111|debuff:law:699|attack:gravity:153,1,145,1,relic_066|relic_102|relic_158|relic_174|relic_boss_095
@@ -495,7 +495,7 @@ foe_l099_3,腐朽の神獣,97,9,6,10,1.05,1.05,1,1.2,0.8,0.95,0.95,attack:gravit
 foe_l099_4,黒葉の守護兵,92,12,8,11,1,1,1,1.2,0.8,0.95,1,attack:gravity:191|defense:gravity:153|support:law:124|defense:gravity:759|attack:law:172,10,149,0,relic_069|relic_109|relic_169|relic_184
 boss_l099,世界樹の終末竜,124,10,10,13,1,1,1.3,1.2,0.95,1,1,attack:gravity:210|defense:gravity:168|support:law:137|debuff:gravity:770|attack:law:189,1,149,1,relic_016|relic_116|relic_159|relic_179|relic_186|relic_boss_099
 foe_l100_1,月輪の魔鳥,80,8,4,7,1,1,1,0.95,1.2,1,0.8,attack:chaos:137|defense:chaos:110|support:gravity:89|defense:chaos:750|attack:gravity:123,10,150,0,relic_042|relic_142|relic_140|relic_165|relic_182|relic_187
-foe_l100_2,破滅の人狼,90,10,5,8,1,1,1,1.05,1.2,1,0.8,attack:chaos:149|defense:chaos:119|support:gravity:97|defense:chaos:760|attack:gravity:134,10,150,0,fang|relic_123|lightning_crystal|relic_178
+foe_l100_2,破滅の人狼,108,10,8,8,1,1,1,1.05,1.2,1,0.8,attack:chaos:149|defense:chaos:119|support:gravity:97|defense:chaos:760|attack:gravity:134,10,150,0,fang|relic_123|lightning_crystal|relic_178
 foe_l100_3,終焉リビングソード,99,9,9,10,1.05,1.2,1,1,0.95,1,0.8,attack:chaos:161|defense:chaos:129|support:gravity:105|defense:chaos:770|attack:gravity:145,10,150,0,relic_083|relic_127|aqua_pearl|relic_183|relic_188
 foe_l100_4,永劫の魔将,85,12,5,11,1,1,1,1,1.2,1,0.8,attack:chaos:173|defense:chaos:138|support:gravity:112|debuff:chaos:780|attack:gravity:156,10,150,0,relic_030|relic_105|relic_155|relic_180
 boss_l100,永劫の大魔王,101,13,7,12,1,1,1,1,1.2,1.3,0.95,attack:chaos:170|defense:chaos:136|support:gravity:111|debuff:chaos:750|attack:gravity:153,1,150,1,relic_030|relic_130|relic_150|sealed_eye|forgotten_crown|relic_boss_100
