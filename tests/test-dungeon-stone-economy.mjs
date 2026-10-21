@@ -17,6 +17,7 @@ assert.equal(targetClearLevel(100),150);
 assert.equal(magicStoneDropChance(150,100),.3,'at-level floor 100 is 30% per fight');
 assert.equal(magicStoneDropChance(150,101),.3,'level-151 enemies keep the capped hero eligible for full stone drops');
 assert.equal(magicStoneDropChance(150,91),.3*(.5**9),'overlevel floor 91 strongly suppresses drops');
+assert.equal(magicStoneDropChance(150,91,true),.3,'first-time floor 91 has no overlevel stone penalty');
 
 for(const seed of [1,11,1234,20261019]){
  const p=simulateProgression(seed);
