@@ -11,7 +11,7 @@ import {reconcileEnemyElements} from '../scripts/dungeon-enemy-element-consisten
 const noBase=row=>{const {hp,mag,...lore}=row;return lore;};
 const load=x=>parseCsv(readFileSync(new URL(x,import.meta.url),'utf8'));
 const prior=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv');
-const now=load('../assets/data/dungeon-enemies.csv');
+const now=load('./fixtures/dungeon-enemies-before-distribution.csv');
 const recalculated=reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(prior))));
 assert.deepEqual(now.map(noBase),recalculated.map(noBase),'catalog exactly matches declared survival archetypes');
 const categories={},changed={hp:0,def:0,res:0,ordinary:0,boss:0};

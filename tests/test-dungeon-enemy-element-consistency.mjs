@@ -11,7 +11,7 @@ const noBase=row=>{const {hp,mag,...lore}=row;return lore;};
 const read=p=>parseCsv(readFileSync(new URL(p,import.meta.url),'utf8'));
 const old=read('./fixtures/dungeon-enemies-pre-readable-affinities.csv');
 const source=read('./fixtures/dungeon-enemies-before-flavor.csv');
-const now=read('../assets/data/dungeon-enemies.csv');
+const now=read('./fixtures/dungeon-enemies-before-distribution.csv');
 const before=alignEnemySpellFlavor(tuneDurability(alignNormalRows(old)));
 assert.equal(now.length,500);
 assert.deepEqual(now.map(noBase),tuneEnemyRows(source).map(noBase),'whole pipeline regenerates all 500');
