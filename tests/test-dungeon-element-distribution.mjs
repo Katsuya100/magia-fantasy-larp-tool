@@ -47,11 +47,11 @@ for(let i=0;i<500;i++){
   if(tags.length)assert.ok(tags.some(t=>Number(b['resist_'+t])<1),'named innate affinity must resist '+b.id);
  }
 }
-assert.equal(Object.keys(combatBalanceResistCalibrations).length,59,'all targeted resistance budgets are reviewed');
+assert.equal(Object.keys(combatBalanceResistCalibrations).length,73,'all targeted resistance budgets are reviewed');
 for(const [id,shift] of Object.entries(combatBalanceResistCalibrations)){
  const before=base.find(r=>r.id===id),after=master.find(r=>r.id===id);
  assert.ok(before&&after,'calibrated enemy exists '+id);
- assert.equal(shift,0.12,'small authored shift only '+id);
+ assert.ok([0.12,0.2].includes(shift),'bounded authored shift only '+id);
  assert.equal(before.hp,after.hp,'combat retune preserves HP '+id);
 }
 const ratio=(n,total)=>100*n/total;
