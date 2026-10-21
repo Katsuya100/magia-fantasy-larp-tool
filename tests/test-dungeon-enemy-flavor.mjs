@@ -22,7 +22,10 @@ for(let i=0;i<500;i++){
  if(layer<20&&slot!==4)assert.deepEqual(a,b,b.id+' protected early regular encounter');
  if(slot===4){
   const main=b.spells.split('|')[0].split(':')[1];
-  assert.equal(Number(a['resist_'+main]),.95,'boss has genuine resistance to own attack element '+b.id);
+  if(layer===80){
+   assert.equal(a.resist_chaos,'0.95','eclipse sovereign must resist chaos');
+   assert.equal(a.resist_gravity,b.resist_gravity,'non-earth celestial sovereign keeps gravity counterplay');
+  }else assert.equal(Number(a['resist_'+main]),.95,'boss has genuine resistance to own attack element '+b.id);
   assert.ok(Math.min(...attrs.map(k=>Number(a['resist_'+k])))<1,'boss has identity resistance '+b.id);
   assert.ok(Math.max(...attrs.map(k=>Number(a['resist_'+k])))>=1.25,'boss keeps explicit elemental weakness '+b.id);
   assert.ok(Number(a.hp)>=65,'boss HP never becomes trivial '+b.id);
