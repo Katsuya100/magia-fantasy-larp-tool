@@ -145,7 +145,7 @@ const arenaMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleArena"'),
 assert.equal((arenaMarkup.match(/class="affinity-hit"/g)||[]).length,2,'one hit FX per combatant');
 assert.match(cinematicCss,/data-affinity="resist"/,'resistance shield styling');
 assert.match(cinematicCss,/data-affinity="weak"/,'weakness burst styling');
-assert.match(cinematicCss,/@media\\(prefers-reduced-motion:reduce\\)\\{[\\s\\S]*?affinity-hit::before/,'motion-safe affinity');
+assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?affinity-hit::before/,'motion-safe affinity');
 for(const name of ['tier-seal','tier-halo','tier-shards']){
  assert.equal((arenaMarkup.match(new RegExp('class="'+name+'"','g'))||[]).length,4,
   'each decorative tier layer exists for both combatants and both projectiles: '+name);
@@ -160,9 +160,9 @@ const liveRelease=cinematicPage.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 assert.ok(liveRelease,'the release marker exists in HTML');
 assert.ok(appSource.includes('dungeon-combat-fx.mjs?v='+liveRelease),'FX JavaScript import matches the release');
 assert.match(appSource,/projectile\.dataset\.tier=actor\.dataset\.tier/,'attack projectiles use caster investment');
-assert.match(appSource,/target\\.dataset\\.affinity='none'/,'affinity resets');
-assert.match(appSource,/victim\\.dataset\\.affinity=attackHitAffinity\\(step\\)/,'attack uses true resistance');
-assert.match(appSource,/victim\\.dataset\\.incomingAttribute=/,'dual casts keep the incoming attribute independent');
+assert.match(appSource,/target\.dataset\.affinity='none'/,'affinity resets');
+assert.match(appSource,/victim\.dataset\.affinity=attackHitAffinity\(step\)/,'attack uses true resistance');
+assert.match(appSource,/victim\.dataset\.incomingAttribute=/,'dual casts keep the incoming attribute independent');
 assert.match(cinematicCss,/--impact-color/,'incoming projectile controls impact hue');
 assert.match(appSource,/victim\.dataset\.incomingTier=String\(magicEffectTier\(step\.upgradeLevel,step\.role\)\)/,
  'incoming force comes from opponent cast, not victim investment');
