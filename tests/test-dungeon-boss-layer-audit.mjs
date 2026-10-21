@@ -9,10 +9,10 @@ const floorStats=Array.from({length:10},(_,i)=>({layer:i+71,old:[],now:[],mpOld:
 for(let i=0;i<samples;i++){
  const seed=17011+i*13,previous=deepRun(seed,band,true,original),now=deepRun(seed,band,true);
  for(const [res,k] of [[previous,'old'],[now,'now']]){
-  for(const point of res.checkpoints){
+  for(const point of res.layerStats.filter(x=>x.cleared)){
    const s=floorStats[point.layer-71];
-   s[k].push(point.hp);s[k==='old'?'mpOld':'mpNow'].push(point.mp);
-   s[k==='old'?'roundsOld':'roundsNow'].push(point.rounds);
+   s[k].push(point.endHp/res.maxHp*100);s[k==='old'?'mpOld':'mpNow'].push(point.endMp/res.maxMp*100);
+   // Layer end HP/MP is recorded after victory MP restoration.
   }
  }
 }
