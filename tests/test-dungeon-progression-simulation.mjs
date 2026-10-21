@@ -2,6 +2,8 @@
 // Only the actual tenth-layer checkpoint can fully restore HP/MP. No XP is
 // applied while the expedition is underway; stone rewards are banked on return.
 import assert from 'node:assert/strict';
+import {resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
@@ -174,6 +176,9 @@ export function summarize(config,samples=32){
   avgSpentStones:avg(runs.map(x=>x.spentStones)),
   lossByFight:Object.entries(runs.filter(x=>!x.win).reduce((a,x)=>{const f=x.clear+1;a[f]=(a[f]||0)+1;return a;},{}))};
 }
+// Only assert/report when the progression suite is run directly. The 128-seed
+// balance benchmark imports simulate() without shadowing its own full report.
+if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)){
 for(const config of scenarios)console.log('PROGRESSION_SIM '+JSON.stringify(summarize(config)));
 // Every planned band is checked using the level intended for its final boss.
 for(const config of scenarios.filter(x=>x.toLayer>=10)){
@@ -209,3 +214,5 @@ assert.ok(ledger.levels.every(x=>x.to>x.from),'level ups require accumulated XP'
 assert.ok(ledger.levels.every((x,i)=>i===0||x.stones>=ledger.levels[i-1].stones),'stone bank is never debited before upgrades');
 assert.ok(ledger.returns.every((x,i)=>i===0||x.level>=ledger.returns[i-1].level),'return-only levels are monotonic');
 console.log('PASS seeded full combat with resource carryover, tenth-layer HP/MP recovery, saved reward ledger and permanent stone upgrades');
+
+}
