@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
-import {openStore,saveProfile,saveHeirName,putCircle,readDungeonSnapshot,getProfile,allCircles} from '../assets/js/dungeon-store.mjs';
+import {openStore,saveProfile,saveHeirName,putCircle,readDungeonSnapshot,getProfile,allCircles,saveProfileWithCircles} from '../assets/js/dungeon-store.mjs';
 import {verifyLocalSnapshot,digestPhoto,recordFingerprint,profilePhotoEvidence,quickFingerprint} from '../assets/js/dungeon-cloud-integrity.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {createSuccessorProfile} from '../assets/js/dungeon-permadeath.mjs';
@@ -141,3 +141,24 @@ assert.equal(failingFactory.databases.get('magia-dungeon-v1').get('circles').siz
 assert.ok(failingSettings.get('profile').legacies[0].circles[0].image instanceof Blob,'aborted migration leaves original embedded photos available');
 assert.equal(failingSettings.get('integrity').savedAt,1000);
 console.log('PASS old on-disk nested Blob, nested loot, legacy Drive backup migration and atomic rollback');
+
+
+// Analysis/reveal metadata and deleting a registered circle must not split a
+// logical save into separate image and profile transactions.
+const editFactory=fakeIndexedDB(),editDb=await openStore(editFactory);
+await saveProfile(editDb,{name:'編集者',level:4,inventory:[],slots:['edit-photo'],magicStones:2});
+await putCircle(editDb,{id:'edit-photo',image:photo,analysis:{power:10},revealed:false});
+const editAt=editFactory.transactions.length;
+await saveProfile(editDb,{...await getProfile(editDb),magicOverrides:{'edit-photo':{id:'edit-photo',analysis:{power:11},revealed:true}}});
+assert.equal(editFactory.transactions.slice(editAt).filter(tx=>tx.mode==='readwrite').length,1);
+assert.deepEqual(editFactory.transactions.slice(editAt).flatMap(tx=>tx.writes).filter(w=>w.store==='circles'),[]);
+assert.equal((await allCircles(editDb))[0].analysis.power,11);
+assert.equal((await allCircles(editDb))[0].revealed,true);
+const deleteAt=editFactory.transactions.length;
+const nextEdit={...await getProfile(editDb),slots:[null],magicOverrides:{},magicStones:2};
+await saveProfileWithCircles(editDb,nextEdit,[],['edit-photo']);
+assert.equal(editFactory.transactions.slice(deleteAt).filter(tx=>tx.mode==='readwrite').length,1,'removal saves ownership and photo deletion in one transaction');
+assert.equal((await allCircles(editDb)).length,0);
+assert.equal((await readDungeonSnapshot(editDb)).profile.slots[0],null);
+assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(editDb))).status,'valid');
+console.log('PASS reveal metadata and registered-photo deletion use one atomic transaction');
