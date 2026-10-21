@@ -86,10 +86,15 @@ for(let layer=1;layer<=100;layer++){
  const dominant=spells[4][0].attribute;
  for(let slot=0;slot<5;slot++){
   assert.equal(spells[slot].length,5,'five spells for layer '+layer);
-  assert.equal(spells[slot].filter(spell=>spell.attribute===dominant).length,3,
-   'one shared primary element per layer '+layer);
-  assert.ok(spells[slot].every(spell=>spell.attribute===dominant||
-   spell.attribute===spells[slot][2].attribute),'no off-theme spells in layer '+layer);
+  const named=slot===4?[]:nameAffinities(party[slot].name);
+  const primaryAttack=slot===4?dominant:named[0]??dominant;
+  assert.equal(spells[slot][0].attribute,primaryAttack,
+   'first offensive spell matches the monster\'s visible innate element '+layer);
+  assert.equal(spells[slot].filter((spell,i)=>i!==0&&spell.attribute===dominant).length,2,
+   'four remaining spells stay in the layer magic school '+layer);
+  assert.ok(spells[slot].every((spell,i)=>i===0||
+   spell.attribute===dominant||spell.attribute===spells[slot][2].attribute),
+   'non-primary spells retain the approved layer spell roles '+layer);
   if(slot===4)assert.equal(Number(party[slot]['resist_'+dominant]),layer===80?1.25:0.95,
    'boss primary resistance as designed '+layer);
   else{
