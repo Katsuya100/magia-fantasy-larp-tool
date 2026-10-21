@@ -7,7 +7,7 @@ import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarity
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261021.11';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261021.11';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,combatTunedEnemy,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261021.11';
+import {enemyForFight,combatTunedEnemy,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261021.12';
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261021.11';
 import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261021.11';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261021.11';
