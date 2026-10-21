@@ -67,14 +67,14 @@ assert.ok(rankLabel[2]<reachedLabel[2]&&reachedLabel[2]<returnedLabel[2],'second
 assert.ok(rankLabel[3]>nameLabel[3],'second row is below the name and level');
 assert.ok(namePaint&&namePaint[2]===nameLabel[2]&&namePaint[3]===308&&namePaint.at(-1)==='start',
  'the name aligns with its heading and moves upward');
-assert.ok(levelPaint&&levelPaint[2]===601&&levelPaint[3]===308&&levelPaint.at(-1)==='center',
- 'the bare level number remains centered horizontally but moves upward');
+assert.ok(levelPaint&&levelPaint[2]===levelLabel[2]&&levelPaint[3]===308&&levelPaint.at(-1)==='start',
+ 'the level number starts at the same left edge as the LEVEL heading');
 assert.ok(rankPaint&&rankPaint[2]===211&&rankPaint[3]===467&&rankPaint.at(-1)==='center',
  'grade is horizontally centered in its panel');
-assert.ok(reachedPaint&&reachedPaint[2]===431&&reachedPaint[3]===450&&reachedPaint.at(-1)==='center',
- 'deepest reached moves upward while staying centered horizontally');
-assert.ok(returnedPaint&&returnedPaint[2]===605&&returnedPaint[3]===450&&returnedPaint.at(-1)==='center',
- 'deepest returned moves upward to match reached');
+assert.ok(reachedPaint&&reachedPaint[2]===reachedLabel[2]&&reachedPaint[3]===450&&reachedPaint.at(-1)==='start',
+ 'deepest reached aligns with its heading while keeping the raised baseline');
+assert.ok(returnedPaint&&returnedPaint[2]===returnedLabel[2]&&returnedPaint[3]===450&&returnedPaint.at(-1)==='start',
+ 'deepest returned aligns with its heading and deepest reached');
 assert.ok(crownPaint&&crownPaint[2]>namePaint[2]&&crownPaint[2]<levelPaint[2],
  'crown stays to the right of the name on the same row');
 assert.equal(crownPaint[3],namePaint[3],'name and crown share the baseline');
@@ -162,8 +162,8 @@ assert.equal(longRankText?.x,211,'long rank is centered');
 assert.equal(longRankText?.maxWidth,undefined,'rank fit must not squeeze glyphs on a single axis');
 assert.equal(longRank.scales.length,0,'rank fit must not distort the character aspect ratio');
 const largeLevel=renderFor('勇者',false);
-assert.ok(largeLevel.paints.some(op=>op.text==='21'&&op.x===601&&op.align==='center'),
- 'level has no prefix and is centered without a crown');
+assert.ok(largeLevel.paints.some(op=>op.text==='21'&&op.x===514+9&&op.align==='start'),
+ 'level has no prefix and aligns with its heading without a crown');
 
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const profileHtml=html.slice(html.indexOf('<section id="home"'),html.indexOf('<section id="library"'));
