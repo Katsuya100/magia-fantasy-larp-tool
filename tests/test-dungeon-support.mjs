@@ -18,6 +18,12 @@ assert.match(profileMarkup,/<\/section>\s*<!-- Profile-only appendix[^]*?<aside 
 assert.match(profileMarkup,/<aside id="dungeonAttribution"[^]*?<details>\s*<summary>✧ 外典の扉<\/summary>/,'attribution is initially collapsed in its own details');
 assert.equal((html.match(/id="dungeonAttribution"/g)||[]).length,1,'exactly one dungeon attribution appendix');
 assert.ok(profileMarkup.includes('href="THIRD_PARTY_NOTICES.md"')&&profileMarkup.includes('href="assets/licenses/sources.json"'),'licenses and origin registry remain discoverable');
+assert.match(profileMarkup,/<h3>冒険者名の確認<\/h3>/,'NG word dictionary is credited inside attribution');
+assert.match(profileMarkup,/MosasoM\/inappropriate-words-ja/,'original NG word dictionary is attributed');
+assert.match(profileMarkup,/Offensive\.txt/,'original offensive word list is cited');
+assert.match(profileMarkup,/Sexual\.txt/,'original sexual word list is cited');
+assert.match(profileMarkup,/href="assets\/licenses\/dungeon-ng-words-MIT\.txt"/,'NG word license is linked directly');
+
 assert.match(attributionStyles,/\.scene-stack > \.dungeon-attribution\{grid-area:2\/1;/,'attribution is placed in the second scene-grid row');
 assert.match(attributionStyles,/#home\[hidden\] \+ \.dungeon-attribution\{display:none\}/,'attribution disappears whenever profile is hidden');
 assert.ok(profileMarkup.indexOf('class="profile-support"')<profileMarkup.indexOf('id="deleteSaveData"'),'support and share precede data deletion');
