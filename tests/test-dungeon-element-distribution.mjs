@@ -19,7 +19,8 @@ const sum=r=>ATTRS.reduce((total,a)=>total+Number(r['resist_'+a]),0);
 let primaryChanges=0,secondaryChanges=0,renames=0;
 for(let i=0;i<500;i++){
  const a=base[i],b=master[i],old=a.spells.split('|').map(s=>s.split(':')),s=b.spells.split('|').map(s=>s.split(':'));
- assert.equal(Number(b.mag),Number(a.mag)+(Object.hasOwn(combatBalanceMagOverrides,a.id)?1:0),'only approved +1 MAG changes '+a.id);
+ assert.equal(Number(b.mag),Object.hasOwn(combatBalanceMagOverrides,a.id)?combatBalanceMagOverrides[a.id]:Number(a.mag),'only curated MAG changes '+a.id);
+ assert.ok(Math.abs(Number(b.mag)-Number(a.mag))<=5,'MAG microtuning never exceeds +5/-1 '+a.id);
  assert.equal(s.length,5);
  for(const k of ['id','name','hp','def','res','weight','min_level','boss_only','favored_collection_ids'])
   assert.equal(a[k],b[k],'identity, drops and base combat stats preserved '+a.id+' '+k);
@@ -64,7 +65,7 @@ for(const a of ATTRS){
 assert.equal(Object.values(primary).reduce((a,b)=>a+b),500);
 assert.equal(Object.values(magic).reduce((a,b)=>a+b),2500);
 assert.equal(renames,0,'no existing character was replaced or renamed');
-assert.equal(Object.keys(combatBalanceMagOverrides).length,4,'exactly four late-game magical-pressure overrides');
+assert.equal(Object.keys(combatBalanceMagOverrides).length,36,'32 regular 61-68F adjustments and four later casters');
 assert.equal(Object.keys(combatBalanceSupplementalCounters).length,5,'all five 70F foes have a second readable counter');
 assert.ok(primaryChanges>100&&secondaryChanges>150);
 for(let layer=1;layer<=100;layer++){

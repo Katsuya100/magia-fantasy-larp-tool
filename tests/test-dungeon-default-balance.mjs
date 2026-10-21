@@ -110,7 +110,6 @@ for(let to=10;to<=100;to+=10){
  if(winRate<winLower||winRate>winUpper)issues.push('winRate outside '+winLower+'-'+winUpper+'%');
  if(medianMp===null||medianMp<mpLower||medianMp>mpUpper)
   issues.push('winner median MP outside '+mpLower+'-'+mpUpper+'%');
- if(from===61&&SAMPLES===128)console.log('DUNGEON_61_SEED_AUDIT '+JSON.stringify(runs.map((r,i)=>({seed:i,win:r.win,cleared:r.cleared,finalHp:Number(r.hp.toFixed(2)),finalMp:Number(r.mp.toFixed(2)),layer70:r.layerStats.find(x=>x.layer===70)?{startHp:r.layerStats.find(x=>x.layer===70).startHp,startMp:r.layerStats.find(x=>x.layer===70).startMp,endHp:r.layerStats.find(x=>x.layer===70).endHp,endMp:r.layerStats.find(x=>x.layer===70).endMp}:null}))));
  const row={band:from+'-'+to,level,samples:SAMPLES,
   stoneRateAtSortieStart:percentile(rate*100),stoneRateRampEnd:percentile(targetStoneRate(to)*100),
   bankedStones:percentile(average(earned)),spentStonesMedian:medianUsed,
@@ -185,54 +184,6 @@ for(let to=10;to<=100;to+=10){
   console.log('DUNGEON_DEFAULT_BALANCE_LAYER '+JSON.stringify(layerRow));
  }
 }
-
-
-if(STRICT&&SAMPLES===128){
- const master=csv('enemies');
- const variants=[
-  ['current',0,0,0,0,0],
-  ['bossMag+4',4,0,0,0,0],
-  ['bossMag+4_allEarlyMag-1',4,1,1,0,0],
-  ['bossMag+4_allEarlyMag-2',4,2,2,0,0],
-  ['bossMag+4_earlyNormalsMag-1',4,1,0,0,0],
-  ['bossMag+4_earlyNormalsMag-2',4,2,0,0,0],
-  ['bossMag+4_earlyBossMag-1',4,0,1,0,0],
-  ['bossMag+4_earlyBossMag-2',4,0,2,0,0],
-  ['bossMag+4_earlyNormalsHp-4',4,0,0,4,0],
-  ['bossMag+4_earlyNormalsHp-8',4,0,0,8,0],
-  ['bossMag+4_earlyNormalsMag-1Hp-4',4,1,0,4,0],
-  ['bossMag+4_allEarlyMag-1Hp-4',4,1,1,4,0],
-  ['bossMag+4_earlyNormalsMag-1Hp-8',4,1,0,8,0],
-  ['bossMag+4_earlyNormalsMag-2Hp-4',4,2,0,4,0],
-  ['bossMag+3_earlyNormalsMag-1Hp-4',3,1,0,4,0],
-  ['bossMag+4_earlyNormalsMag-1Hp-4BossHp+6',4,1,0,4,6],
-  ['bossMag+4_earlyNormalsMag-1Hp-4BossHp-6',4,1,0,4,-6]
- ];
- for(const [name,finalMagGain,regularMagCut,bossMagCut,regularHpCut,finalHpGain] of variants){
-  const enemies=master.map(r=>({...r}));
-  for(const e of enemies){
-   const n=Number(e.id.match(/_l(\d+)/)?.[1]??0);
-   if(e.id==='boss_l070'){
-    e.mag=String(Number(e.mag)+finalMagGain);
-    e.hp=String(Number(e.hp)+finalHpGain);
-   }else if(n>=61&&n<=68){
-    if(e.boss_only==='0'){
-     e.mag=String(Math.max(3,Number(e.mag)-regularMagCut));
-     e.hp=String(Math.max(30,Number(e.hp)-regularHpCut));
-    }else e.mag=String(Math.max(3,Number(e.mag)-bossMagCut));
-   }
-  }
-  const trials=Array.from({length:128},(_,i)=>deepRun(seed(i),{from:61,to:70,level:115},true,enemies));
-  const w=trials.filter(x=>x.win);
-  const medianMp=percentile(median(w.map(x=>x.mp/x.maxMp*100)));
-  const medianHp=percentile(median(w.map(x=>x.hp/x.maxHp*100)));
-  console.log('DUNGEON_61_VARIANT '+JSON.stringify({
-   name,wins:w.length,medianMp,medianHp,
-   passes:w.length>=116&&w.length<=124&&medianMp>=4.5&&medianMp<=14.5&&medianHp>=75.2&&medianHp<=85.2
-  }));
- }
-}
-
 // Mandatory regression benchmark: immediately preceding main before normal-foe affinity
 // correction (257e11713b6a71710f244e234ce4702fc47e684a).
 // Historical values were recorded with the same 128 seeds in main CI 39530340261.

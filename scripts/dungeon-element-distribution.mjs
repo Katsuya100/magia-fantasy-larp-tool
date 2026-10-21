@@ -126,7 +126,44 @@ export const combatBalanceSupplementalCounters=Object.freeze({
   0.2
  ]
 });
-export const combatBalanceMagOverrides=Object.freeze({"foe_l069_3":10,"foe_l070_2":11,"boss_l069":11,"boss_l070":12});
+export const combatBalanceMagOverrides=Object.freeze({
+ "foe_l069_3": 10,
+ "foe_l070_2": 11,
+ "boss_l069": 11,
+ "boss_l070": 16,
+ "foe_l061_1": 6,
+ "foe_l061_2": 8,
+ "foe_l061_3": 8,
+ "foe_l061_4": 9,
+ "foe_l062_1": 6,
+ "foe_l062_2": 8,
+ "foe_l062_3": 7,
+ "foe_l062_4": 10,
+ "foe_l063_1": 6,
+ "foe_l063_2": 8,
+ "foe_l063_3": 7,
+ "foe_l063_4": 10,
+ "foe_l064_1": 6,
+ "foe_l064_2": 8,
+ "foe_l064_3": 7,
+ "foe_l064_4": 10,
+ "foe_l065_1": 6,
+ "foe_l065_2": 8,
+ "foe_l065_3": 7,
+ "foe_l065_4": 10,
+ "foe_l066_1": 6,
+ "foe_l066_2": 8,
+ "foe_l066_3": 7,
+ "foe_l066_4": 10,
+ "foe_l067_1": 6,
+ "foe_l067_2": 8,
+ "foe_l067_3": 7,
+ "foe_l067_4": 10,
+ "foe_l068_1": 6,
+ "foe_l068_2": 9,
+ "foe_l068_3": 8,
+ "foe_l068_4": 11
+});
 
 
 export function applyElementDistribution(source,plan,concepts){
