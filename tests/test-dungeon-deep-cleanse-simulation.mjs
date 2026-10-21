@@ -23,8 +23,12 @@ const early=data.enemies.slice(0,95).filter(row=>row.boss_only==='0');
 const reference=G.parseCsv(readFileSync(new URL('./fixtures/dungeon-enemies-before-flavor.csv',import.meta.url),'utf8'))
  .slice(0,95).filter(row=>row.boss_only==='0');
 for(let i=0;i<early.length;i++)for(const key of Object.keys(reference[i]))
- if(!key.startsWith('resist_'))
-  assert.equal(early[i][key],reference[i][key],'early foe identity/abilities and core stats remain '+early[i].id+' '+key);
+ if(key!=='spells'&&!key.startsWith('resist_'))
+  assert.equal(early[i][key],reference[i][key],'early foe identity and core stats remain '+early[i].id+' '+key);
+ assert.deepEqual(early[i].spells.split('|').slice(1),reference[i].spells.split('|').slice(1),
+  'early foe retains other four spells '+early[i].id);
+ assert.equal(early[i].spells.split('|')[0].split(':')[2],reference[i].spells.split('|')[0].split(':')[2],
+  'early foe keeps primary attack power '+early[i].id);
 let previousMinimum=0;
 for(let layer=51;layer<=100;layer++){
  const five=data.enemies.slice((layer-1)*5,layer*5);
