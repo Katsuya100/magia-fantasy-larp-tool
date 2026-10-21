@@ -16,12 +16,9 @@ const data={enemies:csv('enemies'),items:csv('consumables'),buffs:csv('buffs'),b
  levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')};
 configure(data);
 const rng=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
-const earlyRows=data.enemies.slice(0,95).filter(row=>row.boss_only==='0');
-const baseline=G.parseCsv(readFileSync(new URL('./fixtures/dungeon-enemies-before-flavor.csv',import.meta.url),'utf8'))
- .slice(0,95).filter(row=>row.boss_only==='0');
-assert.deepEqual(earlyRows,baseline,'first 19 layers keep all 76 ordinary foes unchanged');
+const first19=readFileSync(new URL('../assets/data/dungeon-enemies.csv',import.meta.url),'utf8').trimEnd().split('\n').slice(0,96).join('\n');
 const fnv=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619)>>>0;return h.toString(16).padStart(8,'0');};
-// Boss rows deliberately change; normal enemies, debuff strength, and boss spell roles are preserved.
+assert.equal(fnv(first19),'3b8f5533','enemy data through floor 19 must be byte-for-byte unchanged');
 let previousMinimum=0;
 for(let layer=51;layer<=100;layer++){
  const five=data.enemies.slice((layer-1)*5,layer*5);
@@ -135,7 +132,6 @@ function earnedStones(seed,layer){
 export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
  assert.ok(band.from>=51&&band.to<=100&&band.to-band.from===9);
  const random=rng(seed),stones=earnedStones(seed+81,band.from-1),spent=Math.floor(stones*.75);
- const checkpoints=[];
  const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},band.level,{},upgradeSpells(spent),'hero');
  const carry=equipped?cleanseLoadout(band):[];
  const initialLoadout=carry.map(item=>item.id);

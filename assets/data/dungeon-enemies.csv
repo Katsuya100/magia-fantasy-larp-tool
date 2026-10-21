@@ -358,7 +358,7 @@ foe_l072_1,ファントム,72,8,4,6,1,1,1,1.05,0.8,1,1.2,attack:gravity:137|defe
 foe_l072_2,霧ゴースト,82,10,5,8,1,1,1,0.95,0.8,1,1.2,attack:gravity:149|defense:gravity:119|support:law:97|defense:gravity:471|attack:law:134,10,118,0,relic_086|relic_122|relic_162|relic_180
 foe_l072_3,ミストファントム,91,9,9,10,1,1,1,1,0.8,1,1.2,attack:gravity:161|defense:gravity:129|support:law:105|debuff:gravity:464|attack:law:145,10,118,0,relic_083|relic_117|relic_159
 foe_l072_4,影ウィスプ,77,12,4,12,1,1,1,1,0.8,1,1.2,attack:gravity:173|defense:gravity:138|support:law:112|defense:gravity:484|attack:law:156,10,118,0,relic_009|relic_134|relic_159|relic_184
-boss_l072,虚空の操霊師,87,10,6,11,1,1,1.3,1,0.95,1,1.2,attack:gravity:190|defense:gravity:152|support:law:124|debuff:gravity:494|attack:law:171,1,118,1,relic_087|relic_137|relic_150|relic_boss_072
+boss_l072,虚空の操霊師,100,10,6,11,1,1,1.3,1,0.95,1,1.2,attack:gravity:190|defense:gravity:152|support:law:124|debuff:gravity:494|attack:law:171,1,118,1,relic_087|relic_137|relic_150|relic_boss_072
 foe_l073_1,ブラッドウルフ,74,8,4,6,1,1,1,1,1,1.2,0.8,attack:chaos:143|defense:chaos:114|support:gravity:93|defense:chaos:474|attack:gravity:129,10,119,0,relic_088|relic_120|relic_123|relic_163
 foe_l073_2,赤ウルフ,84,10,5,8,1,1,1,1,1,1.2,0.8,attack:chaos:155|defense:chaos:124|support:gravity:101|defense:chaos:480|attack:gravity:140,10,119,0,relic_013|relic_113|relic_163|relic_181
 foe_l073_3,血月の猟犬,93,9,9,10,1,1,1,1,1,1.2,0.8,attack:chaos:167|defense:chaos:134|support:gravity:109|debuff:chaos:474|attack:gravity:150,10,119,0,relic_092|relic_142|relic_167
@@ -368,7 +368,7 @@ foe_l074_1,冥府の戦乙女,76,8,4,6,1,1,1,1.2,1,1,0.8,attack:chaos:149|defens
 foe_l074_2,幽霊骸骨剣士,86,10,5,8,1,1,1,1.2,1,1,0.8,attack:chaos:161|defense:chaos:129|support:gravity:105|defense:chaos:491|attack:gravity:145,10,120,0,bone|relic_101|relic_151|relic_176
 foe_l074_3,亡霊の槍兵,95,9,9,10,1,1,1,1.2,1,1,0.8,attack:chaos:173|defense:chaos:138|support:gravity:112|defense:chaos:497|attack:gravity:156,10,120,0,relic_001|relic_143|relic_168
 foe_l074_4,幽霊魔女,81,12,4,12,1,1,1,1.2,1,1,0.8,attack:chaos:185|defense:chaos:148|support:gravity:120|debuff:chaos:485|attack:gravity:167,10,120,0,relic_001|relic_101|relic_157|relic_181
-boss_l074,冥土の戦姫,107,12,9,12,1,1,1,1.2,1,1.3,0.95,attack:chaos:210|defense:chaos:168|support:gravity:137|debuff:chaos:515|attack:gravity:189,1,120,1,relic_026|relic_148|relic_160|relic_boss_074
+boss_l074,冥土の戦姫,116,12,9,12,1,1,1,1.2,1,1.3,0.95,attack:chaos:210|defense:chaos:168|support:gravity:137|debuff:chaos:515|attack:gravity:189,1,120,1,relic_026|relic_148|relic_160|relic_boss_074
 foe_l075_1,時読みの弟子,78,8,4,6,1.2,1,1,1,1,0.8,1,attack:law:155|defense:law:124|support:gravity:101|debuff:law:495|attack:gravity:140,10,122,0,relic_100|relic_125|relic_105|relic_155
 foe_l075_2,白メイジ,88,10,5,8,1.2,1,1,1,1,0.8,1,attack:law:167|defense:law:134|support:gravity:109|defense:law:505|attack:gravity:150,10,122,0,relic_095|relic_145|relic_165|relic_175
 foe_l075_3,刻の精霊,97,9,9,10,1.2,1,1,1,1,0.8,1,attack:law:179|defense:law:143|support:gravity:116|defense:law:515|attack:gravity:161,10,122,0,relic_043|relic_143|relic_168
@@ -403,7 +403,7 @@ foe_l081_1,ヴォイドレイス,78,8,4,6,1,1,1,1.2,1,1,0.8,attack:chaos:143|def
 foe_l081_2,冥王ビホルダー,88,10,5,8,1,1,1,1.2,1,1,0.8,attack:chaos:155|defense:chaos:124|support:gravity:101|debuff:chaos:556|attack:gravity:140,10,129,0,relic_010|relic_110|relic_151|sealed_eye
 foe_l081_3,漆黒の竜騎士,97,9,9,10,1,1,1,1.2,1,1,0.8,attack:chaos:167|defense:chaos:134|support:gravity:109|defense:chaos:575|attack:gravity:150,10,129,0,relic_021|relic_121|relic_171
 foe_l081_4,黒曜リッチ,83,12,4,12,1,1,1,1.2,1,1,0.8,attack:chaos:179|defense:chaos:143|support:gravity:116|debuff:chaos:586|attack:gravity:161,10,129,0,relic_096|obsidian|relic_171|relic_182
-boss_l081,災厄の黒龍,114,10,10,10,1,1,1,1.2,1,1.3,0.95,attack:chaos:180|defense:chaos:144|support:gravity:117|defense:chaos:586|attack:gravity:162,1,129,1,relic_046|moon_scale|relic_169|relic_185|relic_boss_081
+boss_l081,災厄の黒龍,103,10,10,10,1,1,1,1.2,1,1.3,0.95,attack:chaos:180|defense:chaos:144|support:gravity:117|defense:chaos:586|attack:gravity:162,1,129,1,relic_046|moon_scale|relic_169|relic_185|relic_boss_081
 foe_l082_1,予言の星喰い,80,8,4,6,1.2,1,1,1,1,0.8,1.05,attack:law:149|defense:law:119|support:gravity:97|defense:law:566|attack:gravity:134,10,130,0,relic_075|relic_115|relic_135|relic_155
 foe_l082_2,禁忌の占星師,90,10,5,8,1.2,1,1,1,1,0.8,1,attack:law:161|defense:law:129|support:gravity:105|debuff:law:566|attack:gravity:145,10,130,0,relic_075|relic_142|relic_167|relic_175
 foe_l082_3,終末の聖職者,99,9,9,10,1.2,1,1,1,1,0.8,1,attack:law:173|defense:law:138|support:gravity:112|defense:law:583|attack:gravity:156,10,130,0,relic_028|relic_133|relic_153
@@ -463,7 +463,7 @@ foe_l093_1,禁忌の錬金術師,78,10,4,6,1,1.2,1,1,0.8,1.05,1,attack:gravity:1
 foe_l093_2,虚空の測量者,88,10,5,8,1,1.2,1,1,0.8,1,1,attack:gravity:155|defense:gravity:124|support:law:101|defense:gravity:685|attack:law:140,10,143,0,relic_065|relic_137|relic_162|relic_173|relic_187
 foe_l093_3,星図の魔導機兵,97,9,9,10,1,1.2,1,1,0.8,1,1,attack:gravity:167|defense:gravity:134|support:law:109|defense:gravity:692|attack:law:150,10,143,0,relic_075|relic_142|relic_150|relic_175
 foe_l093_4,銀河の使徒,83,10,4,12,1,1.2,1,1,0.8,0.95,1,attack:gravity:179|defense:gravity:143|support:law:116|defense:gravity:698|attack:law:161,10,143,0,relic_073|relic_123|relic_164|relic_173
-boss_l093,深宇宙の観測者,90,10,7,12,1,1.2,1.3,1,0.95,1,1,attack:gravity:200|defense:gravity:160|support:law:130|debuff:gravity:709|attack:law:180,1,143,1,relic_056|relic_131|relic_172|sealed_eye|relic_boss_093
+boss_l093,深宇宙の観測者,102,10,7,12,1,1.2,1.3,1,0.95,1,1,attack:gravity:200|defense:gravity:160|support:law:130|debuff:gravity:709|attack:law:180,1,143,1,relic_056|relic_131|relic_172|sealed_eye|relic_boss_093
 foe_l094_1,刻印の処刑人,80,8,4,6,1,1,1.2,1.05,1,0.8,1.05,attack:law:149|defense:law:119|support:gravity:97|debuff:law:689|attack:gravity:134,10,144,0,relic_057|relic_133|relic_134|lightning_crystal|relic_174
 foe_l094_2,月影の竜騎士,90,10,7,8,1,1,1.2,1,1,0.8,0.95,attack:law:161|defense:law:129|support:gravity:105|defense:law:695|attack:gravity:145,10,144,0,relic_061|relic_101|relic_161|relic_181|relic_185
 foe_l094_3,黄泉ペガサス,99,9,7,10,1,1,1.2,0.95,1,0.8,1,attack:law:173|defense:law:138|support:gravity:112|defense:law:701|attack:gravity:156,10,144,0,relic_085|relic_135|relic_160|relic_177
