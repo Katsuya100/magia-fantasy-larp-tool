@@ -64,7 +64,7 @@ const longestName='あいうえおかきくけこさしすせそたちつてと'
 const longPaint=[];
 const measuredCtx={...ctx,
  measureText(text){
-  const fontSize=Number(this.font?.match(/(\\d+)px/)?.[1])||26;
+  const fontSize=Number(this.font?.match(/(\d+)px/)?.[1])||26;
   return {width:[...text].length*fontSize};
  },
  fillText(...args){longPaint.push({text:args[0],x:args[1],y:args[2],maxWidth:args[3],font:this.font});}
