@@ -82,8 +82,17 @@ function note(message){
  if(!message||!/できません|失敗|不足|見つからない|不正|中断|対応ブラウザ|開けません|起動できません|してください/.test(message))return;
  const target=/カメラ|撮影|HTTPS|localhost/.test(message)?'cameraError':profile?.run?'battleError':'pageError';
  $(target).textContent=message;$(target).hidden=false;
+ // Save errors must stay visible until explicitly acknowledged.
+ if(/保存|セーブ|整合性|破損/.test(message)){
+  $('saveErrorMessage').textContent=message;
+  const dialog=$('saveErrorDialog');
+  if(!dialog.open)dialog.showModal();
+ }
 }
-async function persist(){await loadoutSaveQueue;await saveProfile(db,profile);}
+async function persist(){
+ try{await loadoutSaveQueue;await saveProfile(db,profile);}
+ catch(error){note('セーブの保存に失敗しました：'+String(error?.message||error));throw error;}
+}
 function openBackupSetup(){
  if(profile.name)return;
  $('backupSetupStatus').textContent=$('googleDriveStatus').textContent;
@@ -687,7 +696,8 @@ if(run.hero.hp<=0){
   if(profile.permadeath){
    const successor=createSuccessorProfile(profile,run,circles,G.startingBase());
    const lost=successor.legacies.at(-1);
-   await saveProfileWithCircles(db,successor,[],lost.circles.map(circle=>circle.id));
+   try{await saveProfileWithCircles(db,successor,[],lost.circles.map(circle=>circle.id));}
+   catch(error){note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
    profile=successor;
    for(const circle of lost.circles)circleImages.forget(circle.id,circle.image);
    const removed=new Set(lost.circles.map(circle=>circle.id));
@@ -1394,7 +1404,7 @@ async function chooseLoadout(choice){
   try{await saveProfile(db,snapshot);}
   catch(error){
    // A later selection will save its own snapshot; never overwrite its UI.
-   if(revision!==loadoutSaveRevision)return;
+   if(revision!==loadoutSaveRevision){note('編成の保存に失敗しました：'+String(error?.message||error));return;}
    try{
     const stored=await getProfile(db);
     if(revision!==loadoutSaveRevision)return;
@@ -1404,7 +1414,7 @@ async function chooseLoadout(choice){
     profile.carrySlots=saveCarrySlots(carry,profile.inventory);
     render();
    }catch(readError){console.error('保存済みの編成を読み込めませんでした',readError);}
-   note('編成の保存に失敗しました：'+error.message);
+   note('編成の保存に失敗しました：'+String(error?.message||error));
   }
  });
  loadoutSaveQueue=save;
@@ -1581,13 +1591,15 @@ function wire(){
    }catch(error){
     console.error('冒険者名の保存に失敗しました',error);
     $('nameError').textContent='名前を保存できませんでした：'+String(error?.message||error);
+     note('冒険者名の保存に失敗しました：'+String(error?.message||error));
    }finally{
     savingName=false;
     button.disabled=false;
    }
    if(saved&&firstLesson)tutorial.open();
  });
- $('cancelNameDialog').addEventListener('click',()=>$('nameDialog').close());
+ $('closeSaveError').addEventListener('click',()=>$('saveErrorDialog').close());
+  $('cancelNameDialog').addEventListener('click',()=>$('nameDialog').close());
  $('nameDialog').addEventListener('cancel',event=>{if(!profile.name)event.preventDefault();});
  $('deleteDataPhrase').addEventListener('input',()=>{
   $('confirmDeleteData').disabled=$('deleteDataPhrase').value.trim()!=='削除';
