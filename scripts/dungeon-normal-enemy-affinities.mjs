@@ -28,7 +28,10 @@ export const alignNormalRows = function alignNormalRows(input){
   const get=a=>Number(row['resist_'+a]);
   const set=(a,v)=>row['resist_'+a]=String(Number(v.toFixed(2)));
   const chooseWeak=()=>{
-   const ordered=[...counter[tags[0]],...attrs];
+   // Metallic foes are vulnerable to electricity (conductivity) rather than
+   // the default earthen/stone counter. This keeps electrical counterplay readable.
+   const metal=/鉄|金石|ゴールド|ブロンズ|クリスタル|リビングソード|金属|銀魔導人形/;
+   const ordered=metal.test(row.name)?['bolt',...counter[tags[0]],...attrs]:[...counter[tags[0]],...attrs];
    return ordered.find(a=>!tags.includes(a)&&get(a)<=1)??attrs.find(a=>!tags.includes(a)&&get(a)<=1);
   };
   // A creature may NEVER be weak to a named innate element.
