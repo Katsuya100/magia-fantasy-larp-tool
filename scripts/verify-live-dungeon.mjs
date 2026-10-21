@@ -4,7 +4,7 @@ const origin='https://katsuya100.github.io/magia-fantasy-larp-tool/';
 const expectedHtml=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const version=expectedHtml.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 if(!version)throw Error('Missing current release marker');
-const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs','assets/js/dungeon-progress.mjs',
+const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs','assets/js/dungeon-name-filter.mjs','assets/js/dungeon-progress.mjs',
  'assets/js/dungeon-tutorial.mjs',
  'assets/js/dungeon-combat-fx.mjs','assets/js/dungeon-store.mjs','assets/js/dungeon-legacy-cache.mjs',
  'assets/js/dungeon-photo-manager.mjs','assets/js/dungeon-thumbnails.mjs','assets/js/dungeon-battle-cards.mjs',
