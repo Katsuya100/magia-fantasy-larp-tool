@@ -9,6 +9,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
 import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
+import {withNeutralAttackAttributes,compareNeutralAttackChoices} from './helpers/dungeon-neutral-loadout.mjs';
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
  buffs:csv('buffs'),balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')};
@@ -39,7 +40,7 @@ function heroAction(hero,enemy){
  const heal=ids.find(i=>hero.spells[i].role==='support');
  if(heal!==undefined&&hero.hp/hero.stats.hp<.69)return heal;
  const offense=ids.filter(i=>hero.spells[i].role==='attack');
- if(offense.length)return offense.sort((a,b)=>G.damage(hero,enemy,hero.spells[b],()=>.999)-G.damage(hero,enemy,hero.spells[a],()=>.999))[0];
+ if(offense.length)return offense.sort((a,b)=>compareNeutralAttackChoices(hero,enemy,a,b))[0];
  return heal!==undefined&&hero.hp/hero.stats.hp<.9?heal:-1;
 }
 // Rewards and XP are gathered fight-by-fight but committed only on boss return.
@@ -92,11 +93,13 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
  const history=stones==='earned'?stoneLedger(seed+81,fromLayer-1):{stones:0};
  const budget=stones==='earned'?history.stones:Math.max(0,Number(stones)||0);
- const equipment=upgradeSpells(SPELLS[spells],budget);
+ const chosen=withNeutralAttackAttributes(SPELLS[spells],data.enemies,fromLayer,toLayer);
+ const equipment=upgradeSpells(chosen.spells,budget);
  const hero=G.makeUnit(base,level,{},equipment.spells,'player');
  const first=(fromLayer-1)*5+1,last=toLayer*5;
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
-  startLevel:level,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,
+  startLevel:level,fromLayer,toLayer,spells,attackAttributes:chosen.attackAttributes,
+  spentStones:budget,availableStones:history.stones,
   initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[],
   enemyDebuffCasts:0,enemyDebuffFights:0,fightsReached:0,layerStats:[]};
  for(let fight=first;fight<=last;fight++){
@@ -166,7 +169,8 @@ export function summarize(config,samples=32){
  const runs=Array.from({length:samples},(_,i)=>simulate(17011+i*13,config));
  const wins=runs.filter(x=>x.win);
  const avg=x=>Math.round(x.reduce((n,v)=>n+v,0)/x.length*10)/10;
- return {name:config.name,winRate:Math.round(100*wins.length/samples),
+ return {name:config.name,attackAttributes:runs[0].attackAttributes,
+  winRate:Math.round(100*wins.length/samples),
   avgCleared:avg(runs.map(x=>x.clear)),
   avgTurns:avg(runs.map(x=>x.turns)),avgNormalAttacks:avg(runs.map(x=>x.normalAttacks)),
   avgRestores:avg(runs.map(x=>x.restores)),
