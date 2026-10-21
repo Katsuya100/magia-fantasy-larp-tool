@@ -4,19 +4,21 @@ import {readFileSync} from 'node:fs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 import {nameAffinities,alignNormalRows} from '../scripts/dungeon-normal-enemy-affinities.mjs';
 import {alignEnemySpellFlavor} from '../scripts/dungeon-enemy-spell-flavor.mjs';
+import {reconcileEnemyElements} from '../scripts/dungeon-enemy-element-consistency.mjs';
 import {tuneDurability,durabilityArchetype,durabilityRanges} from '../scripts/dungeon-enemy-durability-rules.mjs';
 const load=path=>parseCsv(readFileSync(new URL(path,import.meta.url),'utf8'));
 const previous=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv'),now=load('../assets/data/dungeon-enemies.csv');
 const attrs=['flame','bolt','aqua','storm','gravity','law','chaos'];
 assert.equal(previous.length,500);
 assert.equal(now.length,500);
-assert.deepEqual(now,alignEnemySpellFlavor(tuneDurability(alignNormalRows(previous))),'normal resistance and durability rules reproduce all 500 rows');
+assert.deepEqual(now,reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(previous)))),'normal resistance and durability rules reproduce all 500 rows');
 let named=0,changed=0,weaknessesFixed=0;
 for(let i=0;i<500;i++){
  const a=previous[i],b=now[i],tags=nameAffinities(b.name);
  if(b.boss_only==='1'){
-  for(const key of Object.keys(a))if(!['hp','def','res','spells'].includes(key))assert.equal(a[key],b[key],'boss spells/attributes/identity unchanged '+b.id+' '+key);
+  for(const key of Object.keys(a))if(!['hp','def','res','spells'].includes(key)&&!key.startsWith('resist_'))assert.equal(a[key],b[key],'boss spells/attributes/identity unchanged '+b.id+' '+key);
   assert.equal(b.spells,alignEnemySpellFlavor([a])[0].spells,'approved boss spell flavor '+b.id);
+  for(const key of attrs)assert.equal(b['resist_'+key],reconcileEnemyElements([alignEnemySpellFlavor([a])[0]])[0]['resist_'+key],'curated boss weakness '+b.id);
   continue;
  }
  const total=x=>attrs.reduce((n,k)=>n+Number(x['resist_'+k]),0);

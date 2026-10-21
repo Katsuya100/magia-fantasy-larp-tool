@@ -6,6 +6,7 @@
 import {alignNormalRows} from './dungeon-normal-enemy-affinities.mjs';
 import {tuneDurability} from './dungeon-enemy-durability-rules.mjs';
 import {alignEnemySpellFlavor} from './dungeon-enemy-spell-flavor.mjs';
+import {reconcileEnemyElements} from './dungeon-enemy-element-consistency.mjs';
 export const tuneEnemyRows = function tuneEnemyRows(input){
  const rows=input.map(r=>({...r}));
  // Small, paired neutral-element shifts only: lower resist_* means LESS damage.
@@ -59,7 +60,7 @@ export const tuneEnemyRows = function tuneEnemyRows(input){
    }
   }
  }
- return alignEnemySpellFlavor(tuneDurability(alignNormalRows(bossFlavor(rows))));
+ return reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(bossFlavor(rows)))));
 };
 
 export const bossFlavor = function bossFlavor(rows){

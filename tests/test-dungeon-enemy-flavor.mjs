@@ -7,6 +7,7 @@ import {tuneEnemyRows} from '../scripts/dungeon-enemy-flavor-rules.mjs';
 import {durabilityArchetype,durabilityRanges,tuneDurability} from '../scripts/dungeon-enemy-durability-rules.mjs';
 import {alignNormalRows,nameAffinities} from '../scripts/dungeon-normal-enemy-affinities.mjs';
 import {alignEnemySpellFlavor} from '../scripts/dungeon-enemy-spell-flavor.mjs';
+import {reconcileEnemyElements} from '../scripts/dungeon-enemy-element-consistency.mjs';
 
 const load=path=>parseCsv(readFileSync(new URL(path,import.meta.url),'utf8'));
 const raw=load('./fixtures/dungeon-enemies-before-flavor.csv');
@@ -14,7 +15,7 @@ const base=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv');
 const shipped=load('../assets/data/dungeon-enemies.csv');
 assert.equal(raw.length,500);assert.equal(base.length,500);assert.equal(shipped.length,500);
 assert.deepEqual(shipped,tuneEnemyRows(raw),'full historical regeneration must match the shipped catalog');
-assert.deepEqual(shipped,alignEnemySpellFlavor(tuneDurability(alignNormalRows(base))),'second-pass durability regeneration must be reproducible');
+assert.deepEqual(shipped,reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(base)))),'second-pass durability regeneration must be reproducible');
 
 let altered=0,regularChanged=0,bossChanged=0;
 for(let i=0;i<shipped.length;i++){
@@ -38,7 +39,7 @@ for(let i=0;i<shipped.length;i++){
    assert.ok(labels.some(a=>Number(now['resist_'+a])<1),'named element has an actual defense '+now.name);
   }
  }else{
-  for(const a of ATTRS)assert.equal(now['resist_'+a],old['resist_'+a],'previously reviewed boss weaknesses stay fixed '+now.id);
+  for(const a of ATTRS)assert.equal(now['resist_'+a],reconcileEnemyElements([alignEnemySpellFlavor([old])[0]])[0]['resist_'+a],'authored boss resistance '+now.id);
  }
  if(['hp','def','res'].some(k=>now[k]!==old[k])){altered++;if(boss)bossChanged++;else regularChanged++;}
 }

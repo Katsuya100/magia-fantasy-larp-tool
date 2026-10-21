@@ -5,11 +5,12 @@ import {parseCsv} from '../assets/js/dungeon-core.mjs';
 import {durabilityArchetype,durabilityRanges,tuneDurability,curatedDurabilityFixes} from '../scripts/dungeon-enemy-durability-rules.mjs';
 import {alignNormalRows} from '../scripts/dungeon-normal-enemy-affinities.mjs';
 import {alignEnemySpellFlavor} from '../scripts/dungeon-enemy-spell-flavor.mjs';
+import {reconcileEnemyElements} from '../scripts/dungeon-enemy-element-consistency.mjs';
 
 const load=x=>parseCsv(readFileSync(new URL(x,import.meta.url),'utf8'));
 const prior=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv');
 const now=load('../assets/data/dungeon-enemies.csv');
-const recalculated=alignEnemySpellFlavor(tuneDurability(alignNormalRows(prior)));
+const recalculated=reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(prior))));
 assert.deepEqual(now,recalculated,'catalog exactly matches declared survival archetypes');
 const categories={},changed={hp:0,def:0,res:0,ordinary:0,boss:0};
 for(let i=0;i<500;i++){

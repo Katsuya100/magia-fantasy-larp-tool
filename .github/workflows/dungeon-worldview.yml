@@ -5,17 +5,21 @@ on:
       - 'assets/data/dungeon-enemies.csv'
       - 'scripts/dungeon-enemy-spell-flavor.mjs'
       - 'scripts/dungeon-enemy-flavor-rules.mjs'
+      - 'scripts/dungeon-enemy-element-consistency.mjs'
       - 'tests/test-dungeon-enemy-*.mjs'
       - 'tests/test-dungeon-normal-affinity.mjs'
       - 'docs/DUNGEON-ENEMY-WORLDVIEW-REVIEW.md'
+      - 'docs/DUNGEON-ENEMY-ELEMENT-CONSISTENCY.md'
   pull_request:
     paths:
       - 'assets/data/dungeon-enemies.csv'
       - 'scripts/dungeon-enemy-spell-flavor.mjs'
       - 'scripts/dungeon-enemy-flavor-rules.mjs'
+      - 'scripts/dungeon-enemy-element-consistency.mjs'
       - 'tests/test-dungeon-enemy-*.mjs'
       - 'tests/test-dungeon-normal-affinity.mjs'
       - 'docs/DUNGEON-ENEMY-WORLDVIEW-REVIEW.md'
+      - 'docs/DUNGEON-ENEMY-ELEMENT-CONSISTENCY.md'
 permissions:
   contents: read
 jobs:
@@ -26,6 +30,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24'
+      - run: node tests/test-dungeon-enemy-element-consistency.mjs
       - run: node tests/test-dungeon-enemy-worldview.mjs
       - run: node tests/test-dungeon-enemy-flavor.mjs
       - run: node tests/test-dungeon-normal-affinity.mjs
