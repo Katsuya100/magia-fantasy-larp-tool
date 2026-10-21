@@ -21,7 +21,13 @@ for(let i=0;i<500;i++){
   assert.ok(tags.every(k=>Number(b['resist_'+k])<=1),'name incorrectly hints vulnerability '+b.name);
   assert.ok(tags.some(k=>Number(b['resist_'+k])<1),'name has no actual elemental defense '+b.name);
  }
- if(attrs.some(k=>a['resist_'+k]!==b['resist_'+k]))changed++;
+ if(tags.length)assert.equal(b.spells.split('|')[0].split(':')[1],tags[0],
+  'first attack reveals the named innate element '+b.name);
+ const sourceSpells=a.spells.split('|'),newSpells=b.spells.split('|');
+ assert.deepEqual(newSpells.slice(1),sourceSpells.slice(1),'other four circles unchanged '+b.id);
+ assert.equal(newSpells[0].split(':')[0],sourceSpells[0].split(':')[0],'attack role unchanged '+b.id);
+ assert.equal(newSpells[0].split(':')[2],sourceSpells[0].split(':')[2],'attack power unchanged '+b.id);
+  if(attrs.some(k=>a['resist_'+k]!==b['resist_'+k]))changed++;
  if(a.hp!==b.hp){
   assert.ok(calibrated.has(b.id),'only reviewed golem HP may change '+b.id);
   const score=x=>Math.max(...[['flame',360],['bolt',420],['gravity',540]].map(([k,p])=>Math.sqrt(p)*Number(x['resist_'+k])));
