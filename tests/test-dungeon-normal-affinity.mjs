@@ -6,6 +6,7 @@ import {nameAffinities,alignNormalRows} from '../scripts/dungeon-normal-enemy-af
 const load=path=>parseCsv(readFileSync(new URL(path,import.meta.url),'utf8'));
 const previous=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv'),now=load('../assets/data/dungeon-enemies.csv');
 const attrs=['flame','bolt','aqua','storm','gravity','law','chaos'];
+const calibrated=new Set(["foe_l044_1","foe_l044_2","foe_l044_3","foe_l051_1","foe_l051_2"]);
 assert.equal(previous.length,500);
 assert.equal(now.length,500);
 assert.deepEqual(now,alignNormalRows(previous),'normal resistance CSV must match deterministic explicit-name rules');
@@ -21,6 +22,12 @@ for(let i=0;i<500;i++){
   assert.ok(tags.some(k=>Number(b['resist_'+k])<1),'name has no actual elemental defense '+b.name);
  }
  if(attrs.some(k=>a['resist_'+k]!==b['resist_'+k]))changed++;
+ if(a.hp!==b.hp){
+  assert.ok(calibrated.has(b.id),'only reviewed golem HP may change '+b.id);
+  const score=x=>Math.max(...[['flame',360],['bolt',420],['gravity',540]].map(([k,p])=>Math.sqrt(p)*Number(x['resist_'+k])));
+  assert.ok(Math.abs(score(b)/Number(b.hp)/(score(a)/Number(a.hp))-1)<=.03,
+   'golem effective health must stay within 3% '+b.id);
+ }
  if(tags.some(k=>Number(a['resist_'+k])>=1.2))weaknessesFixed++;
 }
 assert.equal(now.filter(x=>x.boss_only==='0').length,400);

@@ -63,6 +63,15 @@ export const alignNormalRows = function alignNormalRows(input){
   const before=attrs.reduce((s,a)=>s+Number(input[index]['resist_'+a]),0);
   const after=attrs.reduce((s,a)=>s+get(a),0);
   if(Math.abs(after-before)>1e-8)throw Error('elemental budget changed '+row.id+': '+before+' -> '+after);
+  // A moved weakness can make a metal golem disproportionately tanky
+  // against the standard flame/bolt/gravity loadout. Reduce only its HP
+  // by the exact incoming-damage ratio to preserve old time-to-defeat.
+  const preserveTtk=new Set(["foe_l044_1","foe_l044_2","foe_l044_3","foe_l051_1","foe_l051_2"]);
+  if(preserveTtk.has(row.id)){
+   const stat=old=>Math.max(...[['flame',360],['bolt',420],['gravity',540]].map(([a,p])=>Math.sqrt(p)*Number(old['resist_'+a])));
+   const previous=input[rows.indexOf(row)];
+   row.hp=String(Math.round(Number(previous.hp)*stat(row)/stat(previous)));
+  }
   reviewed++;
  }
  return rows;
