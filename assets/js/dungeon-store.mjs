@@ -1,6 +1,7 @@
 import {startingBase} from './dungeon-core.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
 import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto} from './dungeon-cloud-integrity.mjs';
+import {prepareProfilePhotoRefs,restoreProfilePhotoRefs} from './dungeon-profile-photo-refs.mjs';
 const DB_NAME='magia-dungeon-v1';
 const DB_VERSION=2;
 const STORES=['circles','settings'];
@@ -69,7 +70,7 @@ function request(db,store,mode,op,{silent=false}={}){
 }
 // Read and verify the previous seal BEFORE applying writes. A missing record
 // cannot be silently legitimized by a later (unrelated) profile update.
-function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false}={}){
+function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,photoWrites=new Map()}={}){
  validateDatabase(db);
  return new Promise((resolve,reject)=>{
   let tx;
@@ -79,14 +80,18 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false}
    const previousProfile=settings.get('profile'),previousCircles=items.getAll(),previousSeal=settings.get('integrity');
    const previousName=settings.get(HEIR_NAME_KEY);
    let reads=0;
+   const missingPhotos=new Set();
    const ready=()=>{
-    if(++reads!==4)return;
+    if(++reads!==4+photoWrites.size)return;
     try{
      const p=applyHeirName(previousProfile.result,previousName.result),c=previousCircles.result,seal=previousSeal.result;
      if(seal?.version===1){
       if(!p||seal.records!==recordFingerprint({profile:p,circles:c})||seal.savedAt===undefined)throw Error('保存データの整合性が一致しません。復元が必要です。');
      }
      perform(settings,items);
+     // Store only newly encountered historical photos, atomically with the
+     // metadata and integrity seal. Ordinary equipment saves never rewrite them.
+     for(const [key,blob] of photoWrites)if(missingPhotos.has(key))settings.put(blob,key);
      // A subsequent normal profile write incorporates the virtual name.
      // Delete the overlay atomically so stale names never override it.
      if(writesProfile)settings.delete(HEIR_NAME_KEY);
@@ -113,6 +118,10 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false}
     }
    };
    previousProfile.onsuccess=ready;previousCircles.onsuccess=ready;previousSeal.onsuccess=ready;previousName.onsuccess=ready;
+   for(const key of photoWrites.keys()){
+    const existing=settings.get(key);
+    existing.onsuccess=()=>{if(existing.result===undefined)missingPhotos.add(key);ready();};
+   }
    tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve();};
    tx.onerror=()=>reject(tx.error||Error('セーブの保存に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブの整合性を確認できませんでした。'));
@@ -185,17 +194,19 @@ async function trustedProfileHashes(db,profile){
 export async function saveProfile(db,p){
  withPlayId(p);
  const hashes=await trustedProfileHashes(db,p);
- return mutate(db,settings=>settings.put(p,'profile'),{},hashes,{writesProfile:true});
+ const prepared=await prepareProfilePhotoRefs(p,hashes);
+ return mutate(db,settings=>settings.put(prepared.profile,'profile'),{},hashes,{writesProfile:true,photoWrites:prepared.photos});
 }
 // One IndexedDB transaction prevents a lost/recovered photo and its owner from diverging.
 export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
  withPlayId(profile);
  const hashes=await photoEvidence(added),profileHashes=await trustedProfileHashes(db,profile);
+ const prepared=await prepareProfilePhotoRefs(profile,profileHashes);
  return mutate(db,(settings,items)=>{
   for(const id of removed){items.delete(id);settings.delete(thumbnailKey(id));}
   for(const circle of added)items.put(circle);
-  settings.put(profile,'profile');
- },hashes,profileHashes,{writesProfile:true});
+  settings.put(prepared.profile,'profile');
+ },hashes,profileHashes,{writesProfile:true,photoWrites:prepared.photos});
 }
 // Commit a successor name and its new integrity seal in one small transaction.
 // No legacy photograph is re-serialized or copied by this path.
@@ -232,7 +243,7 @@ export function saveHeirName(db,name){
     }
    };
    p.onsuccess=ready;c.onsuccess=ready;sealRequest.onsuccess=ready;overlay.onsuccess=ready;
-   tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve(nextName);};
+   tx.oncomplete=()=>{notifyDungeonDataChange(db);void getProfile(db).then(resolve,reject);};
    tx.onerror=()=>reject(tx.error||Error('後継者名の保存に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('後継者名の保存が中断されました。'));
   }catch(error){reject(error);}
@@ -244,7 +255,7 @@ export async function getProfile(db){
    request(db,'settings','readonly',s=>s.get('profile')),
    request(db,'settings','readonly',s=>s.get(HEIR_NAME_KEY))
   ]);
-  let p=applyHeirName(raw,nameOverride);
+  let p=await restoreProfilePhotoRefs(applyHeirName(raw,nameOverride),key=>request(db,'settings','readonly',s=>s.get(key)));
   if(!p){
     p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,tutorialDone:false,inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReachedLayer:0,deepestReturnedLayer:0,magicStones:0,run:null};
     const seal=await request(db,'settings','readonly',s=>s.get('integrity'));
@@ -263,7 +274,8 @@ export function readDungeonSnapshot(db){
   try{
    const tx=db.transaction(STORES,'readonly');
    let profile,circles,integrity,nameOverride;
-   tx.oncomplete=()=>resolve({profile:applyHeirName(profile,nameOverride),circles,savedAt:integrity?.savedAt||0,integrity});
+   tx.oncomplete=()=>{void restoreProfilePhotoRefs(applyHeirName(profile,nameOverride),key=>request(db,'settings','readonly',s=>s.get(key)))
+    .then(restored=>resolve({profile:restored,circles,savedAt:integrity?.savedAt||0,integrity}),reject);};
    tx.onerror=()=>reject(tx.error||Error('セーブの読み出しに失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブの読み出しが中断されました。'));
    const p=tx.objectStore('settings').get('profile');
@@ -281,6 +293,7 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0}){
  validateDatabase(db);
  const next={profile,circles};
  const records=recordFingerprint(next),photos=await photoEvidence(circles),profilePhotos=await profilePhotoEvidence(profile);
+ const prepared=await prepareProfilePhotoRefs(profile,profilePhotos);
  return new Promise((resolve,reject)=>{
   try{
    const tx=db.transaction(STORES,'readwrite');
@@ -289,7 +302,8 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0}){
    tx.onabort=()=>reject(tx.error||Error('セーブ復元が中断されました。'));
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
    settings.clear();items.clear();
-   settings.put(profile,'profile');
+   settings.put(prepared.profile,'profile');
+   for(const [key,blob] of prepared.photos)settings.put(blob,key);
    for(const circle of circles)items.put(circle);
    settings.put({version:1,records,photos,profilePhotos,savedAt:Number(savedAt)||0,legacy:false},'integrity');
   }catch(error){reject(error);}
