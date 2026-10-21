@@ -4,7 +4,7 @@ import {ATTRS,basePower} from '../../assets/js/dungeon-core.mjs';
 
 const EPSILON=1e-9;
 function resistance(enemy,attribute){
- const value=Number(enemy['resist_'+attribute]);
+ const value=Number(enemy.resists?.[attribute]??enemy['resist_'+attribute]);
  if(!Number.isFinite(value)||value<=0)
   throw Error('Invalid enemy resistance for '+enemy.id+' '+attribute);
  return value;
