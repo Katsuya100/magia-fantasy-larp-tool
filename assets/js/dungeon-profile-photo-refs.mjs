@@ -69,3 +69,22 @@ export async function restoreProfilePhotoRefs(profile,readCircle){
  };
  return inflate(profile);
 }
+
+// Expand compact backup references from the one authoritative circles array.
+export function restoreProfilePhotoRefsFromCircles(profile,circles){
+ const byId=new Map(circles.map(circle=>[circle.id,circle]));
+ const visit=(value,depth=0)=>{
+  if(depth>50)throw Error('バックアップの入れ子が深すぎます。');
+  if(!value||typeof value!=='object'||value instanceof Blob)return value;
+  if(value[PHOTO_REF]===true){
+   if(!isArchivedPhotoRef(value))throw Error('魔法陣の画像参照が不正です。');
+   const blob=byId.get(value.id)?.image;
+   if(!(blob instanceof Blob)||blob.size!==value.size||blob.type!==value.type)
+    throw Error('バックアップに必要な魔法陣の画像が見つかりません。');
+   return blob;
+  }
+  if(Array.isArray(value))return value.map(item=>visit(item,depth+1));
+  return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,visit(item,depth+1)]));
+ };
+ return visit(profile);
+}
