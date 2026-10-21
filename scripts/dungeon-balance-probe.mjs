@@ -59,7 +59,9 @@ function rank(start,measured){
  const winLo=start<=11?99:90,winHi=start<=11?100:97,mpLo=start===1?50:0,mpHi=start===1?100:15;
  if(measured.hp===null)return 1e6;
  const outside=(x,a,b)=>Math.max(0,a-x,x-b);
- const gap=outside(measured.win,winLo,winHi),hp=outside(measured.hp,oldHp-5,oldHp+5),mp=outside(measured.mp,Math.max(mpLo,oldMp-5),Math.min(mpHi,oldMp+5));
+ const priorPassed=oldWin>=winLo&&oldWin<=winHi&&oldMp>=mpLo&&oldMp<=mpHi;
+ const parityLo=priorPassed?Math.max(winLo,oldWin-2):winLo,parityHi=priorPassed?Math.min(winHi,oldWin+2):winHi;
+ const gap=outside(measured.win,parityLo,parityHi),hp=outside(measured.hp,oldHp-5,oldHp+5),mp=outside(measured.mp,Math.max(mpLo,oldMp-5),Math.min(mpHi,oldMp+5));
  return Math.round((gap*4+hp*1.5+mp*3)*10)/10;
 }
 const bands=(process.env.PROBE_BANDS||'11,21,41,51,61,71,81,91').split(',').map(Number);
@@ -68,11 +70,19 @@ const mags=(process.env.PROBE_MAG||'0.65,0.8,0.95,1.1').split(',').map(Number);
 const scopes=(process.env.PROBE_SCOPES||'whole,last3').split(',');
 const bossMags=(process.env.PROBE_BOSS_MAG||'1').split(',').map(Number);
 const bossHps=(process.env.PROBE_BOSS_HP||'1').split(',').map(Number);
+const sweepByBand={
+  21:{hps:[.95,1],mags:[.75,.77,.78,.79,.8],scopes:['whole'],bossMags:[1,1.15],bossHps:[1]},
+  61:{hps:[.85,.9,.95,1],mags:[1.06,1.08,1.1,1.12],scopes:['last3'],bossMags:[1],bossHps:[1]},
+  71:{hps:[.85,.9,.95,1],mags:[1.1,1.12,1.14,1.16],scopes:['last3'],bossMags:[1],bossHps:[1]},
+  81:{hps:[.85,1],mags:[.82,.85,.9],scopes:['whole'],bossMags:[1.3,1.45,1.6,1.8],bossHps:[1]},
+  91:{hps:[.9,1],mags:[.69,.71,.73,.75,.77],scopes:['whole'],bossMags:[1,1.1,1.25,1.5],bossHps:[1]}
+};
 for(const start of bands){
  const initial=measure(start,enemies);
  console.log('TUNING_BASELINE '+JSON.stringify({band:start+'-'+(start+9),...initial,score:rank(start,initial)}));
  const found=[];
- for(const scope of scopes)for(const hpScale of hps)for(const magScale of mags)for(const bossMag of bossMags)for(const bossHp of bossHps){
+ const sw=sweepByBand[start]||{};
+ for(const scope of sw.scopes||scopes)for(const hpScale of sw.hps||hps)for(const magScale of sw.mags||mags)for(const bossMag of sw.bossMags||bossMags)for(const bossHp of sw.bossHps||bossHps){
   if(hpScale===1&&magScale===1&&bossMag===1&&bossHp===1)continue;
   const result=measure(start,trialRows(start,hpScale,magScale,scope,bossMag,bossHp));
   found.push({scope,hpScale,magScale,bossMag,bossHp,...result,score:rank(start,result)});
