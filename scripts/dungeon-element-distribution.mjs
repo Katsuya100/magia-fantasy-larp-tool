@@ -21,10 +21,6 @@ export const combatBalanceResistCalibrations=Object.freeze({
  "foe_l030_2": 0.2,
  "foe_l030_4": 0.2,
  "boss_l030": 0.2,
- "foe_l069_2": 0.12,
- "foe_l069_4": 0.12,
- "foe_l070_2": 0.12,
- "foe_l070_4": 0.12,
  "foe_l075_1": 0.12,
  "foe_l075_3": 0.12,
  "foe_l076_2": 0.12,
@@ -70,8 +66,6 @@ export const combatBalanceResistCalibrations=Object.freeze({
  "boss_l099": 0.12,
  "foe_l097_1": 0.12,
  "foe_l098_1": 0.12,
- "boss_l069": 0.35,
- "boss_l070": 0.35,
  "boss_l087": 0.2,
  "foe_l027_2": 0.12,
  "foe_l027_4": 0.12,
@@ -82,28 +76,18 @@ export const combatBalanceResistCalibrations=Object.freeze({
  "foe_l089_1": 0.12,
  "foe_l089_3": 0.12,
  "foe_l090_3": 0.12,
- "foe_l036_1": 0.12,
  "foe_l036_3": 0.12,
- "foe_l037_1": 0.12,
  "foe_l037_3": 0.12,
- "foe_l038_1": 0.12,
  "foe_l038_3": 0.12,
- "foe_l039_1": 0.12,
  "foe_l039_3": 0.12,
  "foe_l040_1": 0.12,
  "foe_l040_3": 0.12,
  "boss_l040": 0.12,
- "foe_l061_1": -0.15,
- "foe_l062_2": -0.15,
- "foe_l063_1": -0.15,
- "foe_l064_1": -0.15,
- "foe_l068_2": 0.12,
- "foe_l068_4": 0.12,
- "foe_l069_1": 0.18,
- "foe_l069_3": 0.18,
- "foe_l070_1": 0.18,
- "foe_l070_3": 0.18
+ "foe_l069_2": 0.12,
+ "foe_l070_2": 0.12,
+ "boss_l070": 0.2
 });
+export const combatBalanceMagOverrides=Object.freeze({"foe_l069_3":10,"foe_l070_2":11,"boss_l069":11,"boss_l070":12});
 
 
 export function applyElementDistribution(source,plan,concepts){
@@ -175,6 +159,8 @@ export function applyElementDistribution(source,plan,concepts){
    output['resist_'+guarded]=fmt(Number(output['resist_'+guarded])-balanceShift);
    output['resist_'+alternate]=fmt(Number(output['resist_'+alternate])+balanceShift);
   }
+  if(Object.hasOwn(combatBalanceMagOverrides,before.id))
+   output.mag=String(combatBalanceMagOverrides[before.id]);
   const sum=x=>ELEMENTS.reduce((s,a)=>s+Number(x['resist_'+a]),0);
   if(Math.abs(sum(before)-sum(output))>1e-8)throw Error('Changed resistance budget '+before.id);
   return output;
