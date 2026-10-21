@@ -184,17 +184,19 @@ for(let to=10;to<=100;to+=10){
   console.log('DUNGEON_DEFAULT_BALANCE_LAYER '+JSON.stringify(layerRow));
  }
 }
-// Mandatory regression benchmark: immediate pre-boss main (ca2f46b22d8b0defb45de7f00c9d0de9d363a609).
+// Mandatory regression benchmark: immediately preceding main before normal-foe affinity
+// correction (257e11713b6a71710f244e234ce4702fc47e684a).
+// Historical values were recorded with the same 128 seeds in main CI 39530340261.
 // A previously failing band is allowed to become PASS, even if that exceeds
 // the historical win-rate difference budget. A PASS must never become FAIL.
 // HP/MP median parity remains mandatory in all cases.
 if(SAMPLES===128){
  const baseline={
-  '1-10':[100,54.4,69.7], '11-20':[99.2,11.8,72],
-  '21-30':[94.5,5.4,73.9], '31-40':[97.7,13.1,73.8],
-  '41-50':[96.9,7.7,73.5], '51-60':[99.2,6.7,80.6],
-  '61-70':[100,9.3,80.2], '71-80':[100,8.7,78.1],
-  '81-90':[100,9.9,77.3], '91-100':[95.3,2.2,76.1]
+  '1-10':[100,56.9,73.2], '11-20':[100,11.8,71.7],
+  '21-30':[96.1,5.7,73.9], '31-40':[97.7,13.6,72.8],
+  '41-50':[96.1,8.3,73.5], '51-60':[100,7.2,79.1],
+  '61-70':[100,9.5,80.2], '71-80':[100,8.9,79.4],
+  '81-90':[100,9.2,77.4], '91-100':[94.5,2.8,80.5]
  };
  const acceptedImprovements=[];
  for(const row of report){
