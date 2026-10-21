@@ -194,7 +194,7 @@ assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing de
 assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
 assert.match(app,/shuffledLayerEnemyIds\(masters\.enemies,layer,Math\.random,slot\)/,'game assigns and saves a random order for each new layer');
 assert.match(app,/run\.layerEnemyOrder=\{layer,ids:/,'the order is stored in the active expedition');
-assert.match(app,/finishStartup\(\);\s*if\(profile\.awaitingHeir\)openNameDialog\(true\);\s*else if\(!profile\.name\)openBackupSetup\(\)/,'successors resume naming immediately; new players see backup setup first');
+assert.match(app,/finishStartup\(\);\s*if\(profile\.run\?\.stage==='checkpoint'&&profile\.run\.creatorCongratulationsPending\)showCreatorCongratulations\(\);\s*if\(profile\.awaitingHeir\)openNameDialog\(true\);\s*else if\(!profile\.name\)openBackupSetup\(\)/,'successors resume naming immediately; new players see backup setup first');
 assert.match(page,/<dialog id="backupSetupDialog"/,'backup setup dialog exists');
 
 const copyWarning='バックアップがない端末内セーブは予告なく消える可能性があります。';
@@ -493,7 +493,7 @@ assert.match(css,/\.battle-spell-frame \.battle-tile\{\s*flex:0 0 auto;height:au
 assert.match(css,/\.battle-spells \.tile-cooldown\{\s*margin-top:4px/,'cast label stays just below the image');
 assert.match(css,/#battleArena \.unit\{\s*height:288px;min-height:288px;max-height:288px/,'both combatants have fixed identical desktop height');
 assert.match(css,/#battleArena \.unit\{\s*height:250px;min-height:250px;max-height:250px/,'both combatants have fixed identical mobile height');
-assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:56px minmax\(0,1fr\)/,'both names and their level labels reserve the same fixed row height');
+assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:56px minmax\(0,1fr\)/,'both names reserve the exact same fixed row height');
 assert.match(css,/#battleArena \.unit-info h3\{[\s\S]*?white-space:normal;overflow-wrap:anywhere;[\s\S]*?-webkit-line-clamp:2/,'long names wrap over two lines instead of escaping the card');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:34px 34px 33px minmax\(0,1fr\)/,'both sides align HP, MP and MAG/DEF/RES rows');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*min-width:0;min-height:0;flex:1;overflow:visible/,'status area stops scrolling');
@@ -506,9 +506,9 @@ assert.match(app,/function rowUnit\(unit\)\{[\s\S]*?class="battle-vital"[\s\S]*?
 // margin between glowing glyphs and two-line names on both mobile and desktop.
 assert.match(css,/#battleArena \.unit \.enemy-portrait,#battleArena \.unit \.hero-portrait\{\s*box-sizing:border-box;width:100%;height:64px;flex:0 0 64px;[\s\S]*?margin:0 0 14px;font-size:46px/,'desktop combat portraits leave 14px between icon area and names');
 assert.match(css,/#battleArena \.unit \.enemy-portrait,#battleArena \.unit \.hero-portrait\{\s*height:44px;flex-basis:44px;margin-bottom:12px;font-size:36px/,'mobile combat portraits leave a 12px gap above names');
-assert.match(css,/#battleArena \.unit\{\s*height:288px;min-height:288px;max-height:288px/,'desktop fighter box grows only by the reserved level row');
-assert.match(css,/#battleArena \.unit\{\s*height:250px;min-height:250px;max-height:250px/,'mobile fighter box grows only by the reserved level row');
-assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:56px minmax\(0,1fr\)/,'both combatants reserve room for name and level');
+assert.match(css,/#battleArena \.unit\{\s*height:288px;min-height:288px;max-height:288px/,'spacing does not increase desktop fighter box height');
+assert.match(css,/#battleArena \.unit\{\s*height:250px;min-height:250px;max-height:250px/,'spacing does not increase mobile fighter box height');
+assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:56px minmax\(0,1fr\)/,'left and right names and levels reserve the same row');
 assert.match(css,/#battleArena \.combatant-heading\{\s*min-width:0;display:grid;grid-template-rows:38px 18px/,'the level stays in its own row even when a name wraps');
 assert.match(css,/#battleArena \.combatant-level\{\s*display:block;min-width:0;font:600 12px\/18px/,'the level has a fixed readable line');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:34px 34px 33px minmax\(0,1fr\)/,'HP/MP and attributes stay vertically aligned');
@@ -519,8 +519,8 @@ assert.match(css,/#battleArena \.enemy-portrait::before,[\s\S]*?#battleArena \.h
 assert.match(css,/background:radial-gradient\(ellipse 37% 51% at 50% 61%,\s*var\(--portrait-aura\)/,'portrait glow is a soft vertical ellipse');
 assert.match(css,/#battleArena \.enemy-portrait\{--portrait-aura:rgba\(167,73,100,\.53\)\}/,'enemy keeps rosy aura');
 assert.match(css,/#battleArena \.hero-portrait\{--portrait-aura:rgba\(57,143,159,\.56\)\}/,'hero keeps cool aura');
-assert.match(css,/#battleArena \.unit\{\s*height:288px;min-height:288px;max-height:288px/,'desktop fighter frames remain equal height with a level row');
-assert.match(css,/#battleArena \.unit\{\s*height:250px;min-height:250px;max-height:250px/,'mobile fighter frames remain equal height with a level row');
+assert.match(css,/#battleArena \.unit\{\s*height:288px;min-height:288px;max-height:288px/,'desktop frames remain equal fixed height, slightly shorter');
+assert.match(css,/#battleArena \.unit\{\s*height:250px;min-height:250px;max-height:250px/,'mobile frames remain equal fixed height, slightly shorter');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*grid-template-rows:31px 31px 33px minmax\(0,1fr\)/,'matching mobile HP, MP and attribute rows leave room for status effects');
 assert.match(css,/\.relic-card\.discovered\[data-rarity="common"\] \.relic-art\{box-shadow:none\}/,'only common loses the surrounding aura');
 assert.match(css,/\.relic-card\.discovered\[data-rarity="common"\] \.relic-glyph,[\s\S]*?\.relic-card\.discovered\[data-rarity="common"\] \.relic-rarity\{text-shadow:none\}/,'common text does not glow');

@@ -60,6 +60,19 @@ export function battleEncounter(fight){
 }
 export function clearedLayer(fight){return isLayerBoss(fight)?layerOfFight(fight):0;}
 export function nextLayer(fight){return layerOfFight(fight)+1;}
+// An arrival counts even if an expedition later ends in defeat.
+// Successfully returned layers and active runs establish legacy minimums.
+export function deepestReachedLayer(profile){
+ const depth=Number(profile?.deepestReachedLayer);
+ return Math.max(Number.isSafeInteger(depth)&&depth>0?depth:0,
+  deepestReturnedLayer(profile),layerOfFight(profile?.run?.floor));
+}
+export function recordReachedLayer(profile,fight){
+ const reached=layerOfFight(fight);
+ if(reached)profile.deepestReachedLayer=Math.max(deepestReachedLayer(profile),reached);
+ return deepestReachedLayer(profile);
+}
+export const hasHundredFloorCrown=profile=>profile?.defeatedBosses?.boss_l100===true;
 // Only a successful return from a defeated layer boss establishes a record.
 // Legacy "highest" tracked *visits*, so it cannot safely be treated as a return.
 export function deepestReturnedLayer(profile){
@@ -68,6 +81,9 @@ export function deepestReturnedLayer(profile){
 }
 export function recordReturnedLayer(profile,fight){
  const completed=clearedLayer(fight);
- if(completed)profile.deepestReturnedLayer=Math.max(deepestReturnedLayer(profile),completed);
+ if(completed){
+  profile.deepestReturnedLayer=Math.max(deepestReturnedLayer(profile),completed);
+  recordReachedLayer(profile,fight);
+ }
  return deepestReturnedLayer(profile);
 }

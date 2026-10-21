@@ -2095,3 +2095,100 @@ html,body{overflow-x:clip}
   animation:none!important;opacity:1;transform:translate(-50%,-50%)
  }
 }
+
+/* A unique first-clear 100F creator's greeting, beyond milestone styling. */
+.creator-congratulations-dialog{
+ width:min(610px,calc(100vw - 28px));max-height:92dvh;padding:0;
+ overflow-y:auto;overscroll-behavior:contain;border:2px solid #f7d994;
+ border-radius:18px;color:#fff3d9;
+ background:radial-gradient(ellipse at 50% 12%,#704665 0%,#372343 35%,#141624 78%,#0e111a 100%);
+ box-shadow:0 0 0 5px #a4795038,0 0 0 10px #eec48617,0 0 95px #e0a8675c,0 30px 100px #000d;
+}
+.creator-congratulations-dialog::backdrop{
+ background:radial-gradient(ellipse at center,#3c29489e 0%,#080914ed 75%);
+ backdrop-filter:blur(9px);
+}
+.creator-congratulations-frame{
+ position:relative;isolation:isolate;overflow:hidden;text-align:center;
+ padding:36px 48px 34px;
+ background:radial-gradient(ellipse at 50% 25%,#ffdc8130,transparent 50%);
+}
+.creator-congratulations-frame::before{
+ content:"";position:absolute;inset:10px;border:1px solid #f4cd817a;
+ border-radius:11px;pointer-events:none;z-index:-1;
+}
+.creator-congratulations-frame::after{
+ content:"";position:absolute;inset:17px;border:1px solid #f9dda13b;
+ border-radius:8px;pointer-events:none;z-index:-1;
+}
+.creator-congratulations-stars{
+ color:#ffe5a9;font-size:15px;letter-spacing:.4em;opacity:.85;
+ text-shadow:0 0 18px #ffdfa5;
+ animation:creator-stars-glow 4s ease-in-out infinite;
+}
+.creator-congratulations-kicker{
+ margin:13px 0 15px;color:#efc98e;font:600 10px var(--roman);letter-spacing:.16em;
+}
+.creator-congratulations-crest{
+ position:relative;display:grid;place-items:center;width:144px;height:144px;
+ margin:0 auto 15px;border:2px solid #ffdf9b;border-radius:50%;
+ box-shadow:0 0 0 7px #d4a55f30,0 0 0 17px #e6b86b0e,0 0 42px #ffdb8b7a,inset 0 0 30px #f9d69c4b;
+ background:radial-gradient(circle at 50% 37%,#6f4e74,#251b3b 72%);
+}
+.creator-congratulations-crest::before{
+ content:"";position:absolute;inset:9px;border:1px dashed #ffdc9bb5;border-radius:50%;
+ animation:creator-crest-turn 28s linear infinite;
+}
+.creator-congratulations-crest-number{
+ color:#fff1bf;font:700 67px var(--roman);line-height:1;text-shadow:0 0 18px #ffd782bb;
+}
+.creator-congratulations-crest-star{
+ position:absolute;bottom:18px;color:#ffe6ad;font-size:19px;
+ text-shadow:0 0 14px #ffe6ad;
+}
+.creator-congratulations-overline{
+ margin:0;color:#f9d38c;font:600 11px var(--roman);letter-spacing:.25em;
+}
+.creator-congratulations-divider{
+ display:flex;align-items:center;gap:14px;margin:22px auto 14px;
+ color:#f5d998;font-size:16px;
+}
+.creator-congratulations-divider::before,.creator-congratulations-divider::after{
+ content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,#f5d998a8,transparent);
+}
+.creator-congratulations-dialog h2{
+ margin:0 0 18px;color:#ffefc2;
+ font:700 clamp(23px,5vw,33px) var(--serif);
+ letter-spacing:.13em;text-shadow:0 0 26px #ffc97179;
+}
+.creator-congratulations-message{
+ white-space:pre-line;font-size:clamp(13px,3.5vw,16px);line-height:2.2;
+ color:#fff1db;margin:0 auto;max-width:440px;
+}
+.creator-congratulations-divider-bottom{margin:15px auto 23px}
+button.creator-congratulations-close{
+ width:min(100%,255px);min-height:54px;
+ border:1px solid #fff1c4!important;border-radius:50px!important;
+ background:linear-gradient(115deg,#f9e3b3,#c9994c 55%,#f9dc9c)!important;
+ color:#34223a!important;box-shadow:0 0 24px #eab96a6e,inset 0 1px #fff9!important;
+ letter-spacing:.2em;font-size:16px;
+}
+.hundred-floor-crown{
+ display:inline-block;margin-inline-start:.22em;vertical-align:baseline;
+ font-size:.8em;filter:drop-shadow(0 0 5px #f4c973aa);
+}
+.adventure-depth-record{display:flex;flex-wrap:wrap;gap:6px 20px;margin:5px 0 13px;
+ font-size:13px;color:var(--soft)}
+.adventure-depth-record strong{color:var(--gold);font-variant-numeric:tabular-nums}
+@keyframes creator-stars-glow{0%,100%{opacity:.7}50%{opacity:1}}
+@keyframes creator-crest-turn{to{transform:rotate(360deg)}}
+@media(max-width:540px){
+ .creator-congratulations-frame{padding:27px 21px 29px}
+ .creator-congratulations-crest{width:112px;height:112px}
+ .creator-congratulations-crest-number{font-size:54px}
+ .creator-congratulations-crest-star{bottom:9px;font-size:16px}
+ .creator-congratulations-message{line-height:2}
+}
+@media(prefers-reduced-motion:reduce){
+ .creator-congratulations-stars,.creator-congratulations-crest::before{animation:none!important}
+}

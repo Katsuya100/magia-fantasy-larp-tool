@@ -11,19 +11,19 @@ const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-
 const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','floors','player-base'].map(csv));
 configure({balance,levels,floors,playerBase});
 
-const profile={name:'秘密の冒険者名',level:21,adventurerRank:10,deepestReturnedLayer:10};
+const profile={name:'秘密の冒険者名',level:21,adventurerRank:10,deepestReachedLayer:12,deepestReturnedLayer:10,defeatedBosses:{boss_l100:true}};
 const data=adventurerShareData(profile);
-assert.deepEqual(data,{rank:'鉛級',rankLayer:10,level:21,deepest:10});
+assert.deepEqual(data,{rank:'鉛級',rankLayer:10,level:21,name:profile.name,crowned:true,deepestReached:12,deepestReturned:10});
 const text=adventurerShareText(data);
-assert.equal(text,'マギアサークル-ダンジョンアタック\n冒険者等級：鉛級\nLv.21\n最深帰還：10層');
+assert.equal(text,'マギアサークル-ダンジョンアタック\n冒険者等級：鉛級\nLv.21\n最深到達階層：12層\n最深帰還階層：10層');
 assert.ok(!text.includes(profile.name),"never share the player name");
 const url=new URL(adventurerXUrl(data));
 assert.equal(url.hostname,'x.com');
 assert.equal(url.pathname,'/intent/tweet');
 assert.equal(url.searchParams.get('text'),text);
 assert.equal(url.searchParams.get('url'),DUNGEON_SHARE_URL);
-assert.deepEqual(adventurerShareData({level:0}),{rank:'未取得',rankLayer:0,level:1,deepest:0});
-assert.match(adventurerShareText(adventurerShareData({})),/最深帰還：未到達/);
+assert.deepEqual(adventurerShareData({level:0}),{rank:'未取得',rankLayer:0,level:1,name:'名もなき冒険者',crowned:false,deepestReached:0,deepestReturned:0});
+assert.match(adventurerShareText(adventurerShareData({})),/最深帰還階層：未到達/);
 
 const drawTexts=[],stops=[],drawOps=[];
 const gradient=()=>({addColorStop(offset,color){stops.push([offset,color]);}});
@@ -36,7 +36,9 @@ const canvas={width:0,height:0,getContext:()=>ctx};
 assert.equal(paintAdventurerCard(canvas,data),canvas);
 assert.deepEqual([canvas.width,canvas.height],[1200,675]);
 assert.ok(drawTexts.includes('鉛級')&&drawTexts.includes('Lv.21')&&drawTexts.includes('10層'));
-assert.ok(!drawTexts.includes(profile.name),'Canvas excludes identifying character name');
+assert.ok(drawTexts.includes(profile.name),'Canvas shows the player name on their own card');
+assert.ok(drawTexts.includes('👑'),'Canvas puts the earned crown next to the name');
+assert.ok(drawTexts.includes('12層')&&drawTexts.includes('10層'),'both deep records appear on card');
 assert.ok(drawOps.some(([kind])=>kind==='strokeRect'),'card has decorative border');
 assert.ok(stops.length>=4,'card has gradients');
 assert.ok(stops.some(([,color])=>color===rankMetalPalette(10).light),'card text uses same metallic gradient as profile');
@@ -110,4 +112,4 @@ try{
  assert.equal($('supportPromptDialog').open,false,'share remains optional');
 }finally{env.restore();}
 
-console.log('PASS local Canvas card, private progress values, X intent, profile button, save and native image share');
+console.log('PASS local Canvas card with name/crown, two depth records, private X text and native image share');
