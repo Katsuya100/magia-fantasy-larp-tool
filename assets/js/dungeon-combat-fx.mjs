@@ -1,4 +1,5 @@
 import {isLayerBoss,layerOfFight} from './dungeon-progress.mjs';
+import {resist} from './dungeon-core.mjs';
 // Visual playback follows the ordered snapshots emitted by dungeon-core.round.
 // Animations never alter combat math or determine turn outcomes.
 export const EFFECT_LABELS={attack:'⚔️攻撃',basic:'⚔️通常攻撃',defense:'🛡️防御',debuff:'🕸️弱体',support:'✚回復',buff:'強化',burn:'火傷',item:'道具',revive:'復活'};
@@ -10,6 +11,15 @@ export function effectCaption(step){
  if(step.role==='attack'||step.role==='basic'||step.role==='burn')return symbol+' '+tag+' −'+n;
  if(step.role==='support'||step.role==='item'||step.role==='revive')return symbol+' '+tag+(n?' +'+n:'');
  return symbol+' '+tag;
+}
+// Classify only landed magic attacks. The combat core already uses the same
+// effective multiplier (including temporary resistance and vulnerability).
+export function attackHitAffinity(step){
+ if(step?.role!=='attack'||!(step.amount>0))return 'none';
+ const target=step.side==='hero'?step.enemy:step.side==='enemy'?step.hero:null;
+ if(!target?.resists)return 'none';
+ const value=resist(target,step.attribute);
+ return value<1-0.000001?'resist':value>1+0.000001?'weak':'none';
 }
 // Individual circle's invested stones (not unspent wallet balance).
 // Normal: 0-4; enhanced: 5-19; high: 20-54; ultimate: 55+.

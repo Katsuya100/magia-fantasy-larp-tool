@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {magicEffectTier,effectCaption,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,COMBAT_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
+import {magicEffectTier,effectCaption,attackHitAffinity,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,COMBAT_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase,buffs]=await Promise.all(['balance','levels','floors','player-base','buffs'].map(csv));
 configure({balance,levels,floors,playerBase});
@@ -47,6 +47,21 @@ assert.match(effectCaption({role:'defense',attribute:'aqua'}),/防御/);
 assert.match(effectCaption({role:'debuff',attribute:'storm'}),/弱体/);
 assert.match(effectCaption({role:'buff',attribute:'law'}),/強化/);
 assert.match(effectCaption({role:'support',attribute:'aqua',amount:8}),/回復 \+8/);
+// Affinity visual tests cover both sides, neutral hits, misses, and buffs.
+const affinityHero=unit([]);
+const affinityEnemy=G.makeUnit(base,1,{flame:.5},[],'enemy');
+const affinityHit={side:'hero',role:'attack',attribute:'flame',amount:12,hero:affinityHero,enemy:affinityEnemy};
+assert.equal(attackHitAffinity(affinityHit),'resist');
+assert.equal(attackHitAffinity({...affinityHit,enemy:G.makeUnit(base,1,{flame:1.5},[],'enemy')}),'weak');
+assert.equal(attackHitAffinity({...affinityHit,enemy:unit([])}),'none');
+assert.equal(attackHitAffinity({...affinityHit,amount:0}),'none','misses must not show affinity');
+assert.equal(attackHitAffinity({...affinityHit,role:'basic'}),'none','basic damage ignores elemental resistance');
+assert.equal(attackHitAffinity({...affinityHit,role:'debuff'}),'none','curses do not trigger the attack FX');
+assert.equal(attackHitAffinity({...affinityHit,side:'enemy',hero:G.makeUnit(base,1,{flame:1.6},[],'player')}),'weak','enemy magic hits work too');
+const shielded=unit([]);
+G.addStatus(shielded,{id:'resist_flame',kind:'buff',attribute:'flame',effect:'resist',value:.4,turns:2});
+assert.equal(attackHitAffinity({...affinityHit,enemy:shielded}),'resist','temporary resistance is reflected');
+assert.equal(attackHitAffinity({...affinityHit,enemy:{}}),'none','incomplete visual frames are safe');
 // Strict boundaries for 3 ultimate circles at 55 spent stones each (165 total).
 for(const [stones,expected] of [[0,1],[4,1],[5,2],[19,2],[20,3],[54,3],[55,4],[100,4]]){
  for(const role of ['attack','defense','support','debuff'])
@@ -127,6 +142,10 @@ assert.equal(ceremonyDuration('hero-death',500),1120,'player defeat remains unch
 const cinematicCss=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
 const cinematicPage=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const arenaMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleArena"'),cinematicPage.indexOf('id="battleInfo"'));
+assert.equal((arenaMarkup.match(/class="affinity-hit"/g)||[]).length,2,'one hit FX per combatant');
+assert.match(cinematicCss,/data-affinity="resist"/,'resistance shield styling');
+assert.match(cinematicCss,/data-affinity="weak"/,'weakness burst styling');
+assert.match(cinematicCss,/@media\\(prefers-reduced-motion:reduce\\)\\{[\\s\\S]*?affinity-hit::before/,'motion-safe affinity');
 for(const name of ['tier-seal','tier-halo','tier-shards']){
  assert.equal((arenaMarkup.match(new RegExp('class="'+name+'"','g'))||[]).length,4,
   'each decorative tier layer exists for both combatants and both projectiles: '+name);
@@ -141,7 +160,9 @@ const liveRelease=cinematicPage.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 assert.ok(liveRelease,'the release marker exists in HTML');
 assert.ok(appSource.includes('dungeon-combat-fx.mjs?v='+liveRelease),'FX JavaScript import matches the release');
 assert.match(appSource,/projectile\.dataset\.tier=actor\.dataset\.tier/,'attack projectiles use caster investment');
-assert.match(appSource,/victim\.dataset\.incomingAttribute=/,'dual casts keep the incoming attribute independent');
+assert.match(appSource,/target\\.dataset\\.affinity='none'/,'affinity resets');
+assert.match(appSource,/victim\\.dataset\\.affinity=attackHitAffinity\\(step\\)/,'attack uses true resistance');
+assert.match(appSource,/victim\\.dataset\\.incomingAttribute=/,'dual casts keep the incoming attribute independent');
 assert.match(cinematicCss,/--impact-color/,'incoming projectile controls impact hue');
 assert.match(appSource,/victim\.dataset\.incomingTier=String\(magicEffectTier\(step\.upgradeLevel,step\.role\)\)/,
  'incoming force comes from opponent cast, not victim investment');

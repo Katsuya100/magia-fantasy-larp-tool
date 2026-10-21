@@ -1,5 +1,5 @@
 import * as G from './dungeon-core.mjs?v=20261020.33';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261020.33';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261021.1';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261020.33';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261020.33';
 import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261020.33';
@@ -498,6 +498,7 @@ function clearCombatEffects(){
   target.dataset.effect='idle';
   target.dataset.tier='1';
   target.dataset.hit='false';
+  target.dataset.affinity='none';
   target.dataset.incoming='none';
   target.dataset.incomingAttribute='law';
   target.dataset.incomingTier='1';
@@ -537,7 +538,8 @@ async function animateBattle(steps){
     const opponent=step.side==='hero'?'enemy':'hero';
     const victim=$(opponent+'Combatant');
     victim.dataset.hit='true';
-     victim.dataset.incoming=step.role;
+    if(step.role==='attack')victim.dataset.affinity=attackHitAffinity(step);
+    victim.dataset.incoming=step.role;
     victim.dataset.incomingAttribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
     victim.dataset.incomingTier=String(magicEffectTier(step.upgradeLevel,step.role));
     if(victim.dataset.effect==='idle')victim.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
