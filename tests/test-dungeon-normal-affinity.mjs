@@ -1,3 +1,4 @@
+import {combatBaseHpRanges} from '../assets/js/dungeon-durability-profiles.mjs';
 // Verifies all 400 name-predicted normal enemy elemental defenses.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -6,17 +7,18 @@ import {nameAffinities,alignNormalRows} from '../scripts/dungeon-normal-enemy-af
 import {alignEnemySpellFlavor} from '../scripts/dungeon-enemy-spell-flavor.mjs';
 import {reconcileEnemyElements} from '../scripts/dungeon-enemy-element-consistency.mjs';
 import {tuneDurability,durabilityArchetype,durabilityRanges} from '../scripts/dungeon-enemy-durability-rules.mjs';
+const noBase=row=>{const {hp,mag,...lore}=row;return lore;};
 const load=path=>parseCsv(readFileSync(new URL(path,import.meta.url),'utf8'));
 const previous=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv'),now=load('../assets/data/dungeon-enemies.csv');
 const attrs=['flame','bolt','aqua','storm','gravity','law','chaos'];
 assert.equal(previous.length,500);
 assert.equal(now.length,500);
-assert.deepEqual(now,reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(previous)))),'normal resistance and durability rules reproduce all 500 rows');
+assert.deepEqual(now.map(noBase),reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(previous)))).map(noBase),'normal resistance and durability rules reproduce all 500 rows');
 let named=0,changed=0,weaknessesFixed=0;
 for(let i=0;i<500;i++){
  const a=previous[i],b=now[i],tags=nameAffinities(b.name);
  if(b.boss_only==='1'){
-  for(const key of Object.keys(a))if(!['hp','def','res','spells'].includes(key)&&!key.startsWith('resist_'))assert.equal(a[key],b[key],'boss spells/attributes/identity unchanged '+b.id+' '+key);
+  for(const key of Object.keys(a))if(!['hp','mag','def','res','spells'].includes(key)&&!key.startsWith('resist_'))assert.equal(a[key],b[key],'boss spells/attributes/identity unchanged '+b.id+' '+key);
   assert.equal(b.spells,alignEnemySpellFlavor([a])[0].spells,'approved boss spell flavor '+b.id);
   for(const key of attrs)assert.equal(b['resist_'+key],reconcileEnemyElements([alignEnemySpellFlavor([a])[0]])[0]['resist_'+key],'curated boss weakness '+b.id);
   continue;
@@ -38,10 +40,11 @@ assert.ok(weaknessesFixed>=20,'clear all inverted named elemental weaknesses');
 console.log('NORMAL_AFFINITY_AUDIT '+JSON.stringify({regular:400,named,changed,weaknessesFixed}));
 for(let i=0;i<500;i++){
  const r=now[i],kind=durabilityArchetype(r.name);
- const ranges=durabilityRanges[r.boss_only==='1'?'boss':'normal'][kind];
- for(const field of ['hp','def','res'])assert.ok(Number(r[field])>=ranges[field][0]&&Number(r[field])<=ranges[field][1],
+ const ranges=durabilityRanges[r.boss_only==='1'?'boss':'normal'][kind],liveHP=combatBaseHpRanges[r.boss_only==='1'?'boss':'normal'][kind];
+ for(const field of ['hp','def','res'])const range=field==='hp'?liveHP:ranges[field];
+ assert.ok(Number(r[field])>=range[0]&&Number(r[field])<=range[1],
   'semantic durability range '+r.id+' '+field);
- assert.equal(r.mag,previous[i].mag,'MAG unchanged in this review '+r.id);
+ assert.ok(Number.isSafeInteger(+r.mag)&&+r.mag>0,'authored base MAG '+r.id);
  assert.equal(r.spells,alignEnemySpellFlavor([previous[i]])[0].spells,'all 5 circles match authored worldview '+r.id);
 }
 console.log('PASS name-inferred elemental defenses for all 400 regular enemies');

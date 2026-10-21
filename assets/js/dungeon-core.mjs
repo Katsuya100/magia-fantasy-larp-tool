@@ -1,5 +1,4 @@
-import {num,level,range,optionalNum} from './dungeon-tuning.mjs';
-import {durabilityArchetype,durabilityRanges} from './dungeon-durability-profiles.mjs';
+import {num,level,range} from './dungeon-tuning.mjs';
 import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,CONSUMABLE_TIERS,targetClearLevel} from './dungeon-design.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
 export const ROLES=['attack','defense','support','debuff'];
@@ -337,11 +336,6 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  }
  return log;
 }
-export function enemyScaling(level){
- const t=clamp((Number(level)-1)/(num('level_max')-1),0,1);
- return {hp:num('enemy_hp_scale_early')+(num('enemy_hp_scale_late')-num('enemy_hp_scale_early'))*t,
-  mag:num('enemy_mag_scale_early')+(num('enemy_mag_scale_late')-num('enemy_mag_scale_early'))*t};
-}
 // Old 10-layer full-recovery saves could contain undefined MP after
 // reading hero.stats.mp (which does not exist). Repair only invalid values;
 // legitimate 0 MP must remain 0.
@@ -387,29 +381,12 @@ export function recoverVictoryMp(hero,layer=1){
  hero.mp+=gained;
  return gained;
 }
-// Decade-local combat pressure. All coefficients are source-controlled in
-// dungeon-balance.csv; the authored 500-row enemy catalog, affinities and
-// magic roles remain unchanged. HP adjustments obey the same species bounds
-// used by the enemy durability review; boss adjustments are separate.
-export function enemyCombatCoefficients(row){
- const match=String(row.id||'').match(/_l(\d{3})(?:_|$)/);
- if(!match)return {hp:1,mag:1};
- const floor=Number(match[1]),start=10*Math.floor((floor-1)/10)+1;
- const finalThree=floor>=start+7,finalBoss=finalThree&&floor===start+9&&row.boss_only==='1';
- const get=(kind)=>optionalNum('enemy_'+kind+'_band_'+start,1)*
-  (finalThree?optionalNum('enemy_'+kind+'_last3_'+start,1):1)*
-  (finalBoss?optionalNum('enemy_'+kind+'_boss_'+start,1):1);
- return {hp:get('hp'),mag:get('mag')};
-}
+// Both combatants use the exact same authored base and level growth.
 export function fromEnemy(row,level){
- const scale=enemyScaling(level),tuning=enemyCombatCoefficients(row);
- const kind=durabilityArchetype(row.name),range=durabilityRanges[row.boss_only==='1'?'boss':'normal'][kind];
- const rawHp=tuning.hp===1?+row.hp:Math.max(range.hp[0],Math.min(range.hp[1],Math.round(+row.hp*tuning.hp)));
- const rawMag=Math.max(1,Math.round(+row.mag*tuning.mag));
- const b={hp:Math.max(1,Math.round(rawHp*scale.hp)),mag:Math.max(1,Math.round(rawMag*scale.mag)),def:+row.def,res:+row.res};
+ const base={hp:+row.hp,mag:+row.mag,def:+row.def,res:+row.res};
  const resists=Object.fromEntries(ATTRS.map(a=>[a,+row['resist_'+a]]));
  const spells=row.spells.split('|').map(s=>{const [role,attribute,power]=s.split(':');return {role,attribute,power:+power};});
- return makeUnit(b,level,resists,spells,row.id);
+ return makeUnit(base,level,resists,spells,row.id);
 }
 export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items){
   if(+i.min_value>+i.max_value||!(Number(i.weight)>0))throw Error('Bad item roll');

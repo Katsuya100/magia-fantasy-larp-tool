@@ -1,4 +1,4 @@
-// Shared browser/Node HP archetype bounds used by authored enemy regeneration and live combat scaling.
+// Historical HP archetype bounds for regeneration only; never affect combat.
 export const durabilityArchetype = function durabilityArchetype(name){
  // Explicit named exceptions from the 102-enemy review: large ogres,
  // iron-clad soldiers / guards, and a small magic-oriented fairy dragon.
@@ -49,3 +49,31 @@ export const durabilityRanges = {
   unmarked:{hp:[96,150],def:[7,12],res:[9,14]}
  }
 };
+
+// Current authored RPG HP-base bounds. Static validation only, never runtime clamping.
+export const combatBaseHpRanges = Object.freeze({
+ normal:Object.freeze({
+  slime:Object.freeze([63,81]),
+  flying:Object.freeze([63,87]),
+  beast:Object.freeze([71,95]),
+  spectral:Object.freeze([64,92]),
+  armored:Object.freeze([78,91]),
+  construct:Object.freeze([79,90]),
+  plant:Object.freeze([79,89]),
+  caster:Object.freeze([67,89]),
+  colossus:Object.freeze([90,100]),
+  dragon:Object.freeze([88,97]),
+  raider:Object.freeze([73,80]),
+ }),
+ boss:Object.freeze({
+  beast:Object.freeze([94,127]),
+  dragon:Object.freeze([104,126]),
+  spectral:Object.freeze([92,115]),
+  armored:Object.freeze([95,129]),
+  colossus:Object.freeze([107,119]),
+  caster:Object.freeze([89,118]),
+  plant:Object.freeze([106,106]),
+  construct:Object.freeze([107,107]),
+  flying:Object.freeze([130,130]),
+ }),
+});

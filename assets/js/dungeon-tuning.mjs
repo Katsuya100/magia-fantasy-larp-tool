@@ -7,8 +7,6 @@ export function configure(data){
  ranges=new Map(data.playerBase.map(x=>[x.stat,x]));
 }
 export function num(key){if(!numbers.has(key)||!Number.isFinite(numbers.get(key)))throw Error('Missing balance '+key);return numbers.get(key);}
-// Sparse, explicitly documented per-decade combat tuning defaults to no adjustment.
-export function optionalNum(key,fallback=1){return numbers.has(key)?num(key):fallback;}
 export function level(l){const r=levels.get(Number(l));if(!r)throw Error('Missing level '+l);return r;}
 export function floor(f){
  const fight=Number(f);

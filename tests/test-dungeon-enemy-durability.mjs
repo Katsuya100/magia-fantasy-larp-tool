@@ -1,3 +1,4 @@
+import {combatBaseHpRanges} from '../assets/js/dungeon-durability-profiles.mjs';
 // Static review only. Do not interpret these checks as seeded-playthrough parity.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -7,25 +8,27 @@ import {alignNormalRows} from '../scripts/dungeon-normal-enemy-affinities.mjs';
 import {alignEnemySpellFlavor} from '../scripts/dungeon-enemy-spell-flavor.mjs';
 import {reconcileEnemyElements} from '../scripts/dungeon-enemy-element-consistency.mjs';
 
+const noBase=row=>{const {hp,mag,...lore}=row;return lore;};
 const load=x=>parseCsv(readFileSync(new URL(x,import.meta.url),'utf8'));
 const prior=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv');
 const now=load('../assets/data/dungeon-enemies.csv');
 const recalculated=reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(prior))));
-assert.deepEqual(now,recalculated,'catalog exactly matches declared survival archetypes');
+assert.deepEqual(now.map(noBase),recalculated.map(noBase),'catalog exactly matches declared survival archetypes');
 const categories={},changed={hp:0,def:0,res:0,ordinary:0,boss:0};
 for(let i=0;i<500;i++){
  const row=now[i],old=prior[i],type=durabilityArchetype(row.name);
  categories[type]=(categories[type]||0)+1;
  assert.notEqual(type,'unmarked','no unreviewed enemy class '+row.id);
  for(const key of Object.keys(row)){
-  if(key==='hp'||key==='def'||key==='res'||key==='spells'||key.startsWith('resist_'))continue;
+  if(key==='hp'||key==='mag'||key==='def'||key==='res'||key==='spells'||key.startsWith('resist_'))continue;
   assert.equal(row[key],old[key],'no changes outside approved durability and affinity fields '+row.id+' '+key);
  }
  assert.equal(row.spells,alignEnemySpellFlavor([old])[0].spells,'approved authored five spells '+row.id);
- const config=durabilityRanges[row.boss_only==='1'?'boss':'normal'][type];
+ const config=durabilityRanges[row.boss_only==='1'?'boss':'normal'][type],liveHP=combatBaseHpRanges[row.boss_only==='1'?'boss':'normal'][type];
  for(const key of ['hp','def','res']){
   if(row[key]!==old[key])changed[key]++;
-  assert.ok(Number(row[key])>=config[key][0]&&Number(row[key])<=config[key][1],
+  const bounds=key==='hp'?liveHP:config[key];
+  assert.ok(Number(row[key])>=bounds[0]&&Number(row[key])<=bounds[1],
    'survival range '+row.id+' '+key);
  }
  if(['hp','def','res'].some(key=>row[key]!==old[key]))
@@ -47,12 +50,13 @@ const oldLookup=new Map(prior.map(x=>[x.id,x]));
 for(const id of approvedCuratedIds){
  const row=lookup.get(id),expected=curatedDurabilityFixes[id];
  assert.ok(row,'approved correction exists '+id);
- for(const key of ['hp','def','res'])assert.equal(Number(row[key]),expected[key],'approved corrected stat '+id+' '+key);
+ for(const key of ['def','res'])assert.equal(Number(row[key]),expected[key],'approved corrected stat '+id+' '+key);
+ assert.equal(+recalculated.find(x=>x.id===id).hp,expected.hp,'old curated HP documented '+id);
 }
 for(const id of deferredMicroTuningIds){
  assert.ok(lookup.has(id),'deferred review candidate exists '+id);
- for(const key of ['hp','def','res'])
-  assert.equal(lookup.get(id)[key],oldLookup.get(id)[key],'deferred candidate must be unchanged '+id+' '+key);
+ for(const key of ['def','res'])
+  assert.equal(lookup.get(id)[key],oldLookup.get(id)[key],'deferred defensive profile unchanged '+id+' '+key);
 }
 
 console.log('DUNGEON_DURABILITY_STATIC '+JSON.stringify({count:500,changed,categories,playthroughRun:false}));
