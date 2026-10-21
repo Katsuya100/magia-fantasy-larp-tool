@@ -92,9 +92,10 @@ for(let layer=1;layer<=100;layer++){
  const b=G.fromEnemy(old[index],level),n=G.fromEnemy(now[index],level);
  const previous=bossBudget(player,b),changed=bossBudget(player,n);
  const delta=changed/previous-1;
- assert.ok(Math.abs(delta)<.09,'boss expected effective-health budget differs >9% at '+layer+': '+delta);
+ if(Math.abs(delta)>=.09)console.log('BOSS_BUDGET_OUTLIER '+JSON.stringify({layer,name:now[index].name,oldHP:old[index].hp,newHP:now[index].hp,delta}));
  differences.push(delta);
 }
+assert.ok(differences.every(delta=>Math.abs(delta)<.09),'all 100 boss expected effective-health budgets stay within 9%');
 console.log('BOSS_FLAVOR_BUDGET '+JSON.stringify({count:differences.length,
  mean:differences.reduce((a,b)=>a+b,0)/differences.length,
  largest:Math.max(...differences.map(Math.abs))}));
