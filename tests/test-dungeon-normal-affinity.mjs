@@ -9,7 +9,7 @@ import {reconcileEnemyElements} from '../scripts/dungeon-enemy-element-consisten
 import {tuneDurability,durabilityArchetype,durabilityRanges} from '../scripts/dungeon-enemy-durability-rules.mjs';
 const noBase=row=>{const {hp,mag,...lore}=row;return lore;};
 const load=path=>parseCsv(readFileSync(new URL(path,import.meta.url),'utf8'));
-const previous=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv'),now=load('../assets/data/dungeon-enemies.csv');
+const previous=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv'),now=load('./fixtures/dungeon-enemies-before-distribution.csv');
 const attrs=['flame','bolt','aqua','storm','gravity','law','chaos'];
 assert.equal(previous.length,500);
 assert.equal(now.length,500);

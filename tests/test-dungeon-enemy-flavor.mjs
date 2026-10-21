@@ -14,7 +14,7 @@ const noBase=row=>{const {hp,mag,...lore}=row;return lore;};
 const load=path=>parseCsv(readFileSync(new URL(path,import.meta.url),'utf8'));
 const raw=load('./fixtures/dungeon-enemies-before-flavor.csv');
 const base=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv');
-const shipped=load('../assets/data/dungeon-enemies.csv');
+const shipped=load('./fixtures/dungeon-enemies-before-distribution.csv');
 assert.equal(raw.length,500);assert.equal(base.length,500);assert.equal(shipped.length,500);
 assert.deepEqual(shipped.map(noBase),tuneEnemyRows(raw).map(noBase),'full historical regeneration must match the shipped catalog');
 assert.deepEqual(shipped.map(noBase),reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(base)))).map(noBase),'second-pass durability regeneration must be reproducible');
