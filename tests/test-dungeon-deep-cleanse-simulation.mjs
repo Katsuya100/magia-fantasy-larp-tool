@@ -13,6 +13,7 @@ import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {enemyForFight} from '../assets/js/dungeon-design.mjs';
 import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
 import {simulateProgression} from '../scripts/simulate-dungeon-stones.mjs';
+import {withNeutralAttackAttributes,compareNeutralAttackChoices} from './helpers/dungeon-neutral-loadout.mjs';
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),items:csv('consumables'),buffs:csv('buffs'),balance:csv('balance'),
@@ -65,18 +66,18 @@ const SPELLS=[
  {role:'support',attribute:'aqua',power:320},
  {role:'defense',attribute:'law',power:270}
 ];
-function upgradeSpells(budget){
- const spells=SPELLS.map(s=>({...s,basePower:s.power}));
+function upgradeSpells(budget,original=SPELLS){
+ const spells=original.map(s=>({...s,basePower:s.power}));
  const counts=spells.map(()=>0);
  for(let i=0;i<budget;i++){
   const candidates=spells.map((spell,index)=>({spell,index})).filter(x=>['attack','support'].includes(x.spell.role));
   const score=({spell,index})=>{
-   const now=G.basePower(spell.power),next=G.basePower(strengthenedPower(SPELLS[index].power,counts[index]+1));
+   const now=G.basePower(spell.power),next=G.basePower(strengthenedPower(original[index].power,counts[index]+1));
    return (next-now+.15)/(counts[index]+1)**.25;
   };
   candidates.sort((a,b)=>score(b)-score(a)||a.index-b.index);
   const selected=candidates[0].index;
-  spells[selected].power=strengthenedPower(SPELLS[selected].power,++counts[selected]);
+  spells[selected].power=strengthenedPower(original[selected].power,++counts[selected]);
  }
  return spells;
 }
@@ -87,7 +88,7 @@ function heroChoice(hero,enemy){
  const heal=ids.find(i=>hero.spells[i].role==='support');
  if(heal!==undefined&&hero.hp/hero.stats.hp<.69)return heal;
  const offense=ids.filter(i=>hero.spells[i].role==='attack');
- if(offense.length)return offense.sort((a,b)=>G.damage(hero,enemy,hero.spells[b],()=>.999)-G.damage(hero,enemy,hero.spells[a],()=>.999))[0];
+ if(offense.length)return offense.sort((a,b)=>compareNeutralAttackChoices(hero,enemy,a,b))[0];
  return heal!==undefined&&hero.hp/hero.stats.hp<.9?heal:-1;
 }
 const BANDS=[
@@ -147,7 +148,8 @@ function earnedStones(seed,layer){
 export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
  assert.ok(band.from>=51&&band.to<=100&&band.to-band.from===9);
  const random=rng(seed),stones=earnedStones(seed+81,band.from-1),spent=Math.floor(stones*.75);
- const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},band.level,{},upgradeSpells(spent),'hero');
+ const chosen=withNeutralAttackAttributes(SPELLS,data.enemies,band.from,band.to);
+ const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},band.level,{},upgradeSpells(spent,chosen.spells),'hero');
  const carry=equipped?cleanseLoadout(band):[];
  const initialLoadout=carry.map(item=>item.id);
  const layerStats=[];
@@ -189,7 +191,8 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
   }
  }
  return {win:cleared===last,cleared,hp:hero.hp,mp:hero.mp,maxHp:hero.stats.hp,maxMp:hero.maxMp,
-  stones,spent,rounds,debuffCasts,cleanseUsed,cleanseByType,carryCount:carry.length,
+  stones,spent,rounds,debuffCasts,cleanseUsed,cleanseByType,attackAttributes:chosen.attackAttributes,
+   carryCount:carry.length,
   remaining:carry.filter(Boolean).length,initialLoadout,layerStats};
 }
 // Keep standalone cleanse trials mandatory, but don't rerun them as an import.
@@ -220,7 +223,8 @@ for(const band of BANDS){
  const row={band:band.from+'-'+band.to,level:band.level,samples,
   earnedStones:percent(mean(pairs.map(x=>x.with.stones))),
   spentStones:percent(mean(pairs.map(x=>x.with.spent))),
-  maxCarry:G.capacity(band.level),loadout:cleanseLoadout(band).map(x=>x.id),
+  maxCarry:G.capacity(band.level),attackAttributes:pairs[0].with.attackAttributes,
+   loadout:cleanseLoadout(band).map(x=>x.id),
   without:summarize('without'),with:summarize('with')};
  assert.ok(row.with.avgCleanses<=row.maxCarry);
  console.log('DEBUFF_DEPTH_SIM '+JSON.stringify(row));
