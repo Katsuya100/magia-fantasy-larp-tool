@@ -37,7 +37,26 @@ for(let i=0;i<500;i++){
  if(ex)exceptions++;
  if(b.boss_only==='0')for(const k of nameAffinities(b.name))assert.ok(Number(b['resist_'+k])<=1,'no weakness to literal named element '+b.id);
 }
-assert.equal(changedRes,41);assert.equal(changedSpells,29);assert.equal(exceptions,40);assert.equal(primaryWeak,1);assert.equal(bothWeak,1);
+const secondaryPlan={
+ 'foe_l004_1':'law','foe_l008_1':'gravity','foe_l008_3':'gravity','foe_l008_4':'gravity',
+ 'foe_l009_4':'law','boss_l019':'storm','foe_l027_1':'law','boss_l027':'gravity',
+ 'foe_l043_2':'gravity','foe_l043_3':'chaos','foe_l043_4':'chaos','boss_l043':'law',
+ 'foe_l057_2':'gravity','foe_l057_4':'gravity','boss_l061':'law','foe_l062_3':'aqua',
+ 'boss_l062':'aqua','foe_l065_1':'gravity','boss_l070':'storm','foe_l072_3':'aqua',
+ 'foe_l078_1':'chaos','foe_l078_2':'gravity','foe_l078_3':'chaos','foe_l078_4':'chaos',
+ 'boss_l078':'chaos','foe_l079_1':'storm','foe_l079_2':'storm','foe_l079_4':'law','boss_l097':'storm'
+};
+assert.equal(Object.keys(secondaryPlan).length,29);
+for(const [id,expected] of Object.entries(secondaryPlan)){
+ const enemy=now.find(r=>r.id===id);
+ assert.ok(enemy,'known reviewed secondary slot '+id);
+ const spells=enemy.spells.split('|').map(s=>s.split(':'));
+ for(const slot of [2,4])assert.equal(spells[slot][1],expected,'approved secondary retarget '+id);
+ assert.ok(Number(enemy['resist_'+expected])<=1,'secondary target is not weak '+id);
+}
+assert.equal(changedRes,41);
+assert.equal(changedSpells,0,'secondary spell changes are already applied by the spell flavor stage');
+assert.equal(exceptions,40);assert.equal(primaryWeak,1);assert.equal(bothWeak,1);
 assert.deepEqual(now.find(r=>r.id==='boss_l080'),before.find(r=>r.id==='boss_l080'),'80F boss exception preserved');
 for(const id of ['foe_l091_2','foe_l096_4']){const i=now.findIndex(r=>r.id===id);assert.deepEqual(now[i],before[i],'approved unchanged enemy '+id);}
 const report=readFileSync(new URL('../docs/DUNGEON-ENEMY-ELEMENT-CONSISTENCY.md',import.meta.url),'utf8');
