@@ -3,6 +3,8 @@ import {circleOutlinePixels,ATTRIBUTE_GLOW} from './dungeon-card-art.mjs';
 // Purely visual. A failed photo decode must never block saving or casting.
 export const CIRCLE_RITUAL_DURATION_MS=800; // Upgrade only.
 export const CIRCLE_REVEAL_DURATION_MS=1000;
+export const CIRCLE_GRAND_REVEAL_DURATION_MS=2300;
+export const isGrandCircleReveal=analysis=>Number.isFinite(analysis?.power)&&analysis.power>=500;
 const ATTRIBUTES={
  flame:['🔥','炎'],bolt:['⚡','雷'],aqua:['💧','水'],storm:['🌪️','風'],
  gravity:['🪨','重力'],law:['⚖️','秩序'],chaos:['🌀','混沌']
@@ -92,7 +94,15 @@ export async function playCircleReveal(circle,photoUrl=''){
  try{
   const outline=await circleOutline(circle?.image,circle?.analysis?.attribute);
   dismissActiveCircleReveal?.();
+  const grand=isGrandCircleReveal(circle?.analysis)&&!reducedMotion();
   const root=stageFor('reveal',circle?.analysis,outline);
+  if(grand){
+   root.className+=' circle-ritual--grand';
+   const lightning=element('div','circle-ritual__lightning');
+   lightning.setAttribute('aria-hidden','true');
+   for(let i=1;i<=4;i++)lightning.appendChild(element('span','circle-ritual__bolt circle-ritual__bolt--'+i));
+   root.appendChild(lightning);
+  }
   if(photoUrl){
    const physical=element('img','circle-ritual__physical');
    physical.src=photoUrl;physical.alt='';physical.setAttribute('aria-hidden','true');
@@ -100,7 +110,7 @@ export async function playCircleReveal(circle,photoUrl=''){
   }
   const advance=element('button','circle-ritual__continue');
   advance.type='button';
-  advance.disabled=true; // Prevent a stray tap from dismissing the 1-second reveal.
+  advance.disabled=true; // Prevent stray taps until this reveal's animation has finished.
   advance.setAttribute('aria-label','魔法陣の解明結果を閉じて進む');
   const hint=element('span','circle-ritual__hint');
   hint.textContent='タップして進む';
@@ -129,7 +139,7 @@ export async function playCircleReveal(circle,photoUrl=''){
     advance.focus?.({preventScroll:true});
    };
    if(reducedMotion())ready();
-   else timer=setTimeout(ready,CIRCLE_REVEAL_DURATION_MS);
+   else timer=setTimeout(ready,grand?CIRCLE_GRAND_REVEAL_DURATION_MS:CIRCLE_REVEAL_DURATION_MS);
   });
  }catch{/* A display failure must never undo analysis, saving or battle progress. */}
 }
