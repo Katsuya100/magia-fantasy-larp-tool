@@ -411,6 +411,39 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  isolation:isolate;overflow:hidden;pointer-events:auto;
  background:radial-gradient(ellipse at center,#101827 0%,#02040b 76%)
 }
+.circle-ritual--reveal.circle-ritual--grand{
+ --ritual-duration:2.3s;
+ background:radial-gradient(ellipse at center,#1b2441 0%,#060916 65%,#010207 100%)
+}
+/* Grand revelation only: lightning and a shockwave, never shown for upgrades. */
+.circle-ritual--grand .circle-ritual__lightning{
+ position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;
+ filter:drop-shadow(0 0 12px #aeefff)
+}
+.circle-ritual--grand .circle-ritual__lightning::before{
+ content:"";position:absolute;inset:0;
+ background:radial-gradient(circle,#efffffaa 0%,#94dfff55 17%,transparent 57%);
+ opacity:0;animation:circle-grand-flash 2.3s ease-out both
+}
+.circle-ritual--grand .circle-ritual__lightning::after{
+ content:"";position:absolute;left:50%;top:50%;
+ width:min(78vw,54dvh,390px);aspect-ratio:1;border-radius:50%;
+ border:3px solid #d8faff;box-shadow:0 0 22px #86d8ff,inset 0 0 20px #9ee9ff;
+ animation:circle-grand-shockwave 1.25s ease-out .72s both
+}
+.circle-ritual--grand .circle-ritual__bolt{
+ position:absolute;top:50%;left:50%;
+ width:clamp(45px,13vw,100px);height:min(93vw,65dvh,500px);
+ background:linear-gradient(180deg,#faffff,#75d5ff 45%,#ffffff 75%,#a5abff);
+ clip-path:polygon(49% 0,90% 27%,59% 26%,85% 55%,43% 50%,62% 79%,7% 100%,31% 58%,10% 55%,36% 25%);
+ filter:drop-shadow(0 0 16px #b8f1ff);opacity:0;
+ transform:translate(-50%,-50%) rotate(var(--bolt-turn));
+ animation:circle-grand-bolt .8s steps(1,end) both
+}
+.circle-ritual--grand .circle-ritual__bolt--1{--bolt-turn:-38deg;animation-delay:.38s}
+.circle-ritual--grand .circle-ritual__bolt--2{--bolt-turn:47deg;animation-delay:.7s}
+.circle-ritual--grand .circle-ritual__bolt--3{--bolt-turn:113deg;animation-delay:1.02s}
+.circle-ritual--grand .circle-ritual__bolt--4{--bolt-turn:202deg;animation-delay:1.32s}
 .circle-ritual__physical{
  grid-area:1/1;position:relative;z-index:0;
  width:min(78vw,54dvh,390px);aspect-ratio:1;object-fit:cover;
@@ -524,6 +557,21 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  0%,17%{opacity:0;transform:translateY(12px)}
  36%,86%{opacity:1;transform:translateY(0)}
  100%{opacity:1;transform:translateY(0)}
+}
+@keyframes circle-grand-bolt{
+ 0%,14%,31%,48%,100%{opacity:0}
+ 15%,27%{opacity:1}
+ 32%,43%{opacity:.55}
+ 49%,62%{opacity:.95}
+}
+@keyframes circle-grand-flash{
+ 0%,21%,37%,55%,73%,100%{opacity:0}
+ 26%,42%,61%{opacity:.85}
+}
+@keyframes circle-grand-shockwave{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}
+ 27%{opacity:.9}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(2.4)}
 }
 @media(max-width:440px){.circle-ritual__labels{gap:0}.circle-ritual__label{padding:4px 6px}}
 @media(prefers-reduced-motion:reduce){
