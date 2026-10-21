@@ -176,7 +176,23 @@ assert.equal(targetClearLevel(1),1);
 assert.equal(targetClearLevel(2),3);
 assert.equal(targetClearLevel(3),5);
 assert.equal(targetClearLevel(100),150);
-assert.equal(targetClearLevel(101),150);
+assert.equal(targetClearLevel(101),151);
+assert.equal(targetClearLevel(102),152);
+assert.equal(targetClearLevel(110),160);
+assert.equal(targetClearLevel(200),250);
+assert.equal(targetClearLevel(500),550);
+assert.equal(+level(151).hp_multiplier,29.5);
+assert.equal(+level(151).mag_multiplier,19);
+assert.equal(+level(151).def_multiplier,15.25);
+assert.equal(+level(151).res_multiplier,15.25);
+for(const stat of ['hp','mag','def','res']){
+ const key=stat+'_multiplier';
+ assert.ok(+level(151)[key]>+level(150)[key],stat+' continues growing beyond Lv150');
+ assert.ok(+level(250)[key]>+level(151)[key],stat+' continues growing to Lv250');
+}
+assert.deepEqual(G.stats({hp:100,mag:10,def:7,res:7},151),
+ {hp:2950,mag:190,def:107,res:107},
+ 'above-cap enemies use extended stat multipliers');
 const profile={level:1,xp:0},base={hp:100,mag:10,def:7,res:7};
 const attack={role:'attack',attribute:'flame',power:1200};
 for(let layer=1;layer<=100;layer++){
@@ -217,13 +233,26 @@ for(let layer=1;layer<=100;layer++){
  if(layer<100)G.experience(profile,5*G.fightExperience(expected,profile.level,layer));
 }
 assert.equal(level(150).carry_limit,'18');
-for(let i=0;i<500;i++)assert.equal(enemyForFight(enemies,501,()=>(i+.5)/500).id,enemies[i].id);
+const endlessNormals=enemies.filter(e=>e.boss_only==='0');
+assert.equal(endlessNormals.length,400);
+for(let i=0;i<endlessNormals.length;i++)
+ assert.equal(enemyForFight(enemies,501,()=>(i+.5)/endlessNormals.length).id,endlessNormals[i].id);
+for(const fight of [501,502,503,504,506,507,508,509,2501,2502,2503,2504])
+ assert.equal(enemyForFight(enemies,fight,()=>.99999).boss_only,'0','normal slot never draws a boss at fight '+fight);
+for(const fight of [505,510,2505])
+ assert.equal(enemyForFight(enemies,fight,()=>.99999).boss_only,'1','fifth fight always draws a boss');
 for(let i=0;i<100;i++){
  const boss=enemyForFight(enemies,505,()=>(i+.5)/100);
  assert.equal(boss.boss_only,'1');
  const number=Number(boss.id.slice(6));
  assert.equal(bossUniqueCollection(collections,boss.id).rarity,number%10===0?'legendary':'epic');
 }
-assert.equal(floor(505).enemy_level,'150');
-assert.equal(floor(505).boss,'1');
+for(const [fight,expectedLevel,boss] of [[501,151,'0'],[505,151,'1'],[506,152,'0'],[550,160,'1'],[1000,250,'1'],[2500,550,'1']]){
+ const generated=floor(fight);
+ assert.equal(generated.enemy_level,String(expectedLevel),'generated enemy level at fight '+fight);
+ assert.equal(generated.minimum_enemy_level,String(expectedLevel),'generated level floor at fight '+fight);
+ assert.equal(generated.boss,boss,'generated boss at fight '+fight);
+}
+assert.equal(G.fromEnemy(enemyForFight(enemies,505,()=>0),151).level,151,
+ 'endless boss receives calculated enemy level');
 console.log('PASS 300 relics, 500 monsters, boss drops, 100-layer curve, XP and combat budget');

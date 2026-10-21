@@ -32,6 +32,7 @@ assert.equal(G.magicStoneDropChance(2,2),.30,'below recommended level, keep full
 assert.equal(G.magicStoneDropChance(3,2),.30,'at another layer recommended level, keep full rate');
 assert.equal(G.magicStoneDropChance(150,100),.30,'final designed layer remains eligible');
 assert.equal(G.magicStoneDropChance(150,101),.30,'endless layers remain eligible');
+assert.equal(G.magicStoneDropChance(150,200),.30,'underleveled heroes retain full stone chance in deep layers');
 assert.equal(G.magicStoneDropChance(11,1),.30/1024,'ten extra levels make stones extremely rare');
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:1}),{collection:5,stone:1,use:3});
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2}),{collection:5,stone:0,use:3},'overlevel only reduces stones');

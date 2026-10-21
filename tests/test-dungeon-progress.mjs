@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {layerOfFight,encounterOfFight,isLayerBoss,encounterLabel,battleHeading,battleEncounter,layerName,LAYER_NAMES,
- clearedLayer,nextLayer,deepestReturnedLayer,recordReturnedLayer,FIGHTS_PER_LAYER,dungeonDepthBlend} from '../assets/js/dungeon-progress.mjs';
+ clearedLayer,nextLayer,deepestReturnedLayer,recordReturnedLayer,deepestReachedLayer,recordReachedLayer,hasHundredFloorCrown,FIGHTS_PER_LAYER,dungeonDepthBlend} from '../assets/js/dungeon-progress.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 assert.equal(FIGHTS_PER_LAYER,5);
 for(const [fight,crimson,darkness,fog] of [
@@ -58,4 +58,17 @@ assert.equal(recordReturnedLayer(fresh,6),1,'descending to next layer never rais
 assert.equal(recordReturnedLayer(fresh,10),2,'return after beating second layer boss counts two');
 assert.equal(recordReturnedLayer(fresh,5),2,'later shallow returns do not reduce it');
 assert.equal(deepestReturnedLayer({highest:495,returns:7}),0,'unverifiable legacy visit record is ignored');
-console.log('PASS layer progression and deepest successfully returned layer');
+assert.equal(deepestReachedLayer({deepestReturnedLayer:10}),10,'legacy successful returns count as arrival');
+assert.equal(deepestReachedLayer({run:{floor:501}}),101,'legacy ongoing run establishes arrival');
+const adventurer={returns:0,deepestReachedLayer:0,deepestReturnedLayer:0,run:null};
+assert.equal(recordReachedLayer(adventurer,1),1,'entering first layer establishes an arrival');
+assert.equal(deepestReturnedLayer(adventurer),0,'arrival does not imply return');
+assert.equal(recordReachedLayer(adventurer,501),101,'endless first fight reaches layer 101');
+assert.equal(recordReachedLayer(adventurer,5),101,'later shallow attempts never lower arrival');
+assert.equal(recordReturnedLayer(adventurer,500),100,'successful return records layer 100');
+assert.equal(deepestReachedLayer(adventurer),101,'successful return does not lower highest arrival');
+assert.equal(deepestReturnedLayer(adventurer),100,'return and arrival are independent');
+assert.equal(hasHundredFloorCrown({defeatedBosses:{boss_l100:true}}),true);
+assert.equal(hasHundredFloorCrown({adventurerRank:100,defeatedBosses:{}}),false,'rank is not a crown trigger');
+assert.equal(hasHundredFloorCrown({defeatedBosses:{boss_l100:false}}),false);
+console.log('PASS separate deepest reached/returned records and 100F crown eligibility');

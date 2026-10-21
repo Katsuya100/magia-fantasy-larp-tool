@@ -49,6 +49,7 @@ assert.equal(fresh.run,null);
 assert.equal(fresh.returns,0);
 assert.equal(fresh.magicStones,0);
 assert.equal(fresh.deepestReturnedLayer,0);
+assert.equal(fresh.deepestReachedLayer,0);
 // A later ordinary save must not destroy the profile or photos.
 fresh.name='protected-save';
 await saveProfile(db2,fresh);

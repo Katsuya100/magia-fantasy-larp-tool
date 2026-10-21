@@ -57,7 +57,7 @@ try{
  assert.equal($('tab-dungeon').hidden,true);
  assert.equal($('startAttack').disabled,true);
  assert.match($('playerStats').innerHTML,/携行品上限：3/);
- assert.match($('playerStats').innerHTML,/最深:-/,'new player has no deepest returned layer');
+ assert.match($('playerStats').innerHTML,/最深到達階層：<strong>-<\/strong>/,'new player has no arrival record');
  await doc.click(btn({view:'library'}));
  assert.equal($('library').hidden,false);
  assert.equal($('tab-library').attributes['aria-current'],'page','library is its own preparation tab');
@@ -308,6 +308,7 @@ try{
  assert.equal(p.run.layerEnemyOrder.layer,1,'the first four opponents receive a saved per-layer order');
  assert.equal(new Set(firstLayerOrder).size,4,'each regular foe appears once per layer');
  assert.equal(p.run.enemy.id,firstLayerOrder[0],'first fight uses shuffled opponent #1');
+ assert.equal(p.deepestReachedLayer,1,'entering 1層 counts as arrival');
  assert.equal(p.deepestReturnedLayer,0,'entering 1層 does not count as a completed return');
  assert.equal($('floorLabel').textContent,'1層 はじまりの魔窟','first layer shows its name');
  assert.equal($('battleEncounterLabel').textContent,'1戦目','the encounter is a separate smaller line');assert.equal(p.run.carry.filter(Boolean).length,0,'first outing has no carried items');
@@ -489,7 +490,7 @@ try{
  assert.equal(p.inventory.length+collectibleCount+p.magicStones,loot);
  assert.equal(p.deepestReturnedLayer,1);
  await doc.click(btn({view:'home'}));
- assert.match($('playerStats').innerHTML,/最深:1層/,'profile reports deepest layer instead of battle count');
+ assert.match($('playerStats').innerHTML,/最深帰還階層：<strong>1層<\/strong>/,'profile reports deepest successfully returned layer');
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
  assert.doesNotMatch($('collectionGrid').innerHTML,/赤角鬼王の霊石/,'undropped boss trophy remains hidden');
@@ -602,6 +603,7 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
  assert.equal($('floorLabel').textContent,'2層 地下の亜人砦','next layer has a distinct heading');
  assert.equal($('battleEncounterLabel').textContent,'1戦目');
  assert.equal($('enemyCombatant').dataset.defeated,'false','fresh opponent appears only after starting next layer');
+ assert.equal(p.deepestReachedLayer,2,'descending into the next layer counts as arrival');
  assert.equal(p.deepestReturnedLayer,1,'descending into the next layer does not count as a return');
  assert.equal(p.run.enemy.level,3);
  assert.equal(p.run.hero.hp,hpAtCheckpoint,'continuation carries HP');
@@ -636,6 +638,7 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   assert.equal(el('tab-library').hidden,false);
   assert.equal(el('tab-dungeon').hidden,true);
   assert.equal(defeated.returns,1,'previous rewards remain');
+   assert.equal(defeated.deepestReachedLayer,2,'defeat at layer two preserves arrival record');
    assert.equal(defeated.deepestReturnedLayer,1,'defeat at 2層 cannot increase the returned-layer record');
   assert.equal(defeated.inventory.length,loot-collectibleCount-defeated.magicStones-1,'stone and collection rewards are not inventory items; spent potion is lost and unused potions are refunded');
   assert.equal(defeated.carrySlots[0],null,'consumed potion is not re-equipped after defeat');

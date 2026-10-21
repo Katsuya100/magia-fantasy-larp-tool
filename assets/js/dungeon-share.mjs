@@ -1,5 +1,5 @@
 import {highestRankLayer,rankTitle,rankMetalPalette} from './dungeon-ranks.mjs';
-import {deepestReturnedLayer} from './dungeon-progress.mjs';
+import {deepestReachedLayer,deepestReturnedLayer,hasHundredFloorCrown} from './dungeon-progress.mjs';
 import {paintCircleArt} from './dungeon-card-art.mjs?v=20261020.33';
 
 export const DUNGEON_SHARE_URL='https://katsuya100.github.io/magia-fantasy-larp-tool/dungeon.html';
@@ -9,7 +9,10 @@ export function adventurerShareData(profile){
   rank:rankTitle(highestRankLayer(profile)),
   rankLayer:highestRankLayer(profile),
   level:Number.isSafeInteger(level)&&level>0?level:1,
-  deepest:deepestReturnedLayer(profile)
+  name:String(profile?.name||'名もなき冒険者').trim().slice(0,20),
+  crowned:hasHundredFloorCrown(profile),
+  deepestReached:deepestReachedLayer(profile),
+  deepestReturned:deepestReturnedLayer(profile)
  };
 }
 export function adventurerShareText(data){
@@ -17,7 +20,8 @@ export function adventurerShareText(data){
   'マギアサークル-ダンジョンアタック',
   '冒険者等級：'+data.rank,
   'Lv.'+data.level,
-  '最深帰還：'+(data.deepest?data.deepest+'層':'未到達')
+  '最深到達階層：'+(data.deepestReached?data.deepestReached+'層':'未到達'),
+  '最深帰還階層：'+(data.deepestReturned?data.deepestReturned+'層':'未到達')
  ].join('\n');
 }
 export function adventurerXUrl(data){
@@ -25,8 +29,8 @@ export function adventurerXUrl(data){
  return 'https://x.com/intent/tweet?'+params.toString();
 }
 
-// Pure browser Canvas rendering. Nothing is uploaded: only three progress values
-// are included, and the player name is intentionally excluded.
+// Pure browser Canvas rendering. The saved PNG includes the character name
+// by design; the X-post text omits it so only the image exposes the name.
 export function paintAdventurerCard(canvas,data,artwork=null){
  if(!canvas?.getContext)throw Error('画像を作成できませんでした。');
  const ctx=canvas.getContext('2d');
@@ -65,11 +69,15 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.shadowColor=metal.glow;ctx.shadowBlur=14;
  ctx.fillStyle=lettering;ctx.font='800 66px sans-serif';ctx.fillText(data.rank,107,335,500);
  ctx.shadowBlur=0;
- ctx.fillStyle='#adabb8';ctx.font='600 24px Georgia, serif';ctx.fillText('LEVEL',83,411);
- ctx.fillText('最深帰還',361,411);
- ctx.fillStyle='#fbebcb';ctx.font='700 58px Georgia, sans-serif';ctx.fillText('Lv.'+data.level,83,483,280);
- ctx.font='700 58px sans-serif';ctx.fillText(data.deepest?data.deepest+'層':'未到達',361,483,320);
- ctx.strokeStyle='#a8845566';ctx.beginPath();ctx.moveTo(335,393);ctx.lineTo(335,490);ctx.stroke();
+ ctx.fillStyle='#adabb8';ctx.font='600 20px sans-serif';
+ ctx.fillText('LEVEL',83,411);
+ ctx.fillText('最深到達階層',255,411);
+ ctx.fillText('最深帰還階層',466,411);
+ ctx.fillStyle='#fbebcb';ctx.font='700 42px sans-serif';
+ ctx.fillText('Lv.'+data.level,83,483,145);
+ ctx.fillText(data.deepestReached?data.deepestReached+'層':'未到達',255,483,190);
+ ctx.fillText(data.deepestReturned?data.deepestReturned+'層':'未到達',466,483,172);
+ ctx.strokeStyle='#a8845566';ctx.beginPath();ctx.moveTo(237,393);ctx.lineTo(237,490);ctx.moveTo(454,393);ctx.lineTo(454,490);ctx.stroke();
  // Prefer extracted photo contours; retain the geometric seal as the fallback.
  if(!paintCircleArt(ctx,artwork)){
  const cx=917,cy=335;
@@ -96,5 +104,13 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.strokeStyle='#ae8b5866';ctx.beginPath();ctx.moveTo(82,548);ctx.lineTo(1116,548);ctx.stroke();
  ctx.fillStyle='#c6b4a4';ctx.font='20px Georgia, serif';ctx.fillText('ADVENTURER CARD',82,594);
  ctx.textAlign='right';ctx.fillText('THE ARCANE EXPEDITION',1115,594);ctx.textAlign='start';
+ const heroName=data.name||'名もなき冒険者';
+ ctx.fillStyle='#fbe4b8';ctx.font='600 27px sans-serif';
+ ctx.fillText(heroName,82,629,475);
+ if(data.crowned){
+  const nameWidth=ctx.measureText?.(heroName)?.width??[...heroName].length*27;
+  ctx.font='30px sans-serif';
+  ctx.fillText('👑',Math.min(570,90+Math.min(nameWidth,475)),629);
+ }
  return canvas;
 }
