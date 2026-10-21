@@ -17,7 +17,8 @@ for(let layer=1;layer<=100;layer++){
  const earned=5*G.fightExperience(intended,normal.level,layer);
  assert.ok(Number.isSafeInteger(earned)&&earned>=(intended===150?0:1),'safe-integer XP '+layer);
  G.experience(normal,earned);
- assert.equal(normal.level,targetClearLevel(layer+1),'expected next-layer level after returning at '+layer);
+ assert.equal(normal.level,Math.min(150,targetClearLevel(layer+1)),
+  'player level caps at 150 even as post-100 enemy levels continue increasing');
 }
 assert.equal(normal.level,150,'a normal first-clear journey ends at level 150');
 
