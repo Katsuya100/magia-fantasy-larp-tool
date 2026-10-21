@@ -110,6 +110,7 @@ for(let to=10;to<=100;to+=10){
  if(winRate<winLower||winRate>winUpper)issues.push('winRate outside '+winLower+'-'+winUpper+'%');
  if(medianMp===null||medianMp<mpLower||medianMp>mpUpper)
   issues.push('winner median MP outside '+mpLower+'-'+mpUpper+'%');
+ if(from===61&&SAMPLES===128)console.log('DUNGEON_61_SEED_AUDIT '+JSON.stringify(runs.map((r,i)=>({seed:i,win:r.win,cleared:r.cleared,finalHp:Number(r.hp.toFixed(2)),finalMp:Number(r.mp.toFixed(2)),layer70:r.layerStats.find(x=>x.layer===70)?{startHp:r.layerStats.find(x=>x.layer===70).startHp,startMp:r.layerStats.find(x=>x.layer===70).startMp,endHp:r.layerStats.find(x=>x.layer===70).endHp,endMp:r.layerStats.find(x=>x.layer===70).endMp}:null}))));
  const row={band:from+'-'+to,level,samples:SAMPLES,
   stoneRateAtSortieStart:percentile(rate*100),stoneRateRampEnd:percentile(targetStoneRate(to)*100),
   bankedStones:percentile(average(earned)),spentStonesMedian:medianUsed,
