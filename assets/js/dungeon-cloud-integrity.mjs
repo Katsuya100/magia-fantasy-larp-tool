@@ -24,7 +24,8 @@ export function recordFingerprint(snapshot){
  checkSnapshotShape(snapshot);
  return quickFingerprint({
   profile:JSON.parse(JSON.stringify(snapshot.profile,(_key,value)=>
-   value instanceof Blob?{__photo:true,size:value.size,type:value.type}:value)),
+   value instanceof Blob?{__photo:true,size:value.size,type:value.type}:
+   value?.__magiaArchivedPhoto===true?{__photo:true,size:value.size,type:value.type}:value)),
   circles:snapshot.circles.map(({image,...other})=>other)
  });
 }
