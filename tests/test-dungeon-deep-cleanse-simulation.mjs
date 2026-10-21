@@ -132,9 +132,10 @@ function earnedStones(seed,layer){
  assert.ok(milestone,'valid previous checkpoint '+layer);
  return milestone.stones;
 }
-export function deepRun(seed,band,equipped){
+export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
  assert.ok(band.from>=51&&band.to<=100&&band.to-band.from===9);
  const random=rng(seed),stones=earnedStones(seed+81,band.from-1),spent=Math.floor(stones*.75);
+ const checkpoints=[];
  const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},band.level,{},upgradeSpells(spent),'hero');
  const carry=equipped?cleanseLoadout(band):[];
  const initialLoadout=carry.map(item=>item.id);
@@ -147,7 +148,7 @@ export function deepRun(seed,band,equipped){
    lunaAtStart:carry.filter(item=>item?.id==='luna_stone').length,
    usedBefore:cleanseUsed,cleared:false,endHp:null,endMp:null,
    itemsAtEnd:null,usedAfter:null});
-  const enemy=G.fromEnemy(enemyForFight(data.enemies,fight),+data.floors[fight-1].enemy_level);
+  const enemy=G.fromEnemy(enemyForFight(enemyMaster,fight),+data.floors[fight-1].enemy_level);
   let won=false;
   for(let turn=0;turn<80;turn++){
    if(equipped){
