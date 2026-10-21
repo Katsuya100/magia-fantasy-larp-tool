@@ -19,7 +19,7 @@ const OLD={
 };
 const median=values=>{if(!values.length)return null;const v=[...values].sort((a,b)=>a-b),n=v.length;return (v[Math.floor((n-1)/2)]+v[Math.floor(n/2)])/2;};
 const rounded=n=>n===null?null:Math.round(n*10)/10;
-function trialRows(start,hpScale,magScale,scope){
+function trialRows(start,hpScale,magScale,scope,bossMag=1,bossHp=1){
  const end=start+9;
  return enemies.map(row=>{
   const l=Number(row.id.match(/_l(\d+)(?:_|$)/)?.[1]);
@@ -29,8 +29,9 @@ function trialRows(start,hpScale,magScale,scope){
   if(scope==='boss'&&row.boss_only!=='1')return row;
   const kind=durabilityArchetype(row.name);
   const range=durabilityRanges[row.boss_only==='1'?'boss':'normal'][kind];
-  const hp=Math.max(range.hp[0],Math.min(range.hp[1],Math.round(Number(row.hp)*hpScale)));
-  return {...row,hp:String(hp),mag:String(Math.max(1,Math.round(Number(row.mag)*magScale)))};
+  const finalBoss=row.id===('boss_l'+String(end).padStart(3,'0'));
+  const hp=Math.max(range.hp[0],Math.min(range.hp[1],Math.round(Number(row.hp)*hpScale*(finalBoss?bossHp:1))));
+  return {...row,hp:String(hp),mag:String(Math.max(1,Math.round(Number(row.mag)*magScale*(finalBoss?bossMag:1))))};
  });
 }
 function measure(start,rows){
@@ -65,16 +66,18 @@ const bands=(process.env.PROBE_BANDS||'11,21,41,51,61,71,81,91').split(',').map(
 const hps=(process.env.PROBE_HP||'0.72,0.85,1,1.15').split(',').map(Number);
 const mags=(process.env.PROBE_MAG||'0.65,0.8,0.95,1.1').split(',').map(Number);
 const scopes=(process.env.PROBE_SCOPES||'whole,last3').split(',');
+const bossMags=(process.env.PROBE_BOSS_MAG||'1').split(',').map(Number);
+const bossHps=(process.env.PROBE_BOSS_HP||'1').split(',').map(Number);
 for(const start of bands){
  const initial=measure(start,enemies);
  console.log('TUNING_BASELINE '+JSON.stringify({band:start+'-'+(start+9),...initial,score:rank(start,initial)}));
  const found=[];
- for(const scope of scopes)for(const hpScale of hps)for(const magScale of mags){
-  if(hpScale===1&&magScale===1)continue;
-  const result=measure(start,trialRows(start,hpScale,magScale,scope));
-  found.push({scope,hpScale,magScale,...result,score:rank(start,result)});
+ for(const scope of scopes)for(const hpScale of hps)for(const magScale of mags)for(const bossMag of bossMags)for(const bossHp of bossHps){
+  if(hpScale===1&&magScale===1&&bossMag===1&&bossHp===1)continue;
+  const result=measure(start,trialRows(start,hpScale,magScale,scope,bossMag,bossHp));
+  found.push({scope,hpScale,magScale,bossMag,bossHp,...result,score:rank(start,result)});
  }
  found.sort((a,b)=>a.score-b.score||Math.abs(1-a.hpScale)+Math.abs(1-a.magScale)-Math.abs(1-b.hpScale)-Math.abs(1-b.magScale));
- console.log('TUNING_PROBE '+JSON.stringify({band:start+'-'+(start+9),top:found.slice(0,8),tested:found.length}));
+ console.log('TUNING_PROBE '+JSON.stringify({band:start+'-'+(start+9),top:found.slice(0,16),tested:found.length}));
 }
 console.log('PASS diagnostic candidate search (does not relax or replace official tests)');
