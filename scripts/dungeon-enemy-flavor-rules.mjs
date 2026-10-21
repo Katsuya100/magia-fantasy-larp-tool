@@ -99,7 +99,7 @@ export const bossFlavor = function bossFlavor(rows){
   // boss HP to preserve the multi-spell effective-health budget after counters change.
   const oldScore=damageScore(old),newScore=damageScore(b);
   const desired=Number(old.hp)*(newScore/oldScore)*(100+Number(old.def))/(100+Number(b.def));
-  b.hp=String(Math.round(desired));
+  b.hp=String(Math.round(desired*[1.04,1.06,1.035,1.02,1,1.02,1,0.925,1,0.94][Math.floor((layer-1)/10)]));
  }
  return rows;
 };
