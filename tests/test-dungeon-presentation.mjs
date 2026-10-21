@@ -62,6 +62,8 @@ assert.match(page,/魔法陣の力を解明中/);
 
 
 assert.match(page,/id="heroName"/,'name in duel is populated from saved profile');
+assert.match(page,/<div class="combatant-heading"><h3 id="enemyName"><\/h3><span id="enemyLevel" class="combatant-level"><\/span><\/div>/,'enemy name and level have separate lines');
+assert.match(page,/<div class="combatant-heading"><h3 id="heroName"><\/h3><span id="heroLevel" class="combatant-level"><\/span><\/div>/,'hero name and level have separate lines');
 assert.doesNotMatch(page,/<h3>冒険者<\/h3>/,'no generic name hard-coded inside the duel');
 assert.match(page,/id="battleArena" class="arena" data-role="idle"/,'duel stage has animation state');
 assert.match(page,/id="heroCombatant" class="unit hero-unit"/);
@@ -489,8 +491,8 @@ assert.match(css,/\.battle-spells\{grid-template-columns:repeat\(5,minmax\(0,1fr
 assert.match(css,/\.battle-spells\{align-items:start\}/,'spell frames start aligned without stretching');
 assert.match(css,/\.battle-spell-frame \.battle-tile\{\s*flex:0 0 auto;height:auto;min-height:0/,'cast button sizes to its own image and 発動 label');
 assert.match(css,/\.battle-spells \.tile-cooldown\{\s*margin-top:4px/,'cast label stays just below the image');
-assert.match(css,/#battleArena \.unit\{\s*height:270px;min-height:270px;max-height:270px/,'both combatants have fixed identical desktop height');
-assert.match(css,/#battleArena \.unit\{\s*height:232px;min-height:232px;max-height:232px/,'both combatants have fixed identical mobile height');
+assert.match(css,/#battleArena \.unit\{\s*height:288px;min-height:288px;max-height:288px/,'both combatants have fixed identical desktop height');
+assert.match(css,/#battleArena \.unit\{\s*height:250px;min-height:250px;max-height:250px/,'both combatants have fixed identical mobile height');
 assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:38px minmax\(0,1fr\)/,'both names reserve the exact same fixed row height');
 assert.match(css,/#battleArena \.unit-info h3\{[\s\S]*?white-space:normal;overflow-wrap:anywhere;[\s\S]*?-webkit-line-clamp:2/,'long names wrap over two lines instead of escaping the card');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:34px 34px 33px minmax\(0,1fr\)/,'both sides align HP, MP and MAG/DEF/RES rows');
@@ -504,9 +506,11 @@ assert.match(app,/function rowUnit\(unit\)\{[\s\S]*?class="battle-vital"[\s\S]*?
 // margin between glowing glyphs and two-line names on both mobile and desktop.
 assert.match(css,/#battleArena \.unit \.enemy-portrait,#battleArena \.unit \.hero-portrait\{\s*box-sizing:border-box;width:100%;height:64px;flex:0 0 64px;[\s\S]*?margin:0 0 14px;font-size:46px/,'desktop combat portraits leave 14px between icon area and names');
 assert.match(css,/#battleArena \.unit \.enemy-portrait,#battleArena \.unit \.hero-portrait\{\s*height:44px;flex-basis:44px;margin-bottom:12px;font-size:36px/,'mobile combat portraits leave a 12px gap above names');
-assert.match(css,/#battleArena \.unit\{\s*height:270px;min-height:270px;max-height:270px/,'spacing does not increase desktop fighter box height');
-assert.match(css,/#battleArena \.unit\{\s*height:232px;min-height:232px;max-height:232px/,'spacing does not increase mobile fighter box height');
-assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:38px minmax\(0,1fr\)/,'left and right names reserve the same two-line row');
+assert.match(css,/#battleArena \.unit\{\s*height:288px;min-height:288px;max-height:288px/,'spacing does not increase desktop fighter box height');
+assert.match(css,/#battleArena \.unit\{\s*height:250px;min-height:250px;max-height:250px/,'spacing does not increase mobile fighter box height');
+assert.match(css,/#battleArena \.unit-info\{\s*width:100%;min-width:0;min-height:0;flex:1;\s*display:grid;grid-template-rows:56px minmax\(0,1fr\)/,'both combatants reserve room for name and level');
+assert.match(css,/#battleArena \.combatant-heading\{\s*min-width:0;display:grid;grid-template-rows:38px 18px/,'the level stays in its own row even when a name wraps');
+assert.match(css,/#battleArena \.combatant-level\{\s*display:block;min-width:0;font:600 12px\/18px/,'the level has a fixed readable line');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*width:100%;min-width:0;min-height:0;display:grid;\s*grid-template-rows:34px 34px 33px minmax\(0,1fr\)/,'HP/MP and attributes stay vertically aligned');
 
 /* Glow is drawn outside the short icon track, without changing layout. */
@@ -515,8 +519,8 @@ assert.match(css,/#battleArena \.enemy-portrait::before,[\s\S]*?#battleArena \.h
 assert.match(css,/background:radial-gradient\(ellipse 37% 51% at 50% 61%,\s*var\(--portrait-aura\)/,'portrait glow is a soft vertical ellipse');
 assert.match(css,/#battleArena \.enemy-portrait\{--portrait-aura:rgba\(167,73,100,\.53\)\}/,'enemy keeps rosy aura');
 assert.match(css,/#battleArena \.hero-portrait\{--portrait-aura:rgba\(57,143,159,\.56\)\}/,'hero keeps cool aura');
-assert.match(css,/#battleArena \.unit\{\s*height:270px;min-height:270px;max-height:270px/,'desktop frames remain equal fixed height, slightly shorter');
-assert.match(css,/#battleArena \.unit\{\s*height:232px;min-height:232px;max-height:232px/,'mobile frames remain equal fixed height, slightly shorter');
+assert.match(css,/#battleArena \.unit\{\s*height:288px;min-height:288px;max-height:288px/,'desktop frames remain equal fixed height, slightly shorter');
+assert.match(css,/#battleArena \.unit\{\s*height:250px;min-height:250px;max-height:250px/,'mobile frames remain equal fixed height, slightly shorter');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{\s*grid-template-rows:31px 31px 33px minmax\(0,1fr\)/,'matching mobile HP, MP and attribute rows leave room for status effects');
 assert.match(css,/\.relic-card\.discovered\[data-rarity="common"\] \.relic-art\{box-shadow:none\}/,'only common loses the surrounding aura');
 assert.match(css,/\.relic-card\.discovered\[data-rarity="common"\] \.relic-glyph,[\s\S]*?\.relic-card\.discovered\[data-rarity="common"\] \.relic-rarity\{text-shadow:none\}/,'common text does not glow');
