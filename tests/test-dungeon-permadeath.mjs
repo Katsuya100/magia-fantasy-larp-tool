@@ -34,6 +34,7 @@ assert.equal(creatorStamped.image,lost.image,'stamping never changes the source 
 assert.equal(snapshot.items[0].id,'mana_s');
 assert.equal(snapshot.loot.length,3);
 const heir=createSuccessorProfile(pack,run,[lost,safe],{hp:90,mag:8,def:5,res:5});
+assert.equal(heir.deepestReachedLayer,0,'permadeath starts a new hero at zero arrival depth');
 assert.equal(heir.name,'');
 assert.equal(heir.level,1);assert.equal(heir.xp,0);
 assert.equal(heir.magicStones,7);
