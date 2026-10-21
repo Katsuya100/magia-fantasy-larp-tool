@@ -21,8 +21,6 @@ export const combatBalanceResistCalibrations=Object.freeze({
  "foe_l030_2": 0.2,
  "foe_l030_4": 0.2,
  "boss_l030": 0.2,
- "foe_l068_2": 0.12,
- "foe_l068_4": 0.12,
  "foe_l069_2": 0.12,
  "foe_l069_4": 0.12,
  "foe_l070_2": 0.12,
@@ -66,15 +64,24 @@ export const combatBalanceResistCalibrations=Object.freeze({
  "boss_l088": 0.2,
  "boss_l089": 0.2,
  "boss_l090": 0.2,
- "foe_l090_1": 0.2,
+ "foe_l090_1": 0.12,
  "boss_l097": 0.12,
  "boss_l098": 0.12,
  "boss_l099": 0.12,
  "foe_l097_1": 0.12,
  "foe_l098_1": 0.12,
- "boss_l069": 0.14,
- "boss_l070": 0.14,
- "boss_l087": 0.2
+ "boss_l069": 0.25,
+ "boss_l070": 0.25,
+ "boss_l087": 0.2,
+ "foe_l027_2": 0.12,
+ "foe_l027_4": 0.12,
+ "foe_l028_1": 0.12,
+ "foe_l028_3": 0.12,
+ "foe_l029_2": 0.12,
+ "foe_l029_4": 0.12,
+ "foe_l089_1": 0.12,
+ "foe_l089_3": 0.12,
+ "foe_l090_3": 0.12
 });
 
 
