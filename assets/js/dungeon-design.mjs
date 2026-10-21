@@ -1,5 +1,33 @@
 // Shared dungeon level design: 100 five-fight layers, then endless mixed encounters.
 export const DESIGNED_LAYERS=100;
+// Combat-only durability calibration for neutral-circle playthroughs.
+// The authored 500-monster catalog stays reproducible and is never rewritten.
+// The first factor is the historical band retune; the second is the
+// 128-seed neutral-circle HP correction. Round at each stage to match the
+// verified candidate used in the GitHub Actions tuning sweep.
+export const COMBAT_HP_BALANCE_BY_DECADE=Object.freeze([
+ Object.freeze([1,0.90]),     // 1-10F
+ Object.freeze([0.75,1.22]),  // 11-20F
+ Object.freeze([0.90,1.06]),  // 21-30F
+ Object.freeze([0.82,1.16]),  // 31-40F
+ Object.freeze([0.84,1.10]),  // 41-50F
+ Object.freeze([0.70,1.25]),  // 51-60F
+ Object.freeze([0.73,1.23]),  // 61-70F
+ Object.freeze([0.91,1.04]),  // 71-80F
+ Object.freeze([1.025,1]),   // 81-90F
+ Object.freeze([0.985,1])    // 91-100F
+]);
+export function combatTunedEnemy(row){
+ const match=/^(?:foe_l(\d{3})_[1-4]|boss_l(\d{3}))$/.exec(row.id||'');
+ if(!match)return row;
+ const layer=Number(match[1]||match[2]),decade=Math.ceil(layer/10);
+ const factors=COMBAT_HP_BALANCE_BY_DECADE[decade-1];
+ if(!factors)return row;
+ const newHp=Math.max(1,Math.round(Math.round(Number(row.hp)*factors[0])*factors[1]));
+ if(!Number.isSafeInteger(newHp))throw Error('Invalid calibrated enemy HP '+row.id);
+ return {...row,hp:String(newHp)};
+}
+
 export const RARITIES=['common','uncommon','rare','epic','legendary'];
 // Relative weights of the four non-legendary rarities.
 // Legendary is nearly impossible at layer 1, increasing to 10% at layer 100+.
@@ -50,13 +78,13 @@ export function enemyForFight(enemies,fight,r=Math.random){
   const id=slot===5?'boss_l'+suffix:'foe_l'+suffix+'_'+slot;
   const enemy=enemies.find(e=>e.id===id);
   if(!enemy)throw Error('Missing designed enemy '+id);
-  return enemy;
+  return combatTunedEnemy(enemy);
  }
  // Post-100 regular fights draw only normal enemies, never bosses.
  // The fifth encounter still picks a named boss, with a first-defeat trophy.
  const pool=enemies.filter(e=>e.boss_only===(slot===5?'1':'0'));
  if(!pool.length)throw Error('Empty enemy pool');
- return pool[Math.min(pool.length-1,Math.floor(Math.max(0,r())*pool.length))];
+ return combatTunedEnemy(pool[Math.min(pool.length-1,Math.floor(Math.max(0,r())*pool.length))]);
 }
 export function legendaryDropRate(layer){
  const depth=Math.min(1,Math.max(0,(Number(layer)-1)/99));
