@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {magicEffectTier,effectCaption,attackHitAffinity,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,COMBAT_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
+import {magicEffectTier,effectCaption,attackHitAffinity,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,combatPhaseDuration,COMBAT_EFFECT_MS,AFFINITY_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase,buffs]=await Promise.all(['balance','levels','floors','player-base','buffs'].map(csv));
 configure({balance,levels,floors,playerBase});
@@ -62,6 +62,16 @@ const shielded=unit([]);
 G.addStatus(shielded,{id:'resist_flame',kind:'buff',attribute:'flame',effect:'resist',value:.4,turns:2});
 assert.equal(attackHitAffinity({...affinityHit,enemy:shielded}),'resist','temporary resistance is reflected');
 assert.equal(attackHitAffinity({...affinityHit,enemy:{}}),'none','incomplete visual frames are safe');
+assert.equal(AFFINITY_EFFECT_MS,720,'the whole affinity hit lasts 720ms');
+assert.equal(combatPhaseDuration([affinityHit],COMBAT_EFFECT_MS),AFFINITY_EFFECT_MS,'resistance extends impact');
+assert.equal(combatPhaseDuration([{...affinityHit,enemy:G.makeUnit(base,1,{flame:1.5},[],'enemy')}],COMBAT_EFFECT_MS),AFFINITY_EFFECT_MS,'weakness extends impact');
+assert.equal(combatPhaseDuration([{...affinityHit,amount:0}],COMBAT_EFFECT_MS),COMBAT_EFFECT_MS,'miss keeps normal tempo');
+assert.equal(combatPhaseDuration([{...affinityHit,role:'basic'}],COMBAT_EFFECT_MS),COMBAT_EFFECT_MS,'basic attacks keep normal tempo');
+assert.equal(combatPhaseDuration([{...affinityHit,enemy:unit([])}],COMBAT_EFFECT_MS),COMBAT_EFFECT_MS,'neutral attacks keep normal tempo');
+assert.equal(combatPhaseDuration([affinityHit],0),0,'reduced motion stays instant');
+const affinityWaits=[];
+await playCombatSequence([affinityHit],()=>{}, {duration:COMBAT_EFFECT_MS,wait:async ms=>affinityWaits.push(ms)});
+assert.deepEqual(affinityWaits,[AFFINITY_EFFECT_MS],'affinity FX remain visible for the full extended phase');
 // Strict boundaries for 3 ultimate circles at 55 spent stones each (165 total).
 for(const [stones,expected] of [[0,1],[4,1],[5,2],[19,2],[20,3],[54,3],[55,4],[100,4]]){
  for(const role of ['attack','defense','support','debuff'])
@@ -145,6 +155,9 @@ const arenaMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleArena"'),
 assert.equal((arenaMarkup.match(/class="affinity-hit"/g)||[]).length,2,'one hit FX per combatant');
 assert.match(cinematicCss,/data-affinity="resist"/,'resistance shield styling');
 assert.match(cinematicCss,/data-affinity="weak"/,'weakness burst styling');
+assert.match(cinematicCss,/\.affinity-hit::before\{\s*animation:affinity-ring \.72s/,'shield/burst lasts 720ms');
+assert.match(cinematicCss,/\.affinity-hit::after\{\s*animation:affinity-word \.72s/,'affinity text lasts 720ms');
+assert.match(cinematicCss,/\.combatant-fx::before\{\s*animation-duration:\.72s/,'impact glow matches affinity duration');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?affinity-hit::before/,'motion-safe affinity');
 for(const name of ['tier-seal','tier-halo','tier-shards']){
  assert.equal((arenaMarkup.match(new RegExp('class="'+name+'"','g'))||[]).length,4,
