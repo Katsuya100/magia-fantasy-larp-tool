@@ -7,7 +7,7 @@ import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
-import {simulate} from './test-dungeon-progression-simulation.mjs';
+import {simulate,upgradeSpells} from './test-dungeon-progression-simulation.mjs';
 import {deepRun} from './test-dungeon-deep-cleanse-simulation.mjs';
 import {simulateProgression} from '../scripts/simulate-dungeon-stones.mjs';
 
@@ -69,6 +69,9 @@ for(let to=10;to<=100;to+=10){
   assert.ok(Number.isFinite(alreadyEarned),'known banked stones before F'+from);
   const spending=Math.floor(alreadyEarned*rate+1e-8);
   assert.ok(spending>=0&&spending<=alreadyEarned);
+  const baseSpells=from===1?INTRO:NORMAL;
+  const upgradedPower=upgradeSpells(baseSpells.map(([role,attribute,power])=>({role,attribute,power})),
+   spending).spells.map(spell=>spell.power);
   earned.push(alreadyEarned);
   const randomSeed=seed(i);
   if(withItems){
@@ -81,7 +84,9 @@ for(let to=10;to<=100;to+=10){
    assert.ok(yes.cleanseUsed<=yes.carryCount);
    assert.equal(yes.carryCount,G.capacity(level));
    runs.push({win:yes.win,hp:yes.hp/yes.maxHp*100,mp:yes.mp/yes.maxMp*100,
-    cleanses:yes.cleanseUsed,remaining:yes.remaining,cleared:yes.cleared,spent:yes.spent});
+    cleanses:yes.cleanseUsed,remaining:yes.remaining,cleared:yes.cleared,spent:yes.spent,
+    maxHp:yes.maxHp,maxMp:yes.maxMp,layerStats:yes.layerStats,
+    initialLoadout:yes.initialLoadout,upgradedPower});
    const no=deepRun(randomSeed,{from,to,level},false);
    controlRuns.push(no);
   }else{
@@ -89,7 +94,9 @@ for(let to=10;to<=100;to+=10){
     spells:from===1?'intro':'five',stones:spending});
    assert.equal(result.spentStones,spending);
    runs.push({win:result.win,hp:result.hp/result.initialHp*100,
-    mp:result.mp/result.initialMp*100,cleared:result.clear,spent:spending});
+    mp:result.mp/result.initialMp*100,cleared:result.clear,spent:spending,
+    maxHp:result.initialHp,maxMp:result.initialMp,layerStats:result.layerStats,
+    initialLoadout:[],upgradedPower});
   }
  }
  const winners=runs.filter(x=>x.win);
@@ -117,8 +124,65 @@ for(let to=10;to<=100;to+=10){
   lossesByLayer:Object.entries(runs.filter(x=>!x.win).reduce((acc,x)=>{
    const layer=Math.ceil((x.cleared+1)/5);acc[layer]=(acc[layer]||0)+1;return acc;
   },{})),passed:issues.length===0,issues};
+ // Sanity check: every completed floor carries the actual post-boss MP and
+ // remaining inventory into the next floor; only the sortie start is full.
+ for(const run of runs){
+  assert.equal(run.layerStats[0].layer,from);
+  assert.equal(run.layerStats[0].startMp,run.maxMp);
+  assert.equal(run.layerStats[0].startHp,run.maxHp);
+  for(let j=1;j<run.layerStats.length;j++){
+   const prev=run.layerStats[j-1],next=run.layerStats[j];
+   assert.equal(next.layer,prev.layer+1);
+   assert.equal(prev.cleared,true,'cannot enter next floor without clearing previous floor');
+   assert.equal(next.startMp,prev.endMp,'MP must carry over between floors');
+   assert.equal(next.startHp,prev.endHp,'HP must carry over between floors');
+   if(withItems)assert.equal(next.itemsAtStart,prev.itemsAtEnd,
+    'items must carry over without free replenishment');
+  }
+ }
  report.push(row);
  console.log('DUNGEON_DEFAULT_BALANCE '+JSON.stringify(row));
+ // One trace row per actual floor, rather than the 10-floor summary alone.
+ // The entrance medians use all trials reaching that floor; exit medians use
+ // trials that defeated that floor boss. Denominators are always shown.
+ for(let layer=from;layer<=to;layer++){
+  const reached=runs.flatMap(run=>run.layerStats.filter(state=>state.layer===layer)
+   .map(state=>({run,state})));
+  const cleared=reached.filter(x=>x.state.cleared);
+  const controls=withItems?controlRuns.flatMap(run=>run.layerStats.filter(state=>state.layer===layer)
+   .map(state=>({run,state}))):[];
+  const layerRow={
+   layer,band:from+'-'+to,
+   conditions:{
+    sortieStartLayer:from,heroLevel:level,enemyLevel:Number(data.floors[(layer-1)*5].enemy_level),
+    stoneRatePercent:percentile(rate*100),bankedStonesMedian:median(earned),
+    spentStonesMedian:medianUsed,baseSpellPower:from===1?INTRO.map(x=>x[2]):NORMAL.map(x=>x[2]),
+    upgradedSpellPowerMedian:[0,1,2,3,4].map(k=>percentile(median(runs.map(x=>x.upgradedPower[k])))),
+    itemPolicy:row.items,initialLoadout:runs[0].initialLoadout,
+    maxHp:runs[0].maxHp,maxMp:runs[0].maxMp
+   },
+   trials:SAMPLES,reached:reached.length,cleared:cleared.length,
+   clearRateOfReached:reached.length?percentile(100*cleared.length/reached.length):null,
+   startHpMedian:percentile(median(reached.map(x=>x.state.startHp))),
+   startMpMedian:percentile(median(reached.map(x=>x.state.startMp))),
+   startHpPercentMedian:percentile(median(reached.map(x=>100*x.state.startHp/x.run.maxHp))),
+   startMpPercentMedian:percentile(median(reached.map(x=>100*x.state.startMp/x.run.maxMp))),
+   endHpPercentMedianOfClears:percentile(median(cleared.map(x=>100*x.state.endHp/x.run.maxHp))),
+   endMpMedianOfClears:percentile(median(cleared.map(x=>x.state.endMp))),
+   endMpPercentMedianOfClears:percentile(median(cleared.map(x=>100*x.state.endMp/x.run.maxMp))),
+   itemsAtStartMedian:withItems?median(reached.map(x=>x.state.itemsAtStart)):0,
+   lunaAtStartMedian:withItems?median(reached.map(x=>x.state.lunaAtStart)):0,
+   cleansersUsedWithinFloorMedian:withItems?median(reached.map(x=>x.state.usedAfter-x.state.usedBefore)):0,
+   controlNoItemStartMpPercentMedian:withItems?percentile(median(controls.map(x=>100*x.state.startMp/x.run.maxMp))):null
+  };
+  assert.equal(layerRow.reached>0,layerRow.startMpMedian!==null);
+  if(layer===from){
+   assert.equal(layerRow.reached,SAMPLES);
+   assert.equal(layerRow.startMpPercentMedian,100);
+   assert.equal(layerRow.startHpPercentMedian,100);
+  }
+  console.log('DUNGEON_DEFAULT_BALANCE_LAYER '+JSON.stringify(layerRow));
+ }
 }
 // Required CI regression guard against the 128-seed main-branch benchmark
 // before the enemy-flavor changes (main at b7fc690bb02bed8a6893a5f330be0c18ae1f58d4).

@@ -96,8 +96,10 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
   startLevel:level,fromLayer,toLayer,spells,spentStones:budget,availableStones:history.stones,
   initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[],
-  enemyDebuffCasts:0,enemyDebuffFights:0,fightsReached:0};
+  enemyDebuffCasts:0,enemyDebuffFights:0,fightsReached:0,layerStats:[]};
  for(let fight=first;fight<=last;fight++){
+  if(fight%5===1)stats.layerStats.push({layer:Math.ceil(fight/5),
+   startHp:hero.hp,startMp:hero.mp,cleared:false,endHp:null,endMp:null});
   const foe=enemyForFight(data.enemies,fight);
   const enemy=G.fromEnemy(foe,+data.floors[fight-1].enemy_level);
   const hpBefore=hero.hp,mpBefore=hero.mp;
@@ -118,12 +120,20 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
   }
   if(debuffInFight)stats.enemyDebuffFights++;
   stats.fightStats.push({fight,layer:Math.ceil(fight/5),win,turns:turns+1,hpBefore,hpAfter:hero.hp,mpBefore,mpAfter:hero.mp});
-  if(!win)break;
+  if(!win){
+   const layerStats=stats.layerStats.at(-1);
+   layerStats.endHp=hero.hp;layerStats.endMp=hero.mp;
+   break;
+  }
   stats.clear=fight;
   hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
   stats.mpRestored+=G.recoverVictoryMp(hero,Math.ceil(fight/5));
   if(fight%50===0&&fight<last){ // 10th/20th/... layer, after the boss
    hero.hp=hero.stats.hp;hero.mp=hero.maxMp;stats.restores++;
+  }
+  if(fight%5===0){
+   const layerStats=stats.layerStats.at(-1);
+   layerStats.cleared=true;layerStats.endHp=hero.hp;layerStats.endMp=hero.mp;
   }
  }
  stats.win=stats.clear===last;

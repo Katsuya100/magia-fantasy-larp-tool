@@ -134,9 +134,16 @@ export function deepRun(seed,band,equipped){
  const random=rng(seed),stones=earnedStones(seed+81,band.from-1),spent=Math.floor(stones*.75);
  const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},band.level,{},upgradeSpells(spent),'hero');
  const carry=equipped?cleanseLoadout(band):[];
+ const initialLoadout=carry.map(item=>item.id);
+ const layerStats=[];
  let cleared=(band.from-1)*5,rounds=0,debuffCasts=0,cleanseUsed=0,cleanseByType={};
  const first=cleared+1,last=band.to*5;
  for(let fight=first;fight<=last;fight++){
+  if(fight%5===1)layerStats.push({layer:Math.ceil(fight/5),
+   startHp:hero.hp,startMp:hero.mp,itemsAtStart:carry.filter(Boolean).length,
+   lunaAtStart:carry.filter(item=>item?.id==='luna_stone').length,
+   usedBefore:cleanseUsed,cleared:false,endHp:null,endMp:null,
+   itemsAtEnd:null,usedAfter:null});
   const enemy=G.fromEnemy(enemyForFight(data.enemies,fight),+data.floors[fight-1].enemy_level);
   let won=false;
   for(let turn=0;turn<80;turn++){
@@ -151,14 +158,24 @@ export function deepRun(seed,band,equipped){
    if(hero.hp<=0)break;
    if(enemy.hp<=0){won=true;break;}
   }
-  if(!won)break;
+  if(!won){
+   const entry=layerStats.at(-1);
+   entry.endHp=hero.hp;entry.endMp=hero.mp;
+   entry.itemsAtEnd=carry.filter(Boolean).length;entry.usedAfter=cleanseUsed;
+   break;
+  }
   cleared=fight;
   hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
   G.recoverVictoryMp(hero,Math.ceil(fight/5));
+  if(fight%5===0){
+   const entry=layerStats.at(-1);
+   entry.cleared=true;entry.endHp=hero.hp;entry.endMp=hero.mp;
+   entry.itemsAtEnd=carry.filter(Boolean).length;entry.usedAfter=cleanseUsed;
+  }
  }
  return {win:cleared===last,cleared,hp:hero.hp,mp:hero.mp,maxHp:hero.stats.hp,maxMp:hero.maxMp,
   stones,spent,rounds,debuffCasts,cleanseUsed,cleanseByType,carryCount:carry.length,
-  remaining:carry.filter(Boolean).length};
+  remaining:carry.filter(Boolean).length,initialLoadout,layerStats};
 }
 const samples=Number(process.env.DUNGEON_DEBUFF_SAMPLES||64);
 assert.ok(Number.isSafeInteger(samples)&&samples>=16&&samples<=1024);
