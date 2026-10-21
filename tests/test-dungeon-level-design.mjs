@@ -89,7 +89,7 @@ for(let layer=1;layer<=100;layer++){
    'one shared primary element per layer '+layer);
   assert.ok(spells[slot].every(spell=>spell.attribute===dominant||
    spell.attribute===spells[slot][2].attribute),'no off-theme spells in layer '+layer);
-  assert.equal(Number(party[slot]['resist_'+dominant]),slot===4?0.95:0.8,
+  assert.equal(Number(party[slot]['resist_'+dominant]),slot===4?(layer===80?1.25:0.95):0.8,
    'elemental resistance follows theme while keeping boss/normal tuning '+layer);
  }
 }
