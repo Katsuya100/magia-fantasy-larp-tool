@@ -8,7 +8,7 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
  const databases=new Map();
  const schema=new Map();
  const factory={
-  opens:0,databases,failProfileBlobWrites:false,
+  opens:0,databases,failProfileBlobWrites:false,transactions:[],
   open(name,version){
    factory.opens++;
    if(onOpen==='throw')throw Error('Storage denied');
@@ -24,11 +24,18 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
      transaction(id,mode){
       const names=Array.isArray(id)?id:[id];
       if(!names.length||names.some(name=>!maps.has(name)))throw Error('Missing object store '+id);
+      // Stage writes until commit just like a real IndexedDB transaction.
+      // Failed or aborted transactions must never leak half a save.
+      const staged=new Map(names.map(n=>[n,mode==='readwrite'
+       ?new Map([...maps.get(n)].map(([k,v])=>[k,structuredClone(v)])):maps.get(n)]));
       const tx={error:null,oncomplete:null,onabort:null,onerror:null};
+      const trace={mode,stores:[...names],writes:[]};
+      factory.transactions.push(trace);
       let pending=0,failed=false,complete=false;
+      tx.abort=()=>{if(failed||complete)return;failed=true;setImmediate(()=>tx.onabort?.());};
       tx.objectStore=store=>{
        if(!names.includes(store))throw Error('Store not in transaction '+store);
-       const table=maps.get(store),keyPath=keys.get(store);
+       const table=staged.get(store),keyPath=keys.get(store);
        const request=(action)=>{
         const req={result:undefined,error:null,onsuccess:null,onerror:null};
         pending++;
@@ -39,7 +46,14 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
           pending--;
           if(!pending&&!complete){
            complete=true;
-           setImmediate(()=>tx.oncomplete?.());
+           setImmediate(()=>{
+            if(failed)return;
+            if(mode==='readwrite')for(const name of names){
+             const destination=maps.get(name);destination.clear();
+             for(const [key,value] of staged.get(name))destination.set(key,value);
+            }
+            tx.oncomplete?.();
+           });
           }
          }catch(e){failed=true;req.error=e;req.onerror?.();tx.error=e;tx.onerror?.();}
         });
@@ -47,10 +61,11 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
        };
        return {
         get:key=>request(()=>structuredClone(table.get(key))),
+        getKey:key=>request(()=>table.has(key)?key:undefined),
         getAll:()=>request(()=>structuredClone([...table.values()])),
-        put:(value,key)=>request(()=>{const id=key??value[keyPath];if(id===undefined)throw Error('Missing key');if(rejectBlobRewrite&&store==='circles'&&table.has(id)&&value?.image instanceof Blob)throw Error('Error preparing Blob/File data to be stored in object store');if(store==='settings'&&id==='profile'&&(rejectProfileBlobRewrite||factory.failProfileBlobWrites)&&containsBlob(value))throw Error('Error preparing Blob/File data to be stored in object store');table.set(id,structuredClone(value));return id;}),
-        delete:key=>request(()=>{table.delete(key);return undefined;}),
-        clear:()=>request(()=>{table.clear();})
+        put:(value,key)=>request(()=>{const id=key??value[keyPath];if(id===undefined)throw Error('Missing key');trace.writes.push({store,key:id,kind:'put'});if(rejectBlobRewrite&&store==='circles'&&table.has(id)&&value?.image instanceof Blob)throw Error('Error preparing Blob/File data to be stored in object store');if(store==='settings'&&id==='profile'&&(rejectProfileBlobRewrite||factory.failProfileBlobWrites)&&containsBlob(value))throw Error('Error preparing Blob/File data to be stored in object store');table.set(id,structuredClone(value));return id;}),
+        delete:key=>request(()=>{trace.writes.push({store,key,kind:'delete'});table.delete(key);return undefined;}),
+        clear:()=>request(()=>{trace.writes.push({store,kind:'clear'});table.clear();})
        };
       };
       return tx;
