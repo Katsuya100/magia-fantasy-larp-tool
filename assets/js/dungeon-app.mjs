@@ -93,6 +93,12 @@ async function persist(){
  try{await loadoutSaveQueue;await saveProfile(db,profile);}
  catch(error){note('セーブの保存に失敗しました：'+String(error?.message||error));throw error;}
 }
+// Registered photo bytes are immutable. Analysis/reveal changes live only in
+// profile metadata, and one ordinary profile save seals their update.
+function rememberCircleMetadata(circle){
+ const {image,...metadata}=circle;
+ profile.magicOverrides={...(profile.magicOverrides||{}),[circle.id]:metadata};
+}
 function openBackupSetup(){
  if(profile.name)return;
  $('backupSetupStatus').textContent=$('googleDriveStatus').textContent;
@@ -690,7 +696,9 @@ async function takeTurn(index){
  if(circle?.analysis&&!run.hero.spells[index])run.hero.spells[index]=combatSpell(circle);
  const spell=index>=0?run.hero.spells[index]:null;
  if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index)){note('MP不足・再使用待ち・封印のため使用できない');return;}const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
- if(circle?.analysis&&!isRevealed(circle)){Object.assign(circle,revealOnUse(circle));await putCircle(db,circle);}
+ if(circle?.analysis&&!isRevealed(circle)){
+  Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);await persist();
+ }
  await animateBattle(steps);
 if(run.hero.hp<=0){
   if(profile.permadeath){
@@ -1163,9 +1171,9 @@ async function analyzeUnknown(index){
    const analysis=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
    if(!valid())return;
    Object.assign(circle,savePreanalysis(circle,analysis));
-   await putCircle(db,circle);
    if(!valid())return;
-   run.hero.spells[index]=combatSpell(circle);await persist();
+   run.hero.spells[index]=combatSpell(circle);
+   rememberCircleMetadata(circle);await persist();
    activeAnalysis=null;note('');show('battle');await revealOriginal(circle);await takeTurn(index);
   }catch(e){
    if(!valid())return;
@@ -1324,19 +1332,20 @@ async function confirmCircleAction(){
    void playCircleUpgrade(circle,$('magicUpgradeEffect')).catch(()=>{});
    setTimeout(()=>{if(epoch===upgradeRitualEpoch)dialog.dataset.enhancing='false';},CIRCLE_RITUAL_DURATION_MS);
   }else if(action.type==='remove'){
-   await deleteCircle(db,circle.id);
-   if(profile.circleUpgrades){
-    const upgrades={...profile.circleUpgrades};
-    delete upgrades[circle.id];
-    profile.circleUpgrades=upgrades;
-   }
+   const nextSlots=slots.map(id=>id===circle.id?null:id);
+   const nextProfile={...profile,
+    slots:[...nextSlots],
+    favoriteCircleId:profile.favoriteCircleId===circle.id?null:profile.favoriteCircleId,
+    circleUpgrades:Object.fromEntries(Object.entries(profile.circleUpgrades||{}).filter(([id])=>id!==circle.id)),
+    magicOverrides:Object.fromEntries(Object.entries(profile.magicOverrides||{}).filter(([id])=>id!==circle.id))};
+   await loadoutSaveQueue;
+   await saveProfileWithCircles(db,nextProfile,[],[circle.id]);
+   profile=nextProfile;
    circleImages.forget(circle.id,circle.image);
    failedPhotoIds.delete(circle.id);
-   if(profile.favoriteCircleId===circle.id)profile.favoriteCircleId=null;
    circles=circles.filter(c=>c.id!==circle.id);
-   slots=slots.map(id=>id===circle.id?null:id);
-   profile.slots=[...slots];
-   await persist();render();
+   slots=nextSlots;
+   render();
   }
   $('circleActionDialog').close();
   pendingCircleAction=null;
