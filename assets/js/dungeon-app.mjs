@@ -696,7 +696,7 @@ if(run.hero.hp<=0){
   if(profile.permadeath){
    const successor=createSuccessorProfile(profile,run,circles,G.startingBase());
    const lost=successor.legacies.at(-1);
-   try{await saveProfileWithCircles(db,successor,[],lost.circles.map(circle=>circle.id));}
+   try{await saveProfile(db,successor);}
    catch(error){note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
    profile=successor;
    for(const circle of lost.circles)circleImages.forget(circle.id,circle.image);
@@ -1030,14 +1030,22 @@ async function leave(mode='checkpoint'){
  const restored=[...new Map(restoredPhotos.map(circle=>[circle.id,circle])).values()].filter(circle=>!circles.some(owned=>owned.id===circle.id));
  // Preserve PR #140's recovery guarantee independently from disposable thumbnails.
  const saveReturn=async()=>{
-  if(!restored.length){await persist();return;}
-  await saveProfileWithCircles(db,profile,restored);
+  // Relic recovery changes ownership and stats, not the registered photo.
+  if(restored.length){
+   profile.magicOverrides={...(profile.magicOverrides||{})};
+   for(const circle of restored){
+    const {image,...metadata}=circle;
+    profile.magicOverrides[circle.id]=metadata;
+   }
+  }
+  await persist();
+  if(!restored.length)return;
   const snapshot=await readDungeonSnapshot(db);
   const recoveredIds=new Set(restored.map(circle=>circle.id));
   const persisted=snapshot.circles.filter(circle=>recoveredIds.has(circle.id));
   if(persisted.length!==recoveredIds.size||persisted.some(circle=>!(circle.image instanceof Blob)||!circle.image.size))
    throw Error('遺物の魔法陣の写真を保存できませんでした。');
-  circles=newestCirclesFirst([...circles,...persisted]);
+  circles=newestCirclesFirst([...circles,...persisted.map(circle=>({...circle,...(profile.magicOverrides?.[circle.id]||{})}))]);
  };
  const steps=[...(found.size?['collections']:[]),...(rewards.length?['rewards']:[]),...(run.xp>0?['xp']:[])];
  if(!steps.length){
