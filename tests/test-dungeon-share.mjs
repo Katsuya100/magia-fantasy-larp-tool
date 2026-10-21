@@ -72,7 +72,7 @@ const longestName='あいうえおかきくけこさしすせそたちつてと'
 const longOps=[];
 const measuredCtx={...ctx,
  measureText(text){
-  const fontSize=Number(this.font?.match(/(\\d+)px/)?.[1])||68;
+  const fontSize=Number(this.font?.match(/(\d+)px/)?.[1])||68;
   return {width:[...text].length*fontSize};
  },
  save(){longOps.push(['save']);},restore(){longOps.push(['restore']);},
