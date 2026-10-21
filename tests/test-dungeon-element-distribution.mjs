@@ -68,11 +68,26 @@ assert.equal(renames,0,'no existing character was replaced or renamed');
 assert.equal(Object.keys(combatBalanceMagOverrides).length,36,'32 regular 61-68F adjustments and four later casters');
 assert.equal(Object.keys(combatBalanceSupplementalCounters).length,5,'all five 70F foes have a second readable counter');
 assert.ok(primaryChanges>100&&secondaryChanges>150);
+const jpToAttr={炎:'flame',雷:'bolt',水:'aqua',風:'storm',重力:'gravity',秩序:'law',混沌:'chaos'};
+const attrToJp=Object.fromEntries(Object.entries(jpToAttr).map(([jp,attr])=>[attr,jp]));
+const handAuthoredBossLore=new Set([5,11,17,28,41,50,73,80,100]);
+assert.equal(new Set(concepts.map(c=>c.concept)).size,100,'all 100 authored floor names are unique');
 for(let layer=1;layer<=100;layer++){
  const c=concepts[layer-1],enemies=master.slice((layer-1)*5,layer*5);
  assert.equal(Number(c.layer),layer);
  assert.ok(c.concept.length>=5&&c.interpretation.includes(enemies[4].name),
   'every floor has an authored named concept tied to its boss '+layer);
+ const slots=enemies.map(r=>r.spells.split('|').map(s=>s.split(':')[1]));
+ const used=new Set(slots.flat());
+ const motif=c.interpretation.match(/(炎|雷|水|風|重力|秩序|混沌)と(炎|雷|水|風|重力|秩序|混沌)が交差/);
+ if(motif)for(const jp of [motif[1],motif[2]])
+  assert.ok(used.has(jpToAttr[jp]),'floor lore cannot claim an absent spell element '+layer+' '+jp);
+ if(handAuthoredBossLore.has(layer)){
+  const bossSpells=slots[4];
+  for(const attr of new Set(bossSpells))
+   assert.ok(c.interpretation.includes(attrToJp[attr]),
+    'hand-authored lore must acknowledge each boss element '+layer+' '+attr);
+ }
 }
 const finalBoss=master.find(r=>r.id==='boss_l100');
 assert.equal(plan.find(r=>r.id==='boss_l100').primary,'law');
