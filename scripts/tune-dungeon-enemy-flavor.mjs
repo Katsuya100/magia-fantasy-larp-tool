@@ -1,5 +1,6 @@
 import {readFile,writeFile} from 'node:fs/promises';
 import {tuneEnemyRows} from './dungeon-enemy-flavor-rules.mjs';
+import {applyElementDistribution} from './dungeon-element-distribution.mjs';
 const source=new URL('../tests/fixtures/dungeon-enemies-before-flavor.csv',import.meta.url);
 const target=new URL('../assets/data/dungeon-enemies.csv',import.meta.url);
 const raw=await readFile(source,'utf8');
@@ -18,5 +19,9 @@ for(const row of after){
  const live=existingRows.get(row.id);if(!live)throw Error('Missing base stat '+row.id);
  for(const stat of ['hp','mag'])row[stat]=live[stat];
 }
-await writeFile(target,[header,...after.map(row=>columns.map(key=>row[key]).join(','))].join('\n')+'\n');
+const readCsv=async(path)=>{const raw=await readFile(path,'utf8');const [heading,...lines]=raw.trim().split(/\r?\n/);const keys=heading.split(',');return lines.map(l=>Object.fromEntries(l.split(',').map((v,i)=>[keys[i],v])));};
+const assignments=await readCsv(new URL('../assets/data/dungeon-element-plan.csv',import.meta.url));
+const concepts=await readCsv(new URL('../assets/data/dungeon-layer-concepts.csv',import.meta.url));
+const distributed=applyElementDistribution(after,assignments,concepts);
+await writeFile(target,[header,...distributed.map(row=>columns.map(key=>row[key]).join(','))].join('\n')+'\n');
 console.log('Updated dungeon-enemies.csv: '+after.filter((row,i)=>columns.some(k=>row[k]!==before[i][k])).length+' enemies changed');
