@@ -2,6 +2,7 @@
 // Only the actual tenth-layer checkpoint can fully restore HP/MP. No XP is
 // applied while the expedition is underway; stone rewards are banked on return.
 import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {readFileSync} from 'node:fs';
@@ -179,6 +180,9 @@ export function summarize(config,samples=32){
 // Only assert/report when the progression suite is run directly. The 128-seed
 // balance benchmark imports simulate() without shadowing its own full report.
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+// Importing the simulation must not execute another test's assertions.
+// The full original standalone validation remains mandatory under npm test.
+if(process.argv[1]===fileURLToPath(import.meta.url)){
 for(const config of scenarios)console.log('PROGRESSION_SIM '+JSON.stringify(summarize(config)));
 // Every planned band is checked using the level intended for its final boss.
 for(const config of scenarios.filter(x=>x.toLayer>=10)){
@@ -215,4 +219,5 @@ assert.ok(ledger.levels.every((x,i)=>i===0||x.stones>=ledger.levels[i-1].stones)
 assert.ok(ledger.returns.every((x,i)=>i===0||x.level>=ledger.returns[i-1].level),'return-only levels are monotonic');
 console.log('PASS seeded full combat with resource carryover, tenth-layer HP/MP recovery, saved reward ledger and permanent stone upgrades');
 
+}
 }
