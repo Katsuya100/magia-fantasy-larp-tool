@@ -2029,16 +2029,45 @@ html,body{overflow-x:clip}
 #battleArena .unit[data-affinity="weak"] .affinity-hit{
  --affinity-color:#ff5b8b;--affinity-glow:#ff42755c
 }
+/* A real expanding pressure ring for weakness, not the generic rune burst. */
+#battleArena .unit[data-affinity="weak"] .affinity-hit::before{
+ width:clamp(82px,11vw,140px);border-radius:50%;
+ background:
+  radial-gradient(circle,#fff3dfd6 0 6%,#ff5b8b88 15%,transparent 29%),
+  radial-gradient(circle,transparent 43%,#ffe2db 47% 49%,#ff5b8b 54%,transparent 59%);
+ -webkit-mask:none;mask:none;filter:drop-shadow(0 0 14px #ff4e82);
+ box-shadow:0 0 0 2px #ffd7da,0 0 20px 4px #ff438a7d,inset 0 0 18px #ffb3c8;
+ animation:weak-shockwave .72s cubic-bezier(.15,.75,.25,1) both
+}
 #battleArena .unit[data-affinity="weak"] .affinity-hit::after{
  content:"WEAK";background:linear-gradient(120deg,#42102ae8,#190b19ef);
- box-shadow:0 0 21px 4px var(--affinity-glow),inset 0 0 16px var(--affinity-glow)
-}
-#battleArena .unit[data-affinity="weak"] .affinity-hit::before{
- animation:affinity-ring .72s cubic-bezier(.16,.8,.23,1) both
+ box-shadow:0 0 21px 4px var(--affinity-glow),inset 0 0 16px var(--affinity-glow);
+ animation:weak-damped-shudder .72s linear both
 }
 /* Keep the high-tier impact glow in step with the affinity shield/burst. */
 #battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .combatant-fx::before{
  animation-duration:.72s
+}
+/* Impact wave expands quickly, then spreads thin as its energy fades. */
+@keyframes weak-shockwave{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}
+ 14%{opacity:1;transform:translate(-50%,-50%) scale(.7)}
+ 38%{opacity:.95;transform:translate(-50%,-50%) scale(1.6)}
+ 72%{opacity:.44;transform:translate(-50%,-50%) scale(2.5)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(3.2)}
+}
+/* Alternating displacement loses amplitude until the word settles. */
+@keyframes weak-damped-shudder{
+ 0%{opacity:0;transform:translate(-50%,-50%) scale(1.4)}
+ 10%{opacity:1;transform:translate(-50%,-50%) translate(-9px,4px) rotate(-5deg) scale(1.14)}
+ 18%{opacity:1;transform:translate(-50%,-50%) translate(7px,-3px) rotate(4deg) scale(1.08)}
+ 26%{opacity:1;transform:translate(-50%,-50%) translate(-5px,2px) rotate(-3deg)}
+ 34%{opacity:1;transform:translate(-50%,-50%) translate(3px,-1.5px) rotate(2deg)}
+ 42%{opacity:1;transform:translate(-50%,-50%) translate(-2px,1px) rotate(-1.2deg)}
+ 50%{opacity:1;transform:translate(-50%,-50%) translate(1px,-.5px) rotate(.7deg)}
+ 58%{opacity:1;transform:translate(-50%,-50%) translate(-.5px,0px) rotate(-.3deg)}
+ 66%,86%{opacity:1;transform:translate(-50%,-50%) rotate(0deg)}
+ 100%{opacity:0;transform:translate(-50%,-66%) scale(.94)}
 }
 @keyframes affinity-ring{
  0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-35deg)}
