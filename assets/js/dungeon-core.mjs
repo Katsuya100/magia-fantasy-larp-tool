@@ -79,14 +79,17 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-export function magicStoneDropChance(playerLevel,layer){
- const overlevel=Math.max(0,Number(playerLevel)-targetClearLevel(layer));
+// First-time layers must retain their normal magic-stone chance even when
+// improved XP progression puts the hero ahead of the intended enemy level.
+// Previously returned layers still apply the existing 0.5-per-level penalty.
+export function magicStoneDropChance(playerLevel,layer,firstClear=false){
+ const overlevel=firstClear?0:Math.max(0,Number(playerLevel)-targetClearLevel(layer));
  return num('magic_stone_drop_chance')*Math.pow(num('magic_stone_overlevel_factor_per_level'),overlevel);
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
  const stoneChance=context.playerLevel==null
   ?num('magic_stone_drop_chance')
-  :magicStoneDropChance(context.playerLevel,context.layer??1);
+  :magicStoneDropChance(context.playerLevel,context.layer??1,context.firstClear===true);
  return {
   collection:countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r),
   stone:countSuccesses(num('magic_stone_drop_rolls'),stoneChance,r),

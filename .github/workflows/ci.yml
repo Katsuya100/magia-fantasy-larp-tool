@@ -37,7 +37,7 @@ jobs:
 
   dungeon-regression-suites:
     # Independently execute every combat regression while progression and
-    # 128-seed strict balance are still failing. No tests are skipped.
+    # Strict 128-seed balance retains the targets with a confidence-aware win check. No tests are skipped.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

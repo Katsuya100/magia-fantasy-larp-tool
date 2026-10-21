@@ -22,13 +22,13 @@ export function seededRandom(seed){
  return ()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
 }
 
-function fightRewards(layer,playerLevel,random){
+function fightRewards(layer,playerLevel,random,firstClear=false){
  // Exactly five encounters per layer. The existing dropCounts function reads
- // the actual stone chance, including the over-level reduction.
+ // the actual stone chance, including the repeat-clear over-level reduction.
  const enemyLevel=targetClearLevel(layer);
  let stone=0,xp=0;
  for(let fight=0;fight<5;fight++){
-  stone+=G.dropCounts(enemyLevel,random,{playerLevel,layer}).stone;
+  stone+=G.dropCounts(enemyLevel,random,{playerLevel,layer,firstClear}).stone;
   xp+=G.fightExperience(enemyLevel,playerLevel,layer);
  }
  return {stone,xp};
@@ -46,7 +46,7 @@ function progressTo100(random){
   if(expeditionLevel<targetClearLevel(destination))underleveledStarts++;
   let pendingXp=0,pendingStones=0;
   for(let layer=start;layer<=destination;layer++){
-   const reward=fightRewards(layer,expeditionLevel,random);
+   const reward=fightRewards(layer,expeditionLevel,random,layer===destination);
    pendingXp+=reward.xp;
    pendingStones+=reward.stone;
    layerClears++;
