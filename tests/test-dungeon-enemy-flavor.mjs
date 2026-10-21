@@ -18,14 +18,21 @@ assert.deepEqual(now,tuneEnemyRows(old),'live monster catalog must match reviewe
 for(let i=0;i<500;i++){
  const b=old[i],a=now[i],layer=Math.floor(i/5)+1,slot=i%5;
  for(const field of keys){
-  if(!['hp','mag','def','res',...attrs.map(attr=>'resist_'+attr)].includes(field))
+  if(!['hp','mag','def','res',...attrs.map(attr=>'resist_'+attr)].includes(field)&&!(field==='spells'&&slot!==4))
    assert.equal(a[field],b[field],b.id+' stable '+field);
  }
  if(slot!==4){
   const prior=priorNormals[i],tags=nameAffinities(a.name);
-  for(const field of keys)if(!field.startsWith('resist_')&&!(field==='hp'&&new Set(["foe_l044_1","foe_l044_2","foe_l044_3","foe_l051_1","foe_l051_2"]).has(a.id)))
+  for(const field of keys)if(field!=='spells'&&!field.startsWith('resist_')&&!(field==='hp'&&new Set(["foe_l044_1","foe_l044_2","foe_l044_3","foe_l051_1","foe_l051_2"]).has(a.id)))
    assert.equal(a[field],prior[field],a.id+' stable non-elemental stat '+field);
-  const total=row=>attrs.reduce((s,k)=>s+Number(row['resist_'+k]),0);
+  const sourceSpells=prior.spells.split('|'),newSpells=a.spells.split('|');
+  assert.equal(newSpells.length,5,'five circle roles remain '+a.id);
+  assert.deepEqual(newSpells.slice(1),sourceSpells.slice(1),'only the primary attack may change '+a.id);
+  const oldPrimary=sourceSpells[0].split(':'),newPrimary=newSpells[0].split(':');
+  assert.equal(newPrimary[0],oldPrimary[0],'primary spell role unchanged '+a.id);
+  assert.equal(newPrimary[2],oldPrimary[2],'primary spell power unchanged '+a.id);
+  if(tags.length)assert.equal(newPrimary[1],tags[0],'primary attack matches named attribute '+a.id);
+    const total=row=>attrs.reduce((s,k)=>s+Number(row['resist_'+k]),0);
   assert.ok(Math.abs(total(a)-total(prior))<1e-8,'all-element budget unchanged per foe '+a.id);
   if(!tags.length)assert.deepEqual(a,prior,'no explicit innate element '+a.id);
   if(tags.length){
