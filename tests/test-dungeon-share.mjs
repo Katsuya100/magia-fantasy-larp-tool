@@ -76,7 +76,7 @@ const renderFor=(name,crowned=true)=>{
  const paints=[],scales=[],translations=[];
  const sample={...ctx,
   measureText(text){
-   const size=Number(this.font?.match(/(\\d+)px/)?.[1])||50;
+   const size=Number(this.font?.match(/(\d+)px/)?.[1])||50;
    return {width:[...text].length*size};
   },
   save(){paints.push({kind:'save'});},
