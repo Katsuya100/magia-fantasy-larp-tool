@@ -88,7 +88,7 @@ export function upgradeSpells(spells,budget){
  }
  return {spells:base,counts,costs:base.map(s=>G.spellMpCost(s))};
 }
-export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null}={}){
+export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,enemyMaster=data.enemies}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
  const history=stones==='earned'?stoneLedger(seed+81,fromLayer-1):{stones:0};
  const budget=stones==='earned'?history.stones:Math.max(0,Number(stones)||0);
@@ -102,7 +102,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
  for(let fight=first;fight<=last;fight++){
   if(fight%5===1)stats.layerStats.push({layer:Math.ceil(fight/5),
    startHp:hero.hp,startMp:hero.mp,cleared:false,endHp:null,endMp:null});
-  const foe=enemyForFight(data.enemies,fight);
+  const foe=enemyForFight(enemyMaster,fight);
   const enemy=G.fromEnemy(foe,+data.floors[fight-1].enemy_level);
   const hpBefore=hero.hp,mpBefore=hero.mp;
   let turns=0,win=false,debuffInFight=false;
