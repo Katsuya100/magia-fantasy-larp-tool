@@ -4,6 +4,72 @@
 import {nameAffinities} from './dungeon-normal-enemy-affinities.mjs';
 export const ELEMENTS=['flame','bolt','aqua','storm','gravity','law','chaos'];
 const fmt=n=>String(Number(n.toFixed(2)));
+// Targeted encounter resistance calibration for 128-seed long-sortie parity.
+// These are individual counterplay reallocations (not enemy-only stat growth):
+// less damage from a dominant conventional attack, more from an unprotected
+// alternate element, with the seven-element defense budget exactly conserved.
+export const combatBalanceResistCalibrations=Object.freeze({
+ "foe_l025_1": 0.12,
+ "foe_l026_1": 0.12,
+ "foe_l026_3": 0.12,
+ "foe_l027_1": 0.12,
+ "foe_l027_3": 0.12,
+ "foe_l028_2": 0.12,
+ "foe_l028_4": 0.12,
+ "foe_l029_1": 0.12,
+ "foe_l029_3": 0.12,
+ "foe_l030_2": 0.12,
+ "foe_l030_4": 0.12,
+ "boss_l030": 0.12,
+ "foe_l065_1": 0.12,
+ "foe_l066_1": 0.12,
+ "foe_l066_3": 0.12,
+ "foe_l067_2": 0.12,
+ "foe_l067_4": 0.12,
+ "foe_l068_2": 0.12,
+ "foe_l068_4": 0.12,
+ "foe_l069_2": 0.12,
+ "foe_l069_4": 0.12,
+ "foe_l070_2": 0.12,
+ "foe_l070_4": 0.12,
+ "foe_l075_1": 0.12,
+ "foe_l075_3": 0.12,
+ "foe_l076_2": 0.12,
+ "foe_l076_4": 0.12,
+ "foe_l077_2": 0.12,
+ "foe_l077_4": 0.12,
+ "foe_l078_2": 0.12,
+ "foe_l078_4": 0.12,
+ "foe_l079_2": 0.12,
+ "foe_l079_4": 0.12,
+ "foe_l080_2": 0.12,
+ "foe_l080_4": 0.12,
+ "foe_l085_1": 0.12,
+ "foe_l085_3": 0.12,
+ "foe_l086_1": 0.12,
+ "foe_l086_3": 0.12,
+ "foe_l087_2": 0.12,
+ "foe_l087_4": 0.12,
+ "foe_l088_2": 0.12,
+ "foe_l088_4": 0.12,
+ "foe_l089_2": 0.12,
+ "foe_l089_4": 0.12,
+ "foe_l090_2": 0.12,
+ "foe_l090_4": 0.12,
+ "foe_l095_1": 0.12,
+ "foe_l095_3": 0.12,
+ "foe_l096_2": 0.12,
+ "foe_l096_4": 0.12,
+ "foe_l097_2": 0.12,
+ "foe_l097_4": 0.12,
+ "foe_l098_2": 0.12,
+ "foe_l098_4": 0.12,
+ "foe_l099_2": 0.12,
+ "foe_l099_4": 0.12,
+ "foe_l100_2": 0.12,
+ "foe_l100_4": 0.12
+});
+
 
 export function applyElementDistribution(source,plan,concepts){
  if(source.length!==500||plan.length!==500||concepts.length!==100)
@@ -62,6 +128,17 @@ export function applyElementDistribution(source,plan,concepts){
    output.resist_bolt='0.95';
    output.resist_aqua='1.35';
    output.resist_gravity='1';
+  }
+  const balanceShift=combatBalanceResistCalibrations[before.id];
+  if(balanceShift){
+   const defaultAttacks=[['flame',360],['bolt',420],['gravity',540]];
+   const guarded=defaultAttacks
+    .map(([attr,power])=>({attr,score:Math.sqrt(power)*Number(output['resist_'+attr])}))
+    .sort((a,b)=>b.score-a.score)[0].attr;
+   const alternate=['chaos','law','storm','aqua'].find(a=>!protectedAttrs.has(a));
+   if(!alternate)throw Error('No alternate elemental counter for '+before.id);
+   output['resist_'+guarded]=fmt(Number(output['resist_'+guarded])-balanceShift);
+   output['resist_'+alternate]=fmt(Number(output['resist_'+alternate])+balanceShift);
   }
   const sum=x=>ELEMENTS.reduce((s,a)=>s+Number(x['resist_'+a]),0);
   if(Math.abs(sum(before)-sum(output))>1e-8)throw Error('Changed resistance budget '+before.id);

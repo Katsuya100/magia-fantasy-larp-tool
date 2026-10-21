@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {parseCsv,ATTRS} from '../assets/js/dungeon-core.mjs';
 import {nameAffinities} from '../scripts/dungeon-normal-enemy-affinities.mjs';
-import {applyElementDistribution} from '../scripts/dungeon-element-distribution.mjs';
+import {applyElementDistribution,combatBalanceResistCalibrations} from '../scripts/dungeon-element-distribution.mjs';
 const read=path=>parseCsv(readFileSync(new URL(path,import.meta.url),'utf8'));
 const base=read('./fixtures/dungeon-enemies-before-distribution.csv');
 const master=read('../assets/data/dungeon-enemies.csv');
@@ -46,6 +46,13 @@ for(let i=0;i<500;i++){
   assert.ok(tags.every(t=>Number(b['resist_'+t])<=1),'named innate affinity cannot be weak '+b.id);
   if(tags.length)assert.ok(tags.some(t=>Number(b['resist_'+t])<1),'named innate affinity must resist '+b.id);
  }
+}
+assert.equal(Object.keys(combatBalanceResistCalibrations).length,59,'all targeted resistance budgets are reviewed');
+for(const [id,shift] of Object.entries(combatBalanceResistCalibrations)){
+ const before=base.find(r=>r.id===id),after=master.find(r=>r.id===id);
+ assert.ok(before&&after,'calibrated enemy exists '+id);
+ assert.equal(shift,0.12,'small authored shift only '+id);
+ assert.equal(before.hp,after.hp,'combat retune preserves HP '+id);
 }
 const ratio=(n,total)=>100*n/total;
 for(const a of ATTRS){

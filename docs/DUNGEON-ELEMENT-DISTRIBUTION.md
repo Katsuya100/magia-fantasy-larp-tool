@@ -146,3 +146,7 @@
 - 厳格チェック：`node tests/test-dungeon-element-distribution.mjs`
 
 ※ このファイルは属性の静的監査。勝率・MP消費などはGitHub Actionsの通しプレイ結果で別途検証します。
+
+## 10層連続出撃の耐性微調整
+
+厳格CIの失敗帯21–30、61–70、71–80、81–90、91–100を対象に、各帯に分散した計59体の弱点を0.12ポイントだけ入れ替えた。主・副属性と7属性耐性総和、HP/MAG/DEF/RESは不変。魔法属性の使用件数も不変。調整対象のIDは `combatBalanceResistCalibrations` に明記し、128シードで検証する。41–50帯には手を付けない。
