@@ -48,8 +48,8 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.fillStyle='#ddbe85';ctx.font='600 22px Georgia, serif';ctx.fillText('MAGIA CIRCLE  /  DUNGEON ATTACK',82,101);
  ctx.fillStyle='#f6e4c2';ctx.font='600 34px sans-serif';ctx.fillText('マギアサークル - ダンジョンアタック',82,157,630);
  ctx.strokeStyle='#ae8b5866';ctx.beginPath();ctx.moveTo(82,184);ctx.lineTo(688,184);ctx.stroke();
- // Top row: left-aligned name (proportional contain fit) and centered level.
- // Bottom row: centered rank, deepest reached and deepest returned.
+ // Top row: name and level values align with their left-aligned headings.
+ // Bottom row: centered rank plaque, left-aligned reached and returned values.
  // Keep the entire information area clear of the magic-circle illustration.
  const bottomY=397,bottomH=104;
  const nameX=82,nameW=420,levelX=514,levelW=174;
@@ -90,8 +90,8 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  }
  const levelText=String(data.level);
  fitFont(levelText,60,levelW-28,'800');
- ctx.fillStyle='#fce9bf';ctx.textAlign='center';
- ctx.fillText(levelText,levelX+levelW/2,308);
+ ctx.fillStyle='#fce9bf';ctx.textAlign='start';
+ ctx.fillText(levelText,levelX+9,308);
  ctx.textAlign='start';
 
  label('冒険者等級',rankX,381);
@@ -103,13 +103,13 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.moveTo(levelX-10,212);ctx.lineTo(levelX-10,327);
  ctx.moveTo(reachedX+reachedW+6,bottomY+6);ctx.lineTo(reachedX+reachedW+6,bottomY+bottomH-18);
  ctx.stroke();
- ctx.fillStyle='#f7e6c7';ctx.textAlign='center';
+ ctx.fillStyle='#f7e6c7';ctx.textAlign='start';
  const reachedText=data.deepestReached?data.deepestReached+'層':'未到達';
  const returnedText=data.deepestReturned?data.deepestReturned+'層':'未到達';
  fitFont(reachedText,38,reachedW-22);
- ctx.fillText(reachedText,reachedX+reachedW/2,450);
+ ctx.fillText(reachedText,reachedX+9,450);
  fitFont(returnedText,38,returnedW-22);
- ctx.fillText(returnedText,returnedX+returnedW/2,450);
+ ctx.fillText(returnedText,returnedX+9,450);
  ctx.textAlign='start';
  // Metallic rank plaque stays in the bottom-left corner.
  const metal=rankMetalPalette(data.rankLayer);
