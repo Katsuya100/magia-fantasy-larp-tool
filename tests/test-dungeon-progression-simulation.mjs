@@ -16,6 +16,15 @@ const rng=seed=>()=>{
  return seed/4294967296;
 };
 const SPELLS={
+ // Standard CI scenario for 1-10F: every base power stays within 100-300.
+ // This is a simulation fixture, not a change to players' existing circles.
+ intro:[
+  {role:'attack',attribute:'flame',power:220},
+  {role:'attack',attribute:'bolt',power:260},
+  {role:'attack',attribute:'gravity',power:300},
+  {role:'support',attribute:'aqua',power:200},
+  {role:'defense',attribute:'law',power:160}
+ ],
  beginner:[{role:'attack',attribute:'flame',power:300},{role:'attack',attribute:'bolt',power:330},{role:'support',attribute:'aqua',power:270}],
  three:[{role:'attack',attribute:'flame',power:360},{role:'attack',attribute:'bolt',power:420},{role:'support',attribute:'aqua',power:300}],
  five:[{role:'attack',attribute:'flame',power:360},{role:'attack',attribute:'bolt',power:420},{role:'attack',attribute:'gravity',power:540},
