@@ -343,6 +343,7 @@ function battleImageUrl(){return '';}
 function renderHeroName(hero){
  const name=$('heroName'),displayName=profile.name?.trim()||'名もなき冒険者';
  name.textContent=displayName+(hero.reviveArmed?' 🪽':'');
+ $('heroLevel').textContent='Lv.'+hero.level;
  if(hero.reviveArmed){
   name.setAttribute('title','生命の紅石：復活待機中');
   name.setAttribute('aria-label',displayName+'・生命の紅石：復活待機中');
@@ -441,7 +442,8 @@ function renderRun(){
  const enemy=run.enemy,hero=run.hero;
  $('floorLabel').textContent=battleHeading(run.floor);
  $('battleEncounterLabel').textContent=battleEncounter(run.floor);
- $('enemyName').textContent=run.enemyName+' Lv.'+enemy.level;
+ $('enemyName').textContent=run.enemyName;
+ $('enemyLevel').textContent='Lv.'+enemy.level;
  renderHeroName(hero);
  $('enemyStats').innerHTML=rowUnit(enemy);
  $('heroStats').innerHTML=rowUnit(hero);
