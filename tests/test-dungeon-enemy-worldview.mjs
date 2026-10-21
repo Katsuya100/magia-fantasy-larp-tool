@@ -38,7 +38,7 @@ for(let i=0;i<now.length;i++){
 assert.ok(changed>=200);
 assert.ok(reviewUpdated>=142);
 assert.ok(healRemoved>=57);
-assert.equal(Object.keys(enemySpellOverrides).length,192,'45 earlier fixes and new approvals declared');
+assert.equal(Object.keys(enemySpellOverrides).length,197,'45 earlier fixes and new approvals declared');
 for(const id of Object.keys(enemySpellOverrides))assert.ok(now.some(e=>e.id===id),'no stale curated ID '+id);
 for(const id of ['boss_l070','foe_l070_1','foe_l070_3'])if(now.some(e=>e.id===id))assert.equal(now.find(e=>e.id===id).spells.split('|')[0].split(':')[1],'law','evil and law coexist');
 const named=id=>now.find(x=>x.id===id),attribute=(id,slot)=>named(id).spells.split('|')[slot].split(':')[1];

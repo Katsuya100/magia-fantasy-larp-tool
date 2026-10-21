@@ -12,6 +12,11 @@
 // Q7: Fate/prophecy => law; stellar/gravity => gravity; illusion/void => chaos.
 // Preserve ID, powers, HP/DEF/RES/MAG, resists, loot, slots and non-undead roles.
 export const enemySpellOverrides=Object.freeze({
+ 'foe_l004_3':Object.freeze(['law','gravity']),
+ 'boss_l017':Object.freeze(['gravity','flame']),
+ 'foe_l024_4':Object.freeze(['storm','aqua']),
+ 'foe_l044_4':Object.freeze(['law','gravity']),
+ 'foe_l062_2':Object.freeze(['bolt','storm']),
  'boss_l002':Object.freeze(['gravity','law']),
  'boss_l005':Object.freeze(['chaos','gravity']),
  'boss_l010':Object.freeze(['chaos','law']),
