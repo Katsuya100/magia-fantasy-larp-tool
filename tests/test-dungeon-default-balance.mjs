@@ -185,6 +185,46 @@ for(let to=10;to<=100;to+=10){
   console.log('DUNGEON_DEFAULT_BALANCE_LAYER '+JSON.stringify(layerRow));
  }
 }
+
+if(STRICT&&SAMPLES===128){
+ const master=csv('enemies');
+ const variations=[
+  ['baseline',0,0,0,0,0],['hp+3',3,0,0,0,0],['hp+6',6,0,0,0,0],
+  ['hp+9',9,0,0,0,0],['hp+12',12,0,0,0,0],['hp+18',18,0,0,0,0],['hp+27',27,0,0,0,0],
+  ['mag+1',0,1,0,0,0],['mag+2',0,2,0,0,0],['mag+3',0,3,0,0,0],
+  ['mag+4',0,4,0,0,0],['mag+5',0,5,0,0,0],
+  ['hp+6Mag+2',6,2,0,0,0],['hp+12Mag+2',12,2,0,0,0],
+  ['hp+18Mag+3',18,3,0,0,0],
+  ['guardsMag+1',0,0,1,0,0],['guardsHp+6',0,0,0,6,0],
+  ['mag+2GuardsMag+1',0,2,1,0,0],['hp+9GuardsHp+6',9,0,0,6,0],
+  ['attack2+30%',0,0,0,0,.3],['attack2+60%',0,0,0,0,.6]
+ ];
+ for(const [name,moreHp,moreMag,guardMag,guardHp,attackBoost] of variations){
+  const enemies=master.map(r=>({...r}));
+  for(const e of enemies){
+   if(e.id==='boss_l070'){
+    e.hp=String(Number(e.hp)+moreHp);
+    e.mag=String(Number(e.mag)+moreMag);
+    if(attackBoost){
+     const sp=e.spells.split('|'),last=sp[4].split(':');
+     last[2]=String(Math.round(Number(last[2])*(1+attackBoost)));
+     sp[4]=last.join(':');e.spells=sp.join('|');
+    }
+   }else if(/^foe_l070_/.test(e.id)){
+    e.hp=String(Number(e.hp)+guardHp);
+    e.mag=String(Number(e.mag)+guardMag);
+   }
+  }
+  const trials=Array.from({length:128},(_,i)=>deepRun(seed(i),{from:61,to:70,level:115},true,enemies));
+  const winners=trials.filter(x=>x.win);
+  console.log('DUNGEON_61_VARIANT '+JSON.stringify({
+   name,wins:winners.length,medianMp:percentile(median(winners.map(x=>x.mp/x.maxMp*100))),
+   medianHp:percentile(median(winners.map(x=>x.hp/x.maxHp*100))),
+   failedSeeds:trials.map((r,i)=>r.win?null:i).filter(i=>i!==null)
+  }));
+ }
+}
+
 // Mandatory regression benchmark: immediately preceding main before normal-foe affinity
 // correction (257e11713b6a71710f244e234ce4702fc47e684a).
 // Historical values were recorded with the same 128 seeds in main CI 39530340261.
