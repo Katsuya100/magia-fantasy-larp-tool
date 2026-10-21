@@ -246,7 +246,7 @@ export async function getProfile(db){
   ]);
   let p=applyHeirName(raw,nameOverride);
   if(!p){
-    p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,tutorialDone:false,inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReturnedLayer:0,magicStones:0,run:null};
+    p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,tutorialDone:false,inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReachedLayer:0,deepestReturnedLayer:0,magicStones:0,run:null};
     const seal=await request(db,'settings','readonly',s=>s.get('integrity'));
     // A missing profile with a prior seal means corruption, not a new player.
     // Keep it missing on disk so Drive can restore the complete trusted save.

@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261021.5">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261021.6">
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
@@ -19,13 +19,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261021.5" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261021.6" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261021.5" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261021.6" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -300,6 +300,22 @@
         </div>
       </div>
     </dialog>
+    <dialog id="creatorCongratulationsDialog" class="creator-congratulations-dialog" aria-labelledby="creatorCongratulationsTitle" aria-describedby="creatorCongratulationsMessage">
+      <div class="creator-congratulations-frame">
+        <div class="creator-congratulations-stars" aria-hidden="true">✦　✧　✦　✧　✦</div>
+        <p class="creator-congratulations-kicker">MAGIA CIRCLE · DUNGEON ATTACK</p>
+        <div class="creator-congratulations-crest" aria-hidden="true"><span class="creator-congratulations-crest-number">100</span><span class="creator-congratulations-crest-star">✦</span></div>
+        <p class="creator-congratulations-overline">THE HUNDREDTH FLOOR</p>
+        <div class="creator-congratulations-divider" aria-hidden="true"><span>✧</span></div>
+        <h2 id="creatorCongratulationsTitle">製作者より</h2>
+        <p id="creatorCongratulationsMessage" class="creator-congratulations-message">100層突破おめでとうございます。
+ここまで楽しんでいただきありがとうございました。
+しかし、冒険はまだまだ続きます。
+引き続きダンジョンアタックをお楽しみください。</p>
+        <div class="creator-congratulations-divider creator-congratulations-divider-bottom" aria-hidden="true"><span>✧</span></div>
+        <button type="button" id="creatorCongratulationsClose" class="creator-congratulations-close">閉じる</button>
+      </div>
+    </dialog>
     <dialog id="milestoneChoiceDialog" class="name-dialog milestone-choice-dialog" aria-labelledby="milestoneChoiceTitle" aria-describedby="milestoneChoiceMessage">
       <div class="support-prompt-inner">
         <h2 id="milestoneChoiceTitle"></h2>
@@ -317,7 +333,7 @@
       <div class="support-prompt-inner">
         <h2 id="supportPromptTitle"></h2>
         <p id="supportPromptMessage"></p>
-        <canvas id="adventurerShareCanvas" width="1200" height="675" role="img" aria-label="冒険者等級・レベル・最深帰還のカード"></canvas>
+        <canvas id="adventurerShareCanvas" width="1200" height="675" role="img" aria-label="冒険者名・等級・レベル・最深到達階層・最深帰還階層のカード"></canvas>
         <p id="supportShareHelp" class="support-share-help">Xの投稿には本文が入ります。画像は保存して添付できます。</p>
         <div class="support-prompt-actions">
           <a id="supportXLink" class="support-share-action" href="#" target="_blank" rel="noopener noreferrer">Xでシェア <svg class="share-mark" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 13.5 6.6 3.9m0-10.8L8.7 10.5"/></svg></a>
@@ -396,7 +412,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.21.5</span></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.21.6</span></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -415,6 +431,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261021.5"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261021.6"></script>
 </body>
 </html>
