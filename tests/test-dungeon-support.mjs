@@ -11,7 +11,7 @@ const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const supportLink='https://ofuse.me/2429ddee';
 const profileMarkup=html.slice(html.indexOf('<section id="home"'),html.indexOf('<section id="library"'));
 assert.ok(profileMarkup.includes('class="profile-support" aria-label='),'support actions are in the profile screen');
-const attributionStyles=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+const attributionStyles=html.slice(html.indexOf('<style>'),html.indexOf('</style>'));
 const attributionStart=profileMarkup.indexOf('<aside id="dungeonAttribution" class="dungeon-attribution"');
 assert.ok(attributionStart>profileMarkup.indexOf('id="deleteSaveData"'),'attribution stays below profile data actions');
 assert.match(profileMarkup,/<\/section>\s*<!-- Profile-only appendix[^]*?<aside id="dungeonAttribution" class="dungeon-attribution"/,'attribution is outside the profile panel');
