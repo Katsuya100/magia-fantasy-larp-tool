@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import {readFile,stat} from 'node:fs/promises';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const [page,home,css]=await Promise.all([read('dungeon.html'),read('index.html'),read('assets/css/dungeon.css')]);
+assert.match(page, /<html lang="ja" style="touch-action: manipulation">/, 'double-tap zoom disabled only on dungeon page');
+assert.match(page, /<meta name="viewport" content="width=device-width,initial-scale=1">/, 'pinch zoom remains enabled');
 assert.match(page,/自分だけの魔法陣で迷宮へ/);
 assert.match(page,/<button type="button" id="returnHome" class="danger">帰還する<\/button>/,'short return button');
 assert.match(css,/#returnHome\{background:linear-gradient\(#d9494f,#941f32\)/,'return button is red');
