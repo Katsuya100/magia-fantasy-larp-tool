@@ -50,7 +50,7 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.strokeStyle='#ae8b5866';ctx.beginPath();ctx.moveTo(82,184);ctx.lineTo(688,184);ctx.stroke();
  // Reserve a dedicated name panel to the LEFT of the rank plaque.
  // Both panels remain inside the original 82–688 layout, clear of the magic seal.
- const nameX=82,nameW=248,rankX=342,rankW=346,plaqueY=260,plaqueH=106;
+ const nameX=82,nameW=300,rankX=394,rankW=294,plaqueY=260,plaqueH=106;
  ctx.fillStyle='#adabb8';ctx.font='600 21px sans-serif';
  ctx.fillText('冒険者名',nameX+10,242);
  ctx.fillText('冒険者等級',rankX+10,242);
@@ -59,32 +59,24 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.fillStyle=namePlate;ctx.fillRect(nameX,plaqueY,nameW,plaqueH);
  ctx.strokeStyle='#c9a46b';ctx.lineWidth=2;ctx.strokeRect(nameX,plaqueY,nameW,plaqueH);
  ctx.strokeStyle='#f1d6a457';ctx.lineWidth=1;ctx.strokeRect(nameX+6,plaqueY+6,nameW-12,plaqueH-12);
- // Use up to three centered lines; preserve the last line's space for a crown.
- const heroName=data.name||'名もなき冒険者';
- const nameTextWidth=data.crowned?186:220;
- let nameFont=26,nameLines=[];
- const nameMeasure=value=>ctx.measureText?.(value)?.width??[...value].length*nameFont;
- for(;nameFont>=18;nameFont--){
-  ctx.font='700 '+nameFont+'px sans-serif';
-  nameLines=[''];
-  for(const char of [...heroName]){
-   const last=nameLines.length-1;
-   if(nameLines[last]&&nameMeasure(nameLines[last]+char)>nameTextWidth)
-    nameLines.push(char);
-   else nameLines[last]+=char;
-  }
-  if(nameLines.length<=3)break;
- }
- const lineGap=nameFont+5,firstBaseline=320-(nameLines.length-1)*lineGap/2;
+ // The character name is a large ONE-LINE headline. Scale it horizontally
+ // to fill the panel; long names are condensed instead of becoming tiny or wrapped.
+ // Leave a fixed slot at the right for the 100F crown.
+ const heroName=data.name||'名もなき冒険者',nameFont=68,nameBaseline=340;
+ const nameTextWidth=data.crowned?228:268;
+ ctx.font='800 '+nameFont+'px sans-serif';
+ const measuredName=ctx.measureText?.(heroName)?.width??[...heroName].length*nameFont;
+ const stretch=nameTextWidth/Math.max(1,measuredName);
  ctx.fillStyle='#fff0d4';ctx.shadowColor='#e9ba7d7a';ctx.shadowBlur=7;
- for(const [index,line] of nameLines.entries())
-  ctx.fillText(line,nameX+14,firstBaseline+index*lineGap,nameTextWidth);
+ ctx.save();
+ ctx.translate(nameX+16,0);
+ ctx.scale(stretch,1);
+ ctx.fillText(heroName,0,nameBaseline);
+ ctx.restore();
  ctx.shadowBlur=0;
  if(data.crowned){
-  const last=nameLines.at(-1)||'',lastWidth=nameMeasure(last);
-  ctx.font='29px sans-serif';
-  ctx.fillText('👑',Math.min(nameX+nameW-37,nameX+19+lastWidth),
-   firstBaseline+(nameLines.length-1)*lineGap,30);
+  ctx.font='42px sans-serif';
+  ctx.fillText('👑',nameX+nameW-51,nameBaseline,45);
  }
  // The rank plaque mirrors the profile's --rank-light/mid/deep/glow insignia.
  const metal=rankMetalPalette(data.rankLayer);
