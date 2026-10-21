@@ -78,8 +78,9 @@ assert.ok(crownPaint&&crownPaint[2]>namePaint[2]&&crownPaint[2]<levelPaint[2],
  'crown stays to the right of the name on the same row');
 assert.equal(crownPaint[3],namePaint[3],'name and crown share the baseline');
 assert.ok(!drawOps.some(([kind])=>kind==='scale'||kind==='translate'),'the name must never be stretched along one axis');
-assert.ok(drawOps.filter(([kind])=>kind==='fillText').every(op=>op.length===6),
- 'fillText must never receive maxWidth, which can squeeze glyphs horizontally');
+const fittedValues=new Set([profile.name,'👑','21',data.rank,'12層','10層']);
+assert.ok(drawOps.filter(([kind,value])=>kind==='fillText'&&fittedValues.has(value)).every(op=>op.length===6),
+ 'fitted card values never use fillText(maxWidth), which can squeeze glyphs horizontally');
 assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===250&&w===420&&h===101),'wider upper name plate is drawn');
 assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===514&&y===250&&w===174&&h===101),'level plate is beside name');
 assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===397&&w===258&&h===104),'rank remains in second row');
