@@ -217,8 +217,10 @@ export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
  withPlayId(profile);
  const hashes=await photoEvidence(added),profileHashes=await trustedProfileHashes(db,profile);
  const prepared=await prepareProfilePhotoRefs(profile);
+ const lost=lostCircleIds(profile);
  return mutate(db,(settings,items)=>{
-  for(const id of removed){items.delete(id);settings.delete(thumbnailKey(id));}
+  // A lost magic circle is inactive, NOT deleted from its one shared save.
+  for(const id of removed)if(!lost.has(id)){items.delete(id);settings.delete(thumbnailKey(id));}
   for(const circle of added)items.put(circle);
   settings.put(prepared.profile,'profile');
  },hashes,profileHashes,{writesProfile:true,photoWrites:prepared.photos});
