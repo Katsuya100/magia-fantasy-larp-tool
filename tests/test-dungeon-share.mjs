@@ -42,23 +42,26 @@ assert.ok(drawTexts.includes('鉛級')&&drawTexts.includes('Lv.21')&&drawTexts.i
 assert.ok(drawTexts.includes(profile.name),'Canvas shows the player name on their own card');
 assert.ok(drawTexts.includes('👑'),'Canvas puts the earned crown next to the name');
 const nameLabel=drawOps.find(([kind,text])=>kind==='fillText'&&text==='冒険者名');
+const levelLabel=drawOps.find(([kind,text])=>kind==='fillText'&&text==='LEVEL');
 const rankLabel=drawOps.find(([kind,text])=>kind==='fillText'&&text==='冒険者等級');
+const reachedLabel=drawOps.find(([kind,text])=>kind==='fillText'&&text==='最深到達階層');
+const returnedLabel=drawOps.find(([kind,text])=>kind==='fillText'&&text==='最深帰還階層');
 const namePaint=drawOps.find(([kind,text])=>kind==='fillText'&&text===profile.name);
 const crownPaint=drawOps.find(([kind,text])=>kind==='fillText'&&text==='👑');
+const levelPaint=drawOps.find(([kind,text])=>kind==='fillText'&&text==='Lv.21');
 const rankPaint=drawOps.find(([kind,text])=>kind==='fillText'&&text===data.rank);
-const nameIndex=drawOps.findIndex(([kind,text])=>kind==='fillText'&&text===profile.name);
-const translate=drawOps.slice(0,nameIndex).findLast(([kind])=>kind==='translate');
-const scale=drawOps.slice(0,nameIndex).findLast(([kind])=>kind==='scale');
-assert.ok(nameLabel&&rankLabel&&nameLabel[2]<rankLabel[2],'name label stays left of grade');
-assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===260&&w===300&&h===106),'wider name panel is drawn');
-assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===394&&y===260&&w===294&&h===106),'rank panel remains on the right');
-assert.ok(namePaint&&namePaint[2]===0&&namePaint[3]===340,'name is drawn in one line within the panel');
-assert.match(namePaint[4],/800 68px/,'name headline is 68 px tall');
-assert.ok(translate&&translate[1]===98,'name starts inside the left panel');
-assert.ok(scale&&scale[1]>0&&scale[1]<1,'longer sample name stretches horizontally to fit');
-assert.ok(rankPaint&&rankPaint[2]===414,'rank text remains to the right');
-assert.ok(crownPaint&&crownPaint[2]===331&&crownPaint[3]===340,'crown stays to the right of name on same baseline');
-assert.ok(!drawOps.some(([kind,text,x,y])=>kind==='fillText'&&text===profile.name&&y>548),'footer no longer carries the name');
+assert.ok(nameLabel&&levelLabel&&rankLabel&&reachedLabel&&returnedLabel);
+assert.ok(nameLabel[2]<levelLabel[2]&&nameLabel[3]===levelLabel[3],'first row: name on left, level on right');
+assert.ok(rankLabel[2]<reachedLabel[2]&&reachedLabel[2]<returnedLabel[2],'second row: rank, reached and returned');
+assert.ok(rankLabel[3]>nameLabel[3],'second row is below the name and level');
+assert.ok(namePaint&&levelPaint&&namePaint[3]===levelPaint[3]&&namePaint[2]<levelPaint[2],'large name and level share first row');
+assert.ok(rankPaint&&rankPaint[3]>namePaint[3],'grade belongs to second row');
+assert.ok(crownPaint&&crownPaint[2]>namePaint[2]&&crownPaint[2]<levelPaint[2],'crown stays immediately to the right of name');
+assert.equal(crownPaint[3],namePaint[3],'name and crown share the baseline');
+assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===250&&w===420&&h===101),'wider upper name plate is drawn');
+assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===514&&y===250&&w===174&&h===101),'level plate is beside name');
+assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===397&&w===258&&h===104),'rank moves to second row');
+assert.ok(!drawOps.some(([kind,text,x,y])=>kind==='fillText'&&text===profile.name&&y>548),'name is not in footer');
 assert.ok(drawTexts.includes('12層')&&drawTexts.includes('10層'),'both deep records appear on card');
 assert.ok(drawOps.some(([kind])=>kind==='strokeRect'),'card has decorative border');
 assert.ok(stops.length>=4,'card has gradients');
@@ -66,43 +69,39 @@ assert.ok(stops.some(([,color])=>color===rankMetalPalette(10).light),'card text 
 assert.ok(stops.some(([,color])=>color===rankMetalPalette(10).deep),'card plate uses profile rank metal');
 assert.equal(rankMetalPalette(100).mid,'#f0bf75','highest rank keeps special metallic tone');
 
-// Maximum-length Japanese names must remain a single large headline. They
-// compress horizontally rather than shrink their font or wrap.
+// A real Canvas transforms text horizontally to stretch short names while
+// making full-length names fit on one line at a much larger font size.
 const longestName='あいうえおかきくけこさしすせそたちつてと';
-const longOps=[];
-const measuredCtx={...ctx,
- measureText(text){
-  const fontSize=Number(this.font?.match(/(\d+)px/)?.[1])||68;
-  return {width:[...text].length*fontSize};
- },
- save(){longOps.push(['save']);},restore(){longOps.push(['restore']);},
- translate(...args){longOps.push(['translate',...args]);},
- scale(...args){longOps.push(['scale',...args]);},
- fillText(...args){longOps.push(['fillText',...args,this.font]);}
+const renderFor=(name,crowned=true)=>{
+ const paints=[],scales=[],translations=[];
+ const sample={...ctx,
+  measureText(text){
+   const size=Number(this.font?.match(/(\\d+)px/)?.[1])||50;
+   return {width:[...text].length*size};
+  },
+  save(){paints.push({kind:'save'});},
+  translate(x,y){translations.push([x,y]);paints.push({kind:'translate',x,y});},
+  scale(x,y){scales.push([x,y]);paints.push({kind:'scale',x,y});},
+  restore(){paints.push({kind:'restore'});},
+  fillText(text,x,y,maxWidth){paints.push({kind:'text',text,x,y,maxWidth,font:this.font});}
+ };
+ paintAdventurerCard({getContext:()=>sample},{...data,name,crowned,rank:'オリハルコン級',rankLayer:100});
+ return {paints,scales,translations};
 };
-const longCard={getContext:()=>measuredCtx};
-paintAdventurerCard(longCard,{...data,name:longestName,rank:'オリハルコン級',rankLayer:100});
-const longNameOps=longOps.filter(([op,value])=>op==='fillText'&&value===longestName);
-assert.equal(longNameOps.length,1,'20-character name stays on exactly one line');
-assert.match(longNameOps[0][4],/800 68px/,'maximum-length name keeps the large font');
-const longStretch=longOps.find(([op,value])=>op==='scale'&&typeof value==='number');
-assert.ok(longStretch&&Math.abs(longStretch[1]-228/(20*68))<1e-9,'20-character name is horizontally condensed to crowned name width');
-const longCrown=longOps.find(([op,value])=>op==='fillText'&&value==='👑');
-const longRank=longOps.find(([op,value])=>op==='fillText'&&value==='オリハルコン級');
-assert.ok(longCrown&&longCrown[2]===331&&longCrown[3]===340,'crown is to the right of long name');
-assert.ok(longRank&&longRank[2]===414&&longRank[4]===254,'maximum grade remains inside right plaque');
-assert.equal(longCard.width,1200,'card export width is unchanged');
-
-const shortOps=[];
-const shortCtx={...measuredCtx,
- scale(...args){shortOps.push(['scale',...args]);},
- fillText(...args){shortOps.push(['fillText',...args,this.font]);}
-};
-paintAdventurerCard({getContext:()=>shortCtx},{...data,name:'勇者',crowned:false});
-const shortStretch=shortOps.find(([op,value])=>op==='scale'&&typeof value==='number');
-assert.ok(shortStretch&&shortStretch[1]>1,'short names are stretched to fill the wider available space');
-assert.ok(!shortOps.some(([op,value])=>op==='fillText'&&value==='👑'),'no crown before the 100F boss clear');
-
+const short=renderFor('勇者');
+const shortName=short.paints.find(op=>op.kind==='text'&&op.text==='勇者');
+assert.ok(shortName&&shortName.font==='800 50px sans-serif','short name is drawn in large 50px text');
+assert.ok(short.scales.some(([x,y])=>x>1&&y===1),'short names are stretched horizontally');
+assert.ok(short.translations.some(([x,y])=>x===98&&y===321),'name is transformed inside upper-left plate');
+const long=renderFor(longestName);
+const longName=long.paints.filter(op=>op.kind==='text'&&op.text===longestName);
+assert.equal(longName.length,1,'20-character name stays on one line');
+assert.equal(longName[0].font,'800 34px sans-serif','long name retains legible 34px height');
+assert.ok(long.scales.some(([x,y])=>x<1&&y===1),'long names compress horizontally to fit');
+assert.ok(long.paints.some(op=>op.kind==='text'&&op.text==='👑'&&op.x>98&&op.x<502&&op.y===321),
+ 'crown follows stretched long name inside upper-left plate');
+assert.ok(long.paints.some(op=>op.kind==='text'&&op.text==='オリハルコン級'&&op.y===466),
+ 'longest rank remains in second row');
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const profileHtml=html.slice(html.indexOf('<section id="home"'),html.indexOf('<section id="library"'));
 assert.ok(profileHtml.indexOf('id="openAdventurerShare"')<profileHtml.indexOf('id="deleteSaveData"'),'share and support appear above delete');
