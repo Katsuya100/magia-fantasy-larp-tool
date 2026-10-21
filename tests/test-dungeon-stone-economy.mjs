@@ -15,7 +15,7 @@ assert.deepEqual(Array.from({length:4},()=>randomA()),
 assert.equal(simulateProgression(7213).stones,simulateProgression(7213).stones,'identical seed, identical stone result');
 assert.equal(targetClearLevel(100),150);
 assert.equal(magicStoneDropChance(150,100),.3,'at-level floor 100 is 30% per fight');
-assert.equal(magicStoneDropChance(150,101),.3,'endless layer 101 stays a level-150 drop source');
+assert.equal(magicStoneDropChance(150,101),.3,'level-151 enemies keep the capped hero eligible for full stone drops');
 assert.equal(magicStoneDropChance(150,91),.3*(.5**9),'overlevel floor 91 strongly suppresses drops');
 
 for(const seed of [1,11,1234,20261019]){
