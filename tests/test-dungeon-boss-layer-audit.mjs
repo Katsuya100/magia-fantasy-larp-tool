@@ -29,13 +29,3 @@ for(const band of [{from:71,to:80,level:128},{from:91,to:100,level:150}]){
  }
 }
 console.log('PASS paired boss layer audit 71-80F and 91-100F');
-
-// Explore the final boss's HP/MAG pair without changing seeds or loadouts.
-const live=G.parseCsv(readFileSync(new URL('../assets/data/dungeon-enemies.csv',import.meta.url),'utf8'));
-for(const mag of [12,13])for(const hp of [85,89,91,93,95,97,99,100,101,102]){
- const catalog=[...live],boss={...catalog[499],hp:String(hp),mag:String(mag)};catalog[499]=boss;
- const results=Array.from({length:128},(_,i)=>deepRun(17011+i*13,{from:91,to:100,level:150},true,catalog));
- const winners=results.filter(x=>x.win),rates=winners.map(x=>x.hp/x.maxHp*100),mp=winners.map(x=>x.mp/x.maxMp*100);
- console.log('BOSS_100_HP_MAG_SWEEP '+JSON.stringify({hp,mag,wins:winners.length,
-  winRate:winners.length/128*100,medianHP:median(rates),meanHP:avg(rates),medianMP:median(mp)}));
-}

@@ -498,4 +498,4 @@ foe_l100_1,月輪の魔鳥,80,8,4,6,1,1,1,0.95,1.2,1,0.8,attack:chaos:137|defens
 foe_l100_2,破滅の人狼,90,10,5,8,1,1,1,1.05,1.2,1,0.8,attack:chaos:149|defense:chaos:119|support:gravity:97|defense:chaos:760|attack:gravity:134,10,150,0,fang|relic_123|lightning_crystal|relic_178
 foe_l100_3,終焉リビングソード,99,9,9,10,1,1,1,1,1.2,1,0.8,attack:chaos:161|defense:chaos:129|support:gravity:105|defense:chaos:770|attack:gravity:145,10,150,0,relic_083|relic_127|aqua_pearl|relic_183|relic_188
 foe_l100_4,永劫の魔将,85,12,4,12,1,1,1,1,1.2,1,0.8,attack:chaos:173|defense:chaos:138|support:gravity:112|debuff:chaos:780|attack:gravity:156,10,150,0,relic_030|relic_105|relic_155|relic_180
-boss_l100,永劫の大魔王,116,11,7,10,1,1,1,1,1.2,1.3,0.95,attack:chaos:170|defense:chaos:136|support:gravity:111|debuff:chaos:750|attack:gravity:153,1,150,1,relic_030|relic_130|relic_150|sealed_eye|forgotten_crown|relic_boss_100
+boss_l100,永劫の大魔王,101,13,7,10,1,1,1,1,1.2,1.3,0.95,attack:chaos:170|defense:chaos:136|support:gravity:111|debuff:chaos:750|attack:gravity:153,1,150,1,relic_030|relic_130|relic_150|sealed_eye|forgotten_crown|relic_boss_100

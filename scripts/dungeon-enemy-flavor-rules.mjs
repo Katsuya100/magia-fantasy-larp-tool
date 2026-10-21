@@ -103,7 +103,7 @@ export const bossFlavor = function bossFlavor(rows){
   const oldScore=damageScore(old),newScore=damageScore(b);
   const desired=Number(old.hp)*(newScore/oldScore)*(100+Number(old.def))/(100+Number(b.def));
   b.hp=String(Math.round(Math.round(desired)*[1.04,1.06,1.035,1.02,1,1.02,1,0.925,1,0.94][Math.floor((layer-1)/10)]));
-  if(layer===100){b.hp=String(Math.round(Number(old.hp)*1.075));b.def=old.def;b.res=old.res;} // Exact final-boss baseline difficulty; chaos/law identities remain thematic.
+  if(layer===100){b.hp='101';b.mag='13';b.def=old.def;b.res=old.res;} // 128-seed calibrated: chaos/law identity, higher magic, preserved winning pressure.
  }
  return rows;
 };
