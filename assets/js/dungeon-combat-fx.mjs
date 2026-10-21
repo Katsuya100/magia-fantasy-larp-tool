@@ -30,6 +30,7 @@ export function magicEffectTier(upgradeLevel,role='attack'){
  return count>=55?4:count>=20?3:2;
 }
 export const COMBAT_EFFECT_MS=440;
+export const AFFINITY_EFFECT_MS=720;
 export const ENCOUNTER_EFFECT_MS=820;
 /* Only every fifth encounter is a layer boss; every tenth layer gains a
    second VFX tier and the designed 100th-layer boss gets the finale. */
@@ -55,6 +56,12 @@ export function effectDuration(){
  // Keep reduced-motion users and headless test environments from waiting for animations.
  if(typeof window==='undefined'||typeof window.matchMedia!=='function')return 0;
  return window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:COMBAT_EFFECT_MS;
+}
+// Only elemental resistance/weakness hits hold the arena longer. Normal combat
+// and reduced-motion playback retain their existing timing.
+export function combatPhaseDuration(phase,duration=effectDuration()){
+ return duration===COMBAT_EFFECT_MS&&phase.some(step=>attackHitAffinity(step)!=='none')
+  ?AFFINITY_EFFECT_MS:duration;
 }
 // Resolve order is fixed by the combat core. The two sides animate together
 // if they acted in the same priority phase, without skipping later phases.
@@ -82,13 +89,14 @@ export async function playCombatSequence(steps,paint,{
  let death=null;
  for(const phase of simultaneousPhases(steps)){
   paint(phase);
+  const phaseDuration=combatPhaseDuration(phase,duration);
   const fatal=onFatal&&!death?fatalSide(phase):null;
   if(fatal){
-   const lead=Math.max(0,duration-overlap);
+   const lead=Math.max(0,phaseDuration-overlap);
    if(lead>0)await wait(lead);
    death=Promise.resolve(onFatal(fatal,phase));
-   if(duration-lead>0)await wait(duration-lead);
-  }else if(duration>0)await wait(duration);
+   if(phaseDuration-lead>0)await wait(phaseDuration-lead);
+  }else if(phaseDuration>0)await wait(phaseDuration);
  }
  if(death)await death;
 }

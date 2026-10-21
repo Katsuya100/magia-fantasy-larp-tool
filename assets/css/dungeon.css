@@ -2002,7 +2002,7 @@ html,body{overflow-x:clip}
  filter:drop-shadow(0 0 15px var(--affinity-color))
 }
 #battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .affinity-hit::before{
- animation:affinity-ring .44s ease-out both
+ animation:affinity-ring .72s ease-out both
 }
 #battleArena .affinity-hit::after{
  padding:6px 11px;min-width:70px;text-align:center;
@@ -2014,7 +2014,7 @@ html,body{overflow-x:clip}
  text-shadow:0 0 9px var(--affinity-color),0 1px 2px #000
 }
 #battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .affinity-hit::after{
- animation:affinity-word .44s cubic-bezier(.16,1,.32,1) both
+ animation:affinity-word .72s cubic-bezier(.16,1,.32,1) both
 }
 #battleArena .unit[data-affinity="resist"] .affinity-hit{
  --affinity-color:#70ddff;--affinity-glow:#238bc955
@@ -2034,16 +2034,20 @@ html,body{overflow-x:clip}
  box-shadow:0 0 21px 4px var(--affinity-glow),inset 0 0 16px var(--affinity-glow)
 }
 #battleArena .unit[data-affinity="weak"] .affinity-hit::before{
- animation:affinity-ring .44s cubic-bezier(.16,.8,.23,1) both
+ animation:affinity-ring .72s cubic-bezier(.16,.8,.23,1) both
+}
+/* Keep the high-tier impact glow in step with the affinity shield/burst. */
+#battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .combatant-fx::before{
+ animation-duration:.72s
 }
 @keyframes affinity-ring{
  0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-35deg)}
- 38%,67%{opacity:.95;transform:translate(-50%,-50%) scale(1.15) rotate(12deg)}
+ 38%,80%{opacity:.95;transform:translate(-50%,-50%) scale(1.15) rotate(12deg)}
  100%{opacity:0;transform:translate(-50%,-50%) scale(1.65) rotate(33deg)}
 }
 @keyframes affinity-word{
  0%{opacity:0;transform:translate(-50%,-50%) scale(1.65)}
- 24%,78%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+ 20%,84%{opacity:1;transform:translate(-50%,-50%) scale(1)}
  100%{opacity:0;transform:translate(-50%,-67%) scale(.9)}
 }
 @media(prefers-reduced-motion:reduce){
