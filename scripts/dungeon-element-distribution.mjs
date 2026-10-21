@@ -84,8 +84,16 @@ export const combatBalanceResistCalibrations=Object.freeze({
  "foe_l040_3": 0.12,
  "boss_l040": 0.12,
  "foe_l069_2": 0.12,
- "foe_l070_2": 0.12,
- "boss_l070": 0.2
+ "foe_l070_2": 0.25,
+ "boss_l070": 0.35,
+ "boss_l065": -0.2,
+ "boss_l066": -0.2,
+ "boss_l067": -0.2,
+ "boss_l068": -0.2,
+ "foe_l070_1": 0.25,
+ "foe_l070_3": 0.25,
+ "foe_l070_4": 0.25,
+ "boss_l069": 0.25
 });
 export const combatBalanceMagOverrides=Object.freeze({"foe_l069_3":10,"foe_l070_2":11,"boss_l069":11,"boss_l070":12});
 
