@@ -49,7 +49,7 @@ jobs:
           node-version: '24'
       - run: node scripts/dungeon-balance-probe.mjs
         env:
-          PROBE_BANDS: '81,91'
+          PROBE_BANDS: '21,61,71,81,91'
           PROBE_HP: '0.85,1'
           PROBE_MAG: '0.65,0.75,0.8,0.85,0.9,0.95'
           PROBE_SCOPES: 'whole'
