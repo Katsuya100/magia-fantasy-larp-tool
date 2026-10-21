@@ -120,6 +120,30 @@ for(let to=10;to<=100;to+=10){
  report.push(row);
  console.log('DUNGEON_DEFAULT_BALANCE '+JSON.stringify(row));
 }
+// Required CI regression guard against the 128-seed main-branch benchmark
+// before the enemy-flavor changes (main at b7fc690bb02bed8a6893a5f330be0c18ae1f58d4).
+// Target windows above remain advisory; this *difference* budget is mandatory.
+if(SAMPLES===128){
+ const baseline={
+  '1-10':[100,54.4,69.7], '11-20':[99.2,11.8,72],
+  '21-30':[96.1,6.9,73.9], '31-40':[97.7,14,73.9],
+  '41-50':[96.1,8.3,74], '51-60':[100,6.4,80.6],
+  '61-70':[100,8.4,80.2], '71-80':[100,9.6,79],
+  '81-90':[100,9.4,77], '91-100':[96.9,1.4,75.4]
+ };
+ for(const row of report){
+  const old=baseline[row.band];
+  assert.ok(old,'historical 128-seed band '+row.band);
+  assert.ok(Math.abs(row.winRate-old[0])<=2,
+   'sortie win-rate regression exceeds 2pp in '+row.band+': '+old[0]+' -> '+row.winRate);
+  assert.ok(Math.abs(row.medianMp-old[1])<=5,
+   'sortie median MP regression exceeds 5pp in '+row.band+': '+old[1]+' -> '+row.medianMp);
+  assert.ok(Math.abs(row.medianHp-old[2])<=5,
+   'sortie median HP regression exceeds 5pp in '+row.band+': '+old[2]+' -> '+row.medianHp);
+ }
+ console.log('PASS historical 128-seed sortie parity: win ±2pp, HP/MP ±5pp');
+}
+
 // Do not silently redefine balance targets to force a green build.
 // CI must always expose a clear list of missing goals and a strict-mode path.
 const unmet=report.filter(x=>!x.passed);

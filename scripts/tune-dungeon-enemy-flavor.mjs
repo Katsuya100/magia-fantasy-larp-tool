@@ -1,0 +1,11 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {tuneEnemyRows} from './dungeon-enemy-flavor-rules.mjs';
+const source=new URL('../tests/fixtures/dungeon-enemies-before-flavor.csv',import.meta.url);
+const target=new URL('../assets/data/dungeon-enemies.csv',import.meta.url);
+const raw=await readFile(source,'utf8');
+const [header,...lines]=raw.trim().split(/\r?\n/);
+const columns=header.split(',');
+const before=lines.map(line=>Object.fromEntries(line.split(',').map((v,i)=>[columns[i],v])));
+const after=tuneEnemyRows(before);
+await writeFile(target,[header,...after.map(row=>columns.map(key=>row[key]).join(','))].join('\n')+'\n');
+console.log('Updated dungeon-enemies.csv: '+after.filter((row,i)=>columns.some(k=>row[k]!==before[i][k])).length+' enemies changed');
