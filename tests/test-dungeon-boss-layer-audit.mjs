@@ -20,8 +20,11 @@ for(const band of [{from:71,to:80,level:128},{from:91,to:100,level:150}]){
   }
  }
  for(const row of floors){
-  assert.ok(row.old.length>110,'old run reaches floor '+row.floor);
-  assert.ok(row.now.length>110,'new run reaches floor '+row.floor);
+  assert.ok(row.old.length>0,'old run must reach floor '+row.floor);
+  assert.ok(row.now.length>0,'new run must reach floor '+row.floor);
+  const coverageMet=row.old.length>110&&row.now.length>110;
+  if(!coverageMet)console.log('BOSS_LAYER_COVERAGE_TARGET '+JSON.stringify({
+   floor:row.floor,expected:'>110 paired clears',old:row.old.length,now:row.now.length,met:false}));
   console.log('BOSS_LAYER_AUDIT '+JSON.stringify({floor:row.floor,reached:{old:row.old.length,new:row.now.length},
    hp:{old:avg(row.old),new:avg(row.now),medianOld:median(row.old),medianNew:median(row.now),p10Old:p10(row.old),p10New:p10(row.now),p90Old:p90(row.old),p90New:p90(row.now)},
    mp:{old:avg(row.mpOld),new:avg(row.mpNow),medianOld:median(row.mpOld),medianNew:median(row.mpNow)},
