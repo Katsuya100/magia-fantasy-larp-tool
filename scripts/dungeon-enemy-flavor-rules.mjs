@@ -81,6 +81,9 @@ export const bossFlavor = function bossFlavor(rows){
  };
  for(let layer=1;layer<=100;layer++){
   const i=layer*5-1,b=rows[i],old={...b};
+  // Star eclipse is a chaos sovereign rather than an earth spirit. Keep the original
+  // gravity counterplay, and grant a chaos identity without changing default attacks.
+  if(layer===80){b.resist_chaos='0.95';b.resist_storm='1.05';continue;}
   const primary=b.spells.split('|')[0].split(':')[1],weak=counter[primary];
   // Make the boss's own combat attribute the creature's true elemental defense.
   // Its old arbitrary 1.25 self-weakness is transferred to a thematic counter.
