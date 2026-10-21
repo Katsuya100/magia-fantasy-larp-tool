@@ -336,11 +336,6 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  }
  return log;
 }
-export function enemyScaling(level){
- const t=clamp((Number(level)-1)/(num('level_max')-1),0,1);
- return {hp:num('enemy_hp_scale_early')+(num('enemy_hp_scale_late')-num('enemy_hp_scale_early'))*t,
-  mag:num('enemy_mag_scale_early')+(num('enemy_mag_scale_late')-num('enemy_mag_scale_early'))*t};
-}
 // Old 10-layer full-recovery saves could contain undefined MP after
 // reading hero.stats.mp (which does not exist). Repair only invalid values;
 // legitimate 0 MP must remain 0.
@@ -386,9 +381,13 @@ export function recoverVictoryMp(hero,layer=1){
  hero.mp+=gained;
  return gained;
 }
+// Both combatants use the exact same authored base and level growth.
 export function fromEnemy(row,level){
- const scale=enemyScaling(level);
- const b={hp:Math.max(1,Math.round(+row.hp*scale.hp)),mag:Math.max(1,Math.round(+row.mag*scale.mag)),def:+row.def,res:+row.res};const resists=Object.fromEntries(ATTRS.map(a=>[a,+row['resist_'+a]]));const spells=row.spells.split('|').map(s=>{const [role,attribute,power]=s.split(':');return {role,attribute,power:+power};});return makeUnit(b,level,resists,spells,row.id);}
+ const base={hp:+row.hp,mag:+row.mag,def:+row.def,res:+row.res};
+ const resists=Object.fromEntries(ATTRS.map(a=>[a,+row['resist_'+a]]));
+ const spells=row.spells.split('|').map(s=>{const [role,attribute,power]=s.split(':');return {role,attribute,power:+power};});
+ return makeUnit(base,level,resists,spells,row.id);
+}
 export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items){
   if(+i.min_value>+i.max_value||!(Number(i.weight)>0))throw Error('Bad item roll');
   if(['clear','clear_all','escape','revive'].includes(i.kind)){

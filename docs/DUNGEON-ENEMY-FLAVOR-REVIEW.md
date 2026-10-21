@@ -1,3 +1,9 @@
+# 重要：PR #167での耐久再調整
+
+この文書は過去の調整履歴です。最新のHP・DEF・RESは [DUNGEON-ENEMY-DURABILITY-REVIEW.md](DUNGEON-ENEMY-DURABILITY-REVIEW.md) を参照してください。PR #167では全500体の耐久を再点検しており、以下の「据え置き」「予算維持」「テスト合格」等の記述は**過去の結果**で、現在の未試験ステータスを保証するものではありません。**新しい通しプレイはまだ実行していません。魔法とMAGの変更は取り消し済みです。**
+
+---
+
 # ダンジョン敵500体：フレーバー整合性と戦力維持レビュー
 
 ## 調整範囲と判断
@@ -17,9 +23,9 @@
 ## 保留する既知のトレードオフ
 
 - ボスの耐性再配分によってプレイヤー推奨属性が変化するため、旧通しプレイの勝率・MP・HPと各ボスの複数攻撃魔法に対する耐久予算をCIで監視。
-- 1～19層の通常敵は凍結しているため、序盤のスライム等が同じ耐性を持つ問題は残る。
+- 1～19層の通常敵も、名前で特定できる属性耐性のみを調整。敵ID・魔法・HP・MAG・DEF・RESは不変にして序盤の強さを守る。
 - 51～60層は過去の128シード通しプレイでクリア率が敏感だったため、MAG/DEFの再配分を保留し、名前に対応する中立耐性だけ微調整。
-- 20層以降も既存の主弱点属性と名前が矛盾する例（例：62層の雷大ワシの雷弱点、62層のフェニックスの風主属性）がある。層ごとのカウンター属性を守るため、他属性の小幅調整に留めた。
+- 62層の雷大ワシの雷弱点、44層のゴーレムの重力弱点など、名前と明確に矛盾する相性は今回調整。**名前と攻撃魔法の属性の不一致は別途検証対象**。
 - 属性名のない通常敵や種族の世界観解釈が複数ある敵は「自動判定で差し替え理由なし」として数値を維持。
 
 ## 検証
@@ -148,3 +154,129 @@
 - **不合格→合格は改善として許容**。このとき勝率差の±2ポイント上限のみを免除する。
 - 合格→不合格は許容しない。不合格のままなら勝率差±2ポイント以内。
 - 残HP・残MP中央値は全区間で直前 `main` との差±5ポイント以内を維持。
+
+## 通常敵400体：名前で読める耐性と主攻撃
+
+- 明示された属性（炎・雷・水・氷・風・石・金属・闇等）が弱点になる矛盾を全件調査し、倍率1以下・少なくとも1つは1未満に修正。7属性倍率の合計を各個体で維持。
+- **主攻撃（先頭の攻撃魔法）を名前の明示属性に揃える**。他4枚の魔法陣、デバフ属性、ロール・威力・消費やAIは変えない。これにより名前から相手の代表的な攻撃属性を予測できる。
+- 金属・魔法の剣は雷を弱点にする。44層と51層の金属系5体はHPを従来の主要3属性魔法による討伐時間に合わせて補正。
+- 属性があいまいな名称については出現層の従来設計を優先。ボス100体は前回の整合性調整を維持。
+- CI `dungeon-normal-affinity` で通常敵400体すべての名前と耐性・主攻撃の整合を検証。128シード標準通しプレイの勝率・残HP/残MPを回帰検証。
+
+| 層 | 敵 | 耐性・HP・主攻撃の変更（前→後） |
+|---:|---|---|
+| 1 | コウモリ | bolt:1→1.05、storm:1.2→0.95、gravity:1→1.2、主攻撃:flame→storm |
+| 5 | 毒キノコ | bolt:1→1.05、chaos:1→0.95、主攻撃:aqua→chaos |
+| 7 | 骸骨剣士 | flame:1→1.05、chaos:1→0.95、主攻撃:gravity→chaos |
+| 8 | 鰻 | flame:1→1.05、aqua:1→0.95、主攻撃:chaos→aqua |
+| 8 | 毒ナマズ | flame:1→1.05、aqua:1→0.95 |
+| 8 | イール | flame:1→1.05、aqua:1→0.95、主攻撃:chaos→aqua |
+| 8 | キャットフィッシュ | flame:1→1.05、aqua:1→0.95、主攻撃:chaos→aqua |
+| 9 | 呪い人形 | flame:1→1.05、chaos:1→0.95、主攻撃:bolt→chaos |
+| 12 | 闇コウモリ | bolt:1→1.05、storm:1→0.95 |
+| 15 | 石像兵 | flame:1→1.05、gravity:1→0.95、主攻撃:law→gravity |
+| 15 | 石門の衛兵 | flame:1→1.05、gravity:1→0.95、主攻撃:law→gravity |
+| 15 | 岩ゴーレム | flame:1→1.05、gravity:1→0.95、主攻撃:law→gravity |
+| 15 | ウッドゴーレム | flame:1→1.05、gravity:1→0.95、主攻撃:law→gravity |
+| 16 | 大コウモリ | flame:1→1.05、storm:1→0.95、主攻撃:law→storm |
+| 18 | 飛びトカゲ | flame:1→1.05、storm:1→0.95、主攻撃:aqua→storm |
+| 19 | 影ネズミ | bolt:1→1.05、chaos:1→0.95、主攻撃:storm→chaos |
+| 19 | 影狼 | bolt:1→1.05、chaos:1→0.95、主攻撃:storm→chaos |
+| 20 | 炎スケルトン | aqua:1→1.05、chaos:1→0.95 |
+| 20 | 赤コウモリ | 主攻撃:flame→storm |
+| 22 | 影野犬 | flame:1→1.05、law:1→1.2、chaos:1.2→0.95、主攻撃:storm→chaos |
+| 24 | 幽霊スケルトン | 主攻撃:aqua→chaos |
+| 24 | 霧ゴブリン兵 | 主攻撃:aqua→storm |
+| 25 | 砂キャットフィッシュ | 主攻撃:storm→gravity |
+| 25 | 砂毒ナマズ | flame:1→1.2、bolt:1→1.05、gravity:1→0.95、law:1→1.05、chaos:1.2→0.95、主攻撃:storm→gravity |
+| 26 | 影コウモリ | 主攻撃:storm→chaos |
+| 27 | 黒骸骨剣士 | 主攻撃:law→chaos |
+| 27 | レイス | flame:1→1.05、chaos:1→0.95、主攻撃:law→chaos |
+| 27 | 幽霊ゾンビ兵 | flame:1→1.05、chaos:1→0.95、主攻撃:law→chaos |
+| 29 | 雷コウモリ | 主攻撃:storm→bolt |
+| 30 | 鉄オーガ | flame:1→1.05、bolt:1→1.2、gravity:1.2→0.95、主攻撃:chaos→gravity |
+| 31 | ヴァンパイアバット | flame:0.8→1.05、chaos:1.05→0.8、主攻撃:flame→chaos |
+| 31 | 赤闇コウモリ | 主攻撃:flame→chaos |
+| 31 | バンシー | bolt:1→1.05、chaos:1→0.95、主攻撃:flame→chaos |
+| 31 | 影ウルフ | bolt:1→1.05、chaos:1→0.95、主攻撃:flame→chaos |
+| 33 | 鉄魔導人形 | 主攻撃:law→gravity |
+| 35 | 星屑コウモリ | 主攻撃:law→storm |
+| 36 | トレント | 主攻撃:aqua→gravity |
+| 36 | 岩ドライアド | flame:1→1.05、gravity:1→0.95、主攻撃:aqua→gravity |
+| 37 | アンデッドナイト | flame:1→1.05、chaos:1→0.95、主攻撃:gravity→chaos |
+| 40 | 霧水スライム | 主攻撃:aqua→storm |
+| 40 | 毒大ガマ | 主攻撃:aqua→chaos |
+| 42 | 毒キャットフィッシュ | flame:1→1.05、aqua:1.2→0.95、law:1→1.2 |
+| 43 | 深淵水スライム | 主攻撃:aqua→chaos |
+| 44 | クリスタルゴーレム | bolt:0.8→1.2、gravity:1.2→0.8、HP:76→67、主攻撃:bolt→gravity |
+| 44 | 鉄石ゴーレム | bolt:0.8→1.2、gravity:1.2→0.8、HP:86→76、主攻撃:bolt→gravity |
+| 44 | リビングソード | bolt:0.8→1.2、gravity:1.2→0.8、HP:95→84、主攻撃:bolt→gravity |
+| 45 | 影骸骨剣士 | 主攻撃:bolt→chaos |
+| 45 | 黒古代兵 | 主攻撃:bolt→gravity |
+| 48 | 氷石ゴーレム | flame:1→1.05、gravity:1→0.95 |
+| 49 | アビスドラゴン | 主攻撃:storm→chaos |
+| 49 | 闇飛びトカゲ | 主攻撃:storm→chaos |
+| 49 | 深淵飛びトカゲ | 主攻撃:storm→chaos |
+| 50 | ボーンゴーレム | 主攻撃:chaos→gravity |
+| 51 | ゴールドゴーレム | flame:1→1.05、bolt:1→1.2、gravity:1.2→0.95、HP:78→69、主攻撃:law→gravity |
+| 51 | 金石ゴーレム | flame:1→1.05、bolt:1→1.2、gravity:1.2→0.95、HP:88→78、主攻撃:law→gravity |
+| 53 | ウッドスピリット | flame:1→1.05、gravity:1→0.95、主攻撃:aqua→gravity |
+| 54 | 闇野犬 | 主攻撃:storm→chaos |
+| 54 | 影大ワシ | 主攻撃:storm→chaos |
+| 56 | 幽霊ゾンビ | 主攻撃:gravity→chaos |
+| 56 | グールロード | flame:1→1.05、chaos:1→0.95、主攻撃:gravity→chaos |
+| 56 | 闇スケルトン | flame:1→1.05、chaos:1→0.95、主攻撃:gravity→chaos |
+| 58 | 深淵サハギン | 主攻撃:aqua→chaos |
+| 58 | アビスフィッシュ | 主攻撃:aqua→chaos |
+| 59 | 鉄スケルトン兵 | 主攻撃:chaos→gravity |
+| 60 | デーモン | flame:1→1.05、law:1→1.2、chaos:1.2→0.95、主攻撃:storm→chaos |
+| 60 | 毒大グモ | flame:1→1.05、law:1→1.2、chaos:1.2→0.95、主攻撃:storm→chaos |
+| 60 | 霧毒ナマズ | flame:1→1.05、gravity:1→1.2、chaos:1.2→0.95 |
+| 61 | 幽霊スケルトン兵 | 主攻撃:law→chaos |
+| 61 | 黒ゾンビ兵 | bolt:1→1.05、chaos:1→0.95、主攻撃:law→chaos |
+| 62 | フェニックス | flame:1→0.95、gravity:1→1.05、主攻撃:storm→flame |
+| 62 | 雷大ワシ | bolt:1.2→1、gravity:1→1.2、主攻撃:storm→bolt |
+| 62 | 吹雪カラス | 主攻撃:storm→aqua |
+| 63 | アビスイール | law:1→1.2、chaos:1.2→1、主攻撃:aqua→chaos |
+| 63 | 深淵毒ナマズ | law:1→1.2、chaos:1.2→1、主攻撃:aqua→chaos |
+| 64 | グレートデーモン | 主攻撃:law→chaos |
+| 64 | 鉄リビングアーマー | 主攻撃:law→gravity |
+| 65 | 砂塵の騎兵 | flame:1→1.2、bolt:1→1.05、gravity:1.2→0.95、主攻撃:storm→gravity |
+| 65 | 砂鰻 | flame:1→1.2、gravity:1.2→1、主攻撃:storm→gravity |
+| 65 | 砂オーガ | flame:1→1.05、aqua:1→1.2、gravity:1.2→0.95、主攻撃:storm→gravity |
+| 68 | 霧骸骨剣士 | 主攻撃:chaos→storm |
+| 70 | 堕天の従者 | 主攻撃:law→chaos |
+| 71 | ワイバーンライダー | storm:1.2→0.8、gravity:0.8→1.2、主攻撃:gravity→storm |
+| 71 | 岩飛びトカゲ | flame:1→1.05、aqua:1→1.2、storm:1.2→0.95 |
+| 72 | 霧ゴースト | gravity:0.8→1.2、chaos:1.2→0.8、主攻撃:gravity→storm |
+| 72 | 影ウィスプ | flame:1→1.05、law:1→1.2、chaos:1.2→0.95、主攻撃:gravity→chaos |
+| 76 | エルダートレント | 主攻撃:aqua→gravity |
+| 76 | 翡翠ウッドゴーレム | flame:1→1.05、gravity:1→0.95、主攻撃:aqua→gravity |
+| 77 | 銀リビングアーマー | 主攻撃:law→gravity |
+| 77 | 白古代兵 | flame:1→1.05、gravity:1→0.95、主攻撃:law→gravity |
+| 80 | エルダーデーモン | 主攻撃:gravity→chaos |
+| 80 | 煉獄デュラハン | flame:1→0.95、bolt:1→1.05、主攻撃:gravity→flame |
+| 80 | 黄泉スキュラ | 主攻撃:gravity→chaos |
+| 80 | 星骸の竜兵 | flame:1→1.05、chaos:1→0.95、主攻撃:gravity→chaos |
+| 81 | 黒曜リッチ | 主攻撃:chaos→gravity |
+| 82 | 冥星の使徒 | 主攻撃:law→chaos |
+| 83 | 冥界の使徒 | 主攻撃:gravity→chaos |
+| 84 | 冥府の裁判官 | 主攻撃:law→chaos |
+| 84 | 亡者の執行人 | flame:1→1.05、chaos:1→0.95、主攻撃:law→chaos |
+| 86 | 虚無の兵士 | 主攻撃:bolt→chaos |
+| 87 | 幽界の巨人 | 主攻撃:chaos→gravity |
+| 88 | 星霜の魔人 | 主攻撃:law→aqua |
+| 88 | 神木の霊獣 | flame:1→1.05、gravity:1→0.95、主攻撃:law→gravity |
+| 90 | 不死の神官 | 主攻撃:law→chaos |
+| 90 | 無音の告死鳥 | 主攻撃:law→chaos |
+| 91 | 星影の竜人 | flame:1→1.2、bolt:1→1.05、chaos:1.2→0.95、主攻撃:aqua→chaos |
+| 93 | 銀河の使徒 | 主攻撃:gravity→law |
+| 94 | 月影の竜騎士 | 主攻撃:law→chaos |
+| 94 | 黄泉ペガサス | 主攻撃:law→chaos |
+| 96 | 魔界キマイラ | bolt:1→1.05、chaos:1→0.95、主攻撃:gravity→chaos |
+| 97 | 幻影ドッペルゲンガー | 主攻撃:storm→chaos |
+| 97 | 常闇の竜鱗兵 | flame:1→1.05、chaos:1→0.95、主攻撃:storm→chaos |
+| 98 | 虚無の亡者 | 主攻撃:gravity→chaos |
+| 99 | 腐朽の神獣 | flame:1→1.05、bolt:1→1.05、law:1→0.95、chaos:1→0.95、主攻撃:gravity→chaos |
+| 100 | 月輪の魔鳥 | 主攻撃:chaos→storm |
+| 100 | 終焉リビングソード | flame:1→1.05、bolt:1→1.2、gravity:1.2→0.95、主攻撃:chaos→gravity |

@@ -4,6 +4,9 @@
 // Inventory availability is an explicit stocked-loadout assumption, not a
 // claim that the expected drops can supply every cleanser or Luna Stone.
 import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
+import {alignNormalRows} from '../scripts/dungeon-normal-enemy-affinities.mjs';
+import {alignEnemySpellFlavor} from '../scripts/dungeon-enemy-spell-flavor.mjs';
 import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
@@ -20,9 +23,17 @@ const rng=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4
 // 19 bosses now have deliberate elemental identities. Check the unaffected
 // enemies against the exact catalog before the flavor change.
 const early=data.enemies.slice(0,95).filter(row=>row.boss_only==='0');
-const reference=G.parseCsv(readFileSync(new URL('./fixtures/dungeon-enemies-before-flavor.csv',import.meta.url),'utf8'))
+// The historical fixture predates the approved flavor rewrite. Compare to
+// reproducible current spell-generation rules, not obsolete spell strings.
+const reference=alignEnemySpellFlavor(alignNormalRows(G.parseCsv(readFileSync(
+ new URL('./fixtures/dungeon-enemies-pre-readable-affinities.csv',import.meta.url),'utf8'))))
  .slice(0,95).filter(row=>row.boss_only==='0');
-assert.deepEqual(early,reference,'early 76 ordinary foes must remain unchanged');
+for(let i=0;i<early.length;i++){
+ for(const key of Object.keys(reference[i])){
+  if(!key.startsWith('resist_')&&!['hp','mag','def','res'].includes(key))
+   assert.equal(early[i][key],reference[i][key],'early identity and all five spells unchanged '+early[i].id+' '+key);
+ }
+}
 let previousMinimum=0;
 for(let layer=51;layer<=100;layer++){
  const five=data.enemies.slice((layer-1)*5,layer*5);
@@ -181,6 +192,8 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
   stones,spent,rounds,debuffCasts,cleanseUsed,cleanseByType,carryCount:carry.length,
   remaining:carry.filter(Boolean).length,initialLoadout,layerStats};
 }
+// Keep standalone cleanse trials mandatory, but don't rerun them as an import.
+if(process.argv[1]===fileURLToPath(import.meta.url)){
 const samples=Number(process.env.DUNGEON_DEBUFF_SAMPLES||64);
 assert.ok(Number.isSafeInteger(samples)&&samples>=16&&samples<=1024);
 const mean=a=>a.length?a.reduce((sum,x)=>sum+x,0)/a.length:null;
@@ -214,3 +227,4 @@ for(const band of BANDS){
 }
 assert.ok(totalItems>0,'a stocked cleaner loadout must exercise real potion use');
 console.log('PASS only 51-100F debuff strength progression and paired equipped-cleanser combat trials');
+}

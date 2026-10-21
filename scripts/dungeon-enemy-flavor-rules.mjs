@@ -3,6 +3,10 @@
 // resistance and explicit elemental counter, with effective-HP compensation.
 // All boss IDs, drops, spell configurations, and levels remain unchanged.
 // Re-run: node scripts/tune-dungeon-enemy-flavor.mjs
+import {alignNormalRows} from './dungeon-normal-enemy-affinities.mjs';
+import {tuneDurability} from './dungeon-enemy-durability-rules.mjs';
+import {alignEnemySpellFlavor} from './dungeon-enemy-spell-flavor.mjs';
+import {reconcileEnemyElements} from './dungeon-enemy-element-consistency.mjs';
 export const tuneEnemyRows = function tuneEnemyRows(input){
  const rows=input.map(r=>({...r}));
  // Small, paired neutral-element shifts only: lower resist_* means LESS damage.
@@ -56,7 +60,7 @@ export const tuneEnemyRows = function tuneEnemyRows(input){
    }
   }
  }
- return bossFlavor(rows);
+ return reconcileEnemyElements(alignEnemySpellFlavor(tuneDurability(alignNormalRows(bossFlavor(rows)))));
 };
 
 export const bossFlavor = function bossFlavor(rows){
