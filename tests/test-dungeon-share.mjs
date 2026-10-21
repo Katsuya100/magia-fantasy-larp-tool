@@ -138,8 +138,8 @@ const shortRank=renderFor('勇者',false,'鉛級');
 const longRank=renderFor('勇者',false,'アダマンタイト級');
 const shortRankText=shortRank.paints.find(op=>op.text==='鉛級');
 const longRankText=longRank.paints.find(op=>op.text==='アダマンタイト級');
-const shortRankPx=Number(shortRankText?.font.match(/(\\d+(?:\\.\\d+)?)px/)?.[1]);
-const longRankPx=Number(longRankText?.font.match(/(\\d+(?:\\.\\d+)?)px/)?.[1]);
+const shortRankPx=Number(shortRankText?.font.match(/(\d+(?:\.\d+)?)px/)?.[1]);
+const longRankPx=Number(longRankText?.font.match(/(\d+(?:\.\d+)?)px/)?.[1]);
 assert.equal(shortRankPx,58,'short ranks use the largest font within the rank plate');
 assert.ok(longRankPx<shortRankPx&&longRankPx>20,'long ranks proportionally shrink to fit');
 assert.ok(longRankPx*[...'アダマンタイト級'].length<=258-28,
