@@ -19,8 +19,11 @@ export function eligibleConsumables(items,layer,tier){
 }
 export function targetClearLevel(layer){
  if(!Number.isSafeInteger(layer)||layer<1)throw Error('Invalid layer');
- const x=Math.min(99,layer-1);
- return Math.round(1+2*x-49*x*(x-1)/(99*98));
+ const x=Math.min(DESIGNED_LAYERS-1,layer-1);
+ // Preserve the designed quadratic through layer 100; continue at its
+ // final one-level-per-layer slope instead of letting the parabola turn down.
+ const designed=Math.round(1+2*x-49*x*(x-1)/(99*98));
+ return designed+Math.max(0,layer-DESIGNED_LAYERS);
 }
 export const layerForFight=fight=>Math.ceil(fight/5);
 // Shuffle a layer's four regular encounters once per expedition. The fifth,
@@ -49,9 +52,9 @@ export function enemyForFight(enemies,fight,r=Math.random){
   if(!enemy)throw Error('Missing designed enemy '+id);
   return enemy;
  }
- // Post-100 regular fights can draw any of the 500 enemies.
+ // Post-100 regular fights draw only normal enemies, never bosses.
  // The fifth encounter still picks a named boss, with a first-defeat trophy.
- const pool=slot===5?enemies.filter(e=>e.boss_only==='1'):enemies;
+ const pool=enemies.filter(e=>e.boss_only===(slot===5?'1':'0'));
  if(!pool.length)throw Error('Empty enemy pool');
  return pool[Math.min(pool.length-1,Math.floor(Math.max(0,r())*pool.length))];
 }
