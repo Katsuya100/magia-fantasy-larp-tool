@@ -7,7 +7,21 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261022.1">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261021.14">
+  <style>
+    /* Profile-only appendix: scoped to this page, without touching game styles. */
+    .scene-stack > .dungeon-attribution{grid-area:2/1;min-width:0;margin-top:16px;padding:15px 20px;border:1px solid var(--border);background:#0c1423a8}
+    #home[hidden] + .dungeon-attribution{display:none}
+    .dungeon-attribution summary{cursor:pointer;color:var(--gold);font-weight:700;line-height:1.6}
+    .dungeon-attribution summary:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+    .dungeon-attribution-content{padding-top:12px;font-size:13px;line-height:1.8;color:var(--soft);overflow-wrap:anywhere}
+    .dungeon-attribution-content p{margin:0 0 12px}
+    .dungeon-attribution-content h3{margin:17px 0 6px;color:var(--gold);font-size:14px}
+    .dungeon-attribution-content ul{margin:0 0 14px;padding-left:20px}
+    .dungeon-attribution-content li{margin-bottom:8px}
+    .dungeon-attribution-content a{color:var(--gold)}
+    @media(max-width:630px){.scene-stack > .dungeon-attribution{padding:14px 15px}}
+  </style>
 </head>
 <body>
   <!-- Present from the first HTML paint, before JS and save data have loaded. -->
