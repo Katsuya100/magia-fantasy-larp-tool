@@ -16,16 +16,28 @@ assert.deepEqual(now,tuneEnemyRows(old),'live monster catalog must match reviewe
 for(let i=0;i<500;i++){
  const b=old[i],a=now[i],layer=Math.floor(i/5)+1,slot=i%5;
  for(const field of keys){
-  if(!['mag','def',...attrs.map(attr=>'resist_'+attr)].includes(field))
+  if(!['hp','mag','def','res',...attrs.map(attr=>'resist_'+attr)].includes(field))
    assert.equal(a[field],b[field],b.id+' stable '+field);
  }
- if(layer<20||slot===4)assert.deepEqual(a,b,b.id+' protected early/boss encounter');
+ if(layer<20&&slot!==4)assert.deepEqual(a,b,b.id+' protected early regular encounter');
+ if(slot===4){
+  const main=b.spells.split('|')[0].split(':')[1];
+  assert.equal(Number(a['resist_'+main]),.95,'boss has genuine resistance to own attack element '+b.id);
+  assert.ok(Math.min(...attrs.map(k=>Number(a['resist_'+k])))<1,'boss has identity resistance '+b.id);
+  assert.ok(Math.max(...attrs.map(k=>Number(a['resist_'+k])))>=1.25,'boss keeps explicit elemental weakness '+b.id);
+  assert.ok(Number(a.hp)>=65,'boss HP never becomes trivial '+b.id);
+  assert.ok(Math.abs(Number(a.res)-Number(b.res))<=1,'boss RES capped '+b.id);
+  assert.ok(Math.abs(Number(a.def)-Number(b.def))<=2,'boss DEF capped '+b.id);
+  const sumRes=x=>attrs.reduce((s,k)=>s+Number(x['resist_'+k]),0);
+  assert.ok(Math.abs(sumRes(a)-sumRes(b))<1e-8,'boss total elemental budget unchanged '+b.id);
+ }
+ if(Number(a.hp)!==Number(b.hp)&&slot!==4)assert.fail('regular HP must be unchanged '+b.id);
  if(Number(a.mag)!==Number(b.mag))assert.ok(Math.abs(a.mag-b.mag)<=2,'MAG bound '+b.id);
  if(Number(a.def)!==Number(b.def))assert.ok(Math.abs(a.def-b.def)<=3,'DEF bound '+b.id);
  for(const attr of attrs){
   const key='resist_'+attr,diff=Number(a[key])-Number(b[key]);
-  assert.ok(Math.abs(diff)<=.050000001,'resistance bound '+key+' '+b.id);
-  if(Number(b[key])!==1)assert.equal(a[key],b[key],'authorial elemental weakness/strength '+b.id);
+  if(slot!==4)assert.ok(Math.abs(diff)<=.050000001,'regular resistance bound '+key+' '+b.id);
+  if(slot!==4&&Number(b[key])!==1)assert.equal(a[key],b[key],'normal foe primary/weakness preserved '+b.id);
  }
 }
 const sum=(rows,key)=>rows.reduce((n,e)=>n+Number(e[key]),0);
@@ -64,7 +76,27 @@ for(let layer=1;layer<=100;layer++){
 }
 assert.ok(relative(means.oldOut,means.outgoing)<=.01,'total hero damage change stays within 1%');
 assert.ok(relative(means.oldIn,means.incoming)<=.01,'total enemy damage change stays within 1%');
+
+const trio=[{role:'attack',attribute:'flame',power:360},{role:'attack',attribute:'bolt',power:420},{role:'attack',attribute:'gravity',power:540}];
+function bossBudget(unit,row){
+ const spells=trio.map(spell=>G.damage(unit,row,spell,()=>.999)).sort((a,b)=>b-a);
+ return (spells[0]+.72*spells[1]+.38*spells[2])/row.hp;
+}
+const differences=[];
+for(let layer=1;layer<=100;layer++){
+ const index=layer*5-1,level=targetClearLevel(layer);
+ const player=G.makeUnit({hp:100,mag:10,def:7,res:7},level,{},trio);
+ const b=G.fromEnemy(old[index],level),n=G.fromEnemy(now[index],level);
+ const previous=bossBudget(player,b),changed=bossBudget(player,n);
+ const delta=changed/previous-1;
+ assert.ok(Math.abs(delta)<.09,'boss expected effective-health budget differs >9% at '+layer+': '+delta);
+ differences.push(delta);
+}
+console.log('BOSS_FLAVOR_BUDGET '+JSON.stringify({count:differences.length,
+ mean:differences.reduce((a,b)=>a+b,0)/differences.length,
+ largest:Math.max(...differences.map(Math.abs))}));
+
 const changedIds=now.filter((row,i)=>keys.some(k=>row[k]!==old[i][k])).map(row=>row.id);
 assert.ok(changedIds.length>=100,'substantial 20-100F flavor differentiation');
 console.log('ENEMY_FLAVOR_BUDGET '+JSON.stringify({changed:changedIds.length,damageToEnemyChange:means.outgoing/means.oldOut-1,damageToHeroChange:means.incoming/means.oldIn-1}));
-console.log('PASS all 500 enemies, frozen early layers/bosses, 7-element encounter budgets');
+console.log('PASS all 500 enemies, unchanged early regular foes and all-element encounter budgets, 100 thematic bosses');
