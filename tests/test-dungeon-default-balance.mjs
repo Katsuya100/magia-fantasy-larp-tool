@@ -1,0 +1,135 @@
+// The default, measurable 1-100F combat balance benchmark.
+// Targets are advisory on ordinary CI (log failures without hiding them);
+// set DUNGEON_BALANCE_STRICT=1 to make balance target misses fail the job.
+// Structural/gameplay contract violations always fail CI.
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import * as G from '../assets/js/dungeon-core.mjs';
+import {configure} from '../assets/js/dungeon-tuning.mjs';
+import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {simulate} from './test-dungeon-progression-simulation.mjs';
+import {deepRun} from './test-dungeon-deep-cleanse-simulation.mjs';
+import {simulateProgression} from '../scripts/simulate-dungeon-stones.mjs';
+
+const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
+const data={balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),
+ playerBase:csv('player-base')};
+configure(data);
+const NORMAL=[
+ ['attack','flame',360],['attack','bolt',420],['attack','gravity',540],
+ ['support','aqua',320],['defense','law',270]
+];
+// Deliberately lower-powered first-decade loadout, all powers 100-300.
+const INTRO=[
+ ['attack','flame',220],['attack','bolt',260],['attack','gravity',300],
+ ['support','aqua',200],['defense','law',160]
+];
+assert.ok(INTRO.every(([role,attr,power])=>power>=100&&power<=300));
+assert.ok(NORMAL.every(([role,attr,power])=>Number.isInteger(power)));
+assert.equal(G.capacity(102),13);
+const SAMPLES=Number(process.env.DUNGEON_BALANCE_SAMPLES||128);
+assert.ok(Number.isSafeInteger(SAMPLES)&&SAMPLES>=32&&SAMPLES<=512,
+ 'DUNGEON_BALANCE_SAMPLES must be between 32 and 512');
+const STRICT=process.env.DUNGEON_BALANCE_STRICT==='1';
+const seed=i=>17011+i*13;
+const percentile=(v,decimals=1)=>v===null?null:Number(v.toFixed(decimals));
+function median(values){
+ if(!values.length)return null;
+ const a=[...values].sort((x,y)=>x-y),n=a.length;
+ return (a[Math.floor((n-1)/2)]+a[Math.floor(n/2)])/2;
+}
+function average(values){return values.length?values.reduce((a,b)=>a+b,0)/values.length:null;}
+const milestones=Array.from({length:SAMPLES},(_,i)=>simulateProgression(seed(i)+81).milestones);
+// This is an actual *legal sortie* model, not an upgrade in the middle of a
+// 50-fight expedition. At 11F, a sortie can invest at the 30% point of the
+// agreed 10F=25% -> 20F=75% ramp. The rest of the ramp is reached on later
+// returns. No mid-sortie shopping or restoration is invented.
+function targetStoneRate(floor){
+ if(floor<=10)return .25;
+ if(floor<=20)return .25+(floor-10)*.05;
+ return .75;
+}
+assert.equal(targetStoneRate(1),.25);
+assert.equal(targetStoneRate(10),.25);
+assert.ok(Math.abs(targetStoneRate(11)-.30)<1e-9);
+assert.equal(targetStoneRate(20),.75);
+assert.equal(targetStoneRate(21),.75);
+for(let floor=11;floor<=19;floor++)
+ assert.ok(targetStoneRate(floor)<targetStoneRate(floor+1));
+const LEVELS={10:19,20:37,30:55,40:72,50:87,60:102,70:115,80:128,90:139,100:150};
+const report=[];
+for(let to=10;to<=100;to+=10){
+ const from=to-9,level=LEVELS[to],withItems=from>=51;
+ assert.equal(level,targetClearLevel(to));
+ const rate=targetStoneRate(from),earned=[];
+ const runs=[],controlRuns=[];
+ for(let i=0;i<SAMPLES;i++){
+  const history=milestones[i],prior=from-1;
+  const alreadyEarned=prior===0?0:history.find(row=>row.layer===prior)?.stones;
+  assert.ok(Number.isFinite(alreadyEarned),'known banked stones before F'+from);
+  const spending=Math.floor(alreadyEarned*rate+1e-8);
+  assert.ok(spending>=0&&spending<=alreadyEarned);
+  earned.push(alreadyEarned);
+  const randomSeed=seed(i);
+  if(withItems){
+   // deepRun independently checks the same 75%-of-banked-stones policy,
+   // legal carry capacity, no HP/MP potions and stocked cleansers.
+   assert.equal(rate,.75);
+   const yes=deepRun(randomSeed,{from,to,level},true);
+   assert.equal(yes.spent,spending);
+   assert.equal(yes.stones,alreadyEarned);
+   assert.ok(yes.cleanseUsed<=yes.carryCount);
+   assert.equal(yes.carryCount,G.capacity(level));
+   runs.push({win:yes.win,hp:yes.hp/yes.maxHp*100,mp:yes.mp/yes.maxMp*100,
+    cleanses:yes.cleanseUsed,remaining:yes.remaining,cleared:yes.cleared,spent:yes.spent});
+   const no=deepRun(randomSeed,{from,to,level},false);
+   controlRuns.push(no);
+  }else{
+   const result=simulate(randomSeed,{level,fromLayer:from,toLayer:to,
+    spells:from===1?'intro':'five',stones:spending});
+   assert.equal(result.spentStones,spending);
+   runs.push({win:result.win,hp:result.hp/result.initialHp*100,
+    mp:result.mp/result.initialMp*100,cleared:result.clear,spent:spending});
+  }
+ }
+ const winners=runs.filter(x=>x.win);
+ const winRate=winners.length/SAMPLES*100,
+  medianMp=median(winners.map(x=>x.mp)),
+  medianHp=median(winners.map(x=>x.hp)),
+  medianUsed=median(runs.map(x=>x.spent));
+ const winLower=from<=20?99:90,winUpper=from<=20?100:97;
+ const mpLower=from<=10?50:0,mpUpper=from<=10?100:15;
+ const issues=[];
+ if(winRate<winLower||winRate>winUpper)issues.push('winRate outside '+winLower+'-'+winUpper+'%');
+ if(medianMp===null||medianMp<mpLower||medianMp>mpUpper)
+  issues.push('winner median MP outside '+mpLower+'-'+mpUpper+'%');
+ const row={band:from+'-'+to,level,samples:SAMPLES,
+  stoneRateAtSortieStart:percentile(rate*100),stoneRateRampEnd:percentile(targetStoneRate(to)*100),
+  bankedStones:percentile(average(earned)),spentStonesMedian:medianUsed,
+  baseSpellPower:from<=10?INTRO.map(x=>x[2]):NORMAL.map(x=>x[2]),
+  items:from<=50?'none':from<=70?'cleansers':'cleansers+2 Luna Stones',
+  wins:winners.length,winRate:percentile(winRate),medianMp:percentile(medianMp),
+  medianHp:percentile(medianHp),meanMp:percentile(average(winners.map(x=>x.mp))),
+  meanHp:percentile(average(winners.map(x=>x.hp))),
+  winTarget:winLower+'-'+winUpper+'%',mpTarget:mpLower+'-'+mpUpper+'%',
+  medianCleanses:withItems?median(runs.map(x=>x.cleanses)):0,
+  controlNoItemWinRate:withItems?percentile(100*controlRuns.filter(x=>x.win).length/SAMPLES):null,
+  lossesByLayer:Object.entries(runs.filter(x=>!x.win).reduce((acc,x)=>{
+   const layer=Math.ceil((x.cleared+1)/5);acc[layer]=(acc[layer]||0)+1;return acc;
+  },{})),passed:issues.length===0,issues};
+ report.push(row);
+ console.log('DUNGEON_DEFAULT_BALANCE '+JSON.stringify(row));
+}
+// Do not silently redefine balance targets to force a green build.
+// CI must always expose a clear list of missing goals and a strict-mode path.
+const unmet=report.filter(x=>!x.passed);
+console.log('DUNGEON_DEFAULT_BALANCE_SUMMARY '+JSON.stringify({
+ samples:SAMPLES,median:'successful sorties only',bands:report.length,
+ met:report.length-unmet.length,unmet:unmet.map(x=>({band:x.band,issues:x.issues})),
+ goalStatus:unmet.length?'NEEDS_TUNING':'ALL_TARGETS_MET',
+ ciMode:STRICT?'strict':'reporting'}));
+assert.equal(report.length,10);
+assert.ok(report.some(x=>x.medianCleanses>0),'51+ must exercise item consumption');
+assert.ok(report.every(x=>x.wins>=0&&x.wins<=SAMPLES));
+if(STRICT)assert.equal(unmet.length,0,'some user-approved balance targets are unmet');
+console.log('PASS default 1-100F median balance audit (targets '+(unmet.length?'reported':'met')+')');
