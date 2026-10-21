@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {openStore,saveProfile,saveHeirName,putCircle,readDungeonSnapshot,getProfile,allCircles} from '../assets/js/dungeon-store.mjs';
-import {verifyLocalSnapshot,digestPhoto} from '../assets/js/dungeon-cloud-integrity.mjs';
+import {verifyLocalSnapshot,digestPhoto,recordFingerprint,profilePhotoEvidence,quickFingerprint} from '../assets/js/dungeon-cloud-integrity.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {createSuccessorProfile} from '../assets/js/dungeon-permadeath.mjs';
 
@@ -71,3 +71,73 @@ try{
  factory.failIntegrityWrites=false;
 }finally{env.restore();}
 console.log('PASS single-transaction permadeath and edits, no photo copies, rollback, visible failure dialog');
+
+
+// Real on-disk v1 layout: nested photo Blobs exist in old historical
+// profiles, including a carried legacy within an unfinished expedition,
+// while the circles store contains neither original record.
+const oldFactory=fakeIndexedDB(),oldDb=await openStore(oldFactory);
+const oldProfile={
+ name:'二代目',level:4,inventory:[],magicStones:1,legacies:[
+  {name:'初代',enemyId:'fallen',circles:[{id:'old-photo',image:photo,analysis:{power:20}}],loot:[]}
+ ],
+ run:{floor:4,loot:[{type:'legacy',legacy:{name:'祖父',circles:[{id:'nested-photo',image:photo,analysis:{power:10}}],loot:[]}}]}
+};
+const oldSettings=oldFactory.databases.get('magia-dungeon-v1').get('settings');
+const oldHash=await digestPhoto(photo);
+const oldEvidence=await profilePhotoEvidence(oldProfile);
+oldSettings.set('profile',structuredClone(oldProfile));
+oldSettings.set('integrity',{
+ version:1,records:recordFingerprint({profile:oldProfile,circles:[]}),photos:{},
+ profilePhotos:oldEvidence,savedAt:1000,legacy:false
+});
+assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(oldDb))).status,'valid','pre-migration old on-disk save is trusted');
+const oldTxStart=oldFactory.transactions.length;
+await saveProfile(oldDb,{...await getProfile(oldDb),magicStones:2});
+const oldWrites=oldFactory.transactions.slice(oldTxStart).filter(tx=>tx.mode==='readwrite');
+assert.equal(oldWrites.length,1,'v1 nested-Blob migration commits in one transaction');
+assert.deepEqual(oldWrites[0].writes.filter(w=>w.store==='circles').map(w=>w.key).sort(),['nested-photo','old-photo'],'exactly one first image record per legacy magic');
+const migratedRaw=oldSettings.get('profile');
+assert.equal(migratedRaw.legacies[0].circles[0].image.__magiaArchivedPhoto,true);
+assert.equal(migratedRaw.run.loot[0].legacy.circles[0].image.__magiaArchivedPhoto,true);
+assert.equal(await digestPhoto(oldFactory.databases.get('magia-dungeon-v1').get('circles').get('old-photo').image),oldHash);
+assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(oldDb))).status,'valid','old on-disk save remains verified after conversion');
+const secondWriteAt=oldFactory.transactions.length;
+await saveProfile(oldDb,{...await getProfile(oldDb),magicStones:3});
+assert.deepEqual(oldFactory.transactions.slice(secondWriteAt).flatMap(tx=>tx.writes).filter(w=>w.store==='circles'),[],
+ 'all subsequent profile saves reuse original photo records without rewriting them');
+const compactOld=await serializeDungeonSnapshot(await readDungeonSnapshot(oldDb));
+assert.equal([...compactOld.matchAll(/"base64":/g)].length,2,'each distinct historic image appears only once in Drive backup');
+
+// A Drive v1 file has embedded legacy photos and no circles records at all.
+// Deserialization must preserve it and restoration must migrate atomically.
+const legacyPhoto={__magiaSavePhoto:true,type:photo.type,base64:Buffer.from(await photo.arrayBuffer()).toString('base64')};
+const oldPayload={format:'magia-dungeon-save-v1',savedAt:500,
+ profile:{name:'旧クラウド',level:6,inventory:[],legacies:[{name:'初代',circles:[{id:'drive-photo',image:legacyPhoto}],loot:[]}]},
+ circles:[]};
+const decodedOld=deserializeDungeonSnapshot(JSON.stringify({...oldPayload,checksum:quickFingerprint(oldPayload)}));
+assert.equal(await digestPhoto(decodedOld.profile.legacies[0].circles[0].image),oldHash,'old Drive embedded photo decodes');
+const restoredFactory=fakeIndexedDB(),restoredDb=await openStore(restoredFactory);
+const restoreStart=restoredFactory.transactions.length;
+await import('../assets/js/dungeon-store.mjs').then(store=>store.replaceDungeonSnapshot(restoredDb,decodedOld));
+assert.equal(restoredFactory.transactions.slice(restoreStart).filter(tx=>tx.mode==='readwrite').length,1,'old Drive restore is atomic');
+const restoredSnap=await readDungeonSnapshot(restoredDb);
+assert.equal((await verifyLocalSnapshot(restoredSnap)).status,'valid');
+assert.equal(restoredSnap.circles[0].id,'drive-photo');
+assert.equal(await digestPhoto(restoredSnap.circles[0].image),oldHash);
+assert.equal(restoredFactory.databases.get('magia-dungeon-v1').get('settings').get('profile').legacies[0].circles[0].image.id,'drive-photo');
+
+// Failed conversion never strands new photos without the matching profile.
+const failingFactory=fakeIndexedDB(),failingDb=await openStore(failingFactory);
+const failingSettings=failingFactory.databases.get('magia-dungeon-v1').get('settings');
+failingSettings.set('profile',structuredClone(oldProfile));
+failingSettings.set('integrity',{
+ version:1,records:recordFingerprint({profile:oldProfile,circles:[]}),photos:{},
+ profilePhotos:oldEvidence,savedAt:1000,legacy:false
+});
+failingFactory.failIntegrityWrites=true;
+await assert.rejects(saveProfile(failingDb,{...await getProfile(failingDb),magicStones:5}),/Injected integrity write failure/);
+assert.equal(failingFactory.databases.get('magia-dungeon-v1').get('circles').size,0,'aborted migration leaves original store untouched');
+assert.ok(failingSettings.get('profile').legacies[0].circles[0].image instanceof Blob,'aborted migration leaves original embedded photos available');
+assert.equal(failingSettings.get('integrity').savedAt,1000);
+console.log('PASS old on-disk nested Blob, nested loot, legacy Drive backup migration and atomic rollback');
