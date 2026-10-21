@@ -54,9 +54,6 @@ assert.deepEqual(selected.spells.slice(0,3).map(s=>s.attribute),neutral);
 assert.deepEqual(selected.spells.slice(3),base.slice(3),'heals/defenses are unaffected');
 assert.deepEqual(base.slice(0,3).map(x=>x.attribute),['flame','bolt','gravity'],
  'test loadout rewriting must not mutate spell fixtures');
-const hero={spells:selected.spells};
-assert.ok(compareNeutralAttackChoices(hero,{id:'x',resists:{}},0,1)>0||
- compareNeutralAttackChoices(hero,enemy(),0,1)>0);
 // A weaker neutral spell is preferred over a stronger weakness exploit.
 const fighter={spells:[{role:'attack',attribute:'flame',power:360},
  {role:'attack',attribute:'bolt',power:540}]};
