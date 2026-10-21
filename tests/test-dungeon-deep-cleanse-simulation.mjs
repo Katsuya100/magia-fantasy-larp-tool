@@ -30,8 +30,8 @@ const reference=alignEnemySpellFlavor(alignNormalRows(G.parseCsv(readFileSync(
  .slice(0,95).filter(row=>row.boss_only==='0');
 for(let i=0;i<early.length;i++){
  for(const key of Object.keys(reference[i])){
-  if(!key.startsWith('resist_')&&!['hp','def','res'].includes(key))
-   assert.equal(early[i][key],reference[i][key],'early identity, MAG, and all five spells unchanged '+early[i].id+' '+key);
+  if(!key.startsWith('resist_')&&!['hp','mag','def','res'].includes(key))
+   assert.equal(early[i][key],reference[i][key],'early identity and all five spells unchanged '+early[i].id+' '+key);
  }
 }
 let previousMinimum=0;

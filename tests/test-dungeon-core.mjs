@@ -179,9 +179,10 @@ assert.ok(checkMpLayer(1)>checkMpLayer(50)&&checkMpLayer(50)>checkMpLayer(90),
 assert.equal(checkMpLayer(100),0,'100F victory grants zero automatic MP');
 assert.equal(checkMpLayer(110),0,'post-100 victory remains at zero automatic MP');
 
-const weak=G.enemyScaling(1),deep=G.enemyScaling(150);
-assert.ok(weak.hp<1&&weak.mag<1&&deep.hp<1&&deep.mag<1,'enemy tuning softens all levels');
-assert.ok(weak.hp<deep.hp&&weak.mag<deep.mag,'late bosses remain relatively tougher');
+assert.equal(typeof G.enemyScaling,'undefined','enemy-specific scaling must not exist');
+const commonStats={hp:+enemies[0].hp,mag:+enemies[0].mag,def:+enemies[0].def,res:+enemies[0].res};
+assert.deepEqual(G.fromEnemy(enemies[0],150).stats,G.stats(commonStats,150),
+ 'enemy and player use identical level growth at 150');
 const en=G.fromEnemy(enemies[0],2);assert.equal(en.spells.length,5);assert.ok(en.stats.hp>50,'scaled enemies stay viable at low levels');
 const u=G.makeUnit(base,1,{},[sp]),v=G.makeUnit(base,1,{},[sp]);
 const logs=G.round(u,v,0,0,buffs,()=>.7);assert.ok(logs.length===2);assert.ok(u.hp<100&&v.hp<100);

@@ -41,9 +41,11 @@ console.log('NORMAL_AFFINITY_AUDIT '+JSON.stringify({regular:400,named,changed,w
 for(let i=0;i<500;i++){
  const r=now[i],kind=durabilityArchetype(r.name);
  const ranges=durabilityRanges[r.boss_only==='1'?'boss':'normal'][kind],liveHP=combatBaseHpRanges[r.boss_only==='1'?'boss':'normal'][kind];
- for(const field of ['hp','def','res'])const range=field==='hp'?liveHP:ranges[field];
- assert.ok(Number(r[field])>=range[0]&&Number(r[field])<=range[1],
-  'semantic durability range '+r.id+' '+field);
+ for(const field of ['hp','def','res']){
+  const range=field==='hp'?liveHP:ranges[field];
+  assert.ok(Number(r[field])>=range[0]&&Number(r[field])<=range[1],
+   'semantic durability range '+r.id+' '+field);
+ }
  assert.ok(Number.isSafeInteger(+r.mag)&&+r.mag>0,'authored base MAG '+r.id);
  assert.equal(r.spells,alignEnemySpellFlavor([previous[i]])[0].spells,'all 5 circles match authored worldview '+r.id);
 }
