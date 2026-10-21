@@ -52,6 +52,17 @@
       <button type="button" id="tab-home" data-view="home"><span class="tab-symbol" aria-hidden="true">♜</span><span>プロフィール</span></button>
     </nav>
 
+    <dialog id="saveErrorDialog" class="name-dialog" aria-labelledby="saveErrorTitle" aria-describedby="saveErrorMessage">
+      <div class="delete-data-dialog-inner">
+        <span class="dialog-sigil" aria-hidden="true">！</span>
+        <h2 id="saveErrorTitle">セーブの保存に失敗しました</h2>
+        <p id="saveErrorMessage" role="alert"></p>
+        <p>変更が保存されていない可能性があります。セーブデータやブラウザのサイトデータは削除せず、Driveのバックアップを確認してください。</p>
+        <div class="buttons">
+          <button type="button" id="closeSaveError" class="primary-action">確認しました</button>
+        </div>
+      </div>
+    </dialog>
     <dialog id="backupSetupDialog" class="name-dialog" aria-labelledby="backupSetupTitle">
       <div class="delete-data-dialog-inner">
         <span class="dialog-sigil" aria-hidden="true">☁</span>
