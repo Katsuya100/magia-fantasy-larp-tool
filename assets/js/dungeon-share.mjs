@@ -48,13 +48,17 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.fillStyle='#ddbe85';ctx.font='600 22px Georgia, serif';ctx.fillText('MAGIA CIRCLE  /  DUNGEON ATTACK',82,101);
  ctx.fillStyle='#f6e4c2';ctx.font='600 34px sans-serif';ctx.fillText('マギアサークル - ダンジョンアタック',82,157,630);
  ctx.strokeStyle='#ae8b5866';ctx.beginPath();ctx.moveTo(82,184);ctx.lineTo(688,184);ctx.stroke();
- // Row 1: prominently stretched adventurer name + level.
- // Row 2: adventurer rank, deepest reached and deepest returned.
- // All information remains in the left half, clear of the circle artwork.
+ // Top row: name (proportional contain fit) and centered level.
+ // Bottom row: centered rank, deepest reached and deepest returned.
+ // Keep the entire information area clear of the magic-circle illustration.
  const topY=250,topH=101,bottomY=397,bottomH=104;
  const nameX=82,nameW=420,levelX=514,levelW=174;
  const rankX=82,rankW=258,reachedX=352,reachedW=158,returnedX=522,returnedW=166;
- const label=(text,x,y)=>{ctx.fillStyle='#bbadbd';ctx.font='600 20px sans-serif';ctx.fillText(text,x+9,y);};
+ const label=(text,x,y)=>{
+  ctx.fillStyle='#bbadbd';ctx.font='600 20px sans-serif';
+  ctx.textAlign='start';
+  ctx.fillText(text,x+9,y);
+ };
  const panel=(x,y,w,h,edge='#c9a46b')=>{
   const bg=ctx.createLinearGradient(x,y,x+w,y+h);
   bg.addColorStop(0,'#38293e');bg.addColorStop(1,'#162335');
@@ -62,43 +66,57 @@ export function paintAdventurerCard(canvas,data,artwork=null){
   ctx.strokeStyle=edge;ctx.lineWidth=2;ctx.strokeRect(x,y,w,h);
   ctx.strokeStyle='#f1d6a457';ctx.lineWidth=1;ctx.strokeRect(x+6,y+6,w-12,h-12);
  };
+ // Adjust the font size uniformly, never stretch or squeeze a glyph on one axis.
+ // Avoid fillText(maxWidth): Canvas may condense the text non-proportionally.
+ const fitFont=(value,maxFont,maxWidth,weight='700')=>{
+  const text=String(value);
+  ctx.font=weight+' '+maxFont+'px sans-serif';
+  const measured=ctx.measureText?.(text)?.width;
+  const naturalWidth=Number.isFinite(measured)&&measured>0?measured:[...text].length*maxFont;
+  const size=Math.min(maxFont,maxFont*maxWidth/Math.max(1,naturalWidth));
+  ctx.font=weight+' '+size.toFixed(2)+'px sans-serif';
+  return ctx.measureText?.(text)?.width??naturalWidth*size/maxFont;
+ };
  label('冒険者名',nameX,234);
  label('LEVEL',levelX,234);
  panel(nameX,topY,nameW,topH);
  panel(levelX,topY,levelW,topH);
  const heroName=data.name||'名もなき冒険者';
- const codepoints=[...heroName].length;
- const nameFont=codepoints>15?34:codepoints>10?39:codepoints>6?44:50;
- const availableNameWidth=nameW-34-(data.crowned?45:0),nameStart=nameX+16,nameBaseline=321;
- ctx.font='800 '+nameFont+'px sans-serif';
- const naturalWidth=ctx.measureText?.(heroName)?.width??codepoints*nameFont;
- // Stretch a short name horizontally (up to 1.8x); fit long names on one line.
- const horizontalScale=Math.min(1.8,availableNameWidth/Math.max(1,naturalWidth));
- const stretchedWidth=naturalWidth*horizontalScale;
- ctx.save?.();
- ctx.translate?.(nameStart,nameBaseline);
- ctx.scale?.(horizontalScale,1);
+ // Center the whole "name + crown" unit, not just the name glyphs.
+ ctx.font='34px sans-serif';
+ const crownWidth=data.crowned?Math.min(39,ctx.measureText?.('👑')?.width??34):0;
+ const crownGap=data.crowned?7:0;
+ const nameWidth=fitFont(heroName,72,nameW-32-crownWidth-crownGap,'800');
+ const nameLeft=nameX+(nameW-nameWidth-crownWidth-crownGap)/2;
+ const nameBaseline=325;
  ctx.fillStyle='#fff2db';ctx.shadowColor='#e9ba7d99';ctx.shadowBlur=10;
- if(ctx.save&&ctx.translate&&ctx.scale&&ctx.restore)ctx.fillText(heroName,0,0);
- else ctx.fillText(heroName,nameStart,nameBaseline,availableNameWidth);
+ ctx.textAlign='start';
+ ctx.fillText(heroName,nameLeft,nameBaseline);
  ctx.shadowBlur=0;
- ctx.restore?.();
  if(data.crowned){
   ctx.fillStyle='#ffe6ad';ctx.font='34px sans-serif';
-  ctx.fillText('👑',nameStart+Math.min(stretchedWidth,availableNameWidth)+6,nameBaseline,38);
+  ctx.fillText('👑',nameLeft+nameWidth+crownGap,nameBaseline);
  }
- ctx.fillStyle='#fce9bf';ctx.font='800 52px sans-serif';
- ctx.fillText('Lv.'+data.level,levelX+14,321,levelW-28);
+ const levelText=String(data.level);
+ fitFont(levelText,60,levelW-28,'800');
+ ctx.fillStyle='#fce9bf';ctx.textAlign='center';
+ ctx.fillText(levelText,levelX+levelW/2,326);
+ ctx.textAlign='start';
 
  label('冒険者等級',rankX,381);
  label('最深到達階層',reachedX,381);
  label('最深帰還階層',returnedX,381);
  panel(reachedX,bottomY,reachedW,bottomH);
  panel(returnedX,bottomY,returnedW,bottomH);
- ctx.fillStyle='#f7e6c7';ctx.font='700 33px sans-serif';
- ctx.fillText(data.deepestReached?data.deepestReached+'層':'未到達',reachedX+10,467,reachedW-20);
- ctx.fillText(data.deepestReturned?data.deepestReturned+'層':'未到達',returnedX+10,467,returnedW-20);
- // The rank plaque retains its metallic palette even in its new position.
+ ctx.fillStyle='#f7e6c7';ctx.textAlign='center';
+ const reachedText=data.deepestReached?data.deepestReached+'層':'未到達';
+ const returnedText=data.deepestReturned?data.deepestReturned+'層':'未到達';
+ fitFont(reachedText,38,reachedW-22);
+ ctx.fillText(reachedText,reachedX+reachedW/2,467);
+ fitFont(returnedText,38,returnedW-22);
+ ctx.fillText(returnedText,returnedX+returnedW/2,467);
+ ctx.textAlign='start';
+ // Metallic rank plaque stays in the bottom-left corner.
  const metal=rankMetalPalette(data.rankLayer);
  const metalPlate=ctx.createLinearGradient(rankX,bottomY,rankX+rankW,bottomY+bottomH);
  metalPlate.addColorStop(0,metal.deep);metalPlate.addColorStop(.48,'#151422');metalPlate.addColorStop(1,metal.deep);
@@ -116,9 +134,12 @@ export function paintAdventurerCard(canvas,data,artwork=null){
   for(const [at,color] of [[0,metal.mid],[.31,metal.light],[.49,'#fffdf3'],[.68,metal.light],[1,metal.mid]])lettering.addColorStop(at,color);
  }
  ctx.shadowColor=metal.glow;ctx.shadowBlur=12;ctx.fillStyle=lettering;
- ctx.font='800 44px sans-serif';
- ctx.fillText(data.rank,rankX+12,466,rankW-24);
- ctx.shadowBlur=0;
+ // Short rank names can use large lettering; long names (e.g. アダマンタイト級)
+ // proportionally shrink to the plaque width without changing glyph aspect ratio.
+ fitFont(data.rank,58,rankW-28,'800');
+ ctx.textAlign='center';
+ ctx.fillText(data.rank,rankX+rankW/2,467);
+ ctx.textAlign='start';ctx.shadowBlur=0;
  // Prefer extracted photo contours; retain the geometric seal as the fallback.
  if(!paintCircleArt(ctx,artwork)){
  const cx=917,cy=335;
