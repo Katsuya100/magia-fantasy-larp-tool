@@ -6,6 +6,7 @@ import {parseCsv,ATTRS} from '../assets/js/dungeon-core.mjs';
 import {tuneEnemyRows} from '../scripts/dungeon-enemy-flavor-rules.mjs';
 import {durabilityArchetype,durabilityRanges,tuneDurability} from '../scripts/dungeon-enemy-durability-rules.mjs';
 import {alignNormalRows,nameAffinities} from '../scripts/dungeon-normal-enemy-affinities.mjs';
+import {alignEnemySpellFlavor} from '../scripts/dungeon-enemy-spell-flavor.mjs';
 
 const load=path=>parseCsv(readFileSync(new URL(path,import.meta.url),'utf8'));
 const raw=load('./fixtures/dungeon-enemies-before-flavor.csv');
@@ -13,14 +14,15 @@ const base=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv');
 const shipped=load('../assets/data/dungeon-enemies.csv');
 assert.equal(raw.length,500);assert.equal(base.length,500);assert.equal(shipped.length,500);
 assert.deepEqual(shipped,tuneEnemyRows(raw),'full historical regeneration must match the shipped catalog');
-assert.deepEqual(shipped,tuneDurability(alignNormalRows(base)),'second-pass durability regeneration must be reproducible');
+assert.deepEqual(shipped,alignEnemySpellFlavor(tuneDurability(alignNormalRows(base))),'second-pass durability regeneration must be reproducible');
 
 let altered=0,regularChanged=0,bossChanged=0;
 for(let i=0;i<shipped.length;i++){
  const now=shipped[i],old=base[i],role=durabilityArchetype(now.name),boss=now.boss_only==='1';
  assert.notEqual(role,'unmarked','all 500 enemies have an explicit review class '+now.name);
- for(const key of ['id','name','mag','spells','weight','min_level','boss_only','favored_collection_ids'])
+ for(const key of ['id','name','mag','weight','min_level','boss_only','favored_collection_ids'])
   assert.equal(now[key],old[key],'unchanged identity/offense '+now.id+' '+key);
+ assert.equal(now.spells,alignEnemySpellFlavor([old])[0].spells,'curated spell-worldview regeneration '+now.id);
  const band=durabilityRanges[boss?'boss':'normal'][role];
  for(const stat of ['hp','def','res']){
   assert.ok(Number.isInteger(Number(now[stat])),'integer survival stat '+now.id+' '+stat);
@@ -41,4 +43,4 @@ for(let i=0;i<shipped.length;i++){
  if(['hp','def','res'].some(k=>now[k]!==old[k])){altered++;if(boss)bossChanged++;else regularChanged++;}
 }
 assert.ok(altered>=390&&regularChanged>=300&&bossChanged>=75,'entire dungeon receives role-based durability review');
-console.log('PASS 500 monster flavor records; changed '+altered+' ('+regularChanged+' ordinary, '+bossChanged+' bosses); no MAG/spell edits');
+console.log('PASS 500 monster flavor records; changed '+altered+' ('+regularChanged+' ordinary, '+bossChanged+' bosses); curated worldview spell edits only; no MAG edits');

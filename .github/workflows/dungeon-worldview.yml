@@ -1,0 +1,32 @@
+name: Dungeon worldview unit tests
+on:
+  push:
+    paths:
+      - 'assets/data/dungeon-enemies.csv'
+      - 'scripts/dungeon-enemy-spell-flavor.mjs'
+      - 'scripts/dungeon-enemy-flavor-rules.mjs'
+      - 'tests/test-dungeon-enemy-*.mjs'
+      - 'tests/test-dungeon-normal-affinity.mjs'
+      - 'docs/DUNGEON-ENEMY-WORLDVIEW-REVIEW.md'
+  pull_request:
+    paths:
+      - 'assets/data/dungeon-enemies.csv'
+      - 'scripts/dungeon-enemy-spell-flavor.mjs'
+      - 'scripts/dungeon-enemy-flavor-rules.mjs'
+      - 'tests/test-dungeon-enemy-*.mjs'
+      - 'tests/test-dungeon-normal-affinity.mjs'
+      - 'docs/DUNGEON-ENEMY-WORLDVIEW-REVIEW.md'
+permissions:
+  contents: read
+jobs:
+  static-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - run: node tests/test-dungeon-enemy-worldview.mjs
+      - run: node tests/test-dungeon-enemy-flavor.mjs
+      - run: node tests/test-dungeon-normal-affinity.mjs
+      - run: node tests/test-dungeon-enemy-durability.mjs

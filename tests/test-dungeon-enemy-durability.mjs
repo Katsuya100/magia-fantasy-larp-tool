@@ -4,11 +4,12 @@ import {readFileSync} from 'node:fs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 import {durabilityArchetype,durabilityRanges,tuneDurability,curatedDurabilityFixes} from '../scripts/dungeon-enemy-durability-rules.mjs';
 import {alignNormalRows} from '../scripts/dungeon-normal-enemy-affinities.mjs';
+import {alignEnemySpellFlavor} from '../scripts/dungeon-enemy-spell-flavor.mjs';
 
 const load=x=>parseCsv(readFileSync(new URL(x,import.meta.url),'utf8'));
 const prior=load('./fixtures/dungeon-enemies-pre-readable-affinities.csv');
 const now=load('../assets/data/dungeon-enemies.csv');
-const recalculated=tuneDurability(alignNormalRows(prior));
+const recalculated=alignEnemySpellFlavor(tuneDurability(alignNormalRows(prior)));
 assert.deepEqual(now,recalculated,'catalog exactly matches declared survival archetypes');
 const categories={},changed={hp:0,def:0,res:0,ordinary:0,boss:0};
 for(let i=0;i<500;i++){
@@ -16,9 +17,10 @@ for(let i=0;i<500;i++){
  categories[type]=(categories[type]||0)+1;
  assert.notEqual(type,'unmarked','no unreviewed enemy class '+row.id);
  for(const key of Object.keys(row)){
-  if(key==='hp'||key==='def'||key==='res'||key.startsWith('resist_'))continue;
+  if(key==='hp'||key==='def'||key==='res'||key==='spells'||key.startsWith('resist_'))continue;
   assert.equal(row[key],old[key],'no changes outside approved durability and affinity fields '+row.id+' '+key);
  }
+ assert.equal(row.spells,alignEnemySpellFlavor([old])[0].spells,'approved authored five spells '+row.id);
  const config=durabilityRanges[row.boss_only==='1'?'boss':'normal'][type];
  for(const key of ['hp','def','res']){
   if(row[key]!==old[key])changed[key]++;
@@ -53,4 +55,4 @@ for(const id of deferredMicroTuningIds){
 }
 
 console.log('DUNGEON_DURABILITY_STATIC '+JSON.stringify({count:500,changed,categories,playthroughRun:false}));
-console.log('PASS all 500 enemies classified; magic/MAG unchanged; no simulation');
+console.log('PASS all 500 enemies classified; magic roles aligned with worldview; MAG unchanged; no simulation');
