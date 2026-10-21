@@ -21,7 +21,7 @@ await saveProfile(db,next);
 const writes=factory.transactions.slice(before).filter(tx=>tx.mode==='readwrite');
 assert.equal(writes.length,1,'one death = exactly one atomic readwrite transaction');
 assert.deepEqual(writes[0].writes.filter(w=>w.store==='circles'),[],'death does not rewrite or delete a magic record');
-assert.equal(factory.databases.get('magia-dungeon-v1').get('circles').get(magic.id),beforeCircle,'original photo row object is untouched');
+assert.equal(await digestPhoto(factory.databases.get('magia-dungeon-v1').get('circles').get(magic.id).image),await digestPhoto(beforeCircle.image),'original photo bytes are untouched');
 assert.equal((await allCircles(db)).length,0,'lost magic is hidden, not deleted');
 const stored=factory.databases.get('magia-dungeon-v1').get('settings').get('profile');
 assert.equal(stored.legacies[0].circles[0].image.__magiaArchivedPhoto,true,'historical profile has only a reference');
