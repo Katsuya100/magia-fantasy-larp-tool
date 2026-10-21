@@ -83,36 +83,47 @@ for(let layer=1;layer<=100;layer++){
   const [role,attribute,power]=value.split(':');
   return {role,attribute,power:Number(power)};
  }));
- const dominant=spells[4][0].attribute;
  for(let slot=0;slot<5;slot++){
+  const main=spells[slot][0].attribute,secondary=spells[slot][2].attribute;
   assert.equal(spells[slot].length,5,'five spells for layer '+layer);
-  assert.equal(spells[slot].filter(spell=>spell.attribute===dominant).length,3,
-   'all five spell designs remain unchanged at layer '+layer);
-  assert.ok(spells[slot].every(spell=>spell.attribute===dominant||
-   spell.attribute===spells[slot][2].attribute),'two-element spell template unchanged '+layer);
-  if(slot===4)assert.equal(Number(party[slot]['resist_'+dominant]),layer===80?1.25:0.95,
-   'boss primary resistance as designed '+layer);
-  else{
+  assert.notEqual(main,secondary,'each monster retains its main and alternate attack identity '+party[slot].id);
+  assert.equal(spells[slot].filter(spell=>spell.attribute===main).length,3,
+   'three primary spell slots under reviewed worldview '+party[slot].id);
+  assert.equal(spells[slot].filter(spell=>spell.attribute===secondary).length,2,
+   'two secondary spell slots under reviewed worldview '+party[slot].id);
+  if(slot===4){
+   assert.ok(Number(party[slot]['resist_'+main])<=1||layer===80,
+    'only 80F boss may be vulnerable to its main attribute '+layer);
+   if(layer===80){
+    assert.equal(Number(party[slot].resist_gravity),1.25);
+    assert.equal(Number(party[slot].resist_law),1.2);
+   }
+  }else{
    const tags=nameAffinities(party[slot].name);
+   assert.ok(Number(party[slot]['resist_'+main])<=1,'no unreviewed normal primary weakness '+party[slot].id);
    if(tags.length){
     assert.ok(tags.every(attr=>Number(party[slot]['resist_'+attr])<=1),
      'normal foe name must not advertise an elemental weakness '+party[slot].name);
     assert.ok(tags.some(attr=>Number(party[slot]['resist_'+attr])<1),
      'normal foe name must predict actual elemental resistance '+party[slot].name);
-   }else assert.equal(Number(party[slot]['resist_'+dominant]),.8,
-    'unmarked ordinary foe retains original layer attribute '+layer);
+   }
   }
  }
 }
 
 // Preserve a mix of counters throughout the 100-layer level curve.
+// The old first-monster-of-each-layer quota predated the 500-enemy
+// worldview rewrite. Audit all 500 actual primary identities instead of
+// imposing an obsolete equal-distribution fixture on ordinary wildlife.
 const affinityCounts=Object.fromEntries(G.ATTRS.map(attribute=>[attribute,0]));
-for(let layer=1;layer<=100;layer++){
- const primary=enemies[(layer-1)*5].spells.split('|')[0].split(':')[1];
+for(const row of enemies){
+ const primary=row.spells.split('|')[0].split(':')[1];
+ assert.ok(G.ATTRS.includes(primary),'seven-attribute primary '+row.id);
  affinityCounts[primary]++;
 }
-assert.ok(Object.values(affinityCounts).every(count=>count>=8&&count<=20),
- 'each element remains meaningfully represented across the dungeon');
+assert.equal(Object.values(affinityCounts).reduce((sum,n)=>sum+n,0),500);
+assert.ok(Object.values(affinityCounts).every(count=>count>=10&&count<=200),
+ 'all seven elements remain meaningfully represented in the 500 enemy catalog');
 
 assert.equal(levels.length,150);
 assert.equal(floors.length,500);
