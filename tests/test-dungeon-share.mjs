@@ -30,7 +30,7 @@ const gradient=()=>({addColorStop(offset,color){stops.push([offset,color]);}});
 const ctx={createLinearGradient:gradient,createRadialGradient:gradient,
  fillRect(...args){drawOps.push(['fillRect',...args]);},
  strokeRect(...args){drawOps.push(['strokeRect',...args]);},
- beginPath(){},arc(){},moveTo(){},lineTo(){},closePath(){},stroke(){},
+ beginPath(){},arc(){},moveTo(...args){drawOps.push(['moveTo',...args]);},lineTo(...args){drawOps.push(['lineTo',...args]);},closePath(){},stroke(){},
  save(){drawOps.push(['save']);},restore(){drawOps.push(['restore']);},
  translate(...args){drawOps.push(['translate',...args]);},
  scale(...args){drawOps.push(['scale',...args]);},
@@ -81,9 +81,16 @@ assert.ok(!drawOps.some(([kind])=>kind==='scale'||kind==='translate'),'the name 
 const fittedValues=new Set([profile.name,'👑','21',data.rank,'12層','10層']);
 assert.ok(drawOps.filter(([kind,value])=>kind==='fillText'&&fittedValues.has(value)).every(op=>op.length===6),
  'fitted card values never use fillText(maxWidth), which can squeeze glyphs horizontally');
-assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===250&&w===420&&h===101),'wider upper name plate is drawn');
-assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===514&&y===250&&w===174&&h===101),'level plate is beside name');
-assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===397&&w===258&&h===104),'rank remains in second row');
+for(const [x,y,w,h] of [[82,250,420,101],[514,250,174,101],[352,397,158,104],[522,397,166,104]]){
+ assert.ok(!drawOps.some(([kind,rx,ry,rw,rh])=>(kind==='fillRect'||kind==='strokeRect')&&rx===x&&ry===y&&rw===w&&rh===h),
+  'name, level, reached and returned fields have no panel fill or border');
+}
+const hasDivider=(x1,y1,x2,y2)=>drawOps.some((op,i)=>op[0]==='moveTo'&&op[1]===x1&&op[2]===y1
+ &&drawOps[i+1]?.[0]==='lineTo'&&drawOps[i+1][1]===x2&&drawOps[i+1][2]===y2);
+assert.ok(hasDivider(352,366,688,366),'horizontal partition separates level from reached/returned records');
+assert.ok(hasDivider(516,397,516,501),'vertical partition separates reached and returned records');
+assert.ok(drawOps.some(([kind,x,y,w,h])=>kind==='fillRect'&&x===82&&y===397&&w===258&&h===104),
+ 'metallic rank plate remains in the second row');
 assert.ok(!drawOps.some(([kind,text,x,y])=>kind==='fillText'&&text===profile.name&&y>548),'name is not in footer');
 assert.ok(drawTexts.includes('12層')&&drawTexts.includes('10層'),'both deep records appear on card');
 assert.ok(drawOps.some(([kind])=>kind==='strokeRect'),'card has decorative border');
