@@ -16,9 +16,13 @@ const data={enemies:csv('enemies'),items:csv('consumables'),buffs:csv('buffs'),b
  levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')};
 configure(data);
 const rng=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
-const first19=readFileSync(new URL('../assets/data/dungeon-enemies.csv',import.meta.url),'utf8').trimEnd().split('\n').slice(0,96).join('\n');
-const fnv=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619)>>>0;return h.toString(16).padStart(8,'0');};
-assert.equal(fnv(first19),'3b8f5533','enemy data through floor 19 must be byte-for-byte unchanged');
+// The first 19 layers keep exactly the same 76 ordinary foes, while their
+// 19 bosses now have deliberate elemental identities. Check the unaffected
+// enemies against the exact catalog before the flavor change.
+const early=data.enemies.slice(0,95).filter(row=>row.boss_only==='0');
+const reference=G.parseCsv(readFileSync(new URL('./fixtures/dungeon-enemies-before-flavor.csv',import.meta.url),'utf8'))
+ .slice(0,95).filter(row=>row.boss_only==='0');
+assert.deepEqual(early,reference,'early 76 ordinary foes must remain unchanged');
 let previousMinimum=0;
 for(let layer=51;layer<=100;layer++){
  const five=data.enemies.slice((layer-1)*5,layer*5);
