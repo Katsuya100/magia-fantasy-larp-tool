@@ -4,6 +4,7 @@
 // All boss IDs, drops, spell configurations, and levels remain unchanged.
 // Re-run: node scripts/tune-dungeon-enemy-flavor.mjs
 import {alignNormalRows} from './dungeon-normal-enemy-affinities.mjs';
+import {tuneDurability} from './dungeon-enemy-durability-rules.mjs';
 export const tuneEnemyRows = function tuneEnemyRows(input){
  const rows=input.map(r=>({...r}));
  // Small, paired neutral-element shifts only: lower resist_* means LESS damage.
@@ -57,7 +58,7 @@ export const tuneEnemyRows = function tuneEnemyRows(input){
    }
   }
  }
- return alignNormalRows(bossFlavor(rows));
+ return tuneDurability(alignNormalRows(bossFlavor(rows)));
 };
 
 export const bossFlavor = function bossFlavor(rows){

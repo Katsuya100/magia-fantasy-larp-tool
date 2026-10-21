@@ -72,13 +72,6 @@ export const alignNormalRows = function alignNormalRows(input){
    const previous=input[rows.indexOf(row)];
    row.hp=String(Math.round(Number(previous.hp)*stat(row)/stat(previous)));
   }
-  // Let the first offensive spell, the one observed most often, reveal
-  // this individual monster's name-inferred innate attribute.
-  const spells=row.spells.split('|'),primaryAttack=spells[0].split(':');
-  if(primaryAttack[0]==='attack'&&primaryAttack[1]!==tags[0]){
-   primaryAttack[1]=tags[0];spells[0]=primaryAttack.join(':');
-   row.spells=spells.join('|');
-  }
   reviewed++;
  }
  return rows;
