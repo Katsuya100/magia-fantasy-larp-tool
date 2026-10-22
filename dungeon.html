@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261022.4">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261022.5">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261022.4" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261022.5" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261022.4" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261022.5" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -187,7 +187,7 @@
           <li><strong>内円の中</strong>に魔法を表す<strong>紋様</strong>を描きます。紋様によって「⚔️攻撃・🛡️防御・✚回復・🕸️弱体」が決まります。</li>
           <li>呪文から7つの相（🔥flame / ⚡️bolt / 💧aqua / 🌪️storm / 🪨gravity / ⚖️law / 🌀chaos）を判定します。円や線の精度、呪文、異なる単語数が威力に影響します。</li>
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
-          <li>撮影時に解析し、<strong>解析が成功した魔法陣だけ登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。解析が失敗・中断した撮影画像は保存されません。</li>
+          <li>撮影時に解析し、<strong>成功時は威力250以上、失敗時は相・紋がランダムで威力200〜250の魔法陣として登録します。</strong> 属性と追加効果を先に表示し、MPと威力は初回使用まで伏せられます。撮影を中断した場合は保存されません。</li>
         </ol>
         <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261020.31" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
@@ -303,6 +303,11 @@
         <div class="analysis-status-head"><span>解明進捗</span><strong id="analysisProgressCount">0/5</strong></div>
         <progress id="analysisProgress" max="5" value="0" aria-label="魔法陣の解明進捗"></progress>
         <p id="analysisError" class="name-error" role="alert" hidden></p>
+      </div>
+      <div id="analysisMisfire" class="analysis-misfire" role="status" aria-live="polite" hidden>
+        <span class="analysis-misfire-spark" aria-hidden="true">✧</span>
+        <strong>残念！ 魔法陣の解明に失敗…</strong>
+        <span>不完全な魔法が生まれました</span>
       </div>
       <iframe id="analyzerFrame" title="マギアサークル解析"></iframe>
       <button type="button" id="cancelAnalyze" class="subtle">解明を中止</button>
@@ -472,7 +477,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.22.4</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.22.5</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -491,6 +496,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261022.4"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261022.5"></script>
 </body>
 </html>

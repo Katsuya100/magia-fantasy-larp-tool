@@ -94,8 +94,18 @@ try{
  assert.equal($('analyzing').hidden,true,'failed analysis closes the full-screen analysis view');
  assert.equal($('library').hidden,false,'failed analysis returns to the grimoire');
  assert.ok(visitedAnalysis.includes(false),'photo analysis opens the visible screen');
- await wait(()=>$('cameraError').textContent.includes('保存していません'),'failed capture rejected');
- assert.equal((await allCircles(await openStore(env.factory))).length,0,'failed camera analysis must not save a photo');
+ assert.equal($('analysisMisfire').hidden,false,'failed reading shows the disappointing magic animation');
+ assert.equal($('analyzing').dataset.misfire,'true','only the failed reading enters the misfire state');
+ assert.match($('cameraError').textContent,/不完全な魔法陣として登録/);
+ const fallbackSaved=await allCircles(await openStore(env.factory));
+ assert.equal(fallbackSaved.length,1,'failed analysis still saves the original photograph');
+ assert.equal(fallbackSaved[0].revealed,false,'failed power remains hidden until used');
+ assert.ok(fallbackSaved[0].analysis.power>=200&&fallbackSaved[0].analysis.power<=250);
+ assert.ok(['attack','defense','support','debuff'].includes(fallbackSaved[0].analysis.role));
+ assert.ok(['flame','bolt','aqua','storm','gravity','law','chaos'].includes(fallbackSaved[0].analysis.attribute));
+ await doc.click(btn({remove:fallbackSaved[0].id}));
+ await $('confirmCircleAction').fire('click');
+ assert.equal((await allCircles(await openStore(env.factory))).length,0,'remove restores an empty grimoire for the existing battle regression');
  env.analyzerState.attribute='flame';
  for(let i=0;i<5;i++){
   await $('cameraCapture').fire('click');
@@ -686,5 +696,5 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   assert.equal(cameraDenied.document.getElementById('cameraPane').hidden,false);
   assert.equal(cameraDenied.document.getElementById('cameraPlaceholder').hidden,false);
  }finally{cameraDenied.restore();}
- console.log('PASS dungeon registration, rejected analysis, first-use success, 5-fight return, continued floor 6, free items, reload and defeat');
+ console.log('PASS dungeon registration, failed-analysis fallback, first-use success, 5-fight return, continued floor 6, free items, reload and defeat');
 }finally{Math.random=originalRandom;env.restore();}
