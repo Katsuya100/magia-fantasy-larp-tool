@@ -26,6 +26,18 @@ const glyph=normalizedGlyph([[{x:-.1,y:-.2},{x:.1,y:.2}]]);
 assert.equal(glyph.length,1);
 assert.ok(glyph[0][0].x<0&&glyph[0][1].y>0);
 
+// A square drawn on the pad must stay square after being laid tangentially
+// around the ring; the previous independent 0.029/0.048 scales stretched it.
+const square=normalizedGlyph([[{x:-.6,y:-.6},{x:.6,y:-.6},{x:.6,y:.6},{x:-.6,y:.6}]])[0];
+for(const [index,count] of [[0,1],[1,3],[7,16],[31,32]]){
+ const corners=square.map(p=>glyphPoint(p,index,count));
+ const edge=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ assert.ok(Math.abs(edge(corners[0],corners[1])-edge(corners[1],corners[2]))<1e-12,
+  'spell glyph aspect ratio is preserved at ring slot '+index);
+}
+assert.deepEqual(pointOnPad(210,270,pad),{x:1,y:1},
+ 'even a rectangular pad uses the same coordinate scale on both axes');
+
 const stroke=[{x:0,y:-.3},{x:.2,y:.2}];
 const draft=createDrawingModel();
 assert.equal(draft.addStroke(stroke),true);
@@ -119,13 +131,13 @@ const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
 const source=await readFile(new URL('../assets/js/dungeon-circle-draw.mjs',import.meta.url),'utf8');
 assert.match(html,/id="circleDrawingPad"[^>]*width="420" height="420"/,'pad is a square canvas');
-assert.match(html,/<strong id="circleDrawingStage" class="circle-drawing-stage"[^>]*>呪文を書く<\/strong>/,'stage label is a floating centered element');
+assert.match(html,/<strong id="circleDrawingStage" class="circle-drawing-stage"[^>]*>呪文を1文字ずつ書く<\/strong>/,'stage label is a floating centered element');
 assert.match(html,/id="circleDrawingPreview"[\s\S]*?id="circleDrawingCaret" width="512" height="512" aria-hidden="true"/,'caret has a distinct transparent overlay canvas');
 assert.match(css,/\.circle-drawing-display\{[^}]*background:#070914/,'parchment does not fill the preview surroundings');
 assert.match(css,/\.circle-drawing-entry\{[^}]*background:#070914/,'top and bottom surroundings use the same dark background');
 assert.match(css,/\.circle-drawing-stage\{[^}]*left:50%;top:50%;transform:translate\(-50%,-50%\)/,'stage label is in the center of the screen');
 assert.match(css,/#circleDrawingCaret\{[^}]*animation:circle-drawing-caret-blink 1s steps\(1,end\) infinite/,'only the caret blinks');
-assert.match(source,/sigil\?'紋を書く':'呪文を書く'/,'both steps use the requested writing labels');
+assert.match(source,/sigil\?'紋を書く':'呪文を1文字ずつ書く'/,'both steps use the requested writing labels');
 assert.match(source,/paintCaret\(get\('circleDrawingCaret'\),model\.state/,'redraw follows the active character');
 assert.doesNotMatch(html,/id="circleDrawingSpace"|id="circleDrawingHint"|id="circleDrawingCount"/,'no extra space, help or count labels');
 assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
