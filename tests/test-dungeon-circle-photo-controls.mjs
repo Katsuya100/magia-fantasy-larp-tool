@@ -27,9 +27,9 @@ assert.doesNotMatch(itemGrid([],[],3,false,()=>'',escapeText),/circle-photo-face
 assert.doesNotMatch(itemChoices([],[],()=>'',escapeText),/circle-photo-face/);
 assert.match(app,/class="battle-spell-photo circle-photo-face"><img[^\n]*data-circle-photo-id=/);
 assert.match(app,/class="circle-photo-face"><img alt="魔法陣"[^\n]*aria-pressed=/);
-assert.match(page,/dungeon\.css\?v=20261022\.9/);
-assert.match(page,/dungeon-app\.mjs\?v=20261022\.9/);
-assert.match(app,/dungeon-preparation-ui\.mjs\?v=20261022\.9/);
+assert.match(page,/dungeon\.css\?v=20261022\.10/);
+assert.match(page,/dungeon-app\.mjs\?v=20261022\.10/);
+assert.match(app,/dungeon-preparation-ui\.mjs\?v=20261022\.10/);
 const controls=css.slice(css.indexOf('.circle-photo-face{'),css.indexOf('/* Revelation only:'));
 assert.match(controls,/\.circle-photo-face\{[^}]*border-radius:50%;overflow:hidden/,
  'round photo frames never protrude beyond the button surface');

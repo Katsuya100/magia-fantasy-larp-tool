@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261022.9">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261022.10">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261022.10" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261022.11" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261022.10" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261022.11" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -179,6 +179,7 @@
     <section id="library" class="panel grimoire-panel" hidden>
       <div class="section-heading"><div><p class="chapter">CHAPTER II · GRIMOIRE</p><h2>魔導書</h2></div><span class="section-mark" aria-hidden="true">◎</span></div>
       <button type="button" id="tutorialReplay" class="subtle tutorial-replay">◎ 描き方を練習</button>
+      <button type="button" id="openCircleDrawing" class="drawing-open-button">✍ 魔法陣を描く</button>
       <details class="regulations">
         <summary>魔法陣の描き方・登録規則 <span aria-hidden="true">⌄</span></summary>
         <ol>
@@ -186,8 +187,9 @@
           <li>二つの円の間（<strong>環</strong>）に、魔法の意味を持つ<strong>英語の単語</strong>を呪文として記します。文字は読み取れる大きさで書きます。</li>
           <li><strong>内円の中</strong>に魔法を表す<strong>紋様</strong>を描きます。紋様によって「⚔️攻撃・🛡️防御・✚回復・🕸️弱体」が決まります。</li>
           <li>呪文から7つの相（🔥flame / ⚡️bolt / 💧aqua / 🌪️storm / 🪨gravity / ⚖️law / 🌀chaos）を判定します。円や線の精度、呪文、異なる単語数が威力に影響します。</li>
-          <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。登録は<strong>カメラ撮影のみ</strong>です。</li>
-          <li>撮影時に解析します。成功時の威力は250以上、失敗時は相と紋をランダムに決めて威力200〜250の不完全な魔法として登録します。どちらも同じ解明結果画面で表示し、MPと威力は初回使用まで伏せられます。中断した撮影画像は保存されません。</li>
+          <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。撮影して登録する場合はカメラを使います。</li>
+          <li>「魔法陣を描く」では環を自動生成し、タッチで呪文を1文字ずつ、続けて紋を描きます。手書きの簡易術式は解析結果の威力が60%になります。</li>
+          <li>登録時に解析します。撮影の場合、成功時の威力は250以上、失敗時は相と紋をランダムに決めて威力200〜250の不完全な魔法になります。手書きでも解析失敗時は同じ流れを使い、その威力を60%にします。MPと威力は初回使用まで伏せられます。中断した入力は保存されません。</li>
         </ol>
         <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261020.31" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
@@ -326,6 +328,32 @@
     </section>
     </div>
 
+    <dialog id="circleDrawingDialog" class="circle-drawing-dialog" aria-labelledby="circleDrawingStage" aria-describedby="circleDrawingHint">
+      <div class="circle-drawing-shell">
+        <header class="circle-drawing-header">
+          <button type="button" id="circleDrawingClose" class="drawing-secondary">閉じる</button>
+          <strong id="circleDrawingStage">呪文を描く</strong>
+          <button type="button" id="circleDrawingConfirm" class="drawing-confirm">決定</button>
+        </header>
+        <section class="circle-drawing-display" aria-label="魔法陣のプレビュー">
+          <button type="button" id="circleDrawingUndo" class="drawing-history" aria-label="元に戻す" title="元に戻す">◀</button>
+          <canvas id="circleDrawingPreview" width="512" height="512" role="img" aria-label="作成中の魔法陣"></canvas>
+          <button type="button" id="circleDrawingRedo" class="drawing-history" aria-label="やり直す" title="やり直す">▶</button>
+          <span id="circleDrawingCount" class="circle-drawing-count" aria-live="polite">環：0 / 32</span>
+        </section>
+        <section class="circle-drawing-entry" aria-label="呪文と紋の入力">
+          <p id="circleDrawingHint" class="circle-drawing-hint">1文字描いたら「入力」。単語間は「空白」。</p>
+          <canvas id="circleDrawingPad" class="circle-drawing-pad" width="420" height="300" aria-label="指またはマウスで線を描くタッチパッド"></canvas>
+          <div class="circle-drawing-actions">
+            <button type="button" id="circleDrawingReset" class="drawing-secondary">リセット</button>
+            <button type="button" id="circleDrawingSpace" class="drawing-secondary">空白</button>
+            <button type="button" id="circleDrawingBack" class="drawing-secondary" hidden>呪文へ戻る</button>
+            <button type="button" id="circleDrawingInput" class="drawing-confirm">入力</button>
+          </div>
+          <p id="circleDrawingStatus" class="circle-drawing-status" role="status" aria-live="polite"></p>
+        </section>
+      </div>
+    </dialog>
     <dialog id="magicDetailsDialog" class="magic-details-dialog" aria-labelledby="magicDetailsTitle">
       <div class="magic-details-content">
         <div class="chooser-header"><h3 id="magicDetailsTitle">魔法陣の効果</h3><button type="button" id="closeMagicDetails" class="subtle" aria-label="詳細を閉じる">✕</button></div>
@@ -472,7 +500,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.22.9</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.22.10</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -491,6 +519,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261022.10"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261022.11"></script>
 </body>
 </html>
