@@ -645,7 +645,11 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   stage2.dataset=new Proxy(stage2.dataset,{set(target,key,value){if(key==='event'&&value==='hero-death')deaths.push(value);target[key]=value;return true;}});
   assert.match(el('heroStats').innerHTML,/HP 1\//);
   assert.equal(el('nameDialog').open,false,'returning player has no rename prompt');
-  await doc2.click(btn({cast:'-1'}));
+  // Force the rare early-layer attack for this fatal-hit UI regression.
+  // Gameplay keeps its low attack probability; only this fixture is deterministic.
+  Math.random=()=>0;
+  try{await doc2.click(btn({cast:'-1'}));}
+  finally{Math.random=()=>.5;}
   await wait(()=>el('result').hidden===false,'defeat');
   assert.ok(deaths.includes('hero-death'),'player defeat plays death scene');
   const defeated=await getProfile(await openStore(env2.factory));
