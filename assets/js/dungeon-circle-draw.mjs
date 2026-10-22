@@ -3,6 +3,8 @@ export const DRAWN_GLYPH_LIMIT=32;
 export const DRAWN_POWER_RATE=0.6;
 const INNER_RADIUS=.255;
 const GUIDE_RADIUS=.92;
+// The same scale in both axes preserves each drawn letter's aspect ratio.
+const GLYPH_INK_SCALE=.036;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
@@ -18,7 +20,7 @@ export function glyphAngle(index,count){return -Math.PI/2+(index-(count-1)/2)*GL
 export function caretAngle(count){return -Math.PI/2+count*GLYPH_STEP/2;}
 export function glyphPoint(point,index,count=1){
  const angle=glyphAngle(index,count);
- const tangent=angle+Math.PI/2,dx=point.x*.029,dy=point.y*.048;
+ const tangent=angle+Math.PI/2,dx=point.x*GLYPH_INK_SCALE,dy=point.y*GLYPH_INK_SCALE;
  return {x:.5+.345*Math.cos(angle)+dx*Math.cos(tangent)-dy*Math.sin(tangent),
   y:.5+.345*Math.sin(angle)+dx*Math.sin(tangent)+dy*Math.cos(tangent)};
 }
@@ -208,7 +210,7 @@ export function initCircleDrawing(doc,{onSave}){
   paintCaret(get('circleDrawingCaret'),model.state,{size:512});
   paintPad(pad,model.state,activeStroke);
   const sigil=model.state.mode==='sigil';
-  get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を書く';
+  get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を1文字ずつ書く';
   get('circleDrawingInput').hidden=sigil;
  get('circleDrawingBack').hidden=!sigil;
   get('circleDrawingInput').disabled=model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy;
