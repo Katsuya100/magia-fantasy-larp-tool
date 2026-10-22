@@ -25,11 +25,11 @@ export function initCircleTutorial(doc,onFinish){
   freedom.hidden=!info.freedom;
   $('tutorialFigure').hidden=!info.image;
   if(info.image){
-   preview.src='assets/images/'+info.image+'?v=20261023.13';
+   preview.src='assets/images/'+info.image+'?v=20261023.14';
    preview.alt=info.title+'の描画アニメーション';
   }else preview.alt='';
   back.hidden=step===0;
-  next.textContent=step===CIRCLE_TUTORIAL_STEPS.length-1?'魔導書へ':'次へ';
+  next.textContent=step===CIRCLE_TUTORIAL_STEPS.length-1?'撮影する📷':'次へ';
  }
  function open(){
   if(!overlay.hidden)return;

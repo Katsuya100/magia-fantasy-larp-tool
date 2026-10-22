@@ -51,7 +51,7 @@ try{
   assert.equal($('tutorialFreedom').hidden,i<3);
   if(i>=3)assert.equal($('tutorialFreedom').textContent,CIRCLE_TUTORIAL_STEPS[i].freedom);
  }
- assert.equal($('tutorialContinue').textContent,'魔導書へ');
+ assert.equal($('tutorialContinue').textContent,'撮影する📷','final lesson offers a direct camera action');
  $('tutorialPrevious').fire('click');
  assert.equal($('tutorialCounter').textContent,'4 / 5');
  $('tutorialContinue').fire('click');
