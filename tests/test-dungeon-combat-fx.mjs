@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {magicEffectTier,effectCaption,attackHitAffinity,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,combatPhaseDuration,COMBAT_EFFECT_MS,AFFINITY_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
+import {magicEffectTier,effectCaption,attackHitAffinity,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,combatPhaseDuration,combatPhaseAdvanceDuration,COMBAT_EFFECT_MS,AFFINITY_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase,buffs]=await Promise.all(['balance','levels','floors','player-base','buffs'].map(csv));
 configure({balance,levels,floors,playerBase});
@@ -69,9 +69,11 @@ assert.equal(combatPhaseDuration([{...affinityHit,amount:0}],COMBAT_EFFECT_MS),C
 assert.equal(combatPhaseDuration([{...affinityHit,role:'basic'}],COMBAT_EFFECT_MS),COMBAT_EFFECT_MS,'basic attacks keep normal tempo');
 assert.equal(combatPhaseDuration([{...affinityHit,enemy:unit([])}],COMBAT_EFFECT_MS),COMBAT_EFFECT_MS,'neutral attacks keep normal tempo');
 assert.equal(combatPhaseDuration([affinityHit],0),0,'reduced motion stays instant');
+assert.equal(combatPhaseAdvanceDuration([affinityHit],COMBAT_EFFECT_MS),COMBAT_EFFECT_MS,'RESIST can yield at 440ms while 720ms art remains');
+assert.equal(combatPhaseAdvanceDuration([{...affinityHit,enemy:G.makeUnit(base,1,{flame:1.5},[],'enemy')}],COMBAT_EFFECT_MS),COMBAT_EFFECT_MS,'WEAK also advances at 440ms');
 const affinityWaits=[];
 await playCombatSequence([affinityHit],()=>{}, {duration:COMBAT_EFFECT_MS,wait:async ms=>affinityWaits.push(ms)});
-assert.deepEqual(affinityWaits,[AFFINITY_EFFECT_MS],'affinity FX remain visible for the full extended phase');
+assert.deepEqual(affinityWaits,[COMBAT_EFFECT_MS],'affinity playback waits only for the base phase, not 720ms');
 // Strict boundaries for 3 ultimate circles at 55 spent stones each (165 total).
 for(const [stones,expected] of [[0,1],[4,1],[5,2],[19,2],[20,3],[54,3],[55,4],[100,4]]){
  for(const role of ['attack','defense','support','debuff'])

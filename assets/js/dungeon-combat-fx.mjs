@@ -81,22 +81,37 @@ export function fatalSide(phase){
  if(last.enemy?.hp<=0)return 'enemy';
  return null;
 }
+// RESIST/WEAK keep their full 720ms visual lifetime, but subsequent
+// phases follow the normal 440ms cadence rather than waiting for the text.
+export function combatPhaseAdvanceDuration(phase,duration=effectDuration()){
+ return Math.min(combatPhaseDuration(phase,duration),duration);
+}
 // Start the death effect before the fatal attack animation ends.
+// Only the final nonfatal phase can release early for a queued command.
 export async function playCombatSequence(steps,paint,{
  duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
- onFatal=null,overlap=125
+ onFatal=null,overlap=125,onLastPhase=null
 }={}){
  let death=null;
- for(const phase of simultaneousPhases(steps)){
+ const phases=simultaneousPhases(steps);
+ for(let i=0;i<phases.length;i++){
+  const phase=phases[i];
   paint(phase);
-  const phaseDuration=combatPhaseDuration(phase,duration);
+  const phaseDuration=combatPhaseAdvanceDuration(phase,duration);
   const fatal=onFatal&&!death?fatalSide(phase):null;
+  const last=phase.at(-1);
+  const canQueue=i===phases.length-1&&!fatal&&last?.hero?.hp>0&&last?.enemy?.hp>0;
+  const early=canQueue?onLastPhase?.(phase,phaseDuration):null;
   if(fatal){
    const lead=Math.max(0,phaseDuration-overlap);
    if(lead>0)await wait(lead);
    death=Promise.resolve(onFatal(fatal,phase));
    if(phaseDuration-lead>0)await wait(phaseDuration-lead);
-  }else if(phaseDuration>0)await wait(phaseDuration);
+  }else if(phaseDuration>0){
+   const full=wait(phaseDuration);
+   if(early)await Promise.race([full,early]);
+   else await full;
+  }
  }
  if(death)await death;
 }
