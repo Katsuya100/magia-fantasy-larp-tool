@@ -2311,31 +2311,13 @@ button.creator-congratulations-close{
  aspect-ratio:1 / 1;object-fit:cover;border:0!important;box-shadow:none!important;
  clip-path:circle(calc(50% - var(--circle-guide-inset)) at 50% 50%)
 }
-/* Compact action plaque stays inside the visible circle even in five-column mobile grids. */
-.circle-photo-face::after{
- content:"";position:absolute;left:50%;bottom:17%;z-index:3;
- transform:translateX(-50%);max-width:70%;box-sizing:border-box;
- padding:1px 3px;border:1px solid #ffe8ae;border-radius:999px;
- background:linear-gradient(180deg,#6e4d34,#281c2b 76%);
- box-shadow:inset 0 1px 0 #fff7,inset 0 -2px 0 #0c0d18;
- color:#fff6d9;text-shadow:0 1px 2px #000d;
- font-size:clamp(8px,1.15vw,12px);font-weight:900;line-height:1.15;
- letter-spacing:0;white-space:nowrap;pointer-events:none
-}
 .circle-grid .card > .circle-photo-face{width:100%}
-.circle-grid .card > .circle-photo-face::after{content:"長押し ★"}
 .prepare-spell-frame .loadout-tile .circle-photo-face{width:min(76%,110px)}
-.prepare-spell-frame .loadout-tile .circle-photo-face::after{content:"変更"}
 .circle-picker-grid .picker-option .circle-photo-face{width:100%}
-.circle-picker-grid .picker-option .circle-photo-face::after{content:"選ぶ"}
 .battle-spells .battle-spell-photo.circle-photo-face{width:100%;max-width:112px}
-.battle-spells .battle-spell-photo.circle-photo-face::after{content:"発動"}
 .battle-spells .circle-photo-face .battle-spell-seal{
  inset:var(--circle-guide-inset);z-index:2;border-radius:50%
 }
-/* Disabled spells and locked preparation cannot be activated. */
-.prepare-spell-frame .loadout-tile:disabled .circle-photo-face::after,
-.battle-spells .battle-spell-tile:disabled .circle-photo-face::after{display:none}
 /* Give the existing native choice button a distinct raised face without spillover. */
 .circle-picker-grid .picker-circle-wrap .picker-option:not(.picker-selected){
  border:2px solid #deb981!important;
@@ -2369,6 +2351,66 @@ button.creator-congratulations-close{
  transform:scale(.96);filter:brightness(.87)
 }
 @media(max-width:630px){.prepare-spell-frame .loadout-tile .circle-photo-face{width:85%}}
+/* Equipped spell slots are complete raised buttons, not tiny photos in empty squares.
+   The full-width circle follows the camera's 86% photo guide, while the tile
+   perimeter becomes the raised button itself. No text overlaps the image. */
+.prepare-spell-frame .loadout-tile.equipped,
+.battle-spells .battle-spell-tile[data-cast]{
+ box-sizing:border-box;border:2px solid #d9b474!important;border-radius:12px;
+ background:radial-gradient(circle at 50% 40%,#624953 0,#382b3d 56%,#171b2b 100%)!important;
+ box-shadow:inset 0 2px 0 #fff1c184,inset 0 -3px 0 #0a1020,0 4px 0 #12101d,0 7px 14px #0007!important;
+ transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease
+}
+.prepare-spell-frame .loadout-tile.equipped{
+ padding:0!important;gap:0;justify-content:center
+}
+.prepare-spell-frame .loadout-tile .circle-photo-face,
+.battle-spells .battle-spell-photo.circle-photo-face{
+ width:100%;max-width:none
+}
+.battle-spells .battle-spell-tile[data-cast]{
+ padding:0!important;gap:0;min-height:0;justify-content:flex-start
+}
+.battle-spells .battle-spell-tile[data-cast] .tile-cooldown{
+ box-sizing:border-box;width:100%;min-height:34px;margin:0!important;
+ padding:6px 2px;display:grid;place-items:center;
+ border-top:1px solid #e3b77b88;border-radius:0 0 10px 10px;
+ background:linear-gradient(180deg,#493547,#251f31);
+ box-shadow:inset 0 1px 0 #fff2;font-size:clamp(10px,1.3vw,14px);
+ line-height:1.2;white-space:nowrap
+}
+.prepare-spell-frame .loadout-tile.equipped .tile-index,
+.battle-spells .battle-spell-tile[data-cast] .tile-index{
+ z-index:3;top:5px;left:6px;padding:2px 3px;
+ border-radius:4px;background:#131522c9;color:#f7d9a0
+}
+/* Hover and press affect the entire spell-button face, never a detached photo. */
+.prepare-spell-frame .loadout-tile.equipped:focus-visible,
+.battle-spells .battle-spell-tile[data-cast]:focus-visible{
+ outline:2px solid #ffe6a3;outline-offset:2px
+}
+@media(hover:hover){
+ .prepare-spell-frame .loadout-tile.equipped:not(:disabled):hover,
+ .battle-spells .battle-spell-tile[data-cast]:not(:disabled):hover{
+  border-color:#ffe4a5!important;
+  box-shadow:inset 0 2px 0 #fff8da,inset 0 -3px 0 #0a1020,0 4px 0 #12101d,0 8px 17px #d5a85e55!important
+ }
+}
+.prepare-spell-frame .loadout-tile.equipped:not(:disabled):active,
+.battle-spells .battle-spell-tile[data-cast]:not(:disabled):active{
+ transform:translateY(2px);
+ box-shadow:inset 0 3px 8px #0008,0 1px 0 #12101d!important
+}
+.prepare-spell-frame .loadout-tile.equipped:not(:disabled):active .circle-photo-face,
+.battle-spells .battle-spell-tile[data-cast]:not(:disabled):active .circle-photo-face{
+ transform:none;filter:none
+}
+@media(max-width:630px){
+ .prepare-spell-frame .loadout-tile .circle-photo-face{width:100%}
+ .battle-spells .battle-spell-tile[data-cast] .tile-cooldown{
+  min-height:27px;padding:4px 1px;font-size:clamp(9px,2.5vw,12px)
+ }
+}
 /* Revelation only: the physical photo and the glowing ring fit the camera guide. */
 .circle-ritual--reveal .circle-ritual__physical{
  clip-path:circle(calc(50% - var(--circle-guide-inset)) at 50% 50%);
