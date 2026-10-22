@@ -1,4 +1,4 @@
-// Five tutorial pages using the original, losslessly optimized animated GIFs.
+// Five tutorial pages using four uploaded GIF animations, in reverse upload order.
 export const CIRCLE_TUTORIAL_STEPS=[
  {title:'準備しましょう',hint:'最初にお手元に紙とペンをご用意ください。',detail:'ペンは、できれば太めの油性ペンをお使いください。',image:null},
  {title:'外円を書きましょう',hint:'紙に大きな円を書いてください。',detail:'線をつないで閉じてください。',image:'tutorial-outer.gif'},
@@ -25,7 +25,7 @@ export function initCircleTutorial(doc,onFinish){
   freedom.hidden=!info.freedom;
   $('tutorialFigure').hidden=!info.image;
   if(info.image){
-   preview.src='assets/images/'+info.image+'?v=20261023.10';
+   preview.src='assets/images/'+info.image+'?v=20261023.13';
    preview.alt=info.title+'の描画アニメーション';
   }else preview.alt='';
   back.hidden=step===0;

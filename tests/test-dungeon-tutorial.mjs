@@ -82,24 +82,25 @@ assert.ok(html.includes('dungeon-app.mjs?v='+release),'tutorial HTML loads the c
 assert.match(script,/preview\.src='assets\/images\/'/);
 assert.doesNotMatch(html,/id="tutorialCanvas"|id="tutorialPad"/);
 assert.doesNotMatch(script,/pointerdown|pointermove|setPointerCapture/);
-// The animation is the ORIGINAL Git-history GIF, re-encoded only by lossless optimization.
-// Compare Git blob checksums, frame count, original dimensions, and size reduction.
-const optimizedOriginals=[
- ['tutorial-outer.gif','030d08f4b2b5095a7d62db24bf8fb4196eea11af',22,167393],
- ['tutorial-inner.gif','7584b5d9fa9a74fb1025761ba68ef6e69078810d',22,163720],
- ['tutorial-spell.gif','e39279173813109c69be97c6aa4d034afefec2f3',24,258137],
- ['tutorial-sigil.gif','f48c9c6dede5d35381b088e1f5dc279f11d3e5b7',22,261912]
+// The four GIFs are the user's uploaded optimized animations in REVERSED order.
+// The hashes match exact source bytes; each file retains its GIF animation and dimensions.
+const uploadedOptimizedAnimations=[
+ ['tutorial-outer.gif','a409d1dfd8e99907ec060473a833982efd65f6f2',24,409521,4300575],
+ ['tutorial-inner.gif','1d3ccd3b736cda30c4b855e371a1446a5c76909c',24,344262,4600687],
+ ['tutorial-spell.gif','4d90fe876b65e3a586b73e17265a4fc8fd64673a',13,326987,2790874],
+ ['tutorial-sigil.gif','13a4c46ba06fce8def556d253d410faa2a2e4b02',28,470418,5847905]
 ];
-for(const [name,blobSha,expectedFrames,originalBytes] of optimizedOriginals){
+for(const [name,blobSha,expectedFrames,expectedBytes,originalBytes] of uploadedOptimizedAnimations){
  const b=await readFile(new URL('../assets/images/'+name,import.meta.url));
  assert.equal(b.subarray(0,6).toString('ascii'),'GIF89a',name);
- assert.equal(b.readUInt16LE(6),640,name+' width');
- assert.equal(b.readUInt16LE(8),640,name+' height');
- assert.ok(b.length<originalBytes,name+' is smaller than original');
- assert.equal(createHash('sha1').update('blob '+b.length).update(Buffer.from([0])).update(b).digest('hex'),blobSha,name+' is the losslessly optimized source');
+ assert.equal(b.readUInt16LE(6),820,name+' width');
+ assert.equal(b.readUInt16LE(8),820,name+' height');
+ assert.equal(b.length,expectedBytes,name+' exact compressed size');
+ assert.ok(b.length<originalBytes,name+' smaller than the uploaded original');
+ assert.equal(createHash('sha1').update('blob '+b.length).update(Buffer.from([0])).update(b).digest('hex'),blobSha,name+' matches the uploaded optimized GIF');
  let frames=0;
  for(let i=0;i<b.length-2;i++)if(b[i]===33&&b[i+1]===249&&b[i+2]===4)frames++;
- assert.equal(frames,expectedFrames,name+' animation frame count');
+ assert.equal(frames,expectedFrames,name+' preserves the animated frame count');
 }
 assert.doesNotMatch(script,/tutorial-[a-z]+[.]webp/);
 console.log('PASS five tutorial pages, original optimized animated GIFs and navigation');
