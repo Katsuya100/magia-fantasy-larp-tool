@@ -1,6 +1,7 @@
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
 export const DRAWN_GLYPH_LIMIT=32;
 export const DRAWN_POWER_RATE=0.6;
+export const MIN_DUNGEON_POWER=250;
 const INNER_RADIUS=.255;
 const GUIDE_RADIUS=.92;
 // The same scale in both axes preserves each drawn letter's aspect ratio.
@@ -9,7 +10,21 @@ const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
  if(!Number.isFinite(power)||power<=0||!Number.isFinite(rate)||rate<=0||rate>1)throw Error('手書き魔法陣の威力が不正です。');
- return Math.max(1,Math.round(power*rate));
+ return Math.max(MIN_DUNGEON_POWER,Math.round(power*rate));
+}
+// Bring older hand-drawn circles into line when read, without modifying
+// the signed/backup copy of the original magic-circle image or undoing upgrades.
+export function withDrawnPowerFloor(circle){
+ if(circle?.origin!=='drawn'||!circle.analysis)return circle;
+ const current=Number(circle.analysis.power);
+ const base=Number(circle.basePower??current);
+ if(!Number.isFinite(current)||current<=0||!Number.isFinite(base)||base<=0)return circle;
+ const floor=circle.creationInk?Math.ceil(Number((MIN_DUNGEON_POWER*1.1).toFixed(8))):MIN_DUNGEON_POWER;
+ if(base>=floor&&current>=floor)return circle;
+ const level=Number.isSafeInteger(circle.upgradeLevel)&&circle.upgradeLevel>0?circle.upgradeLevel:0;
+ const correctedBase=Math.max(base,floor);
+ const upgraded=Math.ceil(Number((correctedBase*(1+level/10)).toFixed(8)));
+ return {...circle,basePower:correctedBase,analysis:{...circle.analysis,power:Math.max(current,upgraded)}};
 }
 export function pointOnPad(clientX,clientY,rect){
  const scale=Math.min(rect.width,rect.height)/2;
