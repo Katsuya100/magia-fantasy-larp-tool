@@ -11,7 +11,7 @@ const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs','assets/js/du
  'assets/js/dungeon-upgrades.mjs','assets/js/dungeon-share.mjs',
  'assets/js/dungeon-card-art.mjs','assets/js/dungeon-circle-ritual.mjs','assets/js/dungeon-preparation-ui.mjs',
  'assets/js/dungeon-list-view.mjs',
- 'assets/js/dungeon-core.mjs','assets/js/dungeon-design.mjs','assets/js/dungeon-tuning.mjs','assets/js/dungeon-permadeath.mjs','assets/data/dungeon-balance.csv','assets/data/dungeon-buffs.csv',
+ 'assets/js/dungeon-core.mjs','assets/js/dungeon-magic-knowledge.mjs','assets/js/dungeon-circle-ritual.mjs','assets/js/dungeon-design.mjs','assets/js/dungeon-tuning.mjs','assets/js/dungeon-permadeath.mjs','assets/data/dungeon-balance.csv','assets/data/dungeon-buffs.csv',
  'assets/data/dungeon-levels.csv','assets/data/dungeon-enemies.csv','assets/data/dungeon-consumables.csv'];
 const expected=new Map(await Promise.all(assets.map(async path=>[path,await readFile(new URL('../'+path,import.meta.url),'utf8')])));
 const tutorialGifs=['tutorial-outer.gif','tutorial-inner.gif','tutorial-spell.gif','tutorial-sigil.gif'];

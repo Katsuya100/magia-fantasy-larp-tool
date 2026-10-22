@@ -58,7 +58,7 @@ function addGlow(stage,outline){
   stage.appendChild(canvas);
  }
 }
-function stageFor(mode,analysis,outline){
+function stageFor(mode,analysis,outline,failed=false){
  const root=element('div','circle-ritual circle-ritual--'+mode);
  root.style.setProperty('--ritual-ink',ATTRIBUTE_GLOW[analysis?.attribute]||'#ffe3a7');
  if(mode==='reveal'){
@@ -81,21 +81,27 @@ function stageFor(mode,analysis,outline){
    const label=element('span','circle-ritual__label');
    label.textContent=value;labels.appendChild(label);
   }
+  if(failed){
+   root.className+=' circle-ritual--failed';
+   const notice=element('strong','circle-ritual__failure');
+   notice.textContent='残念… 解明失敗';
+   labels.insertBefore(notice,labels.firstChild);
+  }
   root.appendChild(labels);
   root.setAttribute('role','dialog');
   root.setAttribute('aria-modal','true');
-  root.setAttribute('aria-label',circleRitualLabels(analysis).join('、'));
+  root.setAttribute('aria-label',(failed?'解明失敗。不完全な魔法を生成しました。':'')+circleRitualLabels(analysis).join('、'));
  }else root.setAttribute('aria-hidden','true');
  return root;
 }
-export async function playCircleReveal(circle,photoUrl=''){
+export async function playCircleReveal(circle,photoUrl='',{failed=false}={}){
  if(typeof document==='undefined'||!document.body)return;
  // Keep the full-screen result on screen until an explicit tap, without affecting saved data.
  try{
   const outline=await circleOutline(circle?.image,circle?.analysis?.attribute);
   dismissActiveCircleReveal?.();
   const grand=isGrandCircleReveal(circle?.analysis)&&!reducedMotion();
-  const root=stageFor('reveal',circle?.analysis,outline);
+  const root=stageFor('reveal',circle?.analysis,outline,failed);
   if(grand){
    root.className+=' circle-ritual--grand';
    const lightning=element('div','circle-ritual__lightning');
