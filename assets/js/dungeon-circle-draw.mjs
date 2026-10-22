@@ -100,9 +100,9 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('魔法陣を描画できません。');
  ctx.clearRect(0,0,size,size);
- ctx.fillStyle=exportImage?'#fff':'#0a101d';ctx.fillRect(0,0,size,size);
- const circleColor=exportImage?'#101010':'#d6bd82';
- ctx.strokeStyle=circleColor;ctx.shadowColor=exportImage?'transparent':'#deb875';ctx.shadowBlur=exportImage?0:size*.007;
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,size,size);
+ const circleColor='#111';
+ ctx.strokeStyle=circleColor;ctx.shadowBlur=0;
  for(const r of [.43,INNER_RADIUS]){
   ctx.lineWidth=size*(r===.43?.004:.007);
   ctx.beginPath();ctx.arc(size/2,size/2,size*r,0,Math.PI*2);ctx.stroke();
@@ -113,20 +113,19 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
   if(glyph.space)continue;
   for(const stroke of glyph.strokes){
    strokePath(ctx,stroke,p=>{const q=glyphPoint(p,i,state.letters.length);return {x:q.x*size,y:q.y*size};},
-    size*.006,exportImage?'#000':'#f2d79e',exportImage?0:size*.009);
+    size*.006,'#111');
   }
  }
  const transform=p=>{const q=sigilPoint(p);return {x:q.x*size,y:q.y*size};};
- for(const stroke of state.sigil)strokePath(ctx,stroke,transform,size*.007,exportImage?'#000':'#cdb6ff',exportImage?0:size*.015);
+ for(const stroke of state.sigil)strokePath(ctx,stroke,transform,size*.007,'#111');
  if(state.mode==='sigil'&&activeStroke?.length)
-  strokePath(ctx,activeStroke,transform,size*.007,'#d9c2ff',size*.015);
+  strokePath(ctx,activeStroke,transform,size*.007,'#111');
  if(!exportImage&&state.mode==='spell'){
   const angle=caretAngle(state.letters.length),r=size*.345,half=size*.024;
   ctx.beginPath();
   ctx.moveTo(size/2+(r-half)*Math.cos(angle),size/2+(r-half)*Math.sin(angle));
   ctx.lineTo(size/2+(r+half)*Math.cos(angle),size/2+(r+half)*Math.sin(angle));
-  ctx.strokeStyle='#91f1ec';ctx.lineWidth=size*.006;ctx.lineCap='round';
-  ctx.shadowColor='#91f1ec';ctx.shadowBlur=size*.019;ctx.stroke();ctx.shadowBlur=0;
+  ctx.strokeStyle='#111';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.stroke();
  }
 }
 function paintPad(canvas,state,activeStroke){
