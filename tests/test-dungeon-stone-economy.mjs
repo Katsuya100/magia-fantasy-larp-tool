@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import {magicStoneDropChance} from '../assets/js/dungeon-core.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {
  seededRandom,simulateProgression,simulateAllUltimate,summarizeStoneEconomy,
  MAGIC_STONES_PER_ULTIMATE,EQUIPPED_CIRCLES,ALL_ULTIMATE_COST
 } from '../scripts/simulate-dungeon-stones.mjs';
 
-assert.equal(MAGIC_STONES_PER_ULTIMATE,1200);
+assert.equal(MAGIC_STONES_PER_ULTIMATE,953);
 assert.equal(EQUIPPED_CIRCLES,5);
-assert.equal(ALL_ULTIMATE_COST,6000);
+assert.equal(ALL_ULTIMATE_COST,4765);
 const randomA=seededRandom(1234),randomB=seededRandom(1234);
 assert.deepEqual(Array.from({length:4},()=>randomA()),
  Array.from({length:4},()=>randomB()),'seeded random sequence reproduces exactly');
@@ -36,7 +37,7 @@ for(const seed of [1,11,1234,20261019]){
  assert.equal(p.milestones[1].start,11);
  assert.equal(p.milestones[9].start,91);
  assert.equal(p.milestones[9].level,150);
- assert.equal(p.evenFiveLevels.reduce((a,b)=>a+b,0),p.stones);
+ assert.ok(p.evenFiveLevels.reduce((sum,levels)=>sum+totalUpgradeStoneCost(levels),0)<=p.stones);
  assert.equal(p.evenFiveLevels.length,5);
  assert.equal(p.possibleUltimateCircles,Math.min(5,Math.floor(p.stones/MAGIC_STONES_PER_ULTIMATE)));
  for(const strategy of ['endless','revisit']){

@@ -1,15 +1,17 @@
 import {circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs';
-// Costs rise by one stone every 10 upgrades without rewriting saved upgrade levels.
+// No first-upgrade barrier; repeat-farming yields about five times more stones.
+// Subsequent purchases cost five, increasing every 40 upgrades. Saved levels are unchanged.
 export function upgradeStoneCost(level=0){
  const current=Number(level);
  if(!Number.isSafeInteger(current)||current<0)throw Error('無効な強化段階です');
- return 1+Math.floor(current/10);
+ return current===0?1:5+Math.floor((current-1)/40);
 }
 export function totalUpgradeStoneCost(level){
  const count=Number(level);
  if(!Number.isSafeInteger(count)||count<0)throw Error('無効な強化段階です');
- const bands=Math.floor(count/10),rest=count%10;
- return 5*bands*(bands+1)+rest*(bands+1);
+ if(count===0)return 0;
+ const afterFirst=count-1,tiers=Math.floor(afterFirst/40),rest=afterFirst%40;
+ return 1+40*(5*tiers+tiers*(tiers-1)/2)+rest*(5+tiers);
 }
 // Each upgrade increases power by 10% of original, never compounding.
 // Round the final effective power upward and suppress representation noise.

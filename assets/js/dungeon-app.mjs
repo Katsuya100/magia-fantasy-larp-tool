@@ -1321,7 +1321,7 @@ function openMagicDetails(id){
  $('magicStoneStock').textContent='所持魔導石：'+profile.magicStones+'個 / 次の強化：'+stoneCost+'個';
  $('upgradeCircle').hidden=Boolean(profile.run);
  $('upgradeCircle').disabled=Boolean(profile.run)||!isRevealed(circle)||profile.magicStones<stoneCost;
- $('upgradeHint').textContent=!isRevealed(circle)?'威力は初回使用後に強化できます。':profile.magicStones<stoneCost?'次の強化には魔導石が'+stoneCost+'個必要です。':'初期威力の10%分アップします。10回強化するごとに必要な魔導石が増えます。';
+ $('upgradeHint').textContent=!isRevealed(circle)?'威力は初回使用後に強化できます。':profile.magicStones<stoneCost?'次の強化には魔導石が'+stoneCost+'個必要です。':'初期威力の10%分アップします。次回以降の必要数は強化段階に応じて増加します。';
  const d=circleDetails(circle,masters.buffs,G.mpCost);
  $('magicDetailsImage').src=circleImages.get(circle.image);
  const info=circleEffectDetails(circle,masters.buffs,G.statusDuration);

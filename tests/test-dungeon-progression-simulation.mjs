@@ -8,6 +8,7 @@ import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
+import {allowedStartLayer} from '../assets/js/dungeon-ranks.mjs';
 import {strengthenedPower,upgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {withNeutralAttackAttributes,compareNeutralAttackChoices} from './helpers/dungeon-neutral-loadout.mjs';
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
@@ -48,24 +49,29 @@ function heroAction(hero,enemy,layer){
 // The ledger is a plausible *supply forecast*, not a guarantee that the fights
 // were winnable; the combat simulator validates survivability separately.
 export function stoneLedger(seed,throughLayer){
- const r=rng(seed),progress={level:1,xp:0},levels=[],returns=[];
- let unconfirmedXp=0,unconfirmedStones=0,bank=0,lastLevel=1;
- for(let layer=1;layer<=throughLayer;layer++){
-  for(let i=0;i<5;i++){
+ const r=rng(seed),progress={level:1,xp:0,adventurerRank:0},levels=[],returns=[];
+ let bank=0,lastLevel=1;
+ for(let destination=1;destination<=throughLayer;destination++){
+  // Match legal rank checkpoints and previously returned floors, not a fictional
+  // one-clear-only journey. Bank earned EXP and stones only after each return.
+  const start=allowedStartLayer(progress,progress.adventurerRank+1);
+  const expeditionLevel=progress.level;
+  let pendingXp=0,pendingStones=0;
+  for(let layer=start;layer<=destination;layer++)for(let i=0;i<5;i++){
    const fight=(layer-1)*5+i+1;
    const foe=enemyForFight(data.enemies,fight);
    const enemyLevel=Number(data.floors[fight-1].enemy_level);
-   const drops=G.drops(data.items,data.collections,enemyLevel,r,{layer,playerLevel:progress.level,bossEnemyId:i===4?foe.id:null});
-   unconfirmedStones+=drops.filter(x=>x.type==='stone').length;
-   unconfirmedXp+=G.fightExperience(enemyLevel,progress.level,layer);
+   const drops=G.drops(data.items,data.collections,enemyLevel,r,
+    {layer,playerLevel:expeditionLevel,bossEnemyId:i===4?foe.id:null,firstClear:layer===destination});
+   pendingStones+=drops.filter(x=>x.type==='stone').length;
+   pendingXp+=G.fightExperience(enemyLevel,expeditionLevel,layer);
   }
-  // Boss return: only now are stones and experience banked.
-  bank+=unconfirmedStones;
-  G.experience(progress,unconfirmedXp);
-  if(progress.level>lastLevel)levels.push({from:lastLevel,to:progress.level,stones:bank,layer});
+  bank+=pendingStones;
+  G.experience(progress,pendingXp);
+  if(progress.level>lastLevel)levels.push({from:lastLevel,to:progress.level,stones:bank,layer:destination});
   lastLevel=progress.level;
-  returns.push({layer,level:progress.level,stones:bank});
-  unconfirmedStones=0;unconfirmedXp=0;
+  if(destination%10===0)progress.adventurerRank=destination;
+  returns.push({layer:destination,level:progress.level,stones:bank});
  }
  return {level:progress.level,stones:bank,levels,returns};
 }
