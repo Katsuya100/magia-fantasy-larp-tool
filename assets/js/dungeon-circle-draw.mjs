@@ -199,7 +199,7 @@ export function initCircleDrawing(doc,{onSave}){
  const get=id=>doc.getElementById(id);
  const dialog=get('circleDrawingDialog'),preview=get('circleDrawingPreview'),pad=get('circleDrawingPad');
  const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus');
- const shell=dialog.querySelector('.circle-drawing-shell');
+ const shell=get('circleDrawingShell');
  const discard=get('circleDrawingDiscard'),keep=get('circleDrawingDiscardKeep'),discardButton=get('circleDrawingDiscardConfirm');
  let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,previousFocus=null;
  const message=text=>{status.textContent=text;};
