@@ -81,16 +81,11 @@ function stageFor(mode,analysis,outline,failed=false){
    const label=element('span','circle-ritual__label');
    label.textContent=value;labels.appendChild(label);
   }
-  if(failed){
-   root.className+=' circle-ritual--failed';
-   const notice=element('strong','circle-ritual__failure');
-   notice.textContent='残念… 解明失敗';
-   labels.insertBefore(notice,labels.firstChild);
-  }
+  if(failed)root.className+=' circle-ritual--failed';
   root.appendChild(labels);
   root.setAttribute('role','dialog');
   root.setAttribute('aria-modal','true');
-  root.setAttribute('aria-label',(failed?'解明失敗。不完全な魔法を生成しました。':'')+circleRitualLabels(analysis).join('、'));
+  root.setAttribute('aria-label',circleRitualLabels(analysis).join('、'));
  }else root.setAttribute('aria-hidden','true');
  return root;
 }
