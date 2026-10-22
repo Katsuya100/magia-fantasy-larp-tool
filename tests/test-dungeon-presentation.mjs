@@ -168,10 +168,15 @@ assert.match(css,/\.return-grid\{[^}]*max-height:min\(40dvh,320px\)/,'return lis
 assert.match(css,/@media\(max-width:630px\)\{\.return-panel[^}]+\}\.return-glyph[^}]+\}\.return-panel h2[^}]+\}\.return-grid\{[^}]*repeat\(3,minmax\(0,1fr\)\)/,'mobile maintains three columns');
 assert.match(css,/\.return-treasure \.return-new,\.return-reward \.return-new\{/,'first-acquisition badges have a distinct style');
 assert.ok(page.includes('v'+currentRelease.slice(0,4)+'.'+currentRelease.slice(4,6)+'.'+currentRelease.slice(6,8)+'.'+currentRelease.slice(9)),'visible version confirms the refreshed public release');
-assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の戦利品・経験値"/,'battle counters use a dedicated accessible grouped status');
-assert.match(page,/<div id="checkpointLedger" class="battle-info" role="group" aria-label="帰還の祭壇の戦利品・経験値"/,'sanctuary reuses the same reward card class');
+assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の経験値・戦利品"/,'battle counters use a dedicated accessible grouped status');
+assert.match(page,/<div id="checkpointLedger" class="battle-info" role="group" aria-label="帰還の祭壇の経験値・戦利品"/,'sanctuary reuses the same reward card class');
 const rewardSource=await read('assets/js/dungeon-app.mjs');
 assert.match(rewardSource,/function rewardLedgerMarkup\(run\)/,'battle and sanctuary share a reward renderer');
+const rewardLedger=rewardSource.slice(rewardSource.indexOf('function rewardLedgerMarkup(run)'),rewardSource.indexOf('\nfunction updateDungeonPanelBackground'));
+assert.ok(rewardLedger.indexOf('data-kind="xp"')<rewardLedger.indexOf('data-kind="loot"'),'EXP is the first (left) card, loot is the second (right) card');
+assert.match(rewardLedger,/data-kind="xp"[\s\S]*?獲得EXP[\s\S]*?run\.xp/,'left card retains the true EXP amount');
+assert.match(rewardLedger,/data-kind="loot"[\s\S]*?戦利品[\s\S]*?run\.loot\.length/,'right card retains the true loot count');
+assert.match(rewardSource,/\$\('battleInfo'\)\.innerHTML=rewardLedgerMarkup\(run\)/,'battle reuses the ordered ledger');
 assert.match(rewardSource,/\$\('checkpointLedger'\)\.innerHTML=rewardLedgerMarkup\(run\)/,'checkpoint refreshes the card contents');
 assert.doesNotMatch(rewardSource,/未確定 · 持ち帰り待ち/,'no redundant labels');
 assert.doesNotMatch(rewardSource,/\x27未確定報酬 \x27\+run\.loot\.length/,'checkpoint has no duplicate reward line');
