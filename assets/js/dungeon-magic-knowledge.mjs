@@ -17,6 +17,22 @@ export function normalizeAnalysisResult({attribute,role,power}){
  if(!Object.hasOwn(ATTRIBUTES,a)||!Object.hasOwn(ROLES,r)||!Number.isFinite(p)||p<=0)throw Error('魔法陣の解析結果が不正です');
  return {attribute:a,role:r,power:p};
 }
+// Applies only when a NEW dungeon photograph is successfully analyzed.
+export const MIN_SUCCESSFUL_ANALYSIS_POWER=250;
+export function successfulAnalysisResult(result){
+ const analysis=normalizeAnalysisResult(result);
+ return {...analysis,power:Math.max(MIN_SUCCESSFUL_ANALYSIS_POWER,analysis.power)};
+}
+// A failed reading still creates an intentionally weak, random spell.
+// The independent rolls include both endpoints (200 and 250).
+export function randomFailedAnalysis(random=Math.random){
+ const attributes=Object.keys(ATTRIBUTES),roles=Object.keys(ROLES);
+ return {
+  attribute:attributes[Math.floor(random()*attributes.length)],
+  role:roles[Math.floor(random()*roles.length)],
+  power:200+Math.floor(random()*51)
+ };
+}
 export function newCapturedCircle(id,image,registeredAt){return {id,image,registeredAt,analysis:null,revealed:false};}
 export function savePreanalysis(circle,analysis){return {...circle,analysis:normalizeAnalysisResult(analysis),revealed:false};}
 export function revealOnUse(circle){return {...circle,revealed:true};}

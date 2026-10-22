@@ -2,7 +2,7 @@ import * as G from './dungeon-core.mjs?v=20261022.3';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261022.3';
 import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261022.3';
 import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261022.3';
-import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261022.3';
+import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,successfulAnalysisResult,randomFailedAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261022.4';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261022.3';
 import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261022.3';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261022.3';
@@ -1114,6 +1114,8 @@ function resetAnalysisProgress(){
  $('analysisProgress').setAttribute('aria-valuenow','0');
  $('analysisProgressCount').textContent='0/5';
  $('analysisError').textContent='';$('analysisError').hidden=true;
+ $('analysisMisfire').hidden=true;
+ delete $('analyzing').dataset.misfire;
 }
 function onAnalysisMessage(event){
  const request=activeAnalysis;
@@ -1154,7 +1156,7 @@ async function parseCircleImage(circle,frame,valid,request=null){
     const analyze=await waitUntil(()=>{const el=doc?.getElementById('analyzeButton');return el&&!el.disabled?el:null;},valid);
     analyze.click();
     await waitUntil(()=>!doc.getElementById('altarSection')?.hidden,valid);
-    finish(null,normalizeAnalysisResult({
+    finish(null,successfulAnalysisResult({
      attribute:doc.querySelector('#attributeResult .altar-value')?.textContent?.trim(),
      role:doc.querySelector('#shapeResult .altar-value')?.textContent?.trim(),
      power:doc.querySelector('#powerResult .altar-value')?.textContent?.trim()
@@ -1163,6 +1165,22 @@ async function parseCircleImage(circle,frame,valid,request=null){
   };
   frame.src='magia-circle.html?dungeon=1';
  });
+}
+
+// Only analysis/validation failures become low-power magic. Cancellation and
+// persistence errors are never converted to a successful registration.
+async function analyzeCircleWithFallback(circle,valid,request){
+ try{
+  return {analysis:await parseCircleImage(circle,$('analyzerFrame'),valid,request),failed:false};
+ }catch(error){
+  if(!valid())throw error;
+  $('analysisError').hidden=true;
+  $('analysisMisfire').hidden=false;
+  $('analyzing').dataset.misfire='true';
+  await new Promise(resolve=>setTimeout(resolve,1100));
+  if(!valid())throw Error('解析が中断されました');
+  return {analysis:randomFailedAnalysis(),failed:true};
+ }
 }
 
 async function analyzeCapturedCircle(circle){
@@ -1176,9 +1194,9 @@ async function analyzeCapturedCircle(circle){
  note('');
  const valid=()=>activeAnalysis===request&&!profile.run&&request.epoch===photoAnalysisEpoch;
  try{
-  const result=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
+  const {analysis,failed}=await analyzeCircleWithFallback(circle,valid,request);
   if(!valid())return;
-  const analyzed=savePreanalysis(circle,result);
+  const analyzed=savePreanalysis(circle,analysis);
   // No record is written until all analysis values have been validated.
   await putCircle(db,analyzed);
   if(!valid())return;
@@ -1186,7 +1204,10 @@ async function analyzeCapturedCircle(circle){
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
-  await revealOriginal(analyzed);
+  if(failed){
+   $('cameraError').textContent='残念！解析に失敗しましたが、不完全な魔法陣として登録しました。';
+   $('cameraError').hidden=false;
+  }else await revealOriginal(analyzed);
  }catch(e){
   if(!valid())return;
   activeAnalysis=null;
@@ -1204,13 +1225,16 @@ async function analyzeUnknown(index){
  const valid=()=>activeAnalysis===request&&profile.run===run;
  (async()=>{
   try{
-   const analysis=await parseCircleImage(circle,$('analyzerFrame'),valid,request);
+   const {analysis,failed}=await analyzeCircleWithFallback(circle,valid,request);
    if(!valid())return;
    Object.assign(circle,savePreanalysis(circle,analysis));
    if(!valid())return;
    run.hero.spells[index]=combatSpell(circle);
    rememberCircleMetadata(circle);await persist();
-   activeAnalysis=null;note('');show('battle');await revealOriginal(circle);await takeTurn(index);
+   activeAnalysis=null;note(failed?'残念！解析に失敗したため、不完全な魔法が生まれました。':'');
+   show('battle');
+   if(!failed)await revealOriginal(circle);
+   await takeTurn(index);
   }catch(e){
    if(!valid())return;
    activeAnalysis=null;note('解明できませんでした：'+e.message);
@@ -1290,7 +1314,7 @@ async function capture(){
  lastCaptureRegistration=Math.max(nextCircleRegistration(circles),lastCaptureRegistration+1);
  const original=newCapturedCircle(crypto.randomUUID(),blob,lastCaptureRegistration);
  const circle=profile.permadeath?markCircleCreator(original,profile.name):original;
- // Do not save until the analysis succeeded. Photo stays in memory while queued.
+ // Do not save until analysis or the weak fallback is finalized. Photo stays in memory while queued.
  $('cameraError').hidden=true;$('cameraError').textContent='';
  await analyzeCapturedCircle(circle);
 }

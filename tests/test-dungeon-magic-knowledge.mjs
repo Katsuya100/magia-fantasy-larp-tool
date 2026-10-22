@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {canDepartWithCircles,equippedCircleCount,circleSummary,attributeEffectGuide,circleCardInfo,circleEffectDetails,
  newCapturedCircle,savePreanalysis,isRevealed,revealOnUse,circleDetails,
- normalizeAnalysisResult,spellEffect,ROLES} from '../assets/js/dungeon-magic-knowledge.mjs';
+ normalizeAnalysisResult,successfulAnalysisResult,randomFailedAnalysis,spellEffect,ROLES} from '../assets/js/dungeon-magic-knowledge.mjs';
 const eq=n=>Array.from({length:5},(_,i)=>i<n?'id-'+i:null);
 for(let n=0;n<=5;n++)assert.equal(canDepartWithCircles(eq(n)),n>=3,'equipped count '+n);
 assert.equal(canDepartWithCircles(['a','b','c']),false,'five visible slots required');
@@ -66,4 +66,19 @@ assert.deepEqual(ROLES,{attack:'⚔️攻撃',defense:'🛡️防御',support:'�
 assert.throws(()=>normalizeAnalysisResult({attribute:'invalid',role:'攻撃',power:1}),/不正/);
 assert.throws(()=>normalizeAnalysisResult({attribute:'flame',role:'攻撃',power:-1}),/不正/);
 assert.deepEqual(normalizeAnalysisResult({attribute:' flame ',role:'攻撃',power:'700'}),{attribute:'flame',role:'attack',power:700});
+assert.deepEqual(successfulAnalysisResult({attribute:'flame',role:'攻撃',power:1}),
+ {attribute:'flame',role:'attack',power:250},'successful new dungeon magic has a power floor');
+assert.equal(successfulAnalysisResult({attribute:'flame',role:'attack',power:249.9}).power,250);
+assert.equal(successfulAnalysisResult({attribute:'flame',role:'attack',power:250}).power,250);
+assert.equal(successfulAnalysisResult({attribute:'flame',role:'attack',power:700}).power,700);
+assert.equal(normalizeAnalysisResult({attribute:'flame',role:'attack',power:200}).power,200,'legacy and failed magic is not clamped');
+assert.deepEqual(randomFailedAnalysis(()=>0),{attribute:'flame',role:'attack',power:200});
+assert.deepEqual(randomFailedAnalysis(()=>0.999999),{attribute:'chaos',role:'debuff',power:250});
+for(let i=0;i<1000;i++){
+ const magic=randomFailedAnalysis();
+ assert.ok(magic.power>=200&&magic.power<=250&&Number.isInteger(magic.power));
+ assert.ok(Object.hasOwn({flame:1,bolt:1,aqua:1,storm:1,gravity:1,law:1,chaos:1},magic.attribute));
+ assert.ok(Object.hasOwn(ROLES,magic.role));
+ assert.deepEqual(savePreanalysis(circle,magic).analysis,magic,'weak magic survives normal save validation without a 250 floor');
+}
 console.log('PASS magic knowledge, 3-5 slots, hidden pre-use power, MP and icon-labeled effects');
