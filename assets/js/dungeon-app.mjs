@@ -1232,7 +1232,7 @@ async function analyzeUnknown(index){
   try{
    const result=await parseDungeonMagic(circle,valid,request);
    if(!valid())return;
-   Object.assign(circle,savePreanalysis(circle,result.analysis));
+   Object.assign(circle,savePreanalysis(circle,{...result.analysis,power:circle.origin==='drawn'?drawnPower(result.analysis.power):Math.max(MIN_DUNGEON_POWER,result.analysis.power)}));
    if(!valid())return;
    run.hero.spells[index]=combatSpell(circle);
    rememberCircleMetadata(circle);await persist();
