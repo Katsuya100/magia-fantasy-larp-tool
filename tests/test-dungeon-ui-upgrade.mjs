@@ -10,13 +10,13 @@ try{
  const db=await openStore(env.factory);
  await saveProfile(db,{
   name:'魔術師',level:1,xp:0,base:{hp:100,mag:10,def:7,res:7},returns:0,attempts:0,
-  inventory:[],collection:{},magicStones:11,deepestReturnedLayer:0,slots:[],run:null
+  inventory:[],collection:{},magicStones:15,deepestReturnedLayer:0,slots:[],run:null
  });
  await putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:100},revealed:true});
  await assert.rejects(putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:110},revealed:true}),/Error preparing Blob\/File data/,'simulate mobile IndexedDB failure on a photo rewrite');
  await import('../assets/js/dungeon-app.mjs?integration=upgrade');
  await wait(()=>$('libraryCards').innerHTML.includes('circle-1'));
- assert.match($('magicStoneBalance').textContent,/11個/);
+ assert.match($('magicStoneBalance').textContent,/15個/);
  await env.document.click(button({view:'library'}));
  // Panels must overlap while crossfading; no instant removal, root zoom, or black bars.
  globalThis.window.matchMedia=()=>({matches:false});
@@ -33,11 +33,11 @@ try{
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,true,'upgrade requires a dialog');
  assert.match($('circleActionMessage').textContent,/10%/);
- assert.match($('magicStoneStock').textContent,/次の強化：1個/);
- assert.equal(upgradeStoneCost(1),5,'the next upgrade costs five stones');
+ assert.match($('magicStoneStock').textContent,/次の強化：5個/);
+ assert.equal(upgradeStoneCost(10),6,'the eleventh upgrade costs six stones');
  assert.match($('circleActionMessage').textContent,/。\nこの強化/,'confirmation sentences display on separate lines');
  await $('cancelCircleAction').fire('click');
- assert.equal((await getProfile(db)).magicStones,11,'cancel leaves stones untouched');
+ assert.equal((await getProfile(db)).magicStones,15,'cancel leaves stones untouched');
  assert.equal((await allCircles(db))[0].analysis.power,100,'cancel leaves power untouched');
  await env.document.click(button({upgrade:'circle-1'}));
  await $('confirmCircleAction').fire('click');
