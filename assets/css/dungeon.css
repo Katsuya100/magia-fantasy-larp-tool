@@ -2439,6 +2439,23 @@ button.creator-congratulations-close{
 }
 .circle-drawing-dialog::backdrop{background:#02030cdd;backdrop-filter:blur(6px)}
 .circle-drawing-dialog[open]{display:flex}
+.circle-drawing-discard{
+ position:absolute;inset:0;z-index:10;display:grid;place-items:center;
+ padding:18px;background:#03050ce0;backdrop-filter:blur(3px)
+}
+.circle-drawing-discard[hidden]{display:none}
+.circle-drawing-discard-card{
+ width:min(100%,310px);padding:24px 20px 20px;text-align:center;
+ border:1px solid #a98b61;border-radius:12px;
+ background:#181726;box-shadow:0 18px 56px #000b
+}
+.circle-drawing-discard-card strong{display:block;font-size:16px;color:#f1dcbb}
+.circle-drawing-discard-actions{display:flex;justify-content:center;gap:12px;margin-top:22px}
+#circleDrawingDialog .circle-drawing-discard-actions button{flex:1;max-width:126px}
+#circleDrawingDialog .drawing-discard-confirm{
+ border:1px solid #c9817b;background:#683b41;color:#fff3ed
+}
+
 .circle-drawing-shell{position:relative;display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
 .circle-drawing-header{
  flex:none;display:grid;grid-template-columns:1fr 1fr;
