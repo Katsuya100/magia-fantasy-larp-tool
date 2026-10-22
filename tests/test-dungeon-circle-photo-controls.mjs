@@ -18,7 +18,7 @@ assert.doesNotMatch(css,/\.circle-ritual--upgrade \.circle-ritual__physical\{/,
 
 const circle={id:'test-circle',image:{},analysis:{attribute:'flame',role:'attack',power:250}};
 const escapeText=value=>String(value);
-const slots=spellGrid([circle.id],[circle],()=>'/photo.jpg',escapeText);
+const slots=spellGrid([circle.id,null],[circle],()=>'/photo.jpg',escapeText);
 assert.match(slots,/data-open-slot="0"[^>]*><span class="tile-index">01<\/span><span class="circle-photo-face"><img[^>]*data-circle-photo-id="test-circle"[^>]*><\/span>/);
 assert.match(slots,/class="loadout-tile empty"/,'empty spell slot has no photo frame');
 const choices=circleChoices([circle],[],()=>'/photo.jpg',escapeText);
