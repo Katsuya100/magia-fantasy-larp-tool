@@ -2561,10 +2561,11 @@ button.creator-congratulations-close{
 #library .camera-open-button{color:#281a20;background:linear-gradient(145deg,#fff0bf,#c99353);border:1px solid #ffe1a3;box-shadow:inset 0 1px #fff8,0 0 0 1px #f4cb7755,0 7px 26px #e4af604f}
 .circle-camera-dialog .circle-drawing-shell{padding:12px;gap:9px}
 .circle-camera-dialog .capture-pane{display:flex;flex:1;min-height:0;flex-direction:column;justify-content:center;margin:0;padding:0;border:0;background:transparent}
-.circle-camera-dialog .camera-viewfinder{width:min(100%,calc(94dvh - 200px),570px);margin:auto}
+.circle-camera-dialog .camera-viewfinder-group{display:flex;flex-direction:column;gap:5px;width:min(100%,calc(94dvh - 200px),570px);margin:auto}
+.circle-camera-dialog .camera-viewfinder{width:100%;margin:0}
 .circle-camera-dialog .camera-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;width:100%;margin:12px 0 0}
 .circle-camera-dialog .camera-actions button{min-width:0;min-height:44px;padding:8px 12px;font-size:13px;box-shadow:none}
 .circle-camera-dialog .drawing-secondary{background:#23213a;color:#e8ddfc;border:1px solid #8c779e}
 .circle-camera-dialog .drawing-confirm{background:linear-gradient(145deg,#f5da9e,#bf8d50);color:#191221;border:1px solid #e6bc79}
 .circle-camera-dialog .tutorial-replay{align-self:flex-end;margin:0;font-size:12px!important}
-@media(max-width:630px){.circle-camera-dialog .camera-viewfinder{width:min(100%,calc(100dvh - 178px))}}
+@media(max-width:630px){.circle-camera-dialog .camera-viewfinder-group{width:min(100%,calc(100dvh - 178px))}}
