@@ -21,8 +21,8 @@ for(const [attribute,text] of Object.entries(attributes))
  assert.equal(circleRitualLabels({attribute,role:'attack'})[0],text);
 for(const [role,text] of Object.entries(roles))
  assert.equal(circleRitualLabels({attribute:'flame',role})[1],text);
-assert.match(source,/show\('library'\);\s*returnToCameraScroll\(\);\s*if\(failed\)\{[\s\S]*?\}else await revealOriginal\(analyzed\)/,'saved circle is visible before success-only photo realization or misfire feedback');
-assert.match(source,/show\('battle'\);\s*if\(!failed\)await revealOriginal\(circle\);\s*await takeTurn\(index\)/,'successful dungeon analysis reveals before casting; failed magic casts after misfire');
+assert.match(source,/show\('library'\);\s*returnToCameraScroll\(\);\s*await revealOriginal\(analyzed\)/,'photo realization is after saved circle and visible library');
+assert.match(source,/show\('battle'\);await revealOriginal\(circle\);await takeTurn\(index\)/,'dungeon analysis has its own reveal before casting');
 assert.match(source,/saveProfile\(db,nextProfile\)[\s\S]*?playCircleUpgrade\(circle,\$\('magicUpgradeEffect'\)\)/,'upgrade effect starts only after profile saving');
 assert.match(html,/<div class="magic-details-art"><img id="magicDetailsImage"[^>]*><div id="magicUpgradeEffect"/,'new glow overlays the existing real photo');
 assert.match(css,/\.circle-ritual__veil[\s\S]*?circle-ritual-veil var\(--ritual-duration\)/,'reveal includes black backdrop');
@@ -47,7 +47,7 @@ assert.match(css,/\.circle-ritual--reveal\{[\s\S]*?pointer-events:auto/,'fullscr
 assert.match(css,/\.circle-ritual--reveal\[data-ready="true"\] \.circle-ritual__hint\{opacity:/,'tap hint only appears after the animation');
 assert.match(css,/100%\{opacity:1;transform:scale\(1\)\}/,'the physical circle remains visible after realization');
 assert.match(source,/await revealOriginal\(analyzed\)/);
-assert.match(source,/if\(!failed\)await revealOriginal\(circle\);\s*await takeTurn\(index\)/);
+assert.match(source,/await revealOriginal\(circle\);await takeTurn\(index\)/);
 assert.match(source,/async function revealOriginal\(circle\)\{[\s\S]*?originalUrl=circleImages\.get\(circle\.image\);[\s\S]*?await playCircleReveal\(circle,originalUrl\);/,'reveal uses the full stored original Blob and URL, not a thumbnail');
 assert.doesNotMatch(source,/revealThumbnail|playCircleReveal\(\{\.\.\.circle,image:thumb\}/,'no downsampled photo is used for reveal');
 assert.match(source,/\$\('magicDetailsImage'\)\.src=circleImages\.get\(circle\.image\)/,'details already use the original Blob and must keep doing so');
