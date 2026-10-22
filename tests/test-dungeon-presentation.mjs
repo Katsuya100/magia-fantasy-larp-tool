@@ -297,9 +297,9 @@ assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 
 assert.ok(app.includes('circles=newestCirclesFirst([...circles,analyzed])'),'successful captures sort newest first');
-assert.ok(app.includes('await putCircle(db,analyzed)'),'save only after successful camera analysis');
+assert.ok(app.includes('await putCircle(db,analyzed)'),'save only after successful or fallback magic was validated');
 assert.match(app,/await analyzeCapturedCircle\(circle\)/,'camera opens analysis before registering');
-assert.match(app,/const analyzed=savePreanalysis\(circle,result\);[\s\S]*?await putCircle\(db,analyzed\)/,'save follows validation');
+assert.match(app,/const \{analysis,failed\}=await analyzeCircleWithFallback\(circle,valid,request\);[\s\S]*?const analyzed=savePreanalysis\(circle,analysis\);[\s\S]*?await putCircle\(db,analyzed\)/,'save follows validated success or fallback result');
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
 assert.match(app,/newestCirclesFirst\(await allCircles\(db\)\)/);
 assert.match(app,/newCapturedCircle\(crypto\.randomUUID\(\),blob,lastCaptureRegistration\)/);
