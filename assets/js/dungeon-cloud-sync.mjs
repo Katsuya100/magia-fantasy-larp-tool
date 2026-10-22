@@ -176,11 +176,19 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    dialog.showModal();
   });
  }
- function chooseCloud(description,{allowOverwrite=true,initialChoice=false}={}){
+ function saveDetails(label,snapshot){
+  const name=snapshot?.profile?.name;
+  const savedAt=Number(snapshot?.savedAt);
+  const displayName=typeof name==='string'&&name.trim()?name.trim():'未設定';
+  const date=Number.isFinite(savedAt)&&savedAt>0?new Date(savedAt).toLocaleString('ja-JP'):'不明';
+  return label+'：'+displayName+'（最終保存：'+date+'）';
+ }
+ function chooseCloud(description,{allowOverwrite=true,initialChoice=false,local,remote}={}){
   return new Promise(resolve=>{
    if(!conflictDialog?.showModal){resolve('later');return;}
    choicePending=true;
-   conflictDialog.querySelector('[data-role="description"]').textContent=description.replace(/。(?!$)/g,'。\n');
+   conflictDialog.querySelector('[data-role="description"]').textContent=
+    [description.replace(/。(?!$)/g,'。\n'),saveDetails('バックアップ',remote),saveDetails('端末',local)].join('\n');
    conflictDialog.querySelector('[data-action="overwrite"]').hidden=!allowOverwrite;
    if(overwriteWarning)overwriteWarning.hidden=!allowOverwrite;
    conflictDialog.querySelector('[data-action="later"]').hidden=initialChoice;
@@ -338,7 +346,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    if(file&&remote.valid&&!samePlay&&!meta?.blocked){
     if(!initial){show('別のプレイの可能性があります。自動同期を停止しました。再接続して選択してください。');return result;}
     const choice=await chooseCloud('同じプレイと確認できません。引き継ぐか、上書きするか選んでください。',
-     {allowOverwrite:verification.status==='valid',initialChoice:initial});
+     {allowOverwrite:verification.status==='valid',initialChoice:initial,local,remote:remote.data});
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
      if(verification.status==='legacy'){
@@ -361,7 +369,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(!file)await saveCloudSyncState(db,{});
     else{
      if(!remote.valid){show('バックアップが破損しています。復元できません。');return result;}
-     const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:true});
+     const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:true,local,remote:remote.data});
      if(choice==='restore')return await restore(remote,file,{explicit:true});
      if(choice==='overwrite'){
       // New game replaces the old backup only after the explicit choice.
@@ -377,7 +385,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      return await restore(remote,file,{explicit:Boolean(rescue)});
     }
     if(remote.valid){
-     const choice=await chooseCloud('端末セーブの破損を検出しました。Driveの旧形式バックアップは完全性を確認できません。復元する場合は内容が古い可能性があります。',{allowOverwrite:false});
+     const choice=await chooseCloud('端末セーブの破損を検出しました。Driveの旧形式バックアップは完全性を確認できません。復元する場合は内容が古い可能性があります。',{allowOverwrite:false,local,remote:remote.data});
      if(choice==='restore')return await restore(remote,file,{explicit:true});
     }
     show('端末のセーブが破損しています。確認済みのDriveバックアップがないため上書きを停止しました。');
@@ -462,7 +470,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    // Unknown historic timestamps cannot safely resolve conflicting saves:
    // do not silently overwrite or replace either copy.
    if(upgradedLegacy&&!pristine&&local.savedAt===0&&localHash!==remote.hash){
-    const choice=await chooseCloud('端末とDriveの記録が異なります。端末セーブは新形式に変換済みです。Driveから引き継ぐか、両方の記録を変更せず保留してください。',{allowOverwrite:false});
+    const choice=await chooseCloud('端末とDriveの記録が異なります。端末セーブは新形式に変換済みです。Driveから引き継ぐか、両方の記録を変更せず保留してください。',{allowOverwrite:false,local,remote:remote.data});
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     return result;
    }
@@ -473,7 +481,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    }
    if(decision==='choose'){
     // Never silently overwrite a blank/new browser with Drive data, or vice versa.
-    const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:initial});
+    const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:initial,local,remote:remote.data});
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
      // Replace only after explicit user consent, and protect even the unnamed profile.
