@@ -2,7 +2,7 @@ import * as G from './dungeon-core.mjs?v=20261022.9';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261022.9';
 import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261022.9';
 import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261022.9';
-import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261022.9';
+import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261022.9';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261022.9';
 import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261022.9';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261022.9';
@@ -29,7 +29,8 @@ import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261022.9';
 import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261022.9';
 import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261022.9';
 import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261022.9';
-let cloudSyncController;
+import {initCircleDrawing,drawnPower} from './dungeon-circle-draw.mjs?v=20261022.10';
+let cloudSyncController,drawingEditor;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
 const listView={
@@ -1154,7 +1155,7 @@ async function parseCircleImage(circle,frame,valid,request=null){
     const analyze=await waitUntil(()=>{const el=doc?.getElementById('analyzeButton');return el&&!el.disabled?el:null;},valid);
     analyze.click();
     await waitUntil(()=>!doc.getElementById('altarSection')?.hidden,valid);
-    finish(null,successfulDungeonAnalysis({
+    finish(null,(circle.origin==='drawn'?normalizeAnalysisResult:successfulDungeonAnalysis)({
      attribute:doc.querySelector('#attributeResult .altar-value')?.textContent?.trim(),
      role:doc.querySelector('#shapeResult .altar-value')?.textContent?.trim(),
      power:doc.querySelector('#powerResult .altar-value')?.textContent?.trim()
@@ -1186,7 +1187,8 @@ async function analyzeCapturedCircle(circle){
  try{
   const result=await parseDungeonMagic(circle,valid,request);
   if(!valid())return;
-  const analyzed=savePreanalysis(circle,result.analysis);
+  const reduced=circle.origin==='drawn'?{...result.analysis,power:drawnPower(result.analysis.power)}:result.analysis;
+   const analyzed=savePreanalysis(circle,reduced);
   // No record is written until all analysis values have been validated.
   await putCircle(db,analyzed);
   if(!valid())return;
@@ -1302,6 +1304,13 @@ async function capture(){
  $('cameraError').hidden=true;$('cameraError').textContent='';
  await analyzeCapturedCircle(circle);
 }
+async function saveDrawnCircle(blob){
+ if(profile.run||activeAnalysis)throw Error('探索中・解析中は魔法陣を登録できません。');
+ lastCaptureRegistration=Math.max(nextCircleRegistration(circles),lastCaptureRegistration+1);
+ const original={...newCapturedCircle(crypto.randomUUID(),blob,lastCaptureRegistration),origin:'drawn'};
+ const circle=profile.permadeath?markCircleCreator(original,profile.name):original;
+ await analyzeCapturedCircle(circle);
+}
 function oneSentencePerLine(value){return String(value).replace(/([。！？])\s*(?=\S)/gu,'$1\n');}
 function openMagicDetails(id){
  const circle=circles.find(c=>c.id===id);if(!circle)return;
@@ -1324,7 +1333,7 @@ function openMagicDetails(id){
  const d=circleDetails(circle,masters.buffs,G.mpCost);
  $('magicDetailsImage').src=circleImages.get(circle.image);
  const info=circleEffectDetails(circle,masters.buffs,G.statusDuration);
- const rows=[['属性',d.attribute],['種別',d.role],['効果の詳細',info.effect]];
+ const rows=[['作成方法',circle.origin==='drawn'?'簡易（手書き）':'本格（撮影）'],['属性',d.attribute],['種別',d.role],['効果の詳細',info.effect]];
  if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
  rows.push(['MP',d.mp],['威力',d.power]);
  if(isRevealed(circle)&&circle.upgradeLevel)rows.push(['強化', '+'+(circle.upgradeLevel*10)+'%']);
@@ -1579,6 +1588,7 @@ function wireFavoriteHold(){
  });
 }
 function wire(){
+ drawingEditor=initCircleDrawing(document,{onSave:saveDrawnCircle});
  window.addEventListener('message',onAnalysisMessage);
  document.addEventListener('error',onCirclePhotoError,true);
  document.addEventListener('load',onCirclePhotoLoad,true);
@@ -1708,6 +1718,7 @@ function wire(){
  $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>chooseLoadout(null));
  $('loadoutDialog').addEventListener('close',()=>{if(!$('loadoutDialog').open)picker=null;refreshCirclePhotos();});
+ $('openCircleDrawing').addEventListener('click',()=>{if(!profile.run&&!activeAnalysis){stopCamera();drawingEditor.open();}});
  $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
   $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
