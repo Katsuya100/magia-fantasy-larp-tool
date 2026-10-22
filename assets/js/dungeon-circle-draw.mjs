@@ -201,7 +201,6 @@ export function initCircleDrawing(doc,{onSave}){
   paintPad(pad,model.state,activeStroke);
   const sigil=model.state.mode==='sigil';
   get('circleDrawingStage').textContent=sigil?'紋を描く':'呪文を描く';
-   get('circleDrawingCount').textContent=sigil?'紋の線：'+model.state.sigil.length:'環：'+model.state.letters.length+' / '+DRAWN_GLYPH_LIMIT;
   get('circleDrawingInput').hidden=sigil;
  get('circleDrawingBack').hidden=!sigil;
   get('circleDrawingInput').disabled=model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy;
