@@ -1,5 +1,6 @@
 import * as G from './dungeon-core.mjs?v=20261022.2';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup} from './dungeon-combat-fx.mjs?v=20261022.2';
+import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261022.2';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261022.2';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261022.2';
 import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261022.2';
@@ -73,10 +74,29 @@ function onCirclePhotoLoad(event){
 }
 let dungeonView='prepare';
 let busyAction=false,playingEffects=false,savingName=false;
+const battleInput=createBattleInputBuffer();
 let loadoutSaveQueue=Promise.resolve(),loadoutSaveRevision=0;
 let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null,upgradeRitualEpoch=0;
 let returnFlow=null,returnAnimationToken=0,tutorial=null;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
+async function battleAction(kind,index){
+ const run=profile?.run;
+ if(busyAction){
+  // Buffer only a living battle's next input, not an entrance, death or loot ceremony.
+  if(playingEffects&&run?.stage==='battle'&&run.hero.hp>0&&run.enemy.hp>0)
+   battleInput.offer({kind,index,floor:run.floor});
+  return;
+ }
+ try{
+  await exclusive(()=>kind==='cast'?takeTurn(index):useItem(index));
+ }finally{
+  const next=battleInput.take();
+  // A buffered action must never spill into the next encounter or after a defeat.
+  const current=profile?.run;
+  if(next&&current?.stage==='battle'&&current.floor===next.floor&&current.hero.hp>0&&current.enemy.hp>0)
+   void battleAction(next.kind,next.index).catch(error=>note('戦闘操作に失敗しました：'+String(error?.message||error)));
+ }
+}
 function note(message){
  const targets=['pageError','battleError','cameraError'];
  for(const id of targets){$(id).hidden=true;$(id).textContent='';}
@@ -534,6 +554,7 @@ function clearCombatEffects(){
 async function animateBattle(steps){
  if(!steps.length)return;
  playingEffects=true;
+ battleInput.start();
  $('battleSpells').setAttribute('aria-busy','true');
  $('battleItems').setAttribute('aria-busy','true');
  try{
@@ -576,6 +597,7 @@ async function animateBattle(steps){
    side==='hero'?'探索失敗':'討伐成功',
    side==='hero'?(profile.name||'冒険者'):(profile.run?.enemyName||''))});
  }finally{
+  battleInput.stop();
   clearCombatEffects();
   $('battleSpells').removeAttribute('aria-busy');
   $('battleItems').removeAttribute('aria-busy');
@@ -1583,8 +1605,8 @@ function wire(){
  if(b.dataset.openItem!==undefined){openLoadoutPicker('item',Number(b.dataset.openItem));return;}
  if(b.dataset.chooseCircle!==undefined){await chooseLoadout(Number(b.dataset.chooseCircle));return;}
  if(b.dataset.chooseItem!==undefined){await chooseLoadout(Number(b.dataset.chooseItem));return;}
- if(b.dataset.cast!==undefined){await exclusive(()=>takeTurn(Number(b.dataset.cast)));return;}
- if(b.dataset.use!==undefined){await exclusive(()=>useItem(Number(b.dataset.use)));return;}
+ if(b.dataset.cast!==undefined){await battleAction('cast',Number(b.dataset.cast));return;}
+ if(b.dataset.use!==undefined){await battleAction('use',Number(b.dataset.use));return;}
  });
  $('permadeathInput').addEventListener('change',updateGameModeDescription);
  $('nameForm').addEventListener('submit',async event=>{
