@@ -21,8 +21,8 @@ for(const [attribute,text] of Object.entries(attributes))
  assert.equal(circleRitualLabels({attribute,role:'attack'})[0],text);
 for(const [role,text] of Object.entries(roles))
  assert.equal(circleRitualLabels({attribute:'flame',role})[1],text);
-assert.match(source,/show\('library'\);\s*returnToCameraScroll\(\);\s*await revealOriginal\(analyzed\)/,'photo realization is after saved circle and visible library');
-assert.match(source,/show\('battle'\);await revealOriginal\(circle\);await takeTurn\(index\)/,'dungeon analysis has its own reveal before casting');
+assert.match(source,/show\('library'\);\s*returnToCameraScroll\(\);\s*await revealOriginal\(analyzed,result\.failed\)/,'both results appear after saving in the original reveal screen');
+assert.match(source,/show\('battle'\);await revealOriginal\(circle,result\.failed\);await takeTurn\(index\)/,'both results use the original reveal before casting');
 assert.match(source,/saveProfile\(db,nextProfile\)[\s\S]*?playCircleUpgrade\(circle,\$\('magicUpgradeEffect'\)\)/,'upgrade effect starts only after profile saving');
 assert.match(html,/<div class="magic-details-art"><img id="magicDetailsImage"[^>]*><div id="magicUpgradeEffect"/,'new glow overlays the existing real photo');
 assert.match(css,/\.circle-ritual__veil[\s\S]*?circle-ritual-veil var\(--ritual-duration\)/,'reveal includes black backdrop');
@@ -46,9 +46,9 @@ await playCircleUpgrade({analysis:{attribute:'law',role:'support'}},null);
 assert.match(css,/\.circle-ritual--reveal\{[\s\S]*?pointer-events:auto/,'fullscreen overlay intercepts page taps');
 assert.match(css,/\.circle-ritual--reveal\[data-ready="true"\] \.circle-ritual__hint\{opacity:/,'tap hint only appears after the animation');
 assert.match(css,/100%\{opacity:1;transform:scale\(1\)\}/,'the physical circle remains visible after realization');
-assert.match(source,/await revealOriginal\(analyzed\)/);
-assert.match(source,/await revealOriginal\(circle\);await takeTurn\(index\)/);
-assert.match(source,/async function revealOriginal\(circle\)\{[\s\S]*?originalUrl=circleImages\.get\(circle\.image\);[\s\S]*?await playCircleReveal\(circle,originalUrl\);/,'reveal uses the full stored original Blob and URL, not a thumbnail');
+assert.match(source,/await revealOriginal\(analyzed,result\.failed\)/);
+assert.match(source,/await revealOriginal\(circle,result\.failed\);await takeTurn\(index\)/);
+assert.match(source,/async function revealOriginal\(circle,failed=false\)\{[\s\S]*?originalUrl=circleImages\.get\(circle\.image\);[\s\S]*?await playCircleReveal\(circle,originalUrl,\{failed\}\);/,'reveal uses the full stored original Blob and URL, not a thumbnail');
 assert.doesNotMatch(source,/revealThumbnail|playCircleReveal\(\{\.\.\.circle,image:thumb\}/,'no downsampled photo is used for reveal');
 assert.match(source,/\$\('magicDetailsImage'\)\.src=circleImages\.get\(circle\.image\)/,'details already use the original Blob and must keep doing so');
 
@@ -130,6 +130,18 @@ try{
  assert.equal(instant.dataset.ready,'true');
  reducedAdvance.click();
  await reduced;
+ assert.equal(body.children.length,0);
+ const failedReveal=playCircleReveal(circle,'blob:failed-photo',{failed:true});
+ await new Promise(resolve=>setImmediate(resolve));
+ const failedRoot=body.children[0];
+ assert.match(failedRoot.className,/circle-ritual--reveal circle-ritual--failed/,'failure retains the same result layout');
+ assert.equal(failedRoot.children[0].src,'blob:failed-photo','failure result includes original photo');
+ const labels=failedRoot.children.find(n=>n.className==='circle-ritual__labels');
+ assert.deepEqual(labels.children.map(n=>n.textContent),['残念… 解明失敗','⚖️ 秩序の相','✚ 回復の紋']);
+ const proceed=failedRoot.children.at(-1);
+ assert.equal(proceed.disabled,false,'reduced motion still permits dismissal');
+ proceed.click();
+ await failedReveal;
  assert.equal(body.children.length,0);
 }finally{
  globalThis.document=originalDocument;

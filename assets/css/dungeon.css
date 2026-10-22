@@ -2007,6 +2007,13 @@ html,body{overflow-x:clip}
 #analysisProgress::-moz-progress-bar{background:linear-gradient(90deg,#72d1cc,#f1cd88);border-radius:999px}
 @media(prefers-reduced-motion:reduce){#analysisProgress::-webkit-progress-value{transition:none}}
 
+/* Misread spells reuse the original full-screen circle result and controls. */
+.circle-ritual--failed .circle-ritual__focus{filter:grayscale(.8) brightness(.75);animation:circle-ritual-fizzle 1s ease-out both}
+.circle-ritual--failed .circle-ritual__labels{flex-wrap:wrap;row-gap:0}
+.circle-ritual__failure{flex:0 0 100%;font-size:clamp(14px,3.3vw,18px);color:#eeb2ba;text-shadow:0 0 12px #d4768790}
+@keyframes circle-ritual-fizzle{0%,30%{transform:scale(1)}52%{transform:scale(.88) rotate(-4deg)}75%{transform:scale(.94) rotate(2deg)}100%{transform:scale(.9);opacity:.8}}
+@media(prefers-reduced-motion:reduce){.circle-ritual--failed .circle-ritual__focus{animation:none}}
+
 /* The successor naming dialog must never display game-mode controls. */
 #permadeathChoice[hidden]{display:none!important}
 

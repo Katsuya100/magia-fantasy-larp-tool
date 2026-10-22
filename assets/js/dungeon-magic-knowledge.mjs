@@ -17,6 +17,19 @@ export function normalizeAnalysisResult({attribute,role,power}){
  if(!Object.hasOwn(ATTRIBUTES,a)||!Object.hasOwn(ROLES,r)||!Number.isFinite(p)||p<=0)throw Error('魔法陣の解析結果が不正です');
  return {attribute:a,role:r,power:p};
 }
+// Rules apply to newly analyzed dungeon magic only; old spells retain their power.
+export function successfulDungeonAnalysis(result){
+ const a=normalizeAnalysisResult(result);
+ return {...a,power:Math.max(250,a.power)};
+}
+export function failedDungeonAnalysis(random=Math.random){
+ const attributes=Object.keys(ATTRIBUTES),roles=Object.keys(ROLES);
+ return {
+  attribute:attributes[Math.floor(random()*attributes.length)],
+  role:roles[Math.floor(random()*roles.length)],
+  power:200+Math.floor(random()*51)
+ };
+}
 export function newCapturedCircle(id,image,registeredAt){return {id,image,registeredAt,analysis:null,revealed:false};}
 export function savePreanalysis(circle,analysis){return {...circle,analysis:normalizeAnalysisResult(analysis),revealed:false};}
 export function revealOnUse(circle){return {...circle,revealed:true};}

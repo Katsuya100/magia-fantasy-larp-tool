@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {canDepartWithCircles,equippedCircleCount,circleSummary,attributeEffectGuide,circleCardInfo,circleEffectDetails,
  newCapturedCircle,savePreanalysis,isRevealed,revealOnUse,circleDetails,
- normalizeAnalysisResult,spellEffect,ROLES} from '../assets/js/dungeon-magic-knowledge.mjs';
+ normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,spellEffect,ROLES} from '../assets/js/dungeon-magic-knowledge.mjs';
 const eq=n=>Array.from({length:5},(_,i)=>i<n?'id-'+i:null);
 for(let n=0;n<=5;n++)assert.equal(canDepartWithCircles(eq(n)),n>=3,'equipped count '+n);
 assert.equal(canDepartWithCircles(['a','b','c']),false,'five visible slots required');
@@ -66,4 +66,18 @@ assert.deepEqual(ROLES,{attack:'⚔️攻撃',defense:'🛡️防御',support:'�
 assert.throws(()=>normalizeAnalysisResult({attribute:'invalid',role:'攻撃',power:1}),/不正/);
 assert.throws(()=>normalizeAnalysisResult({attribute:'flame',role:'攻撃',power:-1}),/不正/);
 assert.deepEqual(normalizeAnalysisResult({attribute:' flame ',role:'攻撃',power:'700'}),{attribute:'flame',role:'attack',power:700});
+assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:1}).power,250);
+assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:249}).power,250);
+assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:250}).power,250);
+assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:680}).power,680);
+assert.equal(normalizeAnalysisResult({attribute:'flame',role:'attack',power:200}).power,200,'existing and failed spells not changed');
+assert.deepEqual(failedDungeonAnalysis(()=>0),{attribute:'flame',role:'attack',power:200});
+assert.deepEqual(failedDungeonAnalysis(()=>.999999),{attribute:'chaos',role:'debuff',power:250});
+for(let i=0;i<1000;i++){
+ const a=failedDungeonAnalysis();
+ assert.ok(a.power>=200&&a.power<=250&&Number.isInteger(a.power));
+ assert.ok(Object.hasOwn({flame:1,bolt:1,aqua:1,storm:1,gravity:1,law:1,chaos:1},a.attribute));
+ assert.ok(Object.hasOwn(ROLES,a.role));
+ assert.deepEqual(savePreanalysis(circle,a).analysis,a,'failed magic must remain below the success floor');
+}
 console.log('PASS magic knowledge, 3-5 slots, hidden pre-use power, MP and icon-labeled effects');
