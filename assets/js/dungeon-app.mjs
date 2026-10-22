@@ -929,8 +929,8 @@ function showSupportPrompt(prompt){
    const cleanup=()=>{image.onload=null;image.onerror=null;image.src='';URL.revokeObjectURL(url);};
    image.onload=()=>{
     if(generation===shareImageGeneration&&$('supportPromptDialog').open)
-     draw({image,attribute:selected.analysis?.attribute});
-    cleanup();
+     void draw({image,attribute:selected.analysis?.attribute}).finally(cleanup);
+    else cleanup();
    };
    image.onerror=()=>{cleanup();draw(null);};
    image.src=url;
