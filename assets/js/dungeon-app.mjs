@@ -14,7 +14,7 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261023.6';
 import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261023.6';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261023.6';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261023.6';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261023.7';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261023.6';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261023.6';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261023.6';
