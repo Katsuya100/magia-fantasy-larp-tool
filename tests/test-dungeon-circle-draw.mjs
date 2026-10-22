@@ -203,11 +203,15 @@ for(const id of ['circleDrawingDialog','circleDrawingShell','circleDrawingPrevie
  'circleDrawingDiscardConfirm'])element(id);
 fakeDoc={activeElement:element('priorFocus'),getElementById:id=>{
  assert.ok(nodes.has(id),'editor element exists: '+id);return nodes.get(id);
+},createElement:tag=>{
+ assert.equal(tag,'canvas');
+ return {width:0,height:0,getContext:()=>fakeContext,toBlob(cb,type){cb(new Blob(['ritual'],{type}));}};
 }};
 const oldWindow=globalThis.window;
 globalThis.window={devicePixelRatio:1,addEventListener(){}};
 try{
- const editor=initCircleDrawing(fakeDoc,{onSave:async()=>{}});
+ let savedDrafts=0;
+ const editor=initCircleDrawing(fakeDoc,{onSave:async image=>{assert.equal(image.type,'image/jpeg');savedDrafts++;}});
  const get=id=>nodes.get(id),dialog=get('circleDrawingDialog'),discard=get('circleDrawingDiscard');
  const shell=get('circleDrawingShell'),keep=get('circleDrawingDiscardKeep');
  editor.open();
@@ -239,6 +243,41 @@ try{
  assert.equal(fakeDoc.activeElement,get('priorFocus'),'focus returns to the launch point');
  editor.open();
  assert.equal(discard.hidden,true,'discard prompt never leaks into the next session');
+ // Follow the complete spell -> sigil -> export -> cancelled analysis path.
+ // The real game closes the editor for analysis, then calls resume() on cancel.
+ const drawingPad=get('circleDrawingPad');
+ drawingPad.getBoundingClientRect=()=>({left:0,top:0,width:200,height:200});
+ const inkEvent=(pointerId,x,y)=>({pointerId,clientX:x,clientY:y,pointerType:'touch',preventDefault(){}});
+ drawingPad.dispatch('pointerdown',inkEvent(1,40,45));
+ drawingPad.dispatch('pointermove',inkEvent(1,90,95));
+ drawingPad.dispatch('pointerup',inkEvent(1,90,95));
+ get('circleDrawingInput').dispatch('click');
+ get('circleDrawingConfirm').dispatch('click');
+ assert.equal(get('circleDrawingStage').textContent,'紋を書く','editor advances to sigil');
+ drawingPad.dispatch('pointerdown',inkEvent(2,60,60));
+ drawingPad.dispatch('pointermove',inkEvent(2,120,130));
+ drawingPad.dispatch('pointerup',inkEvent(2,120,130));
+ assert.equal(get('circleDrawingUndo').disabled,false,'sigil stroke has undo history');
+ get('circleDrawingConfirm').dispatch('click');
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(dialog.open,false,'editor closes to analyze the completed drawing');
+ assert.equal(savedDrafts,1,'export reaches analysis callback');
+ editor.resume();
+ assert.equal(dialog.open,true,'cancelling analysis reopens the drawing interface');
+ assert.equal(get('circleDrawingStage').textContent,'紋を書く','sigil editing stage is preserved');
+ assert.equal(get('circleDrawingBack').hidden,false,'return to spell stays available');
+ assert.equal(get('circleDrawingUndo').disabled,false,'undo history is preserved on return');
+ assert.equal(get('circleDrawingConfirm').disabled,false,'drawing can be edited and submitted again');
+ get('circleDrawingUndo').dispatch('click');
+ assert.equal(get('circleDrawingRedo').disabled,false,'undo works after cancelled analysis');
+ get('circleDrawingRedo').dispatch('click');
+ assert.equal(get('circleDrawingUndo').disabled,false,'redo restores the last sigil stroke');
+ get('circleDrawingConfirm').dispatch('click');
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(savedDrafts,2,'restored draft can be submitted again');
+ editor.open();
+ assert.equal(get('circleDrawingStage').textContent,'呪文を1文字ずつ書く','a truly new drawing still starts empty');
+ assert.equal(get('circleDrawingUndo').disabled,true,'fresh editor does not inherit old history');
  dialog.close();
 }finally{if(oldWindow===undefined)delete globalThis.window;else globalThis.window=oldWindow;}
 
