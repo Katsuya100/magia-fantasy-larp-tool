@@ -26,21 +26,21 @@ for(const lvl of [1,20,50]){
  }
 }
 assert.equal(G.magicStoneDropChance(1,1),.30,'at recommended level, keep full stone drop rate');
-assert.equal(G.magicStoneDropChance(2,1),.15,'one level above halves the stone drop rate');
-assert.equal(G.magicStoneDropChance(3,1),.075,'two levels above quarters the stone drop rate');
+assert.equal(G.magicStoneDropChance(2,1),.30,'overlevel no longer reduces stone drops');
+assert.equal(G.magicStoneDropChance(3,1),.30,'overlevel never reduces stone drops');
 assert.equal(G.magicStoneDropChance(2,2),.30,'below recommended level, keep full stone drop rate');
 assert.equal(G.magicStoneDropChance(3,2),.30,'at another layer recommended level, keep full rate');
 assert.equal(G.magicStoneDropChance(150,100),.30,'final designed layer remains eligible');
 assert.equal(G.magicStoneDropChance(150,101),.30,'endless layers remain eligible');
 assert.equal(G.magicStoneDropChance(150,200),.30,'underleveled heroes retain full stone chance in deep layers');
-assert.equal(G.magicStoneDropChance(11,1),.30/1024,'ten extra levels make stones extremely rare');
+assert.equal(G.magicStoneDropChance(150,1),.30,'max-level heroes can replay the first layer');
 assert.equal(G.magicStoneDropChance(11,1,true),.30,'unreturned first-clear layers keep normal stone chance');
-assert.equal(G.magicStoneDropChance(11,1,false),.30/1024,'repeat-cleared layers still use 0.5 decay');
+assert.equal(G.magicStoneDropChance(11,1,false),.30,'repeat clears retain normal stone chance');
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:1}),{collection:5,stone:1,use:3});
-assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2}),{collection:5,stone:0,use:3},'overlevel only reduces stones');
+assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2}),{collection:5,stone:1,use:3},'overlevel never reduces stones');
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2,firstClear:true}),{collection:5,stone:1,use:3},'first-clear stone reward bypasses level penalty');
 assert.deepEqual(G.dropCounts(1,()=>.1,{layer:1,playerLevel:2}),{collection:5,stone:1,use:3},'reduced rate is nonzero');
-assert.equal(G.drops(items,collections,1,()=>.2,{layer:1,playerLevel:2}).filter(x=>x.type==='stone').length,0,'actual rewards apply the overlevel penalty');
+assert.equal(G.drops(items,collections,1,()=>.2,{layer:1,playerLevel:2}).filter(x=>x.type==='stone').length,1,'actual rewards retain normal stone chance');
 assert.equal(G.drops(items,collections,3,()=>.2,{layer:2,playerLevel:2}).filter(x=>x.type==='stone').length,1,'non-overlevelled rewards retain original chance');
 assert.deepEqual(G.dropCounts(1,()=>0),{collection:5,stone:1,use:3});
 assert.deepEqual(G.dropCounts(100,()=>.9999),{collection:0,stone:0,use:0});

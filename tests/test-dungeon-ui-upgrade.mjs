@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {mpCost} from '../assets/js/dungeon-core.mjs';
+import {upgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {openStore,saveProfile,putCircle,getProfile,allCircles} from '../assets/js/dungeon-store.mjs';
 const env=fakeDungeonBrowser({storage:{rejectBlobRewrite:true}}),$=id=>env.document.getElementById(id);
 const button=dataset=>({disabled:false,dataset,closest(){return this;}});
@@ -32,6 +33,8 @@ try{
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,true,'upgrade requires a dialog');
  assert.match($('circleActionMessage').textContent,/10%/);
+ assert.match($('magicStoneStock').textContent,/次の強化：1個/);
+ assert.equal(upgradeStoneCost(10),2,'the eleventh upgrade costs two stones');
  assert.match($('circleActionMessage').textContent,/。\nこの強化/,'confirmation sentences display on separate lines');
  await $('cancelCircleAction').fire('click');
  assert.equal((await getProfile(db)).magicStones,3,'cancel leaves stones untouched');
