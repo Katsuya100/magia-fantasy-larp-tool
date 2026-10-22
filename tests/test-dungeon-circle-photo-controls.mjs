@@ -37,23 +37,12 @@ assert.doesNotMatch(controls,/drop-shadow\(|translateY\(-2px\)|scale\(1\.035\)/,
  'floating shadows and outward hover scaling cannot spill over backgrounds');
 assert.match(controls,/\.circle-photo-face::before\{[^}]*inset:var\(--circle-guide-inset\)/,
  'raised metal rim stays at the camera guide circumference');
-assert.match(controls,/\.circle-photo-face::after\{[^}]*bottom:17%[^}]*pointer-events:none/,
- 'action plaque is inset and cannot intercept clicks or hold gestures');
-for(const [selector,label] of [
- ['.circle-grid .card > .circle-photo-face','長押し ★'],
- ['.prepare-spell-frame .loadout-tile .circle-photo-face','変更'],
- ['.circle-picker-grid .picker-option .circle-photo-face','選ぶ']
-]){
- assert.ok(controls.includes(selector+'::after{content:"'+label+'"}'),'correct action on '+selector);
-}
-assert.match(controls,/\.battle-spells \.battle-spell-photo\.circle-photo-face::after\{display:none\}/,
- 'cast spells have no text plaque covering their photo');
-assert.doesNotMatch(controls,/\.battle-spells \.battle-spell-photo\.circle-photo-face::after\{content:/,
- 'battle casting label is not duplicated on the image');
-assert.match(app,/\+\x27<span class="tile-cooldown">\x27\+state\.cooldown\+\x27<\/span><\/button>\x27/,
- 'the existing cast/cooldown text below the photo remains intact');
-assert.match(controls,/\.battle-spells \.battle-spell-tile:disabled \.circle-photo-face::after\{display:none\}/,
- 'disabled battle spells preserve their existing hidden state');
+assert.doesNotMatch(controls,/\.circle-photo-face::after|\.circle-photo-face::after/,
+ 'no action plaques or text labels overlap any circular image');
+assert.doesNotMatch(controls,/content:"(?:発動|変更|選ぶ|長押し ★)"/,
+ 'labels removed from spell photos in battle, preparation, picker and library');
+assert.match(app,/\+'<span class="tile-cooldown">',
+ 'battle spell retains the existing cast or cooldown text beneath the photo');
 assert.doesNotMatch(controls,/\.circle-photo-face > img\{[^}]*object-position:/,
  'photo alignment and saved image are unchanged');
-console.log('PASS guided circular spell photo controls, inset frames and distinct actions');
+console.log('PASS guided circular spell photos with no overlapping action plaques');

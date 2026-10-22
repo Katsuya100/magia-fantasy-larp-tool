@@ -2311,32 +2311,13 @@ button.creator-congratulations-close{
  aspect-ratio:1 / 1;object-fit:cover;border:0!important;box-shadow:none!important;
  clip-path:circle(calc(50% - var(--circle-guide-inset)) at 50% 50%)
 }
-/* Compact action plaque stays inside the visible circle even in five-column mobile grids. */
-.circle-photo-face::after{
- content:"";position:absolute;left:50%;bottom:17%;z-index:3;
- transform:translateX(-50%);max-width:70%;box-sizing:border-box;
- padding:1px 3px;border:1px solid #ffe8ae;border-radius:999px;
- background:linear-gradient(180deg,#6e4d34,#281c2b 76%);
- box-shadow:inset 0 1px 0 #fff7,inset 0 -2px 0 #0c0d18;
- color:#fff6d9;text-shadow:0 1px 2px #000d;
- font-size:clamp(8px,1.15vw,12px);font-weight:900;line-height:1.15;
- letter-spacing:0;white-space:nowrap;pointer-events:none
-}
 .circle-grid .card > .circle-photo-face{width:100%}
-.circle-grid .card > .circle-photo-face::after{content:"長押し ★"}
 .prepare-spell-frame .loadout-tile .circle-photo-face{width:min(76%,110px)}
-.prepare-spell-frame .loadout-tile .circle-photo-face::after{content:"変更"}
 .circle-picker-grid .picker-option .circle-photo-face{width:100%}
-.circle-picker-grid .picker-option .circle-photo-face::after{content:"選ぶ"}
 .battle-spells .battle-spell-photo.circle-photo-face{width:100%;max-width:112px}
-/* The existing cast text sits below the image; no duplicate plaque on the spell. */
-.battle-spells .battle-spell-photo.circle-photo-face::after{display:none}
 .battle-spells .circle-photo-face .battle-spell-seal{
  inset:var(--circle-guide-inset);z-index:2;border-radius:50%
 }
-/* Disabled spells and locked preparation cannot be activated. */
-.prepare-spell-frame .loadout-tile:disabled .circle-photo-face::after,
-.battle-spells .battle-spell-tile:disabled .circle-photo-face::after{display:none}
 /* Give the existing native choice button a distinct raised face without spillover. */
 .circle-picker-grid .picker-circle-wrap .picker-option:not(.picker-selected){
  border:2px solid #deb981!important;
