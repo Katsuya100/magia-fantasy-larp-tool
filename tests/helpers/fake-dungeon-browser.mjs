@@ -66,7 +66,7 @@ export function fakeDungeonBrowser(config={}){
  URL.createObjectURL=blob=>{const url='blob:mock-'+(++imageSerial);createdImageUrls.push({blob,url});return url;};
  URL.revokeObjectURL=url=>{revokedImageUrls.push(url);};
  globalThis.DataTransfer=class{constructor(){this.files=[];this.items={add:file=>this.files.push(file)};}};
- const mockedNavigator={mediaDevices:{getUserMedia:async()=>{mediaOpened++;if(config.cameraFailure)throw Error('Permission denied');return {getTracks:()=>[{stop(){mediaClosed++;}}]};}}};
+ const mockedNavigator={mediaDevices:{getUserMedia:async()=>{mediaOpened++;if(config.cameraFailure)throw config.cameraFailure==='NotFoundError'?new DOMException('No camera found','NotFoundError'):new DOMException('Permission denied','NotAllowedError');return {getTracks:()=>[{stop(){mediaClosed++;}}]};}}};
  if(config.nativeShare){mockedNavigator.canShare=({files})=>Array.isArray(files)&&files.length===1;mockedNavigator.share=async data=>{nativeShares.push(data);};}
  Object.defineProperty(globalThis,'navigator',{value:mockedNavigator,configurable:true});
  function restore(){globalThis.document=old.document;globalThis.window=old.window;globalThis.indexedDB=old.indexedDB;globalThis.fetch=old.fetch;URL.createObjectURL=old.createObjectURL;URL.revokeObjectURL=old.revokeObjectURL;globalThis.DataTransfer=old.DataTransfer;Object.defineProperty(globalThis,'navigator',{value:old.navigator,configurable:true});}
