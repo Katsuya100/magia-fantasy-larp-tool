@@ -11,7 +11,7 @@ import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {enemyForFight} from '../assets/js/dungeon-design.mjs';
-import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
+import {strengthenedPower,upgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {simulateProgression} from '../scripts/simulate-dungeon-stones.mjs';
 import {withNeutralAttackAttributes,compareNeutralAttackChoices} from './helpers/dungeon-neutral-loadout.mjs';
 
@@ -69,17 +69,21 @@ const SPELLS=[
 function upgradeSpells(budget,original=SPELLS){
  const spells=original.map(s=>({...s,basePower:s.power}));
  const counts=spells.map(()=>0);
- for(let i=0;i<budget;i++){
-  const candidates=spells.map((spell,index)=>({spell,index})).filter(x=>['attack','support'].includes(x.spell.role));
+ let actuallySpent=0;
+ while(actuallySpent<budget){
+  const candidates=spells.map((spell,index)=>({spell,index,cost:upgradeStoneCost(counts[index])}))
+   .filter(x=>['attack','support'].includes(x.spell.role)&&x.cost<=budget-actuallySpent);
+  if(!candidates.length)break;
   const score=({spell,index})=>{
    const now=G.basePower(spell.power),next=G.basePower(strengthenedPower(original[index].power,counts[index]+1));
-   return (next-now+.15)/(counts[index]+1)**.25;
+   return (next-now+.15)/(counts[index]+1)**.25/upgradeStoneCost(counts[index]);
   };
   candidates.sort((a,b)=>score(b)-score(a)||a.index-b.index);
   const selected=candidates[0].index;
+  actuallySpent+=upgradeStoneCost(counts[selected]);
   spells[selected].power=strengthenedPower(original[selected].power,++counts[selected]);
  }
- return spells;
+ return {spells,actuallySpent};
 }
 function enemyChoice(unit,r){return G.chooseEnemySpell(unit,r);}
 function heroChoice(hero,enemy){
@@ -149,7 +153,8 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
  assert.ok(band.from>=51&&band.to<=100&&band.to-band.from===9);
  const random=rng(seed),stones=earnedStones(seed+81,band.from-1),spent=Math.floor(stones*.75);
  const chosen=withNeutralAttackAttributes(SPELLS,data.enemies,band.from,band.to);
- const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},band.level,{},upgradeSpells(spent,chosen.spells),'hero');
+ const invested=upgradeSpells(spent,chosen.spells);
+ const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},band.level,{},invested.spells,'hero');
  const carry=equipped?cleanseLoadout(band):[];
  const initialLoadout=carry.map(item=>item.id);
  const layerStats=[];
@@ -191,7 +196,7 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
   }
  }
  return {win:cleared===last,cleared,hp:hero.hp,mp:hero.mp,maxHp:hero.stats.hp,maxMp:hero.maxMp,
-  stones,spent,rounds,debuffCasts,cleanseUsed,cleanseByType,attackAttributes:chosen.attackAttributes,
+  stones,spent:invested.actuallySpent,stoneBudget:spent,rounds,debuffCasts,cleanseUsed,cleanseByType,attackAttributes:chosen.attackAttributes,
    carryCount:carry.length,
   remaining:carry.filter(Boolean).length,initialLoadout,layerStats};
 }

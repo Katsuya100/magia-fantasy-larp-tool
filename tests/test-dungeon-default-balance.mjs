@@ -90,7 +90,7 @@ for(let to=10;to<=100;to+=10){
    // legal carry capacity, no HP/MP potions and stocked cleansers.
    assert.equal(rate,.75);
    const yes=deepRun(randomSeed,{from,to,level},true);
-   assert.equal(yes.spent,spending);
+   assert.ok(yes.spent<=spending&&spending-yes.spent<16,'cost tiers never overspend');
    assert.deepEqual(yes.attackAttributes,chosen.attackAttributes);
    assert.equal(yes.stones,alreadyEarned);
    assert.ok(yes.cleanseUsed<=yes.carryCount);
@@ -105,11 +105,11 @@ for(let to=10;to<=100;to+=10){
   }else{
    const result=simulate(randomSeed,{level,fromLayer:from,toLayer:to,
     spells:from===1?'intro':'five',stones:spending});
-   assert.equal(result.spentStones,spending);
+   assert.ok(result.spentStones<=spending&&spending-result.spentStones<16,'cost tiers never overspend');
    assert.deepEqual(result.attackAttributes,chosen.attackAttributes);
    if(from===1)assert.equal(result.earlyHeroRecoveryCasts,0,'1-10F is tested without HP healing');
    runs.push({win:result.win,hp:result.hp/result.initialHp*100,
-    mp:result.mp/result.initialMp*100,cleared:result.clear,spent:spending,
+    mp:result.mp/result.initialMp*100,cleared:result.clear,spent:result.spentStones,
     maxHp:result.initialHp,maxMp:result.initialMp,layerStats:result.layerStats,
     initialLoadout:[],upgradedPower});
   }
