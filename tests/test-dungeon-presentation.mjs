@@ -171,6 +171,10 @@ assert.ok(page.includes('v'+currentRelease.slice(0,4)+'.'+currentRelease.slice(4
 assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の経験値・戦利品"/,'battle counters use a dedicated accessible grouped status');
 assert.match(page,/<div id="checkpointLedger" class="battle-info" role="group" aria-label="帰還の祭壇の経験値・戦利品"/,'sanctuary reuses the same reward card class');
 const rewardSource=await read('assets/js/dungeon-app.mjs');
+assert.match(page,/<label><input type="checkbox" id="useMagicInk"><span>魔導のインクを使用<\/span><\/label>/,'ink checkbox label only shows intended text');
+assert.match(page,/<p id="magicInkBalance" aria-live="polite">魔導のインク：0個<\/p>/,'initial ink stock label contains no extra explanation');
+assert.match(rewardSource,/\$\('magicInkBalance'\)\.textContent=MAGIC_INK_NAME\+'：'\+\(profile\.magicInk\|\|0\)\+'個';/,'live ink stock label contains no extra explanation');
+assert.doesNotMatch(page,/ボスから20%でドロップ|基礎威力＋10%/,'no unsolicited ink explanation in HTML');
 assert.match(rewardSource,/function rewardLedgerMarkup\(run\)/,'battle and sanctuary share a reward renderer');
 const rewardLedger=rewardSource.slice(rewardSource.indexOf('function rewardLedgerMarkup(run)'),rewardSource.indexOf('\nfunction updateDungeonPanelBackground'));
 assert.ok(rewardLedger.indexOf('data-kind="xp"')<rewardLedger.indexOf('data-kind="loot"'),'EXP is the first (left) card, loot is the second (right) card');
