@@ -33,6 +33,12 @@ assert.match(css,/@keyframes circle-ritual-faint-light/,'weak light fades out wi
 assert.doesNotMatch(css,/\.circle-ritual__failure/,'no extra visible failure label styles');
 assert.doesNotMatch(ritualSource,/残念|解明失敗|不完全な魔法を生成/,'failure is conveyed by visuals only');
 assert.match(css,/\.circle-ritual__physical\{/,'saved circle artwork exists behind glow');
+assert.match(ritualSource,/if\(circle\?\.origin==='drawn'\)root\.className\+=' circle-ritual--drawn'/,
+ 'the reveal can distinguish handwritten circles from camera photographs');
+assert.match(css,/\.circle-ritual--reveal\.circle-ritual--drawn \.circle-ritual__physical\{\s*border-radius:0;background:#f2e4c6;object-fit:contain/,
+ 'handwritten revelation keeps the full square parchment instead of masking the corners');
+assert.match(css,/\.circle-ritual--failed\.circle-ritual--drawn \.circle-ritual__physical\{filter:none\}/,
+ 'even a weak reading retains parchment brightness');
 for(const animation of ['circle-ritual-ring-in','circle-upgrade-aura','circle-ritual-ink','circle-ritual-veil']){
  assert.ok(css.includes('@keyframes '+animation),'missing '+animation);
 }
@@ -136,6 +142,20 @@ try{
  reducedAdvance.click();
  await reduced;
  assert.equal(body.children.length,0);
+ const drawnReveal=playCircleReveal({...circle,origin:'drawn'},'blob:drawn-parchment');
+ await new Promise(resolve=>setImmediate(resolve));
+ const drawnRoot=body.children[0];
+ assert.match(drawnRoot.className,/circle-ritual--drawn/,'drawn source uses square parchment layout');
+ assert.equal(drawnRoot.children[0].src,'blob:drawn-parchment','the original square JPEG remains the reveal image');
+ drawnRoot.children.at(-1).click();
+ await drawnReveal;
+ const failedDrawnReveal=playCircleReveal({...circle,origin:'drawn'},'blob:failed-drawn',{failed:true});
+ await new Promise(resolve=>setImmediate(resolve));
+ const failedDrawnRoot=body.children[0];
+ assert.match(failedDrawnRoot.className,/circle-ritual--drawn/);
+ assert.match(failedDrawnRoot.className,/circle-ritual--failed/);
+ failedDrawnRoot.children.at(-1).click();
+ await failedDrawnReveal;
  const failedReveal=playCircleReveal(circle,'blob:failed-photo',{failed:true});
  await new Promise(resolve=>setImmediate(resolve));
  const failedRoot=body.children[0];
