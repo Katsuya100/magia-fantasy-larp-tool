@@ -312,10 +312,18 @@ get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())re
  });
  dialog.addEventListener('close',()=>{hideDiscard(false);release();previousFocus?.focus?.();});
  window.addEventListener('resize',()=>{if(dialog.open)repaint();});
+ function present(){
+  release();hideDiscard(false);busy=false;message('');
+  if(!dialog.open)dialog.showModal();
+  repaint();confirm.focus();
+ }
  return {
   open(){
-   model=createDrawingModel();release();hideDiscard(false);message('');previousFocus=doc.activeElement;
-   dialog.showModal();repaint();confirm.focus();
-  }
+   model=createDrawingModel();previousFocus=doc.activeElement;
+   present();
+  },
+  // Reopen the exact draft after cancelling analysis. Never reset the model:
+  // this preserves letters, pen strokes, sigil stage and undo/redo history.
+  resume(){present();}
  };
 }
