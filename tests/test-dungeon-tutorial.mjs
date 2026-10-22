@@ -11,7 +11,7 @@ assert.match(CIRCLE_TUTORIAL_STEPS[1].hint,/大きな円.*ください/);
 assert.match(CIRCLE_TUTORIAL_STEPS[2].hint,/外円の内側.*ください/);
 assert.match(CIRCLE_TUTORIAL_STEPS[3].hint,/内円と外円の間.*英語の呪文.*ください/);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].hint,/内円の中に紋.*ください/);
-assert.deepEqual(CIRCLE_TUTORIAL_STEPS.map(x=>x.image),[null,'tutorial-outer.gif','tutorial-inner.gif','tutorial-spell.gif','tutorial-sigil.gif']);
+assert.deepEqual(CIRCLE_TUTORIAL_STEPS.map(x=>x.image),['tutorial-prepare.webp','tutorial-outer.webp','tutorial-inner.webp','tutorial-complete.webp','tutorial-complete.webp']);
 assert.match(CIRCLE_TUTORIAL_STEPS[3].detail,/相.*意味.*決まります。/);
 assert.match(CIRCLE_TUTORIAL_STEPS[3].attributes,/炎.*雷.*水.*風.*重力.*秩序.*混沌/);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].detail,/紋の種別.*形.*決まります。/);
@@ -29,9 +29,10 @@ try{
  const tutorial=initCircleTutorial(env.document,toCamera=>exits.push(toCamera));
  tutorial.open();
  assert.equal($('tutorialCounter').textContent,'1 / 5');
- assert.equal($('tutorialFigure').hidden,true);
+ assert.equal($('tutorialFigure').hidden,false);
  assert.equal($('tutorialHint').textContent,CIRCLE_TUTORIAL_STEPS[0].hint);
  assert.equal($('tutorialDetails').textContent,CIRCLE_TUTORIAL_STEPS[0].detail);
+ assert.ok($('tutorialAnimation').src.includes('tutorial-prepare.webp'));
  assert.equal($('tutorialPrevious').hidden,true);
  assert.equal($('tutorialFreedom').hidden,true);
  assert.equal($('tutorialAttributes').hidden,true);
@@ -62,7 +63,7 @@ try{
  assert.equal($('dungeonApp').attributes.inert,undefined);
  tutorial.open();
  assert.equal($('tutorialCounter').textContent,'1 / 5');
- assert.equal($('tutorialFigure').hidden,true);
+ assert.equal($('tutorialFigure').hidden,false);
  $('tutorialSkip').fire('click');
  await new Promise(r=>setImmediate(r));
  tutorial.open();
@@ -79,22 +80,24 @@ assert.match(html,/id="tutorialAttributes" hidden/);
 const release=html.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 assert.ok(release,'tutorial HTML contains a release version');
 assert.ok(html.includes('dungeon-app.mjs?v='+release),'tutorial HTML loads the current app');
-assert.match(script,/gif\.src='assets\/images\/'/);
+assert.match(script,/preview\.src='assets\/images\/'/);
 assert.doesNotMatch(html,/id="tutorialCanvas"|id="tutorialPad"/);
 assert.doesNotMatch(script,/pointerdown|pointermove|setPointerCapture/);
-const expectedGifHashes={
- 'tutorial-outer.gif':'1e71d4a08a97f48d001bcec3f07246db3a0f562715c5c1232b9b6e97a83698d6',
- 'tutorial-inner.gif':'54537c9826ae035968633a2b1dcad0008f19a846735b5c1b17b0db8e4d08969f',
- 'tutorial-spell.gif':'765cf80bb40a6db906d86ef5b0383a88d87618d8d7a45af5f17978fc84e990f5',
- 'tutorial-sigil.gif':'0bab6edb58785ed21cfb73448ea363907eaebce164d5654069e22b6339b9685a'
+const expectedImageHashes={
+ 'tutorial-prepare.webp':'7f94c9231f45766eff4eff895ca3003d3150f0ac89424577c311fbaf01383b51',
+ 'tutorial-outer.webp':'dda569913e61c21c6e24f1562cd88c188aa18a719d0de06b3e466e75b5be8a68',
+ 'tutorial-inner.webp':'c1253a99bb8eed7e41921cd94eae2f48ae45b63d156ebf249264fc95601bf631',
+ 'tutorial-complete.webp':'59aa8ede91add8b12927d67f392dde6437d0cb240fdb145a3e70a7333525b3c3'
 };
-for(const step of CIRCLE_TUTORIAL_STEPS.filter(x=>x.image)){
- const b=await readFile(new URL('../assets/images/'+step.image,import.meta.url));
- assert.equal(b.subarray(0,6).toString('ascii'),'GIF89a');
- assert.equal(b.readUInt16LE(6),640,step.image+' width');
- assert.equal(b.readUInt16LE(8),640,step.image+' height');
- assert.equal(createHash('sha256').update(b).digest('hex'),expectedGifHashes[step.image],step.image+' must be the supplied optimized animation');
- let frames=0;for(let i=0;i<b.length-2;i++)if(b[i]===33&&b[i+1]===249&&b[i+2]===4)frames++;
- assert.ok(frames>=2,step.image+' must animate');
+for(const [name,hash] of Object.entries(expectedImageHashes)){
+ const b=await readFile(new URL('../assets/images/'+name,import.meta.url));
+ assert.equal(b.subarray(0,4).toString('ascii'),'RIFF',name);
+ assert.equal(b.subarray(8,12).toString('ascii'),'WEBP',name);
+ assert.equal(b.subarray(12,16).toString('ascii'),'VP8 ',name);
+ assert.equal(b.readUInt16LE(26)&0x3fff,320,name+' width');
+ assert.equal(b.readUInt16LE(28)&0x3fff,320,name+' height');
+ assert.equal(createHash('sha256').update(b).digest('hex'),hash,name+' must match the supplied lightweight art');
+ assert.ok(b.length<10240,name+' must stay under 10 KiB');
 }
-console.log('PASS five polite tutorial pages, four GIFs and navigation');
+assert.doesNotMatch(script,/\.gif/);
+console.log('PASS five tutorial pages, four supplied WebP examples and navigation');

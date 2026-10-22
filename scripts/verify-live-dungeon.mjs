@@ -14,8 +14,8 @@ const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs','assets/js/du
  'assets/js/dungeon-core.mjs','assets/js/dungeon-magic-knowledge.mjs','assets/js/dungeon-circle-ritual.mjs','assets/js/dungeon-design.mjs','assets/js/dungeon-tuning.mjs','assets/js/dungeon-permadeath.mjs','assets/data/dungeon-balance.csv','assets/data/dungeon-buffs.csv',
  'assets/data/dungeon-levels.csv','assets/data/dungeon-enemies.csv','assets/data/dungeon-consumables.csv'];
 const expected=new Map(await Promise.all(assets.map(async path=>[path,await readFile(new URL('../'+path,import.meta.url),'utf8')])));
-const tutorialGifs=['tutorial-outer.gif','tutorial-inner.gif','tutorial-spell.gif','tutorial-sigil.gif'];
-const expectedGifs=new Map(await Promise.all(tutorialGifs.map(async name=>[name,await readFile(new URL('../assets/images/'+name,import.meta.url))])));
+const tutorialImages=['tutorial-prepare.webp','tutorial-outer.webp','tutorial-inner.webp','tutorial-complete.webp'];
+const expectedImages=new Map(await Promise.all(tutorialImages.map(async name=>[name,await readFile(new URL('../assets/images/'+name,import.meta.url))])));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function remote(path,attempt){
  const url=origin+path+(path.includes('?')?'&':'?')+'smoke='+attempt+'-'+Date.now();
@@ -37,13 +37,13 @@ for(let attempt=1;attempt<=24;attempt++){
    const content=await remote(asset+'?v='+version,attempt);
    if(content!==expected.get(asset))throw Error('Published asset is stale: '+asset);
   }
-  for(const name of tutorialGifs){
-   const gifResponse=await fetch(origin+'assets/images/'+name+'?v='+version+'&smoke='+attempt+'-'+Date.now(),{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(12000)});
-   if(!gifResponse.ok)throw Error('Published '+name+' HTTP '+gifResponse.status);
-   const published=Buffer.from(await gifResponse.arrayBuffer());
-   if(published.subarray(0,6).toString()!=='GIF89a'||!published.equals(expectedGifs.get(name)))throw Error('Published tutorial GIF differs: '+name);
+  for(const name of tutorialImages){
+   const imageResponse=await fetch(origin+'assets/images/'+name+'?v='+version+'&smoke='+attempt+'-'+Date.now(),{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(12000)});
+   if(!imageResponse.ok)throw Error('Published '+name+' HTTP '+imageResponse.status);
+   const published=Buffer.from(await imageResponse.arrayBuffer());
+   if(published.subarray(0,4).toString()!=='RIFF'||published.subarray(8,12).toString()!=='WEBP'||!published.equals(expectedImages.get(name)))throw Error('Published tutorial WebP differs: '+name);
   }
-  console.log('LIVE VERIFIED: Pages HTML, assets and four tutorial GIFs match '+version+' at '+origin);
+  console.log('LIVE VERIFIED: Pages HTML, assets and four tutorial WebPs match '+version+' at '+origin);
   process.exit(0);
  }catch(error){
   last=String(error?.message||error);
