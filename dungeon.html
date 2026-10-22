@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261023.7">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261023.8">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261023.7" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261023.8" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261023.7" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261023.8" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -188,8 +188,8 @@
           <li><strong>内円の中</strong>に魔法を表す<strong>紋様</strong>を描きます。紋様によって「⚔️攻撃・🛡️防御・✚回復・🕸️弱体」が決まります。</li>
           <li>呪文から7つの相（🔥flame / ⚡️bolt / 💧aqua / 🌪️storm / 🪨gravity / ⚖️law / 🌀chaos）を判定します。円や線の精度、呪文、異なる単語数が威力に影響します。</li>
           <li>魔法陣<strong>1つを画面に収めて</strong>、明るい場所で撮影してください。撮影して登録する場合はカメラを使います。</li>
-          <li>「魔法陣を描く」では環を自動生成し、タッチで呪文を1文字ずつ描き、何も描かずに「入力」を押すと空白になります。リセットでタッチパッドの線だけを消せます。続けて紋を描きます。手書きの簡易術式は解析結果の威力が60%になります。</li>
-          <li>登録時に解析します。撮影の場合、成功時の威力は250以上、失敗時は相と紋をランダムに決めて威力200〜250の不完全な魔法になります。手書きでも解析失敗時は同じ流れを使い、その威力を60%にします。MPと威力は初回使用まで伏せられます。中断した入力は保存されません。</li>
+          <li>「魔法陣を描く」では環を自動生成し、タッチで呪文を1文字ずつ描き、何も描かずに「入力」を押すと空白になります。リセットでタッチパッドの線だけを消せます。続けて紋を描きます。手書きの簡易術式は解析結果の威力を60%にします（最低250）。</li>
+          <li>登録時に解析します。撮影・手書きとも最低威力は250です。解析失敗時は相と紋をランダムに決めた不完全な魔法になります。手書きは解析値を60%に補正した後に最低250を適用します。MPと威力は初回使用まで伏せられます。中断した入力は保存されません。</li>
         </ol>
         <figure class="regulation-sample"><img src="assets/images/sample.png?v=20261020.31" alt="魔法陣の作図サンプル。外円と内円の間に英語の呪文を記し、内円の中に紋様を描く。" loading="lazy"><figcaption>魔法陣のサンプル</figcaption></figure>
       </details>
@@ -513,7 +513,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.23.7</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.23.8</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -532,6 +532,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261023.7"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261023.8"></script>
 </body>
 </html>
