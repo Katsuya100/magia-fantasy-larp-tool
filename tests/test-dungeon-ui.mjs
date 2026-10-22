@@ -94,8 +94,16 @@ try{
  assert.equal($('analyzing').hidden,true,'failed analysis closes the full-screen analysis view');
  assert.equal($('library').hidden,false,'failed analysis returns to the grimoire');
  assert.ok(visitedAnalysis.includes(false),'photo analysis opens the visible screen');
- await wait(()=>$('cameraError').textContent.includes('保存していません'),'failed capture rejected');
- assert.equal((await allCircles(await openStore(env.factory))).length,0,'failed camera analysis must not save a photo');
+ const weakSaved=await allCircles(await openStore(env.factory));
+ assert.equal(weakSaved.length,1,'failed camera analysis creates a magic circle');
+ assert.equal(weakSaved[0].revealed,false,'weak magic remains hidden until first use');
+ assert.ok(weakSaved[0].analysis.power>=200&&weakSaved[0].analysis.power<=250);
+ assert.ok(['attack','defense','support','debuff'].includes(weakSaved[0].analysis.role));
+ assert.ok(['flame','bolt','aqua','storm','gravity','law','chaos'].includes(weakSaved[0].analysis.attribute));
+ assert.equal($('cameraError').hidden,true,'failed result uses normal reveal, not inline error');
+ await doc.click(btn({remove:weakSaved[0].id}));
+ await $('confirmCircleAction').fire('click');
+ assert.equal((await allCircles(await openStore(env.factory))).length,0,'removing weak magic leaves other checks unchanged');
  env.analyzerState.attribute='flame';
  for(let i=0;i<5;i++){
   await $('cameraCapture').fire('click');
