@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,drawnPower,pointOnPad,glyphPoint,glyphAngle,caretAngle,sigilPoint,normalizedGlyph,createDrawingModel,paintCircle,paintCaret} from '../assets/js/dungeon-circle-draw.mjs';
+import {DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,drawnPower,pointOnPad,glyphPoint,glyphAngle,caretAngle,sigilPoint,normalizedGlyph,createDrawingModel,paintCircle,paintCaret,initCircleDrawing} from '../assets/js/dungeon-circle-draw.mjs';
 
 assert.equal(DRAWN_GLYPH_LIMIT,32);
 assert.equal(DRAWN_POWER_RATE,.6);
@@ -132,4 +132,79 @@ assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
 assert.match(css,/width:min\(100cqw,100cqh\);height:min\(100cqw,100cqh\)/,'pad remains square even on short viewports');
 assert.match(source,/ctx\.moveTo\(w\/2,0\);ctx\.lineTo\(w\/2,h\);ctx\.moveTo\(0,h\/2\);ctx\.lineTo\(w,h\/2\)/,'subtle dotted crosshair is drawn');
 assert.doesNotMatch(source,/circleDrawingSpace|window\.confirm\('呪文を最初から描き直しますか/,'no space button or reset confirmation');
+
+assert.match(html,/id="circleDrawingDiscard"[^>]*role="alertdialog" aria-modal="true"/,'discard uses an accessible in-app confirmation');
+assert.match(html,/<strong id="circleDrawingDiscardTitle">魔法陣を破棄しますか？<\\/strong>/);
+assert.match(html,/id="circleDrawingDiscardKeep"[^>]*>戻る<\\/button>/);
+assert.match(html,/id="circleDrawingDiscardConfirm"[^>]*>破棄<\\/button>/);
+assert.match(css,/\\.circle-drawing-discard\\[hidden\\]\\{display:none\\}/,'hidden confirmation never overlays the editor');
+assert.doesNotMatch(source,/window\\.confirm/,'system confirmation must never appear in drawing flow');
+
+// Headless UI interaction: close, keep, Esc, destroy, and focus must be safe.
+const fakeContext={
+ clearRect(){},fillRect(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},arc(){},
+ stroke(){},fill(){},save(){},restore(){},setLineDash(){},
+ createRadialGradient(){return {addColorStop(){}};}
+};
+const nodes=new Map();
+let fakeDoc;
+function element(id){
+ const listeners=new Map();
+ const e={id,hidden:id==='circleDrawingDiscard',inert:false,open:false,width:0,height:0,
+  textContent:'',disabled:false,
+  addEventListener(name,fn){listeners.set(name,fn);},
+  dispatch(name,arg={}){return listeners.get(name)?.(arg);},
+  focus(){fakeDoc.activeElement=this;},
+  getBoundingClientRect(){return {width:0,height:0,left:0,top:0};},
+  getContext(){return fakeContext;},
+  querySelector(sel){assert.equal(sel,'.circle-drawing-shell');return nodes.get('drawingShell');},
+  showModal(){this.open=true;},close(){this.open=false;this.dispatch('close');}
+ };
+ nodes.set(id,e);return e;
+}
+for(const id of ['circleDrawingDialog','drawingShell','circleDrawingPreview','circleDrawingCaret',
+ 'circleDrawingPad','circleDrawingConfirm','circleDrawingStatus','circleDrawingStage',
+ 'circleDrawingInput','circleDrawingBack','circleDrawingUndo','circleDrawingRedo',
+ 'circleDrawingReset','circleDrawingClose','circleDrawingDiscard','circleDrawingDiscardKeep',
+ 'circleDrawingDiscardConfirm'])element(id);
+fakeDoc={activeElement:element('priorFocus'),getElementById:id=>{
+ assert.ok(nodes.has(id),'editor element exists: '+id);return nodes.get(id);
+}};
+const oldWindow=globalThis.window;
+globalThis.window={devicePixelRatio:1,addEventListener(){}};
+try{
+ const editor=initCircleDrawing(fakeDoc,{onSave:async()=>{}});
+ const get=id=>nodes.get(id),dialog=get('circleDrawingDialog'),discard=get('circleDrawingDiscard');
+ const shell=get('drawingShell'),keep=get('circleDrawingDiscardKeep');
+ editor.open();
+ get('circleDrawingClose').dispatch('click');
+ assert.equal(dialog.open,false,'an empty editor closes without confirmation');
+ editor.open();
+ get('circleDrawingInput').dispatch('click'); // A blank entry is still unsaved.
+ get('circleDrawingClose').dispatch('click');
+ assert.equal(dialog.open,true);
+ assert.equal(discard.hidden,false,'edited circles must open the in-game confirmation');
+ assert.equal(shell.inert,true,'background drawing controls are blocked while confirming');
+ assert.equal(fakeDoc.activeElement,keep,'safe option receives initial focus');
+ keep.dispatch('click');
+ assert.equal(discard.hidden,true);
+ assert.equal(shell.inert,false);
+ assert.equal(fakeDoc.activeElement,get('circleDrawingClose'),'keep returns focus to close button');
+ get('circleDrawingClose').dispatch('click');
+ let prevented=false;
+ dialog.dispatch('cancel',{preventDefault(){prevented=true;}});
+ assert.ok(prevented,'Esc is intercepted');
+ assert.equal(dialog.open,true);
+ assert.equal(discard.hidden,true,'Esc dismisses the discard prompt but keeps the drawing');
+ dialog.dispatch('cancel',{preventDefault(){}});
+ assert.equal(discard.hidden,false,'Esc at the editor layer asks before discarding');
+ get('circleDrawingDiscardConfirm').dispatch('click');
+ assert.equal(dialog.open,false,'only the explicit discard option destroys the draft');
+ assert.equal(shell.inert,false,'the editor is restored after discarding');
+ assert.equal(fakeDoc.activeElement,get('priorFocus'),'focus returns to the launch point');
+ editor.open();
+ assert.equal(discard.hidden,true,'discard prompt never leaks into the next session');
+ dialog.close();
+}finally{if(oldWindow===undefined)delete globalThis.window;else globalThis.window=oldWindow;}
+
 console.log('PASS ritual blank Input, pad-only reset, character undo, centered caret, thick ink and parchment');
