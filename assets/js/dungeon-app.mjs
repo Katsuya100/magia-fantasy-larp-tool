@@ -1,4 +1,4 @@
-import * as G from './dungeon-core.mjs?v=20261022.3';
+import * as G from './dungeon-core.mjs?v=20261022.4';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261022.3';
 import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261022.3';
 import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261022.3';

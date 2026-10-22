@@ -187,6 +187,28 @@ assert.equal(typeof G.enemyScaling,'undefined','enemy-specific scaling must not 
 const commonStats={hp:+enemies[0].hp,mag:+enemies[0].mag,def:+enemies[0].def,res:+enemies[0].res};
 assert.deepEqual(G.fromEnemy(enemies[0],150).stats,G.stats(commonStats,150),
  'enemy and player use identical level growth at 150');
+// Early enemy AI is action-limited without changing the 500 authored spells.
+for(let layer=1;layer<=11;layer++){
+ for(let slot=1;slot<=5;slot++){
+  const fight=(layer-1)*5+slot,row=enemies[fight-1];
+  const enemy=G.fromEnemy(row,Number(floors[fight-1].enemy_level));
+  enemy.hp=1; // Legacy AI would prioritize healing here.
+  if(layer<=10){
+   for(const random of [()=>0,()=>.5,()=>.999]){
+    const choice=G.chooseEnemySpell(enemy,random),picked=choice<0?null:enemy.spells[choice];
+    assert.ok(picked&&['attack','defense'].includes(picked.role),'early enemy action: '+row.id);
+    if(picked.role==='defense'){
+     const powers=G.available(enemy).filter(i=>enemy.spells[i].role==='defense').map(i=>enemy.spells[i].power);
+     assert.equal(picked.power,row.id==='boss_l010'?Math.max(...powers):Math.min(...powers),
+      'weak guards except for the tenth-layer boss: '+row.id);
+    }
+   }
+  }else if(enemy.spells.some(s=>s.role==='support')){
+   assert.equal(enemy.spells[G.chooseEnemySpell(enemy,()=>.5)].role,'support',
+    '11+ enemy healing behavior is unchanged: '+row.id);
+  }
+ }
+}
 const en=G.fromEnemy(enemies[0],2);assert.equal(en.spells.length,5);assert.ok(en.stats.hp>50,'scaled enemies stay viable at low levels');
 const u=G.makeUnit(base,1,{},[sp]),v=G.makeUnit(base,1,{},[sp]);
 const logs=G.round(u,v,0,0,buffs,()=>.7);assert.ok(logs.length===2);assert.ok(u.hp<100&&v.hp<100);

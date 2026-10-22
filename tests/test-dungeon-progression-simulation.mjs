@@ -34,10 +34,11 @@ const SPELLS={
   {role:'support',attribute:'aqua',power:320},{role:'defense',attribute:'law',power:270}]
 };
 function enemyAction(unit,r){return G.chooseEnemySpell(unit,r);}
-function heroAction(hero,enemy){
+function heroAction(hero,enemy,layer){
  const ids=G.available(hero);
  if(!ids.length)return -1;
- const heal=ids.find(i=>hero.spells[i].role==='support');
+ // No healing magic in the 1-10 layer full-playtest; later bands unchanged.
+ const heal=layer<=10?undefined:ids.find(i=>hero.spells[i].role==='support');
  if(heal!==undefined&&hero.hp/hero.stats.hp<.69)return heal;
  const offense=ids.filter(i=>hero.spells[i].role==='attack');
  if(offense.length)return offense.sort((a,b)=>compareNeutralAttackChoices(hero,enemy,a,b))[0];
@@ -101,7 +102,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
   startLevel:level,fromLayer,toLayer,spells,attackAttributes:chosen.attackAttributes,
   spentStones:budget,availableStones:history.stones,
   initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[],
-  enemyDebuffCasts:0,enemyDebuffFights:0,fightsReached:0,layerStats:[]};
+  enemyDebuffCasts:0,enemyDebuffFights:0,fightsReached:0,earlyHeroRecoveryCasts:0,layerStats:[]};
  for(let fight=first;fight<=last;fight++){
   if(fight%5===1)stats.layerStats.push({layer:Math.ceil(fight/5),
    startHp:hero.hp,startMp:hero.mp,cleared:false,endHp:null,endMp:null});
@@ -111,7 +112,8 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
   let turns=0,win=false,debuffInFight=false;
   stats.fightsReached++;
   for(;turns<80;turns++){
-   const pick=heroAction(hero,enemy);
+   const pick=heroAction(hero,enemy,Math.ceil(fight/5));
+   if(fight<=50&&pick>=0&&hero.spells[pick].role==='support')stats.earlyHeroRecoveryCasts++;
    const enemyPick=enemyAction(enemy,r);
    if(enemyPick>=0&&enemy.spells[enemyPick].role==='debuff'){
     stats.enemyDebuffCasts++;debuffInFight=true;
@@ -204,6 +206,13 @@ for(const target of [3,5,19]){
 }
 const firstTen=summarize(scenarios.find(x=>x.level===19));
 assert.equal(firstTen.avgRestores,0,'10-layer MP target must be reached without a milestone full restore');
+for(const seed of [1,17011,17024,17102]){
+ const run=simulate(seed,{level:19,fromLayer:1,toLayer:10,spells:'intro'});
+ assert.equal(run.earlyHeroRecoveryCasts,0,'no HP healing magic through layer 10');
+ for(let i=1;i<run.layerStats.length;i++)
+  assert.ok(run.layerStats[i].startHp<=run.layerStats[i-1].startHp,
+   'HP cannot be restored between early layers');
+}
 const overleveled=summarize(scenarios.find(x=>x.level===12));
 goal('Lv12 clear rate through 3F',overleveled.winRate,'>=95%',overleveled.winRate>=95);
 const endgame=summarize(scenarios.find(x=>x.level===150&&x.stones==='earned'));

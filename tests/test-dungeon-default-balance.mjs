@@ -107,6 +107,7 @@ for(let to=10;to<=100;to+=10){
     spells:from===1?'intro':'five',stones:spending});
    assert.equal(result.spentStones,spending);
    assert.deepEqual(result.attackAttributes,chosen.attackAttributes);
+   if(from===1)assert.equal(result.earlyHeroRecoveryCasts,0,'1-10F is tested without HP healing');
    runs.push({win:result.win,hp:result.hp/result.initialHp*100,
     mp:result.mp/result.initialMp*100,cleared:result.clear,spent:spending,
     maxHp:result.initialHp,maxMp:result.initialMp,layerStats:result.layerStats,
