@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261022.11">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261022.12">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261022.11" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261022.12" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261022.11" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261022.12" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -272,14 +272,14 @@
           <div id="heroProjectile" class="spell-projectile" data-side="hero" data-effect="idle" data-attribute="law"><span class="element-flare"></span><span class="element-trail"></span><span class="tier-seal"></span><span class="tier-halo"></span><span class="tier-shards"></span></div>
         </div>
         <div id="battleCeremony" class="battle-ceremony" data-event="idle" data-boss-tier="none" hidden aria-live="polite"><div class="ceremony-glyph" aria-hidden="true">✦</div><div class="boss-ceremony-art" aria-hidden="true"><i class="boss-vfx-flash"></i><i class="boss-vfx-halo"></i><i class="boss-vfx-wheel"></i><i class="boss-vfx-ring boss-vfx-ring-outer"></i><i class="boss-vfx-ring boss-vfx-ring-inner"></i><i class="boss-vfx-beam boss-vfx-beam-a"></i><i class="boss-vfx-beam boss-vfx-beam-b"></i><i class="boss-vfx-beam boss-vfx-beam-c"></i><i class="boss-vfx-beam boss-vfx-beam-d"></i><i class="boss-vfx-sparks"></i></div><strong id="ceremonyTitle"></strong><span id="ceremonyDetail"></span><div id="lootChests" class="loot-chests" aria-hidden="true"></div></div>
-        <article id="enemyCombatant" class="unit enemy-unit" data-effect="idle" data-attribute="law" data-hit="false" data-defeated="false">
-          <div class="enemy-portrait" aria-hidden="true"><div class="enemy-sigil">⟁</div></div><div class="combatant-fx" aria-hidden="true"><span class="combatant-ring"></span><span class="combatant-burst"></span><span class="element-flare" aria-hidden="true"></span><span class="element-trail" aria-hidden="true"></span><span class="tier-seal"></span><span class="tier-halo"></span><span class="tier-shards"></span><span class="affinity-hit" aria-hidden="true"></span><strong id="enemyFxText"></strong></div>
-          <div class="unit-info"><div class="combatant-heading"><h3 id="enemyName"></h3><span id="enemyLevel" class="combatant-level"></span></div><div id="enemyStats"></div></div>
-        </article>
-        <div class="versus" aria-hidden="true">VS</div>
         <article id="heroCombatant" class="unit hero-unit" data-effect="idle" data-attribute="law" data-hit="false">
           <div class="hero-portrait" aria-hidden="true">✦</div><div class="combatant-fx" aria-hidden="true"><span class="combatant-ring"></span><span class="combatant-burst"></span><span class="element-flare" aria-hidden="true"></span><span class="element-trail" aria-hidden="true"></span><span class="tier-seal"></span><span class="tier-halo"></span><span class="tier-shards"></span><span class="affinity-hit" aria-hidden="true"></span><strong id="heroFxText"></strong></div>
           <div class="unit-info"><div class="combatant-heading"><h3 id="heroName"></h3><span id="heroLevel" class="combatant-level"></span></div><div id="heroStats"></div></div>
+        </article>
+        <div class="versus" aria-hidden="true">VS</div>
+        <article id="enemyCombatant" class="unit enemy-unit" data-effect="idle" data-attribute="law" data-hit="false" data-defeated="false">
+          <div class="enemy-portrait" aria-hidden="true"><div class="enemy-sigil">⟁</div></div><div class="combatant-fx" aria-hidden="true"><span class="combatant-ring"></span><span class="combatant-burst"></span><span class="element-flare" aria-hidden="true"></span><span class="element-trail" aria-hidden="true"></span><span class="tier-seal"></span><span class="tier-halo"></span><span class="tier-shards"></span><span class="affinity-hit" aria-hidden="true"></span><strong id="enemyFxText"></strong></div>
+          <div class="unit-info"><div class="combatant-heading"><h3 id="enemyName"></h3><span id="enemyLevel" class="combatant-level"></span></div><div id="enemyStats"></div></div>
         </article>
       </div>
       <div id="battleInfo" class="battle-info" role="group" aria-label="探索中の戦利品・経験値" aria-live="polite"></div>
@@ -500,7 +500,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.22.11</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.22.12</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -519,6 +519,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261022.11"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261022.12"></script>
 </body>
 </html>

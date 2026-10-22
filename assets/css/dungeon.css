@@ -136,8 +136,8 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .fx-spark{width:120px;height:5px;border-radius:100%;background:var(--fx-color);box-shadow:0 0 18px 8px var(--fx-aura)}
 #battleArena:is([data-role="attack"],[data-role="basic"]) .fx-spark{animation:fx-clash .75s ease-out both}
 #battleArena:is([data-role="attack"],[data-role="basic"]) .hero-unit:is(*){border-color:var(--border)}
-#battleArena:is([data-role="attack"],[data-role="basic"])[data-side="hero"] .hero-unit{animation:fx-rush-left .75s ease-in-out both}
-#battleArena:is([data-role="attack"],[data-role="basic"])[data-side="enemy"] .enemy-unit{animation:fx-rush-right .75s ease-in-out both}
+#battleArena:is([data-role="attack"],[data-role="basic"])[data-side="hero"] .hero-unit{animation:fx-rush-right .75s ease-in-out both}
+#battleArena:is([data-role="attack"],[data-role="basic"])[data-side="enemy"] .enemy-unit{animation:fx-rush-left .75s ease-in-out both}
 #battleArena:is([data-role="attack"],[data-role="basic"])[data-side="hero"] .enemy-unit{animation:fx-impact .75s ease-out both}
 #battleArena:is([data-role="attack"],[data-role="basic"])[data-side="enemy"] .hero-unit{animation:fx-impact .75s ease-out both}
 #battleArena:is([data-role="defense"],[data-role="buff"]) .fx-orbit{animation:fx-guard .75s ease-out both}
@@ -192,8 +192,8 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .combatant-burst{width:115px;height:5px;margin:-2px -57px;background:var(--combat-color);box-shadow:0 0 22px 6px var(--combat-aura);border-radius:50%}
 #battleArena .unit[data-effect="attack"] .combatant-burst,
 #battleArena .unit[data-effect="basic"] .combatant-burst{animation:duel-burst .78s ease-out both}
-#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"]){animation:fx-rush-left .78s ease-out both}
-#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"]){animation:fx-rush-right .78s ease-out both}
+#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"]){animation:fx-rush-right .78s ease-out both}
+#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"]){animation:fx-rush-left .78s ease-out both}
 #battleArena .unit[data-hit="true"]{animation:fx-impact .78s ease-out both;border-color:var(--combat-color)}
 #battleArena .unit[data-effect="defense"] .combatant-ring,
 #battleArena .unit[data-effect="buff"] .combatant-ring{animation:fx-guard .78s ease-out both}
@@ -231,7 +231,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .loot-chest-body{position:absolute;left:10%;right:10%;bottom:0;height:61%;border:2px solid #eac577;border-radius:2px 2px 5px 5px;background:linear-gradient(90deg,#9b542c 0 24%,#e9ae4d 24% 35%,#8c4223 35% 64%,#e6b45c 64% 76%,#9a4c27 76%);box-shadow:inset 0 -5px 0 #4d2b23,0 0 10px #ffc8797a}
 #battleArena .loot-chest-lid{position:absolute;z-index:2;left:7%;right:7%;top:18%;height:31%;border:2px solid #f6d58c;border-radius:7px 7px 2px 2px;background:linear-gradient(90deg,#915029 0 25%,#ffe49b 25% 34%,#ac572b 34% 67%,#ffe49b 67% 77%,#915029 77%);transform-origin:12% 100%;animation:chest-open .7s ease-out calc(var(--chest-delay) + .43s) both}
 #battleArena .loot-chest-light{position:absolute;left:43%;top:18%;width:14%;height:47%;background:radial-gradient(ellipse,#fff7bd,transparent);box-shadow:0 0 12px 5px #ffe4a1bb;opacity:0;animation:chest-treasure-light .75s ease-out calc(var(--chest-delay) + .54s) both}
-@keyframes chest-leap{0%{opacity:0;transform:translate(-36px,-110px) rotate(-32deg) scale(.15)}52%{opacity:1;transform:translate(0,8px) rotate(8deg) scale(1.17)}71%{transform:translate(0,-7px) rotate(-4deg) scale(1.05)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
+@keyframes chest-leap{0%{opacity:0;transform:translate(36px,-110px) rotate(32deg) scale(.15)}52%{opacity:1;transform:translate(0,8px) rotate(-8deg) scale(1.17)}71%{transform:translate(0,-7px) rotate(4deg) scale(1.05)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
 @keyframes chest-open{0%,20%{transform:rotate(0) translateY(0)}75%,100%{transform:rotate(-43deg) translateY(-4px)}}
 @keyframes chest-treasure-light{0%,20%{opacity:0;transform:scale(.3)}55%{opacity:1;transform:translateY(-9px) scale(2)}100%{opacity:.1;transform:translateY(-20px) scale(.5)}}
 #battleArena .battle-ceremony[data-event="loot"] .ceremony-glyph{font-size:33px}
@@ -242,8 +242,8 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .battle-ceremony[data-event="loot"]{animation-duration:var(--ceremony-duration,2.4s)}
 
 /* Both sides can be struck while lunging in the same simultaneous attack phase. */
-#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-left .78s ease-out both}
-#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-right .78s ease-out both}
+#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-right .78s ease-out both}
+#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-left .78s ease-out both}
 
 
 /* Legible per-circle magic details via independent touch controls. */
@@ -612,16 +612,16 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 }
 @keyframes snappy-rush-hero{
  0%{transform:translateX(0) scale(1) rotate(0)}
- 20%{transform:translateX(8px) scale(.97) rotate(2deg);animation-timing-function:cubic-bezier(.08,.82,.15,1)}
- 46%,55%{transform:translateX(-34px) scale(1.1) rotate(-4deg);filter:brightness(1.6)}
- 73%{transform:translateX(5px) scale(.99) rotate(1deg);animation-timing-function:cubic-bezier(.15,.9,.25,1)}
+ 20%{transform:translateX(-8px) scale(.97) rotate(-2deg);animation-timing-function:cubic-bezier(.08,.82,.15,1)}
+ 46%,55%{transform:translateX(34px) scale(1.1) rotate(4deg);filter:brightness(1.6)}
+ 73%{transform:translateX(-5px) scale(.99) rotate(-1deg);animation-timing-function:cubic-bezier(.15,.9,.25,1)}
  100%{transform:none;filter:none}
 }
 @keyframes snappy-rush-enemy{
  0%{transform:translateX(0) scale(1) rotate(0)}
- 20%{transform:translateX(-8px) scale(.97) rotate(-2deg);animation-timing-function:cubic-bezier(.08,.82,.15,1)}
- 46%,55%{transform:translateX(34px) scale(1.1) rotate(4deg);filter:brightness(1.6)}
- 73%{transform:translateX(-5px) scale(.99) rotate(-1deg);animation-timing-function:cubic-bezier(.15,.9,.25,1)}
+ 20%{transform:translateX(8px) scale(.97) rotate(2deg);animation-timing-function:cubic-bezier(.08,.82,.15,1)}
+ 46%,55%{transform:translateX(-34px) scale(1.1) rotate(-4deg);filter:brightness(1.6)}
+ 73%{transform:translateX(5px) scale(.99) rotate(1deg);animation-timing-function:cubic-bezier(.15,.9,.25,1)}
  100%{transform:none;filter:none}
 }
 @keyframes snappy-impact{
@@ -772,8 +772,8 @@ dialog[open]::backdrop{opacity:1}
  animation:enemy-snap-slide .42s cubic-bezier(.12,.88,.19,1) both
 }
 @keyframes enemy-snap-slide{
- 0%{opacity:0;transform:translateX(-48px);filter:brightness(.55)}
- 70%{opacity:1;transform:translateX(3px);filter:brightness(1.3)}
+ 0%{opacity:0;transform:translateX(48px);filter:brightness(.55)}
+ 70%{opacity:1;transform:translateX(-3px);filter:brightness(1.3)}
  100%{opacity:1;transform:translateX(0);filter:none}
 }
 /* The death overlay remains mounted until the reward overlay starts.
@@ -1101,11 +1101,11 @@ html,body{overflow-x:clip}
 }
 #battleArena .spell-projectile{
  position:absolute;top:33%;left:var(--flight-from);width:0;height:0;
- opacity:0;pointer-events:none;--flight-from:calc(25% - 23.5px);
- --flight-to:calc(75% + 23.5px)
+ opacity:0;pointer-events:none;--flight-from:calc(75% + 23.5px);
+ --flight-to:calc(25% - 23.5px)
 }
 #battleArena .spell-projectile[data-side="hero"]{
- --flight-from:calc(75% + 23.5px);--flight-to:calc(25% - 23.5px)
+ --flight-from:calc(25% - 23.5px);--flight-to:calc(75% + 23.5px)
 }
 #battleArena .spell-projectile[data-effect="attack"]{
  animation:spell-projectile-flight .44s cubic-bezier(.22,.65,.27,1) both
@@ -1121,10 +1121,10 @@ html,body{overflow-x:clip}
 }
 @media(max-width:630px){
  #battleArena .spell-projectile{
-  --flight-from:calc(25% - 11.25px);--flight-to:calc(75% + 11.25px)
+  --flight-from:calc(75% + 11.25px);--flight-to:calc(25% - 11.25px)
  }
  #battleArena .spell-projectile[data-side="hero"]{
-  --flight-from:calc(75% + 11.25px);--flight-to:calc(25% - 11.25px)
+  --flight-from:calc(25% - 11.25px);--flight-to:calc(75% + 11.25px)
  }
 }
 @media(prefers-reduced-motion:reduce){
@@ -1294,10 +1294,10 @@ html,body{overflow-x:clip}
  74%{transform:none}
 }
 @keyframes boss-cinematic-rise{
- 0%{opacity:0;transform:translateX(-35px) translateY(10px);filter:brightness(.3)}
- 20%{opacity:1;transform:translateX(8px) translateY(-4px);filter:brightness(2)}
+ 0%{opacity:0;transform:translateX(35px) translateY(10px);filter:brightness(.3)}
+ 20%{opacity:1;transform:translateX(-8px) translateY(-4px);filter:brightness(2)}
  27%,44%,68%{transform:translateX(0);filter:brightness(1.6)}
- 32%,72%{transform:translateX(-5px);filter:brightness(2.15)}
+ 32%,72%{transform:translateX(5px);filter:brightness(2.15)}
  100%{opacity:1;transform:none;filter:none}
 }
 @keyframes boss-cinematic-collapse{

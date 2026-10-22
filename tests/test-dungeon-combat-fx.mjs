@@ -201,4 +201,32 @@ assert.match(cinematicCss,/boss-cinematic-shake/,'boss quake is visible');
 assert.match(cinematicCss,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.versus/,'quake only moves arena badge');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.boss-ceremony-art\{display:none!important\}/,'boss VFX respect reduced motion');
 
+// Scene orientation is presentation-only: actor IDs and their effect targets remain stable.
+assert.deepEqual([...arenaMarkup.matchAll(/<article id="(hero|enemy)Combatant"/g)].map(match=>match[1]),
+ ['hero','enemy'],'hero is on the left and enemy on the right');
+for(const id of ['heroProjectile','enemyProjectile','heroStats','enemyStats','heroFxText','enemyFxText']){
+ assert.equal(arenaMarkup.split('id="'+id+'"').length-1,1,'retained actor effect target '+id);
+}
+const orientationFrame=name=>{
+ const begin=cinematicCss.indexOf('@keyframes '+name+'{');
+ assert.ok(begin>=0,'missing '+name);
+ return cinematicCss.slice(begin,cinematicCss.indexOf('\n}',begin)+2);
+};
+assert.ok(orientationFrame('snappy-rush-hero').includes('translateX(34px)'),'hero attacks toward right');
+assert.ok(orientationFrame('snappy-rush-enemy').includes('translateX(-34px)'),'enemy attacks toward left');
+assert.ok(cinematicCss.includes('[data-side="hero"] .hero-unit{animation:fx-rush-right'),'legacy hero rush faces right');
+assert.ok(cinematicCss.includes('[data-side="enemy"] .enemy-unit{animation:fx-rush-left'),'legacy enemy rush faces left');
+assert.ok(cinematicCss.includes('.hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-right'),'hero dual-hit faces right');
+assert.ok(cinematicCss.includes('.enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-left'),'enemy dual-hit faces left');
+assert.ok(orientationFrame('enemy-snap-slide').includes('translateX(48px)'),'ordinary enemy enters from right');
+assert.ok(orientationFrame('boss-cinematic-rise').includes('translateX(35px)'),'boss enters from right');
+assert.ok(cinematicCss.includes('transform:translate(36px,-110px) rotate(32deg)'),'enemy-side loot flies from right');
+const flightStart=cinematicCss.indexOf('/* Magic attack travels from the center');
+const flightEnd=cinematicCss.indexOf('/* Layer boss cinematics',flightStart);
+const normalizedFlight=cinematicCss.slice(flightStart,flightEnd).replace(/\s+/g,'');
+assert.ok(normalizedFlight.includes('--flight-from:calc(75%+23.5px);--flight-to:calc(25%-23.5px)'),'desktop enemy projectile flies left');
+assert.ok(normalizedFlight.includes('[data-side="hero"]{--flight-from:calc(25%-23.5px);--flight-to:calc(75%+23.5px)'),'desktop hero projectile flies right');
+assert.ok(normalizedFlight.includes('--flight-from:calc(75%+11.25px);--flight-to:calc(25%-11.25px)'),'mobile enemy projectile flies left');
+assert.ok(normalizedFlight.includes('[data-side="hero"]{--flight-from:calc(25%-11.25px);--flight-to:calc(75%+11.25px)'),'mobile hero projectile flies right');
+
 console.log('PASS concurrent elemental fighter phases, ordered actions, encounter/death/loot and exact number of flying treasure chests');
