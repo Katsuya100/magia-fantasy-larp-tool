@@ -133,6 +133,7 @@ assert.match(css,/width:min\(100cqw,100cqh\);height:min\(100cqw,100cqh\)/,'pad r
 assert.match(source,/ctx\.moveTo\(w\/2,0\);ctx\.lineTo\(w\/2,h\);ctx\.moveTo\(0,h\/2\);ctx\.lineTo\(w,h\/2\)/,'subtle dotted crosshair is drawn');
 assert.doesNotMatch(source,/circleDrawingSpace|window\.confirm\('呪文を最初から描き直しますか/,'no space button or reset confirmation');
 
+assert.match(html,/id="circleDrawingShell" class="circle-drawing-shell"/);
 assert.match(html,/id="circleDrawingDiscard"[^>]*role="alertdialog" aria-modal="true"/,'discard uses an accessible in-app confirmation');
 assert.match(html,/<strong id="circleDrawingDiscardTitle">魔法陣を破棄しますか？<\/strong>/);
 assert.match(html,/id="circleDrawingDiscardKeep"[^>]*>戻る<\/button>/);
@@ -157,12 +158,12 @@ function element(id){
   focus(){fakeDoc.activeElement=this;},
   getBoundingClientRect(){return {width:0,height:0,left:0,top:0};},
   getContext(){return fakeContext;},
-  querySelector(sel){assert.equal(sel,'.circle-drawing-shell');return nodes.get('drawingShell');},
+  querySelector(sel){assert.equal(sel,'.circle-drawing-shell');return nodes.get('circleDrawingShell');},
   showModal(){this.open=true;},close(){this.open=false;this.dispatch('close');}
  };
  nodes.set(id,e);return e;
 }
-for(const id of ['circleDrawingDialog','drawingShell','circleDrawingPreview','circleDrawingCaret',
+for(const id of ['circleDrawingDialog','circleDrawingShell','circleDrawingPreview','circleDrawingCaret',
  'circleDrawingPad','circleDrawingConfirm','circleDrawingStatus','circleDrawingStage',
  'circleDrawingInput','circleDrawingBack','circleDrawingUndo','circleDrawingRedo',
  'circleDrawingReset','circleDrawingClose','circleDrawingDiscard','circleDrawingDiscardKeep',
@@ -175,7 +176,7 @@ globalThis.window={devicePixelRatio:1,addEventListener(){}};
 try{
  const editor=initCircleDrawing(fakeDoc,{onSave:async()=>{}});
  const get=id=>nodes.get(id),dialog=get('circleDrawingDialog'),discard=get('circleDrawingDiscard');
- const shell=get('drawingShell'),keep=get('circleDrawingDiscardKeep');
+ const shell=get('circleDrawingShell'),keep=get('circleDrawingDiscardKeep');
  editor.open();
  get('circleDrawingClose').dispatch('click');
  assert.equal(dialog.open,false,'an empty editor closes without confirmation');
