@@ -149,7 +149,7 @@ try{
  assert.ok(libraryMarkup.indexOf('id="useMagicInk"')<libraryMarkup.indexOf('id="openCircleDrawing"'));
  assert.ok(libraryMarkup.indexOf('id="openCircleDrawing"')<libraryMarkup.indexOf('id="openCircleCamera"'));
  assert.doesNotMatch(libraryMarkup,/id="cameraPane"|id="tutorialReplay"/);
- assert.match(page,/id="cameraStop"[^>]*>閉じる<\\/button>\\s*<button[^>]*id="cameraCapture"[^>]*>撮影📷<\\/button>/);
+ assert.match(page,/id="cameraStop"[^>]*>閉じる<\/button>\s*<button[^>]*id="cameraCapture"[^>]*>撮影📷<\/button>/);
  assert.match(page,/id="tutorialReplay"[^>]*>描き方を練習<\\/button>/);
  assert.match(page,/id="repairSelectedCircleImage"[^>]*>撮り直す<\/button>/,'retake has a minimal label');
  assert.doesNotMatch(page,/id="imageRepairFile"/,'retake never exposes a file picker');
