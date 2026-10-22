@@ -96,10 +96,10 @@ for(const [name,blobSha,expectedFrames,originalBytes] of optimizedOriginals){
  assert.equal(b.readUInt16LE(6),640,name+' width');
  assert.equal(b.readUInt16LE(8),640,name+' height');
  assert.ok(b.length<originalBytes,name+' is smaller than original');
- assert.equal(createHash('sha1').update('blob '+b.length+'\\0').update(b).digest('hex'),blobSha,name+' is the losslessly optimized source');
+ assert.equal(createHash('sha1').update('blob '+b.length).update(Buffer.from([0])).update(b).digest('hex'),blobSha,name+' is the losslessly optimized source');
  let frames=0;
  for(let i=0;i<b.length-2;i++)if(b[i]===33&&b[i+1]===249&&b[i+2]===4)frames++;
  assert.equal(frames,expectedFrames,name+' animation frame count');
 }
-assert.doesNotMatch(script,/tutorial-[a-z]+\\.webp/);
+assert.doesNotMatch(script,/tutorial-[a-z]+[.]webp/);
 console.log('PASS five tutorial pages, original optimized animated GIFs and navigation');
