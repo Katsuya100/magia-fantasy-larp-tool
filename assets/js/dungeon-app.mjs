@@ -22,6 +22,7 @@ import {statusBadges} from './dungeon-status-ui.mjs?v=20261022.2';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261022.2';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261022.2';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261022.2';
+import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261022.2';
 import {selectCardCircle} from './dungeon-card-art.mjs?v=20261022.2';
 import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261022.2';
 import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261022.2';
@@ -77,7 +78,7 @@ let busyAction=false,playingEffects=false,savingName=false;
 const battleInput=createBattleInputBuffer();
 let loadoutSaveQueue=Promise.resolve(),loadoutSaveRevision=0;
 let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null,upgradeRitualEpoch=0;
-let returnFlow=null,returnAnimationToken=0,tutorial=null;
+let returnFlow=null,returnAnimationToken=0,tutorial=null,magicStoneTutorial=null;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 async function battleAction(kind,index){
  const run=profile?.run;
@@ -1568,6 +1569,7 @@ function wire(){
  document.addEventListener('error',onCirclePhotoError,true);
  document.addEventListener('load',onCirclePhotoLoad,true);
  wireFavoriteHold();
+ magicStoneTutorial=initMagicStoneTutorial(document);
  tutorial=initCircleTutorial(document,async toCamera=>{
   profile.tutorialDone=true;
   try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}
@@ -1594,7 +1596,13 @@ function wire(){
   cameraReturnScroll=null;
   // Browsing another tab does not dismiss the uncompleted rewards/EXP.
   if(returnFlow&&b.dataset.view==='dungeon')renderReturnStep();
-   stopCamera();show(b.dataset.view);return;
+   stopCamera();show(b.dataset.view);
+   if(b.dataset.view==='library'&&shouldShowMagicStoneTutorial(profile)){
+    profile.magicStoneTutorialSeen=true;
+    magicStoneTutorial.open();
+    void persist().catch(()=>{});
+   }
+   return;
  }
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
  if(b.dataset.action==='delete-data'){openDeleteDataDialog();return;}
