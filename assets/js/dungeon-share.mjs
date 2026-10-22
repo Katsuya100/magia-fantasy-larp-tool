@@ -61,13 +61,13 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  };
  // Adjust the font size uniformly, never stretch or squeeze a glyph on one axis.
  // Avoid fillText(maxWidth): Canvas may condense the text non-proportionally.
- const fitFont=(value,maxFont,maxWidth,weight='700')=>{
+ const fitFont=(value,maxFont,maxWidth,weight='700',family='sans-serif')=>{
   const text=String(value);
-  ctx.font=weight+' '+maxFont+'px sans-serif';
+  ctx.font=weight+' '+maxFont+'px '+family;
   const measured=ctx.measureText?.(text)?.width;
   const naturalWidth=Number.isFinite(measured)&&measured>0?measured:[...text].length*maxFont;
   const size=Math.min(maxFont,maxFont*maxWidth/Math.max(1,naturalWidth));
-  ctx.font=weight+' '+size.toFixed(2)+'px sans-serif';
+  ctx.font=weight+' '+size.toFixed(2)+'px '+family;
   return ctx.measureText?.(text)?.width??naturalWidth*size/maxFont;
  };
  label('冒険者名',nameX,234);
@@ -77,7 +77,8 @@ export function paintAdventurerCard(canvas,data,artwork=null){
  ctx.font='34px sans-serif';
  const crownWidth=data.crowned?Math.min(39,ctx.measureText?.('👑')?.width??34):0;
  const crownGap=data.crowned?7:0;
- const nameWidth=fitFont(heroName,60,nameW-32-crownWidth-crownGap,'800');
+ // Yuji Mai is a regular-weight calligraphic font; no synthetic bold for signatures.
+ const nameWidth=fitFont(heroName,60,nameW-32-crownWidth-crownGap,'400','"Yuji Mai", sans-serif');
  const nameLeft=nameX+9;
  const nameBaseline=308;
  ctx.fillStyle='#fff2db';ctx.shadowColor='#e9ba7d99';ctx.shadowBlur=10;

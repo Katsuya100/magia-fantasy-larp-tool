@@ -122,7 +122,8 @@ const renderFor=(name,crowned=true,rank='オリハルコン級')=>{
 };
 const short=renderFor('勇者');
 const shortName=short.paints.find(op=>op.text==='勇者');
-assert.ok(shortName&&shortName.font==='800 60.00px sans-serif','short name caps at the same 60px size as the level');
+assert.ok(shortName&&shortName.font==='400 60.00px "Yuji Mai", sans-serif',
+ 'short adventurer name uses Yuji Mai regular without synthetic bold');
 assert.equal(shortName.x,82+9,'short name is left-aligned with its heading');
 assert.equal(shortName.y,308,'short name baseline moves up');
 const levelNameFont=Number(shortName.font.match(/(\d+(?:\.\d+)?)px/)?.[1]);
@@ -195,10 +196,21 @@ assert.match(css,/\.support-prompt-actions \.support-share-action\[hidden\]\{dis
 assert.ok(!modalHtml.slice(modalHtml.indexOf('<div class="support-card-tools">')).includes('id="supportNativeShare"'),'image share no longer lives among save/close controls');
 
 
+assert.match(html,/fonts\.googleapis\.com\/css2\?family=Yuji\+Mai&amp;display=swap/,
+ 'Yuji Mai stylesheet is loaded for Canvas rendering');
+assert.match(html,/冒険者カードの書体[\s\S]*?Yuji Mai[\s\S]*?SIL Open Font License 1\.1/,
+ '外典の扉 attributes the font and links its OFL license');
+
 const factory=fakeIndexedDB(),db=await openStore(factory),p=await getProfile(db);
 Object.assign(p,profile,{tutorialDone:true});
 await saveProfile(db,p);
 const env=fakeDungeonBrowser({factory,nativeShare:true}),$=id=>env.document.getElementById(id);
+const fontLoads=[];
+let resolveFontLoad;
+env.document.fonts={load:(font,characters)=>{
+ fontLoads.push({font,characters});
+ return new Promise(resolve=>{resolveFontLoad=resolve;});
+}};
 const wait=async check=>{
  const deadline=Date.now()+9000;
  while(!check()&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,25));
@@ -212,6 +224,12 @@ try{
  assert.equal($('home').hidden,false,'profile is visible before user opens the share dialog');
  await $('openAdventurerShare').fire('click');
  assert.equal($('supportPromptDialog').open,true,'profile opens the same milestone modal');
+ assert.deepEqual(fontLoads,[{font:'60px "Yuji Mai"',characters:profile.name}],
+  'the actual adventurer name is loaded before the PNG can be generated');
+ assert.equal($('adventurerShareCanvas').hidden,true,'preview stays hidden while handwriting font loads');
+ assert.equal($('supportSaveImage').disabled,true,'PNG cannot be saved using a premature fallback font');
+ resolveFontLoad([]);
+ await wait(()=>$('adventurerShareCanvas').hidden===false);
  assert.equal($('supportPromptTitle').textContent,'冒険者カード');
  assert.ok(!html.includes('id="supportDonateLink"'),'ordinary card dialog contains no donation action');
  assert.equal($('adventurerShareCanvas').hidden,false);

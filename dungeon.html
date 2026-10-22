@@ -8,6 +8,9 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
   <link rel="stylesheet" href="assets/css/dungeon.css?v=20261022.2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
   <style>
     /* Profile-only appendix: scoped to this page, without touching game styles. */
     .scene-stack > .dungeon-attribution{grid-area:2/1;min-width:0;margin-top:16px;padding:15px 20px;border:1px solid var(--border);background:#0c1423a8}
@@ -163,6 +166,8 @@
             <li><strong>呪文の意味解析：</strong><a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener noreferrer">Transformers.js</a>と<a href="https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2" target="_blank" rel="noopener noreferrer">all-MiniLM-L6-v2</a>（それぞれApache-2.0）。</li>
             <li><strong>OCR補正用の辞書：</strong><a href="https://github.com/dsojevic/profanity-list" target="_blank" rel="noopener noreferrer">profanity-list</a>（MIT）と<a href="https://github.com/nlile/dictionary-word-list" target="_blank" rel="noopener noreferrer">dictionary-word-list / SCOWL</a>（著作権・許諾表示は第三者通知を参照）。</li>
           </ul>
+          <h3>冒険者カードの書体</h3>
+          <p>共有用冒険者カードの名前には <a href="https://fonts.google.com/specimen/Yuji+Mai" target="_blank" rel="noopener noreferrer">Yuji Mai（佑字 舞）</a>を使用しています。原字は書家・片岡佑之、書体は砧書体制作所／The Yuji Project Authors。<a href="https://github.com/Kinutafontfactory/Yuji" target="_blank" rel="noopener noreferrer">公式配布元</a>の <a href="https://github.com/Kinutafontfactory/Yuji/blob/master/OFL.txt" target="_blank" rel="noopener noreferrer">SIL Open Font License 1.1</a> に基づく書体です。Google Fonts経由で文字データを読み込み、取得できない場合は標準フォントで表示します。</p>
           <h3>冒険者名の確認</h3>
           <p>冒険者名のNGワード確認には、<a href="https://github.com/MosasoM/inappropriate-words-ja" target="_blank" rel="noopener noreferrer">MosasoM/inappropriate-words-ja</a> の <code>Offensive.txt</code> と <code>Sexual.txt</code> に由来する固定版の語彙を使用しています。MIT License、Copyright (c) 2020 K Hashimoto。<a href="assets/licenses/dungeon-ng-words-MIT.txt">ライセンス全文</a>も確認できます。</p>
           <h3>処理について</h3>

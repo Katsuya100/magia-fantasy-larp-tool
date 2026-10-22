@@ -2,6 +2,14 @@
 
 コード、学習済みモデル、辞書・地理データのライセンスを分けて記載します。ライセンス全文・著作権表示は [assets/licenses/](assets/licenses/) に同梱し、取得元とSHA-256を [sources.json](assets/licenses/sources.json) に記録しています。公開用 `npm run build` はこれらもコピーします。調査日: 2026-10-06。
 
+## 冒険者カードのフォント
+
+| 用途 | 書体・配布元 | ライセンス |
+| --- | --- | --- |
+| 冒険者カードPNGの名前描画 | [Yuji Mai（佑字 舞）](https://fonts.google.com/specimen/Yuji+Mai)、原字：書家・片岡佑之、書体制作：砧書体制作所／The Yuji Project Authors。Copyright 2021 The Yuji Project Authors ([公式リポジトリ](https://github.com/Kinutafontfactory/Yuji)) | **SIL Open Font License 1.1**（[原文全文](https://github.com/Kinutafontfactory/Yuji/blob/master/OFL.txt)）。フォントはGoogle Fontsからブラウザが取得し、このリポジトリにはフォントファイルを再配布しません。読み込みに失敗すると標準フォントへフォールバックします |
+
+生成したPNGの著作権はフォントのOFLへ自動的に変更されません。文字を描画するためのフォント取得時にはGoogle Fontsへの外部通信が発生します。
+
 ## ブラウザのライブラリ
 
 | 実際の利用 | 固定バージョン | 出典・ライセンス |
