@@ -199,6 +199,8 @@ export function initCircleDrawing(doc,{onSave}){
  const get=id=>doc.getElementById(id);
  const dialog=get('circleDrawingDialog'),preview=get('circleDrawingPreview'),pad=get('circleDrawingPad');
  const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus');
+ const shell=get('circleDrawingShell');
+ const discard=get('circleDrawingDiscard'),keep=get('circleDrawingDiscardKeep'),discardButton=get('circleDrawingDiscardConfirm');
  let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,previousFocus=null;
  const message=text=>{status.textContent=text;};
  function repaint(){
@@ -267,18 +269,35 @@ get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())re
   finally{busy=false;repaint();}
  }
  confirm.addEventListener('click',()=>void finish());
+ let discardReturnFocus=null;
+ function hideDiscard(restoreFocus=true){
+  if(discard.hidden)return;
+  discard.hidden=true;shell.inert=false;
+  if(restoreFocus&&dialog.open)discardReturnFocus?.focus?.();
+  discardReturnFocus=null;
+ }
  function close(){
-  if(busy)return;
-  if((model.state.letters.length||model.state.ink.length||model.state.sigil.length)&&!window.confirm('描いている魔法陣を破棄しますか？'))return;
-  dialog.close();
+  if(busy||!dialog.open||!discard.hidden)return;
+  if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
+   dialog.close();return;
+  }
+  discardReturnFocus=doc.activeElement;
+  shell.inert=true;
+  discard.hidden=false;keep.focus();
  }
  get('circleDrawingClose').addEventListener('click',close);
- dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
- dialog.addEventListener('close',()=>{release();previousFocus?.focus?.();});
+ keep.addEventListener('click',()=>hideDiscard());
+ discardButton.addEventListener('click',()=>{hideDiscard(false);dialog.close();});
+ dialog.addEventListener('cancel',event=>{
+  event.preventDefault();
+  if(!discard.hidden)hideDiscard();
+  else close();
+ });
+ dialog.addEventListener('close',()=>{hideDiscard(false);release();previousFocus?.focus?.();});
  window.addEventListener('resize',()=>{if(dialog.open)repaint();});
  return {
   open(){
-   model=createDrawingModel();release();message('');previousFocus=doc.activeElement;
+   model=createDrawingModel();release();hideDiscard(false);message('');previousFocus=doc.activeElement;
    dialog.showModal();repaint();confirm.focus();
   }
  };
