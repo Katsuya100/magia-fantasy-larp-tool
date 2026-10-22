@@ -415,7 +415,7 @@ assert.match(css,/dialog\[open\]\{opacity:1/,'dialogs fade in and out');
 assert.doesNotMatch(page,/id="captureAnalyzerFrame"/,'photo analysis must not run in a hidden iframe');
 assert.match(page,/id="analyzerFrame" title="マギアサークル解析"/,'capture analysis uses visible screen');
 assert.match(app,/show\('analyzing'\)/,'captures visibly transition to analysis');
-assert.match(app,/await analyzeCapturedCircle\(circle\)/,'camera waits until analysis settles');
+assert.match(app,/await analyzeCapturedCircle\(circle,\$\('useMagicInk'\)\.checked&&profile\.magicInk>0\)/,'camera waits for analysis, preserving selected crafting material');
 assert.match(app,/await revealOriginal\(analyzed,result\.failed\)/,'both results use the original reveal');
 assert.doesNotMatch(page,/id="analysisMisfire"/,'no extra result format is introduced');
 assert.match(page,/3〜5 SIGILS/);
