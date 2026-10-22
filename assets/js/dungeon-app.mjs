@@ -883,14 +883,24 @@ function showSupportPrompt(prompt){
  $('supportPromptTitle').textContent=prompt.title;
  $('supportPromptMessage').textContent=prompt.message;
  $('supportXLink').href=adventurerXUrl(data);
- $('supportShareHelp').textContent='Xの投稿には本文が入ります。画像は保存して添付できます。';
+ $('supportShareHelp').textContent='冒険者カードを生成しています。Xの投稿には本文が入ります。';
  $('supportNativeShare').hidden=true;
- const draw=artwork=>{
+ canvas.hidden=true;
+ $('supportSaveImage').disabled=true;
+ // Wait for the Japanese glyph subset before rasterizing; saved PNGs must not
+ // accidentally capture a fallback font while Yuji Mai is downloading.
+ const fontReady=typeof document.fonts?.load==='function'
+  ? Promise.resolve().then(()=>document.fonts.load('60px "Yuji Mai"',data.name))
+    .catch(error=>{console.warn('Yuji Maiを読み込めませんでした（標準フォントを使用）',error);})
+  : Promise.resolve();
+ const draw=async artwork=>{
+  await fontReady;
   if(generation!==shareImageGeneration)return;
   try{
    paintAdventurerCard(canvas,data,artwork);
    canvas.hidden=false;
    $('supportSaveImage').disabled=false;
+   $('supportShareHelp').textContent='Xの投稿には本文が入ります。画像は保存して添付できます。';
    if(typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&typeof File!=='undefined'){
     canvas.toBlob(blob=>{
      if(generation!==shareImageGeneration||!blob)return;
@@ -911,10 +921,7 @@ function showSupportPrompt(prompt){
   }
  };
  if(selected?.image&&typeof Image==='function'){
-  // The modal must open synchronously. Keep saving disabled until photo decoding.
-  paintAdventurerCard(canvas,data);
-  canvas.hidden=false;
-  $('supportSaveImage').disabled=true;
+  // Open synchronously; the preview and saving wait for photo and font readiness.
   $('supportPromptDialog').showModal();
   void circleImages.thumbnail(selected).then(thumb=>{
    if(generation!==shareImageGeneration||!$('supportPromptDialog').open)return;
@@ -929,8 +936,8 @@ function showSupportPrompt(prompt){
    image.src=url;
   }).catch(()=>draw(null));
  }else{
-  draw(null);
   $('supportPromptDialog').showModal();
+  void draw(null);
  }
 }
 function openAdventurerShare(){
