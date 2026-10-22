@@ -20,7 +20,7 @@ export function glyphPoint(point,index,count=1){
   y:.5+.345*Math.sin(angle)+dx*Math.sin(tangent)+dy*Math.cos(tangent)};
 }
 export function sigilPoint(point){
- return {x:.5+point.x*INNER_RADIUS/SIGIL_GUIDE_RADIUS,y:.5+point.y*INNER_RADIUS/GUIDE_RADIUS};
+ return {x:.5+point.x*INNER_RADIUS/SIGIL_GUIDE_RADIUS,y:.5+point.y*INNER_RADIUS/SIGIL_GUIDE_RADIUS};
 }
 export function normalizedGlyph(strokes){
  const points=strokes.flat();
