@@ -37,12 +37,20 @@ assert.doesNotMatch(controls,/drop-shadow\(|translateY\(-2px\)|scale\(1\.035\)/,
  'floating shadows and outward hover scaling cannot spill over backgrounds');
 assert.match(controls,/\.circle-photo-face::before\{[^}]*inset:var\(--circle-guide-inset\)/,
  'raised metal rim stays at the camera guide circumference');
-assert.doesNotMatch(controls,/\.circle-photo-face::after|\.circle-photo-face::after/,
- 'no action plaques or text labels overlap any circular image');
+assert.doesNotMatch(controls,/\.circle-photo-face::after/,
+ 'no operation plaque overlaps any circular photo');
 assert.doesNotMatch(controls,/content:"(?:発動|変更|選ぶ|長押し ★)"/,
- 'labels removed from spell photos in battle, preparation, picker and library');
-assert.match(app,/\+'<span class="tile-cooldown">',
- 'battle spell retains the existing cast or cooldown text beneath the photo');
+ 'all former circular-photo action labels are removed');
+assert.ok(app.includes('tile-cooldown')&&app.includes("'+state.cooldown+'"),
+ 'battle spell retains its separate cast/cooldown text below the photo');
+assert.match(controls,/\.prepare-spell-frame \.loadout-tile\.equipped\{[^}]*padding:0!important;gap:0;justify-content:center/,
+ 'preparation spell tile has no padding around the photo');
+assert.match(controls,/\.prepare-spell-frame \.loadout-tile \.circle-photo-face,\s*\.battle-spells \.battle-spell-photo\.circle-photo-face\{[^}]*width:100%;max-width:none/,
+ 'preparation and battle photos span the button width');
+assert.match(controls,/\.battle-spells \.battle-spell-tile\[data-cast\] \.tile-cooldown\{[^}]*border-top:1px solid/,
+ 'battle cast text is a footer below the photo');
+assert.match(controls,/\.battle-spells \.battle-spell-tile\[data-cast\]\{[^}]*padding:0!important;gap:0/,
+ 'battle tile photo and footer form one button');
 assert.doesNotMatch(controls,/\.circle-photo-face > img\{[^}]*object-position:/,
  'photo alignment and saved image are unchanged');
 console.log('PASS guided circular spell photos with no overlapping action plaques');
