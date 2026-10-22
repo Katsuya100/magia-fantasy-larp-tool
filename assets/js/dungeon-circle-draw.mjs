@@ -160,18 +160,18 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('魔法陣を描画できません。');
  ctx.clearRect(0,0,size,size);
  paintParchment(ctx,size);
- brushCircle(ctx,size,.43,.0045);
- brushCircle(ctx,size,INNER_RADIUS,.008);
+ brushCircle(ctx,size,.43,.0055);
+ brushCircle(ctx,size,INNER_RADIUS,.0095);
  for(let i=0;i<state.letters.length;i++){
   const glyph=state.letters[i];
   if(glyph.space)continue;
   for(const stroke of glyph.strokes){
-   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,state.letters.length);return {x:q.x*size,y:q.y*size};},size*.006);
+   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,state.letters.length);return {x:q.x*size,y:q.y*size};},size*.0072);
   }
  }
  const transform=p=>{const q=sigilPoint(p);return {x:q.x*size,y:q.y*size};};
- for(const stroke of state.sigil)brushStroke(ctx,stroke,transform,size*.008);
- if(state.mode==='sigil'&&activeStroke?.length)brushStroke(ctx,activeStroke,transform,size*.008);
+ for(const stroke of state.sigil)brushStroke(ctx,stroke,transform,size*.0096);
+ if(state.mode==='sigil'&&activeStroke?.length)brushStroke(ctx,activeStroke,transform,size*.0096);
 }
 // Draw the cursor on its own transparent layer so CSS can blink it without
 // dimming the parchment or affecting the exported image.
@@ -204,7 +204,7 @@ function paintPad(canvas,state,activeStroke){
   ctx.beginPath();ctx.arc(w/2,h/2,scale*GUIDE_RADIUS,0,Math.PI*2);ctx.stroke();ctx.restore();
  }
  const strokes=state.mode==='spell'?state.ink:state.sigil;
- const width=state.mode==='spell'?4*dpr:2*dpr;
+ const width=state.mode==='spell'?4.8*dpr:2.4*dpr;
  for(const stroke of strokes)strokePath(ctx,stroke,at,width,'#d2b7ff',9*dpr);
  if(activeStroke?.length)strokePath(ctx,activeStroke,at,width,'#e8d9ff',13*dpr);
 }
