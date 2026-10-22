@@ -1629,6 +1629,7 @@ function wireFavoriteHold(){
  });
 }
 function wire(){
+ syncCameraUi(false);
  drawingEditor=initCircleDrawing(document,{onSave:saveDrawnCircle});
  window.addEventListener('message',onAnalysisMessage);
  document.addEventListener('error',onCirclePhotoError,true);
