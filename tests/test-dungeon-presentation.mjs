@@ -12,7 +12,7 @@ assert.match(home,/自分だけの魔法陣で迷宮へ/);
 assert.doesNotMatch(home,/五つの陣で深淵へ/);
 assert.doesNotMatch(page,/共鳴率/);
 assert.match(page,/紋様によって「⚔️攻撃・🛡️防御・✚回復・🕸️弱体」が決まります/);
-assert.match(page,/解析が成功した魔法陣だけ登録します/);
+assert.match(page,/成功時は威力250以上、失敗時は相・紋がランダムで威力200〜250の魔法陣として登録します/);
 assert.match(page,/MPと威力は初回使用まで伏せられます/);
 assert.match(page,/assets\/images\/sample\.png/);
 assert.ok((await stat(new URL('../assets/images/sample.png',import.meta.url))).size>100);
