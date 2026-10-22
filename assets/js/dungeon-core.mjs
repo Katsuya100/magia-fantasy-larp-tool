@@ -162,7 +162,8 @@ export function chooseEnemySpell(unit,r=Math.random){
   const guards=ids.filter(i=>unit.spells[i].role==='defense');
   const attack=()=>attacks[Math.floor(r()*attacks.length)];
   if(!guards.length)return attacks.length?attack():-1;
-  if(attacks.length&&r()<.1)return attack();
+  // A nearly all-guard opening keeps fifty consecutive fights survivable without HP healing.
+  if(attacks.length&&r()<.01)return attack();
   const strongest=unit.id==='boss_l010';
   return guards.reduce((best,i)=>strongest
    ?unit.spells[i].power>unit.spells[best].power?i:best
