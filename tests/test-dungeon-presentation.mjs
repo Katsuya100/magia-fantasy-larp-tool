@@ -430,8 +430,8 @@ assert.match(app,/await analyzeCapturedCircle\(circle,\$\('useMagicInk'\)\.check
 assert.match(app,/await revealOriginal\(analyzed,result\.failed\)/,'both results use the original reveal');
 assert.match(app,/const request=\{id:circle\.id,type:'capture',epoch:photoAnalysisEpoch,origin:circle\.origin\}/,
  'analysis retains whether capture came from handwritten editor');
-assert.match(app,/const drawn=capture&&request\.origin==='drawn';[\s\S]*?if\(drawn\)\{\s*cameraReturnScroll=null;\s*show\('library'\);\s*drawingEditor\.resume\(\);\s*\}else if\(capture\)\{show\('library'\);returnToCameraScroll\(\);\}/,
- 'cancelled handwriting resumes editor, camera capture returns to grimoire');
+assert.match(app,/const drawn=capture&&request\.origin==='drawn';[\s\S]*?if\(drawn\)\{\s*cameraReturnScroll=null;\s*show\('library'\);\s*drawingEditor\.resume\(\);\s*\}else if\(capture\)\{show\('library'\);returnToCameraScroll\(\);openCircleCamera\(\);\}/,
+ 'cancelled handwriting resumes editor, camera capture returns to modal');
 assert.doesNotMatch(page,/id="analysisMisfire"/,'no extra result format is introduced');
 assert.match(page,/3〜5 SIGILS/);
 assert.match(page,/id="circleCounter"/);
