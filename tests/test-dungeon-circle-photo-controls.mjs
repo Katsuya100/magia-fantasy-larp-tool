@@ -27,9 +27,11 @@ assert.doesNotMatch(itemGrid([],[],3,false,()=>'',escapeText),/circle-photo-face
 assert.doesNotMatch(itemChoices([],[],()=>'',escapeText),/circle-photo-face/);
 assert.match(app,/class="battle-spell-photo circle-photo-face"><img[^\n]*data-circle-photo-id=/);
 assert.match(app,/class="circle-photo-face"><img alt="魔法陣"[^\n]*aria-pressed=/);
-assert.match(page,/dungeon\.css\?v=20261022\.10/);
-assert.match(page,/dungeon-app\.mjs\?v=20261022\.10/);
-assert.match(app,/dungeon-preparation-ui\.mjs\?v=20261022\.10/);
+const release=page.match(/data-release="(\d{8}\.\d+)"/)?.[1];
+assert.ok(release,'current dungeon release exists');
+assert.ok(page.includes('dungeon.css?v='+release),'stylesheet uses current release');
+assert.ok(page.includes('dungeon-app.mjs?v='+release),'entry script uses current release');
+assert.ok(app.includes('dungeon-preparation-ui.mjs?v='+release),'preparation module uses current release');
 const controls=css.slice(css.indexOf('.circle-photo-face{'),css.indexOf('/* Revelation only:'));
 assert.match(controls,/\.circle-photo-face\{[^}]*border-radius:50%;overflow:hidden/,
  'round photo frames never protrude beyond the button surface');
