@@ -300,7 +300,7 @@ assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 assert.ok(app.includes('circles=newestCirclesFirst([...circles,analyzed])'),'successful captures sort newest first');
 assert.ok(app.includes('await putCircle(db,analyzed)'),'save only after successful camera analysis');
 assert.match(app,/await analyzeCapturedCircle\(circle\)/,'camera opens analysis before registering');
-assert.match(app,/const analyzed=savePreanalysis\(circle,result\.analysis\);[\s\S]*?await putCircle\(db,analyzed\)/,'save follows validated success or fallback');
+assert.match(app,/const reduced=circle\.origin==='drawn'\?\{\.\.\.result\.analysis,power:drawnPower\(result\.analysis\.power\)\}:result\.analysis;[\s\S]*?const analyzed=savePreanalysis\(circle,reduced\);[\s\S]*?await putCircle\(db,analyzed\)/,'save follows validated analysis or fallback after drawn-only power reduction');
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
 assert.match(app,/newestCirclesFirst\(await allCircles\(db\)\)/);
 assert.match(app,/newCapturedCircle\(crypto\.randomUUID\(\),blob,lastCaptureRegistration\)/);
