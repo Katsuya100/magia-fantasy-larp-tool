@@ -107,6 +107,9 @@ assert.match(page,/<video id="imageRepairVideo" autoplay muted playsinline hidde
 assert.match(page,/id="imageRepairCapture" hidden>撮影して保存<\/button>/,'retakes save a fresh camera shot');
 assert.match(page,/id="openCircleCamera"/);
 assert.match(page,/id="circleCameraDialog" class="circle-drawing-dialog circle-camera-dialog"/);
+const cameraDialog=page.split('id="circleCameraDialog"')[1].split('</dialog>')[0];
+assert.ok(cameraDialog.indexOf('id="tutorialReplay"')<cameraDialog.indexOf('id="cameraPane"'),'practice is above the camera');
+assert.match(css,/\.circle-camera-dialog \.tutorial-replay\{align-self:flex-end/,'practice stays on the dialog top-right');
 assert.match(page,/id="cameraPane" class="capture-pane"(?! hidden)/);
 assert.match(page,/<div class="camera-viewfinder"[^>]*>[\s\S]*?id="cameraPlaceholder"[\s\S]*?<video id="cameraVideo"[^>]* hidden/);
 assert.match(page,/<span class="viewfinder-circle-guide" aria-hidden="true"><\/span>/,'large guide overlays the live camera');

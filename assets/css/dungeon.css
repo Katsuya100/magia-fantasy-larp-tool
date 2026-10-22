@@ -2560,5 +2560,5 @@ button.creator-congratulations-close{
 .circle-camera-dialog .camera-actions button{min-width:0;min-height:44px;padding:8px 12px;font-size:13px;box-shadow:none}
 .circle-camera-dialog .drawing-secondary{background:#23213a;color:#e8ddfc;border:1px solid #8c779e}
 .circle-camera-dialog .drawing-confirm{background:linear-gradient(145deg,#f5da9e,#bf8d50);color:#191221;border:1px solid #e6bc79}
-.circle-camera-dialog .tutorial-replay{align-self:flex-start;margin:0;font-size:12px!important}
+.circle-camera-dialog .tutorial-replay{align-self:flex-end;margin:0;font-size:12px!important}
 @media(max-width:630px){.circle-camera-dialog .camera-viewfinder{width:min(100%,calc(100dvh - 178px))}}
