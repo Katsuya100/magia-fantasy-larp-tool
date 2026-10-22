@@ -133,7 +133,9 @@ const circle={mode:'spell',letters:[{strokes:normalizedGlyph([stroke])}],ink:[],
 paintCircle(fakeCanvas,circle,{size:128});
 assert.equal(fakeCanvas.width,128);
 assert.ok(drawings.some(d=>d.kind==='fill'&&d.color==='#f2e4c6'),'preview is warm parchment rather than plain white');
-assert.ok(drawings.some(d=>d.kind==='stroke'&&d.width>=128*.008),'inner circle line is more substantial');
+assert.ok(drawings.some(d=>d.kind==='stroke'&&d.width===128*.0055),'outer ring is slightly bolder');
+assert.ok(drawings.some(d=>d.kind==='stroke'&&d.width===128*.0095),'inner ring is slightly bolder');
+assert.ok(drawings.some(d=>d.kind==='stroke'&&d.width===128*.0072),'glyph ink is slightly bolder');
 const previewStrokes=drawings.filter(d=>d.kind==='stroke').length;
 drawings.length=0;
 paintCircle(fakeCanvas,circle,{size:128,exportImage:true});
@@ -146,7 +148,7 @@ drawings.length=0;paintCaret(fakeCanvas,{...circle,mode:'sigil'},{size:128});
 assert.equal(drawings.length,0,'caret layer is blank while writing the sigil');
 const sigil={mode:'sigil',letters:circle.letters,ink:[],sigil:[stroke]};
 drawings.length=0;paintCircle(fakeCanvas,sigil,{size:128,exportImage:true});
-assert.ok(drawings.some(d=>d.kind==='stroke'&&d.width===128*.008),'sigil ink is visibly thicker in the final image');
+assert.ok(drawings.some(d=>d.kind==='stroke'&&d.width===128*.0096),'sigil ink is slightly bolder in the final image');
 
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
