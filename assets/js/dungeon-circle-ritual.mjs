@@ -97,6 +97,8 @@ export async function playCircleReveal(circle,photoUrl='',{failed=false}={}){
   dismissActiveCircleReveal?.();
   const grand=isGrandCircleReveal(circle?.analysis)&&!reducedMotion();
   const root=stageFor('reveal',circle?.analysis,outline,failed);
+  // Hand-drawn artwork is a square parchment sheet, not a round cropped photo.
+  if(circle?.origin==='drawn')root.className+=' circle-ritual--drawn';
   if(grand){
    root.className+=' circle-ritual--grand';
    const lightning=element('div','circle-ritual__lightning');

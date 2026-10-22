@@ -25,7 +25,7 @@ export function initCircleTutorial(doc,onFinish){
   freedom.hidden=!info.freedom;
   $('tutorialFigure').hidden=!info.image;
   if(info.image){
-   preview.src='assets/images/'+info.image+'?v=20261023.12';
+   preview.src='assets/images/'+info.image+'?v=20261023.13';
    preview.alt=info.title+'の描画アニメーション';
   }else preview.alt='';
   back.hidden=step===0;
