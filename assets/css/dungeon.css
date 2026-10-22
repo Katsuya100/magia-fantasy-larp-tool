@@ -2460,8 +2460,8 @@ button.creator-congratulations-close{
  position:relative;flex:1 1 50%;min-height:0;min-width:0;
  display:grid;grid-template-columns:46px minmax(0,1fr) 46px;
  place-items:center;align-content:center;gap:2px;
- background:radial-gradient(circle at 50% 45%,#32304a,#090e1c 72%);
- padding:8px 7px 28px
+ background:#efe1c3;
+ padding:4px 7px
 }
 .circle-drawing-display canvas{
  display:block;width:min(100%,calc((94dvh - 130px)/2));height:auto;
@@ -2471,24 +2471,28 @@ button.creator-congratulations-close{
  width:42px;height:50px;padding:4px;font-size:25px;color:var(--gold);
  border-radius:8px;touch-action:manipulation
 }
-.circle-drawing-count{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-size:12px;color:#c8b5d9}
 .circle-drawing-entry{
  flex:1 1 50%;min-height:0;min-width:0;display:flex;
- flex-direction:column;padding:7px 10px max(9px,env(safe-area-inset-bottom));
+ flex-direction:column;padding:4px 7px max(4px,env(safe-area-inset-bottom));
  border-top:1px solid #bda17c6e;background:#070914
 }
-.circle-drawing-hint{flex:none;text-align:center;color:#c9b8db;font-size:12px;line-height:1.4;margin:0 0 7px}
+.circle-drawing-pad-zone{
+ flex:1 1 0;display:grid;place-items:center;container-type:size;
+ min-width:0;min-height:0;overflow:hidden
+}
 .circle-drawing-pad{
- display:block;flex:1 1 auto;min-width:0;min-height:0;width:100%;
+ display:block;flex:none;aspect-ratio:1 / 1;
+ width:min(100cqw,100cqh);height:min(100cqw,100cqh);max-width:100%;max-height:100%;
  border:1px solid #564277;background:#03050b;
  box-shadow:inset 0 0 22px #000;touch-action:none;user-select:none;
  -webkit-user-select:none;overscroll-behavior:contain
 }
 .circle-drawing-actions{flex:none;display:flex;justify-content:space-between;gap:7px;align-items:center;padding-top:8px}
 #circleDrawingDialog .circle-drawing-actions button{flex:none}
-#circleDrawingSpace,#circleDrawingBack{margin-left:auto}
+#circleDrawingBack{margin-left:auto}
 #circleDrawingInput{min-width:87px}
-.circle-drawing-status{flex:none;min-height:20px;margin:5px 0 0;text-align:center;color:#e9b1a9;font-size:12px;line-height:1.4}
+.circle-drawing-status{flex:none;min-height:0;margin:4px 0 0;text-align:center;color:#e9b1a9;font-size:12px;line-height:1.4}
+.circle-drawing-status:empty{display:none}
 @media(max-width:630px){
  .circle-drawing-dialog{width:100%;height:100dvh;max-height:100dvh;max-width:none;margin:0;border:0}
  .drawing-open-button{margin:0 0 18px}
@@ -2497,7 +2501,6 @@ button.creator-congratulations-close{
  .circle-drawing-display canvas{width:min(100%,calc((100dvh - 148px)/2))}
 }
 @media(max-height:520px){
- .circle-drawing-hint{font-size:11px}
  .circle-drawing-header{padding-top:3px;padding-bottom:3px}
  .circle-drawing-actions{padding-top:3px}
  .circle-drawing-status{margin:0}
