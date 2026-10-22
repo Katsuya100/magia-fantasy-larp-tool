@@ -182,6 +182,7 @@ try{
  assert.equal(dialog.open,false,'an empty editor closes without confirmation');
  editor.open();
  get('circleDrawingInput').dispatch('click'); // A blank entry is still unsaved.
+ get('circleDrawingClose').focus(); // Simulate a keyboard click; DOM stubs do not move focus on dispatch.
  get('circleDrawingClose').dispatch('click');
  assert.equal(dialog.open,true);
  assert.equal(discard.hidden,false,'edited circles must open the in-game confirmation');
