@@ -134,11 +134,11 @@ assert.match(source,/ctx\.moveTo\(w\/2,0\);ctx\.lineTo\(w\/2,h\);ctx\.moveTo\(0,
 assert.doesNotMatch(source,/circleDrawingSpace|window\.confirm\('呪文を最初から描き直しますか/,'no space button or reset confirmation');
 
 assert.match(html,/id="circleDrawingDiscard"[^>]*role="alertdialog" aria-modal="true"/,'discard uses an accessible in-app confirmation');
-assert.match(html,/<strong id="circleDrawingDiscardTitle">魔法陣を破棄しますか？<\\/strong>/);
-assert.match(html,/id="circleDrawingDiscardKeep"[^>]*>戻る<\\/button>/);
-assert.match(html,/id="circleDrawingDiscardConfirm"[^>]*>破棄<\\/button>/);
-assert.match(css,/\\.circle-drawing-discard\\[hidden\\]\\{display:none\\}/,'hidden confirmation never overlays the editor');
-assert.doesNotMatch(source,/window\\.confirm/,'system confirmation must never appear in drawing flow');
+assert.match(html,/<strong id="circleDrawingDiscardTitle">魔法陣を破棄しますか？<\/strong>/);
+assert.match(html,/id="circleDrawingDiscardKeep"[^>]*>戻る<\/button>/);
+assert.match(html,/id="circleDrawingDiscardConfirm"[^>]*>破棄<\/button>/);
+assert.match(css,/\.circle-drawing-discard\[hidden\]\{display:none\}/,'hidden confirmation never overlays the editor');
+assert.doesNotMatch(source,/window\.confirm/,'system confirmation must never appear in drawing flow');
 
 // Headless UI interaction: close, keep, Esc, destroy, and focus must be safe.
 const fakeContext={
