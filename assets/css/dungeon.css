@@ -2329,7 +2329,8 @@ button.creator-congratulations-close{
 .circle-picker-grid .picker-option .circle-photo-face{width:100%}
 .circle-picker-grid .picker-option .circle-photo-face::after{content:"選ぶ"}
 .battle-spells .battle-spell-photo.circle-photo-face{width:100%;max-width:112px}
-.battle-spells .battle-spell-photo.circle-photo-face::after{content:"発動"}
+/* The existing cast text sits below the image; no duplicate plaque on the spell. */
+.battle-spells .battle-spell-photo.circle-photo-face::after{display:none}
 .battle-spells .circle-photo-face .battle-spell-seal{
  inset:var(--circle-guide-inset);z-index:2;border-radius:50%
 }

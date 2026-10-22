@@ -27,9 +27,9 @@ assert.doesNotMatch(itemGrid([],[],3,false,()=>'',escapeText),/circle-photo-face
 assert.doesNotMatch(itemChoices([],[],()=>'',escapeText),/circle-photo-face/);
 assert.match(app,/class="battle-spell-photo circle-photo-face"><img[^\n]*data-circle-photo-id=/);
 assert.match(app,/class="circle-photo-face"><img alt="魔法陣"[^\n]*aria-pressed=/);
-assert.match(page,/dungeon\.css\?v=20261022\.8/);
-assert.match(page,/dungeon-app\.mjs\?v=20261022\.8/);
-assert.match(app,/dungeon-preparation-ui\.mjs\?v=20261022\.8/);
+assert.match(page,/dungeon\.css\?v=20261022\.9/);
+assert.match(page,/dungeon-app\.mjs\?v=20261022\.9/);
+assert.match(app,/dungeon-preparation-ui\.mjs\?v=20261022\.9/);
 const controls=css.slice(css.indexOf('.circle-photo-face{'),css.indexOf('/* Revelation only:'));
 assert.match(controls,/\.circle-photo-face\{[^}]*border-radius:50%;overflow:hidden/,
  'round photo frames never protrude beyond the button surface');
@@ -42,13 +42,18 @@ assert.match(controls,/\.circle-photo-face::after\{[^}]*bottom:17%[^}]*pointer-e
 for(const [selector,label] of [
  ['.circle-grid .card > .circle-photo-face','長押し ★'],
  ['.prepare-spell-frame .loadout-tile .circle-photo-face','変更'],
- ['.circle-picker-grid .picker-option .circle-photo-face','選ぶ'],
- ['.battle-spells .battle-spell-photo.circle-photo-face','発動']
+ ['.circle-picker-grid .picker-option .circle-photo-face','選ぶ']
 ]){
  assert.ok(controls.includes(selector+'::after{content:"'+label+'"}'),'correct action on '+selector);
 }
+assert.match(controls,/\.battle-spells \.battle-spell-photo\.circle-photo-face::after\{display:none\}/,
+ 'cast spells have no text plaque covering their photo');
+assert.doesNotMatch(controls,/\.battle-spells \.battle-spell-photo\.circle-photo-face::after\{content:/,
+ 'battle casting label is not duplicated on the image');
+assert.match(app,/\+\x27<span class="tile-cooldown">\x27\+state\.cooldown\+\x27<\/span><\/button>\x27/,
+ 'the existing cast/cooldown text below the photo remains intact');
 assert.match(controls,/\.battle-spells \.battle-spell-tile:disabled \.circle-photo-face::after\{display:none\}/,
- 'disabled battle spells do not display an active cast affordance');
+ 'disabled battle spells preserve their existing hidden state');
 assert.doesNotMatch(controls,/\.circle-photo-face > img\{[^}]*object-position:/,
  'photo alignment and saved image are unchanged');
 console.log('PASS guided circular spell photo controls, inset frames and distinct actions');
