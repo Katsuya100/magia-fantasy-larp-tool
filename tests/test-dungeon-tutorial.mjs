@@ -97,7 +97,7 @@ for(const [name,blobSha,expectedFrames,expectedBytes,originalBytes] of uploadedO
  assert.equal(b.readUInt16LE(8),820,name+' height');
  assert.equal(b.length,expectedBytes,name+' exact compressed size');
  assert.ok(b.length<originalBytes,name+' smaller than the uploaded original');
- assert.equal(createHash('sha1').update('blob '+b.length).update(Buffer.from([0])).update(b).digest('hex'),blobSha,name+' matches the user's optimized GIF');
+ assert.equal(createHash('sha1').update('blob '+b.length).update(Buffer.from([0])).update(b).digest('hex'),blobSha,name+' matches the uploaded optimized GIF');
  let frames=0;
  for(let i=0;i<b.length-2;i++)if(b[i]===33&&b[i+1]===249&&b[i+2]===4)frames++;
  assert.equal(frames,expectedFrames,name+' preserves the animated frame count');
