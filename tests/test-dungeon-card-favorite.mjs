@@ -114,6 +114,9 @@ try{
  const deadline=Date.now()+9000;
  while(!$('startupMask').hidden&&Date.now()<deadline)await new Promise(r=>setTimeout(r,25));
  assert.equal($('startupMask').hidden,true,'dungeon loaded');
+ await env.document.click({dataset:{view:'library'},closest(){return this;}});
+ assert.equal($('library').hidden,false,'favorite test runs from the grimoire scene');
+ assert.equal($('supportPromptDialog').open,false,'opening the grimoire does not show the card');
  const grid=$('libraryCards');
  const target={closest(selector){
   if(selector==='button')return null;
@@ -124,15 +127,32 @@ try{
  grid.fire('pointerup',{target});
  await new Promise(r=>setTimeout(r,590));
  assert.equal((await getProfile(db)).favoriteCircleId,undefined,'short tap does not set favorite');
+ assert.equal($('supportPromptDialog').open,false,'short tap never shows the adventurer card');
  grid.fire('pointerdown',{target,button:0,clientX:10,clientY:10});
  await new Promise(r=>setTimeout(r,620));
  assert.equal((await getProfile(db)).favoriteCircleId,'b','long hold persists the photo ID');
+ assert.equal((await getProfile(db)).favoriteCircleEverSelected,true,'first favorite is recorded persistently');
+ assert.equal($('supportPromptDialog').open,true,'first favorite opens existing adventurer card from library');
+ assert.equal($('supportPromptTitle').textContent,'冒険者カード','reuse the existing share dialog');
  assert.match(grid.innerHTML,/data-circle-id="b"[^>]*data-favorite="true"/,'star marker follows saved favorite');
+ await $('supportPromptClose').fire('click');
+ assert.equal($('supportPromptDialog').open,false,'share dialog can be dismissed');
  grid.fire('pointerdown',{target,button:0,clientX:10,clientY:10});
  await new Promise(r=>setTimeout(r,620));
  assert.equal((await getProfile(db)).favoriteCircleId,null,'holding again removes favorite');
+ assert.equal($('supportPromptDialog').open,false,'unfavorite never reopens the card');
  grid.fire('keydown',{target,key:'Enter'});
  await new Promise(r=>setTimeout(r,35));
  assert.equal((await getProfile(db)).favoriteCircleId,'b','keyboard toggles favorite');
+ assert.equal($('supportPromptDialog').open,false,'favorite after removal does not reopen the card');
+ const other={...target,closest(selector){
+  if(selector==='button')return null;
+  if(selector==='[data-circle-id]')return {dataset:{circleId:'a'}};
+  return null;
+ }};
+ grid.fire('keydown',{target:other,key:'Enter'});
+ await new Promise(r=>setTimeout(r,35));
+ assert.equal((await getProfile(db)).favoriteCircleId,'a','switching favorite still works');
+ assert.equal($('supportPromptDialog').open,false,'switching favorite does not reopen the card');
 }finally{env.restore();}
-console.log('PASS favorite long press, toggle, saved ID, art priority and tinted edges');
+console.log('PASS first favorite adventurer card, one-time persistence, long press, keyboard and art priority');

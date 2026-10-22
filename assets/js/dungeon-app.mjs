@@ -898,7 +898,7 @@ function showMilestoneChoice(prompt){
  $('milestoneChoiceDialog').showModal();
 }
 function showSupportPrompt(prompt){
- if(!prompt||!['home','checkpoint'].includes(activeScene))return;
+ if(!prompt||!['home','checkpoint','library'].includes(activeScene))return;
  const generation=++shareImageGeneration;
  shareImageFile=null;
  const data=adventurerShareData(profile),canvas=$('adventurerShareCanvas');
@@ -1526,10 +1526,12 @@ function openNameDialog(required){
 }
 async function toggleFavoriteCircle(id){
  if(profile.run||!circles.some(circle=>circle.id===id))return;
- const next={...profile,favoriteCircleId:profile.favoriteCircleId===id?null:id};
+ const firstFavorite=!profile.favoriteCircleId&&!profile.favoriteCircleEverSelected;
+ const next={...profile,favoriteCircleId:profile.favoriteCircleId===id?null:id,favoriteCircleEverSelected:true};
  await saveProfile(db,next);
  profile=next;
  render();
+ if(firstFavorite)openAdventurerShare();
 }
 function wireFavoriteHold(){
  const grid=$('libraryCards');
