@@ -1183,8 +1183,7 @@ async function parseDungeonMagic(circle,valid,request){
  }
 }
 async function analyzeCapturedCircle(circle,useInk=false){
- // Reveal the real analyzer for each photo. The live camera remains active
- // in the grimoire, so another photo can be taken immediately after returning.
+ // Show the full analysis screen. Capture returns to its dialog on cancellation.
  const request={id:circle.id,type:'capture',epoch:photoAnalysisEpoch,origin:circle.origin};
  activeAnalysis=request;
  rememberCameraScroll();
@@ -1208,6 +1207,7 @@ async function analyzeCapturedCircle(circle,useInk=false){
   }else await putCircle(db,analyzed);
   if(!valid())return;
   circles=newestCirclesFirst([...circles,analyzed]);
+  if(circle.origin!=='drawn')stopCamera();
   $('useMagicInk').checked=false;
   activeAnalysis=null;
   show('library');
@@ -1218,6 +1218,7 @@ async function analyzeCapturedCircle(circle,useInk=false){
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
+  if(circle.origin!=='drawn')openCircleCamera();
   $('cameraError').textContent='解明失敗：'+String(e?.message||e)+'（写真は保存していません）';
   $('cameraError').hidden=false;
  }
@@ -1247,9 +1248,7 @@ async function analyzeUnknown(index){
 function syncCameraUi(active){
  $('cameraPlaceholder').hidden=active;
  $('cameraVideo').hidden=!active;
- $('cameraStart').hidden=active;
- $('cameraCapture').hidden=!active;
- $('cameraStop').hidden=!active;
+ $('cameraCapture').disabled=!active;
 }
 async function openCamera(video){
  if(!navigator.mediaDevices?.getUserMedia)throw Error('HTTPSまたはlocalhostのカメラ対応ブラウザが必要です。');
@@ -1300,24 +1299,49 @@ function stopRepairCamera(){
  $('imageRepairStart').disabled=false;
  syncRepairCameraUi(false);
 }
+let cameraOpenEpoch=0;
+function openCircleCamera(){
+ if(profile.run||activeAnalysis)return;
+ const dialog=$('circleCameraDialog');
+ if(!dialog.open)dialog.showModal();
+ void startCamera();
+}
 async function startCamera(){
  if(stream){syncCameraUi(true);return;}
- try{stream=await openCamera($('cameraVideo'));syncCameraUi(true);note('');}
- catch(e){stopCamera();note('カメラを起動できません：'+e.message);}
+ const epoch=++cameraOpenEpoch;
+ try{
+  const opened=await openCamera($('cameraVideo'));
+  if(epoch!==cameraOpenEpoch||!$('circleCameraDialog').open){
+   opened.getTracks().forEach(t=>t.stop());
+   $('cameraVideo').srcObject=null;
+   return;
+  }
+  stream=opened;syncCameraUi(true);note('');
+ }catch(e){
+  if(epoch!==cameraOpenEpoch)return;
+  stopCamera();note('カメラを起動できません：'+e.message);
+ }
 }
 function stopCamera(){
+ cameraOpenEpoch++;
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
  $('cameraVideo').srcObject=null;syncCameraUi(false);
 }
+function closeCamera(){
+ if($('circleCameraDialog').open)$('circleCameraDialog').close();
+ stopCamera();
+}
 async function capture(){
- if(!stream||!$('cameraVideo').videoWidth)return;
+ if(!stream||!$('circleCameraDialog').open||!$('cameraVideo').videoWidth)return;
  const blob=await cameraPhotoBlob($('cameraVideo'),$('cameraCanvas'));
  if(!blob){note('撮影画像を作成できません');return;}
+ if(!stream||!$('circleCameraDialog').open)return;
  lastCaptureRegistration=Math.max(nextCircleRegistration(circles),lastCaptureRegistration+1);
  const original=newCapturedCircle(crypto.randomUUID(),blob,lastCaptureRegistration);
  const circle=profile.permadeath?markCircleCreator(original,profile.name):original;
  // Save only when analysis or its weak fallback has been finalized.
  $('cameraError').hidden=true;$('cameraError').textContent='';
+ $('circleCameraDialog').close();
  await analyzeCapturedCircle(circle,$('useMagicInk').checked&&profile.magicInk>0);
 }
 async function saveDrawnCircle(blob){
@@ -1605,18 +1629,22 @@ function wireFavoriteHold(){
  });
 }
 function wire(){
+ syncCameraUi(false);
  drawingEditor=initCircleDrawing(document,{onSave:saveDrawnCircle});
  window.addEventListener('message',onAnalysisMessage);
  document.addEventListener('error',onCirclePhotoError,true);
  document.addEventListener('load',onCirclePhotoLoad,true);
  wireFavoriteHold();
  magicStoneTutorial=initMagicStoneTutorial(document);
+ let practiceFromCamera=false;
  tutorial=initCircleTutorial(document,async toCamera=>{
   profile.tutorialDone=true;
   try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}
-  if(toCamera){show('library');$('cameraStart').focus();}
+  if(toCamera||practiceFromCamera){practiceFromCamera=false;show('library');openCircleCamera();}
  });
- $('tutorialReplay').addEventListener('click',()=>{if(!profile.run&&!activeAnalysis)tutorial.open();});
+ $('tutorialReplay').addEventListener('click',()=>{
+  if(!profile.run&&!activeAnalysis){practiceFromCamera=true;closeCamera();tutorial.open();}
+ });
  const listControls=[
   ['libraryRoleFilter','libraryRole'],['libraryAttributeFilter','libraryAttribute'],['librarySort','librarySort'],
   ['collectionDiscoveryFilter','collectionDiscovery'],['collectionRarityFilter','collectionRarity'],['collectionSort','collectionSort']
@@ -1637,7 +1665,7 @@ function wire(){
   cameraReturnScroll=null;
   // Browsing another tab does not dismiss the uncompleted rewards/EXP.
   if(returnFlow&&b.dataset.view==='dungeon')renderReturnStep();
-   stopCamera();show(b.dataset.view);
+   closeCamera();show(b.dataset.view);
    if(b.dataset.view==='library'&&shouldShowMagicStoneTutorial(profile)){
     profile.magicStoneTutorialSeen=true;
     magicStoneTutorial.open();
@@ -1735,8 +1763,11 @@ function wire(){
  $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>chooseLoadout(null));
  $('loadoutDialog').addEventListener('close',()=>{if(!$('loadoutDialog').open)picker=null;refreshCirclePhotos();});
- $('openCircleDrawing').addEventListener('click',()=>{if(!profile.run&&!activeAnalysis){stopCamera();drawingEditor.open();}});
- $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
+ $('openCircleDrawing').addEventListener('click',()=>{if(!profile.run&&!activeAnalysis){closeCamera();drawingEditor.open();}});
+ $('openCircleCamera').addEventListener('click',openCircleCamera);
+ $('cameraStop').addEventListener('click',closeCamera);
+ $('circleCameraDialog').addEventListener('cancel',event=>{event.preventDefault();closeCamera();});
+ $('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
   $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
   $('openAdventurerShare').addEventListener('click',openAdventurerShare);
@@ -1769,7 +1800,7 @@ function wire(){
    cameraReturnScroll=null;
    show('library');
    drawingEditor.resume();
-  }else if(capture){show('library');returnToCameraScroll();}
+  }else if(capture){show('library');returnToCameraScroll();openCircleCamera();}
   else {renderRun();show('battle');}
  });
  window.addEventListener('beforeunload',()=>{stopCamera();stopRepairCamera();circleImages.releaseAll();});

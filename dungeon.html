@@ -178,8 +178,6 @@
 
     <section id="library" class="panel grimoire-panel" hidden>
       <div class="section-heading"><div><p class="chapter">CHAPTER II · GRIMOIRE</p><h2>魔導書</h2></div><span class="section-mark" aria-hidden="true">◎</span></div>
-      <button type="button" id="tutorialReplay" class="subtle tutorial-replay">◎ 描き方を練習</button>
-      <button type="button" id="openCircleDrawing" class="drawing-open-button">✍ 魔法陣を描く</button>
       <details class="regulations">
         <summary>魔法陣の描き方・登録規則 <span aria-hidden="true">⌄</span></summary>
         <ol>
@@ -197,20 +195,9 @@
         <label><input type="checkbox" id="useMagicInk"><span>魔導のインクを使用</span></label>
         <p id="magicInkBalance" aria-live="polite">魔導のインク：0個</p>
       </div>
-      <div id="cameraPane" class="capture-pane">
-        <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
-          <div id="cameraPlaceholder" class="camera-placeholder" aria-hidden="true"><span>◎</span></div>
-          <video id="cameraVideo" autoplay muted playsinline hidden></video>
-          <span class="viewfinder-circle-guide" aria-hidden="true"></span>
-          <span class="viewfinder-corners" aria-hidden="true"></span>
-        </div>
-        <canvas id="cameraCanvas" hidden></canvas>
-        <div class="buttons camera-actions">
-          <button type="button" id="cameraStart" class="camera-trigger"><span aria-hidden="true">◉</span> 魔法陣を撮影する</button>
-          <button type="button" id="cameraCapture" hidden>撮影して登録</button>
-          <button type="button" id="cameraStop" class="subtle" hidden>閉じる</button>
-        </div>
-        <p id="cameraError" class="inline-error" hidden role="alert"></p>
+      <div class="circle-register-actions">
+        <button type="button" id="openCircleDrawing" class="drawing-open-button">✍️魔法陣を描く</button>
+        <button type="button" id="openCircleCamera" class="camera-open-button">魔法陣を撮る📷</button>
       </div>
       <p id="magicStoneBalance" class="magic-stone-balance">✦ 魔導石：0個</p>
       <p class="favorite-hint">魔法陣の写真を長押し → ★お気に入り登録（もう一度長押しで解除）</p>
@@ -365,6 +352,25 @@
             <button type="button" id="circleDrawingDiscardConfirm" class="drawing-discard-confirm">破棄</button>
           </div>
         </div>
+      </div>
+    </dialog>
+    <dialog id="circleCameraDialog" class="circle-drawing-dialog circle-camera-dialog" aria-label="魔法陣を撮る">
+      <div class="circle-drawing-shell">
+      <div id="cameraPane" class="capture-pane">
+        <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
+          <div id="cameraPlaceholder" class="camera-placeholder" aria-hidden="true"><span>◎</span></div>
+          <video id="cameraVideo" autoplay muted playsinline hidden></video>
+          <span class="viewfinder-circle-guide" aria-hidden="true"></span>
+          <span class="viewfinder-corners" aria-hidden="true"></span>
+        </div>
+        <canvas id="cameraCanvas" hidden></canvas>
+        <div class="buttons camera-actions">
+          <button type="button" id="cameraStop" class="drawing-secondary">閉じる</button>
+          <button type="button" id="cameraCapture" class="drawing-confirm" disabled>撮影📷</button>
+        </div>
+        <p id="cameraError" class="inline-error" hidden role="alert"></p>
+      </div>
+        <button type="button" id="tutorialReplay" class="subtle tutorial-replay">描き方を練習</button>
       </div>
     </dialog>
     <dialog id="magicDetailsDialog" class="magic-details-dialog" aria-labelledby="magicDetailsTitle">

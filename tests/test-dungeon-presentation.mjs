@@ -105,7 +105,8 @@ assert.match(page,/id="collectionProgress"/);
 assert.equal((page.match(/<input[^>]*type="file"/g)||[]).length,0,'camera retakes never offer file selection');
 assert.match(page,/<video id="imageRepairVideo" autoplay muted playsinline hidden>/,'retakes use a live camera feed');
 assert.match(page,/id="imageRepairCapture" hidden>撮影して保存<\/button>/,'retakes save a fresh camera shot');
-assert.match(page,/id="cameraStart"/);
+assert.match(page,/id="openCircleCamera"/);
+assert.match(page,/id="circleCameraDialog" class="circle-drawing-dialog circle-camera-dialog"/);
 assert.match(page,/id="cameraPane" class="capture-pane"(?! hidden)/);
 assert.match(page,/<div class="camera-viewfinder"[^>]*>[\s\S]*?id="cameraPlaceholder"[\s\S]*?<video id="cameraVideo"[^>]* hidden/);
 assert.match(page,/<span class="viewfinder-circle-guide" aria-hidden="true"><\/span>/,'large guide overlays the live camera');
@@ -114,8 +115,8 @@ assert.match(css,/\.camera-viewfinder \.viewfinder-circle-guide\{[^}]*inset:var\
 assert.match(css,/viewfinder-circle-guide\{[^}]*border-radius:50%/,'guide is circular');
 assert.match(css,/viewfinder-circle-guide\{[^}]*border:2px dashed/,'camera ring is dashed');
 assert.doesNotMatch(page,/<canvas[^>]*>[^<]*viewfinder-circle-guide/,'guide does not paint onto captured image');
-assert.match(page,/id="cameraCapture" hidden/);
-assert.match(page,/id="cameraStop"[^>]* hidden/);
+assert.match(page,/id="cameraCapture"[^>]*disabled>撮影📷/);
+assert.match(page,/id="cameraStop"[^>]*>閉じる/);
 assert.doesNotMatch(page,/id="circleName"/);
 assert.doesNotMatch(page,/id="cameraNameWrap"/);
 assert.match(page,/id="openGrimoireFromPicker"/);
@@ -429,8 +430,8 @@ assert.match(app,/await analyzeCapturedCircle\(circle,\$\('useMagicInk'\)\.check
 assert.match(app,/await revealOriginal\(analyzed,result\.failed\)/,'both results use the original reveal');
 assert.match(app,/const request=\{id:circle\.id,type:'capture',epoch:photoAnalysisEpoch,origin:circle\.origin\}/,
  'analysis retains whether capture came from handwritten editor');
-assert.match(app,/const drawn=capture&&request\.origin==='drawn';[\s\S]*?if\(drawn\)\{\s*cameraReturnScroll=null;\s*show\('library'\);\s*drawingEditor\.resume\(\);\s*\}else if\(capture\)\{show\('library'\);returnToCameraScroll\(\);\}/,
- 'cancelled handwriting resumes editor, camera capture returns to grimoire');
+assert.match(app,/const drawn=capture&&request\.origin==='drawn';[\s\S]*?if\(drawn\)\{\s*cameraReturnScroll=null;\s*show\('library'\);\s*drawingEditor\.resume\(\);\s*\}else if\(capture\)\{show\('library'\);returnToCameraScroll\(\);openCircleCamera\(\);\}/,
+ 'cancelled handwriting resumes editor, camera capture returns to modal');
 assert.doesNotMatch(page,/id="analysisMisfire"/,'no extra result format is introduced');
 assert.match(page,/3〜5 SIGILS/);
 assert.match(page,/id="circleCounter"/);
