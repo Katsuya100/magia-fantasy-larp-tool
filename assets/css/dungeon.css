@@ -451,6 +451,12 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  box-shadow:0 0 24px #000a,inset 0 0 24px #0009;
  animation:circle-ritual-physical var(--ritual-duration) ease-in-out both
 }
+/* Preserve the whole parchment square in a hand-drawn circle reveal. */
+.circle-ritual--reveal.circle-ritual--drawn .circle-ritual__physical{
+ border-radius:0;background:#f2e4c6;object-fit:contain
+}
+/* A failed reading dims the magic effects, not the parchment itself. */
+.circle-ritual--failed.circle-ritual--drawn .circle-ritual__physical{filter:none}
 .circle-ritual__veil{
  position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse at 50% 42%,#07111b,#010207 65%);
  animation:circle-ritual-veil var(--ritual-duration) linear both
