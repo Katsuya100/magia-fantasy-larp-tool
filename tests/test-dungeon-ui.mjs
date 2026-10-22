@@ -696,11 +696,22 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   await wait(()=>cameraDenied.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'camera test startup');
   await cameraDenied.document.click(btn({view:'library'}));
   await cameraDenied.document.getElementById('openCircleCamera').fire('click');
-  await wait(()=>cameraDenied.document.getElementById('cameraError').textContent.includes('カメラを起動できません'),'camera denial feedback');
-  assert.match(cameraDenied.document.getElementById('cameraError').textContent,/カメラを起動できません/);
-  assert.equal(cameraDenied.document.getElementById('circleCameraDialog').open,true);
+  await wait(()=>cameraDenied.opened===1&&!cameraDenied.document.getElementById('circleCameraDialog').open,'camera denial dismisses overlay');
+  assert.equal(cameraDenied.document.getElementById('library').hidden,false,'denied camera returns to the grimoire');
+  assert.equal(cameraDenied.document.getElementById('cameraError').hidden,true,'denied permission leaves no error inside a closed dialog');
   assert.equal(cameraDenied.document.getElementById('cameraPlaceholder').hidden,false);
   assert.equal(cameraDenied.document.getElementById('cameraCapture').disabled,true);
+  await cameraDenied.document.getElementById('openCircleCamera').fire('click');
+  await wait(()=>cameraDenied.opened===2&&!cameraDenied.document.getElementById('circleCameraDialog').open,'a second denial dismisses overlay again');
  }finally{cameraDenied.restore();}
+ const cameraMissing=fakeDungeonBrowser({cameraFailure:'NotFoundError'});
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=camera-not-found');
+  await wait(()=>cameraMissing.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'missing camera test startup');
+  await cameraMissing.document.click(btn({view:'library'}));
+  await cameraMissing.document.getElementById('openCircleCamera').fire('click');
+  await wait(()=>cameraMissing.document.getElementById('cameraError').textContent.includes('カメラを起動できません'),'missing camera feedback');
+  assert.equal(cameraMissing.document.getElementById('circleCameraDialog').open,true,'non-permission errors retain camera error panel');
+ }finally{cameraMissing.restore();}
  console.log('PASS dungeon registration, rejected analysis, first-use success, 5-fight return, continued floor 6, free items, reload and defeat');
 }finally{Math.random=originalRandom;env.restore();}
