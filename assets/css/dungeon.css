@@ -2439,13 +2439,19 @@ button.creator-congratulations-close{
 }
 .circle-drawing-dialog::backdrop{background:#02030cdd;backdrop-filter:blur(6px)}
 .circle-drawing-dialog[open]{display:flex}
-.circle-drawing-shell{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+.circle-drawing-shell{position:relative;display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
 .circle-drawing-header{
- flex:none;display:grid;grid-template-columns:1fr auto 1fr;
+ flex:none;display:grid;grid-template-columns:1fr 1fr;
  align-items:center;gap:8px;padding:9px 12px;
  border-bottom:1px solid #c09d634d;background:#191728
 }
-.circle-drawing-header strong{font-size:14px;color:var(--gold);white-space:nowrap}
+.circle-drawing-stage{
+ position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+ z-index:2;pointer-events:none;white-space:nowrap;
+ padding:5px 17px;border:1px solid #c09d6380;border-radius:999px;
+ background:#070914;color:var(--gold);font-size:14px;
+ box-shadow:0 2px 12px #0009
+}
 #circleDrawingDialog button{font-size:13px;min-height:44px;box-shadow:none;padding:8px 12px}
 #circleDrawingDialog .drawing-secondary,
 #circleDrawingDialog .drawing-history{
@@ -2460,12 +2466,24 @@ button.creator-congratulations-close{
  position:relative;flex:1 1 50%;min-height:0;min-width:0;
  display:grid;grid-template-columns:46px minmax(0,1fr) 46px;
  place-items:center;align-content:center;gap:2px;
- background:#efe1c3;
+ background:#070914;
  padding:4px 7px
 }
-.circle-drawing-display canvas{
- display:block;width:min(100%,calc((94dvh - 130px)/2));height:auto;
- max-height:100%;aspect-ratio:1;object-fit:contain
+.circle-drawing-preview-art{
+ position:relative;display:block;width:min(100%,calc((94dvh - 130px)/2));
+ max-height:100%;aspect-ratio:1;justify-self:center
+}
+.circle-drawing-preview-art canvas{display:block;width:100%;height:100%;aspect-ratio:1}
+#circleDrawingCaret{
+ position:absolute;inset:0;pointer-events:none;
+ animation:circle-drawing-caret-blink 1s steps(1,end) infinite
+}
+@keyframes circle-drawing-caret-blink{
+ 0%,49%{opacity:1}
+ 50%,100%{opacity:0}
+}
+@media(prefers-reduced-motion:reduce){
+ #circleDrawingCaret{animation:none}
 }
 #circleDrawingDialog .drawing-history{
  width:42px;height:50px;padding:4px;font-size:25px;color:var(--gold);
@@ -2498,7 +2516,7 @@ button.creator-congratulations-close{
  .drawing-open-button{margin:0 0 18px}
  .circle-drawing-header{padding-top:max(9px,env(safe-area-inset-top))}
  .circle-drawing-display{grid-template-columns:42px minmax(0,1fr) 42px;padding-left:5px;padding-right:5px}
- .circle-drawing-display canvas{width:min(100%,calc((100dvh - 148px)/2))}
+ .circle-drawing-preview-art{width:min(100%,calc((100dvh - 148px)/2))}
 }
 @media(max-height:520px){
  .circle-drawing-header{padding-top:3px;padding-bottom:3px}

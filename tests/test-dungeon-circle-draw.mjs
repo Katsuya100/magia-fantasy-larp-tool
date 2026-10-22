@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,drawnPower,pointOnPad,glyphPoint,glyphAngle,caretAngle,sigilPoint,normalizedGlyph,createDrawingModel,paintCircle} from '../assets/js/dungeon-circle-draw.mjs';
+import {DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,drawnPower,pointOnPad,glyphPoint,glyphAngle,caretAngle,sigilPoint,normalizedGlyph,createDrawingModel,paintCircle,paintCaret} from '../assets/js/dungeon-circle-draw.mjs';
 
 assert.equal(DRAWN_GLYPH_LIMIT,32);
 assert.equal(DRAWN_POWER_RATE,.6);
@@ -104,8 +104,13 @@ assert.ok(drawings.some(d=>d.kind==='stroke'&&d.width>=128*.008),'inner circle l
 const previewStrokes=drawings.filter(d=>d.kind==='stroke').length;
 drawings.length=0;
 paintCircle(fakeCanvas,circle,{size:128,exportImage:true});
-assert.equal(previewStrokes,drawings.filter(d=>d.kind==='stroke').length+1,'caret is not baked into registered spell art');
+assert.equal(previewStrokes,drawings.filter(d=>d.kind==='stroke').length,'preview and export share identical parchment artwork without a static caret');
 assert.ok(drawings.some(d=>d.kind==='fill'&&d.color==='#f2e4c6'),'export has the same parchment finish');
+drawings.length=0;paintCaret(fakeCanvas,circle,{size:128});
+assert.equal(drawings.filter(d=>d.kind==='stroke').length,1,'caret has an independent transparent canvas layer');
+assert.equal(drawings.filter(d=>d.kind==='fill').length,0,'caret never repaints a parchment background');
+drawings.length=0;paintCaret(fakeCanvas,{...circle,mode:'sigil'},{size:128});
+assert.equal(drawings.length,0,'caret layer is blank while writing the sigil');
 const sigil={mode:'sigil',letters:circle.letters,ink:[],sigil:[stroke]};
 drawings.length=0;paintCircle(fakeCanvas,sigil,{size:128,exportImage:true});
 assert.ok(drawings.some(d=>d.kind==='stroke'&&d.width===128*.008),'sigil ink is visibly thicker in the final image');
@@ -114,6 +119,14 @@ const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
 const source=await readFile(new URL('../assets/js/dungeon-circle-draw.mjs',import.meta.url),'utf8');
 assert.match(html,/id="circleDrawingPad"[^>]*width="420" height="420"/,'pad is a square canvas');
+assert.match(html,/<strong id="circleDrawingStage" class="circle-drawing-stage"[^>]*>呪文を書く<\/strong>/,'stage label is a floating centered element');
+assert.match(html,/id="circleDrawingPreview"[\s\S]*?id="circleDrawingCaret" width="512" height="512" aria-hidden="true"/,'caret has a distinct transparent overlay canvas');
+assert.match(css,/\.circle-drawing-display\{[^}]*background:#070914/,'parchment does not fill the preview surroundings');
+assert.match(css,/\.circle-drawing-entry\{[^}]*background:#070914/,'top and bottom surroundings use the same dark background');
+assert.match(css,/\.circle-drawing-stage\{[^}]*left:50%;top:50%;transform:translate\(-50%,-50%\)/,'stage label is in the center of the screen');
+assert.match(css,/#circleDrawingCaret\{[^}]*animation:circle-drawing-caret-blink 1s steps\(1,end\) infinite/,'only the caret blinks');
+assert.match(source,/sigil\?'紋を書く':'呪文を書く'/,'both steps use the requested writing labels');
+assert.match(source,/paintCaret\(get\('circleDrawingCaret'\),model\.state/,'redraw follows the active character');
 assert.doesNotMatch(html,/id="circleDrawingSpace"|id="circleDrawingHint"|id="circleDrawingCount"/,'no extra space, help or count labels');
 assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
 assert.match(css,/width:min\(100cqw,100cqh\);height:min\(100cqw,100cqh\)/,'pad remains square even on short viewports');

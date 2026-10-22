@@ -155,14 +155,19 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
  const transform=p=>{const q=sigilPoint(p);return {x:q.x*size,y:q.y*size};};
  for(const stroke of state.sigil)brushStroke(ctx,stroke,transform,size*.008);
  if(state.mode==='sigil'&&activeStroke?.length)brushStroke(ctx,activeStroke,transform,size*.008);
- // Caret is an editing affordance, not part of the registered ritual image.
- if(!exportImage&&state.mode==='spell'){
-  const angle=caretAngle(state.letters.length),radius=size*.345,half=size*.027;
-  ctx.beginPath();
-  ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
-  ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
-  ctx.strokeStyle='#a64a31';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.globalAlpha=.92;ctx.stroke();ctx.globalAlpha=1;
- }
+}
+// Draw the cursor on its own transparent layer so CSS can blink it without
+// dimming the parchment or affecting the exported image.
+export function paintCaret(canvas,state,{size=512}={}){
+ if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
+ const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
+ ctx.clearRect(0,0,size,size);
+ if(state.mode!=='spell'||state.letters.length>=DRAWN_GLYPH_LIMIT)return;
+ const angle=caretAngle(state.letters.length),radius=size*.345,half=size*.027;
+ ctx.beginPath();
+ ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
+ ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
+ ctx.strokeStyle='#a64a31';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.globalAlpha=.92;ctx.stroke();ctx.globalAlpha=1;
 }
 function paintPad(canvas,state,activeStroke){
  const rect=canvas.getBoundingClientRect();
@@ -198,9 +203,10 @@ export function initCircleDrawing(doc,{onSave}){
  const message=text=>{status.textContent=text;};
  function repaint(){
   paintCircle(preview,model.state,{activeStroke,size:512});
+  paintCaret(get('circleDrawingCaret'),model.state,{size:512});
   paintPad(pad,model.state,activeStroke);
   const sigil=model.state.mode==='sigil';
-  get('circleDrawingStage').textContent=sigil?'紋を描く':'呪文を描く';
+  get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を書く';
   get('circleDrawingInput').hidden=sigil;
  get('circleDrawingBack').hidden=!sigil;
   get('circleDrawingInput').disabled=model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy;
