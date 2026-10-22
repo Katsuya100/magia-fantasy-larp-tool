@@ -166,6 +166,8 @@ assert.match(css,/#circleDrawingDialog \.circle-drawing-actions button\{flex:non
 assert.match(css,/\.circle-drawing-preview-art\{[^}]*calc\(\(94dvh - 88px\)\/2\)/,
  'removing the header increases available drawing area');
 assert.doesNotMatch(html,/id="circleDrawingBack"|呪文へ戻る/,'no redundant spell back action');
+assert.match(html,/id="circleDrawingReset"[^>]*>クリア<\\/button>/,'pad action is now labeled クリア');
+assert.doesNotMatch(source,/circleDrawingBack/,'script has no reference to the removed return button');
 assert.match(css,/#circleDrawingCaret\{[^}]*animation:circle-drawing-caret-blink 1s steps\(1,end\) infinite/,'only the caret blinks');
 assert.match(source,/sigil\?'紋を書く':'呪文を1文字ずつ書く'/,'both steps use the requested writing labels');
 assert.match(source,/paintCaret\(get\('circleDrawingCaret'\),model\.state/,'redraw follows the active character');
