@@ -153,6 +153,22 @@ export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
 export function chooseEnemySpell(unit,r=Math.random){
  const ids=available(unit);
  if(!ids.length)return -1;
+ // Only 1-10 layer enemies are limited to attacks and their weakest defense.
+ // The tenth-layer boss may select its strongest defense instead.
+ // Healing and debuffs never enter these early enemy action choices.
+ const early=/^(?:foe|boss)_l(\d{3})(?:_|$)/.exec(String(unit.id));
+ if(early&&Number(early[1])<=10){
+  const attacks=ids.filter(i=>unit.spells[i].role==='attack');
+  const guards=ids.filter(i=>unit.spells[i].role==='defense');
+  const attack=()=>attacks[Math.floor(r()*attacks.length)];
+  if(!guards.length)return attacks.length?attack():-1;
+  // A nearly all-guard opening keeps fifty consecutive fights survivable without HP healing.
+  if(attacks.length&&r()<.01)return attack();
+  const strongest=unit.id==='boss_l010';
+  return guards.reduce((best,i)=>strongest
+   ?unit.spells[i].power>unit.spells[best].power?i:best
+   :unit.spells[i].power<unit.spells[best].power?i:best);
+ }
  const heal=ids.find(i=>unit.spells[i].role==='support');
  if(heal!==undefined&&unit.hp<unit.stats.hp*num('enemy_heal_threshold'))return heal;
  const curse=ids.find(i=>unit.spells[i].role==='debuff');
