@@ -630,6 +630,16 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  68%{transform:translateX(-4px) scale(1.035) rotate(-1deg);filter:brightness(1.25)}
  100%{transform:none;filter:none}
 }
+/* A hit received by the left-side hero recoils left, not toward the enemy. */
+#battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
+ animation:snappy-impact-hero-left .44s cubic-bezier(.15,.85,.24,1) both
+}
+@keyframes snappy-impact-hero-left{
+ 0%,38%{transform:none;filter:none}
+ 46%,55%{transform:translateX(-7px) scale(.94) rotate(-2deg);filter:brightness(2.5)}
+ 68%{transform:translateX(4px) scale(1.035) rotate(1deg);filter:brightness(1.25)}
+ 100%{transform:none;filter:none}
+}
 @keyframes snappy-burst{
  0%,33%{opacity:0;transform:rotate(-38deg) scale(.1)}
  46%,55%{opacity:1;transform:rotate(28deg) scale(1.5)}
@@ -1302,9 +1312,9 @@ html,body{overflow-x:clip}
 }
 @keyframes boss-cinematic-collapse{
  0%{opacity:1;transform:none;filter:none}
- 22%{transform:translateX(-5px);filter:brightness(2.1)}
- 28%{transform:translateX(7px);filter:brightness(2.6)}
- 36%,54%{transform:translateX(-3px);filter:brightness(1.8)}
+ 22%{transform:translateX(5px);filter:brightness(2.1)}
+ 28%{transform:translateX(-7px);filter:brightness(2.6)}
+ 36%,54%{transform:translateX(3px);filter:brightness(1.8)}
  63%{opacity:1;transform:scale(1.05);filter:brightness(3)}
  90%{opacity:.17;transform:scale(.85) translateY(22px);filter:brightness(2)}
  100%{opacity:0;transform:scale(.65) translateY(40px);filter:brightness(0)}
@@ -2495,3 +2505,10 @@ button.creator-congratulations-close{
  .circle-drawing-actions{padding-top:3px}
  .circle-drawing-status{margin:0}
 }
+
+/* Crafting material selector: isolated to the grimoire registration UI. */
+#library .magic-ink-option{padding:12px 14px;border:1px solid var(--border);background:#0c1723;margin:12px 0}
+#library .magic-ink-option label{display:flex;align-items:center;gap:9px;color:var(--gold);font-size:14px;font-weight:700;cursor:pointer}
+#library .magic-ink-option input{accent-color:#d8b574;width:18px;height:18px;flex:none}
+#library .magic-ink-option p{font-size:12px;color:var(--soft);margin:5px 0 0}
+#library .magic-ink-option input:disabled{cursor:not-allowed}
