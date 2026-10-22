@@ -1183,8 +1183,7 @@ async function parseDungeonMagic(circle,valid,request){
  }
 }
 async function analyzeCapturedCircle(circle,useInk=false){
- // Reveal the real analyzer for each photo. The live camera remains active
- // in the grimoire, so another photo can be taken immediately after returning.
+ // Show the full analysis screen. Capture returns to its dialog on cancellation.
  const request={id:circle.id,type:'capture',epoch:photoAnalysisEpoch,origin:circle.origin};
  activeAnalysis=request;
  rememberCameraScroll();
