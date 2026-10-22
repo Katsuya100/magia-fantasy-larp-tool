@@ -696,6 +696,7 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   await wait(()=>cameraDenied.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'camera test startup');
   await cameraDenied.document.click(btn({view:'library'}));
   await cameraDenied.document.getElementById('openCircleCamera').fire('click');
+  await wait(()=>cameraDenied.document.getElementById('cameraError').textContent.includes('カメラを起動できません'),'camera denial feedback');
   assert.match(cameraDenied.document.getElementById('cameraError').textContent,/カメラを起動できません/);
   assert.equal(cameraDenied.document.getElementById('circleCameraDialog').open,true);
   assert.equal(cameraDenied.document.getElementById('cameraPlaceholder').hidden,false);
