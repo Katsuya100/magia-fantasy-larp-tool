@@ -5,11 +5,11 @@ export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
-// Raise level-up requirements steeply while keeping the authored baseline.
+// Required XP scales steeply to balance unlimited repeat rewards.
 export const nextXp=level=>Math.ceil(Number(levelRow(level).xp_to_next)*
  Math.pow(num('xp_growth_per_10_levels'),(Number(level)-1)/10));
 // Five fights at the intended level supply approximately the XP needed
-// to start the following layer. Lower-level enemies have diminishing returns.
+// to start the following layer. Replay XP never decays.
 export function fightExperience(enemyLevel,playerLevel,layer){
  if(Number(playerLevel)>=num('level_max'))return 0;
  const current=targetClearLevel(Number(layer));
@@ -18,8 +18,7 @@ export function fightExperience(enemyLevel,playerLevel,layer){
   ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
   :nextXp(current);
  const full=Math.max(1,Math.ceil(budget/5));
- const gap=Math.max(0,Number(playerLevel)-Number(enemyLevel));
- return Math.max(1,Math.round(full*Math.pow(num('xp_overlevel_factor_per_level'),gap)));
+ return full;
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
 // Same upgraded-power duration applies to defense and debuff, hero and enemy.
@@ -79,12 +78,10 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// First-time layers must retain their normal magic-stone chance even when
-// improved XP progression puts the hero ahead of the intended enemy level.
-// Previously returned layers still apply the existing 0.5-per-level penalty.
-export function magicStoneDropChance(playerLevel,layer,firstClear=false){
- const overlevel=firstClear?0:Math.max(0,Number(playerLevel)-targetClearLevel(layer));
- return num('magic_stone_drop_chance')*Math.pow(num('magic_stone_overlevel_factor_per_level'),overlevel);
+// First clears and replayed layers have identical stone chances at any level.
+// The unchanged signature also supports older saved expeditions.
+export function magicStoneDropChance(_playerLevel,_layer,_firstClear=false){
+ return num('magic_stone_drop_chance');
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
  const stoneChance=context.playerLevel==null

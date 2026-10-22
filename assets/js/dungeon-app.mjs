@@ -1,4 +1,4 @@
-import * as G from './dungeon-core.mjs?v=20261022.9';
+import * as G from './dungeon-core.mjs?v=20261022.10';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261022.9';
 import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261022.9';
 import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261022.9';
@@ -11,7 +11,7 @@ import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261022.9';
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261022.9';
-import {upgradeCircle,savedUpgrade,combatSpell} from './dungeon-upgrades.mjs?v=20261022.9';
+import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261022.10';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261022.9';
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261022.9';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261022.9';
@@ -1317,10 +1317,11 @@ function openMagicDetails(id){
  $('magicDetailsImage').dataset.circlePhotoId=id;
  $('repairSelectedCircleImage').hidden=!failedPhotoIds.has(id)&&circle.image instanceof Blob&&circle.image.size>0;
  $('upgradeFeedback').textContent='';
- $('magicStoneStock').textContent='所持魔導石：'+profile.magicStones+'個 / 強化1回につき1個';
+ const stoneCost=upgradeStoneCost(circle.upgradeLevel??0);
+ $('magicStoneStock').textContent='所持魔導石：'+profile.magicStones+'個 / 次の強化：'+stoneCost+'個';
  $('upgradeCircle').hidden=Boolean(profile.run);
- $('upgradeCircle').disabled=Boolean(profile.run)||!isRevealed(circle)||profile.magicStones<1;
- $('upgradeHint').textContent=!isRevealed(circle)?'威力は初回使用後に強化できます。':profile.magicStones<1?'魔導石を入手すると強化できます。':'初期威力の10%分ずつ、何度でも強化できます。';
+ $('upgradeCircle').disabled=Boolean(profile.run)||!isRevealed(circle)||profile.magicStones<stoneCost;
+ $('upgradeHint').textContent=!isRevealed(circle)?'威力は初回使用後に強化できます。':profile.magicStones<stoneCost?'次の強化には魔導石が'+stoneCost+'個必要です。':'初期威力の10%分アップします。10回強化するごとに必要な魔導石が増えます。';
  const d=circleDetails(circle,masters.buffs,G.mpCost);
  $('magicDetailsImage').src=circleImages.get(circle.image);
  const info=circleEffectDetails(circle,masters.buffs,G.statusDuration);
@@ -1343,11 +1344,11 @@ function askCircleAction(type,id){
  if(profile.run)return;
  const circle=circles.find(c=>c.id===id);
  if(!circle)return;
- if(type==='upgrade'&&(!isRevealed(circle)||profile.magicStones<1))return;
+ if(type==='upgrade'&&(!isRevealed(circle)||profile.magicStones<upgradeStoneCost(circle.upgradeLevel??0)))return;
  pendingCircleAction={type,id};
  $('circleActionTitle').textContent=type==='upgrade'?'魔法陣を強化しますか？':'魔法陣を削除しますか？';
  $('circleActionMessage').textContent=type==='upgrade'
-  ?'魔導石を1個消費して威力を初期値の10%分アップします。\nこの強化は元に戻せません。'
+  ?'魔導石を'+upgradeStoneCost(circle.upgradeLevel??0)+'個消費して威力を初期値の10%分アップします。\nこの強化は元に戻せません。'
   :'登録した魔法陣は元に戻せません。\n削除してもよろしいですか？';
  $('confirmCircleAction').textContent=type==='upgrade'?'魔導石を使って強化':'削除する';
  if(!$('circleActionDialog').open)$('circleActionDialog').showModal();
@@ -1359,10 +1360,11 @@ async function confirmCircleAction(){
  if(!circle){$('circleActionDialog').close();pendingCircleAction=null;return;}
  try{
   if(action.type==='upgrade'){
-   if(!isRevealed(circle)||profile.magicStones<1)return;
+   const stoneCost=upgradeStoneCost(circle.upgradeLevel??0);
+   if(!isRevealed(circle)||profile.magicStones<stoneCost)return;
    const enhanced=upgradeCircle(circle);
    // Persist only scalar metadata: rewriting a stored photo Blob can fail on mobile browsers.
-   const nextProfile={...profile,magicStones:profile.magicStones-1,
+   const nextProfile={...profile,magicStones:profile.magicStones-stoneCost,
     circleUpgrades:{...(profile.circleUpgrades||{}),[circle.id]:savedUpgrade(enhanced)}};
    await saveProfile(db,nextProfile);
    profile=nextProfile;
