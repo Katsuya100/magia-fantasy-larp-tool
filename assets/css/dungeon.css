@@ -2007,12 +2007,42 @@ html,body{overflow-x:clip}
 #analysisProgress::-moz-progress-bar{background:linear-gradient(90deg,#72d1cc,#f1cd88);border-radius:999px}
 @media(prefers-reduced-motion:reduce){#analysisProgress::-webkit-progress-value{transition:none}}
 
-/* Misread spells reuse the original full-screen circle result and controls. */
-.circle-ritual--failed .circle-ritual__focus{filter:grayscale(.8) brightness(.75);animation:circle-ritual-fizzle 1s ease-out both}
-.circle-ritual--failed .circle-ritual__labels{flex-wrap:wrap;row-gap:0}
-.circle-ritual__failure{flex:0 0 100%;font-size:clamp(14px,3.3vw,18px);color:#eeb2ba;text-shadow:0 0 12px #d4768790}
-@keyframes circle-ritual-fizzle{0%,30%{transform:scale(1)}52%{transform:scale(.88) rotate(-4deg)}75%{transform:scale(.94) rotate(2deg)}100%{transform:scale(.9);opacity:.8}}
-@media(prefers-reduced-motion:reduce){.circle-ritual--failed .circle-ritual__focus{animation:none}}
+/* A weak reading shares the exact original reveal DOM, but the magic barely lights up. */
+.circle-ritual--failed{background:radial-gradient(ellipse at center,#101318 0%,#030407 76%)}
+.circle-ritual--failed .circle-ritual__physical{filter:saturate(.55) brightness(.72)}
+.circle-ritual--failed[data-ready="true"] .circle-ritual__physical{box-shadow:0 0 9px #0008}
+.circle-ritual--failed .circle-ritual__focus{
+ filter:grayscale(1) brightness(.52);
+ animation:circle-ritual-fizzle var(--ritual-duration) ease-out both
+}
+.circle-ritual--failed .circle-ritual__ring--out{animation:none;opacity:0}
+.circle-ritual--failed .circle-ritual__ring--in{animation:circle-ritual-faint-ring var(--ritual-duration) ease-out both}
+.circle-ritual--failed .circle-ritual__light,
+.circle-ritual--failed .circle-ritual__ink,
+.circle-ritual--failed .circle-ritual__bloom{animation:circle-ritual-faint-light var(--ritual-duration) ease-out both}
+.circle-ritual--failed .circle-ritual__labels{color:#b5b2ad;text-shadow:0 0 3px #8b858055}
+@keyframes circle-ritual-fizzle{
+ 0%{transform:scale(.95);opacity:.65}
+ 70%{transform:scale(.91);opacity:.42}
+ 100%{transform:scale(.9);opacity:.35}
+}
+@keyframes circle-ritual-faint-ring{
+ 0%{transform:scale(.95);opacity:.3}
+ 65%{transform:scale(.98);opacity:.12}
+ 100%{transform:scale(.98);opacity:0}
+}
+@keyframes circle-ritual-faint-light{
+ 0%,30%{opacity:0}
+ 55%{opacity:.24}
+ 100%{opacity:0}
+}
+@media(prefers-reduced-motion:reduce){
+ .circle-ritual--failed .circle-ritual__focus{animation:none;opacity:.35;transform:scale(.9)}
+ .circle-ritual--failed .circle-ritual__ring--in,
+ .circle-ritual--failed .circle-ritual__light,
+ .circle-ritual--failed .circle-ritual__ink,
+ .circle-ritual--failed .circle-ritual__bloom{animation:none;opacity:0}
+}
 
 /* The successor naming dialog must never display game-mode controls. */
 #permadeathChoice[hidden]{display:none!important}

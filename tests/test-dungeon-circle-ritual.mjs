@@ -27,6 +27,11 @@ assert.match(source,/saveProfile\(db,nextProfile\)[\s\S]*?playCircleUpgrade\(cir
 assert.match(html,/<div class="magic-details-art"><img id="magicDetailsImage"[^>]*><div id="magicUpgradeEffect"/,'new glow overlays the existing real photo');
 assert.match(css,/\.circle-ritual__veil[\s\S]*?circle-ritual-veil var\(--ritual-duration\)/,'reveal includes black backdrop');
 assert.match(css,/@keyframes circle-ritual-physical/,'photo solidifies under the fading black');
+assert.match(css,/\.circle-ritual--failed \.circle-ritual__focus\{[\s\S]*?filter:grayscale\(1\) brightness\(\.52\)/,'weak magic is visually muted');
+assert.match(css,/@keyframes circle-ritual-faint-ring/,'weak magic does not use a bright ring animation');
+assert.match(css,/@keyframes circle-ritual-faint-light/,'weak light fades out without flashing');
+assert.doesNotMatch(css,/\.circle-ritual__failure/,'no extra visible failure label styles');
+assert.doesNotMatch(ritualSource,/残念|解明失敗|不完全な魔法を生成/,'failure is conveyed by visuals only');
 assert.match(css,/\.circle-ritual__physical\{/,'saved circle artwork exists behind glow');
 for(const animation of ['circle-ritual-ring-in','circle-upgrade-aura','circle-ritual-ink','circle-ritual-veil']){
  assert.ok(css.includes('@keyframes '+animation),'missing '+animation);
@@ -137,7 +142,10 @@ try{
  assert.match(failedRoot.className,/circle-ritual--reveal circle-ritual--failed/,'failure retains the same result layout');
  assert.equal(failedRoot.children[0].src,'blob:failed-photo','failure result includes original photo');
  const labels=failedRoot.children.find(n=>n.className==='circle-ritual__labels');
- assert.deepEqual(labels.children.map(n=>n.textContent),['残念… 解明失敗','⚖️ 秩序の相','✚ 回復の紋']);
+ assert.deepEqual(labels.children.map(n=>n.textContent),['⚖️ 秩序の相','✚ 回復の紋'],
+  'failed reveal must have the same two labels as the original successful result');
+ assert.equal(failedRoot.attributes['aria-label'],'⚖️ 秩序の相、✚ 回復の紋',
+  'failed reveal keeps the normal result dialog label');
  const proceed=failedRoot.children.at(-1);
  assert.equal(proceed.disabled,false,'reduced motion still permits dismissal');
  proceed.click();
