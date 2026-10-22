@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {upgradeCircle,savedUpgrade,applySavedUpgrade,strengthenedPower,combatSpell,upgradeStoneCost,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
-for(const [level,cost] of [[0,5],[1,5],[9,5],[10,6],[40,6],[49,6],[50,7],[90,8],[130,9],[149,9]])assert.equal(upgradeStoneCost(level),cost);
-for(const [level,cost] of [[0,0],[1,5],[10,50],[11,56],[20,110],[150,1070]])assert.equal(totalUpgradeStoneCost(level),cost);
+for(const [level,cost] of [[0,5],[1,5],[9,5],[10,5],[24,5],[25,6],[49,6],[65,7],[90,7],[105,8],[149,9]])assert.equal(upgradeStoneCost(level),cost);
+for(const [level,cost] of [[0,0],[1,5],[10,50],[11,55],[20,100],[25,125],[26,131],[150,1010]])assert.equal(totalUpgradeStoneCost(level),cost);
 const original={id:'circle',analysis:{attribute:'flame',role:'attack',power:100},revealed:true};
 let upgraded=upgradeCircle(original);
 assert.equal(original.analysis.power,100,'original magic is not mutated');

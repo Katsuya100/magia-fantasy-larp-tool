@@ -34,7 +34,7 @@ try{
  assert.equal($('circleActionDialog').open,true,'upgrade requires a dialog');
  assert.match($('circleActionMessage').textContent,/10%/);
  assert.match($('magicStoneStock').textContent,/次の強化：5個/);
- assert.equal(upgradeStoneCost(10),6,'the eleventh upgrade costs six stones');
+ assert.equal(upgradeStoneCost(25),6,'cost increases at the twenty-sixth upgrade');
  assert.match($('circleActionMessage').textContent,/。\nこの強化/,'confirmation sentences display on separate lines');
  await $('cancelCircleAction').fire('click');
  assert.equal((await getProfile(db)).magicStones,15,'cancel leaves stones untouched');

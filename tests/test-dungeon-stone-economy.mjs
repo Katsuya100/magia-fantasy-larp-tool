@@ -7,9 +7,9 @@ import {
  MAGIC_STONES_PER_ULTIMATE,EQUIPPED_CIRCLES,ALL_ULTIMATE_COST
 } from '../scripts/simulate-dungeon-stones.mjs';
 
-assert.equal(MAGIC_STONES_PER_ULTIMATE,1070);
+assert.equal(MAGIC_STONES_PER_ULTIMATE,1010);
 assert.equal(EQUIPPED_CIRCLES,5);
-assert.equal(ALL_ULTIMATE_COST,5350);
+assert.equal(ALL_ULTIMATE_COST,5050);
 const randomA=seededRandom(1234),randomB=seededRandom(1234);
 assert.deepEqual(Array.from({length:4},()=>randomA()),
  Array.from({length:4},()=>randomB()),'seeded random sequence reproduces exactly');
