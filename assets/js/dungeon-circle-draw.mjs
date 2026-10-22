@@ -96,36 +96,72 @@ function strokePath(ctx,points,transform,lineWidth,color,glow=0){
  if(points.length===1){ctx.beginPath();ctx.arc(start.x,start.y,lineWidth/2,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
  ctx.shadowBlur=0;
 }
+// Deterministic warm parchment: the preview and the registered image share the same finish.
+function paintParchment(ctx,size){
+ ctx.fillStyle='#f2e4c6';ctx.fillRect(0,0,size,size);
+ const light=ctx.createRadialGradient(size*.38,size*.28,size*.06,size*.51,size*.55,size*.78);
+ light.addColorStop(0,'rgba(255,252,235,.62)');
+ light.addColorStop(1,'rgba(166,122,73,.13)');
+ ctx.fillStyle=light;ctx.fillRect(0,0,size,size);
+ // Reproducible fiber-like flecks give the surface texture without a network image.
+ let seed=263119;
+ const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ for(let i=0;i<Math.round(size*1.3);i++){
+  const x=rand()*size,y=rand()*size;
+  ctx.fillStyle=i%3===0?'rgba(115,77,40,.11)':'rgba(255,252,238,.24)';
+  ctx.fillRect(x,y,Math.max(.6,size*.0013)*(.4+rand()),Math.max(.5,size*.0009)*(.4+rand()));
+ }
+}
+function brushCircle(ctx,size,radius,width){
+ const steps=240,center=size/2,rad=size*radius;
+ ctx.beginPath();
+ for(let i=0;i<=steps;i++){
+  const t=i*Math.PI*2/steps;
+  const waviness=(Math.sin(t*17+2)+Math.sin(t*41-1)*.5)*size*.00055;
+  const x=center+(rad+waviness)*Math.cos(t),y=center+(rad+waviness)*Math.sin(t);
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+ }
+ ctx.closePath();ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=size*width;
+ ctx.globalAlpha=.85;ctx.strokeStyle='#2b211a';ctx.stroke();
+ ctx.globalAlpha=.19;ctx.strokeStyle='#4f3a28';ctx.lineWidth=size*width*.68;ctx.stroke();
+ ctx.globalAlpha=1;
+}
+function brushStroke(ctx,points,transform,width){
+ if(!points.length)return;
+ ctx.globalAlpha=.85;
+ strokePath(ctx,points,transform,width,'#231b15');
+ ctx.globalAlpha=.15;
+ const jittered=points.map((p,i)=>{
+  const q=transform(p),n=width*.15;
+  return {x:q.x+Math.sin(i*2.71+p.x*13)*n,y:q.y+Math.cos(i*2.37+p.y*9)*n};
+ });
+ strokePath(ctx,jittered,p=>p,width*.42,'#75573b');
+ ctx.globalAlpha=1;
+}
 export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,size=512}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('魔法陣を描画できません。');
  ctx.clearRect(0,0,size,size);
- ctx.fillStyle='#fff';ctx.fillRect(0,0,size,size);
- const circleColor='#111';
- ctx.strokeStyle=circleColor;ctx.shadowBlur=0;
- for(const r of [.43,INNER_RADIUS]){
-  ctx.lineWidth=size*(r===.43?.004:.007);
-  ctx.beginPath();ctx.arc(size/2,size/2,size*r,0,Math.PI*2);ctx.stroke();
- }
- ctx.shadowBlur=0;
+ paintParchment(ctx,size);
+ brushCircle(ctx,size,.43,.0045);
+ brushCircle(ctx,size,INNER_RADIUS,.008);
  for(let i=0;i<state.letters.length;i++){
   const glyph=state.letters[i];
   if(glyph.space)continue;
   for(const stroke of glyph.strokes){
-   strokePath(ctx,stroke,p=>{const q=glyphPoint(p,i,state.letters.length);return {x:q.x*size,y:q.y*size};},
-    size*.006,'#111');
+   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,state.letters.length);return {x:q.x*size,y:q.y*size};},size*.006);
   }
  }
  const transform=p=>{const q=sigilPoint(p);return {x:q.x*size,y:q.y*size};};
- for(const stroke of state.sigil)strokePath(ctx,stroke,transform,size*.007,'#111');
- if(state.mode==='sigil'&&activeStroke?.length)
-  strokePath(ctx,activeStroke,transform,size*.007,'#111');
+ for(const stroke of state.sigil)brushStroke(ctx,stroke,transform,size*.008);
+ if(state.mode==='sigil'&&activeStroke?.length)brushStroke(ctx,activeStroke,transform,size*.008);
+ // Caret is an editing affordance, not part of the registered ritual image.
  if(!exportImage&&state.mode==='spell'){
-  const angle=caretAngle(state.letters.length),r=size*.345,half=size*.024;
+  const angle=caretAngle(state.letters.length),radius=size*.345,half=size*.027;
   ctx.beginPath();
-  ctx.moveTo(size/2+(r-half)*Math.cos(angle),size/2+(r-half)*Math.sin(angle));
-  ctx.lineTo(size/2+(r+half)*Math.cos(angle),size/2+(r+half)*Math.sin(angle));
-  ctx.strokeStyle='#111';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.stroke();
+  ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
+  ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
+  ctx.strokeStyle='#a64a31';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.globalAlpha=.92;ctx.stroke();ctx.globalAlpha=1;
  }
 }
 function paintPad(canvas,state,activeStroke){
