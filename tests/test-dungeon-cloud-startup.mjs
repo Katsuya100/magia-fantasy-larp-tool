@@ -451,6 +451,10 @@ try{
  });
  await connect(recoveringUi);
  await wait(()=>recoveringUi.get('googleDriveConflictDialog').open,'existing remote opens restore/new chooser');
+ const recoveringDescription=recoveringUi.get('googleDriveConflictDialog').querySelector('[data-role="description"]').textContent;
+ const recoveringLocal=await readDungeonSnapshot(recoveringDb),recoveringRemote=deserializeDungeonSnapshot(recoveringDrive.current);
+ assert.ok(recoveringDescription.includes('バックアップ：星の魔導士（最終保存：'+new Date(recoveringRemote.savedAt).toLocaleString('ja-JP')+'）'));
+ assert.ok(recoveringDescription.includes('端末：未設定（最終保存：'+new Date(recoveringLocal.savedAt).toLocaleString('ja-JP')+'）'));
  // Reproduce the actual startup modal behind the restore chooser.
  recoveringUi.get('backupSetupDialog').showModal();
  recoveringUi.get('setupWithoutBackup').hidden=false;
@@ -531,11 +535,19 @@ try{
 
  // Profile-side connection uses the same wording and secondary confirmation.
  const profileChoiceDb=await newDb(),profileChoiceUi=fakeUi(),profileChoiceDrive=remoteApi(firstDrive.current);
+ const namedLocal=await getProfile(profileChoiceDb);
+ namedLocal.name='端末側の冒険者';
+ await saveProfile(profileChoiceDb,namedLocal);
  await saveCloudSyncState(profileChoiceDb,{blocked:true});
  let profileChoiceReady=0;
  start(profileChoiceDb,profileChoiceUi,profileChoiceDrive.fetchImpl,{onInitialReady:()=>profileChoiceReady++});
  await connect(profileChoiceUi,'connectGoogleDrive');
  await wait(()=>profileChoiceUi.get('googleDriveConflictDialog').open,'profile connection opens shared Drive chooser');
+ const profileDescription=profileChoiceUi.get('googleDriveConflictDialog').querySelector('[data-role="description"]').textContent;
+ const profileLocal=await readDungeonSnapshot(profileChoiceDb),profileRemote=deserializeDungeonSnapshot(profileChoiceDrive.current);
+ assert.ok(profileDescription.includes('バックアップ：星の魔導士（最終保存：'+new Date(profileRemote.savedAt).toLocaleString('ja-JP')+'）'));
+ assert.ok(profileDescription.includes('端末：端末側の冒険者（最終保存：'+new Date(profileLocal.savedAt).toLocaleString('ja-JP')+'）'));
+ assert.equal(profileChoiceDrive.uploads,0,'displaying save details does not write either copy');
  const profileOverwrite=profileChoiceUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]');
  profileOverwrite.click();
  assert.equal(profileChoiceUi.get('googleDriveOverwriteDialog').open,true,'profile overwrite opens second confirmation');
