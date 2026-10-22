@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261023.9">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261023.10">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261023.9" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261023.10" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261023.9" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261023.10" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -178,8 +178,6 @@
 
     <section id="library" class="panel grimoire-panel" hidden>
       <div class="section-heading"><div><p class="chapter">CHAPTER II · GRIMOIRE</p><h2>魔導書</h2></div><span class="section-mark" aria-hidden="true">◎</span></div>
-      <button type="button" id="tutorialReplay" class="subtle tutorial-replay">◎ 描き方を練習</button>
-      <button type="button" id="openCircleDrawing" class="drawing-open-button">✍ 魔法陣を描く</button>
       <details class="regulations">
         <summary>魔法陣の描き方・登録規則 <span aria-hidden="true">⌄</span></summary>
         <ol>
@@ -197,20 +195,9 @@
         <label><input type="checkbox" id="useMagicInk"><span>魔導のインクを使用</span></label>
         <p id="magicInkBalance" aria-live="polite">魔導のインク：0個</p>
       </div>
-      <div id="cameraPane" class="capture-pane">
-        <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
-          <div id="cameraPlaceholder" class="camera-placeholder" aria-hidden="true"><span>◎</span></div>
-          <video id="cameraVideo" autoplay muted playsinline hidden></video>
-          <span class="viewfinder-circle-guide" aria-hidden="true"></span>
-          <span class="viewfinder-corners" aria-hidden="true"></span>
-        </div>
-        <canvas id="cameraCanvas" hidden></canvas>
-        <div class="buttons camera-actions">
-          <button type="button" id="cameraStart" class="camera-trigger"><span aria-hidden="true">◉</span> 魔法陣を撮影する</button>
-          <button type="button" id="cameraCapture" hidden>撮影して登録</button>
-          <button type="button" id="cameraStop" class="subtle" hidden>閉じる</button>
-        </div>
-        <p id="cameraError" class="inline-error" hidden role="alert"></p>
+      <div class="circle-register-actions">
+        <button type="button" id="openCircleDrawing" class="drawing-open-button">✍️魔法陣を描く</button>
+        <button type="button" id="openCircleCamera" class="camera-open-button">魔法陣を撮る📷</button>
       </div>
       <p id="magicStoneBalance" class="magic-stone-balance">✦ 魔導石：0個</p>
       <p class="favorite-hint">魔法陣の写真を長押し → ★お気に入り登録（もう一度長押しで解除）</p>
@@ -367,6 +354,25 @@
         </div>
       </div>
     </dialog>
+    <dialog id="circleCameraDialog" class="circle-drawing-dialog circle-camera-dialog" aria-label="魔法陣を撮る">
+      <div class="circle-drawing-shell">
+      <div id="cameraPane" class="capture-pane">
+        <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
+          <div id="cameraPlaceholder" class="camera-placeholder" aria-hidden="true"><span>◎</span></div>
+          <video id="cameraVideo" autoplay muted playsinline hidden></video>
+          <span class="viewfinder-circle-guide" aria-hidden="true"></span>
+          <span class="viewfinder-corners" aria-hidden="true"></span>
+        </div>
+        <canvas id="cameraCanvas" hidden></canvas>
+        <div class="buttons camera-actions">
+          <button type="button" id="cameraStop" class="drawing-secondary">閉じる</button>
+          <button type="button" id="cameraCapture" class="drawing-confirm" disabled>撮影📷</button>
+        </div>
+        <p id="cameraError" class="inline-error" hidden role="alert"></p>
+      </div>
+        <button type="button" id="tutorialReplay" class="subtle tutorial-replay">描き方を練習</button>
+      </div>
+    </dialog>
     <dialog id="magicDetailsDialog" class="magic-details-dialog" aria-labelledby="magicDetailsTitle">
       <div class="magic-details-content">
         <div class="chooser-header"><h3 id="magicDetailsTitle">魔法陣の効果</h3><button type="button" id="closeMagicDetails" class="subtle" aria-label="詳細を閉じる">✕</button></div>
@@ -513,7 +519,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.23.9</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.23.10</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
@@ -532,6 +538,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261023.9"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261023.10"></script>
 </body>
 </html>
