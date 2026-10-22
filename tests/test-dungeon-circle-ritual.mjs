@@ -48,7 +48,7 @@ assert.match(css,/\.circle-ritual--reveal\[data-ready="true"\] \.circle-ritual__
 assert.match(css,/100%\{opacity:1;transform:scale\(1\)\}/,'the physical circle remains visible after realization');
 assert.match(source,/await revealOriginal\(analyzed,result\.failed\)/);
 assert.match(source,/await revealOriginal\(circle,result\.failed\);await takeTurn\(index\)/);
-assert.match(source,/async function revealOriginal\(circle\)\{[\s\S]*?originalUrl=circleImages\.get\(circle\.image\);[\s\S]*?await playCircleReveal\(circle,originalUrl,\{failed\}\);/,'reveal uses the full stored original Blob and URL, not a thumbnail');
+assert.match(source,/async function revealOriginal\(circle,failed=false\)\{[\s\S]*?originalUrl=circleImages\.get\(circle\.image\);[\s\S]*?await playCircleReveal\(circle,originalUrl,\{failed\}\);/,'reveal uses the full stored original Blob and URL, not a thumbnail');
 assert.doesNotMatch(source,/revealThumbnail|playCircleReveal\(\{\.\.\.circle,image:thumb\}/,'no downsampled photo is used for reveal');
 assert.match(source,/\$\('magicDetailsImage'\)\.src=circleImages\.get\(circle\.image\)/,'details already use the original Blob and must keep doing so');
 
