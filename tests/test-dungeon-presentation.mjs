@@ -299,8 +299,9 @@ assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 assert.ok(app.includes('circles=newestCirclesFirst([...circles,analyzed])'),'successful captures sort newest first');
 assert.ok(app.includes('await putCircle(db,analyzed)'),'save only after successful camera analysis');
-assert.match(app,/await analyzeCapturedCircle\(circle\)/,'camera opens analysis before registering');
-assert.match(app,/const reduced=circle\.origin==='drawn'\?\{\.\.\.result\.analysis,power:drawnPower\(result\.analysis\.power\)\}:result\.analysis;[\s\S]*?const analyzed=savePreanalysis\(circle,reduced\);[\s\S]*?await putCircle\(db,analyzed\)/,'save follows validated analysis or fallback after drawn-only power reduction');
+assert.match(app,/await analyzeCapturedCircle\(circle,\$\('useMagicInk'\)\.checked&&profile\.magicInk>0\)/,'camera captures optional ink choice before analysis');
+assert.match(app,/const reduced=circle\.origin==='drawn'\?\{\.\.\.result\.analysis,power:drawnPower\(result\.analysis\.power\)\}:result\.analysis;[\s\S]*?savePreanalysis\(circle,useInk\?inkEnhancedAnalysis\(reduced\):reduced\)[\s\S]*?else await putCircle\(db,analyzed\)/,'validated result applies ink only when selected and preserves non-ink save');
+assert.match(app,/await saveProfileWithCircles\(db,nextProfile,\[analyzed\]\)/,'ink and circle save atomically');
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
 assert.match(app,/newestCirclesFirst\(await allCircles\(db\)\)/);
 assert.match(app,/newCapturedCircle\(crypto\.randomUUID\(\),blob,lastCaptureRegistration\)/);
