@@ -5,7 +5,7 @@ const kindOf=(item,rows)=>rows.find(row=>row.id===item.id)?.kind||'unknown';
 const tierOf=(item,rows)=>rows.find(row=>row.id===item.id)?.tier||'small';
 const strongest=(items,rows,cap='extreme')=>{
  const max=TIERS.indexOf(cap);
- return TIERS[Math.max(0,Math.min(max,...items.map(item=>TIERS.indexOf(tierOf(item,rows)))))]||'small';
+ return TIERS[Math.min(max,Math.max(0,...items.map(item=>TIERS.indexOf(tierOf(item,rows)))))]||'small';
 };
 const tierSuffix={small:'s',medium:'m',large:'l',extreme:'xl'};
 const elixirValue={small:35,medium:65,large:100};
