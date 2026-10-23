@@ -50,6 +50,9 @@ const legacySave={...converted,level:92,xp:legacyStartXp,run:{...converted.run,x
  magicStones:77,adventurerRank:40,inventory:[{id:'heal_s',value:27,bonus:'buff_aqua'}]};
 delete legacySave.pendingReturn;
 delete legacySave.xpScaleVersion;
+const migrationPhoto=new Blob([Uint8Array.from([137,80,78,71,1,2,3])],{type:'image/png'});
+await putCircle(db,{id:'xp-migration-photo',name:'写真の保護',image:migrationPhoto,
+ analysis:{attribute:'law',role:'attack',power:300}});
 await saveProfile(db,legacySave);
 const oldDriveSnapshot=await readDungeonSnapshot(db);
 const exact=await migrateDungeonXp(db);
@@ -64,6 +67,8 @@ assert.ok(Math.abs(resumed.xp/G.nextXp(resumed.level)-oldRunEnd.xp/oldNeed(oldRu
 assert.equal(exact.magicStones,77,'magic stone progress is untouched');
 assert.equal(exact.adventurerRank,40,'adventurer rank is untouched');
 assert.deepEqual(exact.inventory,legacySave.inventory,'items are untouched');
+assert.deepEqual(new Uint8Array(await (await allCircles(db)).find(x=>x.id==='xp-migration-photo').image.arrayBuffer()),
+ new Uint8Array(await migrationPhoto.arrayBuffer()),'circle photo bytes survive migration');
 
 // Simulate restoring an old, signed Google Drive snapshot and reloading.
 // The restored legacy marker is absent and must be migrated just once.
@@ -73,6 +78,8 @@ const restored=await migrateDungeonXp(db);
 assert.equal(restored.xp,exact.xp,'restored legacy gauge migrates consistently');
 assert.equal(restored.run.xp,exact.run.xp,'restored unbanked EXP migrates consistently');
 assert.deepEqual(await migrateDungeonXp(db),restored,'restored save does not convert twice');
+assert.deepEqual(new Uint8Array(await (await allCircles(db)).find(x=>x.id==='xp-migration-photo').image.arrayBuffer()),
+ new Uint8Array(await migrationPhoto.arrayBuffer()),'Drive recovery keeps the original magic-circle image');
 
 // Pending-return reward animation must end at the already-awarded real level.
 const returnReward=oldNeed(92)+Math.floor(oldNeed(93)*0.37);
@@ -87,6 +94,19 @@ G.experience(frameStart,migratedReturn.pendingReturn.gained);
 assert.equal(frameStart.level,migratedReturn.level,'the full return animation ends at the real awarded level');
 assert.ok(Math.abs(frameStart.xp-migratedReturn.xp)<0.00001,'the animation ends at exactly the saved EXP');
 assert.deepEqual(await migrateDungeonXp(db),migratedReturn,'reloading the return animation cannot duplicate XP');
+
+// An invalid legacy reward must fail before writing either the profile or
+// its integrity seal; this is the same transaction-safety path as startup.
+const invalidLegacy={...legacySave,run:{...legacySave.run,xp:-1}};
+delete invalidLegacy.xpScaleVersion;
+await saveProfile(db,invalidLegacy);
+const beforeFailedMigration=await readDungeonSnapshot(db);
+await assert.rejects(migrateDungeonXp(db),/探索中の旧経験値が不正/);
+const afterFailedMigration=await readDungeonSnapshot(db);
+assert.deepEqual(afterFailedMigration.profile,beforeFailedMigration.profile,'a failed migration leaves profile intact');
+assert.deepEqual(afterFailedMigration.integrity,beforeFailedMigration.integrity,'a failed migration does not resign partial data');
+await deleteCircle(db,'xp-migration-photo');
+
 
 p.level=1;p.xp=0;p.run.xp=0;delete p.pendingReturn;p.xpScaleVersion=45;
 await saveProfile(db,p);
