@@ -17,13 +17,14 @@ const status={
  diagnostics:{status:'MEASURED',complete:journeys.combinations.map(x=>({
   style:x.style,route:x.route,reached100:x.completed,samples:x.samples,
   p90ReplayFights:x.distributions.replayedFights.p90,
+  p90PurposefulRecoveryFights:x.distributions.recoveryFights.p90,
   p90Losses:x.distributions.losses.p90,
   p90StoneEarned:x.distributions['earned.stone'].p90
  }))},
  outstanding:['Get per-route measured median baselines and lock a versioned, reviewed candidate',
   'Run independent 256-seed linked-combat acceptance on both economic routes',
   'Construct identical-state paired ink versus stone strategy samples',
-  'Economy modeling of alchemy and 101-150F still needed',
+  'Alchemy paired diagnostics and 101-150F conditional extrapolation are not a substitute for authored combat/bankable resources',
   'Fix any combat win targets by changing game parameters rather than the assertions'],
  warning:'No economy p90 cap is approved. No modeled achievements imply target acceptance.'
 };
