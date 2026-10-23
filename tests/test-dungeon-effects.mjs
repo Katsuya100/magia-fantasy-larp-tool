@@ -230,7 +230,7 @@ for(const power of [100,300,500,1100,1320,2200,4840,7370,10000]){
  const factor=Math.sqrt(power/500);
  const effects=[['flame',Math.min(.14,.045+.025*factor)],
   ['aqua',Math.min(.5,.12+.12*factor)],
-  ['storm',Math.min(.45,.08+.145*factor)],
+  ['storm',Math.min(.45,.08+.15*factor)],
   ['gravity',-Math.min(.5,.12+.12*factor)]];
  for(const [attribute,expected] of effects){
   const victim=target();
