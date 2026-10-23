@@ -35,6 +35,16 @@ try{
  assert.equal($('nameDialog').open,false,'naming dialog closes after saving');
  assert.equal((await getProfile(await openStore(env.factory))).name,'星渡り');
  assert.match($('playerStats').innerHTML,/星渡り/);
+ assert.equal($('circleFirstChoiceDialog').open,true,'first creation offers a direct choice');
+ await $('circleFirstChoiceDraw').fire('click');
+ assert.equal($('circleFirstChoiceDialog').open,false,'choice closes after saving');
+ assert.equal($('circleDrawingDialog').open,true,'draw option opens the drawing editor directly');
+ assert.equal($('circleDrawingLessonDialog').open,true,'first spell entry explains the handwritten spell');
+ assert.equal($('tutorialTitle').textContent,'呪文を書きましょう');
+ await $('circleDrawingLessonClose').fire('click');
+ assert.equal($('circleDrawingLessonDialog').open,false);
+ await $('circleDrawingClose').fire('click');
+ assert.equal($('circleDrawingDialog').open,false,'an untouched drawing closes without a discard warning');
  const initialProfile=await getProfile(await openStore(env.factory));
  const initialVitals=makeUnit(initialProfile.base,initialProfile.level);
  assert.match($('playerStats').innerHTML,new RegExp('<small>HP</small><strong>'+initialVitals.stats.hp+'</strong>'),'profile retains maximum HP');
@@ -73,7 +83,10 @@ try{
  assert.equal($('cameraPlaceholder').hidden,false);
  assert.equal($('cameraCapture').disabled,true);
  await $('openCircleCamera').fire('click');
- await wait(()=>$('circleCameraDialog').open&&!$('cameraCapture').disabled,'camera overlay opens');
+ assert.equal($('tutorialOverlay').hidden,false,'first camera entry runs the existing five-page tutorial');
+ assert.equal(env.opened,0,'camera permission is not requested behind its tutorial');
+ await $('tutorialSkip').fire('click');
+ await wait(()=>$('circleCameraDialog').open&&!$('cameraCapture').disabled,'camera overlay opens after tutorial');
  assert.equal($('cameraPlaceholder').hidden,true);
  assert.equal(env.opened,1);
  await $('openCircleCamera').fire('click');
@@ -701,6 +714,8 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   await wait(()=>cameraDenied.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'camera test startup');
   await cameraDenied.document.click(btn({view:'library'}));
   await cameraDenied.document.getElementById('openCircleCamera').fire('click');
+  assert.equal(cameraDenied.document.getElementById('tutorialOverlay').hidden,false,'first camera entry is taught even without camera permissions');
+  await cameraDenied.document.getElementById('tutorialSkip').fire('click');
   await wait(()=>cameraDenied.opened===1&&!cameraDenied.document.getElementById('circleCameraDialog').open,'camera denial dismisses overlay');
   assert.equal(cameraDenied.document.getElementById('library').hidden,false,'denied camera returns to the grimoire');
   assert.equal(cameraDenied.document.getElementById('cameraError').hidden,true,'denied permission leaves no error inside a closed dialog');
@@ -715,6 +730,8 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   await wait(()=>cameraMissing.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'missing camera test startup');
   await cameraMissing.document.click(btn({view:'library'}));
   await cameraMissing.document.getElementById('openCircleCamera').fire('click');
+  assert.equal(cameraMissing.document.getElementById('tutorialOverlay').hidden,false,'missing camera first shows paper tutorial');
+  await cameraMissing.document.getElementById('tutorialSkip').fire('click');
   await wait(()=>cameraMissing.document.getElementById('cameraError').textContent.includes('カメラを起動できません'),'missing camera feedback');
   assert.equal(cameraMissing.document.getElementById('circleCameraDialog').open,true,'non-permission errors retain camera error panel');
  }finally{cameraMissing.restore();}

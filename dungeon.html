@@ -93,6 +93,17 @@
         </div>
       </div>
     </dialog>
+    <dialog id="circleFirstChoiceDialog" class="name-dialog circle-first-choice" aria-labelledby="circleFirstChoiceTitle">
+      <div class="name-dialog-inner">
+        <span class="dialog-sigil" aria-hidden="true">✦</span>
+        <h2 id="circleFirstChoiceTitle">まずはどちらで遊ぶ？</h2>
+        <div class="circle-first-choice-actions">
+          <button type="button" id="circleFirstChoiceDraw" class="primary-action">魔法陣を描く✍️</button>
+          <button type="button" id="circleFirstChoicePhoto" class="primary-action">魔法陣を撮る📷</button>
+        </div>
+        <p id="circleFirstChoiceError" class="name-error" role="alert"></p>
+      </div>
+    </dialog>
     <dialog id="nameDialog" class="name-dialog" aria-labelledby="nameDialogTitle">
       <div class="name-dialog-inner">
         <span class="dialog-sigil" aria-hidden="true">✦</span>
@@ -322,6 +333,7 @@
     <dialog id="circleDrawingDialog" class="circle-drawing-dialog" aria-labelledby="circleDrawingStage">
       <div id="circleDrawingShell" class="circle-drawing-shell">
         <strong id="circleDrawingStage" class="circle-drawing-stage" aria-live="polite">呪文を1文字ずつ書く</strong>
+        <button type="button" id="circleDrawingPractice" class="subtle circle-drawing-practice">描き方を練習</button>
         <section class="circle-drawing-display" aria-label="魔法陣のプレビュー">
           <div class="circle-drawing-preview-art">
             <canvas id="circleDrawingPreview" width="512" height="512" role="img" aria-label="作成中の魔法陣"></canvas>
@@ -352,6 +364,12 @@
             <button type="button" id="circleDrawingDiscardConfirm" class="drawing-discard-confirm">破棄</button>
           </div>
         </div>
+      </div>
+    </dialog>
+    <dialog id="circleDrawingLessonDialog" class="drawing-lesson-dialog" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint">
+      <div class="tutorial-sheet">
+        <div id="circleDrawingLessonSlot"></div>
+        <button type="button" id="circleDrawingLessonClose" class="subtle dungeon-dialog-close" aria-label="描き方の練習を閉じる">閉じる</button>
       </div>
     </dialog>
     <dialog id="circleCameraDialog" class="circle-drawing-dialog circle-camera-dialog" aria-label="魔法陣を撮る">
@@ -526,7 +544,8 @@
   <div id="tutorialOverlay" class="tutorial-overlay" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet">
       <div class="tutorial-top"><span id="tutorialCounter" aria-live="polite">1 / 5</span><button type="button" id="tutorialSkip" class="subtle">スキップ</button></div>
-      <h2 id="tutorialTitle">準備しましょう</h2>
+      <div id="tutorialBodyHome"><div id="tutorialBody">
+       <h2 id="tutorialTitle">準備しましょう</h2>
       <p id="tutorialHint">最初にお手元に紙とペンをご用意ください。</p>
       <figure id="tutorialFigure" class="tutorial-animation" hidden>
         <img id="tutorialAnimation" alt="" width="320" height="320">
@@ -534,7 +553,8 @@
       <p id="tutorialDetails">ペンは、できれば太めの油性ペンをお使いください。</p>
        <p id="tutorialAttributes" hidden></p>
       <p id="tutorialFreedom" hidden></p>
-      <div class="tutorial-actions">
+      </div></div>
+       <div class="tutorial-actions">
         <button type="button" id="tutorialPrevious" class="subtle" hidden>戻る</button>
         <button type="button" id="tutorialContinue" class="primary-action tutorial-next">次へ</button>
       </div>

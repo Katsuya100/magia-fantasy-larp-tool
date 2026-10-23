@@ -1,4 +1,4 @@
-import {showUiOverlay,hideUiOverlay} from './dungeon-ui-transitions.mjs?v=20261023.27';
+import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.32';
 // Five tutorial pages using four uploaded GIF animations, in reverse upload order.
 export const CIRCLE_TUTORIAL_STEPS=[
  {title:'準備しましょう',hint:'最初にお手元に紙とペンをご用意ください。',detail:'ペンは、できれば太めの油性ペンをお使いください。',image:null},
@@ -10,7 +10,11 @@ export const CIRCLE_TUTORIAL_STEPS=[
 export function initCircleTutorial(doc,onFinish){
  const $=id=>doc.getElementById(id);
  const overlay=$('tutorialOverlay'),next=$('tutorialContinue'),back=$('tutorialPrevious'),preview=$('tutorialAnimation');
- let step=0,previousFocus=null;
+ const lesson=$('circleDrawingLessonDialog'),home=$('tutorialBodyHome'),slot=$('circleDrawingLessonSlot'),body=$('tutorialBody');
+ let step=0,previousFocus=null,lessonFocus=null;
+ // The real page already nests this body under the home slot; the fake DOM in
+ // the Node test harness doesn't parse HTML, so establish its initial parent.
+ if(!body.parentNode)home.appendChild(body);
  function render(){
   const info=CIRCLE_TUTORIAL_STEPS[step],freedom=$('tutorialFreedom');
   $('tutorialCounter').textContent=(step+1)+' / '+CIRCLE_TUTORIAL_STEPS.length;
@@ -33,7 +37,7 @@ export function initCircleTutorial(doc,onFinish){
   next.textContent=step===CIRCLE_TUTORIAL_STEPS.length-1?'撮影する📷':'次へ';
  }
  function open(){
-  if(!overlay.hidden)return;
+  if(!overlay.hidden||lesson.open)return;
   step=0;previousFocus=doc.activeElement;render();showUiOverlay(overlay);
   $('dungeonApp').setAttribute('inert','');next.focus();
  }
@@ -47,6 +51,29 @@ export function initCircleTutorial(doc,onFinish){
  back.addEventListener('click',()=>{if(step>0){step--;render();}});
  $('tutorialSkip').addEventListener('click',()=>close(false));
  overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close(false);}});
+ function restoreLessonBody(){
+  if(body.parentNode!==home)home.appendChild(body);
+ }
+ function closeLesson(){
+  if(!lesson.open)return;
+  closeDungeonDialog(lesson);
+  restoreLessonBody();
+  lessonFocus?.focus?.();
+  lessonFocus=null;
+ }
+ function openLesson(mode){
+  if(!overlay.hidden||lesson.open||!['spell','sigil'].includes(mode))return false;
+  step=mode==='spell'?3:4;
+  lessonFocus=doc.activeElement;
+  slot.appendChild(body);
+  render();
+  showDungeonDialog(lesson);
+  $('circleDrawingLessonClose').focus();
+  return true;
+ }
+ $('circleDrawingLessonClose').addEventListener('click',closeLesson);
+ lesson.addEventListener('cancel',event=>{event.preventDefault();closeLesson();});
+ lesson.addEventListener('close',restoreLessonBody);
  preview.addEventListener('error',()=>{preview.alt='GIFアニメーションを読み込めませんでした';});
- return {open,isOpen:()=>!overlay.hidden};
+ return {open,openLesson,isOpen:()=>!overlay.hidden};
 }

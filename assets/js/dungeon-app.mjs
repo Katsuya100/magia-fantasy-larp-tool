@@ -81,8 +81,9 @@ let dungeonView='prepare';
 let busyAction=false,playingEffects=false,savingName=false;
 const battleInput=createBattleInputBuffer();
 let loadoutSaveQueue=Promise.resolve(),loadoutSaveRevision=0;
-let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null,upgradeRitualEpoch=0;
+let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null,upgradeRitualEpoch=0,cameraAfterTutorial=false;
 let returnFlow=null,returnAnimationToken=0,tutorial=null,magicStoneTutorial=null;
+const isFirstCircleChoice=()=>!profile.initialCircleChoiceDone&&!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 async function battleAction(kind,index){
  const run=profile?.run;
@@ -291,7 +292,7 @@ async function load(){
  if(profile.run?.stage==='checkpoint'&&profile.run.creatorCongratulationsPending)showCreatorCongratulations();
  if(profile.awaitingHeir)openNameDialog(true);
  else if(!profile.name)openBackupSetup();
- else if(!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run)tutorial.open();
+ else if(isFirstCircleChoice())showFirstCircleChoice();
 }
 const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result','returnShowcase']);
 function rememberCameraScroll(){
@@ -1304,6 +1305,8 @@ function stopRepairCamera(){
 let cameraOpenEpoch=0;
 function openCircleCamera(){
  if(profile.run||activeAnalysis)return;
+ // The existing five-page tutorial runs before first camera activation.
+ if(!profile.tutorialDone){cameraAfterTutorial=true;tutorial.open();return;}
  const dialog=$('circleCameraDialog');
  if(!dialog.open)showDungeonDialog(dialog);
  void startCamera();
@@ -1637,23 +1640,56 @@ function wireFavoriteHold(){
   void exclusive(()=>toggleFavoriteCircle(id)).catch(error=>note('お気に入りの保存に失敗しました：'+error.message));
  });
 }
+function showFirstCircleChoice(){
+ if(!$('circleFirstChoiceDialog').open)showDungeonDialog($('circleFirstChoiceDialog'));
+}
 function wire(){
  syncCameraUi(false);
- drawingEditor=initCircleDrawing(document,{onSave:saveDrawnCircle});
+ const showDrawingLesson=(mode,onlyFirst)=>{
+  const key=mode==='sigil'?'drawingSigilTutorialSeen':'drawingSpellTutorialSeen';
+  if(onlyFirst&&profile[key])return;
+  if(tutorial.openLesson(mode)&&!profile[key]){
+   profile[key]=true;
+   void persist().catch(error=>note('描き方の練習記録を保存できませんでした：'+error.message));
+  }
+ };
+ drawingEditor=initCircleDrawing(document,{
+  onSave:saveDrawnCircle,
+  onStageEnter:mode=>showDrawingLesson(mode,true),
+  onPractice:mode=>showDrawingLesson(mode,false)
+ });
  window.addEventListener('message',onAnalysisMessage);
  document.addEventListener('error',onCirclePhotoError,true);
  document.addEventListener('load',onCirclePhotoLoad,true);
  wireFavoriteHold();
  magicStoneTutorial=initMagicStoneTutorial(document);
- let practiceFromCamera=false;
  tutorial=initCircleTutorial(document,async toCamera=>{
   profile.tutorialDone=true;
   try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}
-  if(toCamera||practiceFromCamera){practiceFromCamera=false;show('library');openCircleCamera();}
+  if(toCamera||cameraAfterTutorial){cameraAfterTutorial=false;show('library');openCircleCamera();}
  });
  $('tutorialReplay').addEventListener('click',()=>{
-  if(!profile.run&&!activeAnalysis){practiceFromCamera=true;closeCamera();tutorial.open();}
+  if(!profile.run&&!activeAnalysis){cameraAfterTutorial=true;closeCamera();tutorial.open();}
  });
+ for(const [id,mode] of [['circleFirstChoiceDraw','draw'],['circleFirstChoicePhoto','photo']]){
+  $(id).addEventListener('click',async()=>{
+   if(!$('circleFirstChoiceDialog').open)return;
+   $('circleFirstChoiceDraw').disabled=true;$('circleFirstChoicePhoto').disabled=true;
+   try{
+    profile.initialCircleChoiceDone=true;
+    await persist();
+    closeDungeonDialog($('circleFirstChoiceDialog'));
+    show('library');
+    if(mode==='draw')drawingEditor.open();else openCircleCamera();
+   }catch(error){
+    profile.initialCircleChoiceDone=false;
+    $('circleFirstChoiceError').textContent='遊び方を保存できませんでした：'+error.message;
+   }finally{
+    $('circleFirstChoiceDraw').disabled=false;$('circleFirstChoicePhoto').disabled=false;
+   }
+  });
+ }
+ $('circleFirstChoiceDialog').addEventListener('cancel',event=>event.preventDefault());
  const listControls=[
   ['libraryRoleFilter','libraryRole'],['libraryAttributeFilter','libraryAttribute'],['librarySort','librarySort'],
   ['collectionDiscoveryFilter','collectionDiscovery'],['collectionRarityFilter','collectionRarity'],['collectionSort','collectionSort']
@@ -1702,7 +1738,7 @@ function wire(){
    const name=$('playerNameInput').value.trim();
    if(!name||name.length>20){$('nameError').textContent='1〜20文字で入力してください';return;}
    if(isDungeonNameBlocked(name)){$('nameError').textContent='この名前は使用できません。別の名前を入力してください';return;}
-   const firstLesson=!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run;
+   const firstLesson=isFirstCircleChoice();
    const button=$('savePlayerName');
    savingName=true;
    button.disabled=true;
@@ -1731,7 +1767,7 @@ function wire(){
     savingName=false;
     button.disabled=false;
    }
-   if(saved&&firstLesson)tutorial.open();
+   if(saved&&firstLesson)showFirstCircleChoice();
  });
  $('closeSaveError').addEventListener('click',()=>closeDungeonDialog($('saveErrorDialog')));
   $('cancelNameDialog').addEventListener('click',()=>closeDungeonDialog($('nameDialog')));

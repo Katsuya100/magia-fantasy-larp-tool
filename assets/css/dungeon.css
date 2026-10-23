@@ -2642,3 +2642,10 @@ button.creator-congratulations-close{
 .circle-camera-dialog .drawing-confirm{background:linear-gradient(145deg,#f5da9e,#bf8d50);color:#191221;border:1px solid #e6bc79}
 .circle-camera-dialog .tutorial-replay{align-self:flex-end;margin:0;font-size:12px!important}
 @media(max-width:630px){.circle-camera-dialog .camera-viewfinder-group{width:min(100%,calc(100dvh - 178px))}}
+
+/* A single movable tutorial body serves the camera walkthrough and drawing lessons. */
+.drawing-lesson-dialog{width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 24px);margin:auto;padding:0;overflow-y:auto;border:1px solid #e9c98a;background:#111c26;color:var(--pale);box-shadow:0 20px 80px #000c}
+.drawing-lesson-dialog .tutorial-sheet{width:100%;border:0;box-shadow:none;padding:58px 20px 20px}
+#circleDrawingDialog .circle-drawing-practice{position:absolute;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));z-index:3;min-height:36px;margin:0;padding:5px 10px;font-size:12px}
+.circle-first-choice-actions{display:flex;flex-direction:column;gap:12px;margin:20px 0 12px}
+.circle-first-choice-actions button{width:100%;min-height:50px}

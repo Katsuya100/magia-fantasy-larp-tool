@@ -5,6 +5,10 @@ export function fakeDungeonBrowser(config={}){
  const make=(id)=>{
   const handlers=new Map();
   const element={id,hidden:['library','prepare','collection','battle','checkpoint','analyzing','result','cameraCanvas','cameraVideo','imageRepairCanvas','imageRepairVideo','imageRepairCapture','cameraCapture','cameraStop','pageError','battleError','cameraError','notice','tutorialOverlay','tutorialExample','tutorialPad','tutorialRetry','tutorialFinger'].includes(id),disabled:false,open:false,attributes:{},innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
+   appendChild(node){
+    if(node.parentNode?.children)node.parentNode.children=node.parentNode.children.filter(child=>child!==node);
+    (this.children??=[]).push(node);node.parentNode=this;return node;
+   },
    addEventListener(name,fn){handlers.set(name,fn);},
    fire(name,data={}){const event={target:element,preventDefault(){this.defaultPrevented=true;},...data};return handlers.has(name)?handlers.get(name)(event):element['on'+name]?.(event);},
    setAttribute(name,value){this.attributes[name]=String(value);},
@@ -15,7 +19,7 @@ export function fakeDungeonBrowser(config={}){
    closest(){return element;},
    focus(){},
    play:async()=>{},
-   getContext:()=>({drawImage(...args){element.drawImageArgs=args;},clearRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},fillRect(){},strokeRect(){},arc(){},closePath(){},fillText(){},createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){return {addColorStop(){}};}}),
+   getContext:()=>({drawImage(...args){element.drawImageArgs=args;},save(){},restore(){},setLineDash(){},fill(){},clearRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},fillRect(){},strokeRect(){},arc(){},closePath(){},fillText(){},createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){return {addColorStop(){}};}}),
     getBoundingClientRect:()=>({left:0,top:0,width:320,height:320}),setPointerCapture(){},releasePointerCapture(){},
    toBlob:callback=>callback(new Blob([Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0])],{type:'image/png'})),
    toDataURL:()=>'data:image/png;base64,ZmFrZQ=='
