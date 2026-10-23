@@ -2759,4 +2759,7 @@ button.creator-congratulations-close{
 .alchemy-auto button{align-self:end}
 #alchemyCraft{width:100%}
 #alchemyBaseName,#alchemyPreview{font-size:13px;color:var(--soft)}
+.alchemy-result:not(:empty){margin:10px 0;padding:9px 12px;border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-size:13px}
+.alchemy-byproduct-info{margin:8px 0 2px;font-size:12px;color:var(--gold)}
+.alchemy-byproduct-help{margin:3px 0 8px;font-size:11px;color:var(--soft)}
 @media(max-width:630px){#alchemySlots .loadout-grid{gap:5px}#alchemySlots .tile-item-icon{font-size:26px}#alchemySlots .tile-title{font-size:9px}}
