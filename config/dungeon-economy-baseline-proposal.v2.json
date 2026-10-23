@@ -1,0 +1,473 @@
+{
+  "schemaVersion": "dungeon-economy-baseline-proposal-v2",
+  "status": "AWAITING_USER_APPROVAL_NOT_ACTIVE",
+  "previousVersion": "dungeon-median-first-entry-candidate-v1",
+  "reason": "Game-source EXP overlevel replay reduction (1.85-fold per 10 over target) changed natural levels and reinvestment timing; frozen v1 remains untouched.",
+  "measurements": {
+    "seed": 20261024,
+    "economyTrials": 16,
+    "actionRun": 39997977822,
+    "artifactId": 12519789470,
+    "method": "Actual combat-linked A journeys, each short/long first-entry per 10F band; medians rounded to integers."
+  },
+  "changeSummary": {
+    "changedBandCandidates": 17,
+    "of": 20,
+    "overlevelRewardFactorPerTen": 1.85,
+    "stoneDropCurveChanged": false,
+    "approvedCombatTargetsChanged": false
+  },
+  "proposedRoutes": {
+    "short": [
+      {
+        "from": 1,
+        "to": 10,
+        "level": 1,
+        "upgradeLevels": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "previousLevel": 1,
+        "previousUpgradeLevels": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "changed": false,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 11,
+        "to": 20,
+        "level": 27,
+        "upgradeLevels": [
+          2,
+          1,
+          1,
+          1,
+          0
+        ],
+        "previousLevel": 32,
+        "previousUpgradeLevels": [
+          2,
+          1,
+          1,
+          1,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 21,
+        "to": 30,
+        "level": 47,
+        "upgradeLevels": [
+          6,
+          6,
+          7,
+          7,
+          0
+        ],
+        "previousLevel": 54,
+        "previousUpgradeLevels": [
+          6,
+          6,
+          7,
+          7,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 31,
+        "to": 40,
+        "level": 66,
+        "upgradeLevels": [
+          11,
+          12,
+          11,
+          10,
+          0
+        ],
+        "previousLevel": 74,
+        "previousUpgradeLevels": [
+          11,
+          12,
+          10,
+          10,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 41,
+        "to": 50,
+        "level": 83,
+        "upgradeLevels": [
+          16,
+          16,
+          16,
+          16,
+          0
+        ],
+        "previousLevel": 92,
+        "previousUpgradeLevels": [
+          16,
+          15,
+          16,
+          15,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 51,
+        "to": 60,
+        "level": 99,
+        "upgradeLevels": [
+          22,
+          22,
+          21,
+          21,
+          0
+        ],
+        "previousLevel": 110,
+        "previousUpgradeLevels": [
+          20,
+          20,
+          21,
+          19,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 61,
+        "to": 70,
+        "level": 118,
+        "upgradeLevels": [
+          28,
+          28,
+          28,
+          28,
+          0
+        ],
+        "previousLevel": 139,
+        "previousUpgradeLevels": [
+          25,
+          25,
+          25,
+          24,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 71,
+        "to": 80,
+        "level": 135,
+        "upgradeLevels": [
+          34,
+          38,
+          38,
+          30,
+          0
+        ],
+        "previousLevel": 150,
+        "previousUpgradeLevels": [
+          30,
+          30,
+          30,
+          30,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 81,
+        "to": 90,
+        "level": 149,
+        "upgradeLevels": [
+          36,
+          41,
+          54,
+          37,
+          0
+        ],
+        "previousLevel": 150,
+        "previousUpgradeLevels": [
+          34,
+          37,
+          36,
+          30,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 91,
+        "to": 100,
+        "level": 150,
+        "upgradeLevels": [
+          55,
+          56,
+          54,
+          54,
+          0
+        ],
+        "previousLevel": 150,
+        "previousUpgradeLevels": [
+          43,
+          49,
+          54,
+          42,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      }
+    ],
+    "long": [
+      {
+        "from": 1,
+        "to": 10,
+        "level": 1,
+        "upgradeLevels": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "previousLevel": 1,
+        "previousUpgradeLevels": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "changed": false,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 11,
+        "to": 20,
+        "level": 21,
+        "upgradeLevels": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "previousLevel": 21,
+        "previousUpgradeLevels": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "changed": false,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 21,
+        "to": 30,
+        "level": 36,
+        "upgradeLevels": [
+          2,
+          2,
+          1,
+          1,
+          0
+        ],
+        "previousLevel": 39,
+        "previousUpgradeLevels": [
+          2,
+          2,
+          2,
+          1,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 31,
+        "to": 40,
+        "level": 60,
+        "upgradeLevels": [
+          4,
+          6,
+          7,
+          4,
+          0
+        ],
+        "previousLevel": 57,
+        "previousUpgradeLevels": [
+          4,
+          3,
+          7,
+          3,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 41,
+        "to": 50,
+        "level": 75,
+        "upgradeLevels": [
+          8,
+          8,
+          9,
+          7,
+          0
+        ],
+        "previousLevel": 77,
+        "previousUpgradeLevels": [
+          7,
+          6,
+          7,
+          7,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 51,
+        "to": 60,
+        "level": 91,
+        "upgradeLevels": [
+          12,
+          12,
+          12,
+          11,
+          0
+        ],
+        "previousLevel": 95,
+        "previousUpgradeLevels": [
+          10,
+          10,
+          10,
+          9,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 61,
+        "to": 70,
+        "level": 101,
+        "upgradeLevels": [
+          14,
+          15,
+          14,
+          14,
+          0
+        ],
+        "previousLevel": 106,
+        "previousUpgradeLevels": [
+          13,
+          12,
+          12,
+          12,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 71,
+        "to": 80,
+        "level": 117,
+        "upgradeLevels": [
+          17,
+          17,
+          16,
+          16,
+          0
+        ],
+        "previousLevel": 124,
+        "previousUpgradeLevels": [
+          15,
+          15,
+          15,
+          15,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 81,
+        "to": 90,
+        "level": 134,
+        "upgradeLevels": [
+          21,
+          21,
+          21,
+          20,
+          0
+        ],
+        "previousLevel": 145,
+        "previousUpgradeLevels": [
+          19,
+          18,
+          18,
+          18,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      },
+      {
+        "from": 91,
+        "to": 100,
+        "level": 146,
+        "upgradeLevels": [
+          24,
+          24,
+          24,
+          23,
+          0
+        ],
+        "previousLevel": 150,
+        "previousUpgradeLevels": [
+          22,
+          22,
+          22,
+          22,
+          0
+        ],
+        "changed": true,
+        "context": "first-entry economic median; NOT necessarily combat-prepared"
+      }
+    ]
+  },
+  "limitations": [
+    "Cannot use this v2 to silently overwrite strict fixtures",
+    "First-entry level1 for 1-10F is not the normal 10F combat-prepared state",
+    "Actual owned status-cleansing loadouts have not been frozen in benchmark",
+    "Combat strict still red; fixing economy alone does not prove a shared battle challenge"
+  ],
+  "changeControl": "Do not activate or supersede v1 without user approval and independent 256-seed combat verification."
+}
