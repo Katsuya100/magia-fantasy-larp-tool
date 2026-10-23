@@ -47,4 +47,72 @@ assert.equal(arriving.dataset.uiExiting,'true');
 await new Promise(resolve=>setTimeout(resolve,DUNGEON_MODAL_DURATION_MS+30));
 assert.equal(arriving.dataset.uiExiting,undefined);
 assert.equal(arriving.hidden,true);
-console.log('PASS dungeon modal 200ms show/hide, crossfades, reopen and reduced motion');
+
+// Every native dialog action, including changing the existing adventurer name,
+// camera, recovery, drawing, Drive confirmations and magic-stone help, uses
+// the same browser-local animation path (not window.alert/prompt/confirm).
+const sources=['assets/js/dungeon-app.mjs','assets/js/dungeon-circle-draw.mjs',
+ 'assets/js/dungeon-cloud-sync.mjs','assets/js/dungeon-magic-stone-tutorial.mjs'];
+let opens=0,closes=0;
+for(const file of sources){
+ const source=await read(file);
+ assert.doesNotMatch(source,/\b(?:dialog|conflictDialog|expiredDialog)\.(?:showModal|close)\(\)|\$\('[^']+'\)\.(?:showModal|close)\(\)/,'unmanaged dialog call in '+file);
+ opens+=(source.match(/showDungeonDialog\(/g)||[]).length;
+ closes+=(source.match(/closeDungeonDialog\(/g)||[]).length;
+}
+assert.ok(opens>=18&&closes>=29,'all native dialog paths are routed through the manager');
+assert.match(app,/if\(!dialog\.open\)showDungeonDialog\(dialog\);\s*\$\('playerNameInput'\)\.focus\(\)/,'rename opens with animation');
+assert.match(app,/profile=next;\s*closeDungeonDialog\(\$\('nameDialog'\)\)/,'name save closes with animation');
+assert.match(css,/@keyframes dungeon-dialog-enter\{/);
+assert.match(css,/@keyframes dungeon-dialog-exit\{/);
+assert.match(css,/\.dungeon-modal-exit-layer/);
+for(const file of sources){
+ assert.doesNotMatch(await read(file),/\b(?:window|globalThis)\.(?:alert|confirm|prompt)\s*\(/,'system dialog in '+file);
+}
+const {showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions}=await import('../assets/js/dungeon-ui-transitions.mjs');
+const appended=[];
+function element(){
+ return {open:false,dataset:{},style:{},attrs:{},classList:{add(){}},
+  setAttribute(key,value){this.attrs[key]=value;},removeAttribute(key){delete this.attrs[key];},
+  querySelectorAll(){return [];},cloneNode(){return element();},
+  appendChild(child){(this.children??=[]).push(child);},remove(){this.removed=true;},
+  showModal(){this.open=true;},close(){this.open=false;},
+  getBoundingClientRect(){return {left:20,top:30,width:400,height:250};},
+  addEventListener(type,callback){(this.handlers??={})[type]=callback;}
+ };
+}
+const native=element(),owner={
+ body:{appendChild(portal){appended.push(portal);}},
+ createElement:()=>element(),querySelectorAll:()=>[native],
+ defaultView:{matchMedia:()=>({matches:false})}
+};
+native.ownerDocument=owner;
+showDungeonDialog(native);
+assert.equal(native.open,true,'native dialog shows immediately');
+assert.equal(native.dataset.uiEntering,'true','enter keyframes are explicitly triggered');
+closeDungeonDialog(native);
+assert.equal(native.open,false,'native dialog closes immediately, preserving save/focus ordering');
+assert.equal(appended.length,1,'exit visual exists concurrently with following dialog');
+assert.equal(appended[0].attrs['aria-hidden'],'true');
+assert.equal(appended[0].attrs.inert,'');
+assert.equal(appended[0].children[1].attrs['aria-hidden'],'true');
+showDungeonDialog(native);
+assert.equal(native.open,true,'name dialog can reopen during previous hide');
+closeDungeonDialog(native);
+assert.equal(appended.length,2,'every repeat open/close restarts the animation');
+installDungeonDialogCancelTransitions(owner);
+assert.equal(typeof native.handlers.cancel,'function','native Escape participates too');
+showDungeonDialog(native);
+native.handlers.cancel({defaultPrevented:true});
+native.close();
+await Promise.resolve();
+assert.equal(appended.length,2,'prevented Escape must not create a visual exit');
+showDungeonDialog(native);
+native.handlers.cancel({defaultPrevented:false});
+native.close();
+await Promise.resolve();
+assert.equal(appended.length,3,'unprevented Escape exits with the same animation');
+await new Promise(resolve=>setTimeout(resolve,DUNGEON_MODAL_DURATION_MS+30));
+assert.ok(appended.every(node=>node.removed),'ghosts are removed after the 200ms exit');
+
+console.log('PASS all dungeon dialogs, repeated rename, crossfades, Escape and reduced motion');
