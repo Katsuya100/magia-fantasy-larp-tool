@@ -262,7 +262,7 @@ try{
  assert.equal(get('circleDrawingStage').textContent,'呪文を1文字ずつ書く');
  delete globalThis.window.requestAnimationFrame;
  get('circleDrawingConfirm').dispatch('click');
- assert.equal(get('circleDrawingStage').textContent,'紋');
+ assert.equal(get('circleDrawingStage').textContent,'紋を書く');
  pad.dispatch('pointerdown',pointer(2,60,60));
  pad.dispatch('pointermove',pointer(2,120,130));
  pad.dispatch('pointerup',pointer(2,120,130));
@@ -276,12 +276,12 @@ try{
  assert.equal(saved.length,1);
  assert.equal(saved[0].type,'image/jpeg');
  editor.resume();
- assert.equal(get('circleDrawingStage').textContent,'紋','analysis cancellation retains the sigil screen');
+ assert.equal(get('circleDrawingStage').textContent,'紋を書く','analysis cancellation retains the sigil screen');
  get('circleDrawingConfirm').dispatch('click');
  await new Promise(resolve=>setImmediate(resolve));
  assert.equal(saved.length,2);
  editor.open();
- assert.equal(get('circleDrawingStage').textContent,'呪文');
+ assert.equal(get('circleDrawingStage').textContent,'呪文を1文字ずつ書く');
  assert.equal(get('circleDrawingUndo').disabled,true);
  dialog.close();
 }finally{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
