@@ -107,7 +107,7 @@ const legendaryReward=award({...source,alchemyCount:19},{...common,rarity:'legen
 assert.equal(legendaryReward.magicStones,9,'guaranteed legendary stone stacks with fifth milestone');
 assert.equal(legendaryReward.magicInk,3,'twentieth milestone ink is independent of rarity roll');
 
-const randomDrop=award({...source,alchemyCount:0},{...common,rarity:'rare'},[.9,.9,.11,.02]);
+const randomDrop=award({...source,alchemyCount:0},{...common,rarity:'rare'},[.9,.11,.02]);
 assert.equal(randomDrop.magicStones,8,'rare stone roll succeeds');
 assert.equal(randomDrop.magicInk,3,'rare ink roll succeeds independently');
 const failedDrop=award({...source,alchemyCount:0},common,[.9,.99,0]);
