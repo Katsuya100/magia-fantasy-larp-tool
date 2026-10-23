@@ -772,25 +772,65 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 @keyframes dungeon-dialog-exit{from{opacity:1;transform:none}to{opacity:0;transform:translateY(9px) scale(.985)}}
 @keyframes dungeon-dialog-veil-hide{from{opacity:1}to{opacity:0}}
 
-/* Compact dialogs, including the adventurer-card sharing dialog, share
-   one top-right close control. Editor, camera and celebration overlays retain
-   their original footer actions regardless of their HTML tag. */
-dialog button.dungeon-dialog-close{
- position:absolute!important;inset-block-start:max(10px,env(safe-area-inset-top));
- inset-inline-end:max(10px,env(safe-area-inset-right));z-index:20;
- display:grid!important;place-items:center;
- width:42px!important;height:42px!important;
- min-width:42px!important;min-height:42px!important;max-width:42px!important;
+/* Reusable dialog *frame*, not a collection of per-dialog button overrides.
+   Exactly three frame variants:
+   - closable: reserved header-control rail, shared SVG close
+   - fixed: same surface/body; intentional choices or acknowledgement only
+   - paged: step counter and previous/next in the existing tutorial sheet
+   Fullscreen editor, camera, celebration and photo-repair overlays are excluded. */
+.dungeon-dialog-frame{
+ --dungeon-frame-close-size:42px;
+ --dungeon-frame-top-rail:74px;
+ position:relative;
+ box-sizing:border-box;
+ min-width:0
+}
+.dungeon-dialog-frame-title{
+ min-width:0;max-width:100%;overflow-wrap:anywhere
+}
+/* Use the same surface tokens and inner frame for the two compact variants.
+   Widths and content-specific internals are still controlled by each screen. */
+#dungeonApp dialog[data-dungeon-frame="closable"],
+#dungeonApp dialog[data-dungeon-frame="fixed"]{
+ border:1px solid #cdaa75;border-radius:12px;
+ background:linear-gradient(145deg,#2b1b2e,#101824);
+ box-shadow:0 0 0 5px #cda46d1c,0 30px 100px #000d
+}
+#dungeonApp dialog[data-dungeon-frame="closable"] > .dungeon-dialog-frame{
+ padding-block-start:var(--dungeon-frame-top-rail)!important
+}
+#dungeonApp dialog[data-dungeon-frame="fixed"] > .dungeon-dialog-frame{
+ --dungeon-frame-top-rail:0px
+}
+/* Paged dialogs and the tutorial overlay use the same shell. Pages retain
+   their own previous/next/skip controls and page-specific body content. */
+#dungeonApp dialog[data-dungeon-frame="paged"] > .dungeon-dialog-frame{
+ padding-block-start:var(--dungeon-frame-top-rail)!important
+}
+#tutorialOverlay[data-dungeon-frame="paged"] > .dungeon-dialog-frame{
+ --dungeon-frame-top-rail:0px
+}
+/* The identical close button wins over theme-specific rules in every compact
+   dialog, including the adventurer card, stone help, Drive and confirmations.
+   Its containing block is the frame, never a random nested action row. */
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close{
+ position:absolute!important;
+ inset-block-start:14px!important;inset-inline-end:14px!important;z-index:20;
+ appearance:none!important;box-sizing:border-box!important;
+ display:grid!important;place-items:center!important;
+ width:var(--dungeon-frame-close-size)!important;height:var(--dungeon-frame-close-size)!important;
+ min-width:var(--dungeon-frame-close-size)!important;min-height:var(--dungeon-frame-close-size)!important;
+ max-width:var(--dungeon-frame-close-size)!important;max-height:var(--dungeon-frame-close-size)!important;
+ flex:none!important;align-self:auto!important;
  padding:0!important;margin:0!important;
  border:1px solid #a58c67!important;border-radius:50%!important;
  background:#151725ed!important;color:var(--gold)!important;
  box-shadow:0 3px 14px #0009!important;
  font-size:0!important;line-height:1!important;letter-spacing:0!important;
- cursor:pointer;touch-action:manipulation
+ transform:none!important;cursor:pointer;touch-action:manipulation
 }
-/* SVG strokes are centered at (12,12) in a 24x24 viewBox; an absolutely
-   centered mask avoids text glyph baselines and platform-dependent fonts. */
-dialog button.dungeon-dialog-close::after{
+/* A centered SVG mask (not a baseline-dependent text glyph). */
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close::after{
  content:"";position:absolute;inset-block-start:50%;inset-inline-start:50%;
  width:24px;height:24px;transform:translate(-50%,-50%);
  background-color:currentColor;pointer-events:none;
@@ -798,11 +838,18 @@ dialog button.dungeon-dialog-close::after{
  -webkit-mask:var(--dungeon-close-svg) center / contain no-repeat;
  mask:var(--dungeon-close-svg) center / contain no-repeat
 }
-dialog button.dungeon-dialog-close:hover{background:#30273b!important;border-color:var(--gold)!important}
-dialog button.dungeon-dialog-close:focus-visible{outline:3px solid #ecd191!important;outline-offset:3px}
-dialog button.dungeon-dialog-close[hidden]{display:none!important}
-/* Reserve the corner beside headers; lower rows keep only action buttons. */
-dialog .chooser-header{padding-inline-end:48px}
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close:hover{
+ background:#30273b!important;border-color:var(--gold)!important
+}
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close:focus-visible{
+ outline:3px solid #ecd191!important;outline-offset:3px
+}
+#dungeonApp dialog .dungeon-dialog-frame button.dungeon-dialog-close[hidden]{display:none!important}
+/* Headers live below the rail, never beneath the floating close control.
+   This also protects long Japanese headings on narrow phones. */
+#dungeonApp dialog[data-dungeon-frame="closable"] .chooser-header{
+ padding-inline-end:0
+}
 /* Confirmation for the irreversible local-save reset. */
 .profile-data-actions{margin-top:26px;padding-top:18px;border-top:1px solid var(--border);text-align:right}
 .profile-data-actions p{font-size:12px;color:var(--soft);margin:0 0 10px}
@@ -1836,7 +1883,7 @@ html,body{overflow-x:clip}
 .support-prompt-actions{display:flex;align-items:stretch;justify-content:center;gap:10px;margin-top:25px}
 .support-prompt-dialog{width:min(580px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
 /* The card title and preview begin below the shared top-right × button. */
-#supportPromptDialog .support-prompt-inner{padding-top:62px}
+/* Shared closable frames reserve the adventurer-card title rail. */
 #adventurerShareCanvas{display:block;width:100%;height:auto;aspect-ratio:1200 / 675;border:1px solid #c5a06a70;margin:17px auto 7px}
 .support-share-help{font-size:11px!important;line-height:1.5;color:var(--soft)!important}
 .support-card-tools{display:flex;gap:9px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:16px}
