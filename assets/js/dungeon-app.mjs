@@ -1937,6 +1937,10 @@ function wire(){
    $('confirmRestoreOriginalXp').disabled=true;
    for(const other of originalXpButtons)other.disabled=true;
    try{
+    // Avoid the old, newer-timestamp Drive snapshot immediately restoring
+    // over the user's explicitly recovered local save on page reload.
+    // Disconnect keeps remote bytes untouched and drains any active upload.
+    await cloudSyncController?.disconnect?.();
     await restoreDungeonXpMigrationBackup(db);
     location.reload();
    }catch(error){
