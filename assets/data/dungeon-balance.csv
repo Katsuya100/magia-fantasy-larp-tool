@@ -57,7 +57,7 @@ status_tick_min_damage,1,火傷の継続最小ダメージ
 resistance_buff_duration,4,属性耐性強化の持続ラウンド
 debuff_min_duration,1,弱体の最短持続ラウンド
 debuff_max_duration,4,弱体の最長持続ラウンド
-victory_mp_restore_rate_early,0.095,序盤の戦闘勝利時MP回復率
+victory_mp_restore_rate_early,0.092,序盤の戦闘勝利時MP回復率
 victory_mp_restore_rate_late,0.025,深層の戦闘勝利時MP回復率
 victory_mp_middle_taper,0.015,中盤の戦闘勝利時MP回復率の抑制幅
 victory_mp_beginner_bonus,0.045,序盤で魔法陣3個を編成した際のMP消耗を緩和
