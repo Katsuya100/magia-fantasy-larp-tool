@@ -148,7 +148,7 @@ foe_l030_1,マンティコア,72,5,5,7,0.8,1,1,1,1,1,1.2,attack:flame:149|defens
 foe_l030_2,黒狂犬,72,7,5,8,0.95,1,1.25,1,0.8,1.2,0.8,attack:flame:161|defense:flame:129|support:chaos:105|defense:flame:121|attack:chaos:145,10,55,0,relic_019|relic_121
 foe_l030_3,ケンタウロス,76,6,8,10,1,1,1,0.8,1,1,1.2,attack:storm:173|defense:storm:138|support:aqua:112|defense:storm:130|attack:aqua:156,10,55,0,relic_098|relic_148
 foe_l030_4,鉄オーガ,72,8,5,11,1.05,0.8,1,1,0.75,1,1.4,attack:gravity:185|defense:gravity:148|support:bolt:120|defense:gravity:139|attack:bolt:167,10,55,0,relic_054|relic_146
-boss_l030,魔獣軍の将軍,88,8,10,12,1,0.95,1.2,1,0.8,1.3,1.2,attack:bolt:170|defense:bolt:136|support:flame:111|debuff:bolt:128|attack:flame:153,1,55,1,fang|relic_149|relic_boss_030
+boss_l030,魔獣軍の将軍,94,8,10,12,1,0.95,1.2,1,0.8,1.3,1.2,attack:bolt:170|defense:bolt:136|support:flame:111|debuff:bolt:128|attack:flame:153,1,55,1,fang|relic_149|relic_boss_030
 foe_l031_1,ヴァンパイアバット,63,7,4,10,1.05,1,1,0.95,1.1,1.2,0.8,attack:storm:155|defense:storm:124|defense:chaos:101|defense:storm:116|attack:chaos:140,10,57,0,relic_099|relic_103|lightning_crystal
 foe_l031_2,赤闇コウモリ,71,9,5,8,0.8,1,1,0.95,1,1.2,0.95,attack:storm:167|defense:storm:134|support:chaos:109|defense:storm:125|attack:chaos:150,10,57,0,relic_082|relic_122
 foe_l031_3,バンシー,78,8,5,10,1,1.05,1,1,0.8,1.2,0.95,attack:chaos:179|defense:chaos:143|defense:flame:116|debuff:chaos:134|attack:flame:161,10,57,0,relic_100|relic_105
