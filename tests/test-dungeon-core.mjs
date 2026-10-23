@@ -25,17 +25,29 @@ for(const lvl of [1,20,50]){
   assert.ok(ratio>=.13&&ratio<=.27,'normal attack near 1/5 recommended normal foe HP at level '+lvl+' '+row.id+' '+ratio);
  }
 }
-assert.equal(G.magicStoneDropChance(1,1),.30,'at recommended level, keep full stone drop rate');
-assert.equal(G.magicStoneDropChance(2,1),.30,'overlevel no longer reduces stone drops');
-assert.equal(G.magicStoneDropChance(3,1),.30,'overlevel never reduces stone drops');
-assert.equal(G.magicStoneDropChance(2,2),.30,'below recommended level, keep full stone drop rate');
-assert.equal(G.magicStoneDropChance(3,2),.30,'at another layer recommended level, keep full rate');
-assert.equal(G.magicStoneDropChance(150,100),.30,'final designed layer remains eligible');
-assert.equal(G.magicStoneDropChance(150,101),.30,'endless layers remain eligible');
-assert.equal(G.magicStoneDropChance(150,200),.30,'underleveled heroes retain full stone chance in deep layers');
-assert.equal(G.magicStoneDropChance(150,1),.30,'max-level heroes can replay the first layer');
-assert.equal(G.magicStoneDropChance(11,1,true),.30,'unreturned first-clear layers keep normal stone chance');
-assert.equal(G.magicStoneDropChance(11,1,false),.30,'repeat clears retain normal stone chance');
+// Geometric stone economy: at 150 layers, the chance triples smoothly.
+// Depth rather than hero level determines payout, including on repeated runs.
+assert.equal(G.magicStoneDropChance(1,1),.30,'first layer keeps the original 30% chance');
+assert.equal(G.magicStoneDropChance(150,1),.30,'overleveled early-floor replay retains base odds');
+assert.equal(G.magicStoneDropChance(150,150),.90,'150F reaches the configured 90% target');
+assert.equal(G.magicStoneDropChance(150,200),.90,'post-150 layers remain capped at 90%');
+assert.equal(G.magicStoneDropChance(150,0),.30,'minimum layer clamp protects the early economy');
+for(let layer=1;layer<150;layer++){
+ const before=G.magicStoneDropChance(150,layer);
+ const after=G.magicStoneDropChance(150,layer+1);
+ assert.ok(after>before,'stone chance increases strictly between layers '+layer+' and '+(layer+1));
+}
+for(const layer of [1,2,10,50,91,100,101,149,150,200]){
+ const chance=G.magicStoneDropChance(1,layer);
+ for(const playerLevel of [1,30,80,149,150])
+  for(const firstClear of [true,false])
+   assert.equal(G.magicStoneDropChance(playerLevel,layer,firstClear),chance,'no level or replay penalty');
+}
+assert.ok(G.magicStoneDropChance(150,100)>.6,'100F increases the economy before the Lv150 cap');
+assert.deepEqual(G.dropCounts(1,()=>.6,{layer:1}),{collection:0,stone:0,use:0},
+ 'base-layer odds stay unchanged even when the playerLevel context is omitted');
+assert.deepEqual(G.dropCounts(1,()=>.6,{layer:100}),{collection:0,stone:1,use:0},
+ 'depth-based stone odds apply even when the playerLevel context is omitted');
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:1}),{collection:5,stone:1,use:3});
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2}),{collection:5,stone:1,use:3},'overlevel never reduces stones');
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2,firstClear:true}),{collection:5,stone:1,use:3},'first-clear stone reward bypasses level penalty');
