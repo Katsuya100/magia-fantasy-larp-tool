@@ -362,8 +362,13 @@ export function summarizeJourneys(samples=16,seed=20261024){
      upgrades:[0,1,2,3,4].map(i=>spread(prepared.map(x=>x.circles[i]?.upgradeLevel??0))),
      powers:[0,1,2,3,4].map(i=>spread(prepared.map(x=>x.circles[i]?.power??0)))}};
   });
+  // Actual indivisible player states for paired combat. Never synthesize
+  // an impossible inventory by combining unrelated per-field medians.
+  const comparisonStates=runs.map(r=>({seed:r.seed,best:r.best,rank:r.profile.rank,
+   snapshots:Object.fromEntries([11,21,31,51,71,91].flatMap(layer=>
+    r.entrySnapshots[layer]?[[layer,r.entrySnapshots[layer]]]:[]))}));
   return {style,route,samples,distributions,checkpoints,completed:runs.filter(x=>x.best>=100).length,
-   blocked:runs.length-runs.filter(x=>x.best>=100).length,examples:runs.slice(0,2)};
+   blocked:runs.length-runs.filter(x=>x.best>=100).length,comparisonStates,examples:runs.slice(0,2)};
  });
  return {schemaVersion:ECONOMY_VERSION,seed,samples,alchemy:'off',
   assumptions:{circles:spells,referenceBase:{hp:100,mag:10,def:7,res:7},
