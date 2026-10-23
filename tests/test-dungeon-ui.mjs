@@ -714,6 +714,8 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   await wait(()=>cameraDenied.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'camera test startup');
   await cameraDenied.document.click(btn({view:'library'}));
   await cameraDenied.document.getElementById('openCircleCamera').fire('click');
+  assert.equal(cameraDenied.document.getElementById('tutorialOverlay').hidden,false,'first camera entry is taught even without camera permissions');
+  await cameraDenied.document.getElementById('tutorialSkip').fire('click');
   await wait(()=>cameraDenied.opened===1&&!cameraDenied.document.getElementById('circleCameraDialog').open,'camera denial dismisses overlay');
   assert.equal(cameraDenied.document.getElementById('library').hidden,false,'denied camera returns to the grimoire');
   assert.equal(cameraDenied.document.getElementById('cameraError').hidden,true,'denied permission leaves no error inside a closed dialog');
@@ -728,6 +730,8 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
   await wait(()=>cameraMissing.document.getElementById('playerStats').innerHTML.includes('Lv.1'),'missing camera test startup');
   await cameraMissing.document.click(btn({view:'library'}));
   await cameraMissing.document.getElementById('openCircleCamera').fire('click');
+  assert.equal(cameraMissing.document.getElementById('tutorialOverlay').hidden,false,'missing camera first shows paper tutorial');
+  await cameraMissing.document.getElementById('tutorialSkip').fire('click');
   await wait(()=>cameraMissing.document.getElementById('cameraError').textContent.includes('カメラを起動できません'),'missing camera feedback');
   assert.equal(cameraMissing.document.getElementById('circleCameraDialog').open,true,'non-permission errors retain camera error panel');
  }finally{cameraMissing.restore();}
