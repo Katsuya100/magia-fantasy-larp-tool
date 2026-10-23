@@ -54,6 +54,10 @@ for(const i of [0,1,3,8,31]){
   eq(actual.y,p.y,'spell pointer mapped to pixel y');
  }
 }
+for(const i of [0,8,16,24,31]){
+ const p=sigilGlyphPadPoint({x:0,y:-1},i);
+ assert.ok(Math.hypot(p.x,p.y)<1,'sigil zoom keeps the complete normal outer glyph inside the drawing pad');
+}
 for(const p of [{x:0,y:0},{x:.6,y:-.8},{x:-1,y:1}]){
  const actual=sigilPadPoint(sigilInputPoint(p));
  eq(actual.x,p.x,'sigil pointer mapped to pixel x');
