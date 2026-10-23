@@ -5,6 +5,10 @@ export function fakeDungeonBrowser(config={}){
  const make=(id)=>{
   const handlers=new Map();
   const element={id,hidden:['library','prepare','collection','battle','checkpoint','analyzing','result','cameraCanvas','cameraVideo','imageRepairCanvas','imageRepairVideo','imageRepairCapture','cameraCapture','cameraStop','pageError','battleError','cameraError','notice','tutorialOverlay','tutorialExample','tutorialPad','tutorialRetry','tutorialFinger'].includes(id),disabled:false,open:false,attributes:{},innerHTML:'',textContent:'',value:'',dataset:{},className:'',videoWidth:640,videoHeight:640,
+   appendChild(node){
+    if(node.parentNode?.children)node.parentNode.children=node.parentNode.children.filter(child=>child!==node);
+    (this.children??=[]).push(node);node.parentNode=this;return node;
+   },
    addEventListener(name,fn){handlers.set(name,fn);},
    fire(name,data={}){const event={target:element,preventDefault(){this.defaultPrevented=true;},...data};return handlers.has(name)?handlers.get(name)(event):element['on'+name]?.(event);},
    setAttribute(name,value){this.attributes[name]=String(value);},
