@@ -32,9 +32,10 @@ try{
  globalThis.window.matchMedia=undefined;
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,true,'upgrade requires a dialog');
- assert.match($('circleActionMessage').textContent,/10%/);
+ assert.match($('circleActionMessage').innerHTML,/魔導石を<strong style="color:#ff7777">5<\/strong>個消費して威力を強化します。/,'stone count alone is emphasized in red');
+ assert.doesNotMatch($('circleActionMessage').innerHTML,/初期値の10%/,'confirmation copy stays short');
  assert.equal(upgradeStoneCost(20),6,'cost increases at the twenty-first upgrade');
- assert.match($('circleActionMessage').textContent,/。\nこの強化/,'confirmation sentences display on separate lines');
+ assert.match($('circleActionMessage').innerHTML,/。\nこの強化/,'confirmation sentences display on separate lines');
  await $('cancelCircleAction').fire('click');
  assert.equal((await getProfile(db)).magicStones,15,'cancel leaves stones untouched');
  assert.equal((await allCircles(db))[0].analysis.power,100,'cancel leaves power untouched');

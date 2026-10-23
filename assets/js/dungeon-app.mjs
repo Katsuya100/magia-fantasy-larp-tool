@@ -1407,9 +1407,11 @@ function askCircleAction(type,id){
  if(type==='upgrade'&&(!isRevealed(circle)||profile.magicStones<upgradeStoneCost(circle.upgradeLevel??0)))return;
  pendingCircleAction={type,id};
  $('circleActionTitle').textContent=type==='upgrade'?'魔法陣を強化しますか？':'魔法陣を削除しますか？';
- $('circleActionMessage').textContent=type==='upgrade'
-  ?'魔導石を'+upgradeStoneCost(circle.upgradeLevel??0)+'個消費して威力を初期値の10%分アップします。\nこの強化は元に戻せません。'
-  :'登録した魔法陣は元に戻せません。\n削除してもよろしいですか？';
+ if(type==='upgrade'){
+  $('circleActionMessage').innerHTML='魔導石を<strong style="color:#ff7777">'+upgradeStoneCost(circle.upgradeLevel??0)+'</strong>個消費して威力を強化します。\nこの強化は元に戻せません。';
+ }else{
+  $('circleActionMessage').textContent='登録した魔法陣は元に戻せません。\n削除してもよろしいですか？';
+ }
  $('confirmCircleAction').textContent=type==='upgrade'?'魔導石を使って強化':'削除する';
  if(!$('circleActionDialog').open)showDungeonDialog($('circleActionDialog'));
 }
