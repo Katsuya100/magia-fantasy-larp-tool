@@ -1,4 +1,4 @@
-import {startingBase} from './dungeon-core.mjs';
+import {startingBase,XP_SCALE} from './dungeon-core.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
 import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto} from './dungeon-cloud-integrity.mjs';
 import {prepareProfilePhotoRefs,restoreProfilePhotoRefs} from './dungeon-profile-photo-refs.mjs';
@@ -277,6 +277,22 @@ export function saveHeirName(db,name){
  });
 }
 
+// Convert signed legacy saves once, only after startup integrity verification.
+// XP is stored in the new unit; all other player progress is unchanged.
+export async function migrateDungeonXp(db){
+ const p=await getProfile(db);
+ if(!p||p.xpScaleVersion===XP_SCALE)return p;
+ const scale=x=>Number.isFinite(Number(x))?Number(x)/XP_SCALE:x;
+ p.xp=scale(p.xp);
+ if(p.run)p.run.xp=scale(p.run.xp);
+ if(p.pendingReturn){
+  p.pendingReturn.gained=scale(p.pendingReturn.gained);
+  if(p.pendingReturn.before)p.pendingReturn.before.xp=scale(p.pendingReturn.before.xp);
+ }
+ p.xpScaleVersion=XP_SCALE;
+ await saveProfile(db,p);
+ return p;
+}
 export async function getProfile(db){
   const [raw,nameOverride]=await Promise.all([
    request(db,'settings','readonly',s=>s.get('profile')),
