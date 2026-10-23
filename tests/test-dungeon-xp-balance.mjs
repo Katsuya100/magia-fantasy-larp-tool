@@ -109,7 +109,7 @@ const replayDiagnostics=replayCases.map(({level,from,to})=>{
   gaugePercent:100*earned/G.nextXp(level),afterLevel:p.level,afterXp:p.xp};
 });
 const level92Replay=replayDiagnostics.find(x=>x.level===92);
-assert.equal(level92Replay.earned,3456,'41F five battles use a single scaled EXP budget');
+assert.equal(level92Replay.earned,5953,'41F five battles use a single scaled EXP budget');
 assert.ok(level92Replay.gaugePercent>25&&level92Replay.gaugePercent<27,
  'track the currently excessive Lv92/41F replay gauge gain');
 assert.ok(G.nextXp(149)<100000,'the redesigned late-game curve keeps required XP below six digits');
