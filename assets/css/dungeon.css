@@ -798,9 +798,9 @@ dialog button.dungeon-dialog-close[hidden]{display:none!important}
 /* Reserve the corner beside headers; lower rows keep only action buttons. */
 dialog .chooser-header{padding-inline-end:48px}
 #circleDrawingDialog .circle-drawing-actions{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
-#circleDrawingReset{grid-column:1}
-#circleDrawingConfirm{grid-column:2}
-.circle-camera-dialog .camera-actions{grid-template-columns:minmax(0,1fr)}
+#circleDrawingDialog #circleDrawingReset{grid-column:1}
+#circleDrawingDialog #circleDrawingConfirm{grid-column:2}
+dialog.circle-camera-dialog .camera-actions{grid-template-columns:minmax(0,1fr)}
 /* Confirmation for the irreversible local-save reset. */
 .profile-data-actions{margin-top:26px;padding-top:18px;border-top:1px solid var(--border);text-align:right}
 .profile-data-actions p{font-size:12px;color:var(--soft);margin:0 0 10px}
