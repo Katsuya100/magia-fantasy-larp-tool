@@ -103,12 +103,12 @@ function invest(state){
 }
 function considerInkRedraw(state){
  if(state.style!=='C'||state.best<30)return;
- const upgraded=state.circles.filter(c=>c.active&&c.upgrades>0);
- if(!upgraded.length||state.ink<1)return;
+ const upgraded=state.circles.filter(c=>c.active);
+ if(!upgraded.length||state.ink<5||state.replacements>=3)return;
  // Use a fixed, non-rerolled 250-power newly drawn spell: conservative and
  // transparent; no transferred stone levels, no free ink.
  const candidate=upgraded.sort((a,b)=>actualPower(a)-actualPower(b))[0];
- const used=Math.min(5,state.ink);
+ const used=5;
  const newBase=inkEnhancedAnalysis({power:250},used).power;
  const oldPower=actualPower(candidate);
  // Refuse to spend a rare material for a strictly inferior immediate spell.
@@ -161,6 +161,7 @@ export function runJourney(seed,{style='A',route='short',maxSorties=120,maxFight
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
+  entrySnapshots:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0};
  if(style==='B')state.circles.push(circle('attack','storm',300,false),circle('attack','aqua',290,false),circle('support','law',260,false));
@@ -177,6 +178,18 @@ export function runJourney(seed,{style='A',route='short',maxSorties=120,maxFight
   const usage={};
   state.sorties++;
   for(let layer=start;layer<=goal&&state.fights<maxFights;layer++){
+   if(layer%10===1&&!state.entrySnapshots[layer]){
+    state.entrySnapshots[layer]={layer,sortie:state.sorties,level:firstLevel,
+     targetLevel:targetClearLevel(Math.min(100,layer+9)),rank:profile.adventurerRank,
+     xp:profile.xp,bankedStones:state.stones,bankedInk:state.ink,
+     earned:{...state.earned},spent:{...state.spent},
+     circles:state.circles.filter(c=>c.active).map(c=>({role:c.role,attribute:c.attribute,
+      basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
+      mpCost:G.mpCost(c.basePower),ink:c.ink})),
+     carry:carry.map(item=>({id:item.id,value:item.value,bonus:item.bonus})),
+     playerBase:{hp:100,mag:10,def:7,res:7},
+     status:'FIRST_ENTRY_NOT_A_FIXED_BENCHMARK'};
+   }
    let allWon=true;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
@@ -265,7 +278,7 @@ export function runJourney(seed,{style='A',route='short',maxSorties=120,maxFight
   healCasts:state.healCasts,enemyHealCasts:state.enemyHealCasts,
   enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,
-  trace:state.trace,milestones:state.milestones,blockers:state.blockers};
+  trace:state.trace,milestones:state.milestones,entrySnapshots:state.entrySnapshots,blockers:state.blockers};
 }
 export function summarizeJourneys(samples=16,seed=20261024){
  if(!Number.isSafeInteger(samples)||samples<1||samples>512)throw Error('Invalid economy sample count');
@@ -281,10 +294,18 @@ export function summarizeJourneys(samples=16,seed=20261024){
   }
   const checkpoints=Array.from({length:10},(_,i)=>(i+1)*10).map(layer=>{
    const reached=runs.map(r=>r.trace.find(t=>t.cleared>=layer&&!t.defeat)).filter(Boolean);
+   const prepared=runs.map(r=>r.entrySnapshots[layer-9]).filter(Boolean);
    return {layer,reached:reached.length,
     level:spread(reached.map(x=>x.levelAfter)),levelGap:spread(reached.map(x=>x.levelAfter-targetClearLevel(layer))),
     stone:spread(reached.map(x=>x.stone)),ink:spread(reached.map(x=>x.ink)),
-    fights:spread(reached.map(x=>x.fights))};
+    fights:spread(reached.map(x=>x.fights)),
+    firstEntry:{count:prepared.length,
+     level:spread(prepared.map(x=>x.level)),
+     levelGap:spread(prepared.map(x=>x.level-x.targetLevel)),
+     stoneBalance:spread(prepared.map(x=>x.bankedStones)),
+     inkBalance:spread(prepared.map(x=>x.bankedInk)),
+     upgrades:[0,1,2,3,4].map(i=>spread(prepared.map(x=>x.circles[i]?.upgradeLevel??0))),
+     powers:[0,1,2,3,4].map(i=>spread(prepared.map(x=>x.circles[i]?.power??0)))}};
   });
   return {style,route,samples,distributions,checkpoints,completed:runs.filter(x=>x.best>=100).length,
    blocked:runs.length-runs.filter(x=>x.best>=100).length,examples:runs.slice(0,2)};
