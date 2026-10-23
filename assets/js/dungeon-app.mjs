@@ -1856,6 +1856,7 @@ function wire(){
    }
    return;
  }
+ if(b.dataset.action==='icon-guide'){showDungeonDialog($('iconGuideDialog'));return;}
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
  if(b.dataset.action==='delete-data'){openDeleteDataDialog();return;}
  if(b.dataset.alchemy){openAlchemy(b.dataset.alchemy);return;}
@@ -1910,6 +1911,7 @@ function wire(){
    }
    if(saved&&firstLesson)showFirstCircleChoice();
  });
+ $('closeIconGuide').addEventListener('click',()=>closeDungeonDialog($('iconGuideDialog')));
  $('closeSaveError').addEventListener('click',()=>closeDungeonDialog($('saveErrorDialog')));
   $('cancelNameDialog').addEventListener('click',()=>closeDungeonDialog($('nameDialog')));
  $('nameDialog').addEventListener('cancel',event=>{if(!profile.name)event.preventDefault();});

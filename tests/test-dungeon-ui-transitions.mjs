@@ -10,8 +10,8 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,23,'existing dialogs plus the new shared magic tips');
-assert.equal(new Set(dialogs).size,23);
+assert.equal(dialogs.length,24,'existing dialogs plus the icon guide');
+assert.equal(new Set(dialogs).size,24);
 assert.ok(dialogs.includes('circlePowerTipsDialog'),'magic tips use a single native dialog');
 assert.ok(dialogs.includes('alchemyDialog')&&dialogs.includes('alchemyPickerDialog'),'alchemy dialogs share the native transition manager');
 assert.ok(dialogs.includes('magicInkDialog'),'magic ink selection uses the existing dialog manager');
@@ -142,6 +142,7 @@ assert.ok(appended.every(node=>node.removed),'ghosts are removed after the 200ms
 // variants (closable, fixed, paged). Fullscreen/ceremony surfaces are explicitly
 // excluded. An HTML <dialog> tag alone does not establish the visual category.
 const closable={
+ iconGuideDialog:'closeIconGuide',
  circlePowerTipsDialog:'closeCirclePowerTips',
  loadoutDialog:'closeLoadoutDialog',
  alchemyDialog:'closeAlchemy',
@@ -200,7 +201,7 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
 const pagedNative=['circleDrawingLessonDialog'];
-assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 23 native dialogs accounted for');
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 24 native dialogs accounted for');
 for(const id of pagedNative){
  assert.match(tagOf(id),/data-dungeon-frame="paged"/,'native lesson is a paged frame');
  const content=dialogMarkup(id);

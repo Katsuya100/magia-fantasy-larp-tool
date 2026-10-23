@@ -2788,3 +2788,17 @@ button.creator-congratulations-close{
 .alchemy-byproduct-info{margin:8px 0 2px;font-size:12px;color:var(--gold)}
 .alchemy-byproduct-help{margin:3px 0 8px;font-size:11px;color:var(--soft)}
 @media(max-width:630px){#alchemySlots .loadout-grid{gap:5px}#alchemySlots .tile-item-icon{font-size:26px}#alchemySlots .tile-title{font-size:9px}}
+
+/* Shared, read-only icon guide for preparation and the dungeon. */
+.section-tools{display:flex;align-items:center;gap:10px;flex:none}
+#dungeonApp button.icon-guide-trigger{display:grid;place-items:center;width:42px;height:42px;padding:0;border:1px solid var(--border);border-radius:50%;background:#151725;color:var(--gold);font:700 20px/1 Georgia,serif;box-shadow:none}
+#dungeonApp button.icon-guide-trigger:focus-visible{outline:2px solid #9ae3db;outline-offset:3px}
+.icon-guide-dialog{width:min(620px,calc(100vw - 24px));max-height:85dvh;overflow-y:auto}
+.icon-guide-dialog .dungeon-dialog-frame{padding:24px clamp(16px,4vw,32px) 30px}
+.icon-guide-dialog .icon-guide-group{margin-top:22px}
+.icon-guide-dialog .icon-guide-group h3{margin:0 0 8px;color:var(--gold);font-size:17px}
+.icon-guide-table{width:100%;border-collapse:collapse;font-size:14px}
+.icon-guide-table td{padding:9px 11px;border-bottom:1px solid var(--border);background:#090f1a66;line-height:1.55}
+.icon-guide-table td:first-child{width:110px;white-space:nowrap;text-align:center;font-size:20px}
+.icon-guide-note{margin:8px 0 0;color:var(--soft);font-size:12px}
+@media(max-width:630px){.section-tools{gap:7px}.section-tools .section-mark{font-size:30px}.icon-guide-dialog .icon-guide-table td:first-child{width:92px}.icon-guide-table td{padding:8px 6px;font-size:12px}}
