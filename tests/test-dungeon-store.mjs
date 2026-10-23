@@ -109,6 +109,26 @@ G.experience(frameStart,migratedReturn.pendingReturn.gained);
 assert.equal(frameStart.level,migratedReturn.level,'the full return animation ends at the real awarded level');
 assert.ok(Math.abs(frameStart.xp-migratedReturn.xp)<0.00001,'the animation ends at exactly the saved EXP');
 assert.deepEqual(await migrateDungeonXp(db),migratedReturn,'reloading the return animation cannot duplicate XP');
+// A historic return record without its 'before' object can be reversed
+// exactly from the old final level, gauge and gained EXP.
+const missingBefore={...returning,saveRevision:(await getProfile(db)).saveRevision,
+ pendingReturn:{gained:returnReward,steps:['xp'],step:0}};
+await saveProfile(db,missingBefore);
+const recoveredBefore=await migrateDungeonXp(db);
+assert.equal(recoveredBefore.level,returnEnd.level,'recover missing return start without losing levels');
+const recoveredStart={...recoveredBefore.pendingReturn.before};
+G.experience(recoveredStart,recoveredBefore.pendingReturn.gained);
+assert.equal(recoveredStart.level,recoveredBefore.level,'reconstructed pending reward ends on the actual level');
+assert.ok(Math.abs(recoveredStart.xp-recoveredBefore.xp)<0.00001,'reconstructed pending reward ends on the actual gauge');
+// Inconsistent return reward metadata must stop with the signed old save intact.
+const mismatchedReturn={...returning,saveRevision:(await getProfile(db)).saveRevision,
+ pendingReturn:{before:{level:92,xp:legacyStartXp},gained:1,steps:['xp'],step:0}};
+await saveProfile(db,mismatchedReturn);
+const beforeMismatched=await readDungeonSnapshot(db);
+await assert.rejects(migrateDungeonXp(db),/帰還報酬とセーブ済みレベルが一致/);
+const afterMismatched=await readDungeonSnapshot(db);
+assert.deepEqual(afterMismatched.profile,beforeMismatched.profile,'invalid return metadata keeps original profile');
+assert.deepEqual(afterMismatched.integrity,beforeMismatched.integrity,'invalid return metadata keeps original seal');
 
 // An invalid legacy reward must fail before writing either the profile or
 // its integrity seal; this is the same transaction-safety path as startup.
@@ -136,7 +156,7 @@ stale.magicStones=1;
 await assert.rejects(saveProfile(db,stale),/別のタブでセーブが更新/);
 assert.equal((await getProfile(db)).magicStones,901,'stale tab cannot clobber saved game progress');
 const oldFormatBackup=await getDungeonXpMigrationBackup(db);
-assert.equal(oldFormatBackup.profile.xp,legacyStartXp,'regular gameplay never changes the migration backup');
+assert.equal(oldFormatBackup.profile.xp,returnEnd.xp,'regular gameplay never changes the latest successfully migrated rescue copy');
 
 
 const clean=await getProfile(db);
