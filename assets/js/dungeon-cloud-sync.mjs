@@ -375,7 +375,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(!file)await saveCloudSyncState(db,{});
     else{
      if(!remote.valid){show('バックアップが破損しています。復元できません。');return result;}
-     const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:true,local,remote:remote.data});
+     const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:true,canStartLocal:verification.status!=='corrupt',local,remote:remote.data});
      if(choice==='restore')return await restore(remote,file,{explicit:true});
      if(choice==='overwrite'){
       // New game replaces the old backup only after the explicit choice.
