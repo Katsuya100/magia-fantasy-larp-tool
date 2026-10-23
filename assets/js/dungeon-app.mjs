@@ -5,7 +5,8 @@ import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261023.41'
 import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261023.41';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261023.41';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261023.41';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261023.41';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261023.42';
+import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from './dungeon-alchemy.mjs?v=20261023.42';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261023.41';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261023.41';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261023.41';
@@ -41,6 +42,8 @@ const listView={
  pickerFilter:'all',pickerSort:'newest'
 };
 const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'default'}};
+let alchemy=null,alchemyPickerSlot=-1;
+const alchemyPickerView={filter:'all',sort:'default'};
 const circleImages=createDungeonPhotoManager(()=>db,id=>circles.find(c=>c.id===id));
 function refreshCirclePhotos(){
  circleImages.refresh([...sceneIds.filter(id=>!$(id).hidden).map(id=>$(id)),
@@ -450,7 +453,8 @@ function render(){
    +'<div class="relic-art" aria-hidden="true">'+mark+'</div>'
    +(found?'<span class="relic-rarity" aria-hidden="true">'+collectionRarityMarks(rarity)+'</span>':'')
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
-   +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
+   +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p>'
+    +'<button type="button" class="subtle relic-alchemy" data-alchemy="'+esc(item.id)+'" '+(count<2||profile.run?'disabled':'')+'>錬金</button></article>';
  }).join('')||'<p class="collection-empty">該当するコレクションはありません。</p>';
  $('magicStoneBalance').textContent='✦ 魔導石：'+profile.magicStones+'個';
  
@@ -1461,6 +1465,83 @@ async function confirmCircleAction(){
   pendingCircleAction=null;
  }catch(e){note('魔法陣の処理に失敗しました：'+e.message);}
 }
+
+function renderAlchemy(){
+ if(!alchemy)return;
+ const {relic,slots:choices}=alchemy;
+ $('alchemyBaseName').textContent=relic.name;
+ $('alchemySlots').innerHTML=itemGrid(choices,profile.inventory,5,true,itemName,esc,true,'open-alchemy-item');
+ const indexes=choices.filter(Number.isInteger);
+ let label=indexes.length+' / 5',valid=indexes.length===5;
+ if(valid)try{
+  const made=alchemyRecipe(relic,indexes.map(index=>profile.inventory[index]),masters.items);
+  label=itemName(made)+' ・ '+itemEffectIcons(made);
+ }catch(error){valid=false;label=error.message;}
+ $('alchemyPreview').textContent=label;
+ $('alchemyCraft').disabled=!valid;
+}
+function openAlchemy(id){
+ const relic=masters.collections.find(row=>row.id===id);
+ if(!relic||profile.run||Number(profile.collection[id]||0)<2)return;
+ alchemy={relic,slots:Array(5).fill(null)};
+ $('alchemyError').textContent='';
+ renderAlchemy();
+ showDungeonDialog($('alchemyDialog'));
+}
+function closeAlchemy(){
+ if($('alchemyPickerDialog').open)closeDungeonDialog($('alchemyPickerDialog'));
+ if($('alchemyDialog').open)closeDungeonDialog($('alchemyDialog'));
+ alchemyPickerSlot=-1;
+ alchemy=null;
+}
+function renderAlchemyPicker(){
+ if(!alchemy||alchemyPickerSlot<0)return;
+ const indexes=itemListIndexes(profile.inventory,masters.items,{kind:alchemyPickerView.filter,sort:alchemyPickerView.sort});
+ $('alchemyPickerOptions').innerHTML=indexes.length
+  ?itemChoices(profile.inventory,alchemy.slots,itemName,esc,indexes,alchemyPickerSlot,'choose-alchemy-item')
+  :'<p class="collection-empty">条件に合うアイテムはありません。</p>';
+ $('alchemyClearSlot').hidden=alchemy.slots[alchemyPickerSlot]===null;
+}
+function openAlchemyPicker(index){
+ if(!alchemy||!Number.isInteger(index)||index<0||index>=5)return;
+ alchemyPickerSlot=index;
+ const filters=[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['elixir','HP/MP回復'],['clear','状態異常解除'],['clear_all','全状態異常解除'],['escape','脱出'],['revive','復活']];
+ const sorts=[['default','所持品の順番'],['name','名前順'],['kind','種類順'],['value','効果量が高い順'],['value-asc','効果量が低い順']];
+ $('alchemyPickerFilter').innerHTML=filters.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
+ $('alchemyPickerSort').innerHTML=sorts.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
+ $('alchemyPickerFilter').value=alchemyPickerView.filter;
+ $('alchemyPickerSort').value=alchemyPickerView.sort;
+ renderAlchemyPicker();
+ showDungeonDialog($('alchemyPickerDialog'));
+}
+function closeAlchemyPicker(){
+ if($('alchemyPickerDialog').open)closeDungeonDialog($('alchemyPickerDialog'));
+ alchemyPickerSlot=-1;
+}
+function chooseAlchemyItem(index){
+ if(!alchemy||alchemyPickerSlot<0||index!==null&&!profile.inventory[index])return;
+ alchemy.slots=setSlot(alchemy.slots,alchemyPickerSlot,index);
+ closeAlchemyPicker();
+ renderAlchemy();
+}
+async function confirmAlchemy(){
+ if(!alchemy||profile.run)return;
+ $('alchemyCraft').disabled=true;
+ try{
+  await loadoutSaveQueue;
+  const next=craftAlchemy(profile,alchemy.relic,alchemy.slots,masters.items,masters.buffs);
+  await saveProfile(db,next);
+  profile=next;
+  carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
+  closeAlchemy();
+  render();
+ }catch(error){
+  $('alchemyError').textContent='錬金に失敗しました：'+error.message;
+  note('錬金に失敗しました：'+error.message);
+  renderAlchemy();
+ }
+}
+
 function renderLoadoutChoices(){
  if(!picker)return;
  $('loadoutOptions').className=picker.kind==='circle'?'picker-grid circle-picker-grid':'picker-grid';
@@ -1738,6 +1819,15 @@ function wire(){
   });
  }
  $('startLayer').addEventListener('change',()=>{selectedStartLayer=allowedStartLayer(profile,$('startLayer').value);$('startLayer').value=String(selectedStartLayer);});
+ for(const [id,key] of [['alchemyPickerFilter','filter'],['alchemyPickerSort','sort']]){
+  $(id).addEventListener('change',()=>{alchemyPickerView[key]=$(id).value;renderAlchemyPicker();});
+ }
+ $('alchemyAutoPick').addEventListener('click',()=>{
+  if(!alchemy)return;
+  const picked=alchemyAutoSelect(profile.inventory,masters.items,$('alchemyAutoKind').value,$('alchemyAutoPriority').value);
+  alchemy.slots=[...picked,...Array(5).fill(null)].slice(0,5);
+  renderAlchemy();
+ });
  for(const [id,key] of [['pickerFilter','pickerFilter'],['pickerSort','pickerSort']]){
   $(id).addEventListener('change',()=>{if(!picker)return;pickerView[picker.kind][key==='pickerFilter'?'filter':'sort']=$(id).value;renderLoadoutChoices();});
  }
@@ -1757,9 +1847,12 @@ function wire(){
  }
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
  if(b.dataset.action==='delete-data'){openDeleteDataDialog();return;}
+ if(b.dataset.alchemy){openAlchemy(b.dataset.alchemy);return;}
  if(b.dataset.circleDetail){openMagicDetails(b.dataset.circleDetail);return;}
  if(b.dataset.remove){askCircleAction('remove',b.dataset.remove);return;}
  if(b.dataset.upgrade){askCircleAction('upgrade',b.dataset.upgrade);return;}
+ if(b.dataset.openAlchemyItem!==undefined){openAlchemyPicker(Number(b.dataset.openAlchemyItem));return;}
+ if(b.dataset.chooseAlchemyItem!==undefined){chooseAlchemyItem(Number(b.dataset.chooseAlchemyItem));return;}
  if(b.dataset.openSlot!==undefined){openLoadoutPicker('circle',Number(b.dataset.openSlot));return;}
  if(b.dataset.openItem!==undefined){openLoadoutPicker('item',Number(b.dataset.openItem));return;}
  if(b.dataset.chooseCircle!==undefined){await chooseLoadout(Number(b.dataset.chooseCircle));return;}
@@ -1841,6 +1934,12 @@ function wire(){
  $('cancelCircleAction').addEventListener('click',()=>{closeDungeonDialog($('circleActionDialog'));pendingCircleAction=null;});
  $('circleActionDialog').addEventListener('close',()=>{pendingCircleAction=null;});
  $('confirmCircleAction').addEventListener('click',()=>exclusive(confirmCircleAction));
+ $('closeAlchemy').addEventListener('click',closeAlchemy);
+ $('closeAlchemyPicker').addEventListener('click',closeAlchemyPicker);
+ $('alchemyClearSlot').addEventListener('click',()=>chooseAlchemyItem(null));
+ $('alchemyCraft').addEventListener('click',()=>exclusive(confirmAlchemy));
+ $('alchemyDialog').addEventListener('close',()=>{alchemy=null;alchemyPickerSlot=-1;});
+ $('alchemyPickerDialog').addEventListener('close',()=>{alchemyPickerSlot=-1;});
  $('closeLoadoutDialog').addEventListener('click',closeLoadoutPicker);
  $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>chooseLoadout(null));
