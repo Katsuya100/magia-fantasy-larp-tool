@@ -7,8 +7,9 @@ export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
 // Required XP curve offsets non-decaying repeat fight rewards.
+export const XP_SCALE=45;
 export const nextXp=level=>Math.ceil(Number(levelRow(level).xp_to_next)*
- Math.pow(num('xp_growth_per_10_levels'),(Number(level)-1)/10));
+ Math.pow(num('xp_growth_per_10_levels'),(Number(level)-1)/10))/XP_SCALE;
 // Five fights at the intended level supply approximately the XP needed
 // to start the following layer. Replay rewards do not decay.
 export function fightExperience(enemyLevel,playerLevel,layer){
@@ -19,7 +20,7 @@ export function fightExperience(enemyLevel,playerLevel,layer){
   ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
   :nextXp(current);
  const full=Math.max(1,Math.ceil(budget/5));
- return full;
+ return full/XP_SCALE;
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
 // Same upgraded-power duration applies to defense and debuff, hero and enemy.
