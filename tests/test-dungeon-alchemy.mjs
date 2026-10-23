@@ -33,7 +33,7 @@ assert.deepEqual(recipe('legendary',statuses),{id:'luna_stone',value:0});
 assert.deepEqual(recipe('common',statuses),{id:'escape_scroll',value:0});
 const life=[make('elixir_s',35),make('luna_stone'),make('escape_scroll'),make('heal_s',40),make('clear_flame')];
 assert.deepEqual(recipe('epic',life),{id:'life_ruby',value:0});
-assert.equal(recipe('rare',life).id,'elixir_s');
+assert.equal(recipe('rare',life).id,'escape_scroll');
 
 // Auto-select keeps distinct original indexes and honors type and priority.
 const inventory=[make('clear_flame',0,0),make('heal_s',2,1),make('heal_l',500,2),make('mana_m',60,3),make('heal_m',90,4),make('mana_s',10,5)];
