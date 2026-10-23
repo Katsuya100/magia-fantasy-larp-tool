@@ -5,9 +5,10 @@ export const DRAWN_GLYPH_LIMIT=30;
 export const DRAWN_POWER_RATE=0.6;
 export const MIN_DUNGEON_POWER=250;
 // The "ring" is the BAND between the original inner and outer circles.
-// Keep the sigil/inner boundary fixed and shrink the BAND thickness to 2/3.
+// The outer rim follows the same 86%-diameter framing as the camera and thumbnails.
+// Keep the inner/sigil boundary fixed; the smaller handwriting glyphs are unchanged.
 export const INNER_RADIUS=.255;
-export const OUTER_RADIUS=INNER_RADIUS+(.43-INNER_RADIUS)*(2/3);
+export const OUTER_RADIUS=.43;
 const GUIDE_RADIUS=.92;
 // The same scale in both axes preserves each drawn letter's aspect ratio.
 // Smaller handwriting footprints match the two-thirds-wide 30-slot letter ring.

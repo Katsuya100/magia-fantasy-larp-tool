@@ -2706,8 +2706,44 @@ button.creator-congratulations-close{
 .circle-drawing-finger-guide svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .circle-drawing-finger-guide path{fill:none;stroke:#f2cc9c;stroke-width:1.35;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;filter:drop-shadow(0 0 2px #edbe7a)}
 .circle-drawing-finger{position:absolute;left:24%;top:70%;font-size:34px;line-height:1;transform:translate(-38%,-85%);opacity:0;filter:drop-shadow(1px 3px 4px #000)}
-.circle-drawing-finger-guide[data-playing="true"] path{animation:dungeon-finger-trace 2.5s ease-in-out both}
-.circle-drawing-finger-guide[data-playing="true"] .circle-drawing-finger{animation:dungeon-finger-move 2.5s ease-in-out both}
-@keyframes dungeon-finger-trace{0%,8%{stroke-dashoffset:100;opacity:0}12%{opacity:1}88%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
-@keyframes dungeon-finger-move{0%{left:24%;top:70%;opacity:0}9%{opacity:1}40%{left:42%;top:43%}67%{left:59%;top:48%}88%{left:74%;top:36%;opacity:1}100%{left:74%;top:36%;opacity:0}}
+/* Animated uppercase F: vertical, upper horizontal, then middle horizontal.
+   The finger is invisible when repositioning between the three strokes. */
+.circle-drawing-finger{left:32%;top:24%}
+/* Each F stroke is its own SVG path: the animation is reset at each pen lift. */
+.circle-drawing-finger-guide[data-playing="true"] .finger-f-vertical{animation:dungeon-finger-f-vertical 3s linear both}
+.circle-drawing-finger-guide[data-playing="true"] .finger-f-top{animation:dungeon-finger-f-top 3s linear both}
+.circle-drawing-finger-guide[data-playing="true"] .finger-f-middle{animation:dungeon-finger-f-middle 3s linear both}
+.circle-drawing-finger-guide[data-playing="true"] .circle-drawing-finger{animation:dungeon-finger-move 3s linear both}
+@keyframes dungeon-finger-f-vertical{
+ 0%,5%{stroke-dashoffset:100;opacity:0}
+ 6%{opacity:1}
+ 44%,93%{stroke-dashoffset:0;opacity:1}
+ 100%{stroke-dashoffset:0;opacity:0}
+}
+@keyframes dungeon-finger-f-top{
+ 0%,46%{stroke-dashoffset:100;opacity:0}
+ 47%{opacity:1}
+ 71%,93%{stroke-dashoffset:0;opacity:1}
+ 100%{stroke-dashoffset:0;opacity:0}
+}
+@keyframes dungeon-finger-f-middle{
+ 0%,76%{stroke-dashoffset:100;opacity:0}
+ 77%{opacity:1}
+ 93%{stroke-dashoffset:0;opacity:1}
+ 100%{stroke-dashoffset:0;opacity:0}
+}
+@keyframes dungeon-finger-move{
+ 0%{left:32%;top:24%;opacity:0}
+ 5%{opacity:1}
+ 44%{left:32%;top:76%;opacity:1}
+ 44.01%{opacity:0}
+ 46%{left:32%;top:24%;opacity:0}
+ 47%{opacity:1}
+ 71%{left:70%;top:24%;opacity:1}
+ 71.01%{opacity:0}
+ 76%{left:32%;top:49%;opacity:0}
+ 77%{opacity:1}
+ 93%{left:60%;top:49%;opacity:1}
+ 100%{opacity:0}
+}
 @media(prefers-reduced-motion:reduce){.circle-drawing-finger-guide[data-playing="true"] path,.circle-drawing-finger-guide[data-playing="true"] .circle-drawing-finger{animation:none}}
