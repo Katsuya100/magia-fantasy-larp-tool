@@ -180,8 +180,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   const name=snapshot?.profile?.name;
   const savedAt=Number(snapshot?.savedAt);
   const displayName=typeof name==='string'&&name.trim()?name.trim():'未設定';
+  const level=Number(snapshot?.profile?.level);
   const date=Number.isFinite(savedAt)&&savedAt>0?new Date(savedAt).toLocaleString('ja-JP'):'不明';
-  return label+'：'+displayName+'（最終保存：'+date+'）';
+  return label+'：'+displayName+' Lv.'+(Number.isInteger(level)&&level>0?level:'不明')+'（最終保存：'+date+'）';
  }
  function chooseCloud(description,{allowOverwrite=true,initialChoice=false,local,remote}={}){
   return new Promise(resolve=>{
