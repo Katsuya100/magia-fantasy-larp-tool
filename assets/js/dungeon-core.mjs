@@ -309,6 +309,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
   for(const a of actions){
    if(a.sp.role!==role)continue;
    const oldHp=role==='support'?a.u.hp:a.t.hp;
+   if(role==='debuff')mark(a.t,s=>s.id==='buff_law'||s.effect==='soak'||s.id==='resist_'+a.sp.attribute);
    let message;
    if(role==='basic'){
     // HP scaling approximates one fifth of an ordinary enemy in the recommended level band.
@@ -335,8 +336,6 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
     }
    }else if(role==='support'&&amount>0){
     mark(a.u,s=>s.effect==='heal'||s.effect==='output');
-   }else if(role==='debuff'){
-    mark(a.t,s=>s.id==='buff_law'||s.effect==='soak'||s.id==='resist_'+a.sp.attribute);
    }
    const revived=reviveOnFatal(a.t);
    publish(a,role,a.sp.attribute,message,amount);
