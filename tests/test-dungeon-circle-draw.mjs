@@ -154,7 +154,7 @@ assert.ok(draws.filter(d=>d[0]==='stroke'&&d[2]===128*.0072).length>strokeCount,
 draws.length=0;
 paintCircle(canvas,{...state,mode:'sigil',ink:[]},{size:128,exportImage:true});
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0072),'export includes both finished letters');
-draws.length=0;paintCaret(canvas,state,{size:128,viewIndex:0});
+draws.length=0;paintCaret(canvas,state,{size:128});
 assert.equal(draws.filter(d=>d[0]==='stroke').length,1);
 const caret=draws.find(d=>d[0]==='move');
 const caretRadius=Math.hypot(caret[1]-64,caret[2]-64)/128;
