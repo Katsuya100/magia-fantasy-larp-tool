@@ -1,37 +1,37 @@
-import * as G from './dungeon-core.mjs?v=20261023.31';
-import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261023.31';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261023.31';
-import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261023.31';
-import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261023.31';
-import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261023.31';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261023.31';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261023.31';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261023.31';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261023.31';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261023.31';
+import * as G from './dungeon-core.mjs?v=20261023.32';
+import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261023.32';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261023.32';
+import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261023.32';
+import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261023.32';
+import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261023.32';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261023.32';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261023.32';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261023.32';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261023.32';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261023.32';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261023.31';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261023.31';
-import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261023.31';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261023.31';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261023.31';
-import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261023.31';
-import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261023.31';
-import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261023.31';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261023.31';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261023.31';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261023.31';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261023.31';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261023.31';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261023.31';
-import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261023.31';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261023.31';
-import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261023.31';
-import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261023.31';
-import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261023.31';
-import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261023.31';
-import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261023.31';
-import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261023.31';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261023.32';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261023.32';
+import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261023.32';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261023.32';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261023.32';
+import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261023.32';
+import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261023.32';
+import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261023.32';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261023.32';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261023.32';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261023.32';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261023.32';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261023.32';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261023.32';
+import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261023.32';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261023.32';
+import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261023.32';
+import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261023.32';
+import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261023.32';
+import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261023.32';
+import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261023.32';
+import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261023.32';
 let cloudSyncController,drawingEditor;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -81,8 +81,9 @@ let dungeonView='prepare';
 let busyAction=false,playingEffects=false,savingName=false;
 const battleInput=createBattleInputBuffer();
 let loadoutSaveQueue=Promise.resolve(),loadoutSaveRevision=0;
-let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null,upgradeRitualEpoch=0;
+let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null,upgradeRitualEpoch=0,cameraAfterTutorial=false;
 let returnFlow=null,returnAnimationToken=0,tutorial=null,magicStoneTutorial=null;
+const isFirstCircleChoice=()=>!profile.initialCircleChoiceDone&&!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
 async function battleAction(kind,index){
  const run=profile?.run;
@@ -291,7 +292,7 @@ async function load(){
  if(profile.run?.stage==='checkpoint'&&profile.run.creatorCongratulationsPending)showCreatorCongratulations();
  if(profile.awaitingHeir)openNameDialog(true);
  else if(!profile.name)openBackupSetup();
- else if(!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run)tutorial.open();
+ else if(isFirstCircleChoice())showFirstCircleChoice();
 }
 const dungeonScenes=new Set(['prepare','library','battle','checkpoint','analyzing','result','returnShowcase']);
 function rememberCameraScroll(){
@@ -1304,6 +1305,8 @@ function stopRepairCamera(){
 let cameraOpenEpoch=0;
 function openCircleCamera(){
  if(profile.run||activeAnalysis)return;
+ // The existing five-page tutorial runs before first camera activation.
+ if(!profile.tutorialDone){cameraAfterTutorial=true;tutorial.open();return;}
  const dialog=$('circleCameraDialog');
  if(!dialog.open)showDungeonDialog(dialog);
  void startCamera();
@@ -1637,23 +1640,56 @@ function wireFavoriteHold(){
   void exclusive(()=>toggleFavoriteCircle(id)).catch(error=>note('お気に入りの保存に失敗しました：'+error.message));
  });
 }
+function showFirstCircleChoice(){
+ if(!$('circleFirstChoiceDialog').open)showDungeonDialog($('circleFirstChoiceDialog'));
+}
 function wire(){
  syncCameraUi(false);
- drawingEditor=initCircleDrawing(document,{onSave:saveDrawnCircle});
+ const showDrawingLesson=(mode,onlyFirst)=>{
+  const key=mode==='sigil'?'drawingSigilTutorialSeen':'drawingSpellTutorialSeen';
+  if(onlyFirst&&profile[key])return;
+  if(tutorial.openLesson(mode)&&!profile[key]){
+   profile[key]=true;
+   void persist().catch(error=>note('描き方の練習記録を保存できませんでした：'+error.message));
+  }
+ };
+ drawingEditor=initCircleDrawing(document,{
+  onSave:saveDrawnCircle,
+  onStageEnter:mode=>showDrawingLesson(mode,true),
+  onPractice:mode=>showDrawingLesson(mode,false)
+ });
  window.addEventListener('message',onAnalysisMessage);
  document.addEventListener('error',onCirclePhotoError,true);
  document.addEventListener('load',onCirclePhotoLoad,true);
  wireFavoriteHold();
  magicStoneTutorial=initMagicStoneTutorial(document);
- let practiceFromCamera=false;
  tutorial=initCircleTutorial(document,async toCamera=>{
   profile.tutorialDone=true;
   try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}
-  if(toCamera||practiceFromCamera){practiceFromCamera=false;show('library');openCircleCamera();}
+  if(toCamera||cameraAfterTutorial){cameraAfterTutorial=false;show('library');openCircleCamera();}
  });
  $('tutorialReplay').addEventListener('click',()=>{
-  if(!profile.run&&!activeAnalysis){practiceFromCamera=true;closeCamera();tutorial.open();}
+  if(!profile.run&&!activeAnalysis){cameraAfterTutorial=true;closeCamera();tutorial.open();}
  });
+ for(const [id,mode] of [['circleFirstChoiceDraw','draw'],['circleFirstChoicePhoto','photo']]){
+  $(id).addEventListener('click',async()=>{
+   if(!$('circleFirstChoiceDialog').open)return;
+   $('circleFirstChoiceDraw').disabled=true;$('circleFirstChoicePhoto').disabled=true;
+   try{
+    profile.initialCircleChoiceDone=true;
+    await persist();
+    closeDungeonDialog($('circleFirstChoiceDialog'));
+    show('library');
+    if(mode==='draw')drawingEditor.open();else openCircleCamera();
+   }catch(error){
+    profile.initialCircleChoiceDone=false;
+    $('circleFirstChoiceError').textContent='遊び方を保存できませんでした：'+error.message;
+   }finally{
+    $('circleFirstChoiceDraw').disabled=false;$('circleFirstChoicePhoto').disabled=false;
+   }
+  });
+ }
+ $('circleFirstChoiceDialog').addEventListener('cancel',event=>event.preventDefault());
  const listControls=[
   ['libraryRoleFilter','libraryRole'],['libraryAttributeFilter','libraryAttribute'],['librarySort','librarySort'],
   ['collectionDiscoveryFilter','collectionDiscovery'],['collectionRarityFilter','collectionRarity'],['collectionSort','collectionSort']
@@ -1702,7 +1738,7 @@ function wire(){
    const name=$('playerNameInput').value.trim();
    if(!name||name.length>20){$('nameError').textContent='1〜20文字で入力してください';return;}
    if(isDungeonNameBlocked(name)){$('nameError').textContent='この名前は使用できません。別の名前を入力してください';return;}
-   const firstLesson=!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run;
+   const firstLesson=isFirstCircleChoice();
    const button=$('savePlayerName');
    savingName=true;
    button.disabled=true;
@@ -1731,7 +1767,7 @@ function wire(){
     savingName=false;
     button.disabled=false;
    }
-   if(saved&&firstLesson)tutorial.open();
+   if(saved&&firstLesson)showFirstCircleChoice();
  });
  $('closeSaveError').addEventListener('click',()=>closeDungeonDialog($('saveErrorDialog')));
   $('cancelNameDialog').addEventListener('click',()=>closeDungeonDialog($('nameDialog')));
