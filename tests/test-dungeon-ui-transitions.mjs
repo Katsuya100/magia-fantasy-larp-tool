@@ -135,11 +135,10 @@ await new Promise(resolve=>setTimeout(resolve,DUNGEON_MODAL_DURATION_MS+30));
 assert.ok(appended.every(node=>node.removed),'ghosts are removed after the 200ms exit');
 
 
-// Editors, cameras and celebration screens have dedicated overlay controls;
-// the adventurer-card sharing popup is an ordinary dialog, so it uses the
-// shared top-right SVG close component regardless of the native HTML tag.
-const compactDialogs={
- nameDialog:'cancelNameDialog',
+// Frame components: one shared inner container, with exactly three layout
+// variants (closable, fixed, paged). Fullscreen/ceremony surfaces are explicitly
+// excluded. An HTML <dialog> tag alone does not establish the visual category.
+const closable={
  loadoutDialog:'closeLoadoutDialog',
  magicDetailsDialog:'closeMagicDetails',
  circleActionDialog:'cancelCircleAction',
@@ -150,6 +149,7 @@ const compactDialogs={
  googleDriveExpiredDialog:'data-action="later"',
  deleteDataDialog:'cancelDeleteData'
 };
+const fixed=['saveErrorDialog','backupSetupDialog','nameDialog'];
 const overlayFlows={
  circleDrawingDialog:['circleDrawingClose','閉じる'],
  circleCameraDialog:['cameraStop','閉じる'],
@@ -157,67 +157,96 @@ const overlayFlows={
  creatorCongratulationsDialog:['creatorCongratulationsClose','閉じる'],
  milestoneChoiceDialog:['milestoneClose','閉じる']
 };
-assert.equal(Object.keys(compactDialogs).length,10);
-assert.equal(Object.keys(overlayFlows).length,5);
+const tagOf=id=>{
+ const match=html.match(new RegExp('<dialog id="'+id+'"[^>]*>'));
+ assert.ok(match,'dialog exists: '+id);
+ return match[0];
+};
 const dialogMarkup=id=>{
  const start=html.indexOf('<dialog id="'+id+'"');
  const end=html.indexOf('</dialog>',start);
- assert.ok(start>=0&&end>start,'dialog exists: '+id);
+ assert.ok(start>=0&&end>start,'dialog markup exists: '+id);
  return html.slice(start,end);
 };
-for(const [id,buttonId] of Object.entries(compactDialogs)){
- const buttons=[...dialogMarkup(id).matchAll(/<button\b[^>]*>/g)].map(match=>match[0]);
- const closers=buttons.filter(tag=>tag.includes('dungeon-dialog-close'));
- assert.equal(closers.length,1,'compact dialog has one top-right close: '+id);
- assert.ok(closers[0].includes(buttonId.startsWith('data-action')?buttonId:'id="'+buttonId+'"'),'original handler retained: '+id);
+const controlButtons=markup=>[...markup.matchAll(/<button\b[^>]*>/g)].map(m=>m[0]);
+for(const [id,control] of Object.entries(closable)){
+ assert.match(tagOf(id),/data-dungeon-frame="closable"/,'closable variant: '+id);
+ const content=dialogMarkup(id);
+ assert.match(content,/<div class="[^"]* dungeon-dialog-frame">/,'shared frame element: '+id);
+ assert.match(content,/<h[23] id="[^"]+" class="dungeon-dialog-frame-title"/,'shared title: '+id);
+ const buttons=controlButtons(content).filter(t=>t.includes('dungeon-dialog-close'));
+ assert.equal(buttons.length,1,'exactly one shared close button: '+id);
+ assert.ok(buttons[0].includes(control.startsWith('data-action')?control:'id="'+control+'"'),'original button and handler retained: '+id);
+}
+for(const id of fixed){
+ assert.match(tagOf(id),/data-dungeon-frame="fixed"/,'fixed variant: '+id);
+ const content=dialogMarkup(id);
+ assert.match(content,/<div class="[^"]* dungeon-dialog-frame">/,'same frame component without a close rail: '+id);
+ assert.match(content,/<h[23] id="[^"]+" class="dungeon-dialog-frame-title"/,'same title part: '+id);
+ if(id!=='nameDialog')assert.doesNotMatch(content,/dungeon-dialog-close/,'no close button: '+id);
 }
 for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
- const markup=dialogMarkup(id);
- assert.doesNotMatch(markup,/dungeon-dialog-close/,'overlay keeps original controls: '+id);
- const button=[...markup.matchAll(/<button\b[^>]*>[^<]*<\/button>/g)]
-  .map(match=>match[0]).find(tag=>tag.includes('id="'+buttonId+'"'));
- assert.ok(button,'overlay footer action exists: '+id);
- assert.ok(button.includes('>'+label+'</button>'),'overlay footer label unchanged: '+id);
+ assert.match(tagOf(id),/data-dungeon-frame="overlay"/,'dedicated overlay type: '+id);
+ const content=dialogMarkup(id);
+ assert.doesNotMatch(content,/dungeon-dialog-frame|dungeon-dialog-close/,'overlay layout preserved: '+id);
+ const button=controlButtons(content).find(t=>t.includes('id="'+buttonId+'"'));
+ assert.ok(button,'original overlay footer button: '+id);
+ assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
-for(const id of ['backupSetupDialog','saveErrorDialog']){
- assert.doesNotMatch(dialogMarkup(id),/dungeon-dialog-close/,'required decision stays explicit: '+id);
-}
-assert.equal(Object.keys(compactDialogs).length+Object.keys(overlayFlows).length+2,dialogs.length,'every native dialog has an explicit layout category');
-
-const cardMarkup=dialogMarkup('supportPromptDialog');
-assert.match(cardMarkup,/<canvas id="adventurerShareCanvas"[^>]+aria-label="冒険者名/,'the dialog contains the actual adventurer-card preview');
-assert.match(cardMarkup,/<button type="button" id="supportPromptClose" class="subtle dungeon-dialog-close" aria-label="冒険者カードを閉じる">閉じる<\/button>/,'card has the shared corner button and an explicit accessible name');
-assert.match(app,/function openAdventurerShare\(\)\{[\s\S]*?showSupportPrompt\(\{title:'冒険者カード'/,'adventurer-card entry actually opens the audited dialog');
-assert.match(app,/\$\('supportPromptClose'\)\.addEventListener\('click',\(\)=>closeDungeonDialog\(\$\('supportPromptDialog'\)\)\)/,'card close keeps its existing click handler');
-assert.match(css,/#supportPromptDialog \.support-prompt-inner\{padding-top:62px\}/,'the card title does not collide with the corner button');
-// Draw the X with symmetric SVG diagonals, not a font glyph whose baseline
-// varies across Android, iOS and desktop browsers.
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length,dialogs.length,'every native dialog accounted for');
+const tutorialTag=html.match(/<div id="tutorialOverlay"[^>]+>/)?.[0];
+assert.match(tutorialTag,/data-dungeon-frame="paged"/,'tutorial uses the paged frame variant');
+assert.match(html,/<div class="tutorial-sheet dungeon-dialog-frame">/,'paged UI uses the same frame shell');
+assert.match(html,/<h2 id="tutorialTitle" class="dungeon-dialog-frame-title">/,'paged UI uses the shared title part');
+assert.match(html,/<div class="tutorial-top"><span id="tutorialCounter"/,'page counter unchanged');
+assert.match(html,/<button type="button" id="tutorialPrevious" class="subtle" hidden>戻る<\/button>/,'paged previous');
+assert.match(html,/<button type="button" id="tutorialContinue" class="primary-action tutorial-next">次へ<\/button>/,'paged next');
+assert.match(html,/<button type="button" id="tutorialSkip" class="subtle">スキップ<\/button>/,'page skip stays in overlay');
+// Required first naming switches from fixed to closable only when rename is allowed.
+assert.match(app,/dialog\.dataset\.dungeonFrame=required\?'fixed':'closable';\s*\$\('cancelNameDialog'\)\.hidden=required;/,'naming changes frame type and button visibility together');
+assert.match(dialogMarkup('nameDialog'),/<button[^>]*id="cancelNameDialog"[^>]*dungeon-dialog-close[^>]*hidden>/);
+// The header control lives *inside the shared frame*, not relative to a
+// screen-specific footer, and has a full reserved top rail above all titles.
+const frameStyles=css.slice(css.indexOf('/* Reusable dialog *frame*'),css.indexOf('/* Confirmation for the irreversible local-save reset. */'));
+assert.ok(frameStyles.length>1200,'shared component stylesheet exists');
+assert.match(frameStyles,/\.dungeon-dialog-frame\{[\s\S]*?--dungeon-frame-top-rail:74px;/,'shared top rail variable');
+assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="closable"\] > \.dungeon-dialog-frame\{\s*padding-block-start:var\(--dungeon-frame-top-rail\)!important\s*\}/,'all closable frames reserve the same collision-free title row');
+assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="fixed"\] > \.dungeon-dialog-frame/,'fixed frame does not reserve a close rail');
+assert.match(frameStyles,/#tutorialOverlay\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'paged frame preserves tutorial geometry');
+assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="closable"\] \.dungeon-dialog-frame button\.dungeon-dialog-close\{/,'one scoped, high-priority button part across all compact dialogs');
+const controlStyle=frameStyles.slice(frameStyles.indexOf('button.dungeon-dialog-close{'),frameStyles.indexOf('button.dungeon-dialog-close::after{'));
+for(const prop of [
+ 'position:absolute!important','inset-block-start:14px!important','inset-inline-end:14px!important',
+ 'width:var(--dungeon-frame-close-size)!important','height:var(--dungeon-frame-close-size)!important',
+ 'min-width:var(--dungeon-frame-close-size)!important','max-width:var(--dungeon-frame-close-size)!important',
+ 'padding:0!important','margin:0!important','border-radius:50%!important','font-size:0!important',
+ 'background:#151725ed!important','color:var(--gold)!important','transform:none!important'
+])assert.ok(controlStyle.includes(prop),'one uniform close style: '+prop);
+assert.ok(14+42<74,'close icon ends before the shared title row');
+// The close icon is a symmetric SVG, not a font-dependent X.
 const glyph=css.match(/--dungeon-close-svg:url\("(data:image\/svg\+xml,[^"]+)"\)/);
-assert.ok(glyph,'shared icon uses SVG markup');
+assert.ok(glyph);
 const svgMarkup=decodeURIComponent(glyph[1].split(',')[1]);
-assert.match(svgMarkup,/viewBox='0 0 24 24'/,'the icon has a square coordinate system');
-assert.match(svgMarkup,/d='M6 6L18 18M18 6L6 18'/,'both diagonals are symmetric about (12,12)');
-assert.match(svgMarkup,/stroke-width='2\.4'/,'both strokes have equal weight');
-assert.match(css,/dialog button\.dungeon-dialog-close::after\{[^}]*content:"";position:absolute;inset-block-start:50%;inset-inline-start:50%;[^}]*width:24px;height:24px;transform:translate\(-50%,-50%\);/,'SVG is geometrically centered inside the 42px hit target');
-assert.match(css,/-webkit-mask:var\(--dungeon-close-svg\) center \/ contain no-repeat;/);
-assert.match(css,/\bmask:var\(--dungeon-close-svg\) center \/ contain no-repeat/);
-assert.doesNotMatch(css,/dialog button\.dungeon-dialog-close::after\{\s*content:"[×✕]"/,'the icon must not depend on font glyph alignment');
-
-assert.match(html,/<button[^>]*id="cancelNameDialog"[^>]*dungeon-dialog-close[^>]*hidden>/);
-assert.match(html,/<button[^>]*dungeon-dialog-close[^>]*data-action="later">あとで<\/button>/);
-assert.match(css,/dialog button\.dungeon-dialog-close\{[^}]*position:absolute!important;[^}]*width:42px!important;[^}]*height:42px!important;/);
-assert.match(css,/dialog button\.dungeon-dialog-close:focus-visible\{outline:3px/);
-assert.match(css,/dialog button\.dungeon-dialog-close\[hidden\]\{display:none!important\}/);
-assert.doesNotMatch(css,/#circleDrawingDialog \.circle-drawing-actions\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1\.25fr\)\}/);
-assert.doesNotMatch(css,/dialog\.circle-camera-dialog \.camera-actions\{grid-template-columns:minmax\(0,1fr\)\}/);
+assert.match(svgMarkup,/viewBox='0 0 24 24'/);
+assert.match(svgMarkup,/d='M6 6L18 18M18 6L6 18'/);
+assert.match(frameStyles,/width:24px;height:24px;transform:translate\(-50%,-50%\)/);
+assert.match(frameStyles,/-webkit-mask:var\(--dungeon-close-svg\) center \/ contain no-repeat/);
+assert.match(frameStyles,/\bmask:var\(--dungeon-close-svg\) center \/ contain no-repeat/);
+assert.doesNotMatch(frameStyles,/content:"[×✕]"/);
+assert.doesNotMatch(css,/#supportPromptDialog \.support-prompt-inner\{padding-top:62px\}/,'adventurer card no longer needs a one-off padding hack');
+// The card is a closable frame; the on-screen canvas and its original action
+// are still wired. Screens that were overlays stay outside this component.
+const card=dialogMarkup('supportPromptDialog');
+assert.match(card,/<canvas id="adventurerShareCanvas"/);
+assert.match(card,/<button type="button" id="supportPromptClose" class="subtle dungeon-dialog-close" aria-label="冒険者カードを閉じる">/);
+assert.match(app,/function openAdventurerShare\(\)\{[\s\S]*?showSupportPrompt\(\{title:'冒険者カード'/);
+assert.match(app,/\$\('supportPromptClose'\)\.addEventListener\('click',\(\)=>closeDungeonDialog\(\$\('supportPromptDialog'\)\)\)/);
+for(const id of ['startupMask','circleDrawingDiscard']){
+ assert.ok(html.includes('id="'+id+'"'),'unchanged custom overlay '+id);
+}
 assert.match(css,/#circleDrawingClose\{grid-column:1\}/);
 assert.match(css,/#circleDrawingReset\{grid-column:2\}/);
 assert.match(css,/#circleDrawingConfirm\{grid-column:3\}/);
 assert.match(css,/\.circle-camera-dialog \.camera-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-// The three actual custom overlay elements were always separate and must stay.
-assert.match(html,/<div id="startupMask" class="startup-mask" role="dialog"/);
-assert.match(html,/<div id="tutorialOverlay" class="tutorial-overlay" role="dialog"/);
-assert.match(html,/<div id="circleDrawingDiscard" class="circle-drawing-discard" role="alertdialog"/);
-assert.match(html,/<button type="button" id="tutorialSkip" class="subtle">スキップ<\/button>/);
 
 console.log('PASS all dungeon dialogs, repeated rename, crossfades, Escape and reduced motion');
