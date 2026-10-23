@@ -7,11 +7,11 @@ import {
  createDrawingModel,paintCircle,paintCaret,paintPad,initCircleDrawing
 } from '../assets/js/dungeon-circle-draw.mjs';
 
-assert.equal(DRAWN_GLYPH_LIMIT,20,'upper and lower circles both use 20 real character slots');
+assert.equal(DRAWN_GLYPH_LIMIT,30,'spell ring has 30 matching upper/lower character slots');
 assert.equal(DRAWN_POWER_RATE,.6);
-assert.equal(GLYPH_INK_SCALE,.11,'the pad can reach both rings and neighboring slots');
+assert.ok(Math.abs(GLYPH_INK_SCALE-.11*2/3)<1e-12,'each ring glyph ink footprint is exactly two thirds of its prior size');
 assert.equal(REVOLVER_DURATION_MS,250);
-assert.ok(Math.abs(EDITOR_GLYPH_STEP-Math.PI/10)<1e-12,'each letter spans exactly 18 degrees on both screens');
+assert.ok(Math.abs(EDITOR_GLYPH_STEP-Math.PI/15)<1e-12,'each letter spans exactly 12 degrees on both screens, two thirds of 18 degrees');
 assert.ok(Math.abs(glyphAngle(1,1)-glyphAngle(0,1)-EDITOR_GLYPH_STEP)<1e-12,'upper letter interval equals lower revolver step');
 const visibleSlots=2*Math.asin((GLYPH_INK_SCALE/EDITOR_ZOOM)/.345)/EDITOR_GLYPH_STEP;
 assert.ok(Math.abs(visibleSlots-2)<1e-12,'lower viewport remains precisely two real slots wide after the limit changes');
@@ -25,10 +25,10 @@ assert.deepEqual(pointOnPad(110,170,{left:10,top:20,width:200,height:300}),{x:0,
 assert.ok(Math.abs(sigilPoint({x:.92,y:0}).x-.755)<1e-9);
 assert.ok(Math.abs(glyphAngle(1,3)+Math.PI/2)<1e-9);
 assert.ok(Math.abs(glyphPoint({x:0,y:0},1,3).x-.5)<1e-9);
-assert.ok(glyphPoint({x:0,y:-1},0,1).y<.07,'letter ink reaches beyond the outer circle');
-assert.ok(glyphPoint({x:0,y:1},0,1).y>.24,'letter ink reaches beyond the inner circle');
-assert.ok(glyphPoint({x:1,y:0},0,2).x>.55,'a stroke overlaps the neighboring slot');
-for(const [i,count] of [[0,1],[1,3],[7,16],[19,20]]){
+assert.ok(glyphPoint({x:0,y:-1},0,1).y<.1,'the smaller glyph fits in the existing ring without altering circle dimensions');
+assert.ok(glyphPoint({x:0,y:1},0,1).y>.21,'the smaller glyph retains its vertical range');
+assert.ok(glyphPoint({x:1,y:0},0,2).x>glyphPoint({x:0,y:0},1,2).x,'a full-width glyph can still reach the neighboring slot');
+for(const [i,count] of [[0,1],[1,3],[7,16],[29,30]]){
  const square=[{x:-.6,y:-.6},{x:.6,y:-.6},{x:.6,y:.6}].map(p=>glyphPoint(p,i,count));
  const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  assert.ok(Math.abs(d(square[0],square[1])-d(square[1],square[2]))<1e-12,'glyph aspect ratio remains square');
@@ -39,7 +39,7 @@ for(const [i,count] of [[0,1],[1,3],[7,16],[19,20]]){
 const eq=(a,b,msg)=>assert.ok(Math.abs(a-b)<1e-10,msg+': '+a+' != '+b);
 const spellRadius=GLYPH_INK_SCALE/EDITOR_ZOOM;
 const sigilRadius=(sigilPoint({x:1,y:0}).x-.5)/sigilPadPoint({x:1,y:0}).x;
-for(const i of [0,1,3,8,19]){
+for(const i of [0,1,3,8,29]){
  for(const view of [0,.5,1,3,7]){
   for(const point of [{x:0,y:0},{x:-1,y:.7},{x:.8,y:-1.2}]){
    const top=glyphPoint(point,i,1),dx=top.x-.5,dy=top.y-.5;
@@ -57,15 +57,15 @@ for(const i of [0,1,3,8,19]){
   eq(actual.y,p.y,'spell pointer mapped to pixel y');
  }
 }
-for(const i of [0,5,10,15,19]){
- const outside=sigilGlyphPadPoint({x:0,y:-1},i,20);
- const inside=sigilGlyphPadPoint({x:0,y:1},i,20);
+for(const i of [0,7,14,21,29]){
+ const outside=sigilGlyphPadPoint({x:0,y:-1},i,30);
+ const inside=sigilGlyphPadPoint({x:0,y:1},i,30);
  assert.ok(Math.hypot(outside.x,outside.y)>1,'sigil crop excludes outer-ring lettering');
  assert.ok(Math.hypot(inside.x,inside.y)<1,'sigil crop shows only glyph marks entering the original inner area');
 }
 eq(Math.hypot(sigilPadPoint({x:.92,y:0}).x,sigilPadPoint({x:.92,y:0}).y),.92,'sigil retains its original writing boundary');
 assert.ok(.43/sigilRadius>1.5,'outer ring cannot appear completely inside sigil pad');
-for(const count of [1,2,7,20]){
+for(const count of [1,2,7,30]){
  for(const i of [0,Math.min(count-1,1),count-1]){
   for(const p of [{x:0,y:0},{x:.8,y:-1}]){
    const top=glyphPoint(p,i,count);
@@ -106,7 +106,7 @@ assert.equal(model.canNext,true,'next button is available at slot zero');
 assert.equal(model.addStroke(stroke),true);
 assert.equal(model.canUndo,false,'spell mode repurposes history buttons as navigation');
 assert.equal(model.move(-1),true,'left button wraps at first slot');
-assert.equal(model.state.index,19);
+assert.equal(model.state.index,29);
 assert.equal(model.move(1),true,'right button wraps from last slot to first');
 assert.equal(model.state.index,0);
 assert.deepEqual(model.state.ink[0],stroke,'character coordinates survive a full wrap');
@@ -145,7 +145,7 @@ for(let i=0;i<DRAWN_GLYPH_LIMIT;i++){
 assert.equal(full.move(1),true,'next from last slot wraps to the first slot');
 assert.equal(full.state.index,0);
 assert.equal(full.move(-1),true,'previous from the first slot wraps to the last slot');
-assert.equal(full.state.index,19);
+assert.equal(full.state.index,29);
 assert.equal(full.goSigil(),true);
 assert.equal(full.state.letters.length,DRAWN_GLYPH_LIMIT);
 
@@ -183,7 +183,7 @@ assert.ok(Math.abs(caretAngle-(glyphAngle(0,2)-EDITOR_GLYPH_STEP/2))<1e-10,'care
 draws.length=0;paintCaret(canvas,{...state,index:1},{size:128});
 const nextCaret=draws.find(d=>d[0]==='move');
 const nextAngle=Math.atan2(nextCaret[2]-64,nextCaret[1]-64);
-assert.ok(Math.abs(nextAngle-caretAngle-EDITOR_GLYPH_STEP)<1e-10,'caret moves by the same 18-degree slot as both screens');
+assert.ok(Math.abs(nextAngle-caretAngle-EDITOR_GLYPH_STEP)<1e-10,'caret moves by the same 12-degree slot as both screens');
 draws.length=0;paintCaret(canvas,{...state,index:3,ink:[],letters:[{strokes:[stroke]},{space:true},{space:true},{space:true}]},{size:128,activeStroke:stroke});
 const liveCaret=draws.find(d=>d[0]==='move');
 const liveAngle=Math.atan2(liveCaret[2]-64,liveCaret[1]-64);
@@ -375,4 +375,4 @@ try{
  assert.equal(get('circleDrawingConfirm').disabled,true,'reset editor begins with disabled confirm');
  dialog.close();
 }finally{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
-console.log('PASS 20 centered 18-degree slots, two-slot viewport, trailing-blank centering, cyclic navigation, clipped radial guides and rotating sigil camera');
+console.log('PASS 30 centered 12-degree slots, 2/3-scale glyph ink, exact two-letter viewport, cyclic navigation, clipped guides and sigil crop');
