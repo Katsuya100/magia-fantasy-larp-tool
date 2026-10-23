@@ -11,7 +11,7 @@ const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 const RING_RADIUS=.345;
 // Magnify the *view*, not individual angular gaps: the lower pad must be a true
 // rotated crop of the unchanged upper magic circle.
-export const EDITOR_ZOOM=1.3;
+export const EDITOR_ZOOM=1.2;
 export const EDITOR_GLYPH_STEP=GLYPH_STEP;
 const SPELL_VIEW_RADIUS=GLYPH_INK_SCALE/EDITOR_ZOOM;
 const SIGIL_VIEW_RADIUS=.39;
@@ -338,7 +338,7 @@ export function initCircleDrawing(doc,{onSave}){
   paintCircle(preview,model.state,{activeStroke,size:512});
   paintCaret(get('circleDrawingCaret'),model.state,{size:512});
   paintPad(pad,model.state,activeStroke,viewIndex,padTransition);
-  get('circleDrawingStage').textContent=sigil?'紋':'呪文';
+  get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を1文字ずつ書く';
   get('circleDrawingClose').textContent=sigil?'戻る':'閉じる';
   get('circleDrawingUndo').disabled=busy||animating||!(sigil?model.canUndo:model.canPrevious);
   get('circleDrawingRedo').disabled=busy||animating||!(sigil?model.canRedo:model.canNext);
