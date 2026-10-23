@@ -14,7 +14,7 @@ const RING_RADIUS=.345;
 export const EDITOR_ZOOM=1.2;
 export const EDITOR_GLYPH_STEP=GLYPH_STEP;
 const SPELL_VIEW_RADIUS=GLYPH_INK_SCALE/EDITOR_ZOOM;
-const SIGIL_VIEW_RADIUS=.39;
+const SIGIL_VIEW_RADIUS=.47;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
  if(!Number.isFinite(power)||power<=0||!Number.isFinite(rate)||rate<=0||rate>1)throw Error('手書き魔法陣の威力が不正です。');
