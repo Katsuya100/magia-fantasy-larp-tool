@@ -48,7 +48,8 @@ const legacyStartXp=Math.floor(oldNeed(92)*0.20);
 const earnedInRun=oldNeed(92)+Math.floor(oldNeed(93)*0.65);
 const oldRunEnd=oldAdvance(92,legacyStartXp,earnedInRun);
 const legacySave={...converted,level:92,xp:legacyStartXp,run:{...converted.run,xp:earnedInRun},
- magicStones:77,adventurerRank:40,inventory:[{id:'heal_s',value:27,bonus:'buff_aqua'}]};
+ magicStones:77,adventurerRank:40,inventory:[{id:'heal_s',value:27,bonus:'buff_aqua'}],
+ slots:['xp-migration-photo',null],collection:{relic_001:3}};
 delete legacySave.pendingReturn;
 delete legacySave.xpScaleVersion;
 const migrationPhoto=new Blob([Uint8Array.from([137,80,78,71,1,2,3])],{type:'image/png'});
@@ -68,6 +69,8 @@ assert.ok(Math.abs(resumed.xp/G.nextXp(resumed.level)-oldRunEnd.xp/oldNeed(oldRu
 assert.equal(exact.magicStones,77,'magic stone progress is untouched');
 assert.equal(exact.adventurerRank,40,'adventurer rank is untouched');
 assert.deepEqual(exact.inventory,legacySave.inventory,'items are untouched');
+assert.deepEqual(exact.slots,legacySave.slots,'equipped magic circles stay equipped');
+assert.deepEqual(exact.collection,legacySave.collection,'collection progress stays untouched');
 assert.deepEqual(new Uint8Array(await (await allCircles(db)).find(x=>x.id==='xp-migration-photo').image.arrayBuffer()),
  new Uint8Array(await migrationPhoto.arrayBuffer()),'circle photo bytes survive migration');
 
@@ -79,6 +82,8 @@ const restored=await migrateDungeonXp(db);
 assert.equal(restored.xp,exact.xp,'restored legacy gauge migrates consistently');
 assert.equal(restored.run.xp,exact.run.xp,'restored unbanked EXP migrates consistently');
 assert.deepEqual(await migrateDungeonXp(db),restored,'restored save does not convert twice');
+assert.deepEqual(restored.slots,legacySave.slots,'Drive restoration preserves equipment');
+assert.deepEqual(restored.collection,legacySave.collection,'Drive restoration preserves collected relics');
 assert.deepEqual(new Uint8Array(await (await allCircles(db)).find(x=>x.id==='xp-migration-photo').image.arrayBuffer()),
  new Uint8Array(await migrationPhoto.arrayBuffer()),'Drive recovery keeps the original magic-circle image');
 
@@ -98,6 +103,13 @@ assert.deepEqual(await migrateDungeonXp(db),migratedReturn,'reloading the return
 
 // An invalid legacy reward must fail before writing either the profile or
 // its integrity seal; this is the same transaction-safety path as startup.
+const unknownVersion={...legacySave,xpScaleVersion:G.XP_SCALE+1};
+await saveProfile(db,unknownVersion);
+const beforeUnknownVersion=await readDungeonSnapshot(db);
+await assert.rejects(migrateDungeonXp(db),/未対応のEXPバージョン/);
+const afterUnknownVersion=await readDungeonSnapshot(db);
+assert.deepEqual(afterUnknownVersion.profile,beforeUnknownVersion.profile,'future EXP saves are never converted');
+assert.deepEqual(afterUnknownVersion.integrity,beforeUnknownVersion.integrity,'future XP rejection preserves seal');
 const invalidLegacy={...legacySave,run:{...legacySave.run,xp:-1}};
 delete invalidLegacy.xpScaleVersion;
 await saveProfile(db,invalidLegacy);
