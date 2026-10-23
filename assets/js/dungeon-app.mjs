@@ -1533,8 +1533,13 @@ async function chooseLoadout(choice){
  const revision=++loadoutSaveRevision;
  const snapshot={...profile,slots:[...profile.slots],carrySlots:[...profile.carrySlots]};
  const save=loadoutSaveQueue.then(async()=>{
-  try{await saveProfile(db,snapshot);}
-  catch(error){
+  try{
+   // Fast UI selections share the in-memory profile, but each queued
+   // snapshot must inherit the revision committed by the previous choice.
+   snapshot.saveRevision=profile.saveRevision;
+   await saveProfile(db,snapshot);
+   profile.saveRevision=snapshot.saveRevision;
+  }catch(error){
    // A later selection will save its own snapshot; never overwrite its UI.
    if(revision!==loadoutSaveRevision){note('編成の保存に失敗しました：'+String(error?.message||error));return;}
    try{
