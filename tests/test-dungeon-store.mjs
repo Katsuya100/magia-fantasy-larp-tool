@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
-import {parseCsv} from '../assets/js/dungeon-core.mjs';
+import * as G from '../assets/js/dungeon-core.mjs';
+const {parseCsv}=G;
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 const get=async name=>parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
