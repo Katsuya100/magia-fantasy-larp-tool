@@ -2,6 +2,7 @@
 // Every CSV cell is an individual inspectable parameter (including 500 authored foes).
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
+import {resolve} from 'node:path';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {BOSS_INK_DROP_CHANCE} from '../assets/js/dungeon-ink.mjs';
 import {DESIGNED_LAYERS,BASE_RARITY_WEIGHTS} from '../assets/js/dungeon-design.mjs';
@@ -84,7 +85,7 @@ export function buildManifest(){
   rangePolicy:'null means not approved; the manifest never invents permitted changes',
   entries};
 }
-const self=process.argv[1]&&fileURLToPath(process.argv[1]).href===import.meta.url;
+const self=process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url);
 if(self){
  const output=process.argv[2]||'reports/dungeon-balance-manifest.json';
  mkdirSync(new URL('../'+output,import.meta.url).pathname.replace(/\/[^/]+$/,''),{recursive:true});
