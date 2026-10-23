@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261023.43">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261023.44">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261023.43" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261023.44" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261023.43" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261023.44" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -272,7 +272,8 @@
         <label>レア度（発見済み）<select id="collectionRarityFilter"><option value="all">すべて</option><option value="common">コモン</option><option value="uncommon">アンコモン</option><option value="rare">レア</option><option value="epic">エピック</option><option value="legendary">レジェンダリー</option></select></label>
         <label>並べ替え<select id="collectionSort"><option value="common">レア度が低い順</option><option value="rare">レア度が高い順</option><option value="count">所持数が多い順</option><option value="name">名前順</option></select></label>
       </div>
-      <div id="collectionGrid" class="collection-grid" role="list" aria-label="コレクション一覧"></div>
+      <p id="alchemyResult" class="alchemy-result" role="status" aria-live="polite"></p>
+       <div id="collectionGrid" class="collection-grid" role="list" aria-label="コレクション一覧"></div>
       <dialog id="alchemyDialog" class="loadout-dialog" aria-labelledby="alchemyDialogTitle" data-dungeon-frame="closable">
         <div class="loadout-dialog-inner dungeon-dialog-frame">
           <div class="chooser-header"><h3 id="alchemyDialogTitle" class="dungeon-dialog-frame-title">錬金</h3><button type="button" id="closeAlchemy" class="subtle dungeon-dialog-close" aria-label="錬金を閉じる">✕</button></div>
@@ -287,6 +288,9 @@
             </div>
           </details>
           <p id="alchemyPreview" aria-live="polite">0 / 5</p>
+           <p id="alchemyByproductChance" class="alchemy-byproduct-info">副産物の確率：✦ 魔導石 0% / 🖋️ 魔導墨 0%</p>
+           <p class="alchemy-byproduct-help">素材の効果量が高いほど確率上昇（魔導墨はアンコモン以上）。</p>
+           <p id="alchemyMilestoneProgress" class="alchemy-byproduct-info">錬金累計 0回</p>
           <p id="alchemyError" class="name-error" role="alert"></p>
           <button type="button" id="alchemyCraft" class="primary-action" disabled>錬金する</button>
         </div>
@@ -370,7 +374,7 @@
     </div>
 
     <dialog id="circleDrawingDialog" class="circle-drawing-dialog" aria-labelledby="circleDrawingStage" data-dungeon-frame="overlay">
-      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261023.43" alt="" hidden>
+      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261023.44" alt="" hidden>
       <div id="circleDrawingShell" class="circle-drawing-shell">
         <strong id="circleDrawingStage" class="circle-drawing-stage" aria-live="polite">呪文を1文字ずつ書く</strong>
         <button type="button" id="circleDrawingPractice" class="subtle circle-drawing-practice">描き方を練習</button>
@@ -613,6 +617,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261023.43"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261023.44"></script>
 </body>
 </html>
