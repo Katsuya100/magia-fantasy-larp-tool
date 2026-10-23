@@ -886,11 +886,18 @@ try{
  assert.deepEqual(photoDrive.operations,[],'missing photo never overwrites Drive');
  const corruptLegacy=await legacyDevice('記録改ざん',{tampered:true});
  const corruptUi=fakeUi(),corruptDrive=remoteApi(newerRemote);
- start(corruptLegacy.db,corruptUi,corruptDrive.fetchImpl);
+ let corruptReady=0;
+ start(corruptLegacy.db,corruptUi,corruptDrive.fetchImpl,{onInitialReady:()=>corruptReady++});
  await connect(corruptUi);
  await wait(()=>corruptUi.get('googleDriveConflictDialog').open,'unrelated corrupt local save offers only explicit restore');
  assert.equal(corruptUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').hidden,true,'unverified data cannot be used to overwrite another play');
  assert.deepEqual(corruptDrive.operations,[],'corrupt local record never overwrites the healthy remote');
+ const corruptLocalBefore=await readDungeonSnapshot(corruptLegacy.db);
+ corruptUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
+ await wait(()=>corruptUi.doc.cookie==='','corrupt local later unlinks safely');
+ assert.equal(corruptReady,0,'a corrupt local record cannot bypass the startup integrity gate');
+ assert.deepEqual(await readDungeonSnapshot(corruptLegacy.db),corruptLocalBefore,'corrupt local stays untouched');
+ assert.deepEqual(corruptDrive.operations,[],'corrupt local later never writes Drive');
 
  // 15. An idle tab proactively notifies at token expiry without waiting
  // for another save. The dialog is one-shot until a fresh token is authorized.
