@@ -4,7 +4,7 @@ export const CIRCLE_TUTORIAL_STEPS=[
  {title:'準備しましょう',hint:'最初にお手元に紙とペンをご用意ください。',detail:'ペンは、できれば太めの油性ペンをお使いください。',image:null},
  {title:'外円を書きましょう',hint:'紙に大きな円を書いてください。',detail:'線をつないで閉じてください。',image:'tutorial-outer.gif'},
  {title:'内円を書きましょう',hint:'外円の内側に、小さな円を書いてください。',detail:'内円も閉じた線にしてください。',image:'tutorial-inner.gif'},
- {title:'呪文を書きましょう',hint:'内円と外円の間に英語の呪文を書いてください。',detail:'相は呪文の意味によって決まります。',attributes:'🔥炎・⚡雷・💧水・🌪風・🪨重力・⚖秩序・🌀混沌',freedom:'サンプルに合わせる必要はありません。英単語は自由に書いてください。',image:'tutorial-spell.gif'},
+ {title:'呪文を書きましょう',hint:'内円と外円の間に英語の呪文を書いてください。',detail:'相は呪文の意味によって決まります。',attributes:'🔥flame・⚡bolt・💧aqua・🌪storm・🪨gravity・⚖law・🌀chaos',freedom:'サンプルに合わせる必要はありません。英単語は自由に書いてください。',image:'tutorial-spell.gif'},
  {title:'紋を書きましょう',hint:'内円の中に紋を書いてください。',detail:'紋の種別は形によって決まります。',attributes:'⚔️攻撃・🛡️防御・✚回復・🕸️弱体',freedom:'サンプルに合わせる必要はありません。紋は自由に描いてください。',image:'tutorial-sigil.gif'}
 ];
 export function initCircleTutorial(doc,onFinish,onLessonClosed=()=>{}){
