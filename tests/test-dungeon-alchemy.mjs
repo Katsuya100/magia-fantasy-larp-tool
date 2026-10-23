@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
+import {alchemyRecipe,alchemyAutoSelect,craftAlchemy,alchemyByproductRates,alchemyMilestones} from '../assets/js/dungeon-alchemy.mjs';
 
 const csv=readFileSync(new URL('../assets/data/dungeon-consumables.csv',import.meta.url),'utf8').trim().split(/\r?\n/);
 const keys=csv.shift().split(',');
@@ -73,4 +73,49 @@ assert.equal(outcome('rare',[.4,.9]).bonus,'buff_bolt');
 assert.equal(outcome('rare',[.8]).bonus,undefined);
 assert.equal(outcome('legendary',[.99,.01]).bonus,'buff_aqua');
 
-console.log('PASS dungeon alchemy: recipes, tiers, rarity, slots and validations');
+// Byproducts always accompany an ordinary crafted item, never consume inventory slots.
+// Common relics cannot yield ink. Strong ingredients boost odds, but the caps hold.
+const close=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-9,actual+' != '+expected);
+const standard=five('heal_s',20),powerful=five('heal_xl',1000);
+close(alchemyByproductRates(common,standard).stone,.12);
+assert.equal(alchemyByproductRates(common,powerful).ink,0);
+assert.deepEqual(alchemyByproductRates({rarity:'legendary'},powerful),{stone:1,ink:.23});
+close(alchemyByproductRates({rarity:'uncommon'},powerful).stone,.30);
+close(alchemyByproductRates({rarity:'rare'},powerful).ink,.08);
+assert.deepEqual(alchemyMilestones({}),{count:0,stoneIn:5,inkIn:20});
+assert.deepEqual(alchemyMilestones({alchemyCount:4}),{count:4,stoneIn:1,inkIn:16});
+assert.deepEqual(alchemyMilestones({alchemyCount:20}),{count:20,stoneIn:5,inkIn:20});
+
+const source={...bonusProfile,alchemyCount:4,magicStones:7,magicInk:2};
+const award=(saved,relic,randomValues)=>{
+ const sequence=randomValues[Symbol.iterator]();
+ return craftAlchemy(saved,relic,[0,1,2,3,4],rows,buffs,()=>sequence.next().value??.99,()=>'byproduct-item');
+};
+const fifth=award(source,common,[.99,.99,.99]);
+assert.equal(fifth.alchemyCount,5);
+assert.equal(fifth.magicStones,8,'fifth craft grants one guaranteed stone despite missed random roll');
+assert.equal(fifth.magicInk,2,'fifth craft does not grant ink');
+assert.equal(fifth.inventory.length,1,'byproducts are currencies, not inventory items');
+assert.equal(source.alchemyCount,4,'count updates immutably');
+assert.equal(source.magicStones,7,'stone count updates immutably');
+
+const twentieth=award({...source,alchemyCount:19},common,[.99,.99,.99]);
+assert.equal(twentieth.alchemyCount,20);
+assert.equal(twentieth.magicStones,8,'twentieth craft is also a stone milestone');
+assert.equal(twentieth.magicInk,3,'twentieth craft awards ink even with common relic');
+const legendaryReward=award({...source,alchemyCount:19},{...common,rarity:'legendary'},[.99,.99,.99,.99]);
+assert.equal(legendaryReward.magicStones,9,'guaranteed legendary stone stacks with fifth milestone');
+assert.equal(legendaryReward.magicInk,3,'twentieth milestone ink is independent of rarity roll');
+
+const randomDrop=award({...source,alchemyCount:0},{...common,rarity:'rare'},[.9,.9,.11,.02]);
+assert.equal(randomDrop.magicStones,8,'rare stone roll succeeds');
+assert.equal(randomDrop.magicInk,3,'rare ink roll succeeds independently');
+const failedDrop=award({...source,alchemyCount:0},common,[.9,.99,0]);
+assert.equal(failedDrop.magicStones,7,'failed common stone roll grants nothing');
+assert.equal(failedDrop.magicInk,2,'common relic never drops ink, even with zero random');
+const legacy=award({...source,alchemyCount:undefined,magicStones:undefined,magicInk:undefined},common,[.99,.99,.99]);
+assert.equal(legacy.alchemyCount,1,'older save has no alchemy progress');
+assert.equal(legacy.magicStones,0);
+assert.equal(legacy.magicInk,0);
+
+console.log('PASS dungeon alchemy: recipes, rarity, slots, byproduct odds and milestones');
