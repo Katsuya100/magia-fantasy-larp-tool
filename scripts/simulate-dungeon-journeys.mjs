@@ -4,6 +4,7 @@
 // not a claim about every player-authored drawing.
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
+import {resolve} from 'node:path';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {enemyForFight,targetClearLevel} from '../assets/js/dungeon-design.mjs';
@@ -293,7 +294,7 @@ export function summarizeJourneys(samples=16,seed=20261024){
    extrapolation:'not evaluated: authored 1-100F only'},
   combinations:all};
 }
-if(process.argv[1]&&fileURLToPath(process.argv[1]).href===import.meta.url){
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const count=Number(process.argv[2]||16);
  const report=summarizeJourneys(count);
  mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
