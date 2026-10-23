@@ -129,6 +129,7 @@ assert.doesNotMatch(css,/circle-drawing-to-sigil/,'upper preview no longer anima
 assert.match(source,/export const EDITOR_GLYPH_STEP=GLYPH_STEP\*2\.25/);
 assert.match(source,/ringPoint\(\.345,\(i\/96-\.5\)\*EDITOR_GLYPH_STEP\)/,'crosshair horizontal axis follows the ring curve');
 assert.match(source,/paintCircle\(preview,model\.state,\{activeStroke,size:512\}\)/,'upper preview stays fixed while lower pad spins');
+assert.match(source,/glyphPoint\(p,i,1,exportImage\?null:viewIndex\)/,'each completed upper glyph occupies a fixed slot even as letter count changes');
 assert.match(source,/animateMode\('sigil'/);
 assert.match(source,/animateMode\('spell'/);
 assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
