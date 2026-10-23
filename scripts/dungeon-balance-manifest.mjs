@@ -8,7 +8,7 @@ import {BOSS_INK_DROP_CHANCE} from '../assets/js/dungeon-ink.mjs';
 import {DESIGNED_LAYERS,BASE_RARITY_WEIGHTS} from '../assets/js/dungeon-design.mjs';
 
 const sources={
- balance:['key','value'],levels:['level'],enemies:['id'],floors:['floor'],
+ balance:['key'],levels:['level'],enemies:['id'],floors:['floor'],
  'player-base':['stat'],consumables:['id'],collections:['id'],buffs:['id'],
  'layer-concepts':['layer'], 'element-plan':['layer']
 };
