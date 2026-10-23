@@ -16,12 +16,11 @@ export const GLYPH_INK_SCALE=.11*(2/3);
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 const RING_RADIUS=(INNER_RADIUS+OUTER_RADIUS)/2;
-// Set the lower camera's horizontal field of view to EXACTLY two real
-// 12-degree slots. Never widen the letter angles only in the editor.
-const SPELL_VIEW_RADIUS=RING_RADIUS*Math.sin(GLYPH_STEP);
+// Keep the writing area large; show only a little of each ring guide at the pad edges.
+const SPELL_VIEW_RADIUS=(OUTER_RADIUS-INNER_RADIUS)/(2*.96);
 export const EDITOR_ZOOM=GLYPH_INK_SCALE/SPELL_VIEW_RADIUS;
 export const EDITOR_GLYPH_STEP=GLYPH_STEP;
-// The sigil camera shows only the original inner writing region, not the whole ring.
+// Keep the original close-up for drawing the central sigil.
 const SIGIL_VIEW_RADIUS=INNER_RADIUS/GUIDE_RADIUS;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
@@ -239,9 +238,8 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null,activeStroke=nu
  ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
  ctx.strokeStyle='#a64a31';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.globalAlpha=.92;ctx.stroke();ctx.globalAlpha=1;
 }
-// The same 24-slot centered world geometry is projected through ONE moving camera.
-// At t=0 it is the spell's ~two-letter close-up; at t=1 it is ONLY the inner
-// sigil writing region. A continuous, rotating camera replaces two fading layers.
+// The same 30-slot geometry is projected through one camera.
+// Letters stay large, with ring guides only at the edges; sigil remains a close-up.
 export function projectCircleToPad(point,viewIndex,progress,count=1){
  const t=Math.max(0,Math.min(1,progress));
  // One continuous full turn ends in the same orientation as the upper preview.
@@ -278,8 +276,7 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
  const t=transition?Math.max(0,Math.min(1,transition.progress)):(state.mode==='sigil'?1:0);
  const drawn=visibleGlyphs(state,activeStroke),count=writtenGlyphCount(drawn);
  const project=p=>at(projectCircleToPad(p,viewIndex,t,count));
- // Draw the same two ring circles at every frame. The outer ring naturally
- // travels beyond the canvas as we zoom into the original sigil writing area.
+ // Project the original ring guides through the moving camera.
  const center=project({x:.5,y:.5});
  const viewRadius=SPELL_VIEW_RADIUS*(1-t)+SIGIL_VIEW_RADIUS*t;
  ctx.save();ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,6*dpr]);
