@@ -11,6 +11,7 @@ import {enemyForFight,targetClearLevel} from '../assets/js/dungeon-design.mjs';
 import {allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 import {upgradeStoneCost,strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
+import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
@@ -119,6 +120,29 @@ function considerInkRedraw(state){
  state.circles[state.circles.indexOf(candidate)]={...circle(candidate.role,candidate.attribute,newBase),
   ink:used};
 }
+// Craft only when an actual duplicate and five separate existing ingredients
+// are in the bank; alchemy is never used in the mandatory no-alchemy economy.
+function optionalAlchemy(state){
+ if(!state.alchemy)return;
+ for(let n=0;n<30;n++){
+  const relic=data.collections.find(row=>(state.collection[row.id]||0)>=2);
+  if(!relic)break;
+  const indexes=state.inventory.map((item,i)=>({i,kind:data.items.find(row=>row.id===item.id)?.kind}))
+   .filter(x=>['heal','mana','elixir','escape','revive'].includes(x.kind)).slice(0,5).map(x=>x.i);
+  if(indexes.length!==5||state.inventory.length< G.capacity(state.profile.level)+5)break;
+  const beforeStones=state.stones,beforeInk=state.ink;
+  const profile={inventory:state.inventory,collection:state.collection,magicStones:state.stones,
+   magicInk:state.ink,alchemyCount:state.alchemyCount,carrySlots:[]};
+  const after=craftAlchemy(profile,relic,indexes,data.items,data.buffs,state.random,
+   ()=>'crafted-'+(++state.itemSerial));
+  state.alchemyCount=after.alchemyCount;state.alchemyCrafts++;
+  state.inventory=after.inventory;state.collection=after.collection;
+  state.stones=after.magicStones;state.ink=after.magicInk;
+  state.earned.stone+=state.stones-beforeStones;state.earned.ink+=state.ink-beforeInk;
+  state.alchemyByproducts.stone+=state.stones-beforeStones;
+  state.alchemyByproducts.ink+=state.ink-beforeInk;
+ }
+}
 function commit(state,pending,unused,bestLayer){
  const p=state.profile;
  for(const reward of pending.loot){
@@ -135,6 +159,7 @@ function commit(state,pending,unused,bestLayer){
  G.experience(p,pending.xp);
  state.best=Math.max(bestLayer,state.best);
  state.returns++;
+ optionalAlchemy(state);
  invest(state);considerInkRedraw(state);
 }
 function battle(state,hero,layer,fight,carry,random,usage){
@@ -153,10 +178,11 @@ function battle(state,hero,layer,fight,carry,random,usage){
  }
  return {win:enemy.hp<=0&&hero.hp>0,foe,enemyLevel,rounds,healCasts,enemyHealCasts,enemyDebuffs};
 }
-export function runJourney(seed,{style='A',route='short',maxSorties=120,maxFights=10000}={}){
+export function runJourney(seed,{style='A',route='short',alchemy=false,maxSorties=120,maxFights=10000}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  const random=rng(seed),profile={level:1,xp:0,adventurerRank:0};
- const state={style,route,profile,stones:0,ink:0,inventory:[],collection:{},
+ const state={style,route,alchemy,random,profile,stones:0,ink:0,inventory:[],collection:{},
+  alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
   circles:spells.map(([role,attribute,power])=>circle(role,attribute,power)),
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
@@ -269,7 +295,8 @@ export function runJourney(seed,{style='A',route='short',maxSorties=120,maxFight
  const stoneReconciled=state.earned.stone-state.spent.stone-state.stones;
  const inkReconciled=state.earned.ink-state.spent.ink-state.ink;
  if(stoneReconciled!==0||inkReconciled!==0)throw Error('Resource conservation violated');
- return {seed,style,route,profile:chestSummary(profile),best:state.best,
+ return {seed,style,route,alchemy,alchemyCrafts:state.alchemyCrafts,
+  alchemyByproducts:state.alchemyByproducts,profile:chestSummary(profile),best:state.best,
   sorties:state.sorties,returns:state.returns,losses:state.losses,fights:state.fights,
   replayedFights:state.replayedFights,farmingFights:state.farmingFights,
   earned:state.earned,spent:state.spent,lost:state.lost,balances:{stone:state.stones,ink:state.ink},
