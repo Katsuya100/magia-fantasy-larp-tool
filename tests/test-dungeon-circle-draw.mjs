@@ -19,9 +19,14 @@ assert.ok(Math.abs(OUTER_RADIUS-.43)<1e-12,
  'drawn outer rim is 43% radius, matching the 86%-diameter camera guide');
 const ringCenter=(INNER_RADIUS+OUTER_RADIUS)/2;
 const visibleSlots=2*Math.asin((GLYPH_INK_SCALE/EDITOR_ZOOM)/ringCenter)/EDITOR_GLYPH_STEP;
-assert.ok(visibleSlots>2&&visibleSlots<3,'spell view widens just enough to show both ring guides');
-assert.ok(Math.abs((OUTER_RADIUS-INNER_RADIUS)/2/(GLYPH_INK_SCALE/EDITOR_ZOOM)-.92)<1e-12,
- 'both spell ring edges appear at 92% of the pad radius');
+assert.ok(visibleSlots>2&&visibleSlots<3,'spell pad stays focused on a few large letters');
+const letterViewRadius=GLYPH_INK_SCALE/EDITOR_ZOOM;
+assert.ok(Math.abs((OUTER_RADIUS-INNER_RADIUS)/2/letterViewRadius-.96)<1e-12,
+ 'inner and outer guides appear only at the edges of the writing pad');
+assert.ok(OUTER_RADIUS/letterViewRadius>1,'the full outer circle cannot fit in the letter pad');
+assert.ok(GLYPH_INK_SCALE/letterViewRadius>.8,'letter strokes remain large');
+assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-OUTER_RADIUS},0,0).y+.96)<1e-12);
+assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-INNER_RADIUS},0,0).y-.96)<1e-12);
 assert.equal(drawnPower(500),300);
 assert.equal(drawnPower(1),250);
 assert.throws(()=>drawnPower(0));
@@ -66,12 +71,12 @@ for(const i of [0,1,3,8,29]){
 for(const i of [0,7,14,21,29]){
  const outside=sigilGlyphPadPoint({x:0,y:-1},i,30);
  const inside=sigilGlyphPadPoint({x:0,y:1},i,30);
- assert.ok(Math.hypot(outside.x,outside.y)<.92,'sigil view includes outer-ring lettering');
- assert.ok(Math.hypot(inside.x,inside.y)<.92,'sigil view includes inner-ring lettering');
+ assert.ok(Math.hypot(outside.x,outside.y)>1,'sigil view still focuses on the inner region');
+ assert.ok(Math.hypot(inside.x,inside.y)<1,'sigil view preserves marks entering the inner region');
 }
-eq(Math.hypot(sigilPadPoint({x:.92,y:0}).x,sigilPadPoint({x:.92,y:0}).y),.92*INNER_RADIUS/OUTER_RADIUS,
- 'sigil writing boundary aligns with the inner ring');
-eq(OUTER_RADIUS/sigilRadius,.92,'outer ring fits completely inside the sigil pad');
+eq(Math.hypot(sigilPadPoint({x:.92,y:0}).x,sigilPadPoint({x:.92,y:0}).y),.92,
+ 'sigil writing boundary occupies the original writing area');
+assert.ok(OUTER_RADIUS/sigilRadius>1.25,'sigil view must not zoom out to fit the outer ring');
 for(const count of [1,2,7,30]){
  for(const i of [0,Math.min(count-1,1),count-1]){
   for(const p of [{x:0,y:0},{x:.8,y:-1}]){
@@ -241,8 +246,8 @@ try{
  draws.length=0;paintPad(canvas,{...state,mode:'sigil',ink:[]},[],0);
  assert.ok(draws.some(d=>d[0]==='stroke'&&d[1]==='rgb(169,155,194)'),'sigil view preserves projected glyph strokes');
   const sigilGuides=draws.filter(d=>d[0]==='arc');
-  eq(sigilGuides[0][3]/100,.92,'full outer circle is in frame');
-  eq(sigilGuides[1][3]/100,.92*INNER_RADIUS/OUTER_RADIUS,'inner guide matches the writing boundary');
+  assert.ok(sigilGuides[0][3]/100>1.25,'outer ring stays outside the central sigil crop');
+  eq(sigilGuides[1][3]/100,.92,'inner guide keeps the original sigil writing boundary');
  draws.length=0;paintPad(canvas,state,[],.5);
  assert.ok(draws.some(d=>d[1]==='rgb(162,176,221)'),'color blends during the turn');
  draws.length=0;paintPad(canvas,state,[],29.5);
@@ -298,7 +303,7 @@ assert.match(source,/animateMode\('spell'/);
 assert.match(source,/glyphInputPoint\(padPoint\)/);
 assert.match(source,/sigilInputPoint\(padPoint\)/);
 assert.match(source,/project\(glyphPoint\(p,i,count\)\)/,'both screens use the same centered ink projection');
-assert.match(source,/const SIGIL_VIEW_RADIUS=OUTER_RADIUS\/GUIDE_RADIUS;/,'sigil view fits both circles');
+assert.match(source,/const SIGIL_VIEW_RADIUS=INNER_RADIUS\/GUIDE_RADIUS;/,'sigil close-up stays unchanged');
 assert.doesNotMatch(source,/layer\(1-t|layer\(t,0/,'no composited render layers');
 assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
 assert.match(css,/width:min\(100cqw,100cqh\);height:min\(100cqw,100cqh\)/);
