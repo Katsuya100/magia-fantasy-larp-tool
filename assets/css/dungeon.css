@@ -2464,15 +2464,17 @@ button.creator-congratulations-close{
 
 .circle-drawing-shell{position:relative;display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
 .circle-drawing-header{
- flex:none;display:grid;grid-template-columns:1fr 1fr;
- align-items:center;gap:8px;padding:9px 12px;
- border-bottom:1px solid #c09d634d;background:#191728
+ position:absolute;left:0;right:0;top:50%;z-index:3;
+ display:flex;justify-content:space-between;align-items:center;gap:8px;
+ transform:translateY(-50%);padding:0 8px;pointer-events:none
 }
+#circleDrawingDialog .circle-drawing-header button{pointer-events:auto;min-height:40px}
 .circle-drawing-stage{
  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
- z-index:2;pointer-events:none;white-space:nowrap;
- padding:5px 17px;border:1px solid #c09d6380;border-radius:999px;
- background:#070914;color:var(--gold);font-size:14px;
+ z-index:2;pointer-events:none;white-space:normal;text-align:center;
+ max-width:calc(100% - 158px);line-height:1.2;
+ padding:5px 9px;border:1px solid #c09d6380;border-radius:999px;
+ background:#070914;color:var(--gold);font-size:clamp(11px,3vw,14px);
  box-shadow:0 2px 12px #0009
 }
 #circleDrawingDialog button{font-size:13px;min-height:44px;box-shadow:none;padding:8px 12px}
@@ -2493,7 +2495,7 @@ button.creator-congratulations-close{
  padding:4px 7px
 }
 .circle-drawing-preview-art{
- position:relative;display:block;width:min(100%,calc((94dvh - 130px)/2));
+ position:relative;display:block;width:min(100%,calc((94dvh - 88px)/2));
  max-height:100%;aspect-ratio:1;justify-self:center
 }
 .circle-drawing-preview-art canvas{display:block;width:100%;height:100%;aspect-ratio:1}
@@ -2528,22 +2530,20 @@ button.creator-congratulations-close{
  box-shadow:inset 0 0 22px #000;touch-action:none;user-select:none;
  -webkit-user-select:none;overscroll-behavior:contain
 }
-.circle-drawing-actions{flex:none;display:flex;justify-content:space-between;gap:7px;align-items:center;padding-top:8px}
-#circleDrawingDialog .circle-drawing-actions button{flex:none}
-#circleDrawingBack{margin-left:auto}
-#circleDrawingInput{min-width:87px}
+.circle-drawing-actions{flex:none;display:flex;justify-content:space-between;gap:7px;align-items:center;padding-top:4px}
+#circleDrawingDialog .circle-drawing-actions button{flex:none;min-height:34px;padding:4px 10px;font-size:12px}
+#circleDrawingInput{min-width:67px}
 .circle-drawing-status{flex:none;min-height:0;margin:4px 0 0;text-align:center;color:#e9b1a9;font-size:12px;line-height:1.4}
 .circle-drawing-status:empty{display:none}
 @media(max-width:630px){
  .circle-drawing-dialog{width:100%;height:100dvh;max-height:100dvh;max-width:none;margin:0;border:0}
  .drawing-open-button{margin:0 0 18px}
- .circle-drawing-header{padding-top:max(9px,env(safe-area-inset-top))}
+ .circle-drawing-header{padding-left:5px;padding-right:5px}
  .circle-drawing-display{grid-template-columns:42px minmax(0,1fr) 42px;padding-left:5px;padding-right:5px}
- .circle-drawing-preview-art{width:min(100%,calc((100dvh - 148px)/2))}
+ .circle-drawing-preview-art{width:min(100%,calc((100dvh - 104px)/2))}
 }
 @media(max-height:520px){
- .circle-drawing-header{padding-top:3px;padding-bottom:3px}
- .circle-drawing-actions{padding-top:3px}
+ .circle-drawing-actions{padding-top:2px}
  .circle-drawing-status{margin:0}
 }
 

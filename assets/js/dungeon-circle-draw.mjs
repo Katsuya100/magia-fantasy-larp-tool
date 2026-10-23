@@ -226,8 +226,8 @@ export function initCircleDrawing(doc,{onSave}){
   paintPad(pad,model.state,activeStroke);
   const sigil=model.state.mode==='sigil';
   get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を1文字ずつ書く';
+  get('circleDrawingClose').textContent=sigil?'戻る':'閉じる';
   get('circleDrawingInput').hidden=sigil;
- get('circleDrawingBack').hidden=!sigil;
   get('circleDrawingInput').disabled=model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy;
  get('circleDrawingUndo').disabled=!model.canUndo||busy;
   get('circleDrawingRedo').disabled=!model.canRedo||busy;
@@ -267,7 +267,6 @@ get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())re
   if(busy)return;
   model.reset();message('');repaint();
  });
- get('circleDrawingBack').addEventListener('click',()=>{if(!busy){model.goSpell();message('');repaint();}});
  async function finish(){
   if(busy||pointerId!==null)return;
   if(model.state.mode==='spell'){
@@ -295,6 +294,9 @@ get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())re
  }
  function close(){
   if(busy||!dialog.open||!discard.hidden)return;
+  if(model.state.mode==='sigil'){
+   model.goSpell();release();message('');repaint();return;
+  }
   if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
    dialog.close();return;
   }

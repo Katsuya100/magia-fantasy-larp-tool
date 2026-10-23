@@ -158,7 +158,16 @@ assert.match(html,/<strong id="circleDrawingStage" class="circle-drawing-stage"[
 assert.match(html,/id="circleDrawingPreview"[\s\S]*?id="circleDrawingCaret" width="512" height="512" aria-hidden="true"/,'caret has a distinct transparent overlay canvas');
 assert.match(css,/\.circle-drawing-display\{[^}]*background:#070914/,'parchment does not fill the preview surroundings');
 assert.match(css,/\.circle-drawing-entry\{[^}]*background:#070914/,'top and bottom surroundings use the same dark background');
-assert.match(css,/\.circle-drawing-stage\{[^}]*left:50%;top:50%;transform:translate\(-50%,-50%\)/,'stage label is in the center of the screen');
+assert.match(css,/\.circle-drawing-stage\{[^}]*left:50%;top:50%;transform:translate\(-50%,-50%\)/,'stage label stays centered');
+assert.match(css,/\.circle-drawing-header\{\s*position:absolute;left:0;right:0;top:50%;z-index:3;/,
+ 'close/back and confirm sit at the middle left/right sides instead of using an upper header row');
+assert.match(css,/#circleDrawingDialog \.circle-drawing-actions button\{flex:none;min-height:34px;padding:4px 10px;font-size:12px\}/,
+ 'input and reset have compact controls to free touchpad height');
+assert.match(css,/\.circle-drawing-preview-art\{[^}]*calc\(\(94dvh - 88px\)\/2\)/,
+ 'removing the header increases available drawing area');
+assert.doesNotMatch(html,/id="circleDrawingBack"|呪文へ戻る/,'no redundant spell back action');
+assert.match(html,/id="circleDrawingReset"[^>]*>クリア<\/button>/,'pad action is now labeled クリア');
+assert.doesNotMatch(source,/circleDrawingBack/,'script has no reference to the removed return button');
 assert.match(css,/#circleDrawingCaret\{[^}]*animation:circle-drawing-caret-blink 1s steps\(1,end\) infinite/,'only the caret blinks');
 assert.match(source,/sigil\?'紋を書く':'呪文を1文字ずつ書く'/,'both steps use the requested writing labels');
 assert.match(source,/paintCaret\(get\('circleDrawingCaret'\),model\.state/,'redraw follows the active character');
@@ -200,7 +209,7 @@ function element(id){
 }
 for(const id of ['circleDrawingDialog','circleDrawingShell','circleDrawingPreview','circleDrawingCaret',
  'circleDrawingPad','circleDrawingConfirm','circleDrawingStatus','circleDrawingStage',
- 'circleDrawingInput','circleDrawingBack','circleDrawingUndo','circleDrawingRedo',
+ 'circleDrawingInput','circleDrawingUndo','circleDrawingRedo',
  'circleDrawingReset','circleDrawingClose','circleDrawingDiscard','circleDrawingDiscardKeep',
  'circleDrawingDiscardConfirm'])element(id);
 fakeDoc={activeElement:element('priorFocus'),getElementById:id=>{
@@ -217,6 +226,7 @@ try{
  const get=id=>nodes.get(id),dialog=get('circleDrawingDialog'),discard=get('circleDrawingDiscard');
  const shell=get('circleDrawingShell'),keep=get('circleDrawingDiscardKeep');
  editor.open();
+ assert.equal(get('circleDrawingClose').textContent,'閉じる','spell mode shows close');
  get('circleDrawingClose').dispatch('click');
  assert.equal(dialog.open,false,'an empty editor closes without confirmation');
  editor.open();
@@ -256,6 +266,14 @@ try{
  get('circleDrawingInput').dispatch('click');
  get('circleDrawingConfirm').dispatch('click');
  assert.equal(get('circleDrawingStage').textContent,'紋を書く','editor advances to sigil');
+ assert.equal(get('circleDrawingClose').textContent,'戻る','sigil mode replaces close label with back');
+ get('circleDrawingClose').dispatch('click');
+ assert.equal(dialog.open,true,'sigil back stays inside editor');
+ assert.equal(discard.hidden,true,'sigil back does not ask to discard');
+ assert.equal(get('circleDrawingStage').textContent,'呪文を1文字ずつ書く','sigil back returns to spell stage');
+ assert.equal(get('circleDrawingClose').textContent,'閉じる','spell mode restores close label');
+ get('circleDrawingConfirm').dispatch('click');
+ assert.equal(get('circleDrawingStage').textContent,'紋を書く','the original spell can advance to sigil again');
  drawingPad.dispatch('pointerdown',inkEvent(2,60,60));
  drawingPad.dispatch('pointermove',inkEvent(2,120,130));
  drawingPad.dispatch('pointerup',inkEvent(2,120,130));
@@ -267,7 +285,7 @@ try{
  editor.resume();
  assert.equal(dialog.open,true,'cancelling analysis reopens the drawing interface');
  assert.equal(get('circleDrawingStage').textContent,'紋を書く','sigil editing stage is preserved');
- assert.equal(get('circleDrawingBack').hidden,false,'return to spell stays available');
+ assert.equal(get('circleDrawingClose').textContent,'戻る','cancelled analysis restores contextual back control');
  assert.equal(get('circleDrawingUndo').disabled,false,'undo history is preserved on return');
  assert.equal(get('circleDrawingConfirm').disabled,false,'drawing can be edited and submitted again');
  get('circleDrawingUndo').dispatch('click');
