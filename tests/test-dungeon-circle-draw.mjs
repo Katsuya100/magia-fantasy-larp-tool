@@ -135,7 +135,14 @@ assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0072),'export includes both
 draws.length=0;paintCaret(canvas,state,{size:128,viewIndex:0});
 assert.equal(draws.filter(d=>d[0]==='stroke').length,1);
 const caret=draws.find(d=>d[0]==='move');
-assert.ok(Math.hypot(caret[1]-64,caret[2]-64)>128*.46,'caret sits outside the lettering');
+const caretRadius=Math.hypot(caret[1]-64,caret[2]-64)/128;
+assert.ok(caretRadius>.255&&caretRadius<.43,'caret is inside the magic-circle glyph band');
+const caretAngle=Math.atan2(caret[2]-64,caret[1]-64);
+assert.ok(Math.abs(caretAngle-(glyphAngle(0,1)-EDITOR_GLYPH_STEP/2))<1e-10,'caret marks the LEFT edge, not the glyph center');
+draws.length=0;paintCaret(canvas,{...state,index:1},{size:128});
+const nextCaret=draws.find(d=>d[0]==='move');
+const nextAngle=Math.atan2(nextCaret[2]-64,nextCaret[1]-64);
+assert.ok(Math.abs(nextAngle-caretAngle-EDITOR_GLYPH_STEP)<1e-10,'caret moves by exactly the same 15-degree slot as both screens');
 draws.length=0;paintCaret(canvas,{...state,mode:'sigil'},{size:128});
 assert.equal(draws.length,0);
 const originalWindow=globalThis.window;
@@ -292,4 +299,4 @@ try{
  assert.equal(get('circleDrawingUndo').disabled,true);
  dialog.close();
 }finally{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
-console.log('PASS true zoom, exact top-bottom glyph alignment, sigil-visible letters, outside caret, curved guides and smooth two-way transitions');
+console.log('PASS true zoom, exact top-bottom glyph alignment, sigil-visible letters, left-edge ring caret, curved guides and smooth two-way transitions');
