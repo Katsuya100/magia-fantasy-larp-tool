@@ -80,6 +80,18 @@
         </div>
       </div>
     </dialog>
+    <dialog id="restoreOriginalXpDialog" class="name-dialog" aria-labelledby="restoreOriginalXpTitle" data-dungeon-frame="closable">
+      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+        <span class="dialog-sigil" aria-hidden="true">！</span>
+        <h2 id="restoreOriginalXpTitle" class="dungeon-dialog-frame-title">EXP変換前の記録に戻しますか？</h2>
+        <p>旧セーブを端末内の保全データから復元します。<strong>EXP変換後に進めた冒険・獲得した装備・収集品など、すべての進捗が失われます。</strong></p>
+        <p>復元後は現在のEXP変換を再適用します。Google Drive上のデータには直接触れません。</p>
+        <div class="buttons">
+          <button type="button" id="cancelRestoreOriginalXp" class="subtle">キャンセル</button>
+          <button type="button" id="confirmRestoreOriginalXp" class="danger">進捗が失われることを理解して復元する</button>
+        </div>
+      </div>
+    </dialog>
     <dialog id="backupSetupDialog" class="name-dialog" aria-labelledby="backupSetupTitle" data-dungeon-frame="fixed">
       <div class="delete-data-dialog-inner dungeon-dialog-frame">
         <span class="dialog-sigil" aria-hidden="true">☁</span>
