@@ -17,6 +17,7 @@ const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
  buffs:csv('buffs'),balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')};
 configure(data);
+const FROZEN_A=JSON.parse(readFileSync(new URL('../config/dungeon-economy-baseline-candidate.v1.json',import.meta.url),'utf8'));
 const spells=[
  ['attack','flame',360],['attack','bolt',420],['attack','gravity',540],
  ['support','aqua',320],['defense','law',270]
@@ -102,6 +103,10 @@ function invest(state){
   candidate.upgrades++;state.stones-=cost;state.spent.stone+=cost;
  }
 }
+function recoveryGap(state){
+ const target=FROZEN_A.routes[state.route][3].upgradeLevels;
+ return target.map((required,i)=>Math.max(0,required-state.circles[i].upgrades));
+}
 function considerInkRedraw(state){
  if(state.style!=='C'||state.best<30)return;
  const upgraded=state.circles.filter(c=>c.active);
@@ -116,7 +121,8 @@ function considerInkRedraw(state){
  // Both strategy branches must still be assessed by a paired benchmark.
  if(newBase<=oldPower)return;
  state.ink-=used;state.spent.ink+=used;
- state.sunkCircles++;state.replacements++;
+ if(candidate.upgrades>0)state.sunkCircles++;
+ state.replacements++;
  state.circles[state.circles.indexOf(candidate)]={...circle(candidate.role,candidate.attribute,newBase),
   ink:used};
 }
@@ -189,14 +195,23 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,maxSortie
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
   entrySnapshots:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},trace:[],blockers:[],milestones:[],
-  farmingFights:0};
+  farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
+  recoveryInitialGap:null,recoveryRemainingGap:null};
  if(style==='B')state.circles.push(circle('attack','storm',300,false),circle('attack','aqua',290,false),circle('support','law',260,false));
  // D is the route axis; this permits A+D, B+D and C+D without
  // inventing a mutually exclusive 'D character'.
  for(let sortie=0;sortie<maxSorties&&state.best<100&&state.fights<maxFights;sortie++){
   const upcoming=state.best+1;
   const start=allowedStartLayer(profile,profile.adventurerRank+1);
-  const goal=route==='short'?upcoming:100;
+  // B deliberately recovers its four original spells via REAL repeat sorties.
+  // A's measured fixed F31 equipment is a comparative preparation target,
+  // never a level override, free stone injection, or a hard user-approved cap.
+  const deficit=style==='B'&&state.best===30?recoveryGap(state):[];
+  const recovering=deficit.some(x=>x>0);
+  if(recovering&&state.recoveryInitialGap===null)state.recoveryInitialGap=[...deficit];
+  if(style==='B'&&state.best>=30&&!recovering)state.recoveryAchieved=true;
+  const goal=recovering?state.best:route==='short'?upcoming:100;
+  if(recovering)state.recoverySorties++;
   const firstLevel=profile.level;
   const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},firstLevel,{},equipped(state.circles),'hero');
   let pending={xp:0,loot:[]},lastClear=start-1,defeat=false;
@@ -221,6 +236,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,maxSortie
     const fight=(layer-1)*5+slot;
     const outcome=battle(state,hero,layer,fight,carry,random,usage);
     state.fights++;
+    if(recovering)state.recoveryFights++;
     if(layer<=state.best)state.replayedFights++;
     if(layer<=state.best&&style==='B')state.farmingFights++;
     state.healCasts+=outcome.healCasts;
@@ -276,7 +292,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,maxSortie
   }else if(lastClear>=start){
    commit(state,pending,carry,lastClear);
   }else state.inventory.push(...carry.filter(Boolean));
-  state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,
+  if(style==='B'&&state.best>=30){state.recoveryRemainingGap=recoveryGap(state);
+   if(state.recoveryRemainingGap.every(x=>x===0))state.recoveryAchieved=true;}
+  state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,recovering,
    levelBefore:firstLevel,levelAfter:profile.level,rank:profile.adventurerRank,
    gainedPending:earnedPending,banked:!defeat,stone:state.stones,ink:state.ink,
    usedItems:usage,fights:state.fights,returned:!defeat,
@@ -299,6 +317,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,maxSortie
   alchemyByproducts:state.alchemyByproducts,profile:chestSummary(profile),best:state.best,
   sorties:state.sorties,returns:state.returns,losses:state.losses,fights:state.fights,
   replayedFights:state.replayedFights,farmingFights:state.farmingFights,
+  recovery:{extraFights:state.recoveryFights,sorties:state.recoverySorties,
+   achieved:state.recoveryAchieved,initialGap:state.recoveryInitialGap,
+   remainingGap:state.recoveryRemainingGap,comparison:FROZEN_A.schemaVersion},
   earned:state.earned,spent:state.spent,lost:state.lost,balances:{stone:state.stones,ink:state.ink},
   inventory:state.inventory.length,collection:state.collection,circles:invested,
   sunkCircles:state.sunkCircles,replacements:state.replacements,
@@ -314,6 +335,8 @@ export function summarizeJourneys(samples=16,seed=20261024){
   const runs=Array.from({length:samples},(_,i)=>runJourney(seed+7919*i,{style,route}));
   const metrics=['best','sorties','returns','losses','fights','replayedFights','farmingFights','rankGranted','healCasts','replacements'];
   const distributions=Object.fromEntries(metrics.map(name=>[name,spread(runs.map(x=>x[name]))]));
+  distributions.recoveryFights=spread(runs.map(x=>x.recovery.extraFights));
+  distributions.recoverySorties=spread(runs.map(x=>x.recovery.sorties));
   for(const type of ['stone','ink']){
    for(const field of ['earned','spent','lost','balances']){
     distributions[field+'.'+type]=spread(runs.map(x=>x[field][type]));
