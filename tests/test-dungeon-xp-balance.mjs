@@ -89,6 +89,32 @@ const farmedLevel=farmer.level;
 const before=farmer.level;
 G.experience(farmer,5*G.fightExperience(37,farmer.level,20));
 assert.ok(farmer.level>=before,'the correct challenge awards viable XP');
+// Explicit diagnostics for overleveled replay. These are characterization
+// tests, not approval of the high replay percentage or a new XP nerf.
+const replayCases=[
+ {level:30,from:1,to:10},
+ {level:50,from:11,to:20},
+ {level:92,from:41,to:41},
+ {level:120,from:51,to:60}
+];
+const replayDiagnostics=replayCases.map(({level,from,to})=>{
+ const p={level,xp:0};
+ let earned=0;
+ for(let layer=from;layer<=to;layer++)
+  earned+=5*G.fightExperience(targetClearLevel(layer),level,layer);
+ G.experience(p,earned);
+ return {level,layers:from===to?String(from):from+'-'+to,
+  earned,needed:G.nextXp(level),
+  gaugePercent:100*earned/G.nextXp(level),afterLevel:p.level,afterXp:p.xp};
+});
+const level92Replay=replayDiagnostics.find(x=>x.level===92);
+assert.equal(level92Replay.earned,607,'41F five battles issue exactly 607 scaled EXP');
+assert.ok(level92Replay.gaugePercent>46&&level92Replay.gaugePercent<47,
+ 'track the currently excessive Lv92/41F replay gauge gain');
+assert.ok(G.nextXp(149)<20000,'the redesigned late-game curve stays below 5 digits in required XP');
+assert.equal(G.formatXp(121.40000000000002),'121.4','combat EXP display hides floating point noise');
+assert.equal(G.formatXp(12345.67),'12,345.7','EXP keeps its real units with one decimal at most');
+console.log('XP_REPLAY_DIAGNOSTICS '+JSON.stringify(replayDiagnostics));
 console.log('XP_BAND_BALANCE '+JSON.stringify({
  firstLayerLevel:3,levelAfter100:normal.level,lowFloorRuns:30,
  lowFloorLevel:farmedLevel,nearbyFloorRuns:10,nearbyFloorLevel:nearbyFarmer.level,
