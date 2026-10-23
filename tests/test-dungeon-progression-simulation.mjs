@@ -8,7 +8,8 @@ import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
-import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
+import {allowedStartLayer} from '../assets/js/dungeon-ranks.mjs';
+import {strengthenedPower,upgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {withNeutralAttackAttributes,compareNeutralAttackChoices} from './helpers/dungeon-neutral-loadout.mjs';
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
@@ -48,24 +49,29 @@ function heroAction(hero,enemy,layer){
 // The ledger is a plausible *supply forecast*, not a guarantee that the fights
 // were winnable; the combat simulator validates survivability separately.
 export function stoneLedger(seed,throughLayer){
- const r=rng(seed),progress={level:1,xp:0},levels=[],returns=[];
- let unconfirmedXp=0,unconfirmedStones=0,bank=0,lastLevel=1;
- for(let layer=1;layer<=throughLayer;layer++){
-  for(let i=0;i<5;i++){
+ const r=rng(seed),progress={level:1,xp:0,adventurerRank:0},levels=[],returns=[];
+ let bank=0,lastLevel=1;
+ for(let destination=1;destination<=throughLayer;destination++){
+  // Match legal rank checkpoints and previously returned floors, not a fictional
+  // one-clear-only journey. Bank earned EXP and stones only after each return.
+  const start=allowedStartLayer(progress,progress.adventurerRank+1);
+  const expeditionLevel=progress.level;
+  let pendingXp=0,pendingStones=0;
+  for(let layer=start;layer<=destination;layer++)for(let i=0;i<5;i++){
    const fight=(layer-1)*5+i+1;
    const foe=enemyForFight(data.enemies,fight);
    const enemyLevel=Number(data.floors[fight-1].enemy_level);
-   const drops=G.drops(data.items,data.collections,enemyLevel,r,{layer,playerLevel:progress.level,bossEnemyId:i===4?foe.id:null});
-   unconfirmedStones+=drops.filter(x=>x.type==='stone').length;
-   unconfirmedXp+=G.fightExperience(enemyLevel,progress.level,layer);
+   const drops=G.drops(data.items,data.collections,enemyLevel,r,
+    {layer,playerLevel:expeditionLevel,bossEnemyId:i===4?foe.id:null,firstClear:layer===destination});
+   pendingStones+=drops.filter(x=>x.type==='stone').length;
+   pendingXp+=G.fightExperience(enemyLevel,expeditionLevel,layer);
   }
-  // Boss return: only now are stones and experience banked.
-  bank+=unconfirmedStones;
-  G.experience(progress,unconfirmedXp);
-  if(progress.level>lastLevel)levels.push({from:lastLevel,to:progress.level,stones:bank,layer});
+  bank+=pendingStones;
+  G.experience(progress,pendingXp);
+  if(progress.level>lastLevel)levels.push({from:lastLevel,to:progress.level,stones:bank,layer:destination});
   lastLevel=progress.level;
-  returns.push({layer,level:progress.level,stones:bank});
-  unconfirmedStones=0;unconfirmedXp=0;
+  if(destination%10===0)progress.adventurerRank=destination;
+  returns.push({layer:destination,level:progress.level,stones:bank});
  }
  return {level:progress.level,stones:bank,levels,returns};
 }
@@ -74,21 +80,25 @@ export function stoneLedger(seed,throughLayer){
 export function upgradeSpells(spells,budget){
  const base=spells.map(s=>({...s,basePower:s.basePower??s.power}));
  const counts=base.map(()=>0);
- for(let n=0;n<budget;n++){
-  const candidate=base.map((s,i)=>({s,i})).filter(x=>x.s.role==='attack'||x.s.role==='support');
+ let spentStones=0;
+ while(spentStones<budget){
+  const candidate=base.map((s,i)=>({s,i,cost:upgradeStoneCost(counts[i])}))
+   .filter(x=>(x.s.role==='attack'||x.s.role==='support')&&x.cost<=budget-spentStones);
+  if(!candidate.length)break;
   candidate.sort((a,b)=>{
    const score=x=>{
     const orig=spells[x.i].power,now=x.s.power,next=strengthenedPower(orig,counts[x.i]+1);
     const gain=G.basePower(next)-G.basePower(now);
-    return (gain+.15)/(counts[x.i]+1)**.25;
+    return (gain+.15)/(counts[x.i]+1)**.25/x.cost;
    };
    return score(b)-score(a)||a.i-b.i;
   });
   const {i}=candidate[0];
+  spentStones+=upgradeStoneCost(counts[i]);
   counts[i]++;
   base[i].power=strengthenedPower(spells[i].power,counts[i]);
  }
- return {spells:base,counts,costs:base.map(s=>G.spellMpCost(s))};
+ return {spells:base,counts,spentStones,costs:base.map(s=>G.spellMpCost(s))};
 }
 export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',stones='none',baseStats=null,enemyMaster=data.enemies}={}){
  const r=rng(seed),base=baseStats||{hp:100,mag:10,def:7,res:7};
@@ -100,7 +110,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
  const first=(fromLayer-1)*5+1,last=toLayer*5;
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
   startLevel:level,fromLayer,toLayer,spells,attackAttributes:chosen.attackAttributes,
-  spentStones:budget,availableStones:history.stones,
+  spentStones:equipment.spentStones,stoneBudget:budget,availableStones:history.stones,
   initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[],
   enemyDebuffCasts:0,enemyDebuffFights:0,fightsReached:0,earlyHeroRecoveryCasts:0,layerStats:[]};
  for(let fight=first;fight<=last;fight++){

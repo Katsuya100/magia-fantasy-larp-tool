@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import {upgradeCircle,savedUpgrade,applySavedUpgrade,strengthenedPower,combatSpell} from '../assets/js/dungeon-upgrades.mjs';
+import {upgradeCircle,savedUpgrade,applySavedUpgrade,strengthenedPower,combatSpell,upgradeStoneCost,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
+for(const [level,cost] of [[0,5],[1,5],[9,5],[19,5],[20,6],[59,6],[60,7],[99,7],[100,8],[149,9]])assert.equal(upgradeStoneCost(level),cost);
+for(const [level,cost] of [[0,0],[1,5],[10,50],[11,55],[20,100],[21,106],[60,340],[150,1030]])assert.equal(totalUpgradeStoneCost(level),cost);
 const original={id:'circle',analysis:{attribute:'flame',role:'attack',power:100},revealed:true};
 let upgraded=upgradeCircle(original);
 assert.equal(original.analysis.power,100,'original magic is not mutated');
@@ -35,4 +37,5 @@ assert.equal(applySavedUpgrade({...legacy,analysis:{...legacy.analysis,power:39.
 assert.equal(applySavedUpgrade(legacy,{basePower:50,upgradeLevel:2}).analysis.power,60,'current profile metadata takes precedence over old circle upgrade');
 assert.equal(applySavedUpgrade(original,{basePower:-1,upgradeLevel:9}),original,'invalid saved upgrades are ignored');
 assert.throws(()=>upgradeCircle({analysis:{power:0}}),/強化できない/);
+assert.throws(()=>upgradeStoneCost(-1),/無効な強化段階/);
 console.log('PASS non-compounding magical-circle power upgrades');

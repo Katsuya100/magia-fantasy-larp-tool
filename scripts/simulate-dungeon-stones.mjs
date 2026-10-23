@@ -7,11 +7,12 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 import {allowedStartLayer} from '../assets/js/dungeon-ranks.mjs';
+import {totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 configure({balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')});
 
-export const MAGIC_STONES_PER_ULTIMATE=150;
+export const MAGIC_STONES_PER_ULTIMATE=totalUpgradeStoneCost(150);
 export const EQUIPPED_CIRCLES=5;
 export const ALL_ULTIMATE_COST=MAGIC_STONES_PER_ULTIMATE*EQUIPPED_CIRCLES;
 export const SAMPLES_DEFAULT=512;
@@ -24,7 +25,7 @@ export function seededRandom(seed){
 
 function fightRewards(layer,playerLevel,random,firstClear=false){
  // Exactly five encounters per layer. The existing dropCounts function reads
- // the actual stone chance, including the repeat-clear over-level reduction.
+ // the actual stone chance, without an overlevel reduction on repeat clears.
  const enemyLevel=targetClearLevel(layer);
  let stone=0,xp=0;
  for(let fight=0;fight<5;fight++){
@@ -65,8 +66,12 @@ function progressTo100(random){
  }
  return {level:profile.level,rank:profile.adventurerRank,returns:100,
   fights,layerClears,repeatedLayerClears,underleveledStarts,stones,milestones,
-  evenFiveLevels:Array.from({length:EQUIPPED_CIRCLES},(_,i)=>
-   Math.floor(stones/EQUIPPED_CIRCLES)+(i<stones%EQUIPPED_CIRCLES?1:0)),
+  evenFiveLevels:Array.from({length:EQUIPPED_CIRCLES},(_,i)=>{
+   const bank=Math.floor(stones/EQUIPPED_CIRCLES)+(i<stones%EQUIPPED_CIRCLES?1:0);
+   let upgrades=0;
+   while(upgrades<150&&totalUpgradeStoneCost(upgrades+1)<=bank)upgrades++;
+   return upgrades;
+  }),
   possibleUltimateCircles:Math.min(EQUIPPED_CIRCLES,Math.floor(stones/MAGIC_STONES_PER_ULTIMATE))};
 }
 
@@ -114,7 +119,7 @@ export function summarizeStoneEconomy(samples=SAMPLES_DEFAULT,seed=20261019){
   success:'Every battle won; rank awarded at each 10th boss (>=80% HP and MP)',
   returns:'Return after each new layer to bank XP; start at latest rank checkpoint',
   farming:'After 100F, replay 101F or 91-100F at Lv150; return every farm sortie',
-  expenditure:'Every earned stone can be invested into five circles at one stone per upgrade',
+  expenditure:'Every 10 purchased upgrades increase the next upgrade stone cost by 1',
   notModeled:'Combat failures, items, death, time, and player decisions'
  },progression:{
   returns:campaigns[0].progression.returns,

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {mpCost} from '../assets/js/dungeon-core.mjs';
+import {upgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {openStore,saveProfile,putCircle,getProfile,allCircles} from '../assets/js/dungeon-store.mjs';
 const env=fakeDungeonBrowser({storage:{rejectBlobRewrite:true}}),$=id=>env.document.getElementById(id);
 const button=dataset=>({disabled:false,dataset,closest(){return this;}});
@@ -9,13 +10,13 @@ try{
  const db=await openStore(env.factory);
  await saveProfile(db,{
   name:'魔術師',level:1,xp:0,base:{hp:100,mag:10,def:7,res:7},returns:0,attempts:0,
-  inventory:[],collection:{},magicStones:3,deepestReturnedLayer:0,slots:[],run:null
+  inventory:[],collection:{},magicStones:15,deepestReturnedLayer:0,slots:[],run:null
  });
  await putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:100},revealed:true});
  await assert.rejects(putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:110},revealed:true}),/Error preparing Blob\/File data/,'simulate mobile IndexedDB failure on a photo rewrite');
  await import('../assets/js/dungeon-app.mjs?integration=upgrade');
  await wait(()=>$('libraryCards').innerHTML.includes('circle-1'));
- assert.match($('magicStoneBalance').textContent,/3個/);
+ assert.match($('magicStoneBalance').textContent,/15個/);
  await env.document.click(button({view:'library'}));
  // Panels must overlap while crossfading; no instant removal, root zoom, or black bars.
  globalThis.window.matchMedia=()=>({matches:false});
@@ -32,9 +33,10 @@ try{
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,true,'upgrade requires a dialog');
  assert.match($('circleActionMessage').textContent,/10%/);
+ assert.equal(upgradeStoneCost(20),6,'cost increases at the twenty-first upgrade');
  assert.match($('circleActionMessage').textContent,/。\nこの強化/,'confirmation sentences display on separate lines');
  await $('cancelCircleAction').fire('click');
- assert.equal((await getProfile(db)).magicStones,3,'cancel leaves stones untouched');
+ assert.equal((await getProfile(db)).magicStones,15,'cancel leaves stones untouched');
  assert.equal((await allCircles(db))[0].analysis.power,100,'cancel leaves power untouched');
  await env.document.click(button({upgrade:'circle-1'}));
  await $('confirmCircleAction').fire('click');
@@ -42,10 +44,11 @@ try{
  let saved=(await allCircles(db))[0];
  assert.equal(saved.analysis.power,110,'first stone boosts by 10% of initial 100');
  assert.equal(saved.upgradeLevel,1);
- assert.equal((await getProfile(db)).magicStones,2);
+ assert.equal((await getProfile(db)).magicStones,10);
  assert.equal((await allCircles(db))[0].analysis.power,110,'read applies profile metadata without rewriting photo record');
  assert.equal(env.factory.databases.get('magia-dungeon-v1').get('circles').get('circle-1').analysis.power,100,'photo record stays unmodified');
  assert.equal($('magicDetailsDialog').open,true,'enhancement opens full circle feedback');
+ assert.match($('magicStoneStock').textContent,/次の強化：5個/,'details display actual next upgrade cost');
  assert.equal($('magicDetailsDialog').dataset.enhancing,'true','ritual begins');
  const originalMpMarkup='<dt>MP</dt><dd>'+mpCost(100)+'</dd>';
  assert.ok($('magicDetailsStats').innerHTML.includes(originalMpMarkup),'upgraded detail still shows the original MP cost');
@@ -59,8 +62,8 @@ try{
  assert.equal(saved.analysis.power,120,'second upgrade works despite Blob rewrite failure');
  assert.equal(saved.basePower,100);
  assert.ok($('magicDetailsStats').innerHTML.includes(originalMpMarkup),'repeat upgrades do not change MP display');
- assert.equal((await getProfile(db)).magicStones,1);
- assert.match($('magicStoneBalance').textContent,/1個/);
+ assert.equal((await getProfile(db)).magicStones,5);
+ assert.match($('magicStoneBalance').textContent,/5個/);
  const reopened=await openStore(env.factory);
  assert.equal((await allCircles(reopened))[0].analysis.power,120,'power survives reopening the database');
  reopened.close();
