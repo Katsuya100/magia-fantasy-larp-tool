@@ -78,8 +78,8 @@ globalThis.IntersectionObserver=class{
 URL.createObjectURL=blob=>{const url='blob:test-'+(made.length+1);made.push({url,blob});return url;};
 URL.revokeObjectURL=url=>revoked.push(url);
 globalThis.createImageBitmap=async()=>({width:640,height:480,close(){}});
-globalThis.document={createElement(){return {width:0,height:0,getContext(){return {drawImage(){}};},
- toBlob(cb,type){cb(new Blob(['tiny'],{type}));}};}};
+globalThis.document={createElement(){const canvas={width:0,height:0,getContext(){return {drawImage(){canvasSize=canvas.width;}};},
+ toBlob(cb,type){cb(new Blob(['tiny'],{type}));}};return canvas;}};
 try{
  const photo={dataset:{circlePhotoId:circle.id},src:'',isConnected:true,
   closest:selector=>selector==='#library'?{}:null,getBoundingClientRect:()=>({width:140}),
