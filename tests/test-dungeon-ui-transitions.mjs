@@ -10,8 +10,11 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,19,'existing dialogs plus two scoped onboarding dialogs');
-assert.equal(new Set(dialogs).size,19);
+assert.equal(dialogs.length,20,'existing dialogs plus the explicitly confirmed EXP rescue dialog');
+assert.ok(dialogs.includes('restoreOriginalXpDialog'),'recoverable EXP migration has an in-game confirmation dialog');
+assert.match(html,/id="confirmRestoreOriginalXp"[^>]*class="danger"/,'irreversible rollback is visibly dangerous');
+assert.match(app,/restoreDungeonXpMigrationBackup\(db\)/,'recovery confirmation invokes verified restore');
+assert.equal(new Set(dialogs).size,20);
 assert.match(css,/dialog\{[^}]*transition:opacity \.2s[^}]*display \.2s allow-discrete,overlay \.2s allow-discrete/);
 assert.match(css,/dialog\[open\]\{opacity:1;transform:none\}/);
 assert.match(css,/@starting-style\{\s*dialog\[open\]/);
