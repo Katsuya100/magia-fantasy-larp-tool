@@ -5,7 +5,7 @@ export const MIN_DUNGEON_POWER=250;
 const INNER_RADIUS=.255;
 const GUIDE_RADIUS=.92;
 // The same scale in both axes preserves each drawn letter's aspect ratio.
-export const GLYPH_INK_SCALE=.09;
+export const GLYPH_INK_SCALE=.11;
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 
