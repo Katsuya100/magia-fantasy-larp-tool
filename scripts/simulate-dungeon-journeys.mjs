@@ -212,7 +212,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,maxSortie
      circles:state.circles.filter(c=>c.active).map(c=>({role:c.role,attribute:c.attribute,
       basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
       mpCost:G.mpCost(c.basePower),ink:c.ink})),
-     carry:carry.map(item=>({id:item.id,value:item.value,bonus:item.bonus})),
+     carry:carry.filter(Boolean).map(item=>({id:item.id,value:item.value,bonus:item.bonus})),
      playerBase:{hp:100,mag:10,def:7,res:7},
      status:'FIRST_ENTRY_NOT_A_FIXED_BENCHMARK'};
    }
