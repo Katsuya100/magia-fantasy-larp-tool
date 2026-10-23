@@ -282,7 +282,10 @@ for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g
  assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+currentRelease,'stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
-assert.match(store,/from '\.\/dungeon-core\.mjs'/);
+assert.ok(store.includes("from './dungeon-core.mjs?v="+currentRelease+"'"),
+ 'storage conversion uses the current, cache-busted XP core');
+assert.ok(cloudSync.includes("from './dungeon-store.mjs?v="+currentRelease+"'"),
+ 'Drive sync and gameplay share one cache-busted save module');
 assert.match(picker,/from '\.\/dungeon-loadout\.mjs'/);
 assert.match(picker,/itemEffectIcons\(value\)/,'preparation item tiles share battle/reward effect formatting');
 assert.doesNotMatch(picker,/picker-equipped|✓ 選択中/,'circle picker no longer renders a selected badge');
