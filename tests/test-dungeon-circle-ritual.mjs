@@ -164,7 +164,7 @@ try{
  const labels=failedRoot.children.find(n=>n.className==='circle-ritual__labels');
  assert.deepEqual(labels.children.map(n=>n.textContent),['⚖️ law','✚ 回復の紋'],
   'failed reveal must have the same two labels as the original successful result');
- assert.equal(failedRoot.attributes['aria-label'],'⚖️ 秩序の相、✚ 回復の紋',
+ assert.equal(failedRoot.attributes['aria-label'],'⚖️ law、✚ 回復の紋',
   'failed reveal keeps the normal result dialog label');
  const proceed=failedRoot.children.at(-1);
  assert.equal(proceed.disabled,false,'reduced motion still permits dismissal');
