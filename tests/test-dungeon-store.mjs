@@ -23,8 +23,9 @@ await saveProfile(db,p);
 // Existing signed saves must convert EXP exactly once, including unbanked
 // battle rewards and unfinished return-screen rewards.
 delete p.xpScaleVersion; // Simulate a genuine pre-migration signed save.
-p.level=92;p.xp=90000;p.run.xp=45000;
-p.pendingReturn={gained:22500,before:{level:92,xp:4500},steps:['xp'],step:0};
+p.level=92;p.xp=20000;p.run.xp=45000;
+// The pending reward must reconcile with the already-saved current gauge.
+p.pendingReturn={gained:15500,before:{level:92,xp:4500},steps:['xp'],step:0};
 await saveProfile(db,p);
 const converted=await migrateDungeonXp(db);
 assert.ok(converted.xp>0&&converted.xp<2000,'old XP progress converts to flatter curve');
