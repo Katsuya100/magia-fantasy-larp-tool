@@ -289,14 +289,19 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
    y:.5-radius*Math.cos(angle+baseAngle)
   });
   ctx.save();ctx.globalAlpha=1-t;
+  // Keep all three radial guides wholly BETWEEN the actual inner/outer
+  // circles. The small inset prevents even round dashed endpoints from
+  // overpainting either ring at any zoom or device pixel ratio.
+  const guideInner=INNER_RADIUS+.004,guideOuter=.43-.004;
+  ctx.lineCap='butt';
   const halfStep=GLYPH_STEP/2;
   ctx.strokeStyle='#b8a0d6';ctx.lineWidth=1.35*dpr;ctx.setLineDash([3*dpr,5*dpr]);
   for(const angle of [-halfStep,halfStep]){
-   const p=ringPoint(INNER_RADIUS-.025,angle),q=ringPoint(.43+.025,angle);
+   const p=ringPoint(guideInner,angle),q=ringPoint(guideOuter,angle);
    ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
   }
   ctx.strokeStyle='#f3dcaa';ctx.lineWidth=dpr;ctx.setLineDash([1.5*dpr,3.4*dpr]);
-  let p=ringPoint(INNER_RADIUS-.045,0),q=ringPoint(.43+.045,0);
+  let p=ringPoint(guideInner,0),q=ringPoint(guideOuter,0);
   ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
   ctx.beginPath();
   for(let i=0;i<=96;i++){
