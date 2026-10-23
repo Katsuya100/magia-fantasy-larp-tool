@@ -175,8 +175,9 @@ try{
  await $('closeMagicDetails').fire('click');
  const page=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
  const libraryStructureMarkup=page.split('<section id="library"')[1].split('</section>')[0];
- assert.ok(libraryStructureMarkup.indexOf('魔法陣の描き方・登録規則')<libraryStructureMarkup.indexOf('id="useMagicInk"'));
- assert.ok(libraryStructureMarkup.indexOf('id="useMagicInk"')<libraryStructureMarkup.indexOf('id="openCircleDrawing"'));
+ assert.ok(libraryStructureMarkup.indexOf('魔法陣の描き方・登録規則')<libraryStructureMarkup.indexOf('id="openCircleDrawing"'));
+ assert.doesNotMatch(libraryStructureMarkup,/useMagicInk|magicInkBalance/,'old selector is absent from grimoire');
+
  assert.ok(libraryStructureMarkup.indexOf('id="openCircleDrawing"')<libraryStructureMarkup.indexOf('id="openCircleCamera"'));
  assert.doesNotMatch(libraryStructureMarkup,/id="cameraPane"|id="tutorialReplay"/);
  assert.match(page,/id="cameraStop"[^>]*>閉じる<\/button>\s*<button[^>]*id="cameraCapture"[^>]*>撮影📷<\/button>/);

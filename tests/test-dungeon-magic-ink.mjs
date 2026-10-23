@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {bossDropsMagicInk,inkEnhancedAnalysis,BOSS_INK_DROP_CHANCE,MAGIC_INK_ID} from '../assets/js/dungeon-ink.mjs';
-import {drops,parseCsv} from '../assets/js/dungeon-core.mjs';
+import {bossDropsMagicInk,inkEnhancedAnalysis,BOSS_INK_DROP_CHANCE,MAGIC_INK_ID,MAGIC_INK_NAME} from '../assets/js/dungeon-ink.mjs';
+import {drops,parseCsv,mpCost} from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 
 assert.equal(BOSS_INK_DROP_CHANCE,.20);
+assert.equal(MAGIC_INK_NAME,'魔導墨');
 assert.equal(bossDropsMagicInk(null,()=>0),false,'normal enemies cannot drop ink');
 assert.equal(bossDropsMagicInk('boss_l001',()=>.19999),true);
 assert.equal(bossDropsMagicInk('boss_l001',()=>.2),false);
@@ -14,11 +15,15 @@ assert.equal(successes,20,'exact 20% probability boundary');
 assert.equal(inkEnhancedAnalysis({attribute:'law',role:'attack',power:250}).power,275);
 assert.equal(inkEnhancedAnalysis({power:201}).power,222,'fractional bonus rounds upwards');
 assert.equal(inkEnhancedAnalysis({power:150}).power,165,'ink is applied after hand-drawn adjustment');
+for(let count=0;count<=5;count++)assert.equal(inkEnhancedAnalysis({power:250},count).power,250+25*count,'each ink raises the base by 10%');
+assert.throws(()=>inkEnhancedAnalysis({power:250},6));
+assert.throws(()=>inkEnhancedAnalysis({power:250},-1));
 
 const read=async name=>parseCsv(await readFile(new URL('../assets/data/'+name,import.meta.url),'utf8'));
 const [items,collections,balance,levels,floors,playerBase]=await Promise.all(
  ['dungeon-consumables.csv','dungeon-collections.csv','dungeon-balance.csv','dungeon-levels.csv','dungeon-floors.csv','dungeon-player-base.csv'].map(read));
 configure({balance,levels,floors,playerBase});
+assert.ok(mpCost(inkEnhancedAnalysis({power:2500},5).power)>mpCost(2500),'base-power ink increases MP cost');
 const boss={layer:1,bossEnemyId:'boss_l001'};
 assert.deepEqual(drops(items,collections,1,()=>.1,boss).filter(x=>x.type==='ink'),[{type:'ink',id:MAGIC_INK_ID}]);
 assert.equal(drops(items,collections,1,()=>.1,{layer:1}).some(item=>item.type==='ink'),false);
@@ -36,7 +41,14 @@ assert.match(css,/@keyframes boss-cinematic-rise\{\s*0%\{opacity:0;transform:tra
 assert.match(css,/@keyframes snappy-rush-hero\{[\s\S]*?translateX\(34px\)/,'hero charges toward right');
 assert.match(css,/@keyframes snappy-rush-enemy\{[\s\S]*?translateX\(-34px\)/,'enemy charges toward left');
 assert.match(css,/@keyframes boss-cinematic-collapse\{[\s\S]*?translateX\(5px\)/,'defeated boss recoils to right');
-assert.match(html,/id="useMagicInk"/,'ink selection available only in grimoire');
+assert.match(html,/id="magicInkDialog"/,'ink is selected in a dedicated dialog');
+assert.match(html,/<button type="button" id="cancelMagicInk" class="subtle" autofocus>戻る<\/button>/,'opening the dialog focuses the back button instead of expanding the dropdown');
+assert.doesNotMatch(html,/<select id="magicInkCount"[^>]*autofocus/,'ink dropdown must open only on user interaction');
+assert.match(html,/魔導墨を使うと威力の高い魔法陣を作成できます。/);
+assert.doesNotMatch(html,/id="useMagicInk"|magic-ink-option|魔導のインク/,'old grimoire control is removed');
+assert.match(app,/Array\.from\(\{length:maximum\+1\}/,'dropdown offers only 0–5 and available stock');
+assert.match(app,/magicInk:profile\.magicInk-inkCount/,'selected ink count is deducted');
+assert.match(app,/creationInk:inkCount,basePower:enhanced\.power/,'enhanced base power is persisted');
 assert.match(app,/await saveProfileWithCircles\(db,nextProfile,\[analyzed\]\)/,'ink consumption and new circle atomic');
 assert.match(app,/if\(circle.creationInk\)/,'magic-circle details record use of ink');
 console.log('PASS ink boss drops, crafting bonus, atomic registration and orientation');

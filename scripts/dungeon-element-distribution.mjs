@@ -82,7 +82,7 @@ export const combatBalanceResistCalibrations=Object.freeze({
  "foe_l039_3": 0.12,
  "foe_l040_1": 0.12,
  "foe_l040_3": 0.12,
- "boss_l040": 0.12,
+ "boss_l040": 0.02,
  "foe_l069_2": 0.12,
  "foe_l070_2": 0.25,
  "boss_l070": 0.35,

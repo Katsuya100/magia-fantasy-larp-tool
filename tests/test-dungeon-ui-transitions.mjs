@@ -10,11 +10,13 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,20,'existing dialogs plus the explicitly confirmed EXP rescue dialog');
-assert.ok(dialogs.includes('restoreOriginalXpDialog'),'recoverable EXP migration has an in-game confirmation dialog');
-assert.match(html,/id="confirmRestoreOriginalXp"[^>]*class="danger"/,'irreversible rollback is visibly dangerous');
-assert.match(app,/restoreDungeonXpMigrationBackup\(db\)/,'recovery confirmation invokes verified restore');
-assert.equal(new Set(dialogs).size,20);
+assert.equal(dialogs.length,23,'native dialogs include alchemy, magic ink and EXP recovery');
+assert.equal(new Set(dialogs).size,23);
+assert.ok(dialogs.includes('alchemyDialog')&&dialogs.includes('alchemyPickerDialog'),'alchemy dialogs share the native transition manager');
+assert.ok(dialogs.includes('magicInkDialog'),'magic ink selection uses the existing dialog manager');
+assert.ok(dialogs.includes('restoreOriginalXpDialog'),'migration recovery has a guarded confirmation');
+assert.match(html,/id="confirmRestoreOriginalXp"[^>]*class="danger"/,'recovery warns of irreversible progress loss');
+assert.match(app,/restoreDungeonXpMigrationBackup\(db\)/,'user-initiated legacy restoration is wired');
 assert.match(css,/dialog\{[^}]*transition:opacity \.2s[^}]*display \.2s allow-discrete,overlay \.2s allow-discrete/);
 assert.match(css,/dialog\[open\]\{opacity:1;transform:none\}/);
 assert.match(css,/@starting-style\{\s*dialog\[open\]/);
@@ -143,6 +145,8 @@ assert.ok(appended.every(node=>node.removed),'ghosts are removed after the 200ms
 // excluded. An HTML <dialog> tag alone does not establish the visual category.
 const closable={
  loadoutDialog:'closeLoadoutDialog',
+ alchemyDialog:'closeAlchemy',
+ alchemyPickerDialog:'closeAlchemyPicker',
  magicDetailsDialog:'closeMagicDetails',
  circleActionDialog:'cancelCircleAction',
  magicStoneTutorialDialog:'closeMagicStoneTutorial',
@@ -152,7 +156,7 @@ const closable={
  googleDriveExpiredDialog:'data-action="later"',
  deleteDataDialog:'cancelDeleteData'
 };
-const fixed=['saveErrorDialog','backupSetupDialog','circleFirstChoiceDialog','nameDialog','restoreOriginalXpDialog'];
+const fixed=['saveErrorDialog','backupSetupDialog','circleFirstChoiceDialog','magicInkDialog','nameDialog','restoreOriginalXpDialog'];
 const overlayFlows={
  circleDrawingDialog:['circleDrawingClose','閉じる'],
  circleCameraDialog:['cameraStop','閉じる'],
@@ -197,7 +201,7 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
 const pagedNative=['circleDrawingLessonDialog'];
-assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 20 native dialogs accounted for');
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 23 native dialogs accounted for');
 for(const id of pagedNative){
  assert.match(tagOf(id),/data-dungeon-frame="paged"/,'native lesson is a paged frame');
  const content=dialogMarkup(id);

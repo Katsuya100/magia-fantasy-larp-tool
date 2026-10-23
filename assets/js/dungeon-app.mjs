@@ -1,37 +1,38 @@
-import * as G from './dungeon-core.mjs?v=20261023.41';
-import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261023.41';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261023.41';
-import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261023.41';
-import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261023.41';
-import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261023.41';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261023.41';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261023.41';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261023.41';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261023.41';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261023.41';
+import * as G from './dungeon-core.mjs?v=20261023.46';
+import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261023.46';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261023.46';
+import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261023.46';
+import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261023.46';
+import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261023.46';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261023.46';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261023.46';
+import {alchemyRecipe,alchemyAutoSelect,craftAlchemy,alchemyByproductRates,alchemyMilestones} from './dungeon-alchemy.mjs?v=20261023.46';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261023.46';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261023.46';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261023.46';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261023.41';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261023.41';
-import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261023.41';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261023.41';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261023.41';
-import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261023.41';
-import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261023.41';
-import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261023.41';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261023.41';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261023.41';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261023.41';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261023.41';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261023.41';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261023.41';
-import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261023.41';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261023.41';
-import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261023.41';
-import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261023.41';
-import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261023.41';
-import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261023.41';
-import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261023.41';
-import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261023.41';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261023.46';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261023.46';
+import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261023.46';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261023.46';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261023.46';
+import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261023.46';
+import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261023.46';
+import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261023.46';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261023.46';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261023.46';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261023.46';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261023.46';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261023.46';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261023.46';
+import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261023.46';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261023.46';
+import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261023.46';
+import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261023.46';
+import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261023.46';
+import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261023.46';
+import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261023.46';
+import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261023.46';
 let cloudSyncController,drawingEditor;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -41,6 +42,8 @@ const listView={
  pickerFilter:'all',pickerSort:'newest'
 };
 const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'default'}};
+let alchemy=null,alchemyPickerSlot=-1;
+const alchemyPickerView={filter:'all',sort:'default'};
 const circleImages=createDungeonPhotoManager(()=>db,id=>circles.find(c=>c.id===id));
 function refreshCirclePhotos(){
  circleImages.refresh([...sceneIds.filter(id=>!$(id).hidden).map(id=>$(id)),
@@ -82,6 +85,7 @@ let busyAction=false,playingEffects=false,savingName=false;
 const battleInput=createBattleInputBuffer();
 let loadoutSaveQueue=Promise.resolve(),loadoutSaveRevision=0;
 let photoAnalysisEpoch=0,lastCaptureRegistration=0,cameraReturnScroll=null,pendingCircleAction=null,upgradeRitualEpoch=0,cameraAfterTutorial=false;
+let creationInkCount=0,pendingCreationMode=null;
 let returnFlow=null,returnAnimationToken=0,tutorial=null,magicStoneTutorial=null;
 const isFirstCircleChoice=()=>!profile.initialCircleChoiceDone&&!profile.tutorialDone&&!circles.length&&!profile.attempts&&!profile.run;
 async function exclusive(fn){if(busyAction)return;busyAction=true;try{return await fn();}finally{busyAction=false;}}
@@ -456,12 +460,13 @@ function render(){
    +'<div class="relic-art" aria-hidden="true">'+mark+'</div>'
    +(found?'<span class="relic-rarity" aria-hidden="true">'+collectionRarityMarks(rarity)+'</span>':'')
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
-   +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
+   +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p>'
+    +'<button type="button" class="subtle relic-alchemy" data-alchemy="'+esc(item.id)+'" '+(count<2||profile.run?'disabled':'')+'>錬金</button></article>';
  }).join('')||'<p class="collection-empty">該当するコレクションはありません。</p>';
  $('magicStoneBalance').textContent='✦ 魔導石：'+profile.magicStones+'個';
- $('magicInkBalance').textContent=MAGIC_INK_NAME+'：'+(profile.magicInk||0)+'個';
- $('useMagicInk').disabled=Boolean(profile.run)||Boolean(activeAnalysis)||!(profile.magicInk>0);
- if($('useMagicInk').disabled)$('useMagicInk').checked=false;
+ 
+ 
+ 
   const circleIndexes=circleListIndexes(circles,{
    role:listView.libraryRole,attribute:listView.libraryAttribute,sort:listView.librarySort,slots
   });
@@ -1192,7 +1197,7 @@ async function parseDungeonMagic(circle,valid,request){
   return {analysis:failedDungeonAnalysis(),failed:true};
  }
 }
-async function analyzeCapturedCircle(circle,useInk=false){
+async function analyzeCapturedCircle(circle,inkCount=0){
  // Show the full analysis screen. Capture returns to its dialog on cancellation.
  const request={id:circle.id,type:'capture',epoch:photoAnalysisEpoch,origin:circle.origin};
  activeAnalysis=request;
@@ -1205,20 +1210,21 @@ async function analyzeCapturedCircle(circle,useInk=false){
   const result=await parseDungeonMagic(circle,valid,request);
   if(!valid())return;
   const reduced={...result.analysis,power:circle.origin==='drawn'?drawnPower(result.analysis.power):Math.max(MIN_DUNGEON_POWER,result.analysis.power)};
-  if(useInk&&!(profile.magicInk>0))throw Error('魔導のインクが不足しています。');
-  const analyzed={...savePreanalysis(circle,useInk?inkEnhancedAnalysis(reduced):reduced),...(useInk?{creationInk:true}:{})};
+  if(!Number.isSafeInteger(inkCount)||inkCount<0||inkCount>5||inkCount>profile.magicInk)throw Error('魔導墨が不足しています。');
+  const enhanced=inkCount?inkEnhancedAnalysis(reduced,inkCount):reduced;
+  const analyzed={...savePreanalysis(circle,enhanced),...(inkCount?{creationInk:inkCount,basePower:enhanced.power}:{})};
   // The new circle and ink cost share a single integrity-checked transaction.
-  if(useInk){
+  if(inkCount){
    await loadoutSaveQueue;
    if(!valid())return;
-   const nextProfile={...profile,magicInk:profile.magicInk-1};
+   const nextProfile={...profile,magicInk:profile.magicInk-inkCount};
    await saveProfileWithCircles(db,nextProfile,[analyzed]);
    profile=nextProfile;
   }else await putCircle(db,analyzed);
   if(!valid())return;
   circles=newestCirclesFirst([...circles,analyzed]);
   if(circle.origin!=='drawn')stopCamera();
-  $('useMagicInk').checked=false;
+  creationInkCount=0;
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
@@ -1359,14 +1365,14 @@ async function capture(){
  // Save only when analysis or its weak fallback has been finalized.
  $('cameraError').hidden=true;$('cameraError').textContent='';
  closeDungeonDialog($('circleCameraDialog'));
- await analyzeCapturedCircle(circle,$('useMagicInk').checked&&profile.magicInk>0);
+ await analyzeCapturedCircle(circle,creationInkCount);
 }
 async function saveDrawnCircle(blob){
  if(profile.run||activeAnalysis)throw Error('探索中・解析中は魔法陣を登録できません。');
  lastCaptureRegistration=Math.max(nextCircleRegistration(circles),lastCaptureRegistration+1);
  const original={...newCapturedCircle(crypto.randomUUID(),blob,lastCaptureRegistration),origin:'drawn'};
  const circle=profile.permadeath?markCircleCreator(original,profile.name):original;
- await analyzeCapturedCircle(circle,$('useMagicInk').checked&&profile.magicInk>0);
+ await analyzeCapturedCircle(circle,creationInkCount);
 }
 function oneSentencePerLine(value){return String(value).replace(/([。！？])\s*(?=\S)/gu,'$1\n');}
 function openMagicDetails(id){
@@ -1392,7 +1398,7 @@ function openMagicDetails(id){
  $('magicDetailsImage').src=circleImages.get(circle.image);
  const info=circleEffectDetails(circle,masters.buffs,G.statusDuration);
  const rows=[['作成方法',circle.origin==='drawn'?'簡易（手書き）':'本格（撮影）'],['属性',d.attribute],['種別',d.role],['効果の詳細',info.effect]];
- if(circle.creationInk)rows.push(['🖋️ 魔導のインク','登録時に基礎威力＋10%（適用済み）']);
+ if(circle.creationInk){const count=Number.isInteger(circle.creationInk)?circle.creationInk:1;rows.push(['🖋️ 魔導墨',count+'個使用（基礎威力＋'+count*10+'%）']);}
  if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
  rows.push(['MP',d.mp],['威力',d.power]);
  if(isRevealed(circle)&&circle.upgradeLevel)rows.push(['強化', '+'+(circle.upgradeLevel*10)+'%']);
@@ -1466,6 +1472,94 @@ async function confirmCircleAction(){
   pendingCircleAction=null;
  }catch(e){note('魔法陣の処理に失敗しました：'+e.message);}
 }
+
+function renderAlchemy(){
+ if(!alchemy)return;
+ const {relic,slots:choices}=alchemy;
+ $('alchemyBaseName').textContent=relic.name;
+ $('alchemySlots').innerHTML=itemGrid(choices,profile.inventory,5,true,itemName,esc,true,'open-alchemy-item');
+ const indexes=choices.filter(Number.isInteger);
+ let label=indexes.length+' / 5',valid=indexes.length===5;
+ if(valid)try{
+  const made=alchemyRecipe(relic,indexes.map(index=>profile.inventory[index]),masters.items);
+  label=itemName(made)+' ・ '+itemEffectIcons(made);
+ }catch(error){valid=false;label=error.message;}
+ $('alchemyPreview').textContent=label;
+ const ingredients=indexes.map(index=>profile.inventory[index]).filter(Boolean);
+ const rates=alchemyByproductRates(relic,ingredients);
+ const pct=chance=>(chance*100).toFixed(1).replace(/\.0$/,'')+'%';
+ $('alchemyByproductChance').textContent='副産物の確率：✦ 魔導石 '+pct(rates.stone)+' / 🖋️ 魔導墨 '+pct(rates.ink);
+ const progress=alchemyMilestones(profile);
+ $('alchemyMilestoneProgress').textContent='錬金累計 '+progress.count+'回 · 魔導石確定まであと'+progress.stoneIn+'回 · 魔導墨確定まであと'+progress.inkIn+'回';
+ $('alchemyCraft').disabled=!valid;
+}
+function openAlchemy(id){
+ const relic=masters.collections.find(row=>row.id===id);
+ if(!relic||profile.run||Number(profile.collection[id]||0)<2)return;
+ alchemy={relic,slots:Array(5).fill(null)};
+ $('alchemyError').textContent='';
+ renderAlchemy();
+ showDungeonDialog($('alchemyDialog'));
+}
+function closeAlchemy(){
+ if($('alchemyPickerDialog').open)closeDungeonDialog($('alchemyPickerDialog'));
+ if($('alchemyDialog').open)closeDungeonDialog($('alchemyDialog'));
+ alchemyPickerSlot=-1;
+ alchemy=null;
+}
+function renderAlchemyPicker(){
+ if(!alchemy||alchemyPickerSlot<0)return;
+ const indexes=itemListIndexes(profile.inventory,masters.items,{kind:alchemyPickerView.filter,sort:alchemyPickerView.sort});
+ $('alchemyPickerOptions').innerHTML=indexes.length
+  ?itemChoices(profile.inventory,alchemy.slots,itemName,esc,indexes,alchemyPickerSlot,'choose-alchemy-item')
+  :'<p class="collection-empty">条件に合うアイテムはありません。</p>';
+ $('alchemyClearSlot').hidden=alchemy.slots[alchemyPickerSlot]===null;
+}
+function openAlchemyPicker(index){
+ if(!alchemy||!Number.isInteger(index)||index<0||index>=5)return;
+ alchemyPickerSlot=index;
+ const filters=[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['elixir','HP/MP回復'],['clear','状態異常解除'],['clear_all','全状態異常解除'],['escape','脱出'],['revive','復活']];
+ const sorts=[['default','所持品の順番'],['name','名前順'],['kind','種類順'],['value','効果量が高い順'],['value-asc','効果量が低い順']];
+ $('alchemyPickerFilter').innerHTML=filters.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
+ $('alchemyPickerSort').innerHTML=sorts.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
+ $('alchemyPickerFilter').value=alchemyPickerView.filter;
+ $('alchemyPickerSort').value=alchemyPickerView.sort;
+ renderAlchemyPicker();
+ showDungeonDialog($('alchemyPickerDialog'));
+}
+function closeAlchemyPicker(){
+ if($('alchemyPickerDialog').open)closeDungeonDialog($('alchemyPickerDialog'));
+ alchemyPickerSlot=-1;
+}
+function chooseAlchemyItem(index){
+ if(!alchemy||alchemyPickerSlot<0||index!==null&&!profile.inventory[index])return;
+ alchemy.slots=setSlot(alchemy.slots,alchemyPickerSlot,index);
+ closeAlchemyPicker();
+ renderAlchemy();
+}
+async function confirmAlchemy(){
+ if(!alchemy||profile.run)return;
+ $('alchemyCraft').disabled=true;
+ try{
+  await loadoutSaveQueue;
+  const next=craftAlchemy(profile,alchemy.relic,alchemy.slots,masters.items,masters.buffs);
+  await saveProfile(db,next);
+  const addedStones=next.magicStones-(Number(profile.magicStones)||0);
+  const addedInk=next.magicInk-(Number(profile.magicInk)||0);
+  const item=next.inventory.at(-1);
+  profile=next;
+  carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
+  closeAlchemy();
+  render();
+  const earned=[addedStones?'✦ 魔導石 ×'+addedStones:'',addedInk?'🖋️ 魔導墨 ×'+addedInk:''].filter(Boolean);
+  $('alchemyResult').textContent='錬金成功：'+itemName(item)+(earned.length?' / 副産物：'+earned.join('・'):' / 副産物なし');
+ }catch(error){
+  $('alchemyError').textContent='錬金に失敗しました：'+error.message;
+  note('錬金に失敗しました：'+error.message);
+  renderAlchemy();
+ }
+}
+
 function renderLoadoutChoices(){
  if(!picker)return;
  $('loadoutOptions').className=picker.kind==='circle'?'picker-grid circle-picker-grid':'picker-grid';
@@ -1659,6 +1753,21 @@ function wireFavoriteHold(){
 function showFirstCircleChoice(){
  if(!$('circleFirstChoiceDialog').open)showDungeonDialog($('circleFirstChoiceDialog'));
 }
+function beginCircleCreation(mode,count=0){
+ creationInkCount=count;
+ if(mode==='draw'){closeCamera();drawingEditor.open();}
+ else openCircleCamera();
+}
+function requestCircleCreation(mode){
+ if(profile.run||activeAnalysis)return;
+ if(!(profile.magicInk>0)){beginCircleCreation(mode);return;}
+ pendingCreationMode=mode;
+ const maximum=Math.min(5,profile.magicInk);
+ $('magicInkCount').innerHTML=Array.from({length:maximum+1},(_,i)=>'<option value="'+i+'">'+i+'個</option>').join('');
+ $('magicInkCount').value='0';
+ $('magicInkStock').textContent='所持：'+profile.magicInk+'個';
+ showDungeonDialog($('magicInkDialog'));
+}
 function wire(){
  syncCameraUi(false);
  const tryDrawingFingerIntro=()=>{
@@ -1703,7 +1812,7 @@ function wire(){
     await persist();
     closeDungeonDialog($('circleFirstChoiceDialog'));
     show('library');
-    if(mode==='draw')drawingEditor.open();else openCircleCamera();
+    requestCircleCreation(mode);
    }catch(error){
     profile.initialCircleChoiceDone=false;
     $('circleFirstChoiceError').textContent='遊び方を保存できませんでした：'+error.message;
@@ -1713,6 +1822,15 @@ function wire(){
   });
  }
  $('circleFirstChoiceDialog').addEventListener('cancel',event=>event.preventDefault());
+  $('cancelMagicInk').addEventListener('click',()=>{pendingCreationMode=null;closeDungeonDialog($('magicInkDialog'));});
+  $('confirmMagicInk').addEventListener('click',()=>{
+   const mode=pendingCreationMode,count=Number($('magicInkCount').value);
+   if(!mode||!Number.isSafeInteger(count)||count<0||count>5||count>profile.magicInk)return;
+   pendingCreationMode=null;
+   closeDungeonDialog($('magicInkDialog'));
+   beginCircleCreation(mode,count);
+  });
+  $('magicInkDialog').addEventListener('close',()=>{pendingCreationMode=null;});
  const listControls=[
   ['libraryRoleFilter','libraryRole'],['libraryAttributeFilter','libraryAttribute'],['librarySort','librarySort'],
   ['collectionDiscoveryFilter','collectionDiscovery'],['collectionRarityFilter','collectionRarity'],['collectionSort','collectionSort']
@@ -1724,6 +1842,15 @@ function wire(){
   });
  }
  $('startLayer').addEventListener('change',()=>{selectedStartLayer=allowedStartLayer(profile,$('startLayer').value);$('startLayer').value=String(selectedStartLayer);});
+ for(const [id,key] of [['alchemyPickerFilter','filter'],['alchemyPickerSort','sort']]){
+  $(id).addEventListener('change',()=>{alchemyPickerView[key]=$(id).value;renderAlchemyPicker();});
+ }
+ $('alchemyAutoPick').addEventListener('click',()=>{
+  if(!alchemy)return;
+  const picked=alchemyAutoSelect(profile.inventory,masters.items,$('alchemyAutoKind').value,$('alchemyAutoPriority').value);
+  alchemy.slots=[...picked,...Array(5).fill(null)].slice(0,5);
+  renderAlchemy();
+ });
  for(const [id,key] of [['pickerFilter','pickerFilter'],['pickerSort','pickerSort']]){
   $(id).addEventListener('change',()=>{if(!picker)return;pickerView[picker.kind][key==='pickerFilter'?'filter':'sort']=$(id).value;renderLoadoutChoices();});
  }
@@ -1743,9 +1870,12 @@ function wire(){
  }
  if(b.dataset.action==='rename'){openNameDialog(false);return;}
  if(b.dataset.action==='delete-data'){openDeleteDataDialog();return;}
+ if(b.dataset.alchemy){openAlchemy(b.dataset.alchemy);return;}
  if(b.dataset.circleDetail){openMagicDetails(b.dataset.circleDetail);return;}
  if(b.dataset.remove){askCircleAction('remove',b.dataset.remove);return;}
  if(b.dataset.upgrade){askCircleAction('upgrade',b.dataset.upgrade);return;}
+ if(b.dataset.openAlchemyItem!==undefined){openAlchemyPicker(Number(b.dataset.openAlchemyItem));return;}
+ if(b.dataset.chooseAlchemyItem!==undefined){chooseAlchemyItem(Number(b.dataset.chooseAlchemyItem));return;}
  if(b.dataset.openSlot!==undefined){openLoadoutPicker('circle',Number(b.dataset.openSlot));return;}
  if(b.dataset.openItem!==undefined){openLoadoutPicker('item',Number(b.dataset.openItem));return;}
  if(b.dataset.chooseCircle!==undefined){await chooseLoadout(Number(b.dataset.chooseCircle));return;}
@@ -1852,12 +1982,18 @@ function wire(){
  $('cancelCircleAction').addEventListener('click',()=>{closeDungeonDialog($('circleActionDialog'));pendingCircleAction=null;});
  $('circleActionDialog').addEventListener('close',()=>{pendingCircleAction=null;});
  $('confirmCircleAction').addEventListener('click',()=>exclusive(confirmCircleAction));
+ $('closeAlchemy').addEventListener('click',closeAlchemy);
+ $('closeAlchemyPicker').addEventListener('click',closeAlchemyPicker);
+ $('alchemyClearSlot').addEventListener('click',()=>chooseAlchemyItem(null));
+ $('alchemyCraft').addEventListener('click',()=>exclusive(confirmAlchemy));
+ $('alchemyDialog').addEventListener('close',()=>{alchemy=null;alchemyPickerSlot=-1;});
+ $('alchemyPickerDialog').addEventListener('close',()=>{alchemyPickerSlot=-1;});
  $('closeLoadoutDialog').addEventListener('click',closeLoadoutPicker);
  $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>chooseLoadout(null));
  $('loadoutDialog').addEventListener('close',()=>{if(!$('loadoutDialog').open)picker=null;refreshCirclePhotos();});
- $('openCircleDrawing').addEventListener('click',()=>{if(!profile.run&&!activeAnalysis){closeCamera();drawingEditor.open();}});
- $('openCircleCamera').addEventListener('click',openCircleCamera);
+ $('openCircleDrawing').addEventListener('click',()=>requestCircleCreation('draw'));
+ $('openCircleCamera').addEventListener('click',()=>requestCircleCreation('photo'));
  $('cameraStop').addEventListener('click',closeCamera);
  $('circleCameraDialog').addEventListener('cancel',event=>{event.preventDefault();closeCamera();});
  $('cameraCapture').addEventListener('click',()=>exclusive(capture));
