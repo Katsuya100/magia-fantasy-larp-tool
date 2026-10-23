@@ -150,7 +150,7 @@ assert.doesNotMatch(css,/\.card img\{height:105px\}/);
 assert.match(css,/\.collection-grid\s*\{display:grid;/);
 assert.match(css,/\.relic-card\.locked/);
 assert.match(css,/\.name-dialog::backdrop/);
-assert.match(css,/\.regulation-sample img/);
+assert.match(css,/\.circle-power-tips-dialog img/,'example image uses the shared tips popup');
 assert.match(css,/@media\(max-width:630px\)/);
 assert.match(page,/🔥flame\s*\/\s*⚡️bolt\s*\/\s*💧aqua/);
 assert.match(page,/🌪️storm\s*\/\s*🪨gravity\s*\/\s*⚖️law\s*\/\s*🌀chaos/);
