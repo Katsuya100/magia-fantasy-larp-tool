@@ -202,12 +202,17 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,maxSortie
  // inventing a mutually exclusive 'D character'.
  for(let sortie=0;sortie<maxSorties&&state.best<100&&state.fights<maxFights;sortie++){
   const upcoming=state.best+1;
-  const start=allowedStartLayer(profile,profile.adventurerRank+1);
   // B deliberately recovers its four original spells via REAL repeat sorties.
   // A's measured fixed F31 equipment is a comparative preparation target,
   // never a level override, free stone injection, or a hard user-approved cap.
   const deficit=style==='B'&&state.best===30?recoveryGap(state):[];
   const recovering=deficit.some(x=>x>0);
+  // The highest unlocked start (rank+1) is AFTER the target replay layer
+  // when B has earned the rank at that exact checkpoint. Farm from the
+  // previous LEGAL rank checkpoint, never from a non-existent floor.
+  const farmStart=Math.max(1,profile.adventurerRank-9);
+  const start=allowedStartLayer(profile,recovering?farmStart:profile.adventurerRank+1);
+  if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
   if(recovering&&state.recoveryInitialGap===null)state.recoveryInitialGap=[...deficit];
   if(style==='B'&&state.best>=30&&!recovering)state.recoveryAchieved=true;
   const goal=recovering?state.best:route==='short'?upcoming:100;
