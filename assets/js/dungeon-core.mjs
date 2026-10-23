@@ -8,6 +8,9 @@ export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
 // Required XP curve offsets non-decaying repeat fight rewards.
 export const XP_SCALE=45;
+// A fifth of an integer layer budget may be 0.2 EXP. Normalize each stored
+// accumulation to micro-EXP so five battles land on their exact threshold.
+export const normalizeXp=value=>Math.round(Number(value)*1e6)/1e6;
 // EXP is fractional internally so five fights sum to the exact level budget.
 // Keep the display short without changing the stored value.
 const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:1});
@@ -123,7 +126,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
  if(bossDropsMagicInk(context.bossEnemyId,r))rewards.push({type:'ink',id:MAGIC_INK_ID});
  return rewards;
 }
-export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
+export function experience(p,xp){p.xp=normalizeXp(p.xp+xp);while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp=normalizeXp(p.xp-nextXp(p.level));p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
 export const debuffPowerFactor=spell=>clamp(Math.sqrt(Math.max(0,Number(spell?.power)||0)/num('debuff_power_reference')),num('debuff_power_min'),num('debuff_power_max'));
