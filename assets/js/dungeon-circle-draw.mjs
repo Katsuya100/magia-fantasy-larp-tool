@@ -1,5 +1,6 @@
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
-export const DRAWN_GLYPH_LIMIT=32;
+// Twenty-four slots give every letter the same 15-degree arc in both views.
+export const DRAWN_GLYPH_LIMIT=24;
 export const DRAWN_POWER_RATE=0.6;
 export const MIN_DUNGEON_POWER=250;
 const INNER_RADIUS=.255;
@@ -9,8 +10,8 @@ export const GLYPH_INK_SCALE=.11;
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 const RING_RADIUS=.345;
-// Magnify the *view*, not individual angular gaps: the lower pad must be a true
-// rotated crop of the unchanged upper magic circle.
+// Both screens share a 24-slot circle, while the lower view is a true
+// rotated crop spanning roughly two complete letter slots.
 export const EDITOR_ZOOM=1.2;
 export const EDITOR_GLYPH_STEP=GLYPH_STEP;
 const SPELL_VIEW_RADIUS=GLYPH_INK_SCALE/EDITOR_ZOOM;
