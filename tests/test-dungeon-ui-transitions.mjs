@@ -10,8 +10,8 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,17,'all dungeon dialogs are still present');
-assert.equal(new Set(dialogs).size,17);
+assert.equal(dialogs.length,19,'existing dialogs plus two scoped onboarding dialogs');
+assert.equal(new Set(dialogs).size,19);
 assert.match(css,/dialog\{[^}]*transition:opacity \.2s[^}]*display \.2s allow-discrete,overlay \.2s allow-discrete/);
 assert.match(css,/dialog\[open\]\{opacity:1;transform:none\}/);
 assert.match(css,/@starting-style\{\s*dialog\[open\]/);
@@ -149,7 +149,7 @@ const closable={
  googleDriveExpiredDialog:'data-action="later"',
  deleteDataDialog:'cancelDeleteData'
 };
-const fixed=['saveErrorDialog','backupSetupDialog','nameDialog'];
+const fixed=['saveErrorDialog','backupSetupDialog','circleFirstChoiceDialog','nameDialog'];
 const overlayFlows={
  circleDrawingDialog:['circleDrawingClose','閉じる'],
  circleCameraDialog:['cameraStop','閉じる'],
@@ -193,7 +193,16 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(button,'original overlay footer button: '+id);
  assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
-assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length,dialogs.length,'every native dialog accounted for');
+const pagedNative=['circleDrawingLessonDialog'];
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 19 native dialogs accounted for');
+for(const id of pagedNative){
+ assert.match(tagOf(id),/data-dungeon-frame="paged"/,'native lesson is a paged frame');
+ const content=dialogMarkup(id);
+ assert.match(content,/<div class="tutorial-sheet dungeon-dialog-frame">/,'lesson has shared paged frame');
+ assert.match(content,/<div id="circleDrawingLessonSlot"><\/div>/,'page content is inserted in the normal slot');
+ assert.match(content,/<button type="button" id="circleDrawingLessonClose" class="subtle dungeon-dialog-close"/,'paged lesson retains its close control');
+}
+
 const tutorialTag=html.match(/<div id="tutorialOverlay"[^>]+>/)?.[0];
 assert.match(tutorialTag,/data-dungeon-frame="paged"/,'tutorial uses the paged frame variant');
 assert.match(html,/<div class="tutorial-sheet dungeon-dialog-frame">/,'paged UI uses the same frame shell');
@@ -212,8 +221,9 @@ assert.ok(frameStyles.length>1200,'shared component stylesheet exists');
 assert.match(frameStyles,/\.dungeon-dialog-frame\{[\s\S]*?--dungeon-frame-top-rail:74px;/,'shared top rail variable');
 assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="closable"\] > \.dungeon-dialog-frame\{\s*padding-block-start:var\(--dungeon-frame-top-rail\)!important\s*\}/,'all closable frames reserve the same collision-free title row');
 assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="fixed"\] > \.dungeon-dialog-frame/,'fixed frame does not reserve a close rail');
-assert.match(frameStyles,/#tutorialOverlay\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'paged frame preserves tutorial geometry');
-assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="closable"\] \.dungeon-dialog-frame button\.dungeon-dialog-close\{/,'one scoped, high-priority button part across all compact dialogs');
+assert.match(frameStyles,/#tutorialOverlay\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'tutorial overlay remains paged');
+assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'native lesson reserves its header rail');
+assert.match(frameStyles,/#dungeonApp dialog:is\(\[data-dungeon-frame="closable"\],\[data-dungeon-frame="paged"\]\) \.dungeon-dialog-frame button\.dungeon-dialog-close\{/,'one scoped, high-priority button part across all compact dialogs');
 const controlStyle=frameStyles.slice(frameStyles.indexOf('button.dungeon-dialog-close{'),frameStyles.indexOf('button.dungeon-dialog-close::after{'));
 for(const prop of [
  'position:absolute!important','inset-block-start:14px!important','inset-inline-end:14px!important',
@@ -223,6 +233,7 @@ for(const prop of [
  'background:#151725ed!important','color:var(--gold)!important','transform:none!important'
 ])assert.ok(controlStyle.includes(prop),'one uniform close style: '+prop);
 assert.ok(14+42<74,'close icon ends before the shared title row');
+assert.match(frameStyles,/dialog:is\(/,'paged lesson and closable dialogs share one button style');
 // The close icon is a symmetric SVG, not a font-dependent X.
 const glyph=css.match(/--dungeon-close-svg:url\("(data:image\/svg\+xml,[^"]+)"\)/);
 assert.ok(glyph);

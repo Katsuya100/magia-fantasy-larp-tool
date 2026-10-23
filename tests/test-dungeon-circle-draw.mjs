@@ -290,7 +290,7 @@ function element(id){
 for(const id of [
  'circleDrawingDialog','circleDrawingShell','circleDrawingPreview','circleDrawingCaret','circleDrawingPad',
  'circleDrawingConfirm','circleDrawingStatus','circleDrawingStage','circleDrawingUndo','circleDrawingRedo',
- 'circleDrawingReset','circleDrawingClose','circleDrawingDiscard','circleDrawingDiscardKeep','circleDrawingDiscardConfirm'
+ 'circleDrawingReset','circleDrawingClose','circleDrawingPractice','circleDrawingDiscard','circleDrawingDiscardKeep','circleDrawingDiscardConfirm'
 ])element(id);
 doc={activeElement:element('priorFocus'),getElementById:id=>{
  assert.ok(nodes.has(id),'expected control '+id);return nodes.get(id);
@@ -303,7 +303,9 @@ const previousWindow=globalThis.window;
 globalThis.window={devicePixelRatio:1,addEventListener(){}};
 try{
  const get=id=>nodes.get(id),dialog=get('circleDrawingDialog');
- const editor=initCircleDrawing(doc,{onSave:async image=>saved.push(image)});
+ const entered=[],practiced=[];
+  const editor=initCircleDrawing(doc,{onSave:async image=>saved.push(image),
+   onStageEnter:mode=>entered.push(mode),onPractice:mode=>practiced.push(mode)});
  let blocked=0;
  const nativeGesture={preventDefault(){blocked++;}};
  get('circleDrawingDialog').dispatch('selectstart',nativeGesture);
@@ -313,6 +315,9 @@ try{
  editor.open();
  assert.equal(get('circleDrawingClose').textContent,'閉じる');
  assert.equal(get('circleDrawingConfirm').textContent,'紋を描く');
+  assert.deepEqual(entered,['spell']);
+  get('circleDrawingPractice').dispatch('click');
+  assert.deepEqual(practiced,['spell'],'practice button opens the current stage lesson');
  assert.equal(get('circleDrawingUndo').disabled,false,'left arrow stays active at the first slot');
  assert.equal(get('circleDrawingConfirm').disabled,true,'no spell ink means confirm is disabled immediately');
  get('circleDrawingConfirm').dispatch('click');
@@ -362,6 +367,9 @@ try{
  frames.shift()(0);frames.shift()(160);frames.shift()(320);
  assert.equal(get('circleDrawingStage').textContent,'紋を書く');
  assert.equal(get('circleDrawingConfirm').textContent,'決定');
+  assert.equal(entered.at(-1),'sigil','entering the sigil page reports a new stage');
+  get('circleDrawingPractice').dispatch('click');
+  assert.equal(practiced.at(-1),'sigil','practice now points at the sigil lesson');
  assert.equal(get('circleDrawingClose').textContent,'戻る');
  get('circleDrawingClose').dispatch('click');
  assert.equal(get('circleDrawingStage').textContent,'紋を書く','reverse transform keeps sigil until complete');

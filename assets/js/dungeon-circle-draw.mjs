@@ -1,4 +1,4 @@
-import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.29';
+import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.32';
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
 // Thirty matching 12-degree slots in the upper circle and lower revolver.
 export const DRAWN_GLYPH_LIMIT=30;
@@ -334,7 +334,7 @@ function canvasBlob(canvas,type,quality){
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?.size?resolve(blob):reject(Error('魔法陣画像を作成できません。')),type,quality));
 }
 
-export function initCircleDrawing(doc,{onSave}){
+export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
  const get=id=>doc.getElementById(id);
  const dialog=get('circleDrawingDialog'),preview=get('circleDrawingPreview'),pad=get('circleDrawingPad');
  const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus'),shell=get('circleDrawingShell');
@@ -359,6 +359,7 @@ export function initCircleDrawing(doc,{onSave}){
   get('circleDrawingUndo').setAttribute?.('aria-label',sigil?'取り消す':'前の文字');
   get('circleDrawingRedo').setAttribute?.('aria-label',sigil?'やり直す':'次の文字');
   get('circleDrawingReset').disabled=busy||animating;
+   get('circleDrawingPractice').disabled=busy||animating;
   confirm.disabled=busy||animating||(!sigil&&!model.hasSpellInk);
   confirm.textContent=busy?'登録中…':sigil?'決定':'紋を描く';
  }
@@ -450,7 +451,7 @@ export function initCircleDrawing(doc,{onSave}){
   if(model.state.mode==='spell'){
    if(!model.hasSpellInk)return; // The confirm button is disabled until ink exists; no layout-shifting warning.
    message('');
-   animateMode('sigil',()=>{model.goSigil();release();});
+   animateMode('sigil',()=>{model.goSigil();release();onStageEnter?.('sigil');});
    return;
   }
   if(!model.complete){message('紋を描いてください。');return;}
@@ -482,6 +483,9 @@ export function initCircleDrawing(doc,{onSave}){
   discardReturnFocus=doc.activeElement;shell.inert=true;showUiOverlay(discard);keep.focus();
  }
  get('circleDrawingClose').addEventListener('click',close);
+  get('circleDrawingPractice').addEventListener('click',()=>{
+   if(dialog.open&&!busy&&!animating)onPractice?.(model.state.mode);
+  });
  keep.addEventListener('click',()=>hideDiscard());
  discardButton.addEventListener('click',()=>{hideDiscard(false);closeDungeonDialog(dialog);});
  dialog.addEventListener('cancel',event=>{
@@ -496,7 +500,7 @@ export function initCircleDrawing(doc,{onSave}){
  function present(){
   release();hideDiscard(false);busy=false;animating=false;padTransition=null;viewIndex=model.state.index;message('');
   if(!dialog.open)showDungeonDialog(dialog);
-  repaint();confirm.focus();
+  repaint();confirm.focus();onStageEnter?.(model.state.mode);
  }
  return {
   open(){model=createDrawingModel();previousFocus=doc.activeElement;present();},

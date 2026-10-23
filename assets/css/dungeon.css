@@ -802,15 +802,18 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 #dungeonApp dialog[data-dungeon-frame="fixed"] > .dungeon-dialog-frame{
  --dungeon-frame-top-rail:0px
 }
-/* A paged frame shares the same frame/title contract but retains its
-   existing tutorial overlay layout, animation, pager and skip controls. */
+/* Paged dialogs and the tutorial overlay use the same shell. Pages retain
+   their own previous/next/skip controls and page-specific body content. */
+#dungeonApp dialog[data-dungeon-frame="paged"] > .dungeon-dialog-frame{
+ padding-block-start:var(--dungeon-frame-top-rail)!important
+}
 #tutorialOverlay[data-dungeon-frame="paged"] > .dungeon-dialog-frame{
  --dungeon-frame-top-rail:0px
 }
 /* The identical close button wins over theme-specific rules in every compact
    dialog, including the adventurer card, stone help, Drive and confirmations.
    Its containing block is the frame, never a random nested action row. */
-#dungeonApp dialog[data-dungeon-frame="closable"] .dungeon-dialog-frame button.dungeon-dialog-close{
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close{
  position:absolute!important;
  inset-block-start:14px!important;inset-inline-end:14px!important;z-index:20;
  appearance:none!important;box-sizing:border-box!important;
@@ -827,7 +830,7 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  transform:none!important;cursor:pointer;touch-action:manipulation
 }
 /* A centered SVG mask (not a baseline-dependent text glyph). */
-#dungeonApp dialog[data-dungeon-frame="closable"] .dungeon-dialog-frame button.dungeon-dialog-close::after{
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close::after{
  content:"";position:absolute;inset-block-start:50%;inset-inline-start:50%;
  width:24px;height:24px;transform:translate(-50%,-50%);
  background-color:currentColor;pointer-events:none;
@@ -835,10 +838,10 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  -webkit-mask:var(--dungeon-close-svg) center / contain no-repeat;
  mask:var(--dungeon-close-svg) center / contain no-repeat
 }
-#dungeonApp dialog[data-dungeon-frame="closable"] .dungeon-dialog-frame button.dungeon-dialog-close:hover{
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close:hover{
  background:#30273b!important;border-color:var(--gold)!important
 }
-#dungeonApp dialog[data-dungeon-frame="closable"] .dungeon-dialog-frame button.dungeon-dialog-close:focus-visible{
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close:focus-visible{
  outline:3px solid #ecd191!important;outline-offset:3px
 }
 #dungeonApp dialog .dungeon-dialog-frame button.dungeon-dialog-close[hidden]{display:none!important}
@@ -1880,7 +1883,7 @@ html,body{overflow-x:clip}
 .support-prompt-actions{display:flex;align-items:stretch;justify-content:center;gap:10px;margin-top:25px}
 .support-prompt-dialog{width:min(580px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
 /* The card title and preview begin below the shared top-right × button. */
-/* The shared closable frame reserves the adventurer-card header rail. */
+/* Shared closable frames reserve the adventurer-card title rail. */
 #adventurerShareCanvas{display:block;width:100%;height:auto;aspect-ratio:1200 / 675;border:1px solid #c5a06a70;margin:17px auto 7px}
 .support-share-help{font-size:11px!important;line-height:1.5;color:var(--soft)!important}
 .support-card-tools{display:flex;gap:9px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:16px}
@@ -2686,3 +2689,10 @@ button.creator-congratulations-close{
 .circle-camera-dialog .drawing-confirm{background:linear-gradient(145deg,#f5da9e,#bf8d50);color:#191221;border:1px solid #e6bc79}
 .circle-camera-dialog .tutorial-replay{align-self:flex-end;margin:0;font-size:12px!important}
 @media(max-width:630px){.circle-camera-dialog .camera-viewfinder-group{width:min(100%,calc(100dvh - 178px))}}
+
+/* A single movable tutorial body serves the camera walkthrough and drawing lessons. */
+.drawing-lesson-dialog{width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 24px);margin:auto;padding:0;overflow-y:auto;border:1px solid #e9c98a;background:#111c26;color:var(--pale);box-shadow:0 20px 80px #000c}
+.drawing-lesson-dialog .tutorial-sheet{width:100%;border:0;box-shadow:none;padding:58px 20px 20px}
+#circleDrawingDialog .circle-drawing-practice{position:absolute;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));z-index:3;min-height:36px;margin:0;padding:5px 10px;font-size:12px}
+.circle-first-choice-actions{display:flex;flex-direction:column;gap:12px;margin:20px 0 12px}
+.circle-first-choice-actions button{width:100%;min-height:50px}
