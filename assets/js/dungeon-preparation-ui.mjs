@@ -34,14 +34,14 @@ export function itemBonusEffect(item){
 export function itemEffectText(item){
  const primary=item?.id==='life_ruby'?'死亡時に1回だけHP50%で復活':item?.id?.startsWith('elixir_')?'HP/MP各'+item.value+'%回復':item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.id==='luna_stone'?'全状態異常解除':item?.value?'効果 '+item.value:'状態異常解除';
  const bonus=itemBonusEffect(item);
- return primary+(bonus?'・追加効果：'+bonus.text:'');
+ return primary+(item?.alchemyBoost?'・効果量アップ':'')+(bonus?'・追加効果：'+bonus.text:'');
 }
 // Short visible effect shared by the battle item slot and the return reward card.
 // Absolute HP/MP potions use raw recovery values; elixirs and revival use percent.
 export function itemEffectIcons(item){
  const id=item?.id||'',numeric=Number(item?.value);
  const value=Number.isFinite(numeric)&&numeric>=0?String(numeric):'?';
- const effect=itemBonusEffect(item);const extra=effect?' '+effect.icons:'';
+ const effect=itemBonusEffect(item);const extra=(item?.alchemyBoost?' ✨↑':'')+(effect?' '+effect.icons:'');
  if(id.startsWith('heal_'))return '❤️+'+value+extra;
  if(id.startsWith('mana_'))return '💠+'+value+extra;
  if(id.startsWith('elixir_'))return '❤️💠'+value+'%'+extra;
@@ -67,13 +67,13 @@ export function spellGrid(slots,circles,imageUrl,escapeText,active=true,buffs=[]
     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'">詳細</button>':'')+'</div>';
   }).join('')+'</div>';
 }
-export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,active=true){
+export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,active=true,action='open-item'){
  return '<div class="loadout-grid" role="group" aria-label="携行品">'
   +slots.slice(0,unlocked?capacity:0).map((inventoryIndex,index)=>{
     const usable=unlocked&&index<capacity&&active;
     const value=Number.isInteger(inventoryIndex)?inventory[inventoryIndex]:null;
     const locked=index>=capacity||!unlocked;
-    return '<button type="button" class="loadout-tile '+(locked?'locked':value?'equipped':'empty')+'" data-open-item="'+index+'" aria-label="携行品 '+(index+1)+'枠目 '+(locked?'未解放':value?escapeText(itemName(value))+'・'+escapeText(itemEffectText(value)):'空き')+'" '+(usable?'':'disabled')+'>'
+    return '<button type="button" class="loadout-tile '+(locked?'locked':value?'equipped':'empty')+'" data-'+action+'="'+index+'" aria-label="携行品 '+(index+1)+'枠目 '+(locked?'未解放':value?escapeText(itemName(value))+'・'+escapeText(itemEffectText(value)):'空き')+'" '+(usable?'':'disabled')+'>'
      +'<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span>'
      +'<span class="tile-item-icon" aria-hidden="true">'+(locked?'♙':value?itemSymbol(value):'＋')+'</span>'
      +'<span class="tile-title">'+(locked?'未解放':value?escapeText(itemName(value)):'空き')+'</span>'
@@ -95,11 +95,11 @@ export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[]
    +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'" aria-label="魔法陣の詳細">詳細</button></div>';
  }).join('');
 }
-export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventory.map((_,i)=>i),editingSlot=-1){
+export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventory.map((_,i)=>i),editingSlot=-1,action='choose-item'){
  if(!inventory.length)return '<p class="collection-empty">携行品がありません。</p>';
  return indexes.map(index=>[inventory[index],index]).map(([item,index])=>{
   const selectedSlot=slots.indexOf(index),selected=selectedSlot>=0,current=selected&&selectedSlot===editingSlot;
-  return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-choose-item="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(itemName(item))+'・'+escapeText(itemEffectText(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
+  return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-'+action+'="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(itemName(item))+'・'+escapeText(itemEffectText(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
    +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
    +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
    +(item.id==='luna_stone'||item.id==='life_ruby'||item.id?.startsWith('elixir_')||item.id==='escape_scroll'?itemEffectText({...item,bonus:null}):item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' '+itemBonusEffect(item).icons:'')+'</small></span>'
