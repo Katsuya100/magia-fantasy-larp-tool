@@ -69,8 +69,8 @@ for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4]
   G.round(hero,foe,-1,i===0?0:-1,buffs,()=>.1);
   countdown.push(G.status(hero,'debuff_'+attr)?.turns??0);
  }
- assert.deepEqual(countdown,Array.from({length:7},(_,i)=>Math.max(0,duration-i)),
-  'debuff countdown starts after application '+attr+' P'+power);
+ assert.deepEqual(countdown,Array.from({length:7},(_,i)=>Math.max(0,duration-i-(['bolt','law','chaos'].includes(attr)?0:1))),
+  'debuff countdown begins when its effect can first apply '+attr+' P'+power);
 }
 // Regression: four-turn shock and confusion survive repeated casts on either side.
 for(const attr of ['bolt','chaos'])for(const casterSide of ['player','enemy']){
