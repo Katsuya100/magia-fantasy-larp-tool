@@ -2747,3 +2747,16 @@ button.creator-congratulations-close{
  100%{opacity:0}
 }
 @media(prefers-reduced-motion:reduce){.circle-drawing-finger-guide[data-playing="true"] path,.circle-drawing-finger-guide[data-playing="true"] .circle-drawing-finger{animation:none}}
+
+/* Alchemy reuses the preparation slots, chooser and selectable item tiles. */
+.relic-card .relic-alchemy{margin-top:auto;padding:6px 18px!important;font-size:12px;position:relative;z-index:1}
+.relic-card .relic-alchemy:disabled{opacity:.4;cursor:not-allowed}
+#alchemySlots .loadout-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+#alchemySlots .loadout-tile{width:100%;min-height:0}
+.alchemy-auto{margin:14px 0}
+.alchemy-auto summary{cursor:pointer;color:var(--gold)}
+.alchemy-auto .list-controls{margin:10px 0}
+.alchemy-auto button{align-self:end}
+#alchemyCraft{width:100%}
+#alchemyBaseName,#alchemyPreview{font-size:13px;color:var(--soft)}
+@media(max-width:630px){#alchemySlots .loadout-grid{gap:5px}#alchemySlots .tile-item-icon{font-size:26px}#alchemySlots .tile-title{font-size:9px}}
