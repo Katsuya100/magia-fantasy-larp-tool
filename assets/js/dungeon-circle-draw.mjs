@@ -1,5 +1,6 @@
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
-export const DRAWN_GLYPH_LIMIT=32;
+// Twenty-four slots give every letter the same 15-degree arc in both views.
+export const DRAWN_GLYPH_LIMIT=24;
 export const DRAWN_POWER_RATE=0.6;
 export const MIN_DUNGEON_POWER=250;
 const INNER_RADIUS=.255;
@@ -9,8 +10,8 @@ export const GLYPH_INK_SCALE=.11;
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 const RING_RADIUS=.345;
-// Magnify the *view*, not individual angular gaps: the lower pad must be a true
-// rotated crop of the unchanged upper magic circle.
+// Both screens share a 24-slot circle, while the lower view is a true
+// rotated crop spanning roughly two complete letter slots.
 export const EDITOR_ZOOM=1.2;
 export const EDITOR_GLYPH_STEP=GLYPH_STEP;
 const SPELL_VIEW_RADIUS=GLYPH_INK_SCALE/EDITOR_ZOOM;
@@ -204,8 +205,11 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
  ctx.clearRect(0,0,size,size);
  if(state.mode!=='spell'||state.index>=DRAWN_GLYPH_LIMIT)return;
- const angle=viewIndex===null?glyphAngle(state.index,1):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
- const radius=size*.481,half=size*.009; // Outside the outer ring and usual glyph ink.
+ // The caret marks the LEFT angular boundary of the current 15-degree
+ // glyph slot, inside the ring. It must not cover the letter's center.
+ const centerAngle=viewIndex===null?glyphAngle(state.index,1):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
+ const angle=centerAngle-GLYPH_STEP/2;
+ const radius=size*RING_RADIUS,half=size*.027;
  ctx.beginPath();
  ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
  ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
