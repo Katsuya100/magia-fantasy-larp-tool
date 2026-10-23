@@ -32,7 +32,7 @@ shock_cooldown_max_extra,3,感電クールダウン延長の上限
 seal_two_roles_power,1600,封印2種類に必要な耐性補正後の威力
 dizzy_growth_rate,0.15,目眩の威力成長係数
 dizzy_max_rate,0.45,目眩の失敗確率上限
-gravity_growth_rate,0.12,重圧の威力成長係数
+gravity_growth_rate,0.08,重圧の威力成長係数
 gravity_max_rate,0.5,重圧の出力低下率上限
 shock_cooldown_extra,1,感電によるクールダウン延長
 spell_cooldown,2,魔法陣クールダウン初期値
@@ -48,7 +48,7 @@ checkpoint_interval,5,帰還可能な戦闘間隔
 spell_slots,5,携帯魔法陣の固定数
 item_per_round,1,ラウンドあたりの無料使用上限
 level_max,150,レベル上限
-enemy_heal_threshold,0.45,敵が回復を優先するHP比率
+enemy_heal_threshold,0.46,敵が回復を優先するHP比率
 enemy_attack_preference,0.610,敵が攻撃優先する確率
 enemy_debuff_specialist_preference,0.24,弱体魔法を持つ敵がその魔法を優先して使う確率
 mag_reference,10,MAG係数基準値
@@ -57,7 +57,7 @@ status_tick_min_damage,1,火傷の継続最小ダメージ
 resistance_buff_duration,4,属性耐性強化の持続ラウンド
 debuff_min_duration,1,弱体の最短持続ラウンド
 debuff_max_duration,4,弱体の最長持続ラウンド
-victory_mp_restore_rate_early,0.0905,序盤の戦闘勝利時MP回復率
+victory_mp_restore_rate_early,0.091,序盤の戦闘勝利時MP回復率
 victory_mp_restore_rate_late,0.025,深層の戦闘勝利時MP回復率
 victory_mp_middle_taper,0.015,中盤の戦闘勝利時MP回復率の抑制幅
 victory_mp_beginner_bonus,0.045,序盤で魔法陣3個を編成した際のMP消耗を緩和
