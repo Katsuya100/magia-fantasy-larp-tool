@@ -69,6 +69,72 @@
       <button type="button" id="tab-home" data-view="home"><span class="tab-symbol" aria-hidden="true">♜</span><span>プロフィール</span></button>
     </nav>
 
+    <dialog id="iconGuideDialog" class="name-dialog icon-guide-dialog" aria-labelledby="iconGuideTitle" data-dungeon-frame="closable">
+      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+        <h2 id="iconGuideTitle" class="dungeon-dialog-frame-title">アイコン一覧</h2>
+        <button type="button" id="closeIconGuide" class="subtle dungeon-dialog-close" aria-label="一覧を閉じる">✕</button>
+        <section class="icon-guide-group" aria-labelledby="iconGuideAttributes">
+          <h3 id="iconGuideAttributes">属性</h3>
+          <table class="icon-guide-table"><tbody>
+            <tr><td>🔥</td><td>炎</td></tr>
+            <tr><td>⚡</td><td>雷</td></tr>
+            <tr><td>💧</td><td>水</td></tr>
+            <tr><td>🌪️</td><td>風</td></tr>
+            <tr><td>🪨</td><td>重力</td></tr>
+            <tr><td>⚖️</td><td>秩序</td></tr>
+            <tr><td>🌀</td><td>混沌</td></tr>
+          </tbody></table>
+        </section>
+        <section class="icon-guide-group" aria-labelledby="iconGuideRoles">
+          <h3 id="iconGuideRoles">魔法の役割</h3>
+          <table class="icon-guide-table"><tbody>
+            <tr><td>⚔️</td><td>攻撃</td></tr>
+            <tr><td>🛡️</td><td>防御</td></tr>
+            <tr><td>✚</td><td>回復</td></tr>
+            <tr><td>🕸️</td><td>弱体</td></tr>
+          </tbody></table>
+        </section>
+        <section class="icon-guide-group" aria-labelledby="iconGuideBuffs">
+          <h3 id="iconGuideBuffs">強化</h3>
+          <table class="icon-guide-table"><tbody>
+            <tr><td>🔥↑</td><td>攻撃ダメージ上昇</td></tr>
+            <tr><td>⚡↑</td><td>魔法の出力上昇</td></tr>
+            <tr><td>💧↑</td><td>HP回復量上昇</td></tr>
+            <tr><td>🌪️↑</td><td>被ダメージ軽減</td></tr>
+            <tr><td>🪨↑</td><td>防御力上昇</td></tr>
+            <tr><td>⚖️↑</td><td>弱体耐性上昇</td></tr>
+            <tr><td>🌀↑</td><td>魔法の出力上昇</td></tr>
+            <tr><td>🛡️🔥↑</td><td>属性耐性上昇（例：炎）</td></tr>
+          </tbody></table>
+        </section>
+        <section class="icon-guide-group" aria-labelledby="iconGuideDebuffs">
+          <h3 id="iconGuideDebuffs">弱体</h3>
+          <table class="icon-guide-table"><tbody>
+            <tr><td>🔥↓</td><td>火傷：毎ターンダメージ</td></tr>
+            <tr><td>⚡↓</td><td>感電：再使用待ち延長</td></tr>
+            <tr><td>💧↓</td><td>浸水：属性耐性低下</td></tr>
+            <tr><td>🌪️↓</td><td>目眩：攻撃失敗</td></tr>
+            <tr><td>🪨↓</td><td>重圧：魔法の出力低下</td></tr>
+            <tr><td>⚖️↓</td><td>封印：魔法の役割を封じる</td></tr>
+            <tr><td>🌀↓</td><td>暴走：使用魔法がランダムに変わる</td></tr>
+          </tbody></table>
+          <p class="icon-guide-note">数字は残りターン</p>
+        </section>
+        <section class="icon-guide-group" aria-labelledby="iconGuideItems">
+          <h3 id="iconGuideItems">携行品</h3>
+          <table class="icon-guide-table"><tbody>
+            <tr><td>✚ / ❤️+</td><td>HP回復</td></tr>
+            <tr><td>✧ / 💠+</td><td>MP回復</td></tr>
+            <tr><td>⚗ / ❤️💠</td><td>HP・MP回復</td></tr>
+            <tr><td>◈ / 🧼</td><td>弱体解除</td></tr>
+            <tr><td>🌙</td><td>全状態異常解除</td></tr>
+            <tr><td>🔴</td><td>死亡時に復活</td></tr>
+            <tr><td>📜</td><td>ダンジョンから脱出</td></tr>
+          </tbody></table>
+        </section>
+      </div>
+    </dialog>
+
     <dialog id="saveErrorDialog" class="name-dialog" aria-labelledby="saveErrorTitle" aria-describedby="saveErrorMessage" data-dungeon-frame="fixed">
       <div class="delete-data-dialog-inner dungeon-dialog-frame">
         <span class="dialog-sigil" aria-hidden="true">！</span>
@@ -219,7 +285,7 @@
 
     <section id="prepare" class="panel loadout-panel">
       <p id="pageError" class="inline-error" hidden role="alert"></p>
-      <div class="section-heading"><div><p class="chapter">CHAPTER I · PREPARATION</p><h2>準備&amp;出発</h2></div><span class="section-mark" aria-hidden="true">⚔</span></div>
+      <div class="section-heading"><div><p class="chapter">CHAPTER I · PREPARATION</p><h2>準備&amp;出発</h2></div><div class="section-tools"><button type="button" class="icon-guide-trigger" data-action="icon-guide" aria-label="アイコン一覧" title="アイコン一覧">i</button><span class="section-mark" aria-hidden="true">⚔</span></div></div>
       <div class="subheading"><h3>術式の編成</h3><span>3〜5 SIGILS</span></div>
       <p id="circleCounter" class="gear-counter"></p>
       <div id="slotCards"><div class="loadout-grid" role="group" aria-label="魔法陣の編成" data-static-slots="5">
@@ -297,7 +363,7 @@
 
     <section id="battle" class="panel battle-panel" hidden>
       <p id="battleError" class="inline-error" hidden role="alert"></p>
-      <div class="section-heading"><div><p class="chapter">THE DESCENT · ENCOUNTER</p><h2 id="floorLabel"></h2><p id="battleEncounterLabel" class="battle-encounter-label"></p></div><span class="section-mark" aria-hidden="true">⚔</span></div>
+      <div class="section-heading"><div><p class="chapter">THE DESCENT · ENCOUNTER</p><h2 id="floorLabel"></h2><p id="battleEncounterLabel" class="battle-encounter-label"></p></div><div class="section-tools"><button type="button" class="icon-guide-trigger" data-action="icon-guide" aria-label="アイコン一覧" title="アイコン一覧">i</button><span class="section-mark" aria-hidden="true">⚔</span></div></div>
       <div id="battleArena" class="arena" data-role="idle" data-side="none" data-attribute="law">
         <div class="spell-flight" aria-hidden="true">
           <div id="enemyProjectile" class="spell-projectile" data-side="enemy" data-effect="idle" data-attribute="law"><span class="element-flare"></span><span class="element-trail"></span><span class="tier-seal"></span><span class="tier-halo"></span><span class="tier-shards"></span></div>
