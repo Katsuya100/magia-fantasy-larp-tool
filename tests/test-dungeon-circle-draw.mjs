@@ -9,36 +9,41 @@ import {
 
 assert.equal(DRAWN_GLYPH_LIMIT,30,'spell ring has 30 matching upper/lower character slots');
 assert.equal(DRAWN_POWER_RATE,.6);
-assert.ok(Math.abs(GLYPH_INK_SCALE-.11*2/3)<1e-12,'each ring glyph ink footprint is exactly two thirds of its prior size');
+assert.ok(Math.abs(GLYPH_INK_SCALE-.11*4/9)<1e-12,'letter footprint shrinks with the two-thirds-width band');
 assert.equal(REVOLVER_DURATION_MS,250);
 assert.ok(Math.abs(EDITOR_GLYPH_STEP-Math.PI/15)<1e-12,'each letter spans exactly 12 degrees on both screens, two thirds of 18 degrees');
 assert.ok(Math.abs(glyphAngle(1,1)-glyphAngle(0,1)-EDITOR_GLYPH_STEP)<1e-12,'upper letter interval equals lower revolver step');
 // The ring means the annular BAND, not the drawn glyphs or the whole disk.
-assert.equal(INNER_RADIUS,.255,'inner circle/sigil area remains at its old radius');
+assert.ok(Math.abs((OUTER_RADIUS-INNER_RADIUS)/(.43-.255)-2/3)<1e-12,
+ 'inner guide moves outward and makes the original ring exactly two-thirds as wide');
 assert.ok(Math.abs(OUTER_RADIUS-.43)<1e-12,
  'drawn outer rim is 43% radius, matching the 86%-diameter camera guide');
 const ringCenter=(INNER_RADIUS+OUTER_RADIUS)/2;
 const visibleSlots=2*Math.asin((GLYPH_INK_SCALE/EDITOR_ZOOM)/ringCenter)/EDITOR_GLYPH_STEP;
-assert.ok(visibleSlots>2&&visibleSlots<3,'spell pad stays focused on a few large letters');
+assert.ok(Math.abs(visibleSlots-2)<1e-12,'spell camera frames two full character slots in total');
 const letterViewRadius=GLYPH_INK_SCALE/EDITOR_ZOOM;
-assert.ok(Math.abs((OUTER_RADIUS-INNER_RADIUS)/2/letterViewRadius-.96)<1e-12,
- 'inner and outer guides appear only at the edges of the writing pad');
+const bandEdge=(OUTER_RADIUS-INNER_RADIUS)/(2*letterViewRadius);
+assert.ok(bandEdge>.7&&bandEdge<.8,'both ring guides stay visible without filling the writing pad');
 assert.ok(OUTER_RADIUS/letterViewRadius>1,'the full outer circle cannot fit in the letter pad');
-assert.ok(GLYPH_INK_SCALE/letterViewRadius>.8,'letter strokes remain large');
-assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-OUTER_RADIUS},0,0).y+.96)<1e-12);
-assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-INNER_RADIUS},0,0).y-.96)<1e-12);
+assert.ok(GLYPH_INK_SCALE/letterViewRadius>.6&&GLYPH_INK_SCALE/letterViewRadius<.7,
+ 'letter strokes remain legible with the narrow band');
+assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-OUTER_RADIUS},0,0).y+bandEdge)<1e-12);
+assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-INNER_RADIUS},0,0).y-bandEdge)<1e-12);
 assert.equal(drawnPower(500),300);
 assert.equal(drawnPower(1),250);
 assert.throws(()=>drawnPower(0));
 assert.throws(()=>drawnPower(NaN));
 assert.equal(withDrawnPowerFloor({origin:'drawn',basePower:120,analysis:{power:120}}).analysis.power,250);
 assert.deepEqual(pointOnPad(110,170,{left:10,top:20,width:200,height:300}),{x:0,y:0});
-assert.ok(Math.abs(sigilPoint({x:.92,y:0}).x-.755)<1e-9);
+assert.ok(Math.abs(sigilPoint({x:.92,y:0}).x-(.5+INNER_RADIUS))<1e-12,
+ 'sigil ink expands with the larger inner circle in the upper image');
 assert.ok(Math.abs(glyphAngle(1,3)+Math.PI/2)<1e-9);
 assert.ok(Math.abs(glyphPoint({x:0,y:0},1,3).x-.5)<1e-9);
 assert.ok(Math.abs(glyphPoint({x:0,y:0},0,1).y-(.5-ringCenter))<1e-12,'letters are centered in the shared outer circle');
-assert.ok(glyphPoint({x:0,y:1},0,1).y>.21,'the smaller glyph retains its vertical range');
-assert.ok(glyphPoint({x:1,y:0},0,2).x>glyphPoint({x:0,y:0},1,2).x,'a full-width glyph can still reach the neighboring slot');
+assert.ok(glyphPoint({x:0,y:1},0,1).y>.5-OUTER_RADIUS&&
+ glyphPoint({x:0,y:1},0,1).y<.5-INNER_RADIUS,'the narrower glyph fits inside both ring edges');
+assert.ok(glyphPoint({x:1,y:0},0,2).x<glyphPoint({x:0,y:0},1,2).x,
+ 'a full-width glyph no longer intrudes on the adjacent slot');
 for(const [i,count] of [[0,1],[1,3],[7,16],[29,30]]){
  const square=[{x:-.6,y:-.6},{x:.6,y:-.6},{x:.6,y:.6}].map(p=>glyphPoint(p,i,count));
  const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -50,6 +55,8 @@ for(const [i,count] of [[0,1],[1,3],[7,16],[29,30]]){
 const eq=(a,b,msg)=>assert.ok(Math.abs(a-b)<1e-10,msg+': '+a+' != '+b);
 const spellRadius=GLYPH_INK_SCALE/EDITOR_ZOOM;
 const sigilRadius=(sigilPoint({x:1,y:0}).x-.5)/sigilPadPoint({x:1,y:0}).x;
+eq(sigilRadius,INNER_RADIUS/.92,'sigil camera zooms out to fit the enlarged inner ring');
+assert.ok(sigilRadius>.255/.92,'sigil stage also pulls back, rather than retaining the previous crop');
 for(const i of [0,1,3,8,29]){
  for(const view of [0,.5,1,3,7]){
   for(const point of [{x:0,y:0},{x:-1,y:.7},{x:.8,y:-1.2}]){
@@ -234,7 +241,7 @@ try{
   const radius=spellRadius*(1-progress)+sigilRadius*progress;
   for(const line of lines){
    const measured=line[3].map(([x,y])=>Math.hypot((x-100)/100-center.x,(y-100)/100-center.y)*radius);
-   eq(measured[0],INNER_RADIUS+.004,'vertical guide starts INSIDE the unchanged inner circle');
+   eq(measured[0],INNER_RADIUS+.004,'vertical guide starts just outside the enlarged inner circle');
    eq(measured[1],OUTER_RADIUS-.004,'vertical guide stops BEFORE the aligned outer circle');
   }
  };
@@ -247,7 +254,7 @@ try{
  assert.ok(draws.some(d=>d[0]==='stroke'&&d[1]==='rgb(169,155,194)'),'sigil view preserves projected glyph strokes');
   const sigilGuides=draws.filter(d=>d[0]==='arc');
   assert.ok(sigilGuides[0][3]/100>1.25,'outer ring stays outside the central sigil crop');
-  eq(sigilGuides[1][3]/100,.92,'inner guide keeps the original sigil writing boundary');
+  eq(sigilGuides[1][3]/100,.92,'enlarged inner guide keeps the sigil writing boundary at 92%');
  draws.length=0;paintPad(canvas,state,[],.5);
  assert.ok(draws.some(d=>d[1]==='rgb(162,176,221)'),'color blends during the turn');
  draws.length=0;paintPad(canvas,state,[],29.5);
