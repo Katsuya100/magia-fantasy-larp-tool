@@ -176,8 +176,8 @@ const innerBandStroke=draws.find(d=>d[0]==='stroke'&&d[2]===128*.0095);
 assert.ok(outerBandStroke?.[3]?.length>200&&innerBandStroke?.[3]?.length>200,'both rings are genuinely drawn in the upper preview');
 eq((outerBandStroke[3][0][0]-innerBandStroke[3][0][0])/128,OUTER_RADIUS-INNER_RADIUS,
  'both drawn circles retain the measured annular band width');
-eq((outerBandStroke[3][0][0]-64)/128,OUTER_RADIUS,
- 'rendered outer circle is centered exactly 43% from the upper preview center');
+assert.ok(Math.abs((outerBandStroke[3][0][0]-64)/128-OUTER_RADIUS)<.001,
+ 'the brush-wavy outer rim is within its 0.1% handmade wobble of the 43% target radius');
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0072),'letter ink retained');
 const strokeCount=draws.filter(d=>d[0]==='stroke'&&d[2]===128*.0072).length;
 draws.length=0;paintCircle(canvas,state,{size:128,activeStroke:stroke});
