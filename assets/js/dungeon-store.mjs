@@ -347,17 +347,30 @@ export async function migrateDungeonXp(db){
   p.run.xp=span(start,newEnd);
  }
  if(p.pendingReturn){
-  const before=p.pendingReturn.before;
   const oldAward=Number(p.pendingReturn.gained||0);
   if(!Number.isFinite(oldAward)||oldAward<0)throw Error('帰還報酬の旧経験値が不正です。');
-  if(before){
-   const beforeLevel=Number(before.level);
-   const beforeXp=convert(before.xp,beforeLevel);
-   p.pendingReturn.gained=span({level:beforeLevel,xp:beforeXp},start);
-   before.xp=beforeXp;
-  }else{
-   p.pendingReturn.gained=rounded(oldAward*nextXp(p.level)/oldNext(p.level));
+  // Reconstruct missing return-screen start state by reversing the exact old
+  // level thresholds. A single ratio at the final level is not reversible.
+  if(!p.pendingReturn.before){
+   if(p.level>=maxLevel&&oldAward>0)
+    throw Error('最大レベルの旧帰還報酬を安全に復元できません。旧セーブを保護して停止しました。');
+   let level=p.level,xp=Number(p.xp),remaining=oldAward;
+   while(remaining>xp&&level>1){remaining-=xp;level--;xp=oldNext(level);}
+   if(remaining>xp)throw Error('旧帰還報酬と累計EXPが一致しません。旧セーブを保護して停止しました。');
+   p.pendingReturn.before={level,xp:xp-remaining};
   }
+  const before=p.pendingReturn.before;
+  const beforeLevel=Number(before.level),oldBeforeXp=Number(before.xp);
+  if(!Number.isSafeInteger(beforeLevel)||beforeLevel<1||beforeLevel>maxLevel||
+   !Number.isFinite(oldBeforeXp)||oldBeforeXp<0||
+   beforeLevel<maxLevel&&oldBeforeXp>=oldNext(beforeLevel))
+   throw Error('帰還前の旧レベル・経験値が不正です。旧セーブを保護して停止しました。');
+  const oldEnd=levelAfterOldAward(beforeLevel,oldBeforeXp,oldAward);
+  if(oldEnd.level!==p.level||(p.level<maxLevel&&Math.abs(oldEnd.xp-Number(p.xp))>0.001))
+   throw Error('帰還報酬とセーブ済みレベルが一致しません。旧セーブを保護して停止しました。');
+  const beforeXp=convert(oldBeforeXp,beforeLevel);
+  p.pendingReturn.gained=span({level:beforeLevel,xp:beforeXp},start);
+  before.xp=beforeXp;
  }
  p.xp=start.xp;
  p.xpScaleVersion=XP_SCALE;
