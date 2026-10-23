@@ -81,6 +81,7 @@ jobs:
       - run: node scripts/check-dungeon-economy-baseline.mjs
       - run: node scripts/dungeon-extra-economy-diagnostics.mjs
       - run: node scripts/report-dungeon-journeys.mjs
+      - run: node scripts/dungeon-ink-recovery.mjs
       - run: node scripts/dungeon-ink-paired.mjs
       - name: Archive diagnostic reports and seed traces
         if: always()
