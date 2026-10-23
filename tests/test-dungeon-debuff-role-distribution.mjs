@@ -35,7 +35,7 @@ for(let layer=1;layer<=100;layer++){
  }
  assert.deepEqual(real,layer<20?[]:expectedSlots[layer],'flavor specialist assignment at layer '+layer);
 }
-assert.equal(num('enemy_debuff_specialist_preference'),.27);
+assert.equal(num('enemy_debuff_specialist_preference'),.24);
 // Prior all-caster config, matched to identical combat/75%-stone conditions.
 const previous={
  10:{casts:0,encounters:0},20:{casts:1.05,encounters:2.0},
