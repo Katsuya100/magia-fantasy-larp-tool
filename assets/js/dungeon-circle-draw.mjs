@@ -496,7 +496,7 @@ export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
    animateMode('spell',()=>{model.goSpell();viewIndex=model.state.index;release();message('');});return;
   }
   if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
-   closeDungeonDialog(dialog);return;
+   stopFingerIntro();closeDungeonDialog(dialog);return;
   }
   discardReturnFocus=doc.activeElement;shell.inert=true;showUiOverlay(discard);keep.focus();
  }
@@ -505,7 +505,7 @@ export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
    if(dialog.open&&!busy&&!animating)onPractice?.(model.state.mode);
   });
  keep.addEventListener('click',()=>hideDiscard());
- discardButton.addEventListener('click',()=>{hideDiscard(false);closeDungeonDialog(dialog);});
+ discardButton.addEventListener('click',()=>{stopFingerIntro();hideDiscard(false);closeDungeonDialog(dialog);});
  dialog.addEventListener('cancel',event=>{
   event.preventDefault();
   if(!discard.hidden)hideDiscard();else close();
