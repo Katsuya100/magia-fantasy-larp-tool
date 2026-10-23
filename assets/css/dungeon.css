@@ -772,9 +772,9 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 @keyframes dungeon-dialog-exit{from{opacity:1;transform:none}to{opacity:0;transform:translateY(9px) scale(.985)}}
 @keyframes dungeon-dialog-veil-hide{from{opacity:1}to{opacity:0}}
 
-/* Shared dismiss component for all optional dungeon dialogs. The original
-   buttons stay in place in the DOM, so IDs, click handlers, hidden state,
-   and screen-reader names (閉じる/戻る/キャンセル) are preserved. */
+/* Compact confirmation/input dialogs share a close control.
+   Full-screen editors, cameras, sharing sheets and celebration overlays retain
+   their own original footer controls even when implemented with <dialog>. */
 dialog button.dungeon-dialog-close{
  position:absolute!important;inset-block-start:max(10px,env(safe-area-inset-top));
  inset-inline-end:max(10px,env(safe-area-inset-right));z-index:20;
@@ -797,10 +797,6 @@ dialog button.dungeon-dialog-close:focus-visible{outline:3px solid #ecd191!impor
 dialog button.dungeon-dialog-close[hidden]{display:none!important}
 /* Reserve the corner beside headers; lower rows keep only action buttons. */
 dialog .chooser-header{padding-inline-end:48px}
-#circleDrawingDialog .circle-drawing-actions{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
-#circleDrawingDialog #circleDrawingReset{grid-column:1}
-#circleDrawingDialog #circleDrawingConfirm{grid-column:2}
-dialog.circle-camera-dialog .camera-actions{grid-template-columns:minmax(0,1fr)}
 /* Confirmation for the irreversible local-save reset. */
 .profile-data-actions{margin-top:26px;padding-top:18px;border-top:1px solid var(--border);text-align:right}
 .profile-data-actions p{font-size:12px;color:var(--soft);margin:0 0 10px}
