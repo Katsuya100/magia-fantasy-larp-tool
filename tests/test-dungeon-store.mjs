@@ -21,7 +21,7 @@ assert.deepEqual(p.obtainedItemIds,[],'new profiles begin without acquired item 
 p.returns=2;p.inventory=[{id:'heal_s',value:27,bonus:'buff_aqua'}];p.run={floor:3,hp:42,loot:[]};
 // The app and Drive sync import the save module using release cache keys;
 // saves through a bare import must still notify that same auto-sync bus.
-const versionedStore=await import('../assets/js/dungeon-store.mjs?v=20261023.46');
+const versionedStore=await import('../assets/js/dungeon-store.mjs?v=20261023.47');
 let crossModuleSaveEvents=0;
 const stopVersionedListener=versionedStore.onDungeonDataChange(db,()=>crossModuleSaveEvents++);
 await saveProfile(db,p);
