@@ -453,8 +453,8 @@ try{
  await wait(()=>recoveringUi.get('googleDriveConflictDialog').open,'existing remote opens restore/new chooser');
  const recoveringDescription=recoveringUi.get('googleDriveConflictDialog').querySelector('[data-role="description"]').textContent;
  const recoveringLocal=await readDungeonSnapshot(recoveringDb),recoveringRemote=deserializeDungeonSnapshot(recoveringDrive.current);
- assert.ok(recoveringDescription.includes('バックアップ：星の魔導士（最終保存：'+new Date(recoveringRemote.savedAt).toLocaleString('ja-JP')+'）'));
- assert.ok(recoveringDescription.includes('端末：未設定（最終保存：'+new Date(recoveringLocal.savedAt).toLocaleString('ja-JP')+'）'));
+ assert.ok(recoveringDescription.includes('バックアップ：星の魔導士 Lv.'+recoveringRemote.profile.level+'（最終保存：'+new Date(recoveringRemote.savedAt).toLocaleString('ja-JP')+'）'));
+ assert.ok(recoveringDescription.includes('端末：未設定 Lv.'+recoveringLocal.profile.level+'（最終保存：'+new Date(recoveringLocal.savedAt).toLocaleString('ja-JP')+'）'));
  // Reproduce the actual startup modal behind the restore chooser.
  recoveringUi.get('backupSetupDialog').showModal();
  recoveringUi.get('setupWithoutBackup').hidden=false;
@@ -491,6 +491,9 @@ try{
  start(deliberateDb,deliberateUi,deliberateDrive.fetchImpl,{onRestore:()=>deliberateRestores++});
  await connect(deliberateUi,'connectGoogleDrive');
  await wait(()=>deliberateUi.get('googleDriveConflictDialog').open,'same-adventurer divergent saves require a real choice');
+ const deliberateDescription=deliberateUi.get('googleDriveConflictDialog').querySelector('[data-role="description"]').textContent;
+ assert.ok(deliberateDescription.includes('バックアップ：'+oldCloud.profile.name+' Lv.'+oldCloud.profile.level+'（最終保存：'+new Date(oldCloud.savedAt).toLocaleString('ja-JP')+'）'));
+ assert.ok(deliberateDescription.includes('端末：'+deliberateLocal.name+' Lv.120（最終保存：'+new Date(localBeforeChoice.savedAt).toLocaleString('ja-JP')+'）'));
  assert.equal(deliberateDrive.uploads,0,'higher level alone never authorizes overwriting Drive');
  deliberateUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
  await wait(()=>deliberateRestores===1,'explicit import is respected despite apparent local progress');
@@ -545,8 +548,8 @@ try{
  await wait(()=>profileChoiceUi.get('googleDriveConflictDialog').open,'profile connection opens shared Drive chooser');
  const profileDescription=profileChoiceUi.get('googleDriveConflictDialog').querySelector('[data-role="description"]').textContent;
  const profileLocal=await readDungeonSnapshot(profileChoiceDb),profileRemote=deserializeDungeonSnapshot(profileChoiceDrive.current);
- assert.ok(profileDescription.includes('バックアップ：星の魔導士（最終保存：'+new Date(profileRemote.savedAt).toLocaleString('ja-JP')+'）'));
- assert.ok(profileDescription.includes('端末：端末側の冒険者（最終保存：'+new Date(profileLocal.savedAt).toLocaleString('ja-JP')+'）'));
+ assert.ok(profileDescription.includes('バックアップ：星の魔導士 Lv.'+profileRemote.profile.level+'（最終保存：'+new Date(profileRemote.savedAt).toLocaleString('ja-JP')+'）'));
+ assert.ok(profileDescription.includes('端末：端末側の冒険者 Lv.'+profileLocal.profile.level+'（最終保存：'+new Date(profileLocal.savedAt).toLocaleString('ja-JP')+'）'));
  assert.equal(profileChoiceDrive.uploads,0,'displaying save details does not write either copy');
  const profileOverwrite=profileChoiceUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]');
  profileOverwrite.click();
