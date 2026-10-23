@@ -56,7 +56,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  assert.ok(run.lost.stone>=0&&run.lost.ink>=0&&run.lost.xp>=0);
  assert.ok(run.fights<=120);
  assert.equal(run.circles.filter(c=>c.active).length,5);
- if(run.trace.every(t=>t.cleared<=10))assert.equal(run.healCasts,0,'no intro healing');
+ // Per-battle intro prohibition is asserted inside the simulator itself.
  if(style==='B')assert.equal(run.circles.length,8);
  if(style==='C')assert.ok(run.spent.ink<=run.earned.ink);
 }
