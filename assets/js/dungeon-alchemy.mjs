@@ -58,6 +58,29 @@ export function alchemyAutoSelect(inventory,rows,kind='all',priority='value'){
   }).slice(0,5).map(x=>x.index);
 }
 
+
+const BYPRODUCT_BASE={
+ common:{stone:.10,ink:0},
+ uncommon:{stone:.20,ink:.02},
+ rare:{stone:.35,ink:.05},
+ epic:{stone:.50,ink:.10},
+ legendary:{stone:1,ink:.20}
+};
+// Recovery potency (not item tier) gently raises the odds, capped at +10%
+// for stones and +3% for ink. Common relics never drop ink.
+export function alchemyByproductRates(relic,ingredients=[]){
+ const base=BYPRODUCT_BASE[relic?.rarity]||BYPRODUCT_BASE.common;
+ const amount=Array.isArray(ingredients)?ingredients.reduce((n,item)=>n+numeric(item),0):0;
+ const boost=Math.min(.10,amount/5000);
+ return {stone:Math.min(1,base.stone+boost),ink:base.ink?Math.min(1,base.ink+boost*.3):0};
+}
+
+export function alchemyMilestones(profile){
+ const saved=Number(profile?.alchemyCount);
+ const count=Number.isSafeInteger(saved)&&saved>=0?saved:0;
+ return {count,stoneIn:5-count%5,inkIn:20-count%20};
+}
+
 export function craftAlchemy(profile,relic,indexes,rows,buffs=[],random=Math.random,newId=()=>crypto.randomUUID()){
  if(profile?.run)throw Error('探索中は錬金できません');
  if(!relic||Number(profile?.collection?.[relic.id]||0)<2)throw Error('コレクションが不足しています');
@@ -78,9 +101,19 @@ export function craftAlchemy(profile,relic,indexes,rows,buffs=[],random=Math.ran
   if(choices.length)created.bonus=choices[Math.min(choices.length-1,Math.floor(Math.max(0,Math.min(.999999,Number(random())||0))*choices.length))].id;
  }
  const consumed=new Set(indexes),removedIds=new Set(ingredients.map(item=>item.instanceId));
+ const {count}=alchemyMilestones(profile);
+ if(count===Number.MAX_SAFE_INTEGER)throw Error('錬金記録の上限に達しました');
+ const nextCount=count+1,rates=alchemyByproductRates(relic,ingredients);
+ // Rolls are independent; guaranteed milestone rewards are additive.
+ const roll=()=>{const value=Number(random());return Number.isFinite(value)?Math.max(0,Math.min(.999999,value)):1;};
+ const stones=(roll()<rates.stone?1:0)+(nextCount%5===0?1:0);
+ const ink=(roll()<rates.ink?1:0)+(nextCount%20===0?1:0);
  return {...profile,
   inventory:[...profile.inventory.filter((_,i)=>!consumed.has(i)),created],
   collection:{...profile.collection,[relic.id]:Number(profile.collection[relic.id])-1},
   carrySlots:(profile.carrySlots||[]).map(id=>removedIds.has(id)?null:id),
-  obtainedItemIds:[...new Set([...(profile.obtainedItemIds||[]),created.id])]};
+  obtainedItemIds:[...new Set([...(profile.obtainedItemIds||[]),created.id])],
+  alchemyCount:nextCount,
+  magicStones:Math.max(0,Number(profile.magicStones)||0)+stones,
+  magicInk:Math.max(0,Math.trunc(Number(profile.magicInk)||0))+ink};
 }
