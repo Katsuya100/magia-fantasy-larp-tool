@@ -225,7 +225,9 @@ export function paintCaret(canvas,state,{size=512,transition=null}={}){
  ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
  ctx.strokeStyle='#a64a31';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.globalAlpha=.92;ctx.stroke();ctx.globalAlpha=1;
 }
-function paintPad(canvas,state,activeStroke){
+// The pad is a moving magnified window onto the actual magic circle, not
+// a separate square of ink that gets shrunk into a letter slot.
+export function paintPad(canvas,state,activeStroke=null,transition=null){
  const rect=canvas.getBoundingClientRect();
  if(!rect.width||!rect.height)return;
  const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
@@ -233,19 +235,54 @@ function paintPad(canvas,state,activeStroke){
  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  ctx.fillStyle='#03050b';ctx.fillRect(0,0,w,h);
  const scale=Math.min(w,h)/2;
- const at=p=>({x:w/2+p.x*scale,y:h/2+p.y*scale});
+ const pixel=p=>({x:w/2+p.x*scale,y:h/2+p.y*scale});
+ const finalCamera=state.mode==='spell'?spellCamera(state.letters.length):sigilCamera();
+ let camera=finalCamera;
+ if(transition){
+  const from=transition.type==='revolver'||transition.type==='sigil'
+   ?spellCamera(transition.fromCount):sigilCamera();
+  const to=transition.type==='revolver'||transition.type==='back'
+   ?spellCamera(transition.toCount):sigilCamera();
+  camera=interpolateCamera(from,to,transition.progress);
+ }
+ const project=q=>pixel(circleToPad(q,camera));
+ // The inner and outer ring are genuine projected circle guides. They are
+ // not boundaries: a stroke may cross either arc or overlap adjacent letters.
+ for(const [radius,color] of [[.43,'rgba(244,197,127,.75)'],[INNER_RADIUS,'rgba(138,190,206,.68)']]){
+  ctx.save();ctx.beginPath();
+  for(let i=0;i<=240;i++){
+   const a=i*Math.PI*2/240;
+   const p=project({x:.5+radius*Math.cos(a),y:.5+radius*Math.sin(a)});
+   if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+  }
+  ctx.strokeStyle=color;ctx.lineWidth=dpr*1.35;ctx.setLineDash([5*dpr,6*dpr]);ctx.stroke();ctx.restore();
+ }
  ctx.save();
- ctx.strokeStyle='rgba(176,168,204,.35)';ctx.lineWidth=dpr*.9;ctx.setLineDash([3*dpr,8*dpr]);
+ ctx.strokeStyle='rgba(176,168,204,.28)';ctx.lineWidth=dpr*.9;ctx.setLineDash([3*dpr,8*dpr]);
  ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
  ctx.restore();
- if(state.mode==='sigil'){
-  ctx.save();ctx.strokeStyle='#74718b';ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,7*dpr]);
-  ctx.beginPath();ctx.arc(w/2,h/2,scale*GUIDE_RADIUS,0,Math.PI*2);ctx.stroke();ctx.restore();
+ // Render nearby, already committed letters in alternating glow colors.
+ // Their location rotates continuously while the revolver moves to the next slot.
+ for(let i=0;i<state.letters.length;i++){
+  const glyph=state.letters[i];if(glyph.space)continue;
+  const layoutCount=transition?.type==='revolver'&&i<transition.fromCount
+   ?transition.fromCount+transition.progress:state.letters.length;
+  const at=p=>project(glyphPoint(p,i,layoutCount));
+  const color=i%2===0?'#77d5ff':'#dfb0fa';
+  for(const stroke of glyph.strokes)strokePath(ctx,stroke,at,3*dpr,color,8*dpr);
  }
- const strokes=state.mode==='spell'?state.ink:state.sigil;
- const width=state.mode==='spell'?4.8*dpr:2.4*dpr;
- for(const stroke of strokes)strokePath(ctx,stroke,at,width,'#d2b7ff',9*dpr);
- if(activeStroke?.length)strokePath(ctx,activeStroke,at,width,'#e8d9ff',13*dpr);
+ // The current ink is authored in the *target* spell camera coordinates and
+ // shown through whichever camera is currently being animated.
+ if(state.mode==='spell'){
+  const target=spellCamera(state.letters.length);
+  const at=p=>project(padToCircle(p,target));
+  for(const stroke of state.ink)strokePath(ctx,stroke,at,4.8*dpr,'#e7c5ff',9*dpr);
+  if(activeStroke?.length)strokePath(ctx,activeStroke,at,4.8*dpr,'#fff1c9',13*dpr);
+ }
+ for(const stroke of state.sigil)
+  strokePath(ctx,stroke,p=>project(sigilPoint(p)),2.4*dpr,'#e7c5ff',9*dpr);
+ if(state.mode==='sigil'&&activeStroke?.length)
+  strokePath(ctx,activeStroke,p=>project(sigilPoint(p)),2.4*dpr,'#fff1c9',13*dpr);
 }
 function canvasBlob(canvas,type,quality){
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?.size?resolve(blob):reject(Error('魔法陣画像を作成できません。')),type,quality));
