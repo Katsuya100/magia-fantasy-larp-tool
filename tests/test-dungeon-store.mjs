@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,getDungeonXpMigrationBackup,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 const {parseCsv}=G;
 import {configure} from '../assets/js/dungeon-tuning.mjs';
@@ -28,6 +28,10 @@ p.level=92;p.xp=20000;p.run.xp=45000;
 p.pendingReturn={gained:15500,before:{level:92,xp:4500},steps:['xp'],step:0};
 await saveProfile(db,p);
 const converted=await migrateDungeonXp(db);
+const backupFirst=await getDungeonXpMigrationBackup(db);
+assert.equal(backupFirst.profile.xp,20000,'the original gauge is recoverable');
+assert.equal(backupFirst.profile.run.xp,45000,'the original unbanked reward is recoverable');
+assert.equal(backupFirst.profile.xpScaleVersion,undefined,'backup preserves the legacy format');
 assert.ok(converted.xp>0&&converted.xp<2000,'old XP progress converts to flatter curve');
 assert.ok(converted.run.xp>0&&converted.run.xp<1000,'unbanked XP is converted');
 assert.ok(converted.pendingReturn.gained>0&&converted.pendingReturn.gained<500,'pending reward is converted');
@@ -58,6 +62,10 @@ await putCircle(db,{id:'xp-migration-photo',name:'写真の保護',image:migrati
 await saveProfile(db,legacySave);
 const oldDriveSnapshot=await readDungeonSnapshot(db);
 const exact=await migrateDungeonXp(db);
+const backupFull=await getDungeonXpMigrationBackup(db);
+assert.equal(backupFull.profile.xp,legacyStartXp,'the migrated save retains its exact old EXP');
+assert.deepEqual(new Uint8Array(await backupFull.circles.find(x=>x.id==='xp-migration-photo').image.arrayBuffer()),
+ new Uint8Array(await migrationPhoto.arrayBuffer()),'full backup retains original magic-circle photo bytes');
 assert.equal(exact.level,92);
 assert.ok(Math.abs(exact.xp/G.nextXp(92)-legacyStartXp/oldNeed(92))<0.000001,
  'Lv92 current-level EXP progress remains the same');
@@ -79,6 +87,7 @@ assert.deepEqual(new Uint8Array(await (await allCircles(db)).find(x=>x.id==='xp-
 await replaceDungeonSnapshot(db,oldDriveSnapshot);
 assert.equal((await getProfile(db)).xpScaleVersion,undefined,'cloud backup retains the old EXP version');
 const restored=await migrateDungeonXp(db);
+assert.equal((await getDungeonXpMigrationBackup(db)).profile.xp,legacyStartXp,'Drive legacy restore creates a fresh original backup');
 assert.equal(restored.xp,exact.xp,'restored legacy gauge migrates consistently');
 assert.equal(restored.run.xp,exact.run.xp,'restored unbanked EXP migrates consistently');
 assert.deepEqual(await migrateDungeonXp(db),restored,'restored save does not convert twice');
@@ -90,7 +99,7 @@ assert.deepEqual(new Uint8Array(await (await allCircles(db)).find(x=>x.id==='xp-
 // Pending-return reward animation must end at the already-awarded real level.
 const returnReward=oldNeed(92)+Math.floor(oldNeed(93)*0.37);
 const returnEnd=oldAdvance(92,legacyStartXp,returnReward);
-const returning={...legacySave,level:returnEnd.level,xp:returnEnd.xp,run:null,
+const returning={...legacySave,saveRevision:(await getProfile(db)).saveRevision,level:returnEnd.level,xp:returnEnd.xp,run:null,
  pendingReturn:{before:{level:92,xp:legacyStartXp},gained:returnReward,steps:['xp'],step:0}};
 delete returning.xpScaleVersion;
 await saveProfile(db,returning);
@@ -103,14 +112,14 @@ assert.deepEqual(await migrateDungeonXp(db),migratedReturn,'reloading the return
 
 // An invalid legacy reward must fail before writing either the profile or
 // its integrity seal; this is the same transaction-safety path as startup.
-const unknownVersion={...legacySave,xpScaleVersion:G.XP_SCALE+1};
+const unknownVersion={...legacySave,saveRevision:(await getProfile(db)).saveRevision,xpScaleVersion:G.XP_SCALE+1};
 await saveProfile(db,unknownVersion);
 const beforeUnknownVersion=await readDungeonSnapshot(db);
 await assert.rejects(migrateDungeonXp(db),/未対応のEXPバージョン/);
 const afterUnknownVersion=await readDungeonSnapshot(db);
 assert.deepEqual(afterUnknownVersion.profile,beforeUnknownVersion.profile,'future EXP saves are never converted');
 assert.deepEqual(afterUnknownVersion.integrity,beforeUnknownVersion.integrity,'future XP rejection preserves seal');
-const invalidLegacy={...legacySave,run:{...legacySave.run,xp:-1}};
+const invalidLegacy={...legacySave,saveRevision:(await getProfile(db)).saveRevision,run:{...legacySave.run,xp:-1}};
 delete invalidLegacy.xpScaleVersion;
 await saveProfile(db,invalidLegacy);
 const beforeFailedMigration=await readDungeonSnapshot(db);
@@ -119,12 +128,22 @@ const afterFailedMigration=await readDungeonSnapshot(db);
 assert.deepEqual(afterFailedMigration.profile,beforeFailedMigration.profile,'a failed migration leaves profile intact');
 assert.deepEqual(afterFailedMigration.integrity,beforeFailedMigration.integrity,'a failed migration does not resign partial data');
 await deleteCircle(db,'xp-migration-photo');
+// A stale second game tab must not roll back a successfully committed save.
+const stale=await getProfile(db),updated=await getProfile(db);
+updated.magicStones=901;
+await saveProfile(db,updated);
+stale.magicStones=1;
+await assert.rejects(saveProfile(db,stale),/別のタブでセーブが更新/);
+assert.equal((await getProfile(db)).magicStones,901,'stale tab cannot clobber saved game progress');
+const oldFormatBackup=await getDungeonXpMigrationBackup(db);
+assert.equal(oldFormatBackup.profile.xp,legacyStartXp,'regular gameplay never changes the migration backup');
 
 
-p.level=1;p.xp=0;p.run.xp=0;delete p.pendingReturn;p.xpScaleVersion=45;
-await saveProfile(db,p);
+const clean=await getProfile(db);
+clean.level=1;clean.xp=0;clean.run={...p.run,xp:0};delete clean.pendingReturn;clean.xpScaleVersion=45;
+await saveProfile(db,clean);
 const reread=await getProfile(db);
-assert.deepEqual(reread,p);
+assert.deepEqual(reread,clean);
 reread.level=99;assert.equal((await getProfile(db)).level,1);
 const photo=new Blob([Uint8Array.from([255,216,0,0,255,217])],{type:'image/jpeg'});
 await putCircle(db,{id:'c1',name:'test',image:photo,analysis:null});
@@ -141,6 +160,12 @@ await putCircle(db,{...circles[0],analysis:{attribute:'storm',role:'support',pow
 assert.equal((await allCircles(db))[0].analysis.attribute,'storm');
 await deleteCircle(db,'c2');
 assert.deepEqual((await allCircles(db)).map(x=>x.id),['c1']);
+// After upgrading to DB v3, pre-update v2 JavaScript can never reopen storage.
+await new Promise((resolve,reject)=>{
+ const request=factory.open('magia-dungeon-v1',2);
+ request.onsuccess=()=>reject(Error('v2 tab unexpectedly reopened a v3 save'));
+ request.onerror=()=>{try{assert.equal(request.error.name,'VersionError');resolve();}catch(e){reject(e);}};
+});
 db.close();
 const db2=await openStore(factory);
 assert.equal((await getProfile(db2)).run.floor,3);
@@ -154,6 +179,7 @@ assert.equal(fresh.returns,0);
 assert.equal(fresh.magicStones,0);
 assert.equal(fresh.deepestReturnedLayer,0);
 assert.equal(fresh.deepestReachedLayer,0);
+assert.equal(await getDungeonXpMigrationBackup(db2),null,'explicit game reset removes the old backup');
 // A later ordinary save must not destroy the profile or photos.
 fresh.name='protected-save';
 await saveProfile(db2,fresh);
@@ -166,4 +192,22 @@ await assert.rejects(openStore(fakeIndexedDB({onOpen:'undefined'})),/保存領�
 await assert.rejects(openStore(fakeIndexedDB({onOpen:'error'})),/IndexedDB unavailable/);
 await assert.rejects(openStore(fakeIndexedDB({onOpen:'blocked'})),/別のタブ/);
 await assert.rejects(openStore(fakeIndexedDB({onOpen:'throw'})),/Storage denied/);
-console.log('PASS dungeon IndexedDB startup, photo persistence, update, delete, resume and failure modes');
+// Quota failure while writing the backup must abort conversion atomically.
+const quotaFactory=fakeIndexedDB(),quotaDb=await openStore(quotaFactory);
+const quotaProfile=await getProfile(quotaDb);
+delete quotaProfile.xpScaleVersion;
+quotaProfile.level=92;quotaProfile.xp=20000;
+await saveProfile(quotaDb,quotaProfile);
+const beforeQuota=await readDungeonSnapshot(quotaDb);
+quotaFactory.failMigrationBackupWrites=true;
+await assert.rejects(migrateDungeonXp(quotaDb),/Injected migration backup quota error/);
+const afterQuota=await readDungeonSnapshot(quotaDb);
+assert.deepEqual(afterQuota.profile,beforeQuota.profile,'failed backup never partially migrates the profile');
+assert.deepEqual(afterQuota.integrity,beforeQuota.integrity,'failed backup never resigns the profile');
+assert.equal(await getDungeonXpMigrationBackup(quotaDb),null,'failed migration creates no partial backup');
+quotaFactory.failMigrationBackupWrites=false;
+const afterRetry=await migrateDungeonXp(quotaDb);
+assert.equal(afterRetry.xpScaleVersion,45,'migration can retry safely after quota becomes available');
+assert.equal((await getDungeonXpMigrationBackup(quotaDb)).profile.xp,20000,'retry preserves original old EXP');
+quotaDb.close();
+console.log('PASS dungeon IndexedDB startup, atomic EXP backup, tab collision guard, photo persistence and failure modes');
