@@ -309,7 +309,9 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
  // Its assigned ink color blends continuously, never via an overlaid scene.
  for(let i=0;i<drawn.length;i++){
   const glyph=drawn[i];if(!glyph?.strokes)continue;
-  const highlight=Math.max(0,1-Math.abs(i-viewIndex));
+  // Ink emphasis also wraps over the seam, matching the one-slot camera turn.
+  const separation=Math.abs(i-viewIndex)%DRAWN_GLYPH_LIMIT;
+  const highlight=Math.max(0,1-Math.min(separation,DRAWN_GLYPH_LIMIT-separation));
   const spell=[0,1,2].map(k=>Math.round([113,169,186][k]*(1-highlight)+[210,183,255][k]*highlight));
   const sigil=[169,155,194];
   const color='rgb('+spell.map((v,k)=>Math.round(v*(1-t)+sigil[k]*t)).join(',')+')';
