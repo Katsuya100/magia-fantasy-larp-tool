@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {
- DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,MIN_DUNGEON_POWER,GLYPH_INK_SCALE,REVOLVER_DURATION_MS,
+ DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,MIN_DUNGEON_POWER,GLYPH_INK_SCALE,REVOLVER_DURATION_MS,EDITOR_GLYPH_STEP,
  drawnPower,withDrawnPowerFloor,pointOnPad,glyphPoint,glyphAngle,sigilPoint,
  createDrawingModel,paintCircle,paintCaret,paintPad,initCircleDrawing
 } from '../assets/js/dungeon-circle-draw.mjs';
@@ -10,6 +10,7 @@ assert.equal(DRAWN_GLYPH_LIMIT,32);
 assert.equal(DRAWN_POWER_RATE,.6);
 assert.equal(GLYPH_INK_SCALE,.11,'the pad can reach both rings and neighboring slots');
 assert.equal(REVOLVER_DURATION_MS,250);
+assert.ok(Math.abs(EDITOR_GLYPH_STEP-(2*Math.PI/DRAWN_GLYPH_LIMIT)*2.25)<1e-12,'editor turns are enlarged while the saved circle retains 32 slots');
 assert.equal(drawnPower(500),300);
 assert.equal(drawnPower(1),250);
 assert.throws(()=>drawnPower(0));
@@ -74,7 +75,9 @@ assert.equal(full.state.letters.length,DRAWN_GLYPH_LIMIT);
 const draws=[];
 const ctx={
  clearRect(){},fillRect(){draws.push(['fill',this.fillStyle]);},
- beginPath(){},moveTo(){},lineTo(){},closePath(){},arc(){},save(){},restore(){},setLineDash(){},
+ beginPath(){},moveTo(){},lineTo(){},closePath(){},arc(){},save(){},restore(){},
+ translate(x,y){draws.push(['translate',x,y]);},scale(x,y){draws.push(['scale',x,y]);},
+ setLineDash(dash){draws.push(['dash',...dash]);},
  stroke(){draws.push(['stroke',this.strokeStyle,this.lineWidth]);},fill(){},
  createRadialGradient(){return {addColorStop(){}};}
 };
@@ -85,6 +88,9 @@ assert.ok(draws.some(d=>d[0]==='fill'&&d[1]==='#f2e4c6'));
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0055),'outer ring retained');
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0095),'inner ring retained');
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0072),'letter ink retained');
+const strokeCount=draws.filter(d=>d[0]==='stroke'&&d[2]===128*.0072).length;
+draws.length=0;paintCircle(canvas,state,{size:128,activeStroke:stroke});
+assert.ok(draws.filter(d=>d[0]==='stroke'&&d[2]===128*.0072).length>strokeCount,'live pen stroke immediately appears on the fixed upper preview');
 draws.length=0;
 paintCircle(canvas,{...state,mode:'sigil',ink:[]},{size:128,exportImage:true});
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0072),'export includes both finished letters');
@@ -99,6 +105,10 @@ try{
  assert.ok(draws.some(d=>d[1]==='#866e9c')&&draws.some(d=>d[1]==='#a48968'),'outer/inner scaled ring guides are visible');
  assert.ok(draws.some(d=>d[1]==='rgb(210,183,255)'),'active text uses the highlight ink');
  assert.ok(draws.some(d=>d[1]==='rgb(113,169,186)'),'adjacent text uses a different ink');
+ assert.ok(draws.some(d=>d[0]==='dash'&&d[1]===1.5&&d[2]===3.4),'the fine central dotted cross is rendered');
+ draws.length=0;paintPad(canvas,state,[],0,{progress:.5});
+ assert.ok(draws.some(d=>d[0]==='scale'&&d[1]!==1),'both modes scale during the lower pad transition');
+ assert.ok(draws.some(d=>d[0]==='translate'&&d[1]!==100),'both modes move during transition');
  draws.length=0;paintPad(canvas,state,[],.5);
  assert.ok(draws.some(d=>d[1]==='rgb(162,176,221)'),'color blends during the turn');
 }finally{if(originalWindow===undefined)delete globalThis.window;else globalThis.window=originalWindow;}
@@ -113,7 +123,15 @@ assert.match(html,/class="circle-drawing-actions"[\s\S]*?id="circleDrawingClose"
 assert.match(html,/id="circleDrawingConfirm"[^>]*>紋を描く<\/button>/);
 assert.doesNotMatch(html,/id="circleDrawingInput"/);
 assert.doesNotMatch(source,/get\('circleDrawingInput'\)/);
-assert.match(css,/\.circle-drawing-shell\.is-to-sigil \.circle-drawing-preview-art\{\s*animation:circle-drawing-to-sigil \.25s/);
+assert.match(css,/\.circle-drawing-navigation\{\s*position:absolute;top:50%/,'arrows belong at the middle of the lower half');
+assert.match(css,/\.circle-drawing-entry\{\s*position:relative/);
+assert.doesNotMatch(css,/circle-drawing-to-sigil/,'upper preview no longer animates');
+assert.match(source,/export const EDITOR_GLYPH_STEP=GLYPH_STEP\*2\.25/);
+assert.match(source,/ringPoint\(\.345,\(i\/96-\.5\)\*EDITOR_GLYPH_STEP\)/,'crosshair horizontal axis follows the ring curve');
+assert.match(source,/paintCircle\(preview,model\.state,\{activeStroke,size:512\}\)/,'upper preview stays fixed while lower pad spins');
+assert.match(source,/glyphPoint\(p,i,1,exportImage\?null:viewIndex\)/,'each completed upper glyph occupies a fixed slot even as letter count changes');
+assert.match(source,/animateMode\('sigil'/);
+assert.match(source,/animateMode\('spell'/);
 assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
 assert.match(css,/width:min\(100cqw,100cqh\);height:min\(100cqw,100cqh\)/);
 assert.match(source,/viewIndex=startIndex\+\(target-startIndex\)\*eased/);
@@ -191,12 +209,20 @@ try{
  delete globalThis.window.requestAnimationFrame;
  get('circleDrawingUndo').dispatch('click');
  assert.equal(get('circleDrawingRedo').disabled,false);
+ globalThis.window.requestAnimationFrame=cb=>frames.push(cb);
  get('circleDrawingConfirm').dispatch('click');
+ assert.equal(get('circleDrawingStage').textContent,'呪文','stage changes only when lower zoom/move finishes');
+ assert.equal(get('circleDrawingConfirm').disabled,true);
+ assert.equal(frames.length,1);
+ frames.shift()(0);frames.shift()(160);frames.shift()(320);
  assert.equal(get('circleDrawingStage').textContent,'紋');
  assert.equal(get('circleDrawingConfirm').textContent,'決定');
  assert.equal(get('circleDrawingClose').textContent,'戻る');
  get('circleDrawingClose').dispatch('click');
+ assert.equal(get('circleDrawingStage').textContent,'紋','reverse transform keeps sigil until complete');
+ frames.shift()(0);frames.shift()(160);frames.shift()(320);
  assert.equal(get('circleDrawingStage').textContent,'呪文');
+ delete globalThis.window.requestAnimationFrame;
  get('circleDrawingConfirm').dispatch('click');
  assert.equal(get('circleDrawingStage').textContent,'紋');
  pad.dispatch('pointerdown',pointer(2,60,60));
@@ -221,4 +247,4 @@ try{
  assert.equal(get('circleDrawingUndo').disabled,true);
  dialog.close();
 }finally{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
-console.log('PASS 0.25s revolver, true ring-space glyphs, dual guides, adjacent ink and sigil controls');
+console.log('PASS 0.25s lower-only expanded revolver, curved dotted glyph guides, live ink, two-way moving pad and sigil controls');
