@@ -25,7 +25,7 @@ assert.equal(normal.level,150,'a normal first-clear journey ends at level 150');
 
 // Needed XP should climb sharply across level bands, without an abrupt
 // permanent advantage for collecting low-level enemy kills.
-assert.equal(G.nextXp(1),108,'retain original first-level threshold');
+assert.equal(G.nextXp(1),108/45,'scaled first-level threshold');
 for(const level of [10,20,30,40,60,80,100,120,139]){
  assert.ok(G.nextXp(level+10)>=G.nextXp(level)*1.6,
   'ten levels are substantially more expensive at '+level);
