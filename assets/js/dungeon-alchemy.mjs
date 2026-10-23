@@ -22,12 +22,12 @@ export function alchemyRecipe(relic,ingredients,rows){
  // Epic recipes override ordinary matching and the escape fallback.
  if(rare&&both.length&&clearAll.length&&escape.length)return {id:'life_ruby',value:0};
  if(rare&&clear.length===5&&new Set(clear.map(item=>rows.find(row=>row.id===item.id)?.attribute)).size===5)return {id:'luna_stone',value:0};
- if(rare&&hp.length&&mp.length){
+ if(rare&&hp.length&&mp.length&&!escape.length&&!revive.length){
   const tier=strongest([...hp,...mp],rows,'large');
   return {id:'elixir_'+tierSuffix[tier],value:elixirValue[tier]};
  }
  // Combined HP/MP restoratives remain combined if one is in the mix.
- if(both.length){
+ if(both.length&&!escape.length&&!revive.length){
   const tier=strongest([...both,...hp,...mp],rows,'large');
   return {id:'elixir_'+tierSuffix[tier],value:Math.min(100,Math.max(elixirValue[tier],both.reduce((v,item)=>v+numeric(item),0)))};
  }
