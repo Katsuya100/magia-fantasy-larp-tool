@@ -1,6 +1,6 @@
 import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.27';
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
-// Twenty matching 18-degree slots in the upper circle and lower revolver.
+// Thirty matching 12-degree slots in the upper circle and lower revolver.
 export const DRAWN_GLYPH_LIMIT=30;
 export const DRAWN_POWER_RATE=0.6;
 export const MIN_DUNGEON_POWER=250;
@@ -97,7 +97,7 @@ export function createDrawingModel(){
   },
   move(direction){
    if(state.mode!=='spell'||!Number.isInteger(direction)||Math.abs(direction)!==1)return false;
-   // A turn always advances by exactly one of the 20 real slots, wrapping
+   // A turn always advances by exactly one of the 30 real slots, wrapping
    // at either edge rather than stopping or spinning across the entire ring.
    const next=(state.index+direction+DRAWN_GLYPH_LIMIT)%DRAWN_GLYPH_LIMIT;
    // Blank visited positions may be recorded; only INK determines centering.
@@ -357,7 +357,7 @@ export function initCircleDrawing(doc,{onSave}){
  const release=()=>{pointerId=null;activeStroke=null;};
  function animateTurn(target,direction){
   const startIndex=viewIndex,token=++animationId;
-  // On wrap, animate the adjacent virtual index (20 equals 0 modulo a turn).
+  // On wrap, animate the adjacent virtual index (30 equals 0 modulo a turn).
   const nextVisualIndex=startIndex+direction;
   animating=true;
   repaint();
