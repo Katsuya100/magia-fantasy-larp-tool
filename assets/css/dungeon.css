@@ -775,7 +775,7 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 /* Shared dismiss component for all optional dungeon dialogs. The original
    buttons stay in place in the DOM, so IDs, click handlers, hidden state,
    and screen-reader names (閉じる/戻る/キャンセル) are preserved. */
-dialog .dungeon-dialog-close{
+dialog button.dungeon-dialog-close{
  position:absolute!important;inset-block-start:max(10px,env(safe-area-inset-top));
  inset-inline-end:max(10px,env(safe-area-inset-right));z-index:20;
  display:grid!important;place-items:center;
@@ -788,13 +788,13 @@ dialog .dungeon-dialog-close{
  font-size:0!important;line-height:1!important;letter-spacing:0!important;
  cursor:pointer;touch-action:manipulation
 }
-dialog .dungeon-dialog-close::after{
+dialog button.dungeon-dialog-close::after{
  content:"×";display:block;font-family:Arial,sans-serif;
  font-weight:400;font-size:26px;line-height:1
 }
-dialog .dungeon-dialog-close:hover{background:#30273b!important;border-color:var(--gold)!important}
-dialog .dungeon-dialog-close:focus-visible{outline:3px solid #ecd191!important;outline-offset:3px}
-dialog .dungeon-dialog-close[hidden]{display:none!important}
+dialog button.dungeon-dialog-close:hover{background:#30273b!important;border-color:var(--gold)!important}
+dialog button.dungeon-dialog-close:focus-visible{outline:3px solid #ecd191!important;outline-offset:3px}
+dialog button.dungeon-dialog-close[hidden]{display:none!important}
 /* Reserve the corner beside headers; lower rows keep only action buttons. */
 dialog .chooser-header{padding-inline-end:48px}
 #circleDrawingDialog .circle-drawing-actions{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
