@@ -215,14 +215,14 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
 }
 // Draw the cursor on its own transparent layer so CSS can blink it without
 // dimming the parchment or affecting the exported image.
-export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
+export function paintCaret(canvas,state,{size=512,viewIndex=null,activeStroke=null}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
  ctx.clearRect(0,0,size,size);
  if(state.mode!=='spell'||state.index>=DRAWN_GLYPH_LIMIT)return;
  // The caret marks the LEFT angular boundary of the current 18-degree
  // glyph slot, inside the ring. It must not cover the letter's center.
- const count=writtenGlyphCount(visibleGlyphs(state));
+ const count=writtenGlyphCount(visibleGlyphs(state,activeStroke));
  const centerAngle=viewIndex===null?glyphAngle(state.index,count):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
  const angle=centerAngle-GLYPH_STEP/2;
  const radius=size*RING_RADIUS,half=size*.027;
@@ -333,7 +333,7 @@ export function initCircleDrawing(doc,{onSave}){
  function repaint(){
   const sigil=model.state.mode==='sigil';
   paintCircle(preview,model.state,{activeStroke,size:512});
-  paintCaret(get('circleDrawingCaret'),model.state,{size:512});
+  paintCaret(get('circleDrawingCaret'),model.state,{size:512,activeStroke});
   paintPad(pad,model.state,activeStroke,viewIndex,padTransition);
   get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を1文字ずつ書く';
   get('circleDrawingClose').textContent=sigil?'戻る':'閉じる';
