@@ -1,0 +1,327 @@
+{
+  "schemaVersion": "dungeon-median-first-entry-candidate-v1",
+  "status": "CANDIDATE_NOT_USER_APPROVED",
+  "source": {
+    "actionRun": 39984421358,
+    "artifactId": 12514314209,
+    "seed": 20261024,
+    "economyTrials": 16,
+    "policy": "A five fixed circles, no alchemy, actual combat and banking"
+  },
+  "interpretation": "Rounded per-decade median first-entry player level and five upgrade counts. Not a proven 50-battle prepared loadout. Do not auto-regenerate or pretend carried cleansers were stocked.",
+  "frozenAt": "2026-10-24",
+  "powers": [
+    360,
+    420,
+    540,
+    320,
+    270
+  ],
+  "roles": [
+    "attack",
+    "attack",
+    "attack",
+    "support",
+    "defense"
+  ],
+  "attributes": [
+    "flame",
+    "bolt",
+    "gravity",
+    "aqua",
+    "law"
+  ],
+  "routes": {
+    "short": [
+      {
+        "from": 1,
+        "to": 10,
+        "level": 1,
+        "upgradeLevels": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 11,
+        "to": 20,
+        "level": 32,
+        "upgradeLevels": [
+          2,
+          1,
+          1,
+          1,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 21,
+        "to": 30,
+        "level": 54,
+        "upgradeLevels": [
+          6,
+          6,
+          7,
+          7,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 31,
+        "to": 40,
+        "level": 74,
+        "upgradeLevels": [
+          11,
+          12,
+          10,
+          10,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 41,
+        "to": 50,
+        "level": 92,
+        "upgradeLevels": [
+          16,
+          15,
+          16,
+          15,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 51,
+        "to": 60,
+        "level": 110,
+        "upgradeLevels": [
+          20,
+          20,
+          21,
+          19,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 61,
+        "to": 70,
+        "level": 139,
+        "upgradeLevels": [
+          25,
+          25,
+          25,
+          24,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 71,
+        "to": 80,
+        "level": 150,
+        "upgradeLevels": [
+          30,
+          30,
+          30,
+          30,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 81,
+        "to": 90,
+        "level": 150,
+        "upgradeLevels": [
+          34,
+          37,
+          36,
+          30,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 91,
+        "to": 100,
+        "level": 150,
+        "upgradeLevels": [
+          43,
+          49,
+          54,
+          42,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      }
+    ],
+    "long": [
+      {
+        "from": 1,
+        "to": 10,
+        "level": 1,
+        "upgradeLevels": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 11,
+        "to": 20,
+        "level": 21,
+        "upgradeLevels": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 21,
+        "to": 30,
+        "level": 39,
+        "upgradeLevels": [
+          2,
+          2,
+          2,
+          1,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 31,
+        "to": 40,
+        "level": 57,
+        "upgradeLevels": [
+          4,
+          3,
+          7,
+          3,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 41,
+        "to": 50,
+        "level": 77,
+        "upgradeLevels": [
+          7,
+          6,
+          7,
+          7,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 51,
+        "to": 60,
+        "level": 95,
+        "upgradeLevels": [
+          10,
+          10,
+          10,
+          9,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 61,
+        "to": 70,
+        "level": 106,
+        "upgradeLevels": [
+          13,
+          12,
+          12,
+          12,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 71,
+        "to": 80,
+        "level": 124,
+        "upgradeLevels": [
+          15,
+          15,
+          15,
+          15,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 81,
+        "to": 90,
+        "level": 145,
+        "upgradeLevels": [
+          19,
+          18,
+          18,
+          18,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      },
+      {
+        "from": 91,
+        "to": 100,
+        "level": 150,
+        "upgradeLevels": [
+          22,
+          22,
+          22,
+          22,
+          0
+        ],
+        "verifiedCarry": null,
+        "source": "firstEntry median rounded half upward"
+      }
+    ]
+  },
+  "limitations": [
+    "Actual inventory and in-sortie rank progression require separate validation",
+    "No outcome-based readiness proof; this is first entry, not a win-calibrated build",
+    "First-entry median Level1 for F1 is not a presumption of 10F success",
+    "16 samples are initial measurement, not a replacement for strict combat 256 seeds"
+  ],
+  "changeControl": "Any frozen baseline change needs authored reason, source CI run and user approval."
+}
