@@ -135,50 +135,70 @@ await new Promise(resolve=>setTimeout(resolve,DUNGEON_MODAL_DURATION_MS+30));
 assert.ok(appended.every(node=>node.removed),'ghosts are removed after the 200ms exit');
 
 
-// A single visible close primitive is reused while existing control IDs and
-// handlers remain untouched, including the drawing editor's Close/Back mode.
-const optionalClosers={
+// A tag named <dialog> does NOT imply it is a compact dialog. The drawing
+// editor, cameras, celebration, and share flows are overlay-style surfaces;
+// their original footer button placement must never be absorbed into the
+// common top-right dialog close component.
+const compactDialogs={
  nameDialog:'cancelNameDialog',
  loadoutDialog:'closeLoadoutDialog',
- circleDrawingDialog:'circleDrawingClose',
- circleCameraDialog:'cameraStop',
  magicDetailsDialog:'closeMagicDetails',
  circleActionDialog:'cancelCircleAction',
  magicStoneTutorialDialog:'closeMagicStoneTutorial',
- creatorCongratulationsDialog:'creatorCongratulationsClose',
- milestoneChoiceDialog:'milestoneClose',
- supportPromptDialog:'supportPromptClose',
- imageRepairDialog:'imageRepairLater',
  googleDriveConflictDialog:'data-action="later"',
  googleDriveOverwriteDialog:'data-action="back"',
  googleDriveExpiredDialog:'data-action="later"',
  deleteDataDialog:'cancelDeleteData'
 };
-assert.equal(Object.keys(optionalClosers).length,15);
-for(const [dialogId,buttonId] of Object.entries(optionalClosers)){
- const dialogStart=html.indexOf('<dialog id="'+dialogId+'"');
- const dialogEnd=html.indexOf('</dialog>',dialogStart);
- assert.ok(dialogStart>=0&&dialogEnd>dialogStart,'dialog exists: '+dialogId);
- const segment=html.slice(dialogStart,dialogEnd);
- const buttonTags=[...segment.matchAll(/<button\b[^>]*>/g)].map(match=>match[0]);
- const closers=buttonTags.filter(tag=>tag.includes('dungeon-dialog-close'));
- assert.equal(closers.length,1,'exactly one shared close control: '+dialogId);
- assert.ok(closers[0].includes(buttonId.startsWith('data-action')?buttonId:'id="'+buttonId+'"'),'existing handler kept: '+dialogId);
+const overlayFlows={
+ circleDrawingDialog:['circleDrawingClose','閉じる'],
+ circleCameraDialog:['cameraStop','閉じる'],
+ imageRepairDialog:['imageRepairLater','あとで'],
+ creatorCongratulationsDialog:['creatorCongratulationsClose','閉じる'],
+ milestoneChoiceDialog:['milestoneClose','閉じる'],
+ supportPromptDialog:['supportPromptClose','閉じる']
+};
+assert.equal(Object.keys(compactDialogs).length,9);
+assert.equal(Object.keys(overlayFlows).length,6);
+const dialogMarkup=id=>{
+ const start=html.indexOf('<dialog id="'+id+'"');
+ const end=html.indexOf('</dialog>',start);
+ assert.ok(start>=0&&end>start,'dialog exists: '+id);
+ return html.slice(start,end);
+};
+for(const [id,buttonId] of Object.entries(compactDialogs)){
+ const buttons=[...dialogMarkup(id).matchAll(/<button\b[^>]*>/g)].map(match=>match[0]);
+ const closers=buttons.filter(tag=>tag.includes('dungeon-dialog-close'));
+ assert.equal(closers.length,1,'compact dialog has one top-right close: '+id);
+ assert.ok(closers[0].includes(buttonId.startsWith('data-action')?buttonId:'id="'+buttonId+'"'),'original handler retained: '+id);
 }
-// Required/acknowledgement dialogs are not silently dismissible.
-// The cancel button for required naming is still initially hidden.
-for(const dialogId of ['backupSetupDialog','saveErrorDialog']){
- const segment=html.slice(html.indexOf('<dialog id="'+dialogId+'"'),html.indexOf('</dialog>',html.indexOf('<dialog id="'+dialogId+'"')));
- assert.doesNotMatch(segment,/dungeon-dialog-close/,'mandatory decision remains explicit: '+dialogId);
+for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
+ const markup=dialogMarkup(id);
+ assert.doesNotMatch(markup,/dungeon-dialog-close/,'overlay keeps original controls: '+id);
+ const button=[...markup.matchAll(/<button\b[^>]*>[^<]*<\/button>/g)]
+  .map(match=>match[0]).find(tag=>tag.includes('id="'+buttonId+'"'));
+ assert.ok(button,'overlay footer action exists: '+id);
+ assert.ok(button.includes('>'+label+'</button>'),'overlay footer label unchanged: '+id);
 }
+for(const id of ['backupSetupDialog','saveErrorDialog']){
+ assert.doesNotMatch(dialogMarkup(id),/dungeon-dialog-close/,'required decision stays explicit: '+id);
+}
+assert.equal(Object.keys(compactDialogs).length+Object.keys(overlayFlows).length+2,dialogs.length,'every native dialog has an explicit layout category');
 assert.match(html,/<button[^>]*id="cancelNameDialog"[^>]*dungeon-dialog-close[^>]*hidden>/);
 assert.match(html,/<button[^>]*dungeon-dialog-close[^>]*data-action="later"[^>]*hidden>/);
 assert.match(css,/dialog button\.dungeon-dialog-close\{[^}]*position:absolute!important;[^}]*width:42px!important;[^}]*height:42px!important;/);
 assert.match(css,/dialog button\.dungeon-dialog-close:focus-visible\{outline:3px/);
 assert.match(css,/dialog button\.dungeon-dialog-close\[hidden\]\{display:none!important\}/);
-assert.match(css,/#circleDrawingDialog \.circle-drawing-actions\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1\.25fr\)\}/);
-assert.match(css,/dialog\.circle-camera-dialog \.camera-actions\{grid-template-columns:minmax\(0,1fr\)\}/);
-assert.match(css,/#circleDrawingDialog #circleDrawingReset\{grid-column:1\}/);
-assert.match(css,/#circleDrawingDialog #circleDrawingConfirm\{grid-column:2\}/);
+assert.doesNotMatch(css,/#circleDrawingDialog \.circle-drawing-actions\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1\.25fr\)\}/);
+assert.doesNotMatch(css,/dialog\.circle-camera-dialog \.camera-actions\{grid-template-columns:minmax\(0,1fr\)\}/);
+assert.match(css,/#circleDrawingClose\{grid-column:1\}/);
+assert.match(css,/#circleDrawingReset\{grid-column:2\}/);
+assert.match(css,/#circleDrawingConfirm\{grid-column:3\}/);
+assert.match(css,/\.circle-camera-dialog \.camera-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+// The three actual custom overlay elements were always separate and must stay.
+assert.match(html,/<div id="startupMask" class="startup-mask" role="dialog"/);
+assert.match(html,/<div id="tutorialOverlay" class="tutorial-overlay" role="dialog"/);
+assert.match(html,/<div id="circleDrawingDiscard" class="circle-drawing-discard" role="alertdialog"/);
+assert.match(html,/<button type="button" id="tutorialSkip" class="subtle">スキップ<\/button>/);
 
 console.log('PASS all dungeon dialogs, repeated rename, crossfades, Escape and reduced motion');
