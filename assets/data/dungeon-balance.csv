@@ -62,7 +62,7 @@ victory_mp_restore_rate_late,0.025,深層の戦闘勝利時MP回復率
 victory_mp_middle_taper,0.015,中盤の戦闘勝利時MP回復率の抑制幅
 victory_mp_beginner_bonus,0.045,序盤で魔法陣3個を編成した際のMP消耗を緩和
 victory_mp_early_layer_bonus,0.05,1〜10層で追加する戦闘勝利時MP回復率（11〜20層でゼロへ補間）
-xp_growth_per_10_levels,2.1,10レベルごとの必要経験値の増加倍率（周回EXP減衰なし）
+xp_growth_per_10_levels,1.35,10レベルごとの必要経験値の増加倍率（後半のEXPインフレを抑制）
 defense_duration_base,2,防御魔法持続の下限
 defense_duration_cap,6,防御魔法持続の上限
 defense_duration_power_step,250,威力何点ごとに1ターン延長（0で無効）
