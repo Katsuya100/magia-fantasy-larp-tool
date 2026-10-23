@@ -162,10 +162,12 @@ assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75
  'victory MP recovery decreases with level');
 
 assert.deepEqual(G.VICTORY_MP_LAYER_CURVE.map(([floor,rate])=>[floor,rate]),
- [[1,1],[10,1],[20,.575],[30,.505],[40,.368],[50,.275],[60,.235],
-  [70,.174],[80,.156],[90,.1288],[100,0]]);
-for(const [layer,expected] of [[1,1],[10,1],[15,.7875],[20,.575],
- [80,.156],[90,.1288],[95,.0644],[100,0],[105,0]]){
+ [[1,1],[10,1],[20,.5976],[25,.56],[30,.5395],[35,.462],[40,.406],
+  [45,.357],[50,.3332],[55,.302],[60,.2924],[65,.248],[70,.2244],
+  [75,.199],[80,.192],[90,.1288],[95,.07],[100,0]]);
+for(const [layer,expected] of [[1,1],[10,1],[15,.7988],[20,.5976],
+ [25,.56],[35,.462],[45,.357],[55,.302],[65,.248],[75,.199],
+ [80,.192],[90,.1288],[95,.07],[100,0],[105,0]]){
  assert.ok(Math.abs(G.victoryMpLayerFactor(layer)-expected)<1e-10,
   'victory MP recovery multiplier for floor '+layer);
 }
