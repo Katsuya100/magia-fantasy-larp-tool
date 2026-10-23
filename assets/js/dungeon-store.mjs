@@ -7,7 +7,8 @@ const DB_NAME='magia-dungeon-v1';
 // v3 blocks old v2 game tabs from reopening after conversion.
 const DB_VERSION=3;
 const STORES=['circles','settings'];
-const changes=new WeakMap();
+// Modules can be imported with and without cache keys; preserve one listener bus.
+const changes=globalThis[Symbol.for('magia-dungeon-save-changes')]??=new WeakMap();
 // A successor name is stored separately so naming never rewrites large Blob
 // values nested inside permadeath legacies. The signed profile is assembled
 // from the canonical profile plus this small overlay when read.
