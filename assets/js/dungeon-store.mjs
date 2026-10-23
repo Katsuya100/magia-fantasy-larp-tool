@@ -283,26 +283,53 @@ export function saveHeirName(db,name){
 export async function migrateDungeonXp(db){
  const p=await getProfile(db);
  if(!p||p.xpScaleVersion===XP_SCALE)return p;
- // Preserve exact fractional progress to the next level across BOTH
- // the 45x unit conversion and the flatter 2.1 -> 1.35 growth curve.
+ const maxLevel=150;
+ const oldNext=lvl=>Math.ceil(Number(levelRow(lvl).xp_to_next)*Math.pow(2.1,(Number(lvl)-1)/10));
+ // Level and fraction of the current XP gauge are the durable progress.
  const convert=(xp,lvl)=>{
   const n=Number(xp);
-  if(!Number.isFinite(n))return xp;
-  const oldNeed=Math.ceil(Number(levelRow(lvl).xp_to_next)*Math.pow(2.1,(Number(lvl)-1)/10));
-  return Math.max(0,Math.round(n/oldNeed*nextXp(lvl)*1e6)/1e6);
+  if(!Number.isFinite(n)||n<0)throw Error('旧経験値の値が不正です。セーブを更新せずに停止しました。');
+  return Math.round(n/oldNext(lvl)*nextXp(lvl)*1e6)/1e6;
  };
- const ratioAtLevel=lvl=>nextXp(lvl)/Math.ceil(Number(levelRow(lvl).xp_to_next)*Math.pow(2.1,(Number(lvl)-1)/10));
- p.xp=convert(p.xp,p.level);
- // In-flight rewards have no historical per-fight ledger. Use the current
- // expedition's level as the best available reference and retain fractional XP.
- if(p.run)p.run.xp=Math.max(0,Math.round(Number(p.run.xp||0)*ratioAtLevel(p.level)*1e6)/1e6);
+ const rounded=n=>Math.max(0,Math.round(n*1e6)/1e6);
+ const span=(before,after)=>{
+  if(after.level<before.level)throw Error('旧経験値のレベル順序が不正です。');
+  let earned=-before.xp;
+  for(let level=before.level;level<after.level;level++)earned+=nextXp(level);
+  if(after.level<maxLevel)earned+=after.xp;
+  return rounded(earned);
+ };
+ const levelAfterOldAward=(level,xp,award)=>{
+  let total=xp+award;
+  while(level<maxLevel&&total>=oldNext(level)){total-=oldNext(level);level++;}
+  return {level,xp:level>=maxLevel?0:total};
+ };
+ // Recalculate unbanked XP from the old expedition's actual end state,
+ // not from the ratio at its starting level. The curves differ by level.
+ const start={level:p.level,xp:convert(p.xp,p.level)};
+ if(p.run){
+  const oldAward=Number(p.run.xp||0);
+  if(!Number.isFinite(oldAward)||oldAward<0)throw Error('探索中の旧経験値が不正です。');
+  const oldEnd=levelAfterOldAward(p.level,Number(p.xp),oldAward);
+  const newEnd={level:oldEnd.level,xp:oldEnd.level>=maxLevel?0:convert(oldEnd.xp,oldEnd.level)};
+  p.run.xp=span(start,newEnd);
+ }
  if(p.pendingReturn){
   const before=p.pendingReturn.before;
-  const oldLevel=Number(before?.level||p.level);
-  p.pendingReturn.gained=Math.max(0,Math.round(Number(p.pendingReturn.gained||0)*ratioAtLevel(oldLevel)*1e6)/1e6);
-  if(before)before.xp=convert(before.xp,oldLevel);
+  const oldAward=Number(p.pendingReturn.gained||0);
+  if(!Number.isFinite(oldAward)||oldAward<0)throw Error('帰還報酬の旧経験値が不正です。');
+  if(before){
+   const beforeLevel=Number(before.level);
+   const beforeXp=convert(before.xp,beforeLevel);
+   p.pendingReturn.gained=span({level:beforeLevel,xp:beforeXp},start);
+   before.xp=beforeXp;
+  }else{
+   p.pendingReturn.gained=rounded(oldAward*nextXp(p.level)/oldNext(p.level));
+  }
  }
+ p.xp=start.xp;
  p.xpScaleVersion=XP_SCALE;
+ // The profile, XP-version marker and integrity seal commit in one transaction.
  await saveProfile(db,p);
  return p;
 }
