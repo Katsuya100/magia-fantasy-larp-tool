@@ -19,7 +19,14 @@ assert.ok(p.base.hp>=90&&p.base.hp<=110);
 assert.equal(p.run,null);
 assert.deepEqual(p.obtainedItemIds,[],'new profiles begin without acquired item types');
 p.returns=2;p.inventory=[{id:'heal_s',value:27,bonus:'buff_aqua'}];p.run={floor:3,hp:42,loot:[]};
+// The app and Drive sync import the save module using release cache keys;
+// saves through a bare import must still notify that same auto-sync bus.
+const versionedStore=await import('../assets/js/dungeon-store.mjs?v=20261023.41');
+let crossModuleSaveEvents=0;
+const stopVersionedListener=versionedStore.onDungeonDataChange(db,()=>crossModuleSaveEvents++);
 await saveProfile(db,p);
+assert.equal(crossModuleSaveEvents,1,'cache-keyed Drive listeners receive game saves');
+stopVersionedListener();
 // Existing signed saves must convert EXP exactly once, including unbanked
 // battle rewards and unfinished return-screen rewards.
 delete p.xpScaleVersion; // Simulate a genuine pre-migration signed save.
