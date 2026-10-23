@@ -23,14 +23,15 @@ import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartL
 import {statusBadges} from './dungeon-status-ui.mjs?v=20261023.25';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261023.25';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261023.25';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261023.25';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261023.26';
 import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261023.25';
 import {selectCardCircle} from './dungeon-card-art.mjs?v=20261023.25';
 import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261023.25';
 import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261023.25';
 import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261023.25';
 import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261023.25';
-import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261023.25';
+import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261023.26';
+import {hideUiOverlay} from './dungeon-ui-transitions.mjs?v=20261023.26';
 let cloudSyncController,drawingEditor;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -199,7 +200,7 @@ function finishStartup(){
  $('dungeonApp').removeAttribute('inert');
  $('dungeonApp').setAttribute('aria-busy','false');
  $('startupMask').setAttribute('aria-busy','false');
- $('startupMask').hidden=true;
+ hideUiOverlay($('startupMask'));
 }
 function failStartup(error){
  console.error(error);
