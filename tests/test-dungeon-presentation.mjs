@@ -153,7 +153,7 @@ assert.match(css,/\.name-dialog::backdrop/);
 assert.match(css,/\.circle-power-tips-dialog img/,'example image uses the shared tips popup');
 assert.match(css,/@media\(max-width:630px\)/);
 assert.match(page,/<option value="flame">🔥flame<\/option><option value="bolt">⚡bolt<\/option><option value="aqua">💧aqua/,'element labels are English in grimoire filters');
-assert.match(page,/🌪️storm\s*\/\s*🪨gravity\s*\/\s*⚖️law\s*\/\s*🌀chaos/);
+assert.match(page,/<option value="storm">🌪️storm<\/option><option value="gravity">🪨gravity<\/option><option value="law">⚖️law<\/option><option value="chaos">🌀chaos/,'all seven labels are English');
 assert.match(page,/<dialog id="loadoutDialog"/);
 assert.match(page,/id="loadoutOptions" class="picker-grid"/);
 assert.match(css,/\.picker-grid\.circle-picker-grid\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/,'circle picker has exactly three columns');
