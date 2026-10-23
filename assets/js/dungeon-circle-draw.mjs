@@ -226,7 +226,8 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
 // sigil writing region. A continuous, rotating camera replaces two fading layers.
 export function projectCircleToPad(point,viewIndex,progress,count=1){
  const t=Math.max(0,Math.min(1,progress));
- const theta=-(viewIndex-(count-1)/2)*GLYPH_STEP*(1-t);
+ // One continuous full turn ends in the same orientation as the upper preview.
+ const theta=-(viewIndex-(count-1)/2)*GLYPH_STEP*(1-t)+Math.PI*2*t;
  const dx=point.x-.5,dy=point.y-.5;
  const radius=SPELL_VIEW_RADIUS*(1-t)+SIGIL_VIEW_RADIUS*t;
  return {x:(dx*Math.cos(theta)-dy*Math.sin(theta))/radius,
