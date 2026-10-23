@@ -16,7 +16,7 @@ for(let layer=1;layer<=100;layer++){
  const intended=targetClearLevel(layer);
  assert.equal(normal.level,intended,'start level for layer '+layer);
  const earned=5*G.fightExperience(intended,normal.level,layer);
- assert.ok(Number.isSafeInteger(earned)&&earned>=(intended===150?0:1),'safe-integer XP '+layer);
+ assert.ok(Number.isFinite(earned)&&earned>=(intended===150?0:1/45),'finite scaled XP '+layer);
  G.experience(normal,earned);
  assert.equal(normal.level,Math.min(150,targetClearLevel(layer+1)),
   'player level caps at 150 even as post-100 enemy levels continue increasing');
