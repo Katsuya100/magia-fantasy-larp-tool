@@ -19,8 +19,9 @@ assert.ok(Math.abs(OUTER_RADIUS-.43)<1e-12,
  'drawn outer rim is 43% radius, matching the 86%-diameter camera guide');
 const ringCenter=(INNER_RADIUS+OUTER_RADIUS)/2;
 const visibleSlots=2*Math.asin((GLYPH_INK_SCALE/EDITOR_ZOOM)/ringCenter)/EDITOR_GLYPH_STEP;
-assert.ok(Math.abs(visibleSlots-2)<1e-12,'lower viewport remains precisely two real slots wide after the limit changes');
-assert.ok(EDITOR_ZOOM>1&&EDITOR_ZOOM<1.22,'real optical zoom preserves both visible ring guides');
+assert.ok(visibleSlots>2&&visibleSlots<3,'spell view widens just enough to show both ring guides');
+assert.ok(Math.abs((OUTER_RADIUS-INNER_RADIUS)/2/(GLYPH_INK_SCALE/EDITOR_ZOOM)-.92)<1e-12,
+ 'both spell ring edges appear at 92% of the pad radius');
 assert.equal(drawnPower(500),300);
 assert.equal(drawnPower(1),250);
 assert.throws(()=>drawnPower(0));
@@ -65,11 +66,12 @@ for(const i of [0,1,3,8,29]){
 for(const i of [0,7,14,21,29]){
  const outside=sigilGlyphPadPoint({x:0,y:-1},i,30);
  const inside=sigilGlyphPadPoint({x:0,y:1},i,30);
- assert.ok(Math.hypot(outside.x,outside.y)>1,'sigil crop excludes outer-ring lettering');
- assert.ok(Math.hypot(inside.x,inside.y)<1,'sigil crop shows only glyph marks entering the original inner area');
+ assert.ok(Math.hypot(outside.x,outside.y)<.92,'sigil view includes outer-ring lettering');
+ assert.ok(Math.hypot(inside.x,inside.y)<.92,'sigil view includes inner-ring lettering');
 }
-eq(Math.hypot(sigilPadPoint({x:.92,y:0}).x,sigilPadPoint({x:.92,y:0}).y),.92,'sigil retains its original writing boundary');
-assert.ok(OUTER_RADIUS/sigilRadius>1.25,'outer ring still remains outside the original cropped sigil pad');
+eq(Math.hypot(sigilPadPoint({x:.92,y:0}).x,sigilPadPoint({x:.92,y:0}).y),.92*INNER_RADIUS/OUTER_RADIUS,
+ 'sigil writing boundary aligns with the inner ring');
+eq(OUTER_RADIUS/sigilRadius,.92,'outer ring fits completely inside the sigil pad');
 for(const count of [1,2,7,30]){
  for(const i of [0,Math.min(count-1,1),count-1]){
   for(const p of [{x:0,y:0},{x:.8,y:-1}]){
@@ -159,7 +161,7 @@ let activePath=[];
 const ctx={
  clearRect(){},drawImage(...args){draws.push(['image',...args]);},fillRect(){draws.push(['fill',this.fillStyle]);},
  beginPath(){activePath=[];},moveTo(x,y){draws.push(['move',x,y]);activePath.push([x,y]);},
- lineTo(x,y){activePath.push([x,y]);},closePath(){},arc(){},save(){},restore(){},
+ lineTo(x,y){activePath.push([x,y]);},closePath(){},arc(x,y,r){draws.push(['arc',x,y,r]);},save(){},restore(){},
  translate(x,y){draws.push(['translate',x,y]);},scale(x,y){draws.push(['scale',x,y]);},
  setLineDash(dash){draws.push(['dash',...dash]);},
  stroke(){draws.push(['stroke',this.strokeStyle,this.lineWidth,activePath.slice()]);},fill(){},
@@ -209,6 +211,9 @@ globalThis.window={devicePixelRatio:1,addEventListener(){}};
 try{
  draws.length=0;paintPad(canvas,state,[],0);
  assert.ok(draws.some(d=>d[1]==='#866e9c')&&draws.some(d=>d[1]==='#a48968'),'outer/inner scaled ring guides are visible');
+  const spellGuides=draws.filter(d=>d[0]==='arc');
+  eq(spellGuides[0][3]/100,OUTER_RADIUS/spellRadius,'spell outer guide radius matches world');
+  eq(spellGuides[1][3]/100,INNER_RADIUS/spellRadius,'spell inner guide radius matches world');
  assert.ok(draws.some(d=>d[1]==='rgb(210,183,255)'),'active text uses the highlight ink');
  assert.ok(draws.some(d=>d[1]==='rgb(113,169,186)'),'adjacent text uses a different ink');
  assert.ok(draws.some(d=>d[0]==='dash'&&d[1]===1.5&&d[2]===3.4),'the fine central dotted cross is rendered');
@@ -221,7 +226,7 @@ try{
    (d[1]==='#b8a0d6'||d[1]==='#f3dcaa')&&d[3]?.length===2);
   assert.equal(lines.length,3,'both letter-boundary guides and the center vertical guide are present');
   const center=projectCircleToPad({x:.5,y:.5},0,progress,2);
-  const radius=(GLYPH_INK_SCALE/EDITOR_ZOOM)*(1-progress)+(.255/.92)*progress;
+  const radius=spellRadius*(1-progress)+sigilRadius*progress;
   for(const line of lines){
    const measured=line[3].map(([x,y])=>Math.hypot((x-100)/100-center.x,(y-100)/100-center.y)*radius);
    eq(measured[0],INNER_RADIUS+.004,'vertical guide starts INSIDE the unchanged inner circle');
@@ -234,7 +239,10 @@ try{
  assert.equal(draws.filter(d=>d[0]==='stroke'&&Math.abs(d[2]-2.7)<1e-10).length,2,'two glyphs are each painted once during transition');
  assert.equal(draws.some(d=>d[0]==='scale'||d[0]==='translate'),false,'no layered, scaled renderings of two separate screens');
  draws.length=0;paintPad(canvas,{...state,mode:'sigil',ink:[]},[],0);
- assert.ok(draws.some(d=>d[0]==='stroke'&&d[1]==='rgb(169,155,194)'),'sigil crop preserves projected glyph strokes');
+ assert.ok(draws.some(d=>d[0]==='stroke'&&d[1]==='rgb(169,155,194)'),'sigil view preserves projected glyph strokes');
+  const sigilGuides=draws.filter(d=>d[0]==='arc');
+  eq(sigilGuides[0][3]/100,.92,'full outer circle is in frame');
+  eq(sigilGuides[1][3]/100,.92*INNER_RADIUS/OUTER_RADIUS,'inner guide matches the writing boundary');
  draws.length=0;paintPad(canvas,state,[],.5);
  assert.ok(draws.some(d=>d[1]==='rgb(162,176,221)'),'color blends during the turn');
  draws.length=0;paintPad(canvas,state,[],29.5);
@@ -290,7 +298,7 @@ assert.match(source,/animateMode\('spell'/);
 assert.match(source,/glyphInputPoint\(padPoint\)/);
 assert.match(source,/sigilInputPoint\(padPoint\)/);
 assert.match(source,/project\(glyphPoint\(p,i,count\)\)/,'both screens use the same centered ink projection');
-assert.match(source,/const SIGIL_VIEW_RADIUS=INNER_RADIUS\/GUIDE_RADIUS;/,'original sigil crop retained');
+assert.match(source,/const SIGIL_VIEW_RADIUS=OUTER_RADIUS\/GUIDE_RADIUS;/,'sigil view fits both circles');
 assert.doesNotMatch(source,/layer\(1-t|layer\(t,0/,'no composited render layers');
 assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
 assert.match(css,/width:min\(100cqw,100cqh\);height:min\(100cqw,100cqh\)/);
