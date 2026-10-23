@@ -251,6 +251,8 @@ assert.match(html,/id="circleDrawingPad"[^>]*width="420" height="420"/);
 assert.match(html,/id="circleDrawingParchment" src="assets\/images\/dungeon-parchment\.jpg\?v=/);
 assert.match(html,/class="circle-drawing-brush-icon" aria-hidden="true">🖌️<\/span>/);
 assert.match(html,/id="circleDrawingFingerGuide"[^>]*aria-hidden="true" hidden/);
+assert.match(html,/d="M32 76 L32 24 L70 24 M32 49 L60 49"/,"the guide draws the letter F, not an abstract curve");
+assert.match(css,/@keyframes dungeon-finger-move\{[^}]*top:76%/,"the finger demonstrates the vertical F stroke");
 assert.match(css,/\.circle-drawing-finger-guide\{[^}]*pointer-events:none/);
 assert.match(html,/id="circleDrawingStage"[^>]*>呪文を1文字ずつ書く<\/strong>/);
 assert.match(html,/class="circle-drawing-navigation"[\s\S]*?id="circleDrawingUndo"[\s\S]*?id="circleDrawingRedo"/);
