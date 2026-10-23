@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
@@ -33,6 +33,60 @@ assert.ok(converted.pendingReturn.before.xp>0&&converted.pendingReturn.before.xp
 assert.equal(converted.xpScaleVersion,45);
 assert.deepEqual(await migrateDungeonXp(db),converted,'repeat startup never scales twice');
 assert.equal((await getProfile(db)).xp,converted.xp,'converted signed save persists');
+ 
+// A real legacy save at 92 with 20% of the old gauge, and unbanked EXP
+// crossing a level boundary, must keep its exact earned level after migration.
+const oldNeed=lvl=>Math.ceil(Number(levels[lvl-1].xp_to_next)*Math.pow(2.1,(lvl-1)/10));
+const oldAdvance=(lvl,xp,award)=>{
+ xp+=award;
+ while(lvl<150&&xp>=oldNeed(lvl)){xp-=oldNeed(lvl);lvl++;}
+ return {level:lvl,xp:lvl===150?0:xp};
+};
+const legacyStartXp=Math.floor(oldNeed(92)*0.20);
+const earnedInRun=oldNeed(92)+Math.floor(oldNeed(93)*0.65);
+const oldRunEnd=oldAdvance(92,legacyStartXp,earnedInRun);
+const legacySave={...converted,level:92,xp:legacyStartXp,run:{...converted.run,xp:earnedInRun},
+ magicStones:77,adventurerRank:40,inventory:[{id:'heal_s',value:27,bonus:'buff_aqua'}]};
+delete legacySave.pendingReturn;
+delete legacySave.xpScaleVersion;
+await saveProfile(db,legacySave);
+const oldDriveSnapshot=await readDungeonSnapshot(db);
+const exact=await migrateDungeonXp(db);
+assert.equal(exact.level,92);
+assert.ok(Math.abs(exact.xp/G.nextXp(92)-legacyStartXp/oldNeed(92))<0.000001,
+ 'Lv92 current-level EXP progress remains the same');
+const resumed={level:exact.level,xp:exact.xp};
+G.experience(resumed,exact.run.xp);
+assert.equal(resumed.level,oldRunEnd.level,'pending exploration XP yields the same final level');
+assert.ok(Math.abs(resumed.xp/G.nextXp(resumed.level)-oldRunEnd.xp/oldNeed(oldRunEnd.level))<0.000001,
+ 'pending exploration XP keeps the earned post-return gauge fraction');
+assert.equal(exact.magicStones,77,'magic stone progress is untouched');
+assert.equal(exact.adventurerRank,40,'adventurer rank is untouched');
+assert.deepEqual(exact.inventory,legacySave.inventory,'items are untouched');
+
+// Simulate restoring an old, signed Google Drive snapshot and reloading.
+// The restored legacy marker is absent and must be migrated just once.
+await replaceDungeonSnapshot(db,oldDriveSnapshot);
+assert.equal((await getProfile(db)).xpScaleVersion,undefined,'cloud backup retains the old EXP version');
+const restored=await migrateDungeonXp(db);
+assert.equal(restored.xp,exact.xp,'restored legacy gauge migrates consistently');
+assert.equal(restored.run.xp,exact.run.xp,'restored unbanked EXP migrates consistently');
+assert.deepEqual(await migrateDungeonXp(db),restored,'restored save does not convert twice');
+
+// Pending-return reward animation must end at the already-awarded real level.
+const returnReward=oldNeed(92)+Math.floor(oldNeed(93)*0.37);
+const returnEnd=oldAdvance(92,legacyStartXp,returnReward);
+const returning={...legacySave,level:returnEnd.level,xp:returnEnd.xp,run:null,
+ pendingReturn:{before:{level:92,xp:legacyStartXp},gained:returnReward,steps:['xp'],step:0}};
+delete returning.xpScaleVersion;
+await saveProfile(db,returning);
+const migratedReturn=await migrateDungeonXp(db);
+const frameStart={level:92,xp:migratedReturn.pendingReturn.before.xp};
+G.experience(frameStart,migratedReturn.pendingReturn.gained);
+assert.equal(frameStart.level,migratedReturn.level,'the full return animation ends at the real awarded level');
+assert.ok(Math.abs(frameStart.xp-migratedReturn.xp)<0.00001,'the animation ends at exactly the saved EXP');
+assert.deepEqual(await migrateDungeonXp(db),migratedReturn,'reloading the return animation cannot duplicate XP');
+
 p.level=1;p.xp=0;p.run.xp=0;delete p.pendingReturn;p.xpScaleVersion=45;
 await saveProfile(db,p);
 const reread=await getProfile(db);
