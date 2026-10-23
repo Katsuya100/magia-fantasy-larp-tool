@@ -4,23 +4,22 @@ import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from '
 export const DRAWN_GLYPH_LIMIT=30;
 export const DRAWN_POWER_RATE=0.6;
 export const MIN_DUNGEON_POWER=250;
-// The "ring" is the BAND between the original inner and outer circles.
-// The outer rim follows the same 86%-diameter framing as the camera and thumbnails.
-// Keep the inner/sigil boundary fixed; the smaller handwriting glyphs are unchanged.
-export const INNER_RADIUS=.255;
+// Narrow the letter band to two-thirds by moving only the inner ring outward.
+// The outer rim keeps its 86%-diameter alignment with the camera and thumbnails.
 export const OUTER_RADIUS=.43;
+export const INNER_RADIUS=OUTER_RADIUS-(OUTER_RADIUS-.255)*2/3;
 const GUIDE_RADIUS=.92;
 // The same scale in both axes preserves each drawn letter's aspect ratio.
-// Smaller handwriting footprints match the two-thirds-wide 30-slot letter ring.
-export const GLYPH_INK_SCALE=.11*(2/3);
+// Shrink the letter footprint with the ring so ink stays between both circles.
+export const GLYPH_INK_SCALE=.11*(2/3)*(2/3);
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 const RING_RADIUS=(INNER_RADIUS+OUTER_RADIUS)/2;
-// Keep the writing area large; show only a little of each ring guide at the pad edges.
-const SPELL_VIEW_RADIUS=(OUTER_RADIUS-INNER_RADIUS)/(2*.96);
+// Frame two letter slots: one full center letter and half of each neighbor.
+const SPELL_VIEW_RADIUS=RING_RADIUS*Math.sin(GLYPH_STEP);
 export const EDITOR_ZOOM=GLYPH_INK_SCALE/SPELL_VIEW_RADIUS;
 export const EDITOR_GLYPH_STEP=GLYPH_STEP;
-// Keep the original close-up for drawing the central sigil.
+// Reframe the sigil to its larger inner circle, retaining a 92% guide boundary.
 const SIGIL_VIEW_RADIUS=INNER_RADIUS/GUIDE_RADIUS;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
@@ -239,7 +238,7 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null,activeStroke=nu
  ctx.strokeStyle='#a64a31';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.globalAlpha=.92;ctx.stroke();ctx.globalAlpha=1;
 }
 // The same 30-slot geometry is projected through one camera.
-// Letters stay large, with ring guides only at the edges; sigil remains a close-up.
+// Two letter slots stay in view; the sigil camera follows the enlarged inner ring.
 export function projectCircleToPad(point,viewIndex,progress,count=1){
  const t=Math.max(0,Math.min(1,progress));
  // One continuous full turn ends in the same orientation as the upper preview.
