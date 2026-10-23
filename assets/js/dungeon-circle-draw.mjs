@@ -4,14 +4,17 @@ import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from '
 export const DRAWN_GLYPH_LIMIT=30;
 export const DRAWN_POWER_RATE=0.6;
 export const MIN_DUNGEON_POWER=250;
-const INNER_RADIUS=.255;
+// The "ring" is the BAND between the original inner and outer circles.
+// Keep the sigil/inner boundary fixed and shrink the BAND thickness to 2/3.
+export const INNER_RADIUS=.255;
+export const OUTER_RADIUS=INNER_RADIUS+(.43-INNER_RADIUS)*(2/3);
 const GUIDE_RADIUS=.92;
 // The same scale in both axes preserves each drawn letter's aspect ratio.
 // Smaller handwriting footprints match the two-thirds-wide 30-slot letter ring.
 export const GLYPH_INK_SCALE=.11*(2/3);
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
-const RING_RADIUS=.345;
+const RING_RADIUS=(INNER_RADIUS+OUTER_RADIUS)/2;
 // Set the lower camera's horizontal field of view to EXACTLY two real
 // 12-degree slots. Never widen the letter angles only in the editor.
 const SPELL_VIEW_RADIUS=RING_RADIUS*Math.sin(GLYPH_STEP);
@@ -201,7 +204,7 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('魔法陣を描画できません。');
  ctx.clearRect(0,0,size,size);
  paintParchment(ctx,size);
- brushCircle(ctx,size,.43,.0055);
+ brushCircle(ctx,size,OUTER_RADIUS,.0055);
  brushCircle(ctx,size,INNER_RADIUS,.0095);
  const visible=visibleGlyphs(state,activeStroke),count=writtenGlyphCount(visible);
  for(let i=0;i<visible.length;i++){
@@ -277,7 +280,7 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
  const center=project({x:.5,y:.5});
  const viewRadius=SPELL_VIEW_RADIUS*(1-t)+SIGIL_VIEW_RADIUS*t;
  ctx.save();ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,6*dpr]);
- for(const radius of [.43,INNER_RADIUS]){
+ for(const radius of [OUTER_RADIUS,INNER_RADIUS]){
   ctx.beginPath();ctx.arc(center.x,center.y,scale*radius/viewRadius,0,Math.PI*2);
   ctx.strokeStyle=radius===INNER_RADIUS?'#a48968':'#866e9c';ctx.stroke();
  }
@@ -294,7 +297,7 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
   // Keep all three radial guides wholly BETWEEN the actual inner/outer
   // circles. The small inset prevents even round dashed endpoints from
   // overpainting either ring at any zoom or device pixel ratio.
-  const guideInner=INNER_RADIUS+.004,guideOuter=.43-.004;
+  const guideInner=INNER_RADIUS+.004,guideOuter=OUTER_RADIUS-.004;
   ctx.lineCap='butt';
   const halfStep=GLYPH_STEP/2;
   ctx.strokeStyle='#b8a0d6';ctx.lineWidth=1.35*dpr;ctx.setLineDash([3*dpr,5*dpr]);
