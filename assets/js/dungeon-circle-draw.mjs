@@ -4,8 +4,10 @@ export const DRAWN_POWER_RATE=0.6;
 export const MIN_DUNGEON_POWER=250;
 const INNER_RADIUS=.255;
 const GUIDE_RADIUS=.92;
-// The same scale in both axes preserves each drawn letter's aspect ratio.
-const GLYPH_INK_SCALE=.036;
+// One touchpad unit is actual magic-circle space (not a normalized letter box).
+// Its half-width reaches past both rings and multiple adjacent 32-slot letters.
+export const GLYPH_PAD_SCALE=.105;
+const GLYPH_INK_SCALE=GLYPH_PAD_SCALE;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
@@ -38,6 +40,28 @@ export function glyphPoint(point,index,count=1){
  const tangent=angle+Math.PI/2,dx=point.x*GLYPH_INK_SCALE,dy=point.y*GLYPH_INK_SCALE;
  return {x:.5+.345*Math.cos(angle)+dx*Math.cos(tangent)-dy*Math.sin(tangent),
   y:.5+.345*Math.sin(angle)+dx*Math.sin(tangent)+dy*Math.cos(tangent)};
+}
+export function spellCamera(count){
+ const angle=caretAngle(count);
+ return {cx:.5+.345*Math.cos(angle),cy:.5+.345*Math.sin(angle),rotation:angle+Math.PI/2,scale:GLYPH_PAD_SCALE};
+}
+export function sigilCamera(){
+ return {cx:.5,cy:.5,rotation:0,scale:INNER_RADIUS/GUIDE_RADIUS};
+}
+export function padToCircle(point,camera){
+ const c=Math.cos(camera.rotation),s=Math.sin(camera.rotation);
+ return {x:camera.cx+camera.scale*(point.x*c-point.y*s),
+  y:camera.cy+camera.scale*(point.x*s+point.y*c)};
+}
+export function circleToPad(point,camera){
+ const dx=(point.x-camera.cx)/camera.scale,dy=(point.y-camera.cy)/camera.scale;
+ const c=Math.cos(camera.rotation),s=Math.sin(camera.rotation);
+ return {x:dx*c+dy*s,y:-dx*s+dy*c};
+}
+export function interpolateCamera(a,b,progress){
+ const t=Math.max(0,Math.min(1,progress));
+ return {cx:a.cx+(b.cx-a.cx)*t,cy:a.cy+(b.cy-a.cy)*t,
+  rotation:a.rotation+(b.rotation-a.rotation)*t,scale:a.scale+(b.scale-a.scale)*t};
 }
 export function sigilPoint(point){
  return {x:.5+point.x*INNER_RADIUS/GUIDE_RADIUS,y:.5+point.y*INNER_RADIUS/GUIDE_RADIUS};
@@ -78,7 +102,7 @@ export function createDrawingModel(){
   enterGlyph(){
    if(state.mode!=='spell'||state.letters.length>=DRAWN_GLYPH_LIMIT)return false;
    mutate(()=>{
-    state.letters.push(state.ink.length?{strokes:normalizedGlyph(state.ink)}:{space:true});
+    state.letters.push(state.ink.length?{strokes:state.ink.map(stroke=>stroke.map(point=>({...point})))}:{space:true});
     state.ink=[];
    });
    return true;
@@ -155,7 +179,7 @@ function brushStroke(ctx,points,transform,width){
  strokePath(ctx,jittered,p=>p,width*.42,'#75573b');
  ctx.globalAlpha=1;
 }
-export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,size=512}={}){
+export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,size=512,transition=null}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('魔法陣を描画できません。');
  ctx.clearRect(0,0,size,size);
@@ -166,8 +190,22 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
   const glyph=state.letters[i];
   if(glyph.space)continue;
   for(const stroke of glyph.strokes){
-   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,state.letters.length);return {x:q.x*size,y:q.y*size};},size*.0072);
+   // Existing letters recenter gradually during a revolver step; the just-entered
+   // letter stays where the pen drew it and rotates out of the current view.
+   const count=transition?.type==='revolver'&&i<transition.fromCount
+    ?transition.fromCount+transition.progress:state.letters.length;
+   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,count);return {x:q.x*size,y:q.y*size};},size*.0072);
   }
+ }
+ if(state.mode==='spell'){
+  // Before 入力 the unfinished pen marks are also visible on the large preview.
+  const camera=spellCamera(state.letters.length);
+  for(const stroke of state.ink)brushStroke(ctx,stroke,p=>{
+   const q=padToCircle(p,camera);return {x:q.x*size,y:q.y*size};
+  },size*.0072);
+  if(activeStroke?.length)brushStroke(ctx,activeStroke,p=>{
+   const q=padToCircle(p,camera);return {x:q.x*size,y:q.y*size};
+  },size*.0072);
  }
  const transform=p=>{const q=sigilPoint(p);return {x:q.x*size,y:q.y*size};};
  for(const stroke of state.sigil)brushStroke(ctx,stroke,transform,size*.0096);
@@ -175,12 +213,13 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
 }
 // Draw the cursor on its own transparent layer so CSS can blink it without
 // dimming the parchment or affecting the exported image.
-export function paintCaret(canvas,state,{size=512}={}){
+export function paintCaret(canvas,state,{size=512,transition=null}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
  ctx.clearRect(0,0,size,size);
  if(state.mode!=='spell'||state.letters.length>=DRAWN_GLYPH_LIMIT)return;
- const angle=caretAngle(state.letters.length),radius=size*.345,half=size*.027;
+ const visibleCount=transition?.type==='revolver'?transition.fromCount+transition.progress:state.letters.length;
+ const angle=caretAngle(visibleCount),radius=size*.345,half=size*.027;
  ctx.beginPath();
  ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
  ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
