@@ -9,7 +9,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {enemyForFight,targetClearLevel} from '../assets/js/dungeon-design.mjs';
 import {allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
-import {upgradeStoneCost,strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
+import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
 
@@ -109,8 +109,8 @@ function recoveryGap(state){
 }
 function considerInkRedraw(state){
  if(state.style!=='C'||state.best<30)return;
- const upgraded=state.circles.filter(c=>c.active);
- if(!upgraded.length||state.ink<5||state.replacements>=3)return;
+ const upgraded=state.circles.filter(c=>c.active&&!c.redrawn);
+ if(!upgraded.length||state.ink<5||state.replacements>=state.redrawLimit)return;
  // Use a fixed, non-rerolled 250-power newly drawn spell: conservative and
  // transparent; no transferred stone levels, no free ink.
  const candidate=upgraded.sort((a,b)=>actualPower(a)-actualPower(b))[0];
@@ -119,12 +119,16 @@ function considerInkRedraw(state){
  const oldPower=actualPower(candidate);
  // Refuse to spend a rare material for a strictly inferior immediate spell.
  // Both strategy branches must still be assessed by a paired benchmark.
- if(newBase<=oldPower)return;
+ if(newBase<=oldPower&&!state.forceRedraw)return;
+ state.redrawEvents.push({layer:state.best,role:candidate.role,attribute:candidate.attribute,
+  oldPower,newPower:newBase,upgradesLost:candidate.upgrades,
+  sunkStones:totalUpgradeStoneCost(candidate.upgrades),inkConsumed:used,
+  forcedDiagnostic:state.forceRedraw,stoneInvestmentTransferred:0});
  state.ink-=used;state.spent.ink+=used;
  if(candidate.upgrades>0)state.sunkCircles++;
  state.replacements++;
  state.circles[state.circles.indexOf(candidate)]={...circle(candidate.role,candidate.attribute,newBase),
-  ink:used};
+  ink:used,redrawn:true};
 }
 // Craft only when an actual duplicate and five separate existing ingredients
 // are in the bank; alchemy is never used in the mandatory no-alchemy economy.
@@ -184,10 +188,13 @@ function battle(state,hero,layer,fight,carry,random,usage){
  }
  return {win:enemy.hp<=0&&hero.hp>0,foe,enemyLevel,rounds,healCasts,enemyHealCasts,enemyDebuffs};
 }
-export function runJourney(seed,{style='A',route='short',alchemy=false,maxSorties=120,maxFights=10000}={}){
+export function runJourney(seed,{style='A',route='short',alchemy=false,
+ redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
+ if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  const random=rng(seed),profile={level:1,xp:0,adventurerRank:0};
  const state={style,route,alchemy,random,profile,stones:0,ink:0,inventory:[],collection:{},
+  redrawLimit,forceRedraw,redrawEvents:[],
   alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
   circles:spells.map(([role,attribute,power])=>circle(role,attribute,power)),
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
@@ -327,7 +334,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,maxSortie
    remainingGap:state.recoveryRemainingGap,comparison:FROZEN_A.schemaVersion},
   earned:state.earned,spent:state.spent,lost:state.lost,balances:{stone:state.stones,ink:state.ink},
   inventory:state.inventory.length,collection:state.collection,circles:invested,
-  sunkCircles:state.sunkCircles,replacements:state.replacements,
+  sunkCircles:state.sunkCircles,replacements:state.replacements,redrawEvents:state.redrawEvents,
   healCasts:state.healCasts,enemyHealCasts:state.enemyHealCasts,
   enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,
