@@ -28,7 +28,7 @@ const INTRO=[
 assert.ok(INTRO.every(([role,attr,power])=>power>=100&&power<=300));
 assert.ok(NORMAL.every(([role,attr,power])=>Number.isInteger(power)));
 assert.equal(G.capacity(102),13);
-const SAMPLES=Number(process.env.DUNGEON_BALANCE_SAMPLES||128);
+const SAMPLES=Number(process.env.DUNGEON_BALANCE_SAMPLES||256);
 assert.ok(Number.isSafeInteger(SAMPLES)&&SAMPLES>=32&&SAMPLES<=512,
  'DUNGEON_BALANCE_SAMPLES must be between 32 and 512');
 const STRICT=process.env.DUNGEON_BALANCE_STRICT==='1';
