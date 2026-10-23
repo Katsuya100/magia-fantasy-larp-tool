@@ -16,6 +16,7 @@ const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs','assets/js/du
 const expected=new Map(await Promise.all(assets.map(async path=>[path,await readFile(new URL('../'+path,import.meta.url),'utf8')])));
 const tutorialImages=['tutorial-outer.gif','tutorial-inner.gif','tutorial-spell.gif','tutorial-sigil.gif'];
 const expectedImages=new Map(await Promise.all(tutorialImages.map(async name=>[name,await readFile(new URL('../assets/images/'+name,import.meta.url))])));
+const expectedParchment=await readFile(new URL('../assets/images/dungeon-parchment.jpg',import.meta.url));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function remote(path,attempt){
  const url=origin+path+(path.includes('?')?'&':'?')+'smoke='+attempt+'-'+Date.now();
@@ -43,7 +44,11 @@ for(let attempt=1;attempt<=24;attempt++){
    const published=Buffer.from(await imageResponse.arrayBuffer());
    if(published.subarray(0,6).toString()!=='GIF89a'||!published.equals(expectedImages.get(name)))throw Error('Published tutorial GIF differs: '+name);
   }
-  console.log('LIVE VERIFIED: Pages HTML, assets and four animated tutorial GIFs match '+version+' at '+origin);
+  const parchmentResponse=await fetch(origin+'assets/images/dungeon-parchment.jpg?v='+version+'&smoke='+attempt+'-'+Date.now(),{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(12000)});
+  if(!parchmentResponse.ok)throw Error('Published parchment HTTP '+parchmentResponse.status);
+  const publishedParchment=Buffer.from(await parchmentResponse.arrayBuffer());
+  if(!publishedParchment.equals(expectedParchment))throw Error('Published parchment texture differs from this commit');
+  console.log('LIVE VERIFIED: Pages HTML, assets, tutorial GIFs and uploaded parchment match '+version+' at '+origin);
   process.exit(0);
  }catch(error){
   last=String(error?.message||error);
