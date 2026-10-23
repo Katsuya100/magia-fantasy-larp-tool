@@ -1,3 +1,4 @@
+import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.27';
 // Magic-stone guidance is intentionally separate from the drawing tutorial.
 export function shouldShowMagicStoneTutorial(profile){
  return Number(profile?.magicStones)>0&&!profile?.magicStoneTutorialSeen;
@@ -6,7 +7,7 @@ export function shouldShowMagicStoneTutorial(profile){
 export function initMagicStoneTutorial(doc,{view=globalThis.window,requestFrame=globalThis.requestAnimationFrame}={}){
  const dialog=doc.getElementById('magicStoneTutorialDialog');
  const closeButton=doc.getElementById('closeMagicStoneTutorial');
- closeButton.addEventListener('click',()=>dialog.close());
+ closeButton.addEventListener('click',()=>closeDungeonDialog(dialog));
  dialog.addEventListener('close',()=>{
   const label=doc.getElementById('magicStoneBalance');
   if(!label||typeof view?.scrollTo!=='function')return;
@@ -23,5 +24,5 @@ export function initMagicStoneTutorial(doc,{view=globalThis.window,requestFrame=
   };
   requestFrame(frame);
  });
- return {open(){if(!dialog.open)dialog.showModal();}};
+ return {open(){if(!dialog.open)showDungeonDialog(dialog);}};
 }
