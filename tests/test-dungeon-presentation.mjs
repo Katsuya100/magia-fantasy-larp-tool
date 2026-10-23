@@ -19,7 +19,7 @@ for(const phrase of ['線やカーブを綺麗に','読みやすく','円の線�
 assert.match(tipDialog,/assets\/images\/sample\.png/,'sample is the ideal drawing');
 assert.match(tipDialog,/<figure><figcaption>理想形<\/figcaption><img/,'ideal example is labeled before the image');
 assert.match(css,/#circleDrawingDialog \.circle-power-tips-button\{position:absolute;top:max\(10px,env\(safe-area-inset-top\)\);left:max\(10px,env\(safe-area-inset-left\)\)/,'drawing tips are aligned to the existing header buttons');
-assert.doesNotMatch(css,/\.circle-power-tips-button\{[^}]*position:absolute/,'camera tips flow normally with toolbar buttons');
+assert.match(css,/\n\.circle-power-tips-button\{\s*min-height:34px/,'camera tips use normal flow while drawing positioning stays scoped');
 assert.match(css,/\.circle-camera-dialog \.camera-viewfinder-toolbar\{display:flex;justify-content:space-between/,'camera actions share a toolbar above the viewfinder');
 assert.match(css,/#tutorialAttributes\{[^}]*white-space:pre-line;word-break:keep-all/,'element list retains intentional line breaks');
 assert.match(css,/\.circle-power-tips-dialog strong\{color:#ff737b;font-weight:800/,'tips are bold red');
