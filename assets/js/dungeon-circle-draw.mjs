@@ -294,21 +294,44 @@ export function initCircleDrawing(doc,{onSave}){
  const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus');
  const shell=get('circleDrawingShell');
  const discard=get('circleDrawingDiscard'),keep=get('circleDrawingDiscardKeep'),discardButton=get('circleDrawingDiscardConfirm');
- let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,previousFocus=null;
+ let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,previousFocus=null,transition=null,animationEpoch=0;
+ // Animation modifies only the view camera. Original strokes never move or shrink.
+ function endTransition(){animationEpoch++;transition=null;}
+ function animateCamera(type,fromCount,toCount,duration){
+  const epoch=++animationEpoch;
+  transition={type,fromCount,toCount,progress:0};
+  repaint();
+  if(typeof window.requestAnimationFrame!=='function'||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches){
+   transition=null;repaint();return;
+  }
+  let started=null;
+  const tick=time=>{
+   if(animationEpoch!==epoch||!dialog.open)return;
+   if(started===null)started=time;
+   const linear=Math.max(0,Math.min(1,(time-started)/duration));
+   // Smooth acceleration and deceleration: the reel settles at each letter.
+   const t=linear*linear*(3-2*linear);
+   transition.progress=t;
+   if(linear>=1)transition=null;
+   repaint();
+   if(transition)window.requestAnimationFrame(tick);
+  };
+  window.requestAnimationFrame(tick);
+ }
  const message=text=>{status.textContent=text;};
  function repaint(){
-  paintCircle(preview,model.state,{activeStroke,size:512});
-  paintCaret(get('circleDrawingCaret'),model.state,{size:512});
-  paintPad(pad,model.state,activeStroke);
+  paintCircle(preview,model.state,{activeStroke,size:512,transition});
+  paintCaret(get('circleDrawingCaret'),model.state,{size:512,transition});
+  paintPad(pad,model.state,activeStroke,transition);
   const sigil=model.state.mode==='sigil';
   get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を1文字ずつ書く';
   get('circleDrawingClose').textContent=sigil?'戻る':'閉じる';
   get('circleDrawingInput').hidden=sigil;
-  get('circleDrawingInput').disabled=model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy;
- get('circleDrawingUndo').disabled=!model.canUndo||busy;
-  get('circleDrawingRedo').disabled=!model.canRedo||busy;
-  get('circleDrawingReset').disabled=busy;
-  confirm.disabled=busy;
+  get('circleDrawingInput').disabled=model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy||Boolean(transition);
+ get('circleDrawingUndo').disabled=!model.canUndo||busy||Boolean(transition);
+  get('circleDrawingRedo').disabled=!model.canRedo||busy||Boolean(transition);
+  get('circleDrawingReset').disabled=busy||Boolean(transition);
+  confirm.disabled=busy||Boolean(transition);
   confirm.textContent=busy?'登録中…':'決定';
  }
  const release=()=>{pointerId=null;activeStroke=null;};
@@ -318,7 +341,7 @@ export function initCircleDrawing(doc,{onSave}){
   release();message('');repaint();
  }
  pad.addEventListener('pointerdown',event=>{
-  if(busy||pointerId!==null||event.pointerType==='mouse'&&event.button!==0)return;
+  if(busy||transition||pointerId!==null||event.pointerType==='mouse'&&event.button!==0)return;
   if(model.state.mode==='spell'&&model.state.letters.length>=DRAWN_GLYPH_LIMIT){message('環は32文字までです。');return;}
   event.preventDefault();
   pointerId=event.pointerId;activeStroke=[pointOnPad(event.clientX,event.clientY,pad.getBoundingClientRect())];
@@ -335,20 +358,25 @@ export function initCircleDrawing(doc,{onSave}){
  pad.addEventListener('pointercancel',event=>finishPointer(event,true));
  pad.addEventListener('lostpointercapture',event=>finishPointer(event,true));
  get('circleDrawingInput').addEventListener('click',()=>{
-  if(!busy&&model.enterGlyph()){message('');repaint();}
+  if(busy||transition||pointerId!==null)return;
+  const fromCount=model.state.letters.length;
+  if(model.enterGlyph()){message('');animateCamera('revolver',fromCount,fromCount+1,420);}
  });
-get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())repaint();});
- get('circleDrawingRedo').addEventListener('click',()=>{if(!busy&&model.redo())repaint();});
+get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&!transition&&model.undo())repaint();});
+ get('circleDrawingRedo').addEventListener('click',()=>{if(!busy&&!transition&&model.redo())repaint();});
  get('circleDrawingReset').addEventListener('click',()=>{
-  if(busy)return;
+  if(busy||transition)return;
   model.reset();message('');repaint();
  });
  async function finish(){
-  if(busy||pointerId!==null)return;
+  if(busy||transition||pointerId!==null)return;
   if(model.state.mode==='spell'){
-   if(model.state.ink.length&&model.state.letters.length<DRAWN_GLYPH_LIMIT)model.enterGlyph();
+   // If the last character is still on the pad, finish it at the current
+   // focal point before the camera zooms out to the sigil center.
+   const fromCount=model.state.letters.length;
+   if(model.state.ink.length&&fromCount<DRAWN_GLYPH_LIMIT)model.enterGlyph();
    if(!model.goSigil()){message('呪文を1文字以上入力してください。');repaint();return;}
-   message('');repaint();return;
+   message('');animateCamera('sigil',fromCount,0,720);return;
   }
   if(!model.complete){message('紋を描いてから決定してください。');return;}
   busy=true;message('魔法陣を封印しています…');repaint();
@@ -369,9 +397,10 @@ get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())re
   discardReturnFocus=null;
  }
  function close(){
-  if(busy||!dialog.open||!discard.hidden)return;
+  if(busy||transition||!dialog.open||!discard.hidden)return;
   if(model.state.mode==='sigil'){
-   model.goSpell();release();message('');repaint();return;
+   model.goSpell();release();message('');
+   animateCamera('back',0,model.state.letters.length,580);return;
   }
   if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
    dialog.close();return;
@@ -388,10 +417,10 @@ get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())re
   if(!discard.hidden)hideDiscard();
   else close();
  });
- dialog.addEventListener('close',()=>{hideDiscard(false);release();previousFocus?.focus?.();});
+ dialog.addEventListener('close',()=>{endTransition();hideDiscard(false);release();previousFocus?.focus?.();});
  window.addEventListener('resize',()=>{if(dialog.open)repaint();});
  function present(){
-  release();hideDiscard(false);busy=false;message('');
+  endTransition();release();hideDiscard(false);busy=false;message('');
   if(!dialog.open)dialog.showModal();
   repaint();confirm.focus();
  }
