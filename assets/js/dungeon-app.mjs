@@ -245,6 +245,13 @@ async function load(){
   showDungeonDialog($('backupSetupDialog'));
   return;
  }
+
+ // Run only after checking the signed local save. Restoring from Drive
+
+ // reloads the page and applies the same one-time migration.
+
+ profile=await migrateDungeonXp(db);
+
  profile.legacies??=[];
  returnFlow=Array.isArray(profile.pendingReturn?.steps)&&profile.pendingReturn.steps.length?profile.pendingReturn:null;
  if(!Array.isArray(profile.obtainedItemIds))profile.obtainedItemIds=[...new Set([...(profile.inventory||[]),...(profile.run?.carry||[])].filter(Boolean).map(item=>item.id).filter(Boolean))];
