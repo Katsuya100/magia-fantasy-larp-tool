@@ -65,10 +65,13 @@ for(const attr of ['flame','storm','aqua','law']){
  const foe=G.makeUnit({hp:3000,mag:12,def:10,res:10},1,{},[spell('attack',attr,100)]);
  G.round(actor,foe,0,-1,buffs,()=>.99);
  assert.equal(G.status(actor,'resist_'+attr)?.turns,4,'unused resistance retains full duration '+attr);
- assert.equal(actor.statuses.find(s=>s.id.startsWith('buff_'))?.turns,4,'unused buff retains full duration '+attr);
+ const activeDefense=['storm','gravity'].includes(attr);
+ assert.equal(actor.statuses.find(s=>s.id.startsWith('buff_'))?.turns,activeDefense?3:4,
+  'defensive buff counts a basic hit, other buffs await their first effect '+attr);
  G.round(actor,foe,-1,0,buffs,()=>.99);
  assert.equal(G.status(actor,'resist_'+attr)?.turns,3,'resistance counts matching hit '+attr);
- assert.equal(actor.statuses.find(s=>s.id.startsWith('buff_'))?.turns,3,'buff counts its first affected round '+attr);
+ assert.equal(actor.statuses.find(s=>s.id.startsWith('buff_'))?.turns,activeDefense?2:3,
+  'buff counts the rounds in which its effect is active '+attr);
 }
 for(const [attr,role] of [['flame','attack'],['bolt','attack'],['aqua','support'],
  ['storm','attack'],['gravity','attack'],['law','attack'],['chaos','attack']]){
