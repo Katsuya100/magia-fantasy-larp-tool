@@ -16,7 +16,7 @@ assert.equal(CIRCLE_TUTORIAL_STEPS[3].detail,'相(属性)は呪文の意味に�
 assert.deepEqual(CIRCLE_TUTORIAL_STEPS[3].attributes.split('\n'),[
  '🔥flame・⚡bolt・💧aqua','🌪storm・🪨gravity','⚖law・🌀chaos'
 ]);
-assert.match(CIRCLE_TUTORIAL_STEPS[3].attributes,/flame.*bolt.*aqua.*storm.*gravity.*law.*chaos/);
+assert.match(CIRCLE_TUTORIAL_STEPS[3].attributes,/flame.*bolt.*aqua.*storm.*gravity.*law.*chaos/s);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].detail,/紋の種別.*形.*決まります。/);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].attributes,/攻撃.*防御.*回復.*弱体/);
 for(const i of [3,4])assert.match(CIRCLE_TUTORIAL_STEPS[i].freedom,/サンプルに合わせる必要はありません.*自由.*ください/);
