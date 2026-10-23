@@ -1,6 +1,6 @@
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
-// Twenty-four slots give every letter the same 15-degree arc in both views.
-export const DRAWN_GLYPH_LIMIT=24;
+// Twenty matching 18-degree slots in the upper circle and lower revolver.
+export const DRAWN_GLYPH_LIMIT=20;
 export const DRAWN_POWER_RATE=0.6;
 export const MIN_DUNGEON_POWER=250;
 const INNER_RADIUS=.255;
@@ -10,11 +10,11 @@ export const GLYPH_INK_SCALE=.11;
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 const RING_RADIUS=.345;
-// Both screens share a 24-slot circle, while the lower view is a true
-// rotated crop spanning roughly two complete letter slots.
-export const EDITOR_ZOOM=1.2;
+// Set the lower camera's horizontal field of view to EXACTLY two real
+// 18-degree slots. Never widen the letter angles only in the editor.
+const SPELL_VIEW_RADIUS=RING_RADIUS*Math.sin(GLYPH_STEP);
+export const EDITOR_ZOOM=GLYPH_INK_SCALE/SPELL_VIEW_RADIUS;
 export const EDITOR_GLYPH_STEP=GLYPH_STEP;
-const SPELL_VIEW_RADIUS=GLYPH_INK_SCALE/EDITOR_ZOOM;
 // The sigil camera shows only the original inner writing region, not the whole ring.
 const SIGIL_VIEW_RADIUS=INNER_RADIUS/GUIDE_RADIUS;
 
@@ -82,8 +82,9 @@ export function createDrawingModel(){
   state,
   get canUndo(){return state.mode==='sigil'&&undo.length>0;},
   get canRedo(){return state.mode==='sigil'&&redo.length>0;},
-  get canPrevious(){return state.mode==='spell'&&state.index>0;},
-  get canNext(){return state.mode==='spell'&&state.index<DRAWN_GLYPH_LIMIT-1;},
+  get canPrevious(){return state.mode==='spell';},
+  get canNext(){return state.mode==='spell';},
+  get hasSpellInk(){return state.ink.length>0||state.letters.some(g=>g?.strokes?.some(stroke=>stroke.length>0));},
   addStroke(points){
    if(!Array.isArray(points)||!points.length)return false;
    const stroke=points.map(p=>({x:Number(p.x),y:Number(p.y)}));
@@ -94,9 +95,10 @@ export function createDrawingModel(){
   },
   move(direction){
    if(state.mode!=='spell'||!Number.isInteger(direction)||Math.abs(direction)!==1)return false;
-   const next=state.index+direction;
-   if(next<0||next>=DRAWN_GLYPH_LIMIT)return false;
-   // Moving right across an empty slot deliberately inserts a space.
+   // A turn always advances by exactly one of the 20 real slots, wrapping
+   // at either edge rather than stopping or spinning across 19 slots.
+   const next=(state.index+direction+DRAWN_GLYPH_LIMIT)%DRAWN_GLYPH_LIMIT;
+   // Blank visited positions may be recorded; only INK determines centering.
    saveCurrent(direction===1);
    state.index=next;load();
    return true;
@@ -184,6 +186,14 @@ export function visibleGlyphs(state,activeStroke=null){
  if(state.mode==='spell'&&(state.ink.length||activeStroke?.length))visible[state.index]={strokes:[...state.ink,...(activeStroke?.length?[activeStroke]:[])]};
  return visible;
 }
+// Align from the first slot through the FINAL INKED slot. A trailing run
+// of placeholders, including wraparound visits, never recenters the preview.
+export function writtenGlyphCount(glyphs){
+ for(let i=glyphs.length-1;i>=0;i--){
+  if(glyphs[i]?.strokes?.some(stroke=>stroke.length>0))return i+1;
+ }
+ return 1;
+}
 export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,size=512,viewIndex=null}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('魔法陣を描画できません。');
@@ -191,7 +201,7 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
  paintParchment(ctx,size);
  brushCircle(ctx,size,.43,.0055);
  brushCircle(ctx,size,INNER_RADIUS,.0095);
- const visible=visibleGlyphs(state,activeStroke),count=Math.max(1,visible.length);
+ const visible=visibleGlyphs(state,activeStroke),count=writtenGlyphCount(visible);
  for(let i=0;i<visible.length;i++){
   const glyph=visible[i];
   if(!glyph||glyph.space)continue;
@@ -205,14 +215,14 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
 }
 // Draw the cursor on its own transparent layer so CSS can blink it without
 // dimming the parchment or affecting the exported image.
-export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
+export function paintCaret(canvas,state,{size=512,viewIndex=null,activeStroke=null}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
  ctx.clearRect(0,0,size,size);
  if(state.mode!=='spell'||state.index>=DRAWN_GLYPH_LIMIT)return;
- // The caret marks the LEFT angular boundary of the current 15-degree
+ // The caret marks the LEFT angular boundary of the current 18-degree
  // glyph slot, inside the ring. It must not cover the letter's center.
- const count=Math.max(1,visibleGlyphs(state).length);
+ const count=writtenGlyphCount(visibleGlyphs(state,activeStroke));
  const centerAngle=viewIndex===null?glyphAngle(state.index,count):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
  const angle=centerAngle-GLYPH_STEP/2;
  const radius=size*RING_RADIUS,half=size*.027;
@@ -258,7 +268,7 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
  ctx.fillStyle='#03050b';ctx.fillRect(0,0,w,h);
  const scale=Math.min(w,h)/2,at=p=>({x:w/2+p.x*scale,y:h/2+p.y*scale});
  const t=transition?Math.max(0,Math.min(1,transition.progress)):(state.mode==='sigil'?1:0);
- const drawn=visibleGlyphs(state,activeStroke),count=Math.max(1,drawn.length);
+ const drawn=visibleGlyphs(state,activeStroke),count=writtenGlyphCount(drawn);
  const project=p=>at(projectCircleToPad(p,viewIndex,t,count));
  // Draw the same two ring circles at every frame. The outer ring naturally
  // travels beyond the canvas as we zoom into the original sigil writing area.
@@ -299,7 +309,9 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
  // Its assigned ink color blends continuously, never via an overlaid scene.
  for(let i=0;i<drawn.length;i++){
   const glyph=drawn[i];if(!glyph?.strokes)continue;
-  const highlight=Math.max(0,1-Math.abs(i-viewIndex));
+  // Ink emphasis also wraps over the seam, matching the one-slot camera turn.
+  const separation=Math.abs(i-viewIndex)%DRAWN_GLYPH_LIMIT;
+  const highlight=Math.max(0,1-Math.min(separation,DRAWN_GLYPH_LIMIT-separation));
   const spell=[0,1,2].map(k=>Math.round([113,169,186][k]*(1-highlight)+[210,183,255][k]*highlight));
   const sigil=[169,155,194];
   const color='rgb('+spell.map((v,k)=>Math.round(v*(1-t)+sigil[k]*t)).join(',')+')';
@@ -323,7 +335,7 @@ export function initCircleDrawing(doc,{onSave}){
  function repaint(){
   const sigil=model.state.mode==='sigil';
   paintCircle(preview,model.state,{activeStroke,size:512});
-  paintCaret(get('circleDrawingCaret'),model.state,{size:512});
+  paintCaret(get('circleDrawingCaret'),model.state,{size:512,activeStroke});
   paintPad(pad,model.state,activeStroke,viewIndex,padTransition);
   get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を1文字ずつ書く';
   get('circleDrawingClose').textContent=sigil?'戻る':'閉じる';
@@ -332,12 +344,14 @@ export function initCircleDrawing(doc,{onSave}){
   get('circleDrawingUndo').setAttribute?.('aria-label',sigil?'取り消す':'前の文字');
   get('circleDrawingRedo').setAttribute?.('aria-label',sigil?'やり直す':'次の文字');
   get('circleDrawingReset').disabled=busy||animating;
-  confirm.disabled=busy||animating;
+  confirm.disabled=busy||animating||(!sigil&&!model.hasSpellInk);
   confirm.textContent=busy?'登録中…':sigil?'決定':'紋を描く';
  }
  const release=()=>{pointerId=null;activeStroke=null;};
- function animateTurn(target){
+ function animateTurn(target,direction){
   const startIndex=viewIndex,token=++animationId;
+  // On wrap, animate the adjacent virtual index (20 equals 0 modulo a turn).
+  const nextVisualIndex=startIndex+direction;
   animating=true;
   repaint();
   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
@@ -351,11 +365,11 @@ export function initCircleDrawing(doc,{onSave}){
    if(start===null)start=time;
    const t=Math.min(1,(time-start)/REVOLVER_DURATION_MS);
    const eased=t*t*(3-2*t);
-   viewIndex=startIndex+(target-startIndex)*eased;
+   viewIndex=startIndex+(nextVisualIndex-startIndex)*eased;
    // Only the rotated crop turns; the finished-circle preview stays fixed.
    repaint();
    if(t<1)raf.call(window,step);
-   else{animating=false;repaint();}
+   else{viewIndex=target;animating=false;repaint();}
   };
   raf.call(window,step);
  }
@@ -405,12 +419,12 @@ export function initCircleDrawing(doc,{onSave}){
  get('circleDrawingUndo').addEventListener('click',()=>{
   if(busy||animating||pointerId!==null)return;
   if(model.state.mode==='sigil'){if(model.undo())repaint();}
-  else if(model.move(-1)){message('');animateTurn(model.state.index);}
+  else if(model.move(-1)){message('');animateTurn(model.state.index,-1);}
  });
  get('circleDrawingRedo').addEventListener('click',()=>{
   if(busy||animating||pointerId!==null)return;
   if(model.state.mode==='sigil'){if(model.redo())repaint();}
-  else if(model.move(1)){message('');animateTurn(model.state.index);}
+  else if(model.move(1)){message('');animateTurn(model.state.index,1);}
  });
  get('circleDrawingReset').addEventListener('click',()=>{
   if(busy||animating||pointerId!==null)return;
@@ -419,9 +433,7 @@ export function initCircleDrawing(doc,{onSave}){
  async function finish(){
   if(busy||animating||pointerId!==null)return;
   if(model.state.mode==='spell'){
-   if(!model.state.ink.length&&!model.state.letters.some(x=>x&&!x.space)){
-    message('呪文を描いてください。');return;
-   }
+   if(!model.hasSpellInk)return; // The confirm button is disabled until ink exists; no layout-shifting warning.
    message('');
    animateMode('sigil',()=>{model.goSigil();release();});
    return;
