@@ -204,7 +204,7 @@ assert.match(css,/\bmask:var\(--dungeon-close-svg\) center \/ contain no-repeat/
 assert.doesNotMatch(css,/dialog button\.dungeon-dialog-close::after\{\s*content:"[×✕]"/,'the icon must not depend on font glyph alignment');
 
 assert.match(html,/<button[^>]*id="cancelNameDialog"[^>]*dungeon-dialog-close[^>]*hidden>/);
-assert.match(html,/<button[^>]*dungeon-dialog-close[^>]*data-action="later"[^>]*hidden>/);
+assert.match(html,/<button[^>]*dungeon-dialog-close[^>]*data-action="later">あとで<\/button>/);
 assert.match(css,/dialog button\.dungeon-dialog-close\{[^}]*position:absolute!important;[^}]*width:42px!important;[^}]*height:42px!important;/);
 assert.match(css,/dialog button\.dungeon-dialog-close:focus-visible\{outline:3px/);
 assert.match(css,/dialog button\.dungeon-dialog-close\[hidden\]\{display:none!important\}/);
