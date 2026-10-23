@@ -1,3 +1,4 @@
+import {showUiOverlay,hideUiOverlay} from './dungeon-ui-transitions.mjs?v=20261023.26';
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
 // Twenty matching 18-degree slots in the upper circle and lower revolver.
 export const DRAWN_GLYPH_LIMIT=20;
@@ -457,7 +458,7 @@ export function initCircleDrawing(doc,{onSave}){
  let discardReturnFocus=null;
  function hideDiscard(restoreFocus=true){
   if(discard.hidden)return;
-  discard.hidden=true;shell.inert=false;
+  hideUiOverlay(discard);shell.inert=false;
   if(restoreFocus&&dialog.open)discardReturnFocus?.focus?.();
   discardReturnFocus=null;
  }
@@ -469,7 +470,7 @@ export function initCircleDrawing(doc,{onSave}){
   if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
    dialog.close();return;
   }
-  discardReturnFocus=doc.activeElement;shell.inert=true;discard.hidden=false;keep.focus();
+  discardReturnFocus=doc.activeElement;shell.inert=true;showUiOverlay(discard);keep.focus();
  }
  get('circleDrawingClose').addEventListener('click',close);
  keep.addEventListener('click',()=>hideDiscard());

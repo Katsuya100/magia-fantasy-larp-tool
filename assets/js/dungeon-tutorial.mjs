@@ -1,3 +1,4 @@
+import {showUiOverlay,hideUiOverlay} from './dungeon-ui-transitions.mjs?v=20261023.26';
 // Five tutorial pages using four uploaded GIF animations, in reverse upload order.
 export const CIRCLE_TUTORIAL_STEPS=[
  {title:'準備しましょう',hint:'最初にお手元に紙とペンをご用意ください。',detail:'ペンは、できれば太めの油性ペンをお使いください。',image:null},
@@ -33,12 +34,12 @@ export function initCircleTutorial(doc,onFinish){
  }
  function open(){
   if(!overlay.hidden)return;
-  step=0;previousFocus=doc.activeElement;render();overlay.hidden=false;
+  step=0;previousFocus=doc.activeElement;render();showUiOverlay(overlay);
   $('dungeonApp').setAttribute('inert','');next.focus();
  }
  function close(toCamera){
   if(overlay.hidden)return;
-  overlay.hidden=true;$('dungeonApp').removeAttribute('inert');
+  hideUiOverlay(overlay);$('dungeonApp').removeAttribute('inert');
   if(!toCamera)previousFocus?.focus?.();
   Promise.resolve().then(()=>onFinish(toCamera)).catch(error=>console.error('チュートリアルの終了処理に失敗',error));
  }
