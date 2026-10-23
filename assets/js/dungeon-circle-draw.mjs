@@ -12,7 +12,7 @@ const GUIDE_RADIUS=.92;
 // The same scale in both axes preserves each drawn letter's aspect ratio.
 // Shrink the letter footprint with the ring so ink stays between both circles.
 export const GLYPH_INK_SCALE=.11*(2/3)*(2/3);
-export const REVOLVER_DURATION_MS=250;
+export const REVOLVER_DURATION_MS=100;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 const RING_RADIUS=(INNER_RADIUS+OUTER_RADIUS)/2;
 // Frame two letter slots: one full center letter and half of each neighbor.
