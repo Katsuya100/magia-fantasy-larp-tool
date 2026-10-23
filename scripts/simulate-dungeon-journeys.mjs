@@ -129,7 +129,7 @@ function commit(state,pending,unused,bestLayer){
    instanceId:'item-'+(++state.itemSerial)
   });
   else if(reward.type==='collection')state.collection[reward.id]=(state.collection[reward.id]||0)+1;
-  else if(reward.type==='rank')acquireAdventurerRank(p,reward.layer);
+  else if(reward.type==='rank'&&acquireAdventurerRank(p,reward.layer))state.rankGranted++;
  }
  state.inventory.push(...unused.filter(Boolean));
  G.experience(p,pending.xp);
@@ -197,7 +197,7 @@ export function runJourney(seed,{style='A',route='short',maxSorties=120,maxFight
     if(boss&&layer%10===0&&layer<=100){
      state.rankChecks++;
      const badge=rankBadgeDrop(fight,hero,profile,pending.loot);
-     if(badge){drops.push(badge);state.rankGranted++;}
+     if(badge)drops.push(badge);
     }
     pending.loot.push(...drops);
     pending.xp=G.normalizeXp(pending.xp+G.fightExperience(outcome.enemyLevel,firstLevel,layer));
@@ -207,19 +207,24 @@ export function runJourney(seed,{style='A',route='short',maxSorties=120,maxFight
    if(!allWon)break;
    lastClear=layer;
    if(layer%10===0){
-    // Post-boss optional reward: choose official full-recovery only now.
-    hero.hp=hero.stats.hp;hero.mp=hero.maxMp;
-   }
-   if(layer%10===0){
+    // Sample the boss outcome before granting the separately chosen
+    // checkpoint recovery; never count full HP/MP as a boss rank award.
     state.milestones.push({layer,provisional:true,level:firstLevel,
      rank:profile.adventurerRank,stones:state.stones,ink:state.ink,
-     hpPercent:percent(hero.hp,hero.stats.hp),mpPercent:percent(hero.mp,hero.maxMp),
+     bossExitHpPercent:percent(hero.hp,hero.stats.hp),
+     bossExitMpPercent:percent(hero.mp,hero.maxMp),
      fights:state.fights});
+    hero.hp=hero.stats.hp;hero.mp=hero.maxMp;
    }
-   if(route==='short')break;
-   // Long route returns only on an explicit low-resource choice at a checkpoint
-   // or after reaching 100F, with no unauthorized between-floor refill.
-   if(layer%10===0&&(hero.hp/hero.stats.hp<.25||hero.mp/hero.maxMp<.15))break;
+   // Short journeys bank only AFTER reaching the intended new layer, not
+   // after clearing the rank-gated route's first repeated layer.
+   // Long journeys prefer a full decade of NEW layers, banking risky
+   // unconfirmed loot at that milestone instead of assuming every win.
+   if(route==='long'&&layer%10===0&&layer>=state.best+10)break;
+   // A risk-aware long dive can still return at a completed layer when
+   // resources become critical. These are strategy parameters, NOT new
+   // acceptance thresholds for game balance.
+   if(route==='long'&&(hero.hp/hero.stats.hp<.3||hero.mp/hero.maxMp<.2))break;
   }
   for(const [id,count] of Object.entries(usage))state.cleanseUses[id]=(state.cleanseUses[id]||0)+count;
   const earnedPending={stone:pending.loot.filter(x=>x.type==='stone').length,
