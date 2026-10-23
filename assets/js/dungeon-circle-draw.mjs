@@ -8,6 +8,8 @@ const GUIDE_RADIUS=.92;
 export const GLYPH_INK_SCALE=.11;
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
+// The editor magnifies the angular sweep; saved glyph positions stay on the original 32-slot circle.
+export const EDITOR_GLYPH_STEP=GLYPH_STEP*2.25;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
  if(!Number.isFinite(power)||power<=0||!Number.isFinite(rate)||rate<=0||rate>1)throw Error('手書き魔法陣の威力が不正です。');
@@ -178,7 +180,7 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
  brushCircle(ctx,size,.43,.0055);
  brushCircle(ctx,size,INNER_RADIUS,.0095);
  const visible=state.letters.slice();
- if(state.mode==='spell'&&state.ink.length)visible[state.index]={strokes:state.ink};
+ if(state.mode==='spell'&&(state.ink.length||activeStroke?.length))visible[state.index]={strokes:[...state.ink,...(activeStroke?.length?[activeStroke]:[])]};
  for(let i=0;i<visible.length;i++){
   const glyph=visible[i];
   if(!glyph||glyph.space)continue;
@@ -197,7 +199,7 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
  ctx.clearRect(0,0,size,size);
  if(state.mode!=='spell'||state.index>=DRAWN_GLYPH_LIMIT)return;
- const angle=viewIndex===null?caretAngle(state.letters.length):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
+ const angle=viewIndex===null?glyphAngle(state.index,Math.max(1,state.letters.length)):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
  const radius=size*.345,half=size*.027;
  ctx.beginPath();
  ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
@@ -207,12 +209,13 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
 // The pad is a zoomed, un-clipped section of the circle: neighboring letters
 // stay visible and blend into the active-ink color as the revolver turns.
 function padGlyphPoint(point,index,viewIndex){
- const theta=-Math.PI/2+(index-viewIndex)*GLYPH_STEP,tangent=theta+Math.PI/2;
+ const theta=-Math.PI/2+(index-viewIndex)*EDITOR_GLYPH_STEP,tangent=theta+Math.PI/2;
  const x=.345*Math.cos(theta)+GLYPH_INK_SCALE*(point.x*Math.cos(tangent)-point.y*Math.sin(tangent));
  const y=.345*Math.sin(theta)+GLYPH_INK_SCALE*(point.x*Math.sin(tangent)+point.y*Math.cos(tangent));
  return {x:x/GLYPH_INK_SCALE,y:(y+.345)/GLYPH_INK_SCALE};
 }
-export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index){
+// Canvas-space crosshairs follow the curved letter band, not a rectangular grid.
+export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,transition=null){
  const rect=canvas.getBoundingClientRect();
  if(!rect.width||!rect.height)return;
  const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
@@ -220,35 +223,64 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index){
  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  ctx.fillStyle='#03050b';ctx.fillRect(0,0,w,h);
  const scale=Math.min(w,h)/2,at=p=>({x:w/2+p.x*scale,y:h/2+p.y*scale});
- if(state.mode==='spell'){
-  // Inner/outer guides are arcs of the real circle projected onto this pad.
+ const ringPoint=(radius,angle)=>at({x:radius*Math.sin(angle)/GLYPH_INK_SCALE,
+  y:(.345-radius*Math.cos(angle))/GLYPH_INK_SCALE});
+ const halfStep=EDITOR_GLYPH_STEP/2;
+ const drawSpell=()=>{
+  // Actual inner and outer ring arcs.
   ctx.save();ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,6*dpr]);
   for(const radius of [.43,INNER_RADIUS]){
    ctx.beginPath();
    for(let i=0;i<=120;i++){
-    const angle=(i-60)*.015;
-    const p=at({x:radius*Math.sin(angle)/GLYPH_INK_SCALE,
-     y:(.345-radius*Math.cos(angle))/GLYPH_INK_SCALE});
+    const p=ringPoint(radius,(i/120-.5)*1.1);
     if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
    }
    ctx.strokeStyle=radius===INNER_RADIUS?'#a48968':'#866e9c';ctx.stroke();
   }
-  ctx.restore();
+  // The two spokes delimit exactly one magnified revolver turn.
+  ctx.strokeStyle='#b8a0d6';ctx.lineWidth=1.35*dpr;ctx.setLineDash([3*dpr,5*dpr]);
+  for(const theta of [-halfStep,halfStep]){
+   const inner=ringPoint(INNER_RADIUS-.025,theta),outer=ringPoint(.43+.025,theta);
+   ctx.beginPath();ctx.moveTo(inner.x,inner.y);ctx.lineTo(outer.x,outer.y);ctx.stroke();
+  }
+  // Fine dotted central cross: radial axis and a *curved* tangential axis.
+  ctx.strokeStyle='#f3dcaa';ctx.lineWidth=1*dpr;ctx.setLineDash([1.5*dpr,3.4*dpr]);
+  let p=ringPoint(INNER_RADIUS-.045,0),q=ringPoint(.43+.045,0);
+  ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
+  ctx.beginPath();
+  for(let i=0;i<=96;i++){
+   p=ringPoint(.345,(i/96-.5)*EDITOR_GLYPH_STEP);
+   if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+  }
+  ctx.stroke();ctx.restore();
   const drawn=state.letters.slice();
-  if(state.ink.length)drawn[state.index]={strokes:state.ink};
+  if(state.ink.length||activeStroke?.length)drawn[state.index]={strokes:[...state.ink,...(activeStroke?.length?[activeStroke]:[])]};
   for(let i=0;i<drawn.length;i++){
-   const glyph=drawn[i];if(!glyph?.strokes||Math.abs(i-viewIndex)>4)continue;
+   const glyph=drawn[i];if(!glyph?.strokes||Math.abs(i-viewIndex)>3)continue;
    const highlight=Math.max(0,1-Math.abs(i-viewIndex));
    const color='rgb('+[0,1,2].map(k=>Math.round([113,169,186][k]*(1-highlight)+[210,183,255][k]*highlight)).join(',')+')';
    for(const stroke of glyph.strokes)strokePath(ctx,stroke,p=>at(padGlyphPoint(p,i,viewIndex)),3.2*dpr,color,7*dpr);
   }
-  if(activeStroke?.length)strokePath(ctx,activeStroke,at,3.2*dpr,'#e8d9ff',9*dpr);
- }else{
+ };
+ const drawSigil=()=>{
   ctx.save();ctx.strokeStyle='#74718b';ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,7*dpr]);
   ctx.beginPath();ctx.arc(w/2,h/2,scale*GUIDE_RADIUS,0,Math.PI*2);ctx.stroke();ctx.restore();
   for(const stroke of state.sigil)strokePath(ctx,stroke,at,2.4*dpr,'#d2b7ff',9*dpr);
-  if(activeStroke?.length)strokePath(ctx,activeStroke,at,2.4*dpr,'#e8d9ff',13*dpr);
- }
+  if(activeStroke?.length&&state.mode==='sigil')strokePath(ctx,activeStroke,at,2.4*dpr,'#e8d9ff',13*dpr);
+ };
+ if(transition){
+  const t=Math.max(0,Math.min(1,transition.progress));
+  // Both drawing surfaces visibly move AND scale, crossfading in both directions.
+  const layer=(alpha,dx,dy,zoom,paint)=>{
+   if(alpha<=0)return;
+   ctx.save();ctx.globalAlpha=alpha;
+   ctx.translate(w/2+dx*w,h/2+dy*h);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);
+   paint();ctx.restore();
+  };
+  layer(1-t,-.17*t,.14*t,1-.3*t,drawSpell);
+  layer(t,.17*(1-t),-.14*(1-t),.7+.3*t,drawSigil);
+ }else if(state.mode==='spell')drawSpell();
+ else drawSigil();
 }
 function canvasBlob(canvas,type,quality){
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?.size?resolve(blob):reject(Error('魔法陣画像を作成できません。')),type,quality));
@@ -260,13 +292,13 @@ export function initCircleDrawing(doc,{onSave}){
  const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus'),shell=get('circleDrawingShell');
  const discard=get('circleDrawingDiscard'),keep=get('circleDrawingDiscardKeep'),discardButton=get('circleDrawingDiscardConfirm');
  let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,animating=false,previousFocus=null,viewIndex=0;
- let animationId=0;
+ let animationId=0,padTransition=null;
  const message=text=>{status.textContent=text;};
  function repaint(){
   const sigil=model.state.mode==='sigil';
-  paintCircle(preview,model.state,{activeStroke,size:512,viewIndex:sigil?null:viewIndex});
-  paintCaret(get('circleDrawingCaret'),model.state,{size:512,viewIndex});
-  paintPad(pad,model.state,activeStroke,viewIndex);
+  paintCircle(preview,model.state,{activeStroke,size:512});
+  paintCaret(get('circleDrawingCaret'),model.state,{size:512});
+  paintPad(pad,model.state,activeStroke,viewIndex,padTransition);
   get('circleDrawingStage').textContent=sigil?'紋':'呪文';
   get('circleDrawingClose').textContent=sigil?'戻る':'閉じる';
   get('circleDrawingUndo').disabled=busy||animating||!(sigil?model.canUndo:model.canPrevious);
@@ -278,15 +310,14 @@ export function initCircleDrawing(doc,{onSave}){
   confirm.textContent=busy?'登録中…':sigil?'決定':'紋を描く';
  }
  const release=()=>{pointerId=null;activeStroke=null;};
- function animateTurn(target,done=()=>{},toSigil=false){
+ function animateTurn(target){
   const startIndex=viewIndex,token=++animationId;
   animating=true;
-  if(toSigil)shell.classList?.add('is-to-sigil');
   repaint();
   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
   const raf=window.requestAnimationFrame;
   if(typeof raf!=='function'||reduced){
-   viewIndex=target;animating=false;done();shell.classList?.remove('is-to-sigil');repaint();return;
+   viewIndex=target;animating=false;repaint();return;
   }
   let start=null;
   const step=time=>{
@@ -298,9 +329,29 @@ export function initCircleDrawing(doc,{onSave}){
    // Restore the wheel's original angle before entering sigil mode.
    repaint();
    if(t<1)raf.call(window,step);
-   else{animating=false;done();shell.classList?.remove('is-to-sigil');repaint();}
+   else{animating=false;repaint();}
   };
   raf.call(window,step);
+ }
+ function animateMode(toMode,done){
+  const token=++animationId,forward=toMode==='sigil';
+  animating=true;
+  const render=t=>{padTransition={progress:forward?t:1-t};repaint();};
+  const complete=()=>{padTransition=null;animating=false;done();repaint();};
+  render(0);
+  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const raf=window.requestAnimationFrame;
+  if(typeof raf!=='function'||reduced){complete();return;}
+  let start=null;
+  const frame=time=>{
+   if(token!==animationId||!dialog.open)return;
+   if(start===null)start=time;
+   const t=Math.min(1,(time-start)/320),eased=t*t*(3-2*t);
+   render(eased);
+   if(t<1)raf.call(window,frame);
+   else complete();
+  };
+  raf.call(window,frame);
  }
  function finishPointer(event,cancel=false){
   if(pointerId!==event.pointerId)return;
@@ -342,9 +393,8 @@ export function initCircleDrawing(doc,{onSave}){
    if(!model.state.ink.length&&!model.state.letters.some(x=>x&&!x.space)){
     message('呪文を描いてください。');return;
    }
-   const count=Math.max(model.state.letters.length,model.state.ink.length?model.state.index+1:0);
    message('');
-   animateTurn((count-1)/2,()=>{model.goSigil();release();},true);
+   animateMode('sigil',()=>{model.goSigil();release();});
    return;
   }
   if(!model.complete){message('紋を描いてください。');return;}
@@ -368,7 +418,7 @@ export function initCircleDrawing(doc,{onSave}){
  function close(){
   if(busy||animating||!dialog.open||!discard.hidden)return;
   if(model.state.mode==='sigil'){
-   model.goSpell();viewIndex=model.state.index;release();message('');repaint();return;
+   animateMode('spell',()=>{model.goSpell();viewIndex=model.state.index;release();message('');});return;
   }
   if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
    dialog.close();return;
@@ -383,12 +433,12 @@ export function initCircleDrawing(doc,{onSave}){
   if(!discard.hidden)hideDiscard();else close();
  });
  dialog.addEventListener('close',()=>{
-  animationId++;animating=false;shell.classList?.remove('is-to-sigil');
+  animationId++;animating=false;padTransition=null;
   hideDiscard(false);release();previousFocus?.focus?.();
  });
  window.addEventListener('resize',()=>{if(dialog.open)repaint();});
  function present(){
-  release();hideDiscard(false);busy=false;animating=false;viewIndex=model.state.index;message('');
+  release();hideDiscard(false);busy=false;animating=false;padTransition=null;viewIndex=model.state.index;message('');
   if(!dialog.open)dialog.showModal();
   repaint();confirm.focus();
  }
