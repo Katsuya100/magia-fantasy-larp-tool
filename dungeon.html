@@ -113,7 +113,7 @@
           <p id="nameError" class="name-error" role="alert"></p>
           <button type="submit" id="savePlayerName" class="primary-action">この名で冒険する <span aria-hidden="true">⟶</span></button>
         </form>
-        <button type="button" id="cancelNameDialog" class="subtle" hidden>戻る</button>
+        <button type="button" id="cancelNameDialog" class="subtle dungeon-dialog-close" hidden>戻る</button>
       </div>
     </dialog>
 
@@ -225,7 +225,7 @@
       <div id="gearCards"><div class="loadout-grid" role="group" aria-label="携行品"></div></div><p id="gearCounter" class="gear-counter"></p>
       <dialog id="loadoutDialog" class="loadout-dialog" aria-labelledby="loadoutDialogTitle">
         <div class="loadout-dialog-inner">
-          <div class="chooser-header"><div><p class="chapter">GRIMOIRE · EQUIPMENT</p><h3 id="loadoutDialogTitle">魔法陣を選ぶ</h3></div><button type="button" id="closeLoadoutDialog" class="subtle" aria-label="選択を閉じる">✕</button></div>
+          <div class="chooser-header"><div><p class="chapter">GRIMOIRE · EQUIPMENT</p><h3 id="loadoutDialogTitle">魔法陣を選ぶ</h3></div><button type="button" id="closeLoadoutDialog" class="subtle dungeon-dialog-close" aria-label="選択を閉じる">✕</button></div>
           <div class="list-controls picker-controls" role="group" aria-label="候補のソートとフィルター">
             <label>絞り込み<select id="pickerFilter"><option value="all">すべて</option></select></label>
             <label>並べ替え<select id="pickerSort"><option value="newest">登録が新しい順</option></select></label>
@@ -336,7 +336,7 @@
           </div>
           <div class="circle-drawing-control-panel">
             <div class="circle-drawing-actions">
-              <button type="button" id="circleDrawingClose" class="drawing-secondary">閉じる</button>
+              <button type="button" id="circleDrawingClose" class="drawing-secondary dungeon-dialog-close">閉じる</button>
               <button type="button" id="circleDrawingReset" class="drawing-secondary">クリア</button>
               <button type="button" id="circleDrawingConfirm" class="drawing-confirm">紋を描く</button>
             </div>
@@ -368,7 +368,7 @@
           </div>
         <canvas id="cameraCanvas" hidden></canvas>
         <div class="buttons camera-actions">
-          <button type="button" id="cameraStop" class="drawing-secondary">閉じる</button>
+          <button type="button" id="cameraStop" class="drawing-secondary dungeon-dialog-close">閉じる</button>
           <button type="button" id="cameraCapture" class="drawing-confirm" disabled>撮影📷</button>
         </div>
         <p id="cameraError" class="inline-error" hidden role="alert"></p>
@@ -377,7 +377,7 @@
     </dialog>
     <dialog id="magicDetailsDialog" class="magic-details-dialog" aria-labelledby="magicDetailsTitle">
       <div class="magic-details-content">
-        <div class="chooser-header"><h3 id="magicDetailsTitle">魔法陣の効果</h3><button type="button" id="closeMagicDetails" class="subtle" aria-label="詳細を閉じる">✕</button></div>
+        <div class="chooser-header"><h3 id="magicDetailsTitle">魔法陣の効果</h3><button type="button" id="closeMagicDetails" class="subtle dungeon-dialog-close" aria-label="詳細を閉じる">✕</button></div>
         <div id="magicDetailsLegacyTitle" class="legacy-provenance" hidden></div>
         <div class="magic-details-art"><img id="magicDetailsImage" alt="選択した魔法陣の画像"><div id="magicUpgradeEffect" aria-hidden="true"></div></div>
         <button type="button" id="repairSelectedCircleImage" class="subtle" hidden>撮り直す</button>
@@ -396,7 +396,7 @@
         <h2 id="circleActionTitle"></h2>
         <p id="circleActionMessage"></p>
         <div class="buttons">
-          <button type="button" id="cancelCircleAction" class="subtle">キャンセル</button>
+          <button type="button" id="cancelCircleAction" class="subtle dungeon-dialog-close">キャンセル</button>
           <button type="button" id="confirmCircleAction" class="primary-action"></button>
         </div>
       </div>
@@ -406,7 +406,7 @@
         <h2 id="magicStoneTutorialTitle">魔導石</h2>
         <img src="assets/images/magic-stone-tutorial.webp" alt="魔法陣カードの詳細・削除・魔導石で強化ボタン" width="350" height="359" style="display:block;width:min(100%,350px);height:auto;margin:16px auto">
         <p id="magicStoneTutorialMessage">魔導石を使えば、あなたの魔法を強化できます。</p>
-        <div class="buttons"><button type="button" id="closeMagicStoneTutorial" class="primary-action">閉じる</button></div>
+        <div class="buttons"><button type="button" id="closeMagicStoneTutorial" class="primary-action dungeon-dialog-close">閉じる</button></div>
       </div>
     </dialog>
     <dialog id="creatorCongratulationsDialog" class="creator-congratulations-dialog" aria-labelledby="creatorCongratulationsTitle" aria-describedby="creatorCongratulationsMessage">
@@ -422,7 +422,7 @@
 しかし、冒険はまだまだ続きます。
 引き続きダンジョンアタックをお楽しみください。</p>
         <div class="creator-congratulations-divider creator-congratulations-divider-bottom" aria-hidden="true"><span>✧</span></div>
-        <button type="button" id="creatorCongratulationsClose" class="creator-congratulations-close">閉じる</button>
+        <button type="button" id="creatorCongratulationsClose" class="creator-congratulations-close dungeon-dialog-close">閉じる</button>
       </div>
     </dialog>
     <dialog id="milestoneChoiceDialog" class="name-dialog milestone-choice-dialog" aria-labelledby="milestoneChoiceTitle" aria-describedby="milestoneChoiceMessage">
@@ -435,7 +435,7 @@
           <a id="milestoneDonate" class="profile-action" href="https://ofuse.me/2429ddee" target="_blank" rel="noopener noreferrer"><span class="profile-action-icon" aria-hidden="true">♡</span><span>作者を応援</span></a>
         </div>
         <p class="milestone-choice-optional">シェアも応援も任意です。</p>
-        <button type="button" id="milestoneClose" class="subtle">閉じる</button>
+        <button type="button" id="milestoneClose" class="subtle dungeon-dialog-close">閉じる</button>
       </div>
     </dialog>
     <dialog id="supportPromptDialog" class="name-dialog support-prompt-dialog" aria-labelledby="supportPromptTitle" aria-describedby="supportPromptMessage">
@@ -450,7 +450,7 @@
         </div>
         <div class="support-card-tools">
           <button type="button" id="supportSaveImage">画像を保存</button>
-          <button type="button" id="supportPromptClose" class="subtle">閉じる</button>
+          <button type="button" id="supportPromptClose" class="subtle dungeon-dialog-close">閉じる</button>
         </div>
       </div>
     </dialog>
@@ -470,7 +470,7 @@
         <div class="buttons camera-actions">
           <button type="button" id="imageRepairStart" class="camera-trigger">カメラを起動</button>
           <button type="button" id="imageRepairCapture" hidden>撮影して保存</button>
-          <button type="button" id="imageRepairLater" class="subtle">あとで</button>
+          <button type="button" id="imageRepairLater" class="subtle dungeon-dialog-close">あとで</button>
         </div>
       </div>
     </dialog>
@@ -482,7 +482,7 @@
         <div class="buttons">
           <button type="button" class="subtle" data-action="restore">引き継ぐ</button>
           <button type="button" class="danger" data-action="overwrite">新しいデータで上書きする</button>
-          <button type="button" class="subtle" data-action="later" hidden>あとで決める</button>
+          <button type="button" class="subtle dungeon-dialog-close" data-action="later" hidden>あとで決める</button>
         </div>
       </div>
     </dialog>
@@ -491,7 +491,7 @@
         <h2 id="googleDriveOverwriteTitle">バックアップを上書きしますか？</h2>
         <p>Driveの以前のデータは失われます。</p>
         <div class="buttons">
-          <button type="button" class="subtle" data-action="back">戻る</button>
+          <button type="button" class="subtle dungeon-dialog-close" data-action="back">戻る</button>
           <button type="button" class="danger" data-action="confirm">上書きする</button>
         </div>
       </div>
@@ -501,7 +501,7 @@
         <h2 id="googleDriveExpiredTitle">Google Driveの接続が切れました</h2>
         <p>冒険データは端末に残っています。再接続すると同期を再開します。</p>
         <div class="buttons">
-          <button type="button" class="subtle" data-action="later">あとで</button>
+          <button type="button" class="subtle dungeon-dialog-close" data-action="later">あとで</button>
           <button type="button" class="subtle" data-action="reconnect">Google Driveに再接続</button>
         </div>
       </div>
@@ -516,7 +516,7 @@
         <input type="text" id="deleteDataPhrase" autocomplete="off" spellcheck="false" placeholder="削除" aria-describedby="deleteDataError">
         <p id="deleteDataError" class="name-error" role="alert"></p>
         <div class="buttons">
-          <button type="button" id="cancelDeleteData" class="subtle">キャンセル</button>
+          <button type="button" id="cancelDeleteData" class="subtle dungeon-dialog-close">キャンセル</button>
           <button type="button" id="confirmDeleteData" class="danger" disabled>端末内データを削除</button>
         </div>
       </div>
