@@ -1,4 +1,4 @@
-import {showUiOverlay,hideUiOverlay} from './dungeon-ui-transitions.mjs?v=20261023.26';
+import {showUiOverlay,hideUiOverlay} from './dungeon-ui-transitions.mjs?v=20261023.27';
 // Five tutorial pages using four uploaded GIF animations, in reverse upload order.
 export const CIRCLE_TUTORIAL_STEPS=[
  {title:'準備しましょう',hint:'最初にお手元に紙とペンをご用意ください。',detail:'ペンは、できれば太めの油性ペンをお使いください。',image:null},

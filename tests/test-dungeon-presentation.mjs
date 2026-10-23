@@ -236,7 +236,7 @@ assert.match(cloudSyncSource,/await establishLegacyIntegrity\(db,local\);\s*loca
 assert.match(cloudSyncSource,/if\(overwriteWarning\)overwriteWarning.hidden=!allowOverwrite/,'non-overwrite flows conceal misleading warning');
 assert.match(app,/void cloudSyncController\?\.syncNow\?\.\(\)/,'name submission queues Drive upload without holding the local action lock');
 assert.doesNotMatch(app,/await cloudSyncController\?\.syncNow\?\.\(\)/,'network uploads never block the rename form');
-assert.match(app,/if\(profile\.awaitingHeir\)\{[\s\S]*?next=await saveHeirName\(db,name\);[\s\S]*?\}else\{[\s\S]*?await saveProfile\(db,next\);[\s\S]*?\}\s*profile=next;\s*\$\('nameDialog'\)\.close\(\);\s*render\(\);[\s\S]*?void cloudSyncController\?\.syncNow\?\.\(\)/,'both heir and ordinary names are saved locally, the dialog closes, then the cloud request starts');
+assert.match(app,/if\(profile\.awaitingHeir\)\{[\s\S]*?next=await saveHeirName\(db,name\);[\s\S]*?\}else\{[\s\S]*?await saveProfile\(db,next\);[\s\S]*?\}\s*profile=next;\s*closeDungeonDialog\(\$\('nameDialog'\)\);\s*render\(\);[\s\S]*?void cloudSyncController\?\.syncNow\?\.\(\)/,'both heir and ordinary names are saved locally, the dialog closes, then the cloud request starts');
 assert.equal(page.split('システム上 <strong>'+concurrentWarning+'</strong>。').length-1,2,'both backup surfaces show the same explicit rollback warning');
 assert.ok(page.indexOf('<p class="backup-sync-warning">'+copyWarning+'</p>')<page.indexOf('id="backupSetupStatus"'),'the initial warning precedes connection status');
 const cloudMarkup=page.match(/<div class="cloud-sync">([\s\S]*?)<\/div>/)?.[1];
@@ -258,7 +258,7 @@ assert.match(css,/\.cloud-sync-actions\{display:flex;flex-wrap:wrap/,'connection
 assert.match(page,/<button type="button" id="setupGoogleDrive"[^>]*>GoogleDriveに同期する<\/button>/,'pre-registration sync button matches profile');
 assert.match(page,/<button type="button" id="setupWithoutBackup"[^>]*>同期せず始める<\/button>/,'local-only choice is clear');
 const cloudSync=await read('assets/js/dungeon-cloud-sync.mjs');
-assert.match(cloudSync,/if\(choice==='restore'\|\|choice==='overwrite'\)\{[\s\S]*?lockLocalOnly\(true\);[\s\S]*?\}\s*choicePending=false;\s*pendingChoiceCancel=null;\s*conflictDialog\.close\(\)/,'restore hides skip before the overlay chooser closes');
+assert.match(cloudSync,/if\(choice==='restore'\|\|choice==='overwrite'\)\{[\s\S]*?lockLocalOnly\(true\);[\s\S]*?\}\s*choicePending=false;\s*pendingChoiceCancel=null;\s*closeDungeonDialog\(conflictDialog\)/,'restore hides skip before the overlay chooser closes');
 assert.match(cloudSync,/setSyncing\(true\);\s*show\('同期中…'\)/,'background sync marks real API work busy');
 assert.match(cloudSync,/if\(again&&!stopped&&!restoring&&drive\)\{[\s\S]*?queueMicrotask\(\(\)=>\{if\(drive&&!stopped&&!restoring\)void sync\(false\)/,'at most one queued follow-up save starts immediately after active upload');
 assert.match(cloudSync,/if\(busy\)\{again=true;return;\}/,'autosave edits during upload coalesce into one pending bit');

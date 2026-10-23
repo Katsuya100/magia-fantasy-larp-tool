@@ -1,4 +1,4 @@
-import {showUiOverlay,hideUiOverlay} from './dungeon-ui-transitions.mjs?v=20261023.26';
+import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.27';
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
 // Twenty matching 18-degree slots in the upper circle and lower revolver.
 export const DRAWN_GLYPH_LIMIT=20;
@@ -450,7 +450,7 @@ export function initCircleDrawing(doc,{onSave}){
    const canvas=doc.createElement('canvas');
    paintCircle(canvas,model.state,{exportImage:true,size:1024});
    const image=await canvasBlob(canvas,'image/jpeg',.92);
-   dialog.close();release();await onSave(image);
+   closeDungeonDialog(dialog);release();await onSave(image);
   }catch(error){message('登録できませんでした：'+String(error?.message||error));}
   finally{busy=false;repaint();}
  }
@@ -468,13 +468,13 @@ export function initCircleDrawing(doc,{onSave}){
    animateMode('spell',()=>{model.goSpell();viewIndex=model.state.index;release();message('');});return;
   }
   if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
-   dialog.close();return;
+   closeDungeonDialog(dialog);return;
   }
   discardReturnFocus=doc.activeElement;shell.inert=true;showUiOverlay(discard);keep.focus();
  }
  get('circleDrawingClose').addEventListener('click',close);
  keep.addEventListener('click',()=>hideDiscard());
- discardButton.addEventListener('click',()=>{hideDiscard(false);dialog.close();});
+ discardButton.addEventListener('click',()=>{hideDiscard(false);closeDungeonDialog(dialog);});
  dialog.addEventListener('cancel',event=>{
   event.preventDefault();
   if(!discard.hidden)hideDiscard();else close();
@@ -486,7 +486,7 @@ export function initCircleDrawing(doc,{onSave}){
  window.addEventListener('resize',()=>{if(dialog.open)repaint();});
  function present(){
   release();hideDiscard(false);busy=false;animating=false;padTransition=null;viewIndex=model.state.index;message('');
-  if(!dialog.open)dialog.showModal();
+  if(!dialog.open)showDungeonDialog(dialog);
   repaint();confirm.focus();
  }
  return {

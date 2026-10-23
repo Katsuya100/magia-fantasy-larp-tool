@@ -754,6 +754,21 @@ dialog[open]::backdrop{opacity:1}
 }
 @keyframes dungeon-modal-overlay-show{from{opacity:0}to{opacity:1}}
 @keyframes dungeon-modal-overlay-hide{from{opacity:1}to{opacity:0}}
+
+/* Explicit entry keyframes restart for every showModal, including rename. */
+dialog[open][data-ui-entering="true"]{animation:dungeon-dialog-enter .2s cubic-bezier(.16,1,.3,1) both}
+dialog[open][data-ui-entering="true"]::backdrop{animation:dungeon-dialog-veil-show .2s ease-out both}
+@keyframes dungeon-dialog-enter{from{opacity:0;transform:translateY(9px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes dungeon-dialog-veil-show{from{opacity:0}to{opacity:1}}
+/* Prevent rendering both the native discrete close and its safe visual copy. */
+dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transition:none!important}
+/* Exiting visual is aria-hidden, inert and not hit-testable.
+   Every newly shown native dialog renders above it in the top layer. */
+.dungeon-modal-exit-layer{position:fixed;inset:0;z-index:2500;pointer-events:none!important}
+.dungeon-modal-exit-veil{position:absolute;inset:0;background:#06060fc9;backdrop-filter:blur(5px);animation:dungeon-dialog-veil-hide .2s ease-in both}
+.dungeon-dialog-ghost[open]{position:fixed;pointer-events:none!important;max-width:none;max-height:none;overflow:hidden;animation:dungeon-dialog-exit .2s ease-in both!important}
+@keyframes dungeon-dialog-exit{from{opacity:1;transform:none}to{opacity:0;transform:translateY(9px) scale(.985)}}
+@keyframes dungeon-dialog-veil-hide{from{opacity:1}to{opacity:0}}
 /* Confirmation for the irreversible local-save reset. */
 .profile-data-actions{margin-top:26px;padding-top:18px;border-top:1px solid var(--border);text-align:right}
 .profile-data-actions p{font-size:12px;color:var(--soft);margin:0 0 10px}
