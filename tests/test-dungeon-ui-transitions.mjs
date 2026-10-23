@@ -172,7 +172,7 @@ for(const dialogId of ['backupSetupDialog','saveErrorDialog']){
  assert.doesNotMatch(segment,/dungeon-dialog-close/,'mandatory decision remains explicit: '+dialogId);
 }
 assert.match(html,/<button[^>]*id="cancelNameDialog"[^>]*dungeon-dialog-close[^>]*hidden>/);
-assert.match(html,/<button[^>]*data-action="later"[^>]*dungeon-dialog-close[^>]*hidden>/);
+assert.match(html,/<button[^>]*dungeon-dialog-close[^>]*data-action="later"[^>]*hidden>/);
 assert.match(css,/dialog button\.dungeon-dialog-close\{[^}]*position:absolute!important;[^}]*width:42px!important;[^}]*height:42px!important;/);
 assert.match(css,/dialog button\.dungeon-dialog-close:focus-visible\{outline:3px/);
 assert.match(css,/dialog button\.dungeon-dialog-close\[hidden\]\{display:none!important\}/);
