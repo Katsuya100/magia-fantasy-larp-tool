@@ -26,6 +26,8 @@ try{
  await $('setupWithoutBackup').fire('click');
  assert.equal($('backupSetupDialog').open,false,'local-only choice closes setup');
  assert.equal($('nameDialog').open,true,'new adventurer is named in a dialog');
+ assert.equal($('nameDialog').dataset.dungeonFrame,'fixed','required naming uses a no-close frame');
+ assert.equal($('cancelNameDialog').hidden,true,'required naming has no top-right close');
  $('playerNameInput').value='　 ';
  await $('nameForm').fire('submit');
  assert.match($('nameError').textContent,/1〜20文字/);
@@ -52,6 +54,8 @@ try{
  assert.equal($('home').hidden,false,'profile is accessible from the rightmost tab');
  await doc.click(btn({action:'rename'}));
  assert.equal($('nameDialog').open,true);
+ assert.equal($('nameDialog').dataset.dungeonFrame,'closable','renaming uses the shared closable frame');
+ assert.equal($('cancelNameDialog').hidden,false,'rename exposes the common close control');
  $('playerNameInput').value='暁の旅人';
  await $('nameForm').fire('submit');
  assert.equal($('nameDialog').open,false);
