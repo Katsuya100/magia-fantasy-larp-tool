@@ -7,7 +7,7 @@ import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 const read=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase]=['balance','levels','floors','player-base'].map(read);
 configure({balance,levels,floors,playerBase});
-assert.equal(num('xp_growth_per_10_levels'),2.1,'steeper required EXP curve');
+assert.equal(num('xp_growth_per_10_levels'),1.35,'flatter required EXP curve');
 
 // At-level adventurers should still reach the recommended level for the
 // next layer after five victories followed by a safe return.
@@ -27,10 +27,10 @@ assert.equal(normal.level,150,'a normal first-clear journey ends at level 150');
 // permanent advantage for collecting low-level enemy kills.
 assert.equal(G.nextXp(1),3,'scaled first-level threshold');
 for(const level of [10,20,30,40,60,80,100,120,139]){
- assert.ok(G.nextXp(level+10)>=G.nextXp(level)*1.6,
+ assert.ok(G.nextXp(level+10) >=G.nextXp(level)*1.15,
   'ten levels are substantially more expensive at '+level);
 }
-assert.ok(G.nextXp(100)>G.nextXp(20)*100,'high levels must be far more expensive');
+assert.ok(G.nextXp(100)>G.nextXp(20)*5,'late-game XP increases without runaway inflation');
 assert.ok(G.nextXp(150)<Number.MAX_SAFE_INTEGER,'level-cap XP remains safe');
 assert.equal(G.fightExperience(150,150,100),0,'max-level characters receive no wasted XP');
 assert.ok(G.fightExperience(150,149,100)>0,'below-cap characters can still gain XP from the final boss');
@@ -52,7 +52,7 @@ for(const layer of [1,3,10,20,50,80,99]){
    'replay XP remains unchanged at layer '+layer+', gap '+gap);
  }
 }
-assert.ok(G.fightExperience(139,139,90)>G.fightExperience(19,19,10)*100,
+assert.ok(G.fightExperience(139,139,90)>G.fightExperience(19,19,10)*15,
  'endgame enemy rewards must be worth considerably more than early monsters');
 
 // Regression: farming layers 1–10 with a level 30 adventurer must no longer
