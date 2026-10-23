@@ -10,8 +10,9 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,22,'existing dialogs plus alchemy and item picker');
-assert.equal(new Set(dialogs).size,22);
+assert.equal(dialogs.length,23,'existing dialogs plus the new shared magic tips');
+assert.equal(new Set(dialogs).size,23);
+assert.ok(dialogs.includes('circlePowerTipsDialog'),'magic tips use a single native dialog');
 assert.ok(dialogs.includes('alchemyDialog')&&dialogs.includes('alchemyPickerDialog'),'alchemy dialogs share the native transition manager');
 assert.ok(dialogs.includes('magicInkDialog'),'magic ink selection uses the existing dialog manager');
 assert.match(css,/dialog\{[^}]*transition:opacity \.2s[^}]*display \.2s allow-discrete,overlay \.2s allow-discrete/);
