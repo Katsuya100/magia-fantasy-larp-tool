@@ -1,4 +1,4 @@
-import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.28';
+import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.29';
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
 // Thirty matching 12-degree slots in the upper circle and lower revolver.
 export const DRAWN_GLYPH_LIMIT=30;
