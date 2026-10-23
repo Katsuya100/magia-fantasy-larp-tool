@@ -10,7 +10,7 @@ import {
 assert.equal(DRAWN_GLYPH_LIMIT,30,'spell ring has 30 matching upper/lower character slots');
 assert.equal(DRAWN_POWER_RATE,.6);
 assert.ok(Math.abs(GLYPH_INK_SCALE-.11*4/9)<1e-12,'letter footprint shrinks with the two-thirds-width band');
-assert.equal(REVOLVER_DURATION_MS,100);
+assert.equal(REVOLVER_DURATION_MS,250);
 assert.ok(Math.abs(EDITOR_GLYPH_STEP-Math.PI/15)<1e-12,'each letter spans exactly 12 degrees on both screens, two thirds of 18 degrees');
 assert.ok(Math.abs(glyphAngle(1,1)-glyphAngle(0,1)-EDITOR_GLYPH_STEP)<1e-12,'upper letter interval equals lower revolver step');
 // The ring means the annular BAND, not the drawn glyphs or the whole disk.
@@ -405,15 +405,15 @@ try{
  pad.dispatch('pointermove',pointer(1,90,95));
  pad.dispatch('pointerup',pointer(1,90,95));
  assert.equal(get('circleDrawingConfirm').disabled,false,'one drawn stroke enables the sigil step');
- // Exercise the revolver duration, including disabled buttons during transition.
+ // Exercise a real 250ms frame sequence, including disabled buttons during transition.
  const frames=[];
  globalThis.window.requestAnimationFrame=cb=>frames.push(cb);
  get('circleDrawingRedo').dispatch('click');
  assert.equal(get('circleDrawingRedo').disabled,true);
  assert.equal(frames.length,1);
- frames.shift()(0);frames.shift()(REVOLVER_DURATION_MS/2);
+ frames.shift()(0);frames.shift()(125);
  assert.equal(get('circleDrawingRedo').disabled,true);
- frames.shift()(REVOLVER_DURATION_MS);
+ frames.shift()(250);
  assert.equal(get('circleDrawingRedo').disabled,false);
  delete globalThis.window.requestAnimationFrame;
  get('circleDrawingUndo').dispatch('click');

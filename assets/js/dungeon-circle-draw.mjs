@@ -33,7 +33,8 @@ export function withDrawnPowerFloor(circle){
  const current=Number(circle.analysis.power);
  const base=Number(circle.basePower??current);
  if(!Number.isFinite(current)||current<=0||!Number.isFinite(base)||base<=0)return circle;
- const floor=circle.creationInk?Math.ceil(Number((MIN_DUNGEON_POWER*1.1).toFixed(8))):MIN_DUNGEON_POWER;
+ const count=Number.isInteger(circle.creationInk)?circle.creationInk:(circle.creationInk?1:0);
+  const floor=Math.ceil(Number((MIN_DUNGEON_POWER*(1+count/10)).toFixed(8)));
  if(base>=floor&&current>=floor)return circle;
  const level=Number.isSafeInteger(circle.upgradeLevel)&&circle.upgradeLevel>0?circle.upgradeLevel:0;
  const correctedBase=Math.max(base,floor);
