@@ -33,7 +33,6 @@ try{
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,true,'upgrade requires a dialog');
  assert.match($('circleActionMessage').textContent,/10%/);
- assert.match($('magicStoneStock').textContent,/次の強化：5個/);
  assert.equal(upgradeStoneCost(20),6,'cost increases at the twenty-first upgrade');
  assert.match($('circleActionMessage').textContent,/。\nこの強化/,'confirmation sentences display on separate lines');
  await $('cancelCircleAction').fire('click');
@@ -49,6 +48,7 @@ try{
  assert.equal((await allCircles(db))[0].analysis.power,110,'read applies profile metadata without rewriting photo record');
  assert.equal(env.factory.databases.get('magia-dungeon-v1').get('circles').get('circle-1').analysis.power,100,'photo record stays unmodified');
  assert.equal($('magicDetailsDialog').open,true,'enhancement opens full circle feedback');
+ assert.match($('magicStoneStock').textContent,/次の強化：5個/,'details display actual next upgrade cost');
  assert.equal($('magicDetailsDialog').dataset.enhancing,'true','ritual begins');
  const originalMpMarkup='<dt>MP</dt><dd>'+mpCost(100)+'</dd>';
  assert.ok($('magicDetailsStats').innerHTML.includes(originalMpMarkup),'upgraded detail still shows the original MP cost');

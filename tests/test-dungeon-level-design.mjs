@@ -214,7 +214,8 @@ for(let layer=1;layer<=100;layer++){
  const favored=enemies.find(x=>x.id===bossId).favored_collection_ids.split('|');
  assert.ok(favored.includes(trophy.id),'boss favors its own unique trophy at layer '+layer);
  const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,favoredCollectionIds:favored});
- assert.ok(rewards.length<=9);
+ assert.ok(rewards.filter(x=>x.type!=='ink').length<=9,'existing rewards retain their 9-item ceiling');
+ assert.equal(rewards.filter(x=>x.type==='ink').length,1,'bosses have one independent ink roll');
  assert.equal(rewards.filter(x=>x.id===trophy.id).length,0,'common rolls never give epic or legendary trophies');
  const weights=rarityWeights(layer),totalWeight=weights.reduce((sum,n)=>sum+n,0);
  const epicTicket=(weights[0]+weights[1]+weights[2]+weights[3]/2)/totalWeight;

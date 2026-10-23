@@ -1,21 +1,41 @@
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
 export const DRAWN_GLYPH_LIMIT=32;
 export const DRAWN_POWER_RATE=0.6;
+export const MIN_DUNGEON_POWER=250;
 const INNER_RADIUS=.255;
-const GUIDE_RADIUS=.65;
+const GUIDE_RADIUS=.92;
+// The same scale in both axes preserves each drawn letter's aspect ratio.
+const GLYPH_INK_SCALE=.036;
+const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
  if(!Number.isFinite(power)||power<=0||!Number.isFinite(rate)||rate<=0||rate>1)throw Error('手書き魔法陣の威力が不正です。');
- return Math.max(1,Math.round(power*rate));
+ return Math.max(MIN_DUNGEON_POWER,Math.round(power*rate));
+}
+// Bring older hand-drawn circles into line when read, without modifying
+// the signed/backup copy of the original magic-circle image or undoing upgrades.
+export function withDrawnPowerFloor(circle){
+ if(circle?.origin!=='drawn'||!circle.analysis)return circle;
+ const current=Number(circle.analysis.power);
+ const base=Number(circle.basePower??current);
+ if(!Number.isFinite(current)||current<=0||!Number.isFinite(base)||base<=0)return circle;
+ const floor=circle.creationInk?Math.ceil(Number((MIN_DUNGEON_POWER*1.1).toFixed(8))):MIN_DUNGEON_POWER;
+ if(base>=floor&&current>=floor)return circle;
+ const level=Number.isSafeInteger(circle.upgradeLevel)&&circle.upgradeLevel>0?circle.upgradeLevel:0;
+ const correctedBase=Math.max(base,floor);
+ const upgraded=Math.ceil(Number((correctedBase*(1+level/10)).toFixed(8)));
+ return {...circle,basePower:correctedBase,analysis:{...circle.analysis,power:Math.max(current,upgraded)}};
 }
 export function pointOnPad(clientX,clientY,rect){
  const scale=Math.min(rect.width,rect.height)/2;
  if(!(scale>0))throw Error('タッチパッドのサイズが不正です。');
  return {x:(clientX-rect.left-rect.width/2)/scale,y:(clientY-rect.top-rect.height/2)/scale};
 }
-export function glyphPoint(point,index){
- const angle=-Math.PI/2+index*2*Math.PI/DRAWN_GLYPH_LIMIT;
- const tangent=angle+Math.PI/2,dx=point.x*.029,dy=point.y*.048;
+export function glyphAngle(index,count){return -Math.PI/2+(index-(count-1)/2)*GLYPH_STEP;}
+export function caretAngle(count){return -Math.PI/2+count*GLYPH_STEP/2;}
+export function glyphPoint(point,index,count=1){
+ const angle=glyphAngle(index,count);
+ const tangent=angle+Math.PI/2,dx=point.x*GLYPH_INK_SCALE,dy=point.y*GLYPH_INK_SCALE;
  return {x:.5+.345*Math.cos(angle)+dx*Math.cos(tangent)-dy*Math.sin(tangent),
   y:.5+.345*Math.sin(angle)+dx*Math.sin(tangent)+dy*Math.cos(tangent)};
 }
@@ -31,7 +51,8 @@ export function normalizedGlyph(strokes){
  const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
  return strokes.map(stroke=>stroke.map(p=>({x:(p.x-cx)*1.7/span,y:(p.y-cy)*1.7/span})));
 }
-function snapshot(s){return {letters:s.letters.slice(),ink:s.ink.slice(),sigil:s.sigil.slice()};}
+// Undo/redo only tracks committed characters (or complete sigil strokes), never pen movements.
+function snapshot(s){return {letters:s.letters.slice(),sigil:s.sigil.slice()};}
 export function createDrawingModel(){
  const state={mode:'spell',letters:[],ink:[],sigil:[]};
  let undo=[],redo=[];
@@ -50,18 +71,16 @@ export function createDrawingModel(){
    if(!Array.isArray(points)||!points.length)return false;
    const stroke=points.map(p=>({x:Number(p.x),y:Number(p.y)}));
    if(stroke.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))return false;
-   mutate(()=>{if(state.mode==='spell')state.ink.push(stroke);else state.sigil.push(stroke);});
+   if(state.mode==='spell')state.ink.push(stroke);
+   else mutate(()=>state.sigil.push(stroke));
    return true;
   },
   enterGlyph(){
-   if(state.mode!=='spell'||!state.ink.length||state.letters.length>=DRAWN_GLYPH_LIMIT)return false;
-   mutate(()=>{state.letters.push({strokes:normalizedGlyph(state.ink)});state.ink=[];});
-   return true;
-  },
-  addSpace(){
-   if(state.mode!=='spell'||state.ink.length||!state.letters.length||
-    state.letters.length>=DRAWN_GLYPH_LIMIT||state.letters.at(-1).space)return false;
-   mutate(()=>state.letters.push({space:true}));
+   if(state.mode!=='spell'||state.letters.length>=DRAWN_GLYPH_LIMIT)return false;
+   mutate(()=>{
+    state.letters.push(state.ink.length?{strokes:normalizedGlyph(state.ink)}:{space:true});
+    state.ink=[];
+   });
    return true;
   },
   goSigil(){
@@ -70,14 +89,12 @@ export function createDrawingModel(){
   },
   goSpell(){state.mode='spell';undo=[];redo=[];},
   reset(){
-   const key=state.mode==='spell'?'ink':'sigil';
    if(state.mode==='spell'){
-    if(!state.ink.length&&!state.letters.length)return false;
-    mutate(()=>{state.ink=[];state.letters=[];});
-   }else{
-    if(!state[key].length)return false;
-    mutate(()=>state.sigil=[]);
+    if(!state.ink.length)return false;
+    state.ink=[];return true;
    }
+   if(!state.sigil.length)return false;
+   mutate(()=>state.sigil=[]);
    return true;
   },
   undo(){return history('undo');},
@@ -96,30 +113,78 @@ function strokePath(ctx,points,transform,lineWidth,color,glow=0){
  if(points.length===1){ctx.beginPath();ctx.arc(start.x,start.y,lineWidth/2,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
  ctx.shadowBlur=0;
 }
+// Deterministic warm parchment: the preview and the registered image share the same finish.
+function paintParchment(ctx,size){
+ ctx.fillStyle='#f2e4c6';ctx.fillRect(0,0,size,size);
+ const light=ctx.createRadialGradient(size*.38,size*.28,size*.06,size*.51,size*.55,size*.78);
+ light.addColorStop(0,'rgba(255,252,235,.62)');
+ light.addColorStop(1,'rgba(166,122,73,.13)');
+ ctx.fillStyle=light;ctx.fillRect(0,0,size,size);
+ // Reproducible fiber-like flecks give the surface texture without a network image.
+ let seed=263119;
+ const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ for(let i=0;i<Math.round(size*1.3);i++){
+  const x=rand()*size,y=rand()*size;
+  ctx.fillStyle=i%3===0?'rgba(115,77,40,.11)':'rgba(255,252,238,.24)';
+  ctx.fillRect(x,y,Math.max(.6,size*.0013)*(.4+rand()),Math.max(.5,size*.0009)*(.4+rand()));
+ }
+}
+function brushCircle(ctx,size,radius,width){
+ const steps=240,center=size/2,rad=size*radius;
+ ctx.beginPath();
+ for(let i=0;i<=steps;i++){
+  const t=i*Math.PI*2/steps;
+  const waviness=(Math.sin(t*17+2)+Math.sin(t*41-1)*.5)*size*.00055;
+  const x=center+(rad+waviness)*Math.cos(t),y=center+(rad+waviness)*Math.sin(t);
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+ }
+ ctx.closePath();ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=size*width;
+ ctx.globalAlpha=.85;ctx.strokeStyle='#2b211a';ctx.stroke();
+ ctx.globalAlpha=.19;ctx.strokeStyle='#4f3a28';ctx.lineWidth=size*width*.68;ctx.stroke();
+ ctx.globalAlpha=1;
+}
+function brushStroke(ctx,points,transform,width){
+ if(!points.length)return;
+ ctx.globalAlpha=.85;
+ strokePath(ctx,points,transform,width,'#231b15');
+ ctx.globalAlpha=.15;
+ const jittered=points.map((p,i)=>{
+  const q=transform(p),n=width*.15;
+  return {x:q.x+Math.sin(i*2.71+p.x*13)*n,y:q.y+Math.cos(i*2.37+p.y*9)*n};
+ });
+ strokePath(ctx,jittered,p=>p,width*.42,'#75573b');
+ ctx.globalAlpha=1;
+}
 export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,size=512}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('魔法陣を描画できません。');
  ctx.clearRect(0,0,size,size);
- ctx.fillStyle=exportImage?'#fff':'#0a101d';ctx.fillRect(0,0,size,size);
- const circleColor=exportImage?'#101010':'#d6bd82';
- ctx.strokeStyle=circleColor;ctx.shadowColor=exportImage?'transparent':'#deb875';ctx.shadowBlur=exportImage?0:size*.007;
- for(const r of [.43,INNER_RADIUS]){
-  ctx.lineWidth=size*(r===.43?.004:.003);
-  ctx.beginPath();ctx.arc(size/2,size/2,size*r,0,Math.PI*2);ctx.stroke();
- }
- ctx.shadowBlur=0;
+ paintParchment(ctx,size);
+ brushCircle(ctx,size,.43,.0055);
+ brushCircle(ctx,size,INNER_RADIUS,.0095);
  for(let i=0;i<state.letters.length;i++){
   const glyph=state.letters[i];
   if(glyph.space)continue;
   for(const stroke of glyph.strokes){
-   strokePath(ctx,stroke,p=>{const q=glyphPoint(p,i);return {x:q.x*size,y:q.y*size};},
-    size*.006,exportImage?'#000':'#f2d79e',exportImage?0:size*.009);
+   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,state.letters.length);return {x:q.x*size,y:q.y*size};},size*.0072);
   }
  }
  const transform=p=>{const q=sigilPoint(p);return {x:q.x*size,y:q.y*size};};
- for(const stroke of state.sigil)strokePath(ctx,stroke,transform,size*.003,exportImage?'#000':'#cdb6ff',exportImage?0:size*.015);
- if(state.mode==='sigil'&&activeStroke?.length)
-  strokePath(ctx,activeStroke,transform,size*.003,'#d9c2ff',size*.015);
+ for(const stroke of state.sigil)brushStroke(ctx,stroke,transform,size*.0096);
+ if(state.mode==='sigil'&&activeStroke?.length)brushStroke(ctx,activeStroke,transform,size*.0096);
+}
+// Draw the cursor on its own transparent layer so CSS can blink it without
+// dimming the parchment or affecting the exported image.
+export function paintCaret(canvas,state,{size=512}={}){
+ if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
+ const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
+ ctx.clearRect(0,0,size,size);
+ if(state.mode!=='spell'||state.letters.length>=DRAWN_GLYPH_LIMIT)return;
+ const angle=caretAngle(state.letters.length),radius=size*.345,half=size*.027;
+ ctx.beginPath();
+ ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
+ ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
+ ctx.strokeStyle='#a64a31';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.globalAlpha=.92;ctx.stroke();ctx.globalAlpha=1;
 }
 function paintPad(canvas,state,activeStroke){
  const rect=canvas.getBoundingClientRect();
@@ -130,12 +195,16 @@ function paintPad(canvas,state,activeStroke){
  ctx.fillStyle='#03050b';ctx.fillRect(0,0,w,h);
  const scale=Math.min(w,h)/2;
  const at=p=>({x:w/2+p.x*scale,y:h/2+p.y*scale});
+ ctx.save();
+ ctx.strokeStyle='rgba(176,168,204,.35)';ctx.lineWidth=dpr*.9;ctx.setLineDash([3*dpr,8*dpr]);
+ ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
+ ctx.restore();
  if(state.mode==='sigil'){
   ctx.save();ctx.strokeStyle='#74718b';ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,7*dpr]);
   ctx.beginPath();ctx.arc(w/2,h/2,scale*GUIDE_RADIUS,0,Math.PI*2);ctx.stroke();ctx.restore();
  }
  const strokes=state.mode==='spell'?state.ink:state.sigil;
- const width=state.mode==='spell'?4*dpr:2*dpr;
+ const width=state.mode==='spell'?4.8*dpr:2.4*dpr;
  for(const stroke of strokes)strokePath(ctx,stroke,at,width,'#d2b7ff',9*dpr);
  if(activeStroke?.length)strokePath(ctx,activeStroke,at,width,'#e8d9ff',13*dpr);
 }
@@ -147,21 +216,20 @@ export function initCircleDrawing(doc,{onSave}){
  const get=id=>doc.getElementById(id);
  const dialog=get('circleDrawingDialog'),preview=get('circleDrawingPreview'),pad=get('circleDrawingPad');
  const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus');
+ const shell=get('circleDrawingShell');
+ const discard=get('circleDrawingDiscard'),keep=get('circleDrawingDiscardKeep'),discardButton=get('circleDrawingDiscardConfirm');
  let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,previousFocus=null;
  const message=text=>{status.textContent=text;};
  function repaint(){
   paintCircle(preview,model.state,{activeStroke,size:512});
+  paintCaret(get('circleDrawingCaret'),model.state,{size:512});
   paintPad(pad,model.state,activeStroke);
   const sigil=model.state.mode==='sigil';
-  get('circleDrawingStage').textContent=sigil?'紋を描く':'呪文を描く';
-  get('circleDrawingHint').textContent=sigil?'点線を目安に紋を描いてください。円の外にも描けます。':'1文字描いたら「入力」。単語間は「空白」。';
-  get('circleDrawingCount').textContent=sigil?'紋の線：'+model.state.sigil.length:'環：'+model.state.letters.length+' / '+DRAWN_GLYPH_LIMIT;
+  get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を1文字ずつ書く';
+  get('circleDrawingClose').textContent=sigil?'戻る':'閉じる';
   get('circleDrawingInput').hidden=sigil;
-  get('circleDrawingSpace').hidden=sigil;
-  get('circleDrawingBack').hidden=!sigil;
-  get('circleDrawingInput').disabled=!model.state.ink.length||model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy;
-  get('circleDrawingSpace').disabled=!model.state.letters.length||!!model.state.ink.length||!!model.state.letters.at(-1)?.space||model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy;
-  get('circleDrawingUndo').disabled=!model.canUndo||busy;
+  get('circleDrawingInput').disabled=model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy;
+ get('circleDrawingUndo').disabled=!model.canUndo||busy;
   get('circleDrawingRedo').disabled=!model.canRedo||busy;
   get('circleDrawingReset').disabled=busy;
   confirm.disabled=busy;
@@ -193,17 +261,12 @@ export function initCircleDrawing(doc,{onSave}){
  get('circleDrawingInput').addEventListener('click',()=>{
   if(!busy&&model.enterGlyph()){message('');repaint();}
  });
- get('circleDrawingSpace').addEventListener('click',()=>{
-  if(!busy&&model.addSpace()){message('');repaint();}
- });
- get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())repaint();});
+get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())repaint();});
  get('circleDrawingRedo').addEventListener('click',()=>{if(!busy&&model.redo())repaint();});
  get('circleDrawingReset').addEventListener('click',()=>{
   if(busy)return;
-  if(model.state.mode==='spell'&&model.state.letters.length&&!window.confirm('呪文を最初から描き直しますか？'))return;
   model.reset();message('');repaint();
  });
- get('circleDrawingBack').addEventListener('click',()=>{if(!busy){model.goSpell();message('');repaint();}});
  async function finish(){
   if(busy||pointerId!==null)return;
   if(model.state.mode==='spell'){
@@ -222,19 +285,47 @@ export function initCircleDrawing(doc,{onSave}){
   finally{busy=false;repaint();}
  }
  confirm.addEventListener('click',()=>void finish());
+ let discardReturnFocus=null;
+ function hideDiscard(restoreFocus=true){
+  if(discard.hidden)return;
+  discard.hidden=true;shell.inert=false;
+  if(restoreFocus&&dialog.open)discardReturnFocus?.focus?.();
+  discardReturnFocus=null;
+ }
  function close(){
-  if(busy)return;
-  if((model.state.letters.length||model.state.ink.length||model.state.sigil.length)&&!window.confirm('描いている魔法陣を破棄しますか？'))return;
-  dialog.close();
+  if(busy||!dialog.open||!discard.hidden)return;
+  if(model.state.mode==='sigil'){
+   model.goSpell();release();message('');repaint();return;
+  }
+  if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
+   dialog.close();return;
+  }
+  discardReturnFocus=doc.activeElement;
+  shell.inert=true;
+  discard.hidden=false;keep.focus();
  }
  get('circleDrawingClose').addEventListener('click',close);
- dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
- dialog.addEventListener('close',()=>{release();previousFocus?.focus?.();});
+ keep.addEventListener('click',()=>hideDiscard());
+ discardButton.addEventListener('click',()=>{hideDiscard(false);dialog.close();});
+ dialog.addEventListener('cancel',event=>{
+  event.preventDefault();
+  if(!discard.hidden)hideDiscard();
+  else close();
+ });
+ dialog.addEventListener('close',()=>{hideDiscard(false);release();previousFocus?.focus?.();});
  window.addEventListener('resize',()=>{if(dialog.open)repaint();});
+ function present(){
+  release();hideDiscard(false);busy=false;message('');
+  if(!dialog.open)dialog.showModal();
+  repaint();confirm.focus();
+ }
  return {
   open(){
-   model=createDrawingModel();release();message('');previousFocus=doc.activeElement;
-   dialog.showModal();repaint();confirm.focus();
-  }
+   model=createDrawingModel();previousFocus=doc.activeElement;
+   present();
+  },
+  // Reopen the exact draft after cancelling analysis. Never reset the model:
+  // this preserves letters, pen strokes, sigil stage and undo/redo history.
+  resume(){present();}
  };
 }

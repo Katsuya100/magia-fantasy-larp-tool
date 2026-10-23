@@ -1,4 +1,4 @@
-// Five simple pages: paper and pen preparation, then four GIF demonstrations.
+// Five tutorial pages using four uploaded GIF animations, in reverse upload order.
 export const CIRCLE_TUTORIAL_STEPS=[
  {title:'準備しましょう',hint:'最初にお手元に紙とペンをご用意ください。',detail:'ペンは、できれば太めの油性ペンをお使いください。',image:null},
  {title:'外円を書きましょう',hint:'紙に大きな円を書いてください。',detail:'線をつないで閉じてください。',image:'tutorial-outer.gif'},
@@ -8,7 +8,7 @@ export const CIRCLE_TUTORIAL_STEPS=[
 ];
 export function initCircleTutorial(doc,onFinish){
  const $=id=>doc.getElementById(id);
- const overlay=$('tutorialOverlay'),next=$('tutorialContinue'),back=$('tutorialPrevious'),gif=$('tutorialAnimation');
+ const overlay=$('tutorialOverlay'),next=$('tutorialContinue'),back=$('tutorialPrevious'),preview=$('tutorialAnimation');
  let step=0,previousFocus=null;
  function render(){
   const info=CIRCLE_TUTORIAL_STEPS[step],freedom=$('tutorialFreedom');
@@ -25,11 +25,11 @@ export function initCircleTutorial(doc,onFinish){
   freedom.hidden=!info.freedom;
   $('tutorialFigure').hidden=!info.image;
   if(info.image){
-   gif.src='assets/images/'+info.image+'?v=20261018.37';
-   gif.alt=info.title+'アニメーション';
-  }else gif.alt='';
+   preview.src='assets/images/'+info.image+'?v=20261023.14';
+   preview.alt=info.title+'の描画アニメーション';
+  }else preview.alt='';
   back.hidden=step===0;
-  next.textContent=step===CIRCLE_TUTORIAL_STEPS.length-1?'魔導書へ':'次へ';
+  next.textContent=step===CIRCLE_TUTORIAL_STEPS.length-1?'撮影する📷':'次へ';
  }
  function open(){
   if(!overlay.hidden)return;
@@ -46,6 +46,6 @@ export function initCircleTutorial(doc,onFinish){
  back.addEventListener('click',()=>{if(step>0){step--;render();}});
  $('tutorialSkip').addEventListener('click',()=>close(false));
  overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close(false);}});
- gif.addEventListener('error',()=>{gif.alt='GIFを読み込めませんでした';});
+ preview.addEventListener('error',()=>{preview.alt='GIFアニメーションを読み込めませんでした';});
  return {open,isOpen:()=>!overlay.hidden};
 }

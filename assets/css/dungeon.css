@@ -451,6 +451,12 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  box-shadow:0 0 24px #000a,inset 0 0 24px #0009;
  animation:circle-ritual-physical var(--ritual-duration) ease-in-out both
 }
+/* Preserve the whole parchment square in a hand-drawn circle reveal. */
+.circle-ritual--reveal.circle-ritual--drawn .circle-ritual__physical{
+ border-radius:0;background:#f2e4c6;object-fit:contain
+}
+/* A failed reading dims the magic effects, not the parchment itself. */
+.circle-ritual--failed.circle-ritual--drawn .circle-ritual__physical{filter:none}
 .circle-ritual__veil{
  position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse at 50% 42%,#07111b,#010207 65%);
  animation:circle-ritual-veil var(--ritual-duration) linear both
@@ -628,6 +634,16 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  0%,38%{transform:none;filter:none}
  46%,55%{transform:translateX(7px) scale(.94) rotate(2deg);filter:brightness(2.5)}
  68%{transform:translateX(-4px) scale(1.035) rotate(-1deg);filter:brightness(1.25)}
+ 100%{transform:none;filter:none}
+}
+/* A hit received by the left-side hero recoils left, not toward the enemy. */
+#battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
+ animation:snappy-impact-hero-left .44s cubic-bezier(.15,.85,.24,1) both
+}
+@keyframes snappy-impact-hero-left{
+ 0%,38%{transform:none;filter:none}
+ 46%,55%{transform:translateX(-7px) scale(.94) rotate(-2deg);filter:brightness(2.5)}
+ 68%{transform:translateX(4px) scale(1.035) rotate(1deg);filter:brightness(1.25)}
  100%{transform:none;filter:none}
 }
 @keyframes snappy-burst{
@@ -1302,9 +1318,9 @@ html,body{overflow-x:clip}
 }
 @keyframes boss-cinematic-collapse{
  0%{opacity:1;transform:none;filter:none}
- 22%{transform:translateX(-5px);filter:brightness(2.1)}
- 28%{transform:translateX(7px);filter:brightness(2.6)}
- 36%,54%{transform:translateX(-3px);filter:brightness(1.8)}
+ 22%{transform:translateX(5px);filter:brightness(2.1)}
+ 28%{transform:translateX(-7px);filter:brightness(2.6)}
+ 36%,54%{transform:translateX(3px);filter:brightness(1.8)}
  63%{opacity:1;transform:scale(1.05);filter:brightness(3)}
  90%{opacity:.17;transform:scale(.85) translateY(22px);filter:brightness(2)}
  100%{opacity:0;transform:scale(.65) translateY(40px);filter:brightness(0)}
@@ -2429,13 +2445,38 @@ button.creator-congratulations-close{
 }
 .circle-drawing-dialog::backdrop{background:#02030cdd;backdrop-filter:blur(6px)}
 .circle-drawing-dialog[open]{display:flex}
-.circle-drawing-shell{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
-.circle-drawing-header{
- flex:none;display:grid;grid-template-columns:1fr auto 1fr;
- align-items:center;gap:8px;padding:9px 12px;
- border-bottom:1px solid #c09d634d;background:#191728
+.circle-drawing-discard{
+ position:absolute;inset:0;z-index:10;display:grid;place-items:center;
+ padding:18px;background:#03050ce0;backdrop-filter:blur(3px)
 }
-.circle-drawing-header strong{font-size:14px;color:var(--gold);white-space:nowrap}
+.circle-drawing-discard[hidden]{display:none}
+.circle-drawing-discard-card{
+ width:min(100%,310px);padding:24px 20px 20px;text-align:center;
+ border:1px solid #a98b61;border-radius:12px;
+ background:#181726;box-shadow:0 18px 56px #000b
+}
+.circle-drawing-discard-card strong{display:block;font-size:16px;color:#f1dcbb}
+.circle-drawing-discard-actions{display:flex;justify-content:center;gap:12px;margin-top:22px}
+#circleDrawingDialog .circle-drawing-discard-actions button{flex:1;max-width:126px}
+#circleDrawingDialog .drawing-discard-confirm{
+ border:1px solid #c9817b;background:#683b41;color:#fff3ed
+}
+
+.circle-drawing-shell{position:relative;display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+.circle-drawing-header{
+ position:absolute;left:0;right:0;top:50%;z-index:3;
+ display:flex;justify-content:space-between;align-items:center;gap:8px;
+ transform:translateY(-50%);padding:0 8px;pointer-events:none
+}
+#circleDrawingDialog .circle-drawing-header button{pointer-events:auto;min-height:40px}
+.circle-drawing-stage{
+ position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+ z-index:2;pointer-events:none;white-space:normal;text-align:center;
+ max-width:calc(100% - 158px);line-height:1.2;
+ padding:5px 9px;border:1px solid #c09d6380;border-radius:999px;
+ background:#070914;color:var(--gold);font-size:clamp(11px,3vw,14px);
+ box-shadow:0 2px 12px #0009
+}
 #circleDrawingDialog button{font-size:13px;min-height:44px;box-shadow:none;padding:8px 12px}
 #circleDrawingDialog .drawing-secondary,
 #circleDrawingDialog .drawing-history{
@@ -2450,45 +2491,81 @@ button.creator-congratulations-close{
  position:relative;flex:1 1 50%;min-height:0;min-width:0;
  display:grid;grid-template-columns:46px minmax(0,1fr) 46px;
  place-items:center;align-content:center;gap:2px;
- background:radial-gradient(circle at 50% 45%,#32304a,#090e1c 72%);
- padding:8px 7px 28px
+ background:#070914;
+ padding:4px 7px
 }
-.circle-drawing-display canvas{
- display:block;width:min(100%,calc((94dvh - 130px)/2));height:auto;
- max-height:100%;aspect-ratio:1;object-fit:contain
+.circle-drawing-preview-art{
+ position:relative;display:block;width:min(100%,calc((94dvh - 88px)/2));
+ max-height:100%;aspect-ratio:1;justify-self:center
+}
+.circle-drawing-preview-art canvas{display:block;width:100%;height:100%;aspect-ratio:1}
+#circleDrawingCaret{
+ position:absolute;inset:0;pointer-events:none;
+ animation:circle-drawing-caret-blink 1s steps(1,end) infinite
+}
+@keyframes circle-drawing-caret-blink{
+ 0%,49%{opacity:1}
+ 50%,100%{opacity:0}
+}
+@media(prefers-reduced-motion:reduce){
+ #circleDrawingCaret{animation:none}
 }
 #circleDrawingDialog .drawing-history{
  width:42px;height:50px;padding:4px;font-size:25px;color:var(--gold);
  border-radius:8px;touch-action:manipulation
 }
-.circle-drawing-count{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-size:12px;color:#c8b5d9}
 .circle-drawing-entry{
  flex:1 1 50%;min-height:0;min-width:0;display:flex;
- flex-direction:column;padding:7px 10px max(9px,env(safe-area-inset-bottom));
+ flex-direction:column;padding:4px 7px max(4px,env(safe-area-inset-bottom));
  border-top:1px solid #bda17c6e;background:#070914
 }
-.circle-drawing-hint{flex:none;text-align:center;color:#c9b8db;font-size:12px;line-height:1.4;margin:0 0 7px}
+.circle-drawing-pad-zone{
+ flex:1 1 0;display:grid;place-items:center;container-type:size;
+ min-width:0;min-height:0;overflow:hidden
+}
 .circle-drawing-pad{
- display:block;flex:1 1 auto;min-width:0;min-height:0;width:100%;
+ display:block;flex:none;aspect-ratio:1 / 1;
+ width:min(100cqw,100cqh);height:min(100cqw,100cqh);max-width:100%;max-height:100%;
  border:1px solid #564277;background:#03050b;
  box-shadow:inset 0 0 22px #000;touch-action:none;user-select:none;
  -webkit-user-select:none;overscroll-behavior:contain
 }
-.circle-drawing-actions{flex:none;display:flex;justify-content:space-between;gap:7px;align-items:center;padding-top:8px}
-#circleDrawingDialog .circle-drawing-actions button{flex:none}
-#circleDrawingSpace,#circleDrawingBack{margin-left:auto}
-#circleDrawingInput{min-width:87px}
-.circle-drawing-status{flex:none;min-height:20px;margin:5px 0 0;text-align:center;color:#e9b1a9;font-size:12px;line-height:1.4}
+.circle-drawing-actions{flex:none;display:flex;justify-content:space-between;gap:7px;align-items:center;padding-top:4px}
+#circleDrawingDialog .circle-drawing-actions button{flex:none;min-height:34px;padding:4px 10px;font-size:12px}
+#circleDrawingInput{min-width:67px}
+.circle-drawing-status{flex:none;min-height:0;margin:4px 0 0;text-align:center;color:#e9b1a9;font-size:12px;line-height:1.4}
+.circle-drawing-status:empty{display:none}
 @media(max-width:630px){
  .circle-drawing-dialog{width:100%;height:100dvh;max-height:100dvh;max-width:none;margin:0;border:0}
  .drawing-open-button{margin:0 0 18px}
- .circle-drawing-header{padding-top:max(9px,env(safe-area-inset-top))}
+ .circle-drawing-header{padding-left:5px;padding-right:5px}
  .circle-drawing-display{grid-template-columns:42px minmax(0,1fr) 42px;padding-left:5px;padding-right:5px}
- .circle-drawing-display canvas{width:min(100%,calc((100dvh - 148px)/2))}
+ .circle-drawing-preview-art{width:min(100%,calc((100dvh - 104px)/2))}
 }
 @media(max-height:520px){
- .circle-drawing-hint{font-size:11px}
- .circle-drawing-header{padding-top:3px;padding-bottom:3px}
- .circle-drawing-actions{padding-top:3px}
+ .circle-drawing-actions{padding-top:2px}
  .circle-drawing-status{margin:0}
 }
+
+/* Crafting material selector: isolated to the grimoire registration UI. */
+#library .magic-ink-option{padding:12px 14px;border:1px solid var(--border);background:#0c1723;margin:12px 0}
+#library .magic-ink-option label{display:flex;align-items:center;gap:9px;color:var(--gold);font-size:14px;font-weight:700;cursor:pointer}
+#library .magic-ink-option input{accent-color:#d8b574;width:18px;height:18px;flex:none}
+#library .magic-ink-option p{font-size:12px;color:var(--soft);margin:5px 0 0}
+#library .magic-ink-option input:disabled{cursor:not-allowed}
+
+/* Registration entry points and camera dialog only. */
+#library .circle-register-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 18px}
+#library .circle-register-actions button{min-width:0;margin:0;padding:14px 8px;font-size:clamp(13px,3.1vw,17px);border-radius:8px;letter-spacing:.01em}
+#library .drawing-open-button{color:#fff0db;background:linear-gradient(145deg,#7c566d,#432d54);border-color:#d2a5d9;box-shadow:inset 0 1px #fff5,0 5px 18px #b78dd034}
+#library .camera-open-button{color:#281a20;background:linear-gradient(145deg,#fff0bf,#c99353);border:1px solid #ffe1a3;box-shadow:inset 0 1px #fff8,0 0 0 1px #f4cb7755,0 7px 26px #e4af604f}
+.circle-camera-dialog .circle-drawing-shell{padding:12px;gap:9px}
+.circle-camera-dialog .capture-pane{display:flex;flex:1;min-height:0;flex-direction:column;justify-content:center;margin:0;padding:0;border:0;background:transparent}
+.circle-camera-dialog .camera-viewfinder-group{display:flex;flex-direction:column;gap:5px;width:min(100%,calc(94dvh - 200px),570px);margin:auto}
+.circle-camera-dialog .camera-viewfinder{width:100%;margin:0}
+.circle-camera-dialog .camera-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;width:100%;margin:12px 0 0}
+.circle-camera-dialog .camera-actions button{min-width:0;min-height:44px;padding:8px 12px;font-size:13px;box-shadow:none}
+.circle-camera-dialog .drawing-secondary{background:#23213a;color:#e8ddfc;border:1px solid #8c779e}
+.circle-camera-dialog .drawing-confirm{background:linear-gradient(145deg,#f5da9e,#bf8d50);color:#191221;border:1px solid #e6bc79}
+.circle-camera-dialog .tutorial-replay{align-self:flex-end;margin:0;font-size:12px!important}
+@media(max-width:630px){.circle-camera-dialog .camera-viewfinder-group{width:min(100%,calc(100dvh - 178px))}}

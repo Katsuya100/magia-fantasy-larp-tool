@@ -26,16 +26,16 @@ try{
  assert.equal($('permadeathChoice').hidden,true,'no mode selector in the successor dialog');
  assert.equal($('permadeathInput').value,'permadeath');
  assert.equal($('savePlayerName').disabled,false);
- // Reproduce a concurrent game action holding the shared action lock.
- // The successor confirmation must be independent of that lock.
+ // A pending camera permission request must not block the successor confirmation.
  let resumeCamera;
  navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>{resumeCamera=resolve;});
- const cameraAction=$('cameraStart').fire('click');
+ await $('openCircleCamera').fire('click');
  await wait(()=>Boolean(resumeCamera));
  $('playerNameInput').value='二代目';
  await $('nameForm').fire('submit');
  resumeCamera({getTracks:()=>[{stop(){}}]});
- await cameraAction;
+ await wait(()=>$('cameraCapture').disabled===false);
+ await $('cameraStop').fire('click');
  assert.equal($('nameDialog').open,false,'successor confirmation closes the dialog');
  assert.equal($('savePlayerName').disabled,false,'button remains usable');
  const next=await getProfile(db);

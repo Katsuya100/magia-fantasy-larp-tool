@@ -1,35 +1,36 @@
-import * as G from './dungeon-core.mjs?v=20261022.12';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261022.12';
-import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261022.12';
-import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261022.12';
-import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261022.12';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261022.12';
-import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261022.12';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261022.12';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261022.12';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261022.12';
+import * as G from './dungeon-core.mjs?v=20261023.17';
+import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261023.17';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261023.17';
+import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261023.17';
+import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261023.17';
+import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261023.17';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261023.17';
+import {spellGrid,itemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261023.17';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261023.17';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261023.17';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261023.17';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261022.12';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261022.12';
-import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261022.12';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261022.12';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261022.12';
-import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261022.12';
-import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261022.12';
-import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261022.12';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261022.12';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261022.12';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261022.12';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261022.12';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261022.12';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261022.12';
-import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261022.12';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261022.12';
-import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261022.12';
-import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261022.12';
-import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261022.12';
-import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261022.12';
-import {initCircleDrawing,drawnPower} from './dungeon-circle-draw.mjs?v=20261022.12';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261023.17';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261023.17';
+import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261023.17';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261023.17';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261023.17';
+import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261023.17';
+import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261023.17';
+import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261023.17';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261023.17';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261023.17';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261023.17';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261023.17';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261023.17';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261023.17';
+import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261023.17';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261023.17';
+import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261023.17';
+import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261023.17';
+import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261023.17';
+import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261023.17';
+import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261023.17';
 let cloudSyncController,drawingEditor;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -140,7 +141,7 @@ async function refreshRepairStatus(){
 async function handleDriveImageRepair(){
  circleImages.releaseAll();
  failedPhotoIds.clear();
- circles=newestCirclesFirst(await allCircles(db));
+ circles=newestCirclesFirst((await allCircles(db)).map(withDrawnPowerFloor));
  slots=prepareCircles(profile.slots,circles.map(c=>c.id),num('spell_slots'));
  await refreshRepairStatus();
  render();
@@ -250,10 +251,11 @@ async function load(){
  profile.defeatedBosses??={};
  for(const relic of masters.collections)if(relic.boss_enemy_id&&Number(profile.collection?.[relic.id]||0)>0)profile.defeatedBosses[relic.boss_enemy_id]=true;
  profile.magicStones=Math.max(0,Number(profile.magicStones)||0);
+ profile.magicInk=Math.max(0,Math.trunc(Number(profile.magicInk)||0));
  profile.deepestReturnedLayer=deepestReturnedLayer(profile);
   profile.deepestReachedLayer=deepestReachedLayer(profile);
  startupStage('魔導書の頁を並べている…');
- circles=newestCirclesFirst(await allCircles(db));
+ circles=newestCirclesFirst((await allCircles(db)).map(withDrawnPowerFloor));
  // Restore original MP cost for expeditions saved before this change.
  const activeSpells=profile.run?.hero?.spells;
  if(Array.isArray(activeSpells))for(const [index,id] of (profile.run.slotIds||[]).entries()){
@@ -447,6 +449,9 @@ function render(){
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p></article>';
  }).join('')||'<p class="collection-empty">該当するコレクションはありません。</p>';
  $('magicStoneBalance').textContent='✦ 魔導石：'+profile.magicStones+'個';
+ $('magicInkBalance').textContent=MAGIC_INK_NAME+'：'+(profile.magicInk||0)+'個';
+ $('useMagicInk').disabled=Boolean(profile.run)||Boolean(activeAnalysis)||!(profile.magicInk>0);
+ if($('useMagicInk').disabled)$('useMagicInk').checked=false;
   const circleIndexes=circleListIndexes(circles,{
    role:listView.libraryRole,attribute:listView.libraryAttribute,sort:listView.librarySort,slots
   });
@@ -465,13 +470,13 @@ function render(){
  refreshCirclePhotos();
 }
 function rewardLedgerMarkup(run){
- return '<div class="battle-stat" data-kind="loot">'
-   +'<span class="battle-stat-label"><span aria-hidden="true">✥</span> 戦利品</span>'
-   +'<strong class="battle-stat-value">'+run.loot.length+'</strong>'
-   +'<small>帰還時に確定</small></div>'
-  +'<div class="battle-stat" data-kind="xp">'
+ return '<div class="battle-stat" data-kind="xp">'
    +'<span class="battle-stat-label"><span aria-hidden="true">✧</span> 獲得EXP</span>'
    +'<strong class="battle-stat-value">+'+run.xp+'</strong>'
+   +'<small>帰還時に確定</small></div>'
+  +'<div class="battle-stat" data-kind="loot">'
+   +'<span class="battle-stat-label"><span aria-hidden="true">✥</span> 戦利品</span>'
+   +'<strong class="battle-stat-value">'+run.loot.length+'</strong>'
    +'<small>帰還時に確定</small></div>';
 }
 function updateDungeonPanelBackground(fight){
@@ -840,6 +845,7 @@ function renderReturnStep(){
    let symbol,name,count=reward.count;
    if(reward.type==='use'){symbol=itemSymbol(reward.item);name=itemName(reward.item);}
    else if(reward.type==='stone'){symbol='✦';name='魔導石';}
+   else if(reward.type==='ink'){symbol='🖋️';name=MAGIC_INK_NAME;}
     else if(reward.type==='legacy'){symbol='🔹';name=reward.name;}
    else{symbol='✧';name=reward.name;}
    const rankLayer=reward.type==='rank'?(Number(reward.layer)||ADVENTURER_RANKS.find(rank=>rankBadgeName(rank.layer)===reward.name)?.layer||0):0;
@@ -847,7 +853,7 @@ function renderReturnStep(){
     ?'<span class="return-reward-symbol return-rank-symbol" aria-hidden="true"><span class="adventurer-grade"><strong data-rank="'+rankLayer+'"><span>'+esc(rankTitle(rankLayer))+'</span></strong></span></span>'
     :'<span class="return-reward-symbol" aria-hidden="true">'+symbol+'</span>';
    return '<article class="return-reward" style="--reveal-delay:'+(Math.min(i,12)*.07)+'s">'
-    +(reward.isNew||reward.type==='rank'||reward.type==='stone'?'<span class="return-new">NEW</span>':'')
+    +(reward.isNew||reward.type==='rank'||reward.type==='stone'||reward.type==='ink'?'<span class="return-new">NEW</span>':'')
     +symbolMarkup
     +'<strong>'+esc(name)+'</strong>'
     +(reward.type==='use'?'<span class="return-reward-effect" aria-label="'+esc(itemEffectText(reward.item))+'">'+itemEffectIcons(reward.item)+'</span>':'')
@@ -1013,7 +1019,7 @@ async function leave(mode='checkpoint'){
  if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;
  const found=new Map(),items=new Map(),badges=[];
  const knownItems=new Set(profile.obtainedItemIds);
- let stones=0;
+ let stones=0,inks=0;
  const registerItem=item=>{
   const key=JSON.stringify([item.id,item.value,item.bonus]);
   const existing=items.get(key);
@@ -1033,6 +1039,8 @@ async function leave(mode='checkpoint'){
    profile.inventory.push(item);if(visible)registerItem(item);else recoveredItemIds.add(item.id);
   }else if(item.type==='stone'){
    profile.magicStones++;if(visible)stones++;
+  }else if(item.type==='ink'){
+   profile.magicInk=(Number(profile.magicInk)||0)+1;if(visible)inks++;
   }else if(item.type==='collection'){
    const oldCount=Number(profile.collection[item.id]||0);
    profile.collection[item.id]=oldCount+1;
@@ -1071,7 +1079,7 @@ async function leave(mode='checkpoint'){
  ensureItemInstances(profile);
  profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
  carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
- const rewards=[...recoveredCards,...badges,...(stones?[{type:'stone',count:stones}]:[]),...[...items.values()].sort((a,b)=>Number(b.isNew)-Number(a.isNew))];
+ const rewards=[...recoveredCards,...badges,...(stones?[{type:'stone',count:stones}]:[]),...(inks?[{type:'ink',count:inks}]:[]),...[...items.values()].sort((a,b)=>Number(b.isNew)-Number(a.isNew))];
  const restored=[...new Map(restoredPhotos.map(circle=>[circle.id,circle])).values()].filter(circle=>!circles.some(owned=>owned.id===circle.id));
  // Preserve PR #140's recovery guarantee independently from disposable thumbnails.
  const saveReturn=async()=>{
@@ -1174,10 +1182,9 @@ async function parseDungeonMagic(circle,valid,request){
   return {analysis:failedDungeonAnalysis(),failed:true};
  }
 }
-async function analyzeCapturedCircle(circle){
- // Reveal the real analyzer for each photo. The live camera remains active
- // in the grimoire, so another photo can be taken immediately after returning.
- const request={id:circle.id,type:'capture',epoch:photoAnalysisEpoch};
+async function analyzeCapturedCircle(circle,useInk=false){
+ // Show the full analysis screen. Capture returns to its dialog on cancellation.
+ const request={id:circle.id,type:'capture',epoch:photoAnalysisEpoch,origin:circle.origin};
  activeAnalysis=request;
  rememberCameraScroll();
  show('analyzing');
@@ -1187,12 +1194,21 @@ async function analyzeCapturedCircle(circle){
  try{
   const result=await parseDungeonMagic(circle,valid,request);
   if(!valid())return;
-  const reduced=circle.origin==='drawn'?{...result.analysis,power:drawnPower(result.analysis.power)}:result.analysis;
-   const analyzed=savePreanalysis(circle,reduced);
-  // No record is written until all analysis values have been validated.
-  await putCircle(db,analyzed);
+  const reduced={...result.analysis,power:circle.origin==='drawn'?drawnPower(result.analysis.power):Math.max(MIN_DUNGEON_POWER,result.analysis.power)};
+  if(useInk&&!(profile.magicInk>0))throw Error('魔導のインクが不足しています。');
+  const analyzed={...savePreanalysis(circle,useInk?inkEnhancedAnalysis(reduced):reduced),...(useInk?{creationInk:true}:{})};
+  // The new circle and ink cost share a single integrity-checked transaction.
+  if(useInk){
+   await loadoutSaveQueue;
+   if(!valid())return;
+   const nextProfile={...profile,magicInk:profile.magicInk-1};
+   await saveProfileWithCircles(db,nextProfile,[analyzed]);
+   profile=nextProfile;
+  }else await putCircle(db,analyzed);
   if(!valid())return;
   circles=newestCirclesFirst([...circles,analyzed]);
+  if(circle.origin!=='drawn')stopCamera();
+  $('useMagicInk').checked=false;
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
@@ -1202,6 +1218,7 @@ async function analyzeCapturedCircle(circle){
   activeAnalysis=null;
   show('library');
   returnToCameraScroll();
+  if(circle.origin!=='drawn')openCircleCamera();
   $('cameraError').textContent='解明失敗：'+String(e?.message||e)+'（写真は保存していません）';
   $('cameraError').hidden=false;
  }
@@ -1216,7 +1233,7 @@ async function analyzeUnknown(index){
   try{
    const result=await parseDungeonMagic(circle,valid,request);
    if(!valid())return;
-   Object.assign(circle,savePreanalysis(circle,result.analysis));
+   Object.assign(circle,savePreanalysis(circle,{...result.analysis,power:circle.origin==='drawn'?drawnPower(result.analysis.power):Math.max(MIN_DUNGEON_POWER,result.analysis.power)}));
    if(!valid())return;
    run.hero.spells[index]=combatSpell(circle);
    rememberCircleMetadata(circle);await persist();
@@ -1231,9 +1248,7 @@ async function analyzeUnknown(index){
 function syncCameraUi(active){
  $('cameraPlaceholder').hidden=active;
  $('cameraVideo').hidden=!active;
- $('cameraStart').hidden=active;
- $('cameraCapture').hidden=!active;
- $('cameraStop').hidden=!active;
+ $('cameraCapture').disabled=!active;
 }
 async function openCamera(video){
  if(!navigator.mediaDevices?.getUserMedia)throw Error('HTTPSまたはlocalhostのカメラ対応ブラウザが必要です。');
@@ -1284,32 +1299,62 @@ function stopRepairCamera(){
  $('imageRepairStart').disabled=false;
  syncRepairCameraUi(false);
 }
+let cameraOpenEpoch=0;
+function openCircleCamera(){
+ if(profile.run||activeAnalysis)return;
+ const dialog=$('circleCameraDialog');
+ if(!dialog.open)dialog.showModal();
+ void startCamera();
+}
 async function startCamera(){
  if(stream){syncCameraUi(true);return;}
- try{stream=await openCamera($('cameraVideo'));syncCameraUi(true);note('');}
- catch(e){stopCamera();note('カメラを起動できません：'+e.message);}
+ const epoch=++cameraOpenEpoch;
+ try{
+  const opened=await openCamera($('cameraVideo'));
+  if(epoch!==cameraOpenEpoch||!$('circleCameraDialog').open){
+   opened.getTracks().forEach(t=>t.stop());
+   $('cameraVideo').srcObject=null;
+   return;
+  }
+  stream=opened;syncCameraUi(true);note('');
+ }catch(e){
+  if(epoch!==cameraOpenEpoch)return;
+  if(e?.name==='NotAllowedError'||e?.name==='PermissionDeniedError'){
+   closeCamera();
+   $('cameraError').hidden=true;$('cameraError').textContent='';
+   return;
+  }
+  stopCamera();note('カメラを起動できません：'+e.message);
+ }
 }
 function stopCamera(){
+ cameraOpenEpoch++;
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
  $('cameraVideo').srcObject=null;syncCameraUi(false);
 }
+function closeCamera(){
+ if($('circleCameraDialog').open)$('circleCameraDialog').close();
+ stopCamera();
+}
 async function capture(){
- if(!stream||!$('cameraVideo').videoWidth)return;
+ if(!stream||!$('circleCameraDialog').open||!$('cameraVideo').videoWidth)return;
  const blob=await cameraPhotoBlob($('cameraVideo'),$('cameraCanvas'));
  if(!blob){note('撮影画像を作成できません');return;}
+ if(!stream||!$('circleCameraDialog').open)return;
  lastCaptureRegistration=Math.max(nextCircleRegistration(circles),lastCaptureRegistration+1);
  const original=newCapturedCircle(crypto.randomUUID(),blob,lastCaptureRegistration);
  const circle=profile.permadeath?markCircleCreator(original,profile.name):original;
  // Save only when analysis or its weak fallback has been finalized.
  $('cameraError').hidden=true;$('cameraError').textContent='';
- await analyzeCapturedCircle(circle);
+ $('circleCameraDialog').close();
+ await analyzeCapturedCircle(circle,$('useMagicInk').checked&&profile.magicInk>0);
 }
 async function saveDrawnCircle(blob){
  if(profile.run||activeAnalysis)throw Error('探索中・解析中は魔法陣を登録できません。');
  lastCaptureRegistration=Math.max(nextCircleRegistration(circles),lastCaptureRegistration+1);
  const original={...newCapturedCircle(crypto.randomUUID(),blob,lastCaptureRegistration),origin:'drawn'};
  const circle=profile.permadeath?markCircleCreator(original,profile.name):original;
- await analyzeCapturedCircle(circle);
+ await analyzeCapturedCircle(circle,$('useMagicInk').checked&&profile.magicInk>0);
 }
 function oneSentencePerLine(value){return String(value).replace(/([。！？])\s*(?=\S)/gu,'$1\n');}
 function openMagicDetails(id){
@@ -1335,6 +1380,7 @@ function openMagicDetails(id){
  $('magicDetailsImage').src=circleImages.get(circle.image);
  const info=circleEffectDetails(circle,masters.buffs,G.statusDuration);
  const rows=[['作成方法',circle.origin==='drawn'?'簡易（手書き）':'本格（撮影）'],['属性',d.attribute],['種別',d.role],['効果の詳細',info.effect]];
+ if(circle.creationInk)rows.push(['🖋️ 魔導のインク','登録時に基礎威力＋10%（適用済み）']);
  if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
  rows.push(['MP',d.mp],['威力',d.power]);
  if(isRevealed(circle)&&circle.upgradeLevel)rows.push(['強化', '+'+(circle.upgradeLevel*10)+'%']);
@@ -1590,18 +1636,22 @@ function wireFavoriteHold(){
  });
 }
 function wire(){
+ syncCameraUi(false);
  drawingEditor=initCircleDrawing(document,{onSave:saveDrawnCircle});
  window.addEventListener('message',onAnalysisMessage);
  document.addEventListener('error',onCirclePhotoError,true);
  document.addEventListener('load',onCirclePhotoLoad,true);
  wireFavoriteHold();
  magicStoneTutorial=initMagicStoneTutorial(document);
+ let practiceFromCamera=false;
  tutorial=initCircleTutorial(document,async toCamera=>{
   profile.tutorialDone=true;
   try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}
-  if(toCamera){show('library');$('cameraStart').focus();}
+  if(toCamera||practiceFromCamera){practiceFromCamera=false;show('library');openCircleCamera();}
  });
- $('tutorialReplay').addEventListener('click',()=>{if(!profile.run&&!activeAnalysis)tutorial.open();});
+ $('tutorialReplay').addEventListener('click',()=>{
+  if(!profile.run&&!activeAnalysis){practiceFromCamera=true;closeCamera();tutorial.open();}
+ });
  const listControls=[
   ['libraryRoleFilter','libraryRole'],['libraryAttributeFilter','libraryAttribute'],['librarySort','librarySort'],
   ['collectionDiscoveryFilter','collectionDiscovery'],['collectionRarityFilter','collectionRarity'],['collectionSort','collectionSort']
@@ -1622,7 +1672,7 @@ function wire(){
   cameraReturnScroll=null;
   // Browsing another tab does not dismiss the uncompleted rewards/EXP.
   if(returnFlow&&b.dataset.view==='dungeon')renderReturnStep();
-   stopCamera();show(b.dataset.view);
+   closeCamera();show(b.dataset.view);
    if(b.dataset.view==='library'&&shouldShowMagicStoneTutorial(profile)){
     profile.magicStoneTutorialSeen=true;
     magicStoneTutorial.open();
@@ -1720,8 +1770,11 @@ function wire(){
  $('openGrimoireFromPicker').addEventListener('click',()=>{closeLoadoutPicker();show('library');});
  $('clearLoadoutSlot').addEventListener('click',()=>chooseLoadout(null));
  $('loadoutDialog').addEventListener('close',()=>{if(!$('loadoutDialog').open)picker=null;refreshCirclePhotos();});
- $('openCircleDrawing').addEventListener('click',()=>{if(!profile.run&&!activeAnalysis){stopCamera();drawingEditor.open();}});
- $('cameraStart').addEventListener('click',()=>exclusive(startCamera));$('cameraStop').addEventListener('click',stopCamera);$('cameraCapture').addEventListener('click',()=>exclusive(capture));
+ $('openCircleDrawing').addEventListener('click',()=>{if(!profile.run&&!activeAnalysis){closeCamera();drawingEditor.open();}});
+ $('openCircleCamera').addEventListener('click',openCircleCamera);
+ $('cameraStop').addEventListener('click',closeCamera);
+ $('circleCameraDialog').addEventListener('cancel',event=>{event.preventDefault();closeCamera();});
+ $('cameraCapture').addEventListener('click',()=>exclusive(capture));
  $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
   $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
   $('openAdventurerShare').addEventListener('click',openAdventurerShare);
@@ -1743,13 +1796,18 @@ function wire(){
  $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;const previousScroll=run.checkpointBattleScrollY;delete run.checkpointBattleScrollY;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');restoreContinuedBattleScroll(previousScroll);await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
  $('cancelAnalyze').addEventListener('click',()=>{
   const request=activeAnalysis,capture=request?.type==='capture';
+  const drawn=capture&&request.origin==='drawn';
   activeAnalysis=null;
   request?.cancel?.();
   if(capture)photoAnalysisEpoch++;
   $('analyzerFrame').onload=null;
   $('analyzerFrame').src='about:blank';
   note('');
-  if(capture){show('library');returnToCameraScroll();}
+  if(drawn){
+   cameraReturnScroll=null;
+   show('library');
+   drawingEditor.resume();
+  }else if(capture){show('library');returnToCameraScroll();openCircleCamera();}
   else {renderRun();show('battle');}
  });
  window.addEventListener('beforeunload',()=>{stopCamera();stopRepairCamera();circleImages.releaseAll();});

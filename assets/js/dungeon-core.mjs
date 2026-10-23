@@ -1,15 +1,16 @@
 import {num,level,range} from './dungeon-tuning.mjs';
 import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,CONSUMABLE_TIERS,targetClearLevel} from './dungeon-design.mjs';
+import {MAGIC_INK_ID,bossDropsMagicInk} from './dungeon-ink.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
 export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
-// Required XP scales steeply to balance unlimited repeat rewards.
+// Required XP curve offsets non-decaying repeat fight rewards.
 export const nextXp=level=>Math.ceil(Number(levelRow(level).xp_to_next)*
  Math.pow(num('xp_growth_per_10_levels'),(Number(level)-1)/10));
 // Five fights at the intended level supply approximately the XP needed
-// to start the following layer. Replay XP never decays.
+// to start the following layer. Replay rewards do not decay.
 export function fightExperience(enemyLevel,playerLevel,layer){
  if(Number(playerLevel)>=num('level_max'))return 0;
  const current=targetClearLevel(Number(layer));
@@ -78,8 +79,8 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// First clears and replayed layers have identical stone chances at any level.
-// The unchanged signature also supports older saved expeditions.
+// Magic stones keep one base chance on new or repeated layers at every level.
+// Retain the former signature for compatible saved expeditions.
 export function magicStoneDropChance(_playerLevel,_layer,_firstClear=false){
  return num('magic_stone_drop_chance');
 }
@@ -107,6 +108,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
  for(let i=0;i<stone;i++)rewards.push({type:'stone',id:'magic_stone'});
  for(let i=0;i<collection;i++)
   rewards.push({type:'collection',id:rollCollection(collections,layer,r,context.bossEnemyId??null,context.favoredCollectionIds).id});
+ if(bossDropsMagicInk(context.bossEnemyId,r))rewards.push({type:'ink',id:MAGIC_INK_ID});
  return rewards;
 }
 export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
