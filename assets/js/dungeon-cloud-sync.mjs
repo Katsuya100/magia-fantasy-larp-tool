@@ -185,7 +185,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   const date=Number.isFinite(savedAt)&&savedAt>0?new Date(savedAt).toLocaleString('ja-JP'):'不明';
   return label+'：'+displayName+' Lv.'+(Number.isInteger(level)&&level>0?level:'不明')+'（最終保存：'+date+'）';
  }
- function chooseCloud(description,{allowOverwrite=true,initialChoice=false,local,remote}={}){
+ function chooseCloud(description,{allowOverwrite=true,initialChoice=false,canStartLocal=true,local,remote}={}){
   return new Promise(resolve=>{
    if(!conflictDialog?.showModal){resolve('later');return;}
    choicePending=true;
@@ -193,7 +193,6 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     [description.replace(/。(?!$)/g,'。\n'),saveDetails('バックアップ',remote),saveDetails('端末',local)].join('\n');
    conflictDialog.querySelector('[data-action="overwrite"]').hidden=!allowOverwrite;
    if(overwriteWarning)overwriteWarning.hidden=!allowOverwrite;
-   conflictDialog.querySelector('[data-action="later"]').hidden=initialChoice;
    const title=doc?.getElementById('googleDriveConflictTitle');
    if(title)title.textContent=initialChoice?'バックアップが見つかりました':'冒険データの確認';
    const finish=choice=>{
@@ -210,11 +209,16 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.removeEventListener('click',handler);
     resolve(choice);
    };
-   const cancel=event=>{event.preventDefault();if(!initialChoice)finish('later');};
+   const chooseLocal=()=>{
+    finish('later');
+    // Finish unlinking before continuing with the unchanged local save.
+    void disconnect().then(()=>{if(canStartLocal)onInitialReady();});
+   };
+   const cancel=event=>{event.preventDefault();if(!initialChoice)chooseLocal();};
    const handlers=[['restore',()=>finish('restore')],
     ['overwrite',async()=>{if(pendingConfirmCancel)return;
      if(await confirmOverwrite()&&!disconnectPending&&conflictDialog.open)finish('overwrite');}],
-    ['later',()=>finish('later')]];
+    ['later',chooseLocal]];
    // Keep the overwrite handler after Back: otherwise the real browser
    // cannot open the second confirmation again (once:true would remove it).
    for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.addEventListener('click',handler);
@@ -348,7 +352,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    if(file&&remote.valid&&!samePlay&&!meta?.blocked){
     if(!initial){show('別のプレイの可能性があります。自動同期を停止しました。再接続して選択してください。');return result;}
     const choice=await chooseCloud('同じプレイと確認できません。引き継ぐか、上書きするか選んでください。',
-     {allowOverwrite:verification.status==='valid',initialChoice:initial,local,remote:remote.data});
+     {allowOverwrite:verification.status==='valid',initialChoice:initial,canStartLocal:verification.status!=='corrupt',local,remote:remote.data});
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
      if(verification.status==='legacy'){
@@ -371,7 +375,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(!file)await saveCloudSyncState(db,{});
     else{
      if(!remote.valid){show('バックアップが破損しています。復元できません。');return result;}
-     const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:true,local,remote:remote.data});
+     const choice=await chooseCloud('引き継ぐか、上書きするか選んでください。',{initialChoice:true,canStartLocal:verification.status!=='corrupt',local,remote:remote.data});
      if(choice==='restore')return await restore(remote,file,{explicit:true});
      if(choice==='overwrite'){
       // New game replaces the old backup only after the explicit choice.
@@ -387,7 +391,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      return await restore(remote,file,{explicit:Boolean(rescue)});
     }
     if(remote.valid){
-     const choice=await chooseCloud('端末セーブの破損を検出しました。Driveの旧形式バックアップは完全性を確認できません。復元する場合は内容が古い可能性があります。',{allowOverwrite:false,local,remote:remote.data});
+     const choice=await chooseCloud('端末セーブの破損を検出しました。Driveの旧形式バックアップは完全性を確認できません。復元する場合は内容が古い可能性があります。',{allowOverwrite:false,canStartLocal:false,local,remote:remote.data});
      if(choice==='restore')return await restore(remote,file,{explicit:true});
     }
     show('端末のセーブが破損しています。確認済みのDriveバックアップがないため上書きを停止しました。');

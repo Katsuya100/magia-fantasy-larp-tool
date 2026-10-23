@@ -442,8 +442,8 @@ try{
  assert.equal(afterDeleteUi.get('disconnectGoogleDrive').hidden,true,'deleted account stays unlinked');
  assert.equal((await readDungeonSnapshot(deleteDb)).profile?.name,undefined,'local account is deleted');
 
- // 2. Fresh local browser + existing named cloud backup: require only two
- // choices, never a name form until the user chooses a new game.
+ // 2. Fresh local browser + existing named cloud backup: require an explicit
+ // choice, never a name form until the user chooses a new game or local save.
  const recoveringDb=await newDb(),recoveringUi=fakeUi(),recoveringDrive=remoteApi(firstDrive.current);
  let recoveringNames=0,reloads=0;
  start(recoveringDb,recoveringUi,recoveringDrive.fetchImpl,{
@@ -460,7 +460,7 @@ try{
  recoveringUi.get('setupWithoutBackup').hidden=false;
  recoveringUi.get('setupWithoutBackup').disabled=false;
  assert.equal(recoveringNames,0);
- assert.equal(recoveringUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,true,'only two startup choices');
+ assert.equal(recoveringUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,false,'fresh browser offers later/local-only');
  assert.equal(recoveringDrive.uploads,0,'never replace the stored name before an explicit choice');
  assert.deepEqual(recoveringDrive.operations,[],'a found backup must not receive POST or PATCH before choosing');
  recoveringUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
@@ -471,6 +471,42 @@ try{
  assert.equal(recoveringUi.get('setupWithoutBackup').hidden,true,'skip option cannot flash before reload');
  assert.equal((await readDungeonSnapshot(recoveringDb)).profile.name,'星の魔導士');
  assert.equal(recoveringNames,0,'restoration does not open a new name dialog');
+
+ // Choosing "あとで" on first connect unlinks Drive, closes startup setup,
+ // and keeps both backups intact while the user continues locally.
+ const laterDb=await newDb(),laterUi=fakeUi(),laterDrive=remoteApi(firstDrive.current);
+ let laterReady=0,laterRestores=0;
+ const laterController=start(laterDb,laterUi,laterDrive.fetchImpl,{
+  onInitialReady:()=>{laterReady++;laterUi.get('backupSetupDialog').close();},
+  onRestore:()=>laterRestores++
+ });
+ laterUi.get('backupSetupDialog').showModal();
+ await connect(laterUi);
+ await wait(()=>laterUi.get('googleDriveConflictDialog').open,'first-connect later option appears');
+ const laterLocalBefore=await readDungeonSnapshot(laterDb),laterRemoteBefore=laterDrive.current;
+ assert.equal(laterUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,false);
+ laterUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
+ await wait(()=>laterReady===1,'later resumes local startup after unlink');
+ assert.equal(laterUi.get('googleDriveConflictDialog').open,false,'later closes backup chooser');
+ assert.equal(laterUi.get('backupSetupDialog').open,false,'later exits backup setup without choosing cloud data');
+ assert.equal(laterUi.doc.cookie,'','later clears saved OAuth cookie');
+ assert.equal(laterUi.button.hidden,false,'later restores manual connect control');
+ assert.equal(laterUi.get('disconnectGoogleDrive').hidden,true,'later disconnects Drive');
+ assert.match(laterUi.status.textContent,/同期を解除しました/);
+ assert.equal(laterRestores,0,'later never reloads the cloud save');
+ assert.deepEqual(await readDungeonSnapshot(laterDb),laterLocalBefore,'later retains complete local save');
+ assert.equal(laterDrive.current,laterRemoteBefore,'later does not change remote backup');
+ assert.deepEqual(laterDrive.operations,[],'later never uploads to Drive');
+ const laterProfile=await getProfile(laterDb);
+ laterProfile.name='ローカルで続ける冒険者';
+ await saveProfile(laterDb,laterProfile);
+ assert.equal(await laterController.syncNow(),'deferred','later disables subsequent manual sync');
+ assert.equal(laterDrive.current,laterRemoteBefore,'local progress stays off Drive');
+ const laterRefreshUi=fakeUi(laterUi.cookies);
+ start(laterDb,laterRefreshUi,laterDrive.fetchImpl);
+ await wait(()=>!laterRefreshUi.button.disabled,'later refresh can reconnect manually');
+ assert.equal(laterRefreshUi.get('googleDriveConflictDialog').open,false,'later refresh does not silently reconnect');
+ assert.equal(laterRefreshUi.button.hidden,false,'later refresh stays on local save');
 
  // One adventurer can have a lower-level Drive checkpoint than the local
  // device. Explicit "引き継ぐ" is a deliberate choice: restore the verified
@@ -504,6 +540,24 @@ try{
  assert.equal(deliberatelyRestored.savedAt,oldCloud.savedAt,'the selected Drive saved timestamp is retained');
  assert.deepEqual(deliberateDrive.operations,[],'explicit restore never uploads the other checkpoint');
  assert.notEqual(deliberatelyRestored.savedAt,localBeforeChoice.savedAt,'local timestamp does not override explicit selection');
+
+ // "あとで" also retains an existing higher-level local adventurer.
+ const postponeDb=await newDb(),postponeUi=fakeUi(),postponeDrive=remoteApi(firstDrive.current);
+ const postponeProfile=await getProfile(postponeDb);
+ postponeProfile.name='端末の冒険者';postponeProfile.level=80;
+ await saveProfile(postponeDb,postponeProfile);
+ await saveCloudSyncState(postponeDb,{blocked:true});
+ const postponeSnapshot=await readDungeonSnapshot(postponeDb),postponeRemote=postponeDrive.current;
+ let postponeRestores=0;
+ const postponeController=start(postponeDb,postponeUi,postponeDrive.fetchImpl,{onRestore:()=>postponeRestores++});
+ await connect(postponeUi,'connectGoogleDrive');
+ await wait(()=>postponeUi.get('googleDriveConflictDialog').open,'named local save can choose later');
+ postponeUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
+ await wait(()=>postponeUi.doc.cookie==='','named later unlinks before further local play');
+ assert.deepEqual(await readDungeonSnapshot(postponeDb),postponeSnapshot,'named later preserves level and local progress');
+ assert.equal(postponeDrive.current,postponeRemote,'named later leaves Drive backup intact');
+ assert.equal(postponeRestores,0,'named later does not restore');
+ assert.equal(await postponeController.syncNow(),'deferred','named later keeps sync disconnected');
 
  // 3. Fresh browser + existing backup + explicit new game: the unnamed seed
  // replaces the backup BEFORE naming; the name is then synced immediately.
@@ -687,7 +741,7 @@ try{
  await wait(()=>reopenedUi.get('googleDriveConflictDialog').open,'page restart detects an existing backup');
  assert.equal(reopenedReady,0);
  assert.deepEqual(reopenedDrive.operations,[],'startup must not silently overwrite existing Drive data');
- assert.equal(reopenedUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,true);
+ assert.equal(reopenedUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').hidden,false);
 
  // 11. A page refresh restores the short-lived token from a cookie, then
  // verifies the actual Drive backup without another Google authorization popup.
@@ -832,11 +886,39 @@ try{
  assert.deepEqual(photoDrive.operations,[],'missing photo never overwrites Drive');
  const corruptLegacy=await legacyDevice('記録改ざん',{tampered:true});
  const corruptUi=fakeUi(),corruptDrive=remoteApi(newerRemote);
- start(corruptLegacy.db,corruptUi,corruptDrive.fetchImpl);
+ let corruptReady=0;
+ start(corruptLegacy.db,corruptUi,corruptDrive.fetchImpl,{onInitialReady:()=>corruptReady++});
  await connect(corruptUi);
  await wait(()=>corruptUi.get('googleDriveConflictDialog').open,'unrelated corrupt local save offers only explicit restore');
  assert.equal(corruptUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').hidden,true,'unverified data cannot be used to overwrite another play');
  assert.deepEqual(corruptDrive.operations,[],'corrupt local record never overwrites the healthy remote');
+ const corruptLocalBefore=await readDungeonSnapshot(corruptLegacy.db);
+ corruptUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
+ await wait(()=>corruptUi.doc.cookie==='','corrupt local later unlinks safely');
+ assert.equal(corruptReady,1,'legacy local save remains playable after unlink');
+ assert.deepEqual(await readDungeonSnapshot(corruptLegacy.db),corruptLocalBefore,'legacy local stays untouched');
+ assert.deepEqual(corruptDrive.operations,[],'legacy local later never writes Drive');
+
+ // A genuinely corrupt signed snapshot cannot bypass the startup integrity
+ // gate through "あとで": unlinking is allowed, starting that save is not.
+ const damagedFactory=fakeIndexedDB(),damagedDb=await openStore(damagedFactory);
+ const damagedProfile=await getProfile(damagedDb);
+ damagedProfile.name='署名済みの冒険者';
+ await saveProfile(damagedDb,damagedProfile);
+ const damagedSettings=damagedFactory.databases.get('magia-dungeon-v1').get('settings');
+ damagedSettings.set('profile',{...damagedSettings.get('profile'),level:17});
+ const damagedBefore=await readDungeonSnapshot(damagedDb);
+ assert.equal((await verifyLocalSnapshot(damagedBefore)).status,'corrupt');
+ const damagedUi=fakeUi(),damagedDrive=remoteApi(firstDrive.current);
+ let damagedReady=0;
+ start(damagedDb,damagedUi,damagedDrive.fetchImpl,{onInitialReady:()=>damagedReady++});
+ await connect(damagedUi);
+ await wait(()=>damagedUi.get('googleDriveConflictDialog').open,'corrupt verified local save requires a decision');
+ damagedUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
+ await wait(()=>damagedUi.doc.cookie==='','later clears credentials even with corrupt local data');
+ assert.equal(damagedReady,0,'corrupt signed local save cannot enter gameplay');
+ assert.deepEqual(await readDungeonSnapshot(damagedDb),damagedBefore,'corrupt local stays unmodified');
+ assert.deepEqual(damagedDrive.operations,[],'corrupt later never writes Drive');
 
  // 15. An idle tab proactively notifies at token expiry without waiting
  // for another save. The dialog is one-shot until a fresh token is authorized.
