@@ -2709,15 +2709,26 @@ button.creator-congratulations-close{
 /* Animated uppercase F: vertical, upper horizontal, then middle horizontal.
    The finger is invisible when repositioning between the three strokes. */
 .circle-drawing-finger{left:32%;top:24%}
-.circle-drawing-finger-guide[data-playing="true"] path{animation:dungeon-finger-trace 3s linear both}
+/* Each F stroke is its own SVG path: the animation is reset at each pen lift. */
+.circle-drawing-finger-guide[data-playing="true"] .finger-f-vertical{animation:dungeon-finger-f-vertical 3s linear both}
+.circle-drawing-finger-guide[data-playing="true"] .finger-f-top{animation:dungeon-finger-f-top 3s linear both}
+.circle-drawing-finger-guide[data-playing="true"] .finger-f-middle{animation:dungeon-finger-f-middle 3s linear both}
 .circle-drawing-finger-guide[data-playing="true"] .circle-drawing-finger{animation:dungeon-finger-move 3s linear both}
-@keyframes dungeon-finger-trace{
+@keyframes dungeon-finger-f-vertical{
  0%,5%{stroke-dashoffset:100;opacity:0}
  6%{opacity:1}
- 44%{stroke-dashoffset:56}
- 47%{stroke-dashoffset:56}
- 71%{stroke-dashoffset:24}
- 77%{stroke-dashoffset:24}
+ 44%,93%{stroke-dashoffset:0;opacity:1}
+ 100%{stroke-dashoffset:0;opacity:0}
+}
+@keyframes dungeon-finger-f-top{
+ 0%,46%{stroke-dashoffset:100;opacity:0}
+ 47%{opacity:1}
+ 71%,93%{stroke-dashoffset:0;opacity:1}
+ 100%{stroke-dashoffset:0;opacity:0}
+}
+@keyframes dungeon-finger-f-middle{
+ 0%,76%{stroke-dashoffset:100;opacity:0}
+ 77%{opacity:1}
  93%{stroke-dashoffset:0;opacity:1}
  100%{stroke-dashoffset:0;opacity:0}
 }
