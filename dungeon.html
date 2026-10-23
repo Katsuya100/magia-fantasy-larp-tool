@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261024.01">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261024.02">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261024.01" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261024.02" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261024.01" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261024.02" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -361,13 +361,13 @@
     </div>
 
     <dialog id="circleDrawingDialog" class="circle-drawing-dialog" aria-labelledby="circleDrawingStage" data-dungeon-frame="overlay">
-      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261024.01" alt="" hidden>
+      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261024.02" alt="" hidden>
       <div id="circleDrawingShell" class="circle-drawing-shell">
         <strong id="circleDrawingStage" class="circle-drawing-stage" aria-live="polite">呪文を1文字ずつ書く</strong>
+        <button type="button" id="circleDrawingPowerTips" class="subtle circle-power-tips-button">強い魔法のコツ</button>
         <button type="button" id="circleDrawingPractice" class="subtle circle-drawing-practice">描き方を練習</button>
         <section class="circle-drawing-display" aria-label="魔法陣のプレビュー">
           <div class="circle-drawing-preview-art">
-            <button type="button" id="circleDrawingPowerTips" class="subtle circle-power-tips-button">強い魔法のコツ</button>
             <canvas id="circleDrawingPreview" width="512" height="512" role="img" aria-label="作成中の魔法陣"></canvas>
             <canvas id="circleDrawingCaret" width="512" height="512" aria-hidden="true"></canvas>
           </div>
@@ -420,7 +420,7 @@
           <li>呪文を<strong>円の線に重ねない</strong></li>
           <li><strong>重複しない英単語</strong>を多く使う</li>
         </ol>
-        <figure><img src="assets/images/sample.png?v=20261020.31" alt="理想の魔法陣。綺麗な二重円、重ならない英語の呪文、中央の紋" loading="lazy"><figcaption>理想形</figcaption></figure>
+        <figure><figcaption>理想形</figcaption><img src="assets/images/sample.png?v=20261020.31" alt="理想の魔法陣。綺麗な二重円、重ならない英語の呪文、中央の紋" loading="lazy"></figure>
       </div>
     </dialog>
     <dialog id="circleDrawingLessonDialog" class="drawing-lesson-dialog" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" data-dungeon-frame="paged">
@@ -433,9 +433,11 @@
       <div class="circle-drawing-shell">
         <div id="cameraPane" class="capture-pane">
           <div class="camera-viewfinder-group">
-            <button type="button" id="tutorialReplay" class="subtle tutorial-replay">描き方を練習</button>
-            <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
+            <div class="camera-viewfinder-toolbar">
               <button type="button" id="circleCameraPowerTips" class="subtle circle-power-tips-button">強い魔法のコツ</button>
+              <button type="button" id="tutorialReplay" class="subtle tutorial-replay">描き方を練習</button>
+            </div>
+            <div class="camera-viewfinder" aria-label="正方形の撮影範囲">
           <div id="cameraPlaceholder" class="camera-placeholder" aria-hidden="true"><span>◎</span></div>
           <video id="cameraVideo" autoplay muted playsinline hidden></video>
           <span class="viewfinder-circle-guide" aria-hidden="true"></span>
@@ -597,7 +599,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.24.01</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.24.02</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" data-dungeon-frame="paged" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet dungeon-dialog-frame">
@@ -618,6 +620,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261024.01"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261024.02"></script>
 </body>
 </html>
