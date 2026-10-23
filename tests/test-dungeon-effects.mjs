@@ -80,9 +80,10 @@ for(const [attr,role] of [['flame','attack'],['bolt','attack'],['aqua','support'
  if(role==='support')actor.hp-=500;
  G.round(actor,foe,0,-1,buffs,()=>.99);
  const bonus=actor.statuses.find(s=>s.id.startsWith('buff_'));
- assert.equal(bonus?.turns,4,'new buff lasts four turns until affected '+attr);
+ const defended=['storm','gravity'].includes(attr);
+ assert.equal(bonus?.turns,defended?3:4,'buff consumes application turn only when it protects a hit '+attr);
  G.round(actor,foe,1,-1,buffs,()=>.99);
- assert.equal(G.status(actor,bonus.id)?.turns,3,'buff counts first applicable turn '+attr);
+ assert.equal(G.status(actor,bonus.id)?.turns,defended?2:3,'buff counts its next active turn '+attr);
 }
 const upgraded={role:'defense',attribute:'flame',power:1000,basePower:270};
 assert.equal(G.defenseDuration(upgraded),6,'stone-upgraded power, not original MP basis');
