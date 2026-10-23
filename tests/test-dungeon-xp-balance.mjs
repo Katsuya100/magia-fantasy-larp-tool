@@ -7,7 +7,8 @@ import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 const read=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase]=['balance','levels','floors','player-base'].map(read);
 configure({balance,levels,floors,playerBase});
-assert.equal(num('xp_growth_per_10_levels'),1.35,'flatter required EXP curve');
+assert.equal(num('xp_growth_per_10_levels'),1.85,'steeper pre-100 EXP growth');
+assert.equal(num('xp_growth_per_10_levels_late'),1.1,'tapered late EXP growth');
 
 // At-level adventurers should still reach the recommended level for the
 // next layer after five victories followed by a safe return.
@@ -108,10 +109,10 @@ const replayDiagnostics=replayCases.map(({level,from,to})=>{
   gaugePercent:100*earned/G.nextXp(level),afterLevel:p.level,afterXp:p.xp};
 });
 const level92Replay=replayDiagnostics.find(x=>x.level===92);
-assert.equal(level92Replay.earned,607,'41F five battles issue exactly 607 scaled EXP');
-assert.ok(level92Replay.gaugePercent>46&&level92Replay.gaugePercent<47,
+assert.equal(level92Replay.earned,3456,'41F five battles use a single scaled EXP budget');
+assert.ok(level92Replay.gaugePercent>25&&level92Replay.gaugePercent<27,
  'track the currently excessive Lv92/41F replay gauge gain');
-assert.ok(G.nextXp(149)<20000,'the redesigned late-game curve stays below 5 digits in required XP');
+assert.ok(G.nextXp(149)<100000,'the redesigned late-game curve keeps required XP below six digits');
 assert.equal(G.formatXp(121.40000000000002),'121.4','combat EXP display hides floating point noise');
 assert.equal(G.formatXp(12345.67),'12,345.7','EXP keeps its real units with one decimal at most');
 console.log('XP_REPLAY_DIAGNOSTICS '+JSON.stringify(replayDiagnostics));
