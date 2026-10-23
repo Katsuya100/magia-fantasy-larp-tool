@@ -13,7 +13,7 @@ import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261023.40';
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261023.40';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261023.40';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261023.40';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261023.40';
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261023.40';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261023.40';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261023.40';
@@ -1786,6 +1786,25 @@ function wire(){
     button.disabled=false;
    }
    if(saved&&firstLesson)showFirstCircleChoice();
+ });
+ // The original signed save is available in both the profile and damaged-
+ // save recovery screens. Never silently roll back subsequent gameplay.
+ const originalXpButtons=[$('restoreOriginalXpSave'),$('restoreOriginalXpSaveSetup')];
+ void hasDungeonXpMigrationBackup(db).then(available=>{
+  for(const button of originalXpButtons)button.hidden=!available;
+ }).catch(error=>console.warn('EXP変換前の保全データを確認できませんでした',error));
+ for(const button of originalXpButtons)button.addEventListener('click',()=>{
+  if(!window.confirm('EXP変換前のセーブを復元します。変換後に進めた冒険・装備・収集記録は失われます。続行しますか？'))return;
+  void exclusive(async()=>{
+   for(const other of originalXpButtons)other.disabled=true;
+   try{
+    await restoreDungeonXpMigrationBackup(db);
+    location.reload();
+   }catch(error){
+    for(const other of originalXpButtons)other.disabled=false;
+    note('EXP変換前のセーブを復元できませんでした：'+String(error?.message||error));
+   }
+  });
  });
  $('closeSaveError').addEventListener('click',()=>closeDungeonDialog($('saveErrorDialog')));
   $('cancelNameDialog').addEventListener('click',()=>closeDungeonDialog($('nameDialog')));
