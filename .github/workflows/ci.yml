@@ -78,6 +78,7 @@ jobs:
       - run: node tests/test-dungeon-journeys.mjs
       - run: node scripts/dungeon-balance-manifest.mjs
       - run: node scripts/simulate-dungeon-journeys.mjs 16 > reports/dungeon-journeys.log
+      - run: node scripts/dungeon-extra-economy-diagnostics.mjs
       - run: node scripts/report-dungeon-journeys.mjs
       - name: Archive diagnostic reports and seed traces
         if: always()
