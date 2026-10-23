@@ -12,8 +12,16 @@ export const XP_SCALE=45;
 // Keep the display short without changing the stored value.
 const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:1});
 export const formatXp=value=>xpDisplay.format(Number(value)||0);
-export const nextXp=level=>Math.ceil(Number(levelRow(level).xp_to_next)*
- Math.pow(num('xp_growth_per_10_levels'),(Number(level)-1)/10)/XP_SCALE);
+// Grow steeply until Lv100 to limit lower-floor replay, then taper so
+// the high-end required and earned EXP values remain under six figures.
+export const nextXp=level=>{
+ const steps=(Number(level)-1)/10;
+ const earlySteps=Math.min(steps,9.9);
+ const lateSteps=Math.max(0,steps-9.9);
+ return Math.ceil(Number(levelRow(level).xp_to_next)*
+  Math.pow(num('xp_growth_per_10_levels'),earlySteps)*
+  Math.pow(num('xp_growth_per_10_levels_late'),lateSteps)/XP_SCALE);
+};
 // Five fights at the intended level supply approximately the XP needed
 // to start the following layer. Replay rewards do not decay.
 export function fightExperience(enemyLevel,playerLevel,layer){
