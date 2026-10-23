@@ -21,6 +21,7 @@ p.returns=2;p.inventory=[{id:'heal_s',value:27,bonus:'buff_aqua'}];p.run={floor:
 await saveProfile(db,p);
 // Existing signed saves must convert EXP exactly once, including unbanked
 // battle rewards and unfinished return-screen rewards.
+delete p.xpScaleVersion; // Simulate a genuine pre-migration signed save.
 p.level=92;p.xp=90000;p.run.xp=45000;
 p.pendingReturn={gained:22500,before:{level:92,xp:4500},steps:['xp'],step:0};
 await saveProfile(db,p);
