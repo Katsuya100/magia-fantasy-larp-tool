@@ -205,8 +205,11 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
  ctx.clearRect(0,0,size,size);
  if(state.mode!=='spell'||state.index>=DRAWN_GLYPH_LIMIT)return;
- const angle=viewIndex===null?glyphAngle(state.index,1):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
- const radius=size*.481,half=size*.009; // Outside the outer ring and usual glyph ink.
+ // The caret marks the LEFT angular boundary of the current 15-degree
+ // glyph slot, inside the ring. It must not cover the letter's center.
+ const centerAngle=viewIndex===null?glyphAngle(state.index,1):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
+ const angle=centerAngle-GLYPH_STEP/2;
+ const radius=size*RING_RADIUS,half=size*.027;
  ctx.beginPath();
  ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
  ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
