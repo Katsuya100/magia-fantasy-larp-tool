@@ -19,6 +19,8 @@ assert.deepEqual(recipe('common',[make('heal_s',30),make('mana_s',10),make('clea
 assert.deepEqual(recipe('common',[make('heal_s',10),make('heal_m',20),make('clear_flame'),make('clear_aqua'),make('clear_bolt')]),{id:'heal_m',value:60});
 assert.deepEqual(recipe('common',[make('elixir_s',35),make('heal_s',20),make('mana_s',20),make('clear_flame'),make('clear_bolt')]),{id:'elixir_s',value:35});
 assert.deepEqual(recipe('common',five('clear_flame')),{id:'escape_scroll',value:0});
+assert.deepEqual(recipe('common',[make('heal_s',40),make('escape_scroll'),make('clear_flame'),make('clear_bolt'),make('clear_aqua')]),{id:'escape_scroll',value:0});
+assert.deepEqual(recipe('epic',[make('elixir_s',35),make('escape_scroll'),make('clear_flame'),make('clear_bolt'),make('clear_aqua')]),{id:'escape_scroll',value:0});
 assert.deepEqual(recipe('common',[make('escape_scroll'),make('escape_scroll'),make('clear_flame'),make('clear_bolt'),make('clear_aqua')]),{id:'escape_scroll',value:2});
 assert.deepEqual(recipe('common',[make('life_ruby',2),make('life_ruby',4),make('clear_flame'),make('clear_bolt'),make('clear_aqua')]),{id:'life_ruby',value:14});
 
