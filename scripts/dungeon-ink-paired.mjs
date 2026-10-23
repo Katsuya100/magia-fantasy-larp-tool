@@ -17,6 +17,7 @@ const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('col
 configure(data);
 const MAX_SAMPLES=256,SEED_BASE=17011;
 const economics=read('reports/dungeon-journeys-v1.json');
+const powerRecovery=read('reports/dungeon-ink-recovery-v1.json');
 const goals=read('config/dungeon-approved-goals.v1.json');
 if(goals.strictSamples!==MAX_SAMPLES)throw Error('Approved 256 paired seeds required');
 const choose=(hero,enemy,layer)=>{
@@ -102,7 +103,7 @@ const report={schemaVersion:'dungeon-ink-paired-v1',samples:MAX_SAMPLES,seedRule
  resource:'both arms start from same actual banked inventory; 5 ink required, no free stones or items',
  combat:'10 consecutive real layers, 50 fights at a fixed pre-return level; same combat RNG per pair'},
  cases:[],requirements:{continueRational:false,redrawRational:false,
- fullOpportunityCostMeasured:false},unmet:[],warnings:[]};
+ fullOpportunityCostMeasured:false,powerRecoveryFarmingMeasured:false},unmet:[],warnings:[]};
 for(const route of ['short','long']){
  const group=economics.combinations.find(x=>x.style==='A'&&x.route===route);
  if(!group||!group.comparisonStates)throw Error('Missing actual economic account states '+route);
@@ -145,6 +146,8 @@ for(const route of ['short','long']){
    hpImprovement<=0&&mpImprovement<=0);
   if(combatUpgrade)report.requirements.redrawRational=true;
   if(combatDowngrade)report.requirements.continueRational=true;
+  const cost=powerRecovery.studied.find(x=>x.route===route&&x.layer===start&&x.samples);
+  if(!cost||cost.referenceSeed!==source.seed)throw Error('Recovery is not for the same owner state');
   const row={route,from:start,to:start+9,status:'MEASURED',
    initialState:{seed:source.seed,level:source.snapshot.level,bankedInk:source.snapshot.bankedInk,
     bankedStone:source.snapshot.bankedStones,spentStone:source.snapshot.spent.stone,
@@ -158,6 +161,11 @@ for(const route of ['short','long']){
    keep:continuous,redraw:replacement,
    tradeoff:{winRateDelta:winImprovement,hpMedianDelta:hpImprovement,
     mpMedianDelta:mpImprovement,combatUpgrade,combatDowngrade},
+   economicPowerRecovery:{samples:cost.samples,successes:cost.successes,
+    failedToRecover:cost.unsuccessful,extraFights:cost.distributions.extraFights,
+    losses:cost.distributions.losses,additionalSorties:cost.distributions.sorties,
+    extraStoneSpent:cost.distributions.stoneSpent,
+    materialLimit:'Only a spell-power catch-up; not a certified 10-layer combat break-even'},
    drawQualityAssumption:p.drawQualityAssumption};
   report.cases.push(row);
   console.log('DUNGEON_INK_PAIR '+JSON.stringify(row));
@@ -165,7 +173,9 @@ for(const route of ['short','long']){
 }
 if(!report.requirements.continueRational)report.unmet.push('No observed state in which continuing is the better battle/economic choice');
 if(!report.requirements.redrawRational)report.unmet.push('No observed state where ink redraw provides battle advantage');
-report.unmet.push('Additional fights and realistic redraw preparation break-even have not been measured; cannot certify both strategies');
+report.requirements.powerRecoveryFarmingMeasured=report.cases.filter(x=>x.status==='MEASURED')
+ .every(x=>x.economicPowerRecovery.samples>0);
+report.unmet.push('Measured real replay cost to restore spell power, but equal-readiness combat performance and 1-3 circle redraw break-even are still unproven');
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
 writeFileSync(new URL('../reports/dungeon-ink-paired-v1.json',import.meta.url),
  JSON.stringify(report,null,2)+'\n');
@@ -177,6 +187,7 @@ if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMAR
  report.cases.map(r=>r.status!=='MEASURED'
   ?r.route+' '+r.from+'F: unavailable\n'
   :r.route+' '+r.from+'F: keep '+r.keep.winRate+'% / redraw '+r.redraw.winRate+
-   '% ; ink -5, sunk stones '+r.opportunity.priorStoneSunk+'\n').join('')+
+   '% ; ink -5, sunk stones '+r.opportunity.priorStoneSunk+
+   ', p90 recovery fights '+r.economicPowerRecovery.extraFights.p90+'\n').join('')+
  '\nHard strategic proof remains **UNMET** without paired re-farming and break-even.\n');
 if(report.unmet.length)process.exitCode=1;
