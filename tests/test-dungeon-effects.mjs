@@ -53,7 +53,10 @@ for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4]
  }
  const expectedTurns=Array.from({length:7},(_,i)=>Math.max(0,duration-i-1));
  assert.deepEqual(resistTurns,expectedTurns,'resistance countdown '+attr+' P'+power);
- assert.deepEqual(bonusTurns,expectedTurns,'extra buff countdown '+attr+' P'+power);
+ const bonusDuration=['flame','bolt','aqua'].includes(attr)
+  ?Array.from({length:7},(_,i)=>Math.max(0,duration-i))
+  :expectedTurns;
+ assert.deepEqual(bonusTurns,bonusDuration,'extra buff starts at its first effective turn '+attr+' P'+power);
  assert.ok(damageTaken.slice(0,duration).every(d=>d<normalDamage),'protected hits '+attr+' P'+power);
  assert.ok(damageTaken.slice(duration).every(d=>d===normalDamage),'unprotected hits '+attr+' P'+power);
 }
@@ -69,7 +72,7 @@ for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4]
   G.round(hero,foe,-1,i===0?0:-1,buffs,()=>.1);
   countdown.push(G.status(hero,'debuff_'+attr)?.turns??0);
  }
- assert.deepEqual(countdown,Array.from({length:7},(_,i)=>Math.max(0,duration-i-(['bolt','law','chaos'].includes(attr)?0:1))),
+ assert.deepEqual(countdown,Array.from({length:7},(_,i)=>Math.max(0,duration-i-(['bolt','aqua','law','chaos'].includes(attr)?0:1))),
   'debuff countdown begins when its effect can first apply '+attr+' P'+power);
 }
 // Regression: four-turn shock and confusion survive repeated casts on either side.
@@ -93,6 +96,42 @@ for(const attr of ['bolt','chaos'])for(const casterSide of ['player','enemy']){
  assert.equal(G.status(victim,'debuff_'+attr)?.turns,1,attr+' remains during the third affected round');
  fight(-1,-1);
  assert.equal(G.status(victim,'debuff_'+attr),undefined,attr+' expires after the fourth affected round');
+}
+
+ // Statuses available only after the current action do not lose that first turn.
+for(const attribute of ['flame','bolt','aqua']){
+ const fighterBase={hp:2000,mag:12,def:10,res:10};
+ const ward=G.makeUnit(fighterBase,1,{},[spell('defense',attribute,500)],'player');
+ const opponent=G.makeUnit(fighterBase,1,{},[spell('attack',attribute,100)],'enemy');
+ G.round(ward,opponent,0,0,buffs,()=>.99);
+ assert.equal(G.status(ward,'resist_'+attribute)?.turns,3,'resistance shields this turn');
+ assert.equal(ward.statuses.find(x=>x.id.startsWith('buff_'))?.turns,4,
+  'offensive or healing buff waits for its first usable turn '+attribute);
+ G.round(ward,opponent,-1,-1,buffs,()=>.99);
+ assert.equal(ward.statuses.find(x=>x.id.startsWith('buff_'))?.turns,3,
+  'offensive or healing buff begins ticking on the next round '+attribute);
+}
+// A curse without an effect opportunity yet must keep its entire duration.
+for(const attribute of ['storm','gravity']){
+ const hero=unit([spell('defense','law',500)]),foe=unit([spell('debuff',attribute,500)]);
+ G.round(hero,foe,0,0,buffs,()=>.99);
+ assert.equal(G.status(hero,'debuff_'+attribute)?.turns,4,
+  'debuff does not tick before any attack it can modify '+attribute);
+ G.round(hero,foe,-1,-1,buffs,()=>.99);
+ assert.equal(G.status(hero,'debuff_'+attribute)?.turns,3,
+  'debuff ticks from the first usable following turn '+attribute);
+}
+// Reapplying a delayed curse refreshes the duration without losing one immediately.
+for(const attribute of ['bolt','chaos']){
+ const fighterBase={hp:3000,mag:12,def:10,res:10};
+ const caster=G.makeUnit(fighterBase,1,{},[spell('debuff',attribute,500)]);
+ const target=G.makeUnit(fighterBase,1,{},[spell('attack','law',100)]);
+ G.round(caster,target,0,-1,buffs,()=>.99);
+ G.round(caster,target,-1,-1,buffs,()=>.99);
+ assert.equal(G.status(target,'debuff_'+attribute)?.turns,3);
+ G.round(caster,target,0,-1,buffs,()=>.99);
+ assert.equal(G.status(target,'debuff_'+attribute)?.turns,4,
+  'reapplied '+attribute+' gets its full refreshed duration');
 }
 const caster=unit();
 for(const power of [270,540,1000]){
