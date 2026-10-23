@@ -895,9 +895,30 @@ try{
  const corruptLocalBefore=await readDungeonSnapshot(corruptLegacy.db);
  corruptUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
  await wait(()=>corruptUi.doc.cookie==='','corrupt local later unlinks safely');
- assert.equal(corruptReady,0,'a corrupt local record cannot bypass the startup integrity gate');
- assert.deepEqual(await readDungeonSnapshot(corruptLegacy.db),corruptLocalBefore,'corrupt local stays untouched');
- assert.deepEqual(corruptDrive.operations,[],'corrupt local later never writes Drive');
+ assert.equal(corruptReady,1,'legacy local save remains playable after unlink');
+ assert.deepEqual(await readDungeonSnapshot(corruptLegacy.db),corruptLocalBefore,'legacy local stays untouched');
+ assert.deepEqual(corruptDrive.operations,[],'legacy local later never writes Drive');
+
+ // A genuinely corrupt signed snapshot cannot bypass the startup integrity
+ // gate through "あとで": unlinking is allowed, starting that save is not.
+ const damagedFactory=fakeIndexedDB(),damagedDb=await openStore(damagedFactory);
+ const damagedProfile=await getProfile(damagedDb);
+ damagedProfile.name='署名済みの冒険者';
+ await saveProfile(damagedDb,damagedProfile);
+ const damagedSettings=damagedFactory.databases.get('magia-dungeon-v1').get('settings');
+ damagedSettings.set('profile',{...damagedSettings.get('profile'),level:17});
+ const damagedBefore=await readDungeonSnapshot(damagedDb);
+ assert.equal((await verifyLocalSnapshot(damagedBefore)).status,'corrupt');
+ const damagedUi=fakeUi(),damagedDrive=remoteApi(firstDrive.current);
+ let damagedReady=0;
+ start(damagedDb,damagedUi,damagedDrive.fetchImpl,{onInitialReady:()=>damagedReady++});
+ await connect(damagedUi);
+ await wait(()=>damagedUi.get('googleDriveConflictDialog').open,'corrupt verified local save requires a decision');
+ damagedUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
+ await wait(()=>damagedUi.doc.cookie==='','later clears credentials even with corrupt local data');
+ assert.equal(damagedReady,0,'corrupt signed local save cannot enter gameplay');
+ assert.deepEqual(await readDungeonSnapshot(damagedDb),damagedBefore,'corrupt local stays unmodified');
+ assert.deepEqual(damagedDrive.operations,[],'corrupt later never writes Drive');
 
  // 15. An idle tab proactively notifies at token expiry without waiting
  // for another save. The dialog is one-shot until a fresh token is authorized.
