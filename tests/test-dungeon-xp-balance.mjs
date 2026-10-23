@@ -23,6 +23,21 @@ for(let layer=1;layer<=100;layer++){
   'player level caps at 150 even as post-100 enemy levels continue increasing');
 }
 assert.equal(normal.level,150,'a normal first-clear journey ends at level 150');
+// Actual expedition path: rewards are added five times before every return.
+// A fractional 0.2/0.4 EXP reward must not leave the hero one level short.
+const incremental={level:1,xp:0};
+for(let layer=1;layer<=100;layer++){
+ const expectedStart=targetClearLevel(layer);
+ assert.equal(incremental.level,expectedStart,'exact start level after all previous fight-by-fight returns at layer '+layer);
+ let pending=0;
+ for(let fight=0;fight<5;fight++)
+  pending=G.normalizeXp(pending+G.fightExperience(expectedStart,incremental.level,layer));
+ G.experience(incremental,pending);
+ assert.equal(incremental.level,Math.min(150,targetClearLevel(layer+1)),
+  'fight-by-fight EXP awards precisely finish layer '+layer);
+ assert.equal(incremental.xp,0,'no floating XP residue at the level threshold of layer '+layer);
+}
+
 
 // Needed XP should climb sharply across level bands, without an abrupt
 // permanent advantage for collecting low-level enemy kills.
