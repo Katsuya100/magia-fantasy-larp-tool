@@ -8,6 +8,10 @@ export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
 // Required XP curve offsets non-decaying repeat fight rewards.
 export const XP_SCALE=45;
+// EXP is fractional internally so five fights sum to the exact level budget.
+// Keep the display short without changing the stored value.
+const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:1});
+export const formatXp=value=>xpDisplay.format(Number(value)||0);
 export const nextXp=level=>Math.ceil(Number(levelRow(level).xp_to_next)*
  Math.pow(num('xp_growth_per_10_levels'),(Number(level)-1)/10)/XP_SCALE);
 // Five fights at the intended level supply approximately the XP needed
