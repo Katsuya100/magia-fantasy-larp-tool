@@ -34,6 +34,8 @@ export function alchemyRecipe(relic,ingredients,rows){
  const specials=[...escape,...revive];
  if(specials.length>=2)return {id:revive.length===specials.length?'life_ruby':'escape_scroll',
   value:specials.reduce((n,item)=>n+numeric(item),0)*2+specials.length};
+ // Escape/revival mixed into ordinary recovery is not a valid recovery recipe.
+ if(specials.length)return {id:'escape_scroll',value:0};
  if(hp.length||mp.length){
   // Equal pairs favor HP when there are two of each, otherwise MP.
   const target=hp.length===mp.length?(hp.length>=2?'heal':'mana'):(hp.length>mp.length?'heal':'mana');
