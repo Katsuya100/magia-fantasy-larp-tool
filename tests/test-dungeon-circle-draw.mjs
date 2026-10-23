@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {
- DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,MIN_DUNGEON_POWER,GLYPH_INK_SCALE,REVOLVER_DURATION_MS,EDITOR_GLYPH_STEP,EDITOR_ZOOM,
+ DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,MIN_DUNGEON_POWER,GLYPH_INK_SCALE,REVOLVER_DURATION_MS,EDITOR_GLYPH_STEP,EDITOR_ZOOM,INNER_RADIUS,OUTER_RADIUS,
  drawnPower,withDrawnPowerFloor,pointOnPad,glyphPoint,glyphAngle,sigilPoint,visibleGlyphs,writtenGlyphCount,projectCircleToPad,
  padGlyphPoint,glyphInputPoint,sigilPadPoint,sigilInputPoint,sigilGlyphPadPoint,
  createDrawingModel,paintCircle,paintCaret,paintPad,initCircleDrawing
@@ -13,7 +13,12 @@ assert.ok(Math.abs(GLYPH_INK_SCALE-.11*2/3)<1e-12,'each ring glyph ink footprint
 assert.equal(REVOLVER_DURATION_MS,250);
 assert.ok(Math.abs(EDITOR_GLYPH_STEP-Math.PI/15)<1e-12,'each letter spans exactly 12 degrees on both screens, two thirds of 18 degrees');
 assert.ok(Math.abs(glyphAngle(1,1)-glyphAngle(0,1)-EDITOR_GLYPH_STEP)<1e-12,'upper letter interval equals lower revolver step');
-const visibleSlots=2*Math.asin((GLYPH_INK_SCALE/EDITOR_ZOOM)/.345)/EDITOR_GLYPH_STEP;
+// The ring means the annular BAND, not the drawn glyphs or the whole disk.
+assert.equal(INNER_RADIUS,.255,'inner circle/sigil area remains at its old radius');
+assert.ok(Math.abs((OUTER_RADIUS-INNER_RADIUS)/(.43-.255)-2/3)<1e-12,
+ 'the actual space between the two circles—not merely the letters—is two thirds as thick');
+const ringCenter=(INNER_RADIUS+OUTER_RADIUS)/2;
+const visibleSlots=2*Math.asin((GLYPH_INK_SCALE/EDITOR_ZOOM)/ringCenter)/EDITOR_GLYPH_STEP;
 assert.ok(Math.abs(visibleSlots-2)<1e-12,'lower viewport remains precisely two real slots wide after the limit changes');
 assert.ok(EDITOR_ZOOM>1&&EDITOR_ZOOM<1.22,'real optical zoom preserves both visible ring guides');
 assert.equal(drawnPower(500),300);
@@ -25,7 +30,7 @@ assert.deepEqual(pointOnPad(110,170,{left:10,top:20,width:200,height:300}),{x:0,
 assert.ok(Math.abs(sigilPoint({x:.92,y:0}).x-.755)<1e-9);
 assert.ok(Math.abs(glyphAngle(1,3)+Math.PI/2)<1e-9);
 assert.ok(Math.abs(glyphPoint({x:0,y:0},1,3).x-.5)<1e-9);
-assert.ok(glyphPoint({x:0,y:-1},0,1).y<.1,'the smaller glyph fits in the existing ring without altering circle dimensions');
+assert.ok(Math.abs(glyphPoint({x:0,y:0},0,1).y-(.5-ringCenter))<1e-12,'letters are centered in the NARROWER annular band');
 assert.ok(glyphPoint({x:0,y:1},0,1).y>.21,'the smaller glyph retains its vertical range');
 assert.ok(glyphPoint({x:1,y:0},0,2).x>glyphPoint({x:0,y:0},1,2).x,'a full-width glyph can still reach the neighboring slot');
 for(const [i,count] of [[0,1],[1,3],[7,16],[29,30]]){
@@ -46,7 +51,7 @@ for(const i of [0,1,3,8,29]){
    const theta=-view*EDITOR_GLYPH_STEP;
    const lower=padGlyphPoint(point,i,view),sigil=sigilGlyphPadPoint(point,i);
    eq(lower.x,(dx*Math.cos(theta)-dy*Math.sin(theta))/spellRadius,'lower x is top crop');
-   eq(lower.y,(dx*Math.sin(theta)+dy*Math.cos(theta)+.345)/spellRadius,'lower y is top crop');
+   eq(lower.y,(dx*Math.sin(theta)+dy*Math.cos(theta)+ringCenter)/spellRadius,'lower y is top crop');
    eq(sigil.x,dx/sigilRadius,'sigil text x is top crop');
    eq(sigil.y,dy/sigilRadius,'sigil text y is top crop');
   }
@@ -64,7 +69,7 @@ for(const i of [0,7,14,21,29]){
  assert.ok(Math.hypot(inside.x,inside.y)<1,'sigil crop shows only glyph marks entering the original inner area');
 }
 eq(Math.hypot(sigilPadPoint({x:.92,y:0}).x,sigilPadPoint({x:.92,y:0}).y),.92,'sigil retains its original writing boundary');
-assert.ok(.43/sigilRadius>1.5,'outer ring cannot appear completely inside sigil pad');
+assert.ok(OUTER_RADIUS/sigilRadius>1.25,'outer ring still remains outside the original cropped sigil pad');
 for(const count of [1,2,7,30]){
  for(const i of [0,Math.min(count-1,1),count-1]){
   for(const p of [{x:0,y:0},{x:.8,y:-1}]){
@@ -79,7 +84,7 @@ for(const count of [1,2,7,30]){
  }
  eq((glyphAngle(0,count)+glyphAngle(count-1,count))/2,-Math.PI/2,'whole upper spell stays centered');
 }
-const testWorld={x:.5+.345,y:.5};
+const testWorld={x:.5+ringCenter,y:.5};
 const rotateQuarter=projectCircleToPad(testWorld,0,.25,1);
 const rotateHalf=projectCircleToPad(testWorld,0,.5,1);
 assert.ok(rotateQuarter.y>0&&rotateHalf.x<0,'one camera visibly rotates even on the first glyph');
@@ -166,6 +171,11 @@ paintCircle(canvas,state,{size:128,viewIndex:0});
 assert.ok(draws.some(d=>d[0]==='fill'&&d[1]==='#f2e4c6'));
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0055),'outer ring retained');
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0095),'inner ring retained');
+const outerBandStroke=draws.find(d=>d[0]==='stroke'&&d[2]===128*.0055);
+const innerBandStroke=draws.find(d=>d[0]==='stroke'&&d[2]===128*.0095);
+assert.ok(outerBandStroke?.[3]?.length>200&&innerBandStroke?.[3]?.length>200,'both rings are genuinely drawn in the upper preview');
+eq((outerBandStroke[3][0][0]-innerBandStroke[3][0][0])/128,OUTER_RADIUS-INNER_RADIUS,
+ 'actual upper painted ring band thickness shrinks to two-thirds');
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0072),'letter ink retained');
 const strokeCount=draws.filter(d=>d[0]==='stroke'&&d[2]===128*.0072).length;
 draws.length=0;paintCircle(canvas,state,{size:128,activeStroke:stroke});
@@ -177,7 +187,7 @@ draws.length=0;paintCaret(canvas,state,{size:128});
 assert.equal(draws.filter(d=>d[0]==='stroke').length,1);
 const caret=draws.find(d=>d[0]==='move');
 const caretRadius=Math.hypot(caret[1]-64,caret[2]-64)/128;
-assert.ok(caretRadius>.255&&caretRadius<.43,'caret is inside the magic-circle glyph band');
+assert.ok(caretRadius>INNER_RADIUS&&caretRadius<OUTER_RADIUS,'caret stays inside the newly narrowed annular band');
 const caretAngle=Math.atan2(caret[2]-64,caret[1]-64);
 assert.ok(Math.abs(caretAngle-(glyphAngle(0,2)-EDITOR_GLYPH_STEP/2))<1e-10,'caret marks the LEFT edge, not the glyph center');
 draws.length=0;paintCaret(canvas,{...state,index:1},{size:128});
@@ -210,8 +220,8 @@ try{
   const radius=(GLYPH_INK_SCALE/EDITOR_ZOOM)*(1-progress)+(.255/.92)*progress;
   for(const line of lines){
    const measured=line[3].map(([x,y])=>Math.hypot((x-100)/100-center.x,(y-100)/100-center.y)*radius);
-   eq(measured[0],.255+.004,'vertical guide starts INSIDE the inner circle');
-   eq(measured[1],.43-.004,'vertical guide stops BEFORE the outer circle');
+   eq(measured[0],INNER_RADIUS+.004,'vertical guide starts INSIDE the unchanged inner circle');
+   eq(measured[1],OUTER_RADIUS-.004,'vertical guide stops BEFORE the reduced outer circle');
   }
  };
  checkRadialGuideBounds(0);
@@ -383,4 +393,4 @@ try{
  assert.equal(get('circleDrawingConfirm').disabled,true,'reset editor begins with disabled confirm');
  dialog.close();
 }finally{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
-console.log('PASS 30 centered 12-degree slots, two-thirds ink, two-letter crop, cyclic navigation, selection prevention and sigil crop');
+console.log('PASS real annular ring band thickness 2/3, fixed sigil center, 30 centered glyphs, two-slot lower zoom, drag protection, continuous camera');
