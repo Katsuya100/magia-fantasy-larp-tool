@@ -725,11 +725,13 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  animation:terminal-fade-in .28s ease-out both;transform:none!important
 }
 @keyframes terminal-fade-in{from{opacity:0}to{opacity:1}}
-/* The 17 native dungeon dialogs overlap their 200 ms Show/Hide transitions.
+/* All modal opacity and movement use the same linear 200 ms progress in both directions.
+   An ease-out Show versus ease-in Hide made entry look like an instant pop.
+   The 17 native dungeon dialogs overlap their 200 ms Show/Hide transitions.
    Discrete display and top-layer overlay keep closing dialogs visible. */
 dialog{
  opacity:0;transform:translateY(9px) scale(.985);
- transition:opacity .2s ease-out,transform .2s cubic-bezier(.16,1,.3,1),
+ transition:opacity .2s linear,transform .2s linear,
   display .2s allow-discrete,overlay .2s allow-discrete
 }
 dialog[open]{opacity:1;transform:none}
@@ -737,27 +739,27 @@ dialog[open]{opacity:1;transform:none}
  dialog[open]{opacity:0;transform:translateY(9px) scale(.985)}
  dialog[open]::backdrop{opacity:0}
 }
-dialog::backdrop{opacity:0;transition:opacity .2s ease-out,display .2s allow-discrete,overlay .2s allow-discrete}
+dialog::backdrop{opacity:0;transition:opacity .2s linear,display .2s allow-discrete,overlay .2s allow-discrete}
 dialog[open]::backdrop{opacity:1}
 /* Only modal UI overlays: gameplay ceremonies and screen fades stay untouched.
    hidden updates synchronously, while outgoing pixels remain for 200 ms. */
 .startup-mask:not([hidden]),
 .tutorial-overlay:not([hidden]),
 .circle-drawing-discard:not([hidden]){
- animation:dungeon-modal-overlay-show .2s ease-out both
+ animation:dungeon-modal-overlay-show .2s linear both
 }
 .startup-mask[hidden][data-ui-exiting="true"],
 .tutorial-overlay[hidden][data-ui-exiting="true"],
 .circle-drawing-discard[hidden][data-ui-exiting="true"]{
  display:grid!important;pointer-events:none!important;
- animation:dungeon-modal-overlay-hide .2s ease-in both
+ animation:dungeon-modal-overlay-hide .2s linear both
 }
 @keyframes dungeon-modal-overlay-show{from{opacity:0}to{opacity:1}}
 @keyframes dungeon-modal-overlay-hide{from{opacity:1}to{opacity:0}}
 
 /* Explicit entry keyframes restart for every showModal, including rename. */
-dialog[open][data-ui-entering="true"]{animation:dungeon-dialog-enter .2s cubic-bezier(.16,1,.3,1) both}
-dialog[open][data-ui-entering="true"]::backdrop{animation:dungeon-dialog-veil-show .2s ease-out both}
+dialog[open][data-ui-entering="true"]{animation:dungeon-dialog-enter .2s linear both}
+dialog[open][data-ui-entering="true"]::backdrop{animation:dungeon-dialog-veil-show .2s linear both}
 @keyframes dungeon-dialog-enter{from{opacity:0;transform:translateY(9px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes dungeon-dialog-veil-show{from{opacity:0}to{opacity:1}}
 /* Prevent rendering both the native discrete close and its safe visual copy. */
@@ -765,8 +767,8 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 /* Exiting visual is aria-hidden, inert and not hit-testable.
    Every newly shown native dialog renders above it in the top layer. */
 .dungeon-modal-exit-layer{position:fixed;inset:0;z-index:2500;pointer-events:none!important}
-.dungeon-modal-exit-veil{position:absolute;inset:0;background:#06060fc9;backdrop-filter:blur(5px);animation:dungeon-dialog-veil-hide .2s ease-in both}
-.dungeon-dialog-ghost[open]{position:fixed;pointer-events:none!important;max-width:none;max-height:none;overflow:hidden;animation:dungeon-dialog-exit .2s ease-in both!important}
+.dungeon-modal-exit-veil{position:absolute;inset:0;background:#06060fc9;backdrop-filter:blur(5px);animation:dungeon-dialog-veil-hide .2s linear both}
+.dungeon-dialog-ghost[open]{position:fixed;pointer-events:none!important;max-width:none;max-height:none;overflow:hidden;animation:dungeon-dialog-exit .2s linear both!important}
 @keyframes dungeon-dialog-exit{from{opacity:1;transform:none}to{opacity:0;transform:translateY(9px) scale(.985)}}
 @keyframes dungeon-dialog-veil-hide{from{opacity:1}to{opacity:0}}
 /* Confirmation for the irreversible local-save reset. */

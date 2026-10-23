@@ -65,6 +65,25 @@ assert.match(app,/if\(!dialog\.open\)showDungeonDialog\(dialog\);\s*\$\('playerN
 assert.match(app,/profile=next;\s*closeDungeonDialog\(\$\('nameDialog'\)\)/,'name save closes with animation');
 assert.match(css,/@keyframes dungeon-dialog-enter\{/);
 assert.match(css,/@keyframes dungeon-dialog-exit\{/);
+
+// Show and Hide must advance at the *same perceived speed*, not merely share
+// a nominal 200ms duration. Previously entry used a fast-start cubic-bezier
+// while exit used ease-in, making rename/confirmation dialogs pop in.
+const symmetricTimings=[
+ 'transition:opacity .2s linear,transform .2s linear,',
+ 'dialog::backdrop{opacity:0;transition:opacity .2s linear,',
+ 'animation:dungeon-modal-overlay-show .2s linear both',
+ 'animation:dungeon-modal-overlay-hide .2s linear both',
+ 'animation:dungeon-dialog-enter .2s linear both',
+ 'animation:dungeon-dialog-exit .2s linear both!important',
+ 'animation:dungeon-dialog-veil-show .2s linear both',
+ 'animation:dungeon-dialog-veil-hide .2s linear both'
+];
+for(const timing of symmetricTimings){
+ assert.ok(css.includes(timing),'symmetric 200ms modal animation: '+timing);
+}
+assert.doesNotMatch(css.slice(css.indexOf('/* All modal opacity and movement'),css.indexOf('/* Confirmation for the irreversible local-save reset. */')),/\.2s (?:ease-in|ease-out|cubic-bezier)/,'no asymmetric easing in modal section');
+
 assert.match(css,/\.dungeon-modal-exit-layer/);
 for(const file of sources){
  assert.doesNotMatch(await read(file),/\b(?:window|globalThis)\.(?:alert|confirm|prompt)\s*\(/,'system dialog in '+file);
