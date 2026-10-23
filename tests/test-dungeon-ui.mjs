@@ -45,8 +45,16 @@ try{
  assert.equal($('tutorialTitle').textContent,'呪文を書きましょう');
  await $('circleDrawingLessonClose').fire('click');
  assert.equal($('circleDrawingLessonDialog').open,false);
+ assert.equal($('circleDrawingFingerGuide').hidden,false,'first handwriting opens the finger trace after the lesson closes');
+ assert.equal($('circleDrawingFingerGuide').dataset.playing,'true');
+ await wait(async()=>(await getProfile(await openStore(env.factory))).drawingFingerGuideSeen===true,'finger hint is saved for future launches');
  await $('circleDrawingClose').fire('click');
  assert.equal($('circleDrawingDialog').open,false,'an untouched drawing closes without a discard warning');
+ assert.equal($('circleDrawingFingerGuide').hidden,true,'closing handwriting cancels animation without any ink');
+ await $('openCircleDrawing').fire('click');
+ assert.equal($('circleDrawingDialog').open,true);
+ assert.equal($('circleDrawingFingerGuide').hidden,true,'re-entering handwriting never repeats the once-only hint');
+ await $('circleDrawingClose').fire('click');
  const initialProfile=await getProfile(await openStore(env.factory));
  const initialVitals=makeUnit(initialProfile.base,initialProfile.level);
  assert.match($('playerStats').innerHTML,new RegExp('<small>HP</small><strong>'+initialVitals.stats.hp+'</strong>'),'profile retains maximum HP');

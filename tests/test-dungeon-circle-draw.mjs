@@ -157,7 +157,7 @@ assert.equal(full.state.letters.length,DRAWN_GLYPH_LIMIT);
 const draws=[];
 let activePath=[];
 const ctx={
- clearRect(){},fillRect(){draws.push(['fill',this.fillStyle]);},
+ clearRect(){},drawImage(...args){draws.push(['image',...args]);},fillRect(){draws.push(['fill',this.fillStyle]);},
  beginPath(){activePath=[];},moveTo(x,y){draws.push(['move',x,y]);activePath.push([x,y]);},
  lineTo(x,y){activePath.push([x,y]);},closePath(){},arc(){},save(){},restore(){},
  translate(x,y){draws.push(['translate',x,y]);},scale(x,y){draws.push(['scale',x,y]);},
@@ -181,7 +181,9 @@ const strokeCount=draws.filter(d=>d[0]==='stroke'&&d[2]===128*.0072).length;
 draws.length=0;paintCircle(canvas,state,{size:128,activeStroke:stroke});
 assert.ok(draws.filter(d=>d[0]==='stroke'&&d[2]===128*.0072).length>strokeCount,'live pen stroke immediately appears on the fixed upper preview');
 draws.length=0;
-paintCircle(canvas,{...state,mode:'sigil',ink:[]},{size:128,exportImage:true});
+const parchmentStub={naturalWidth:256};
+paintCircle(canvas,{...state,mode:'sigil',ink:[]},{size:128,exportImage:true,parchmentImage:parchmentStub});
+assert.ok(draws.some(d=>d[0]==='image'&&d[1]===parchmentStub&&d[4]===128),'export paints supplied background first');
 assert.ok(draws.some(d=>d[0]==='stroke'&&d[2]===128*.0072),'export includes both finished letters');
 draws.length=0;paintCaret(canvas,state,{size:128});
 assert.equal(draws.filter(d=>d[0]==='stroke').length,1);
@@ -239,10 +241,17 @@ try{
  assert.ok(draws.some(d=>d[1]==='rgb(210,183,255)'),'wrapped slot zero has the original active ink color');
 }finally{if(originalWindow===undefined)delete globalThis.window;else globalThis.window=originalWindow;}
 
+const parchment=await readFile(new URL('../assets/images/dungeon-parchment.jpg',import.meta.url));
+assert.equal(parchment.subarray(0,2).toString('hex'),'ffd8');
+assert.equal(parchment.length,3492,'optimized supplied JPEG is committed intact');
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
 const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
 const source=await readFile(new URL('../assets/js/dungeon-circle-draw.mjs',import.meta.url),'utf8');
 assert.match(html,/id="circleDrawingPad"[^>]*width="420" height="420"/);
+assert.match(html,/id="circleDrawingParchment" src="assets\/images\/dungeon-parchment\.jpg\?v=/);
+assert.match(html,/class="circle-drawing-brush-icon" aria-hidden="true">🖌️<\/span>/);
+assert.match(html,/id="circleDrawingFingerGuide"[^>]*aria-hidden="true" hidden/);
+assert.match(css,/\.circle-drawing-finger-guide\{[^}]*pointer-events:none/);
 assert.match(html,/id="circleDrawingStage"[^>]*>呪文を1文字ずつ書く<\/strong>/);
 assert.match(html,/class="circle-drawing-navigation"[\s\S]*?id="circleDrawingUndo"[\s\S]*?id="circleDrawingRedo"/);
 assert.match(html,/class="circle-drawing-actions"[\s\S]*?id="circleDrawingClose"[\s\S]*?id="circleDrawingReset"[\s\S]*?id="circleDrawingConfirm"/);
@@ -256,7 +265,7 @@ assert.match(css,/\.circle-drawing-pad\{[^}]*touch-action:none/,'pad never hands
 assert.doesNotMatch(css,/circle-drawing-to-sigil/,'upper preview no longer animates');
 assert.match(source,/export const EDITOR_GLYPH_STEP=GLYPH_STEP;/);
 assert.match(source,/ringPoint\(RING_RADIUS,\(i\/96-\.5\)\*GLYPH_STEP\)/,'crosshair follows the actual upper-ring arc');
-assert.match(source,/paintCircle\(preview,model\.state,\{activeStroke,size:512\}\)/,'upper preview stays fixed while lower pad spins');
+assert.match(source,/paintCircle\(preview,model\.state,\{activeStroke,size:512,parchmentImage:parchment\}\)/,'upper preview uses supplied parchment');
 assert.match(source,/glyphPoint\(p,i,count,exportImage\?null:viewIndex\)/,'upper preview and export center the complete spell');
 assert.match(source,/animateMode\('sigil'/);
 assert.match(source,/animateMode\('spell'/);
@@ -276,7 +285,7 @@ const nodes=new Map();
 function element(id){
  const listeners=new Map();
  const e={
-  id,hidden:id==='circleDrawingDiscard',open:false,inert:false,disabled:false,textContent:'',width:0,height:0,
+  id,hidden:id==='circleDrawingDiscard',open:false,inert:false,disabled:false,textContent:'',width:0,height:0,dataset:{},
   addEventListener(name,fn){listeners.set(name,fn);},
   dispatch(name,arg={}){return listeners.get(name)?.(arg);},
   setAttribute(name,value){this[name]=value;},
@@ -290,7 +299,8 @@ function element(id){
 for(const id of [
  'circleDrawingDialog','circleDrawingShell','circleDrawingPreview','circleDrawingCaret','circleDrawingPad',
  'circleDrawingConfirm','circleDrawingStatus','circleDrawingStage','circleDrawingUndo','circleDrawingRedo',
- 'circleDrawingReset','circleDrawingClose','circleDrawingPractice','circleDrawingDiscard','circleDrawingDiscardKeep','circleDrawingDiscardConfirm'
+ 'circleDrawingReset','circleDrawingClose','circleDrawingPractice','circleDrawingDiscard','circleDrawingDiscardKeep','circleDrawingDiscardConfirm',
+ 'circleDrawingParchment','circleDrawingFingerGuide','circleDrawingFinger'
 ])element(id);
 doc={activeElement:element('priorFocus'),getElementById:id=>{
  assert.ok(nodes.has(id),'expected control '+id);return nodes.get(id);
@@ -303,6 +313,8 @@ const previousWindow=globalThis.window;
 globalThis.window={devicePixelRatio:1,addEventListener(){}};
 try{
  const get=id=>nodes.get(id),dialog=get('circleDrawingDialog');
+ get('circleDrawingParchment').naturalWidth=256;
+ get('circleDrawingParchment').decode=async()=>{};
  const entered=[],practiced=[];
   const editor=initCircleDrawing(doc,{onSave:async image=>saved.push(image),
    onStageEnter:mode=>entered.push(mode),onPractice:mode=>practiced.push(mode)});
@@ -313,6 +325,13 @@ try{
  get('circleDrawingPad').dispatch('contextmenu',nativeGesture);
  assert.equal(blocked,3,'drawing mode intercepts native text selection, dragging and long-press menus');
  editor.open();
+ assert.equal(get('circleDrawingFingerGuide').hidden,true,'no demo before onboarding');
+ assert.equal(editor.startFingerIntro(),true);
+ assert.equal(get('circleDrawingFingerGuide').hidden,false,'finger overlays the lower pad');
+ assert.equal(editor.startFingerIntro(),false,'animation cannot stack');
+ assert.equal(get('circleDrawingConfirm').disabled,true,'ghost trace is not saved as ink');
+ get('circleDrawingFinger').dispatch('animationend');
+ assert.equal(get('circleDrawingFingerGuide').hidden,true);
  assert.equal(get('circleDrawingClose').textContent,'閉じる');
  assert.equal(get('circleDrawingConfirm').textContent,'紋を描く');
   assert.deepEqual(entered,['spell']);
@@ -342,7 +361,9 @@ try{
  const pad=get('circleDrawingPad');
  pad.getBoundingClientRect=()=>({left:0,top:0,width:200,height:200});
  const pointer=(id,x,y)=>({pointerId:id,clientX:x,clientY:y,pointerType:'touch',preventDefault(){}});
+ assert.equal(editor.startFingerIntro(),true);
  pad.dispatch('pointerdown',pointer(1,40,45));
+ assert.equal(get('circleDrawingFingerGuide').hidden,true,'user drawing stops demo immediately');
  pad.dispatch('pointermove',pointer(1,90,95));
  pad.dispatch('pointerup',pointer(1,90,95));
  assert.equal(get('circleDrawingConfirm').disabled,false,'one drawn stroke enables the sigil step');

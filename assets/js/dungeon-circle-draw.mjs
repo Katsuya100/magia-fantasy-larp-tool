@@ -199,11 +199,13 @@ export function writtenGlyphCount(glyphs){
  }
  return 1;
 }
-export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,size=512,viewIndex=null}={}){
+export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,size=512,viewIndex=null,parchmentImage=null}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('魔法陣を描画できません。');
  ctx.clearRect(0,0,size,size);
- paintParchment(ctx,size);
+ // Identical texture for the on-screen preview and the exported magic-circle JPEG.
+ if(parchmentImage?.naturalWidth>0)ctx.drawImage(parchmentImage,0,0,size,size);
+ else paintParchment(ctx,size); // Pure tests and preview before the image finishes loading.
  brushCircle(ctx,size,OUTER_RADIUS,.0055);
  brushCircle(ctx,size,INNER_RADIUS,.0095);
  const visible=visibleGlyphs(state,activeStroke),count=writtenGlyphCount(visible);
@@ -339,6 +341,8 @@ export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
  const dialog=get('circleDrawingDialog'),preview=get('circleDrawingPreview'),pad=get('circleDrawingPad');
  const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus'),shell=get('circleDrawingShell');
  const discard=get('circleDrawingDiscard'),keep=get('circleDrawingDiscardKeep'),discardButton=get('circleDrawingDiscardConfirm');
+ const parchment=get('circleDrawingParchment'),fingerGuide=get('circleDrawingFingerGuide'),finger=get('circleDrawingFinger');
+ fingerGuide.hidden=true;
  // Native text selections/HTML drags can steal a touch gesture mid-stroke,
  // especially when the finger moves over the labels or outside the canvas.
  dialog.addEventListener('selectstart',event=>event.preventDefault());
@@ -346,10 +350,17 @@ export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
  pad.addEventListener('contextmenu',event=>event.preventDefault());
  let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,animating=false,previousFocus=null,viewIndex=0;
  let animationId=0,padTransition=null;
+ function stopFingerIntro(){fingerGuide.hidden=true;delete fingerGuide.dataset.playing;}
+ function startFingerIntro(){
+  if(!dialog.open||model.state.mode!=='spell'||model.hasSpellInk||busy||animating||!fingerGuide.hidden)return false;
+  if(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return true;
+  fingerGuide.hidden=false;fingerGuide.dataset.playing='true';
+  return true;
+ }
  const message=text=>{status.textContent=text;};
  function repaint(){
   const sigil=model.state.mode==='sigil';
-  paintCircle(preview,model.state,{activeStroke,size:512});
+  paintCircle(preview,model.state,{activeStroke,size:512,parchmentImage:parchment});
   paintCaret(get('circleDrawingCaret'),model.state,{size:512,activeStroke});
   paintPad(pad,model.state,activeStroke,viewIndex,padTransition);
   get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を1文字ずつ書く';
@@ -363,6 +374,9 @@ export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
   confirm.disabled=busy||animating||(!sigil&&!model.hasSpellInk);
   confirm.textContent=busy?'登録中…':sigil?'決定':'紋を描く';
  }
+ parchment.addEventListener('load',()=>{if(dialog.open)repaint();});
+ parchment.addEventListener('error',()=>{if(dialog.open)message('羊皮紙の背景画像を読み込めませんでした。');});
+ finger.addEventListener('animationend',stopFingerIntro);
  const release=()=>{pointerId=null;activeStroke=null;};
  function animateTurn(target,direction){
   const startIndex=viewIndex,token=++animationId;
@@ -416,6 +430,7 @@ export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
  }
  pad.addEventListener('pointerdown',event=>{
   if(busy||animating||pointerId!==null||event.pointerType==='mouse'&&event.button!==0)return;
+  stopFingerIntro();
   event.preventDefault();
   pointerId=event.pointerId;
   const p=pointOnPad(event.clientX,event.clientY,pad.getBoundingClientRect());
@@ -458,7 +473,10 @@ export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
   busy=true;message('魔法陣を封印しています…');repaint();
   try{
    const canvas=doc.createElement('canvas');
-   paintCircle(canvas,model.state,{exportImage:true,size:1024});
+   // Do not save the old synthesized background while the uploaded image loads.
+   if(typeof parchment.decode==='function')await parchment.decode();
+   if(!(parchment.naturalWidth>0))throw Error('羊皮紙の背景画像を読み込めませんでした。');
+   paintCircle(canvas,model.state,{exportImage:true,size:1024,parchmentImage:parchment});
    const image=await canvasBlob(canvas,'image/jpeg',.92);
    closeDungeonDialog(dialog);release();await onSave(image);
   }catch(error){message('登録できませんでした：'+String(error?.message||error));}
@@ -478,7 +496,7 @@ export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
    animateMode('spell',()=>{model.goSpell();viewIndex=model.state.index;release();message('');});return;
   }
   if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
-   closeDungeonDialog(dialog);return;
+   stopFingerIntro();closeDungeonDialog(dialog);return;
   }
   discardReturnFocus=doc.activeElement;shell.inert=true;showUiOverlay(discard);keep.focus();
  }
@@ -487,24 +505,25 @@ export function initCircleDrawing(doc,{onSave,onStageEnter,onPractice}={}){
    if(dialog.open&&!busy&&!animating)onPractice?.(model.state.mode);
   });
  keep.addEventListener('click',()=>hideDiscard());
- discardButton.addEventListener('click',()=>{hideDiscard(false);closeDungeonDialog(dialog);});
+ discardButton.addEventListener('click',()=>{stopFingerIntro();hideDiscard(false);closeDungeonDialog(dialog);});
  dialog.addEventListener('cancel',event=>{
   event.preventDefault();
   if(!discard.hidden)hideDiscard();else close();
  });
  dialog.addEventListener('close',()=>{
-  animationId++;animating=false;padTransition=null;
+  animationId++;animating=false;padTransition=null;stopFingerIntro();
   hideDiscard(false);release();previousFocus?.focus?.();
  });
  window.addEventListener('resize',()=>{if(dialog.open)repaint();});
  function present(){
-  release();hideDiscard(false);busy=false;animating=false;padTransition=null;viewIndex=model.state.index;message('');
+  stopFingerIntro();release();hideDiscard(false);busy=false;animating=false;padTransition=null;viewIndex=model.state.index;message('');
   if(!dialog.open)showDungeonDialog(dialog);
   repaint();confirm.focus();onStageEnter?.(model.state.mode);
  }
  return {
   open(){model=createDrawingModel();previousFocus=doc.activeElement;present();},
   // Analysis cancellation resumes the existing spell and sigil, not a fresh draft.
-  resume(){present();}
+  resume(){present();},
+  startFingerIntro
  };
 }
