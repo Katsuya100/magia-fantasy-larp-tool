@@ -241,6 +241,8 @@ assert.doesNotMatch(html,/id="circleDrawingInput"/);
 assert.doesNotMatch(source,/get\('circleDrawingInput'\)/);
 assert.match(css,/\.circle-drawing-navigation\{\s*position:absolute;top:50%/,'arrows belong at the middle of the lower half');
 assert.match(css,/\.circle-drawing-entry\{\s*position:relative/);
+assert.match(css,/#circleDrawingDialog,#circleDrawingDialog \*\{[^}]*user-select:none;[^}]*-webkit-user-select:none;[^}]*-webkit-touch-callout:none/,'drawing dialog disables selection and long-press callouts');
+assert.match(css,/\.circle-drawing-pad\{[^}]*touch-action:none/,'pad never hands drawing gestures to scrolling');
 assert.doesNotMatch(css,/circle-drawing-to-sigil/,'upper preview no longer animates');
 assert.match(source,/export const EDITOR_GLYPH_STEP=GLYPH_STEP;/);
 assert.match(source,/ringPoint\(RING_RADIUS,\(i\/96-\.5\)\*GLYPH_STEP\)/,'crosshair follows the actual upper-ring arc');
@@ -292,6 +294,12 @@ globalThis.window={devicePixelRatio:1,addEventListener(){}};
 try{
  const get=id=>nodes.get(id),dialog=get('circleDrawingDialog');
  const editor=initCircleDrawing(doc,{onSave:async image=>saved.push(image)});
+ let blocked=0;
+ const nativeGesture={preventDefault(){blocked++;}};
+ get('circleDrawingDialog').dispatch('selectstart',nativeGesture);
+ get('circleDrawingDialog').dispatch('dragstart',nativeGesture);
+ get('circleDrawingPad').dispatch('contextmenu',nativeGesture);
+ assert.equal(blocked,3,'drawing mode intercepts native text selection, dragging and long-press menus');
  editor.open();
  assert.equal(get('circleDrawingClose').textContent,'閉じる');
  assert.equal(get('circleDrawingConfirm').textContent,'紋を描く');
@@ -375,4 +383,4 @@ try{
  assert.equal(get('circleDrawingConfirm').disabled,true,'reset editor begins with disabled confirm');
  dialog.close();
 }finally{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
-console.log('PASS 30 centered 12-degree slots, 2/3-scale glyph ink, exact two-letter viewport, cyclic navigation, clipped guides and sigil crop');
+console.log('PASS 30 centered 12-degree slots, two-thirds ink, two-letter crop, cyclic navigation, selection prevention and sigil crop');
