@@ -40,9 +40,9 @@ function median(values){
  return (a[Math.floor((n-1)/2)]+a[Math.floor(n/2)])/2;
 }
 function average(values){return values.length?values.reduce((a,b)=>a+b,0)/values.length:null;}
-// With 128 seeded trials the observed win rate has sampling uncertainty.
-// Keep the original target bands; reject only when a 95% confidence interval
-// is disjoint from the target, while separately recording point-estimate misses.
+// Retain Wilson intervals as a diagnostic only: a CI overlap is not a pass.
+// The observed win rate must meet the approved 90-97% target AND a 2-point
+// interior margin (92-95%) for 21-100F, preventing edge-of-band releases.
 function winRateWilson95(wins,trials){
  const z=1.96,p=wins/trials,z2=z*z,denom=1+z2/trials;
  const center=(p+z2/(2*trials))/denom;
@@ -120,12 +120,15 @@ for(let to=10;to<=100;to+=10){
   medianHp=median(winners.map(x=>x.hp)),
   medianUsed=median(runs.map(x=>x.spent));
  const winLower=from<=20?99:90,winUpper=from<=20?100:97;
+ const marginLower=from<=20?99:92,marginUpper=from<=20?100:95;
  const mpLower=from<=10?50:0,mpUpper=from<=10?100:15;
  const winInterval=winRateWilson95(winners.length,SAMPLES);
  const pointWinRateInTarget=winRate>=winLower&&winRate<=winUpper;
+ const pointWinRateInsideMargin=winRate>=marginLower&&winRate<=marginUpper;
  const statisticallyCompatible=winInterval.lower<=winUpper&&winInterval.upper>=winLower;
  const issues=[];
- if(!statisticallyCompatible)issues.push('winRate 95% interval outside '+winLower+'-'+winUpper+'%');
+ if(!pointWinRateInTarget)issues.push('observed winRate outside '+winLower+'-'+winUpper+'%');
+ else if(!pointWinRateInsideMargin)issues.push('observed winRate outside '+marginLower+'-'+marginUpper+'% safety margin');
  if(medianMp===null||medianMp<mpLower||medianMp>mpUpper)
   issues.push('winner median MP outside '+mpLower+'-'+mpUpper+'%');
  const row={band:from+'-'+to,level,samples:SAMPLES,
@@ -137,8 +140,8 @@ for(let to=10;to<=100;to+=10){
   wins:winners.length,winRate:percentile(winRate),medianMp:percentile(medianMp),
   medianHp:percentile(medianHp),meanMp:percentile(average(winners.map(x=>x.mp))),
   meanHp:percentile(average(winners.map(x=>x.hp))),
-  winTarget:winLower+'-'+winUpper+'%',mpTarget:mpLower+'-'+mpUpper+'%',
-  winRatePointInTarget:pointWinRateInTarget,
+  winTarget:winLower+'-'+winUpper+'%',winSafetyMargin:marginLower+'-'+marginUpper+'%',mpTarget:mpLower+'-'+mpUpper+'%',
+  winRatePointInTarget:pointWinRateInTarget,winRatePointInsideMargin:pointWinRateInsideMargin,
   winRate95Interval:[percentile(winInterval.lower),percentile(winInterval.upper)],
   winRateCompatibleWithTarget:statisticallyCompatible,
   medianCleanses:withItems?median(runs.map(x=>x.cleanses)):0,
@@ -221,15 +224,16 @@ if(SAMPLES===128){
  console.log('DUNGEON_BALANCE_LEGACY_REFERENCE '+JSON.stringify(baseline));
 }
 
-// Never redefine the approved target bands. Report point-estimate misses
-// even when compatible with the target within the sampling uncertainty.
-// Strict mode still rejects statistically incompatible bands and MP misses.
+// Keep the original approved bands. Strict CI requires observed wins inside
+// the interior safety margin; Wilson intervals are visible but not an escape
+// hatch for an out-of-range observed rate.
 const unmet=report.filter(x=>!x.passed);
 console.log('DUNGEON_DEFAULT_BALANCE_SUMMARY '+JSON.stringify({
  samples:SAMPLES,median:'successful sorties only',bands:report.length,
  met:report.length-unmet.length,unmet:unmet.map(x=>({band:x.band,issues:x.issues})),
  pointEstimateOutsideTarget:report.filter(x=>!x.winRatePointInTarget).map(x=>({band:x.band,winRate:x.winRate,target:x.winTarget,interval95:x.winRate95Interval})),
- winRateAssessment:'95% Wilson interval intersects unchanged target band',
+ pointEstimateOutsideMargin:report.filter(x=>!x.winRatePointInsideMargin).map(x=>({band:x.band,winRate:x.winRate,margin:x.winSafetyMargin})),
+ winRateAssessment:'observed win rate inside target with 92-95% interior margin for 21-100F; Wilson 95% interval diagnostic only',
  goalStatus:unmet.length?'NEEDS_TUNING':'ALL_TARGETS_MET',
  ciMode:STRICT?'strict':'reporting'}));
 assert.equal(report.length,10);
