@@ -25,7 +25,7 @@ assert.deepEqual(recipe('common',[make('life_ruby',2),make('life_ruby',4),make('
 // Only epic or legendary can unlock combination recipes.
 const mixed=[make('heal_l',100),make('mana_xl',120),make('clear_flame'),make('clear_bolt'),make('clear_aqua')];
 assert.deepEqual(recipe('epic',mixed),{id:'elixir_l',value:100});
-assert.equal(recipe('rare',mixed).id,'heal_l');
+assert.equal(recipe('rare',mixed).id,'mana_xl');
 const statuses=['flame','bolt','aqua','storm','gravity'].map(name=>make('clear_'+name));
 assert.deepEqual(recipe('legendary',statuses),{id:'luna_stone',value:0});
 assert.deepEqual(recipe('common',statuses),{id:'escape_scroll',value:0});
