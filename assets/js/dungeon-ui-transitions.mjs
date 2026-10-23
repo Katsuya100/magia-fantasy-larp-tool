@@ -58,6 +58,7 @@ export function showDungeonDialog(dialog){
 // fades under the next dialog or custom overlay.
 // No media players or scripts run inside the copy; IDs are removed.
 function captureDialogExit(dialog){
+ try{
  const doc=dialog.ownerDocument;
  if(!doc?.body?.appendChild||typeof dialog.cloneNode!=='function'||motionReduced(dialog))return null;
  const bounds=dialog.getBoundingClientRect?.();
@@ -68,6 +69,8 @@ function captureDialogExit(dialog){
  ghost.setAttribute('aria-hidden','true');
  ghost.setAttribute('inert','');
  for(const child of ghost.querySelectorAll('[id]'))child.removeAttribute('id');
+ // Ghosts cannot launch duplicate media playback or iframe loads.
+ for(const media of ghost.querySelectorAll('video,audio,iframe,script'))media.remove();
  ghost.setAttribute('open','');
  ghost.classList.add('dungeon-dialog-ghost');
  // Freeze geometry before .close() removes the original from the top layer.
@@ -86,6 +89,9 @@ function captureDialogExit(dialog){
  portal.appendChild(veil);
  portal.appendChild(ghost);
  return portal;
+ }catch{ // Native close must never depend on a visual effect.
+  return null;
+ }
 }
 
 export function closeDungeonDialog(dialog){
@@ -96,6 +102,27 @@ export function closeDungeonDialog(dialog){
  const exit= captureDialogExit(dialog);
  dialog.close(); // Preserve synchronous native state and all close handlers.
  if(!exit)return;
+ mountDialogExit(dialog,exit);
+}
+
+const cancelInstalled=new WeakSet();
+// Escape retains native cancel semantics and existing guards. Capture the
+// outgoing image first, but only mount it if the browser really closed.
+export function installDungeonDialogCancelTransitions(doc){
+ for(const dialog of doc?.querySelectorAll?.('dialog')||[]){
+  if(cancelInstalled.has(dialog))continue;
+  cancelInstalled.add(dialog);
+  dialog.addEventListener('cancel',event=>{
+   const exit=captureDialogExit(dialog);
+   if(!exit)return;
+   queueMicrotask(()=>{
+    if(!event.defaultPrevented&&!dialog.open)mountDialogExit(dialog,exit);
+   });
+  });
+ }
+}
+
+function mountDialogExit(dialog,exit){
  dialog.ownerDocument.body.appendChild(exit);
  const cleanup=setTimeout(()=>exit.remove(),DUNGEON_MODAL_DURATION_MS);
  cleanup.unref?.();
