@@ -336,6 +336,11 @@ export function initCircleDrawing(doc,{onSave}){
  const dialog=get('circleDrawingDialog'),preview=get('circleDrawingPreview'),pad=get('circleDrawingPad');
  const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus'),shell=get('circleDrawingShell');
  const discard=get('circleDrawingDiscard'),keep=get('circleDrawingDiscardKeep'),discardButton=get('circleDrawingDiscardConfirm');
+ // Native text selections/HTML drags can steal a touch gesture mid-stroke,
+ // especially when the finger moves over the labels or outside the canvas.
+ dialog.addEventListener('selectstart',event=>event.preventDefault());
+ dialog.addEventListener('dragstart',event=>event.preventDefault());
+ pad.addEventListener('contextmenu',event=>event.preventDefault());
  let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,animating=false,previousFocus=null,viewIndex=0;
  let animationId=0,padTransition=null;
  const message=text=>{status.textContent=text;};
