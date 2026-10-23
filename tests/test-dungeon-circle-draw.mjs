@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,MIN_DUNGEON_POWER,withDrawnPowerFloor,drawnPower,pointOnPad,glyphPoint,glyphAngle,caretAngle,sigilPoint,normalizedGlyph,createDrawingModel,paintCircle,paintCaret,initCircleDrawing} from '../assets/js/dungeon-circle-draw.mjs';
+import {DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,MIN_DUNGEON_POWER,withDrawnPowerFloor,drawnPower,pointOnPad,glyphPoint,glyphAngle,caretAngle,spellCamera,sigilCamera,padToCircle,circleToPad,interpolateCamera,GLYPH_PAD_SCALE,sigilPoint,normalizedGlyph,createDrawingModel,paintCircle,paintCaret,paintPad,initCircleDrawing} from '../assets/js/dungeon-circle-draw.mjs';
 
 assert.equal(DRAWN_GLYPH_LIMIT,32);
 assert.equal(DRAWN_POWER_RATE,.6);
@@ -43,6 +43,27 @@ assert.ok(Math.abs(centered[0].x+centered[2].x-1)<1e-9,'adjacent runes straddle 
 assert.ok(Math.abs(glyphAngle(1,3)+Math.PI/2)<1e-9);
 assert.ok(Math.abs(caretAngle(0)+Math.PI/2)<1e-9);
 assert.ok(caretAngle(3)>caretAngle(1),'caret advances by character slots');
+assert.equal(GLYPH_PAD_SCALE,.105,'one pad unit spans enough of the true circle to cross rings and neighboring letters');
+for(const count of [0,1,7,31]){
+ const camera=spellCamera(count);
+ for(const point of [{x:0,y:0},{x:-.7,y:.8},{x:1,y:-1}]){
+  const world=padToCircle(point,camera),recovered=circleToPad(world,camera);
+  assert.ok(Math.hypot(recovered.x-point.x,recovered.y-point.y)<1e-12,'camera roundtrips exact pen coordinates');
+  const stored=glyphPoint(point,count,count+1);
+  assert.ok(Math.hypot(stored.x-world.x,stored.y-world.y)<1e-12,'saved glyph uses exact scaled magic-circle geometry');
+ }
+}
+assert.ok(Math.hypot(padToCircle({x:0,y:-1},spellCamera(0)).x-.5,padToCircle({x:0,y:-1},spellCamera(0)).y-.5)>.43,
+ 'pen can extend past the outer circle');
+assert.ok(Math.hypot(padToCircle({x:0,y:1},spellCamera(0)).x-.5,padToCircle({x:0,y:1},spellCamera(0)).y-.5)<.255,
+ 'pen can extend beyond the inner circle');
+assert.ok(Math.hypot(glyphPoint({x:0,y:0},0,1).x-glyphPoint({x:0,y:0},1,2).x,
+ glyphPoint({x:0,y:0},0,1).y-glyphPoint({x:0,y:0},1,2).y)<GLYPH_PAD_SCALE,
+ 'neighboring text centers share overlapping touchpad regions');
+const mid=interpolateCamera(spellCamera(3),sigilCamera(),.5);
+assert.ok(mid.scale>GLYPH_PAD_SCALE&&mid.scale<sigilCamera().scale,'sigil transition smoothly zooms out');
+assert.ok(Math.abs(mid.rotation)<Math.abs(spellCamera(3).rotation),'camera un-rotates toward the inner circle');
+
 const glyph=normalizedGlyph([[{x:-.1,y:-.2},{x:.1,y:.2}]]);
 assert.equal(glyph.length,1);
 assert.ok(glyph[0][0].x<0&&glyph[0][1].y>0);
@@ -82,6 +103,7 @@ assert.equal(model.canUndo,false,'multiple strokes of one draft letter do not be
 assert.equal(model.enterGlyph(),true);
 assert.equal(model.state.letters.length,1);
 assert.equal(model.state.ink.length,0);
+assert.deepEqual(model.state.letters[0].strokes,[stroke,stroke],'input preserves exact pen paths rather than shrinking into a slot');
 assert.equal(model.canUndo,true);
 assert.equal(model.enterGlyph(),true,'empty Input adds a word separator without separate button');
 assert.equal(model.state.letters[1].space,true);
@@ -171,6 +193,9 @@ assert.doesNotMatch(source,/circleDrawingBack/,'script has no reference to the r
 assert.match(css,/#circleDrawingCaret\{[^}]*animation:circle-drawing-caret-blink 1s steps\(1,end\) infinite/,'only the caret blinks');
 assert.match(source,/sigil\?'紋を書く':'呪文を1文字ずつ書く'/,'both steps use the requested writing labels');
 assert.match(source,/paintCaret\(get\('circleDrawingCaret'\),model\.state/,'redraw follows the active character');
+assert.match(source,/animateCamera\('revolver',fromCount,fromCount\+1,420\)/,'Input advances with animated reel');
+assert.match(source,/animateCamera\('sigil',fromCount,0,720\)/,'Decision rotates and zooms the camera to sigil');
+assert.match(source,/window\.matchMedia\?\.\('\(prefers-reduced-motion: reduce\)'\)/,'accessibility setting skips camera motion');
 assert.doesNotMatch(html,/id="circleDrawingSpace"|id="circleDrawingHint"|id="circleDrawingCount"/,'no extra space, help or count labels');
 assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
 assert.match(css,/width:min\(100cqw,100cqh\);height:min\(100cqw,100cqh\)/,'pad remains square even on short viewports');
