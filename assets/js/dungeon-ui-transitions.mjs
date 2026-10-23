@@ -39,7 +39,7 @@ export function showDungeonDialog(dialog){
  if(!dialog||dialog.open)return;
  const timer=pendingEntries.get(dialog);
  if(timer!==undefined){clearTimeout(timer);pendingEntries.delete(dialog);}
- if(dialog.dataset&&!motionReduced(dialog))dialog.dataset.uiEntering='true';
+ if(dialog.dataset){delete dialog.dataset.uiClosing;if(!motionReduced(dialog))dialog.dataset.uiEntering='true';}
  dialog.showModal();
  if(dialog.dataset?.uiEntering){
   const cleanup=setTimeout(()=>{
@@ -98,8 +98,8 @@ export function closeDungeonDialog(dialog){
  if(!dialog?.open)return;
  const timer=pendingEntries.get(dialog);
  if(timer!==undefined){clearTimeout(timer);pendingEntries.delete(dialog);}
- if(dialog.dataset)delete dialog.dataset.uiEntering;
- const exit= captureDialogExit(dialog);
+ if(dialog.dataset){delete dialog.dataset.uiEntering;dialog.dataset.uiClosing='true';}
+ const exit=captureDialogExit(dialog);
  dialog.close(); // Preserve synchronous native state and all close handlers.
  if(!exit)return;
  mountDialogExit(dialog,exit);
@@ -115,8 +115,11 @@ export function installDungeonDialogCancelTransitions(doc){
   dialog.addEventListener('cancel',event=>{
    const exit=captureDialogExit(dialog);
    if(!exit)return;
+   if(dialog.dataset){delete dialog.dataset.uiEntering;dialog.dataset.uiClosing='true';}
    queueMicrotask(()=>{
-    if(!event.defaultPrevented&&!dialog.open)mountDialogExit(dialog,exit);
+    if(event.defaultPrevented||dialog.open){
+     if(dialog.dataset)delete dialog.dataset.uiClosing;
+    }else mountDialogExit(dialog,exit);
    });
   });
  }
