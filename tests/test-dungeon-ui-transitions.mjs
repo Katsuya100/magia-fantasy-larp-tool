@@ -177,6 +177,8 @@ assert.match(css,/dialog button\.dungeon-dialog-close\{[^}]*position:absolute!im
 assert.match(css,/dialog button\.dungeon-dialog-close:focus-visible\{outline:3px/);
 assert.match(css,/dialog button\.dungeon-dialog-close\[hidden\]\{display:none!important\}/);
 assert.match(css,/#circleDrawingDialog \.circle-drawing-actions\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1\.25fr\)\}/);
-assert.match(css,/\.circle-camera-dialog \.camera-actions\{grid-template-columns:minmax\(0,1fr\)\}/);
+assert.match(css,/dialog\.circle-camera-dialog \.camera-actions\{grid-template-columns:minmax\(0,1fr\)\}/);
+assert.match(css,/#circleDrawingDialog #circleDrawingReset\{grid-column:1\}/);
+assert.match(css,/#circleDrawingDialog #circleDrawingConfirm\{grid-column:2\}/);
 
 console.log('PASS all dungeon dialogs, repeated rename, crossfades, Escape and reduced motion');
