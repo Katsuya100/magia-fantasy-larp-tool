@@ -319,10 +319,13 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
       num('def_divisor')/(num('def_divisor')+relativeArmor)));
     a.t.hp=Math.max(0,a.t.hp-d);
     message=a.name+'：通常攻撃 '+d;
-   }else message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
-   if(role==='debuff'){
-    const applied=status(a.t,'debuff_'+a.sp.attribute);
-    if(applied&&['shock','seal','confused'].includes(applied.effect))appliedDebuffs.add(applied);
+   }else {
+    const previous=role==='debuff'?status(a.t,'debuff_'+a.sp.attribute):null;
+    message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
+    if(role==='debuff'&&!previous){
+     const applied=status(a.t,'debuff_'+a.sp.attribute);
+     if(applied&&['shock','seal','confused'].includes(applied.effect))appliedDebuffs.add(applied);
+    }
    }
    log.push(message);
    const amount=role==='support'?a.u.hp-oldHp:oldHp-a.t.hp;
