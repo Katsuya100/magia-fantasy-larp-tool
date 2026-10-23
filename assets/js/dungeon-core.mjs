@@ -322,7 +322,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
    }else message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
    if(role==='debuff'){
     const applied=status(a.t,'debuff_'+a.sp.attribute);
-    if(applied)appliedDebuffs.add(applied);
+    if(applied&&['shock','seal','confused'].includes(applied.effect))appliedDebuffs.add(applied);
    }
    log.push(message);
    const amount=role==='support'?a.u.hp-oldHp:oldHp-a.t.hp;
@@ -337,7 +337,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  }
  for(const a of actions){
   for(const s of a.u.statuses){
-   if(s.effect==='burn'&&!appliedDebuffs.has(s)){
+   if(s.effect==='burn'){
     const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*Math.min(num('burn_max_hp_rate'),num('burn_hp_rate')*s.value)));
     const oldHp=a.u.hp;
     a.u.hp=Math.max(0,a.u.hp-d);
