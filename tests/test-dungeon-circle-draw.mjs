@@ -181,7 +181,11 @@ assert.ok(Math.abs(caretAngle-(glyphAngle(0,2)-EDITOR_GLYPH_STEP/2))<1e-10,'care
 draws.length=0;paintCaret(canvas,{...state,index:1},{size:128});
 const nextCaret=draws.find(d=>d[0]==='move');
 const nextAngle=Math.atan2(nextCaret[2]-64,nextCaret[1]-64);
-assert.ok(Math.abs(nextAngle-caretAngle-EDITOR_GLYPH_STEP)<1e-10,'caret moves by exactly the same 15-degree slot as both screens');
+assert.ok(Math.abs(nextAngle-caretAngle-EDITOR_GLYPH_STEP)<1e-10,'caret moves by the same 18-degree slot as both screens');
+draws.length=0;paintCaret(canvas,{...state,index:3,ink:[],letters:[{strokes:[stroke]},{space:true},{space:true},{space:true}]},{size:128,activeStroke:stroke});
+const liveCaret=draws.find(d=>d[0]==='move');
+const liveAngle=Math.atan2(liveCaret[2]-64,liveCaret[1]-64);
+assert.ok(Math.abs(liveAngle-(glyphAngle(3,4)-EDITOR_GLYPH_STEP/2))<1e-10,'caret tracks live ink centering as soon as drawing starts');
 draws.length=0;paintCaret(canvas,{...state,mode:'sigil'},{size:128});
 assert.equal(draws.length,0);
 const originalWindow=globalThis.window;
