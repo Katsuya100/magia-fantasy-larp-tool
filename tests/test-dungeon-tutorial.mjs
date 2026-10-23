@@ -12,8 +12,11 @@ assert.match(CIRCLE_TUTORIAL_STEPS[2].hint,/外円の内側.*ください/);
 assert.match(CIRCLE_TUTORIAL_STEPS[3].hint,/内円と外円の間.*英語の呪文.*ください/);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].hint,/内円の中に紋.*ください/);
 assert.deepEqual(CIRCLE_TUTORIAL_STEPS.map(x=>x.image),[null,'tutorial-outer.gif','tutorial-inner.gif','tutorial-spell.gif','tutorial-sigil.gif']);
-assert.match(CIRCLE_TUTORIAL_STEPS[3].detail,/相.*意味.*決まります。/);
-assert.match(CIRCLE_TUTORIAL_STEPS[3].attributes,/flame.*bolt.*aqua.*storm.*gravity.*law.*chaos/);
+assert.equal(CIRCLE_TUTORIAL_STEPS[3].detail,'相(属性)は呪文の意味によって決まります。');
+assert.deepEqual(CIRCLE_TUTORIAL_STEPS[3].attributes.split('\n'),[
+ '🔥flame・⚡bolt・💧aqua','🌪storm・🪨gravity','⚖law・🌀chaos'
+]);
+assert.match(CIRCLE_TUTORIAL_STEPS[3].attributes,/flame.*bolt.*aqua.*storm.*gravity.*law.*chaos/s);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].detail,/紋の種別.*形.*決まります。/);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].attributes,/攻撃.*防御.*回復.*弱体/);
 for(const i of [3,4])assert.match(CIRCLE_TUTORIAL_STEPS[i].freedom,/サンプルに合わせる必要はありません.*自由.*ください/);

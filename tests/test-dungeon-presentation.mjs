@@ -17,7 +17,11 @@ const tipDialog=page.split('id="circlePowerTipsDialog"')[1].split('</dialog>')[0
 for(const phrase of ['線やカーブを綺麗に','読みやすく','円の線に重ねない','重複しない英単語'])
  assert.match(tipDialog,new RegExp('<strong>'+phrase+'</strong>'),'important parts bold');
 assert.match(tipDialog,/assets\/images\/sample\.png/,'sample is the ideal drawing');
-assert.match(css,/\.circle-power-tips-button\{[^}]*position:absolute;top:8px;left:8px;z-index:5/,'tips snap to camera square');
+assert.match(tipDialog,/<figure><figcaption>理想形<\/figcaption><img/,'ideal example is labeled before the image');
+assert.match(css,/#circleDrawingDialog \.circle-power-tips-button\{position:absolute;top:max\(10px,env\(safe-area-inset-top\)\);left:max\(10px,env\(safe-area-inset-left\)\)/,'drawing tips are aligned to the existing header buttons');
+assert.match(css,/\n\.circle-power-tips-button\{\s*min-height:34px/,'camera tips use normal flow while drawing positioning stays scoped');
+assert.match(css,/\.circle-camera-dialog \.camera-viewfinder-toolbar\{display:flex;justify-content:space-between/,'camera actions share a toolbar above the viewfinder');
+assert.match(css,/#tutorialAttributes\{[^}]*white-space:pre-line;word-break:keep-all/,'element list retains intentional line breaks');
 assert.match(css,/\.circle-power-tips-dialog strong\{color:#ff737b;font-weight:800/,'tips are bold red');
 assert.doesNotMatch(page,/dungeon-circle-tutorial\.gif/);
 assert.match(page,/assets\/images\/sample\.png/);
@@ -116,10 +120,13 @@ const cameraDialog=page.split('id="circleCameraDialog"')[1].split('</dialog>')[0
 assert.ok(cameraDialog.indexOf('id="cameraPane"')<cameraDialog.indexOf('id="tutorialReplay"'),'practice belongs to the camera pane');
 assert.ok(cameraDialog.indexOf('class="camera-viewfinder-group"')<cameraDialog.indexOf('id="tutorialReplay"'),'practice snaps to the viewfinder wrapper');
 assert.ok(cameraDialog.indexOf('id="tutorialReplay"')<cameraDialog.indexOf('class="camera-viewfinder"'),'practice sits immediately above the camera');
-assert.ok(cameraDialog.indexOf('class="camera-viewfinder"')<cameraDialog.indexOf('id="circleCameraPowerTips"'),'camera tips inside the photo frame');
+assert.ok(cameraDialog.indexOf('class="camera-viewfinder-toolbar"')<cameraDialog.indexOf('id="circleCameraPowerTips"'),'camera tips are in the same toolbar as practice');
+assert.ok(cameraDialog.indexOf('id="circleCameraPowerTips"')<cameraDialog.indexOf('id="tutorialReplay"'),'camera tips on the left, practice on the right');
+assert.ok(cameraDialog.indexOf('id="tutorialReplay"')<cameraDialog.indexOf('class="camera-viewfinder"'),'camera toolbar is outside and above the photo frame');
 const drawingDialog=page.split('id="circleDrawingDialog"')[1].split('</dialog>')[0];
-assert.ok(drawingDialog.indexOf('class="circle-drawing-preview-art"')<drawingDialog.indexOf('id="circleDrawingPowerTips"'),'drawing tips inside the preview frame');
-assert.match(css,/\.circle-camera-dialog \.tutorial-replay\{align-self:flex-end/,'practice is right-aligned to the camera edge');
+assert.ok(drawingDialog.indexOf('id="circleDrawingPowerTips"')<drawingDialog.indexOf('id="circleDrawingPractice"'),'drawing tips are first in the existing header');
+assert.ok(drawingDialog.indexOf('id="circleDrawingPractice"')<drawingDialog.indexOf('class="circle-drawing-display"'),'both drawing actions are outside the preview');
+assert.match(css,/\.circle-camera-dialog \.camera-viewfinder-toolbar\{display:flex;justify-content:space-between/,'practice and tips share a left-right row');
 assert.match(css,/\.circle-camera-dialog \.camera-viewfinder-group\{[^}]*gap:5px/,'practice is close to the viewfinder');
 assert.match(css,/@media\(max-width:630px\)\{\.circle-camera-dialog \.camera-viewfinder-group\{width:min/,'practice stays snapped to the camera on mobile');
 assert.match(page,/id="cameraPane" class="capture-pane"(?! hidden)/);
