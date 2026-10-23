@@ -177,7 +177,7 @@ export function chooseEnemySpell(unit,r=Math.random){
   ?offense[Math.floor(r()*offense.length)]:ids[Math.floor(r()*ids.length)];
 }
 
-export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];u.statuses=u.statuses.filter(s=>s!==confused);}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=spellMpCost(sp);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=shock.shockExtra??num('shock_cooldown_extra');u.statuses=u.statuses.filter(s=>s!==shock);}return {...sp};}
+export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=spellMpCost(sp);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=shock.shockExtra??num('shock_cooldown_extra');}return {...sp};}
 // Whether a carried item currently has a usable primary effect (or bonus).
 // Escape scrolls are always usable; revival can only be armed once per fight.
 export function canUseBattleItem(hero,item,items,buffs=[]){
@@ -293,6 +293,7 @@ export function reviveOnFatal(unit){
 export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onStep){
  const ps=prepare(player,pickPlayer,r),es=prepare(enemy,pickEnemy,r);
  const actions=[{u:player,t:enemy,sp:ps,name:'自分',side:'hero'},{u:enemy,t:player,sp:es,name:'敵',side:'enemy'}],log=[];
+ const appliedDebuffs=new Set();
  const snapshot=u=>({...u,statuses:u.statuses.map(x=>({...x})),cooldowns:[...u.cooldowns]});
  const publish=(a,role,attribute,message,amount=0)=>{
   if(onStep)onStep({side:a.side,role,attribute,text:message,amount,
@@ -318,7 +319,14 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
       num('def_divisor')/(num('def_divisor')+relativeArmor)));
     a.t.hp=Math.max(0,a.t.hp-d);
     message=a.name+'：通常攻撃 '+d;
-   }else message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
+   }else {
+    const previous=role==='debuff'?status(a.t,'debuff_'+a.sp.attribute):null;
+    message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
+    if(role==='debuff'&&!previous){
+     const applied=status(a.t,'debuff_'+a.sp.attribute);
+     if(applied&&['shock','seal','confused'].includes(applied.effect))appliedDebuffs.add(applied);
+    }
+   }
    log.push(message);
    const amount=role==='support'?a.u.hp-oldHp:oldHp-a.t.hp;
    const revived=reviveOnFatal(a.t);
@@ -347,7 +355,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
      publish(a,'revive','law',revival,revived);
     }
    }
-   s.turns--;
+   if(!appliedDebuffs.has(s))s.turns--;
   }
   a.u.statuses=a.u.statuses.filter(s=>s.turns>0);
   a.u.cooldowns=a.u.cooldowns.map(x=>Math.max(0,x-1));
