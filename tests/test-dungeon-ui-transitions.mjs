@@ -142,6 +142,7 @@ assert.ok(appended.every(node=>node.removed),'ghosts are removed after the 200ms
 // variants (closable, fixed, paged). Fullscreen/ceremony surfaces are explicitly
 // excluded. An HTML <dialog> tag alone does not establish the visual category.
 const closable={
+ circlePowerTipsDialog:'closeCirclePowerTips',
  loadoutDialog:'closeLoadoutDialog',
  alchemyDialog:'closeAlchemy',
  alchemyPickerDialog:'closeAlchemyPicker',
@@ -199,7 +200,7 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
 const pagedNative=['circleDrawingLessonDialog'];
-assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 22 native dialogs accounted for');
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 23 native dialogs accounted for');
 for(const id of pagedNative){
  assert.match(tagOf(id),/data-dungeon-frame="paged"/,'native lesson is a paged frame');
  const content=dialogMarkup(id);
