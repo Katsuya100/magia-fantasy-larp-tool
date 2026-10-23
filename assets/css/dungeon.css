@@ -760,6 +760,8 @@ dialog[open][data-ui-entering="true"]{animation:dungeon-dialog-enter .2s cubic-b
 dialog[open][data-ui-entering="true"]::backdrop{animation:dungeon-dialog-veil-show .2s ease-out both}
 @keyframes dungeon-dialog-enter{from{opacity:0;transform:translateY(9px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes dungeon-dialog-veil-show{from{opacity:0}to{opacity:1}}
+/* Prevent rendering both the native discrete close and its safe visual copy. */
+dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transition:none!important}
 /* Exiting visual is aria-hidden, inert and not hit-testable.
    Every newly shown native dialog renders above it in the top layer. */
 .dungeon-modal-exit-layer{position:fixed;inset:0;z-index:2500;pointer-events:none!important}
