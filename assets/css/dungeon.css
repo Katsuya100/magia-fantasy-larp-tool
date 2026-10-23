@@ -2465,8 +2465,8 @@ button.creator-congratulations-close{
 .circle-drawing-shell{position:relative;display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
 .circle-drawing-stage{
  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
- z-index:2;pointer-events:none;text-align:center;
- padding:4px 16px;border:1px solid #c09d6380;border-radius:999px;
+ z-index:2;pointer-events:none;text-align:center;white-space:normal;
+ max-width:calc(100% - 24px);padding:5px 12px;border:1px solid #c09d6380;border-radius:999px;
  background:#070914;color:var(--gold);font-size:12px;line-height:1.2;
  box-shadow:0 2px 12px #0009
 }
