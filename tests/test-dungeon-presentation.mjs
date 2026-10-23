@@ -180,9 +180,11 @@ assert.ok(page.includes('v'+currentRelease.slice(0,4)+'.'+currentRelease.slice(4
 assert.match(page,/<div id="battleInfo" class="battle-info" role="group" aria-label="探索中の経験値・戦利品"/,'battle counters use a dedicated accessible grouped status');
 assert.match(page,/<div id="checkpointLedger" class="battle-info" role="group" aria-label="帰還の祭壇の経験値・戦利品"/,'sanctuary reuses the same reward card class');
 const rewardSource=await read('assets/js/dungeon-app.mjs');
-assert.match(page,/<label><input type="checkbox" id="useMagicInk"><span>魔導のインクを使用<\/span><\/label>/,'ink checkbox label only shows intended text');
-assert.match(page,/<p id="magicInkBalance" aria-live="polite">魔導のインク：0個<\/p>/,'initial ink stock label contains no extra explanation');
-assert.match(rewardSource,/\$\('magicInkBalance'\)\.textContent=MAGIC_INK_NAME\+'：'\+\(profile\.magicInk\|\|0\)\+'個';/,'live ink stock label contains no extra explanation');
+assert.match(page,/id="magicInkDialog"/,'ink selection has a dedicated dialog');
+assert.match(page,/魔導墨を使うと威力の高い魔法陣を作成できます。/,'dialog explains bonus');
+assert.doesNotMatch(page,/id="useMagicInk"|id="magicInkBalance"|魔導のインク/,'old grimoire checkbox and copy removed');
+
+assert.match(rewardSource,/\$\('magicInkStock'\)\.textContent='所持：'\+profile\.magicInk\+'個'/,'stock shown only in dialog');
 assert.doesNotMatch(page,/ボスから20%でドロップ|基礎威力＋10%/,'no unsolicited ink explanation in HTML');
 assert.match(rewardSource,/function rewardLedgerMarkup\(run\)/,'battle and sanctuary share a reward renderer');
 const rewardLedger=rewardSource.slice(rewardSource.indexOf('function rewardLedgerMarkup(run)'),rewardSource.indexOf('\nfunction updateDungeonPanelBackground'));
@@ -317,8 +319,8 @@ assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 assert.ok(app.includes('circles=newestCirclesFirst([...circles,analyzed])'),'successful captures sort newest first');
 assert.ok(app.includes('await putCircle(db,analyzed)'),'save only after successful camera analysis');
-assert.match(app,/await analyzeCapturedCircle\(circle,\$\('useMagicInk'\)\.checked&&profile\.magicInk>0\)/,'camera captures optional ink choice before analysis');
-assert.match(app,/const reduced=\{\.\.\.result\.analysis,power:circle\.origin==='drawn'\?drawnPower\(result\.analysis\.power\):Math\.max\(MIN_DUNGEON_POWER,result\.analysis\.power\)\};[\s\S]*?savePreanalysis\(circle,useInk\?inkEnhancedAnalysis\(reduced\):reduced\)[\s\S]*?else await putCircle\(db,analyzed\)/,'validated result clamps both capture modes before optional ink and save');
+assert.match(app,/await analyzeCapturedCircle\(circle,creationInkCount\)/,'camera keeps chosen ink count');
+assert.match(app,/inkEnhancedAnalysis\(reduced,inkCount\)[\s\S]*?savePreanalysis\(circle,enhanced\)[\s\S]*?else await putCircle\(db,analyzed\)/,'ink modifies base before saving');
 assert.match(app,/await saveProfileWithCircles\(db,nextProfile,\[analyzed\]\)/,'ink and circle save atomically');
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
 assert.match(app,/newestCirclesFirst\(\(await allCircles\(db\)\)\.map\(withDrawnPowerFloor\)\)/,'older drawn circles load with 250 minimum');
@@ -433,7 +435,7 @@ assert.match(css,/dialog\[open\]\{opacity:1/,'dialogs fade in and out');
 assert.doesNotMatch(page,/id="captureAnalyzerFrame"/,'photo analysis must not run in a hidden iframe');
 assert.match(page,/id="analyzerFrame" title="マギアサークル解析"/,'capture analysis uses visible screen');
 assert.match(app,/show\('analyzing'\)/,'captures visibly transition to analysis');
-assert.match(app,/await analyzeCapturedCircle\(circle,\$\('useMagicInk'\)\.checked&&profile\.magicInk>0\)/,'camera waits for analysis, preserving selected crafting material');
+assert.match(app,/await analyzeCapturedCircle\(circle,creationInkCount\)/,'camera waits for analysis while preserving ink count');
 assert.match(app,/await revealOriginal\(analyzed,result\.failed\)/,'both results use the original reveal');
 assert.match(app,/const request=\{id:circle\.id,type:'capture',epoch:photoAnalysisEpoch,origin:circle\.origin\}/,
  'analysis retains whether capture came from handwritten editor');

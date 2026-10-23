@@ -2667,12 +2667,12 @@ button.creator-congratulations-close{
  .circle-drawing-status{margin:0}
 }
 
-/* Crafting material selector: isolated to the grimoire registration UI. */
-#library .magic-ink-option{padding:12px 14px;border:1px solid var(--border);background:#0c1723;margin:12px 0}
-#library .magic-ink-option label{display:flex;align-items:center;gap:9px;color:var(--gold);font-size:14px;font-weight:700;cursor:pointer}
-#library .magic-ink-option input{accent-color:#d8b574;width:18px;height:18px;flex:none}
-#library .magic-ink-option p{font-size:12px;color:var(--soft);margin:5px 0 0}
-#library .magic-ink-option input:disabled{cursor:not-allowed}
+/* Ink is chosen only when beginning a new circle. */
+#magicInkDialog #magicInkStock{color:var(--soft);font-size:13px;margin:12px 0}
+#magicInkDialog label{display:block;color:var(--gold);margin-bottom:6px}
+#magicInkDialog select{display:block;width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:#1a2131;color:var(--pale);font:inherit}
+#magicInkDialog .magic-ink-actions{display:flex;gap:10px;margin-top:18px}
+#magicInkDialog .magic-ink-actions button{flex:1}
 
 /* Registration entry points and camera dialog only. */
 #library .circle-register-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 18px}

@@ -10,8 +10,9 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,19,'existing dialogs plus two scoped onboarding dialogs');
-assert.equal(new Set(dialogs).size,19);
+assert.equal(dialogs.length,20,'existing dialogs plus magic ink selection dialog');
+assert.equal(new Set(dialogs).size,20);
+assert.ok(dialogs.includes('magicInkDialog'),'magic ink selection uses the existing dialog manager');
 assert.match(css,/dialog\{[^}]*transition:opacity \.2s[^}]*display \.2s allow-discrete,overlay \.2s allow-discrete/);
 assert.match(css,/dialog\[open\]\{opacity:1;transform:none\}/);
 assert.match(css,/@starting-style\{\s*dialog\[open\]/);
@@ -149,7 +150,7 @@ const closable={
  googleDriveExpiredDialog:'data-action="later"',
  deleteDataDialog:'cancelDeleteData'
 };
-const fixed=['saveErrorDialog','backupSetupDialog','circleFirstChoiceDialog','nameDialog'];
+const fixed=['saveErrorDialog','backupSetupDialog','circleFirstChoiceDialog','magicInkDialog','nameDialog'];
 const overlayFlows={
  circleDrawingDialog:['circleDrawingClose','閉じる'],
  circleCameraDialog:['cameraStop','閉じる'],
@@ -194,7 +195,7 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
 const pagedNative=['circleDrawingLessonDialog'];
-assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 19 native dialogs accounted for');
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 20 native dialogs accounted for');
 for(const id of pagedNative){
  assert.match(tagOf(id),/data-dungeon-frame="paged"/,'native lesson is a paged frame');
  const content=dialogMarkup(id);
