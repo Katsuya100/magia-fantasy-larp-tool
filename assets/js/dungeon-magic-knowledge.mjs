@@ -117,7 +117,7 @@ export function circleEffectDetails(circle,buffs=[],statusDuration=null){
   effect:'敵に'+ATTRIBUTES[attribute].label+'属性の🕸️弱体効果を与えます。持続時間と強さは魔法の威力に応じて変わり、相手の耐性でも変化します。',
   statusName:info.debuff,
   statusDescription:info.debuffDescription,
-  duration:isRevealed(circle)&&typeof statusDuration==='function'?statusDuration(a)+'ターン（威力連動）':'2〜6ターン（威力連動）'
+  duration:isRevealed(circle)&&typeof statusDuration==='function'?statusDuration(a)+'ターン':'2〜6ターン'
  };
 }
 export function attributeEffectGuide(buffs=[]){
