@@ -6,7 +6,8 @@ export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
-// Required XP curve offsets non-decaying repeat fight rewards.
+// EXP uses the approved scaling while overlevel replay receives less EXP;
+// this does not touch the independently rolled magic stone economy.
 export const XP_SCALE=45;
 // A fifth of an integer layer budget may be 0.2 EXP. Normalize each stored
 // accumulation to micro-EXP so five battles land on their exact threshold.
@@ -34,7 +35,15 @@ export function fightExperience(enemyLevel,playerLevel,layer){
  const budget=next>current
   ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
   :nextXp(current);
- return budget/5;
+ // At-level or under-leveled victories keep the existing designed
+ // five-fight XP budget. Farming substantially weaker layers must not
+ // overlevel away the 95% target before a real encounter takes place.
+ // One 10-level gap uses the current 1.85 early progression factor as a
+ // source-controlled, tunable game value (no test-only level rewrites).
+ const gap=Math.max(0,Number(playerLevel)-current);
+ const decay=num('xp_overlevel_decay_per_10_levels');
+ if(!(decay>=1&&Number.isFinite(decay)))throw Error('Invalid overlevel EXP falloff');
+ return budget/5/Math.pow(decay,gap/10);
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
 // Same upgraded-power duration applies to defense and debuff, hero and enemy.
