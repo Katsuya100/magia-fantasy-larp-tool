@@ -19,7 +19,7 @@ export function fightExperience(enemyLevel,playerLevel,layer){
  const budget=next>current
   ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
   :nextXp(current);
- return Math.max(1,Math.ceil(budget/5));
+ return budget/5;
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
 // Same upgraded-power duration applies to defense and debuff, hero and enemy.
