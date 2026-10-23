@@ -235,6 +235,7 @@ await assert.rejects(openStore(fakeIndexedDB({onOpen:'throw'})),/Storage denied/
 // Quota failure while writing the backup must abort conversion atomically.
 const quotaFactory=fakeIndexedDB(),quotaDb=await openStore(quotaFactory);
 const quotaProfile=await getProfile(quotaDb);
+await putCircle(quotaDb,{id:'pre-migration-proof',name:'保全する写真',image:photo});
 delete quotaProfile.xpScaleVersion;
 quotaProfile.level=92;quotaProfile.xp=20000;
 await saveProfile(quotaDb,quotaProfile);
@@ -246,8 +247,24 @@ assert.deepEqual(afterQuota.profile,beforeQuota.profile,'failed backup never par
 assert.deepEqual(afterQuota.integrity,beforeQuota.integrity,'failed backup never resigns the profile');
 assert.equal(await getDungeonXpMigrationBackup(quotaDb),null,'failed migration creates no partial backup');
 quotaFactory.failMigrationBackupWrites=false;
+// Failure at the very last integrity-seal write must also roll back the
+// previously staged backup and profile in the same IndexedDB transaction.
+quotaFactory.failIntegrityWrites=true;
+await assert.rejects(migrateDungeonXp(quotaDb),/Injected integrity write failure/);
+assert.deepEqual((await readDungeonSnapshot(quotaDb)).profile,beforeQuota.profile,'seal failure leaves unconverted profile');
+assert.deepEqual((await readDungeonSnapshot(quotaDb)).integrity,beforeQuota.integrity,'seal failure leaves original proof');
+assert.equal(await getDungeonXpMigrationBackup(quotaDb),null,'seal failure leaves no orphaned backup');
+quotaFactory.failIntegrityWrites=false;
 const afterRetry=await migrateDungeonXp(quotaDb);
 assert.equal(afterRetry.xpScaleVersion,45,'migration can retry safely after quota becomes available');
 assert.equal((await getDungeonXpMigrationBackup(quotaDb)).profile.xp,20000,'retry preserves original old EXP');
+// Tampering with the archived photo cannot be laundered into a replacement save.
+const archived=quotaFactory.databases.get('magia-dungeon-v1').get('settings').get('xpMigrationBackupV1');
+archived.circles[0].image=new Blob([Uint8Array.from([1,2,3])],{type:'image/jpeg'});
+const beforeBadPhotoRestore=await readDungeonSnapshot(quotaDb);
+await assert.rejects(restoreDungeonXpMigrationBackup(quotaDb),/署名または写真が一致しません/);
+const afterBadPhotoRestore=await readDungeonSnapshot(quotaDb);
+assert.deepEqual(afterBadPhotoRestore.profile,beforeBadPhotoRestore.profile,'tampered archival photo cannot overwrite play progress');
+assert.deepEqual(afterBadPhotoRestore.integrity,beforeBadPhotoRestore.integrity,'tampered archive cannot rewrite the trusted seal');
 quotaDb.close();
 console.log('PASS dungeon IndexedDB startup, atomic EXP backup, tab collision guard, photo persistence and failure modes');
