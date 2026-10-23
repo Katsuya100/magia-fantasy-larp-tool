@@ -1799,14 +1799,20 @@ function wire(){
   for(const button of originalXpButtons)button.hidden=!available;
  }).catch(error=>console.warn('EXP変換前の保全データを確認できませんでした',error));
  for(const button of originalXpButtons)button.addEventListener('click',()=>{
-  if(!window.confirm('EXP変換前のセーブを復元します。変換後に進めた冒険・装備・収集記録は失われます。続行しますか？'))return;
+  showDungeonDialog($('restoreOriginalXpDialog'));
+ });
+ $('cancelRestoreOriginalXp').addEventListener('click',()=>closeDungeonDialog($('restoreOriginalXpDialog')));
+ $('confirmRestoreOriginalXp').addEventListener('click',()=>{
   void exclusive(async()=>{
+   $('confirmRestoreOriginalXp').disabled=true;
    for(const other of originalXpButtons)other.disabled=true;
    try{
     await restoreDungeonXpMigrationBackup(db);
     location.reload();
    }catch(error){
+    $('confirmRestoreOriginalXp').disabled=false;
     for(const other of originalXpButtons)other.disabled=false;
+    closeDungeonDialog($('restoreOriginalXpDialog'));
     note('EXP変換前のセーブを復元できませんでした：'+String(error?.message||error));
    }
   });
