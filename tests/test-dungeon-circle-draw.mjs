@@ -8,7 +8,7 @@ import {
 
 assert.equal(DRAWN_GLYPH_LIMIT,32);
 assert.equal(DRAWN_POWER_RATE,.6);
-assert.equal(GLYPH_INK_SCALE,.09,'the pad can reach both rings and neighboring slots');
+assert.equal(GLYPH_INK_SCALE,.11,'the pad can reach both rings and neighboring slots');
 assert.equal(REVOLVER_DURATION_MS,250);
 assert.equal(drawnPower(500),300);
 assert.equal(drawnPower(1),250);
