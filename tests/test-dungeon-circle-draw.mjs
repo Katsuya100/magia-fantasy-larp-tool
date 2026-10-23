@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {
  DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,MIN_DUNGEON_POWER,GLYPH_INK_SCALE,REVOLVER_DURATION_MS,EDITOR_GLYPH_STEP,EDITOR_ZOOM,
- drawnPower,withDrawnPowerFloor,pointOnPad,glyphPoint,glyphAngle,sigilPoint,
+ drawnPower,withDrawnPowerFloor,pointOnPad,glyphPoint,glyphAngle,sigilPoint,visibleGlyphs,projectCircleToPad,
  padGlyphPoint,glyphInputPoint,sigilPadPoint,sigilInputPoint,sigilGlyphPadPoint,
  createDrawingModel,paintCircle,paintCaret,paintPad,initCircleDrawing
 } from '../assets/js/dungeon-circle-draw.mjs';
@@ -58,9 +58,31 @@ for(const i of [0,1,3,8,23]){
  }
 }
 for(const i of [0,6,12,18,23]){
- const p=sigilGlyphPadPoint({x:0,y:-1},i);
- assert.ok(Math.hypot(p.x,p.y)<1,'sigil zoom keeps the complete normal outer glyph inside the drawing pad');
+ const outside=sigilGlyphPadPoint({x:0,y:-1},i,24);
+ const inside=sigilGlyphPadPoint({x:0,y:1},i,24);
+ assert.ok(Math.hypot(outside.x,outside.y)>1,'sigil crop excludes outer-ring lettering');
+ assert.ok(Math.hypot(inside.x,inside.y)<1,'sigil crop shows only glyph marks entering the original inner area');
 }
+eq(Math.hypot(sigilPadPoint({x:.92,y:0}).x,sigilPadPoint({x:.92,y:0}).y),.92,'sigil retains its original writing boundary');
+assert.ok(.43/sigilRadius>1.5,'outer ring cannot appear completely inside sigil pad');
+for(const count of [1,2,7,24]){
+ for(const i of [0,Math.min(count-1,1),count-1]){
+  for(const p of [{x:0,y:0},{x:.8,y:-1}]){
+   const top=glyphPoint(p,i,count);
+   const start=projectCircleToPad(top,i,0,count),end=projectCircleToPad(top,i,1,count);
+   const spell=padGlyphPoint(p,i,i,count),sigil=sigilGlyphPadPoint(p,i,count);
+   eq(start.x,spell.x,'spell frame starts at same upper-centered point');
+   eq(start.y,spell.y,'spell frame starts at same upper-centered point');
+   eq(end.x,sigil.x,'sigil frame ends at same upper-centered point');
+   eq(end.y,sigil.y,'sigil frame ends at same upper-centered point');
+  }
+ }
+ eq((glyphAngle(0,count)+glyphAngle(count-1,count))/2,-Math.PI/2,'whole upper spell stays centered');
+}
+const testWorld={x:.5+.345,y:.5};
+const rotateQuarter=projectCircleToPad(testWorld,0,.25,1);
+const rotateHalf=projectCircleToPad(testWorld,0,.5,1);
+assert.ok(rotateQuarter.y>0&&rotateHalf.x<0,'one camera visibly rotates even on the first glyph');
 for(const p of [{x:0,y:0},{x:.6,y:-.8},{x:-1,y:1}]){
  const actual=sigilPadPoint(sigilInputPoint(p));
  eq(actual.x,p.x,'sigil pointer mapped to pixel x');
@@ -138,7 +160,7 @@ const caret=draws.find(d=>d[0]==='move');
 const caretRadius=Math.hypot(caret[1]-64,caret[2]-64)/128;
 assert.ok(caretRadius>.255&&caretRadius<.43,'caret is inside the magic-circle glyph band');
 const caretAngle=Math.atan2(caret[2]-64,caret[1]-64);
-assert.ok(Math.abs(caretAngle-(glyphAngle(0,1)-EDITOR_GLYPH_STEP/2))<1e-10,'caret marks the LEFT edge, not the glyph center');
+assert.ok(Math.abs(caretAngle-(glyphAngle(0,2)-EDITOR_GLYPH_STEP/2))<1e-10,'caret marks the LEFT edge, not the glyph center');
 draws.length=0;paintCaret(canvas,{...state,index:1},{size:128});
 const nextCaret=draws.find(d=>d[0]==='move');
 const nextAngle=Math.atan2(nextCaret[2]-64,nextCaret[1]-64);
@@ -154,10 +176,10 @@ try{
  assert.ok(draws.some(d=>d[1]==='rgb(113,169,186)'),'adjacent text uses a different ink');
  assert.ok(draws.some(d=>d[0]==='dash'&&d[1]===1.5&&d[2]===3.4),'the fine central dotted cross is rendered');
  draws.length=0;paintPad(canvas,state,[],0,{progress:.5});
- assert.ok(draws.some(d=>d[0]==='scale'&&d[1]!==1),'both modes scale during the lower pad transition');
- assert.ok(draws.some(d=>d[0]==='translate'&&d[1]!==100),'both modes move during transition');
+ assert.equal(draws.filter(d=>d[0]==='stroke'&&Math.abs(d[2]-2.7)<1e-10).length,2,'two glyphs are each painted once during transition');
+ assert.equal(draws.some(d=>d[0]==='scale'||d[0]==='translate'),false,'no layered, scaled renderings of two separate screens');
  draws.length=0;paintPad(canvas,{...state,mode:'sigil',ink:[]},[],0);
- assert.ok(draws.some(d=>d[0]==='stroke'&&d[1]==='#a99bc2'),'sigil pad also shows every drawn character');
+ assert.ok(draws.some(d=>d[0]==='stroke'&&d[1]==='rgb(169,155,194)'),'sigil crop preserves projected glyph strokes');
  draws.length=0;paintPad(canvas,state,[],.5);
  assert.ok(draws.some(d=>d[1]==='rgb(162,176,221)'),'color blends during the turn');
 }finally{if(originalWindow===undefined)delete globalThis.window;else globalThis.window=originalWindow;}
@@ -178,12 +200,14 @@ assert.doesNotMatch(css,/circle-drawing-to-sigil/,'upper preview no longer anima
 assert.match(source,/export const EDITOR_GLYPH_STEP=GLYPH_STEP;/);
 assert.match(source,/ringPoint\(RING_RADIUS,\(i\/96-\.5\)\*GLYPH_STEP\)/,'crosshair follows the actual upper-ring arc');
 assert.match(source,/paintCircle\(preview,model\.state,\{activeStroke,size:512\}\)/,'upper preview stays fixed while lower pad spins');
-assert.match(source,/glyphPoint\(p,i,1,exportImage\?null:viewIndex\)/,'each completed upper glyph occupies a fixed slot even as letter count changes');
+assert.match(source,/glyphPoint\(p,i,count,exportImage\?null:viewIndex\)/,'upper preview and export center the complete spell');
 assert.match(source,/animateMode\('sigil'/);
 assert.match(source,/animateMode\('spell'/);
 assert.match(source,/glyphInputPoint\(padPoint\)/);
 assert.match(source,/sigilInputPoint\(padPoint\)/);
-assert.match(source,/sigilGlyphPadPoint\(p,i\)/);
+assert.match(source,/project\(glyphPoint\(p,i,count\)\)/,'both screens use the same centered ink projection');
+assert.match(source,/const SIGIL_VIEW_RADIUS=INNER_RADIUS\/GUIDE_RADIUS;/,'original sigil crop retained');
+assert.doesNotMatch(source,/layer\(1-t|layer\(t,0/,'no composited render layers');
 assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
 assert.match(css,/width:min\(100cqw,100cqh\);height:min\(100cqw,100cqh\)/);
 assert.match(source,/viewIndex=startIndex\+\(target-startIndex\)\*eased/);
@@ -299,4 +323,4 @@ try{
  assert.equal(get('circleDrawingUndo').disabled,true);
  dialog.close();
 }finally{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
-console.log('PASS true zoom, exact top-bottom glyph alignment, sigil-visible letters, left-edge ring caret, curved guides and smooth two-way transitions');
+console.log('PASS centered spell, exact world projections, original sigil crop, one rotating camera and left-edge caret');
