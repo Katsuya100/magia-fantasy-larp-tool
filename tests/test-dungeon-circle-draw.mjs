@@ -150,12 +150,14 @@ assert.equal(full.goSigil(),true);
 assert.equal(full.state.letters.length,DRAWN_GLYPH_LIMIT);
 
 const draws=[];
+let activePath=[];
 const ctx={
  clearRect(){},fillRect(){draws.push(['fill',this.fillStyle]);},
- beginPath(){},moveTo(x,y){draws.push(['move',x,y]);},lineTo(){},closePath(){},arc(){},save(){},restore(){},
+ beginPath(){activePath=[];},moveTo(x,y){draws.push(['move',x,y]);activePath.push([x,y]);},
+ lineTo(x,y){activePath.push([x,y]);},closePath(){},arc(){},save(){},restore(){},
  translate(x,y){draws.push(['translate',x,y]);},scale(x,y){draws.push(['scale',x,y]);},
  setLineDash(dash){draws.push(['dash',...dash]);},
- stroke(){draws.push(['stroke',this.strokeStyle,this.lineWidth]);},fill(){},
+ stroke(){draws.push(['stroke',this.strokeStyle,this.lineWidth,activePath.slice()]);},fill(){},
  createRadialGradient(){return {addColorStop(){}};}
 };
 const canvas={width:0,height:0,getContext(){return ctx;},getBoundingClientRect(){return {left:0,top:0,width:200,height:200};}};
@@ -196,6 +198,24 @@ try{
  assert.ok(draws.some(d=>d[1]==='rgb(210,183,255)'),'active text uses the highlight ink');
  assert.ok(draws.some(d=>d[1]==='rgb(113,169,186)'),'adjacent text uses a different ink');
  assert.ok(draws.some(d=>d[0]==='dash'&&d[1]===1.5&&d[2]===3.4),'the fine central dotted cross is rendered');
+ // Both character-boundary spokes AND the middle dotted radial guide must
+ // start just outside the INNER ring and finish just inside the OUTER ring.
+ // Check actual canvas strokes, not only a source-code substring.
+ const checkRadialGuideBounds=progress=>{
+  draws.length=0;paintPad(canvas,state,[],0,{progress});
+  const lines=draws.filter(d=>d[0]==='stroke'&&
+   (d[1]==='#b8a0d6'||d[1]==='#f3dcaa')&&d[3]?.length===2);
+  assert.equal(lines.length,3,'both letter-boundary guides and the center vertical guide are present');
+  const center=projectCircleToPad({x:.5,y:.5},0,progress,2);
+  const radius=(GLYPH_INK_SCALE/EDITOR_ZOOM)*(1-progress)+(.255/.92)*progress;
+  for(const line of lines){
+   const measured=line[3].map(([x,y])=>Math.hypot((x-100)/100-center.x,(y-100)/100-center.y)*radius);
+   eq(measured[0],.255+.004,'vertical guide starts INSIDE the inner circle');
+   eq(measured[1],.43-.004,'vertical guide stops BEFORE the outer circle');
+  }
+ };
+ checkRadialGuideBounds(0);
+ checkRadialGuideBounds(.5);
  draws.length=0;paintPad(canvas,state,[],0,{progress:.5});
  assert.equal(draws.filter(d=>d[0]==='stroke'&&Math.abs(d[2]-2.7)<1e-10).length,2,'two glyphs are each painted once during transition');
  assert.equal(draws.some(d=>d[0]==='scale'||d[0]==='translate'),false,'no layered, scaled renderings of two separate screens');
@@ -355,4 +375,4 @@ try{
  assert.equal(get('circleDrawingConfirm').disabled,true,'reset editor begins with disabled confirm');
  dialog.close();
 }finally{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
-console.log('PASS 20 centered 18-degree slots, exactly two-slot viewport, trailing-blank-safe centering, wraparound navigation, disabled empty confirm and rotating sigil camera');
+console.log('PASS 20 centered 18-degree slots, two-slot viewport, trailing-blank centering, cyclic navigation, clipped radial guides and rotating sigil camera');
