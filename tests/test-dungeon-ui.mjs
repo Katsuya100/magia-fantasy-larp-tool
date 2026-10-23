@@ -39,7 +39,13 @@ try{
  await $('circleFirstChoiceDraw').fire('click');
  assert.equal($('circleFirstChoiceDialog').open,false,'choice closes after saving');
  assert.equal($('circleDrawingDialog').open,true,'draw option opens the drawing editor directly');
- assert.equal($('circleDrawingLessonDialog').open,true,'first spell entry explains the handwritten spell');
+ assert.equal($('circleDrawingLessonDialog').open,true,'first spell entry explains the handwritten spell; diagnostics: '+JSON.stringify({
+  overlayHidden:$('tutorialOverlay').hidden,drawOpen:$('circleDrawingDialog').open,
+  lessonOpen:$('circleDrawingLessonDialog').open,
+  lessonTitle:$('tutorialTitle').textContent,
+  choiceError:$('circleFirstChoiceError').textContent,
+  seen:(await getProfile(await openStore(env.factory))).drawingSpellTutorialSeen
+ }));
  assert.equal($('tutorialTitle').textContent,'呪文を書きましょう');
  await $('circleDrawingLessonClose').fire('click');
  assert.equal($('circleDrawingLessonDialog').open,false);
