@@ -291,9 +291,13 @@ export function reviveOnFatal(unit){
 }
 // Optional onStep is a read-only timeline of resolved actions; combat rules are unchanged.
 export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onStep){
+ const used=new Set();
+ const mark=(unit,check)=>{for(const s of unit.statuses)if(check(s))used.add(s);};
  const ps=prepare(player,pickPlayer,r),es=prepare(enemy,pickEnemy,r);
+ for(const [unit,pick] of [[player,pickPlayer],[enemy,pickEnemy]]){
+  mark(unit,s=>s.effect==='seal'||(pick>=0&&(s.effect==='shock'||s.effect==='confused')));
+ }
  const actions=[{u:player,t:enemy,sp:ps,name:'自分',side:'hero'},{u:enemy,t:player,sp:es,name:'敵',side:'enemy'}],log=[];
- const appliedDebuffs=new Set();
  const snapshot=u=>({...u,statuses:u.statuses.map(x=>({...x})),cooldowns:[...u.cooldowns]});
  const publish=(a,role,attribute,message,amount=0)=>{
   if(onStep)onStep({side:a.side,role,attribute,text:message,amount,
@@ -305,6 +309,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
   for(const a of actions){
    if(a.sp.role!==role)continue;
    const oldHp=role==='support'?a.u.hp:a.t.hp;
+   if(role==='debuff')mark(a.t,s=>s.id==='buff_law'||s.effect==='soak'||s.id==='resist_'+a.sp.attribute);
    let message;
    if(role==='basic'){
     // HP scaling approximates one fifth of an ordinary enemy in the recommended level band.
@@ -319,16 +324,19 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
       num('def_divisor')/(num('def_divisor')+relativeArmor)));
     a.t.hp=Math.max(0,a.t.hp-d);
     message=a.name+'：通常攻撃 '+d;
-   }else {
-    const previous=role==='debuff'?status(a.t,'debuff_'+a.sp.attribute):null;
-    message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
-    if(role==='debuff'&&!previous){
-     const applied=status(a.t,'debuff_'+a.sp.attribute);
-     if(applied&&['shock','seal','confused'].includes(applied.effect))appliedDebuffs.add(applied);
-    }
-   }
+   }else message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
    log.push(message);
    const amount=role==='support'?a.u.hp-oldHp:oldHp-a.t.hp;
+   if(role==='attack'||role==='basic'){
+    mark(a.u,s=>s.effect==='dizzy');
+    if(amount>0){
+     mark(a.u,s=>s.effect==='attack'||s.effect==='output');
+     mark(a.t,s=>s.effect==='incoming'||s.effect==='def'||
+      (role==='attack'&&(s.effect==='soak'||s.id==='resist_'+a.sp.attribute)));
+    }
+   }else if(role==='support'&&amount>0){
+    mark(a.u,s=>s.effect==='heal'||s.effect==='output');
+   }
    const revived=reviveOnFatal(a.t);
    publish(a,role,a.sp.attribute,message,amount);
    if(revived){
@@ -341,6 +349,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  for(const a of actions){
   for(const s of a.u.statuses){
    if(s.effect==='burn'){
+    used.add(s);
     const d=Math.max(num('status_tick_min_damage'),Math.round(a.u.stats.hp*Math.min(num('burn_max_hp_rate'),num('burn_hp_rate')*s.value)));
     const oldHp=a.u.hp;
     a.u.hp=Math.max(0,a.u.hp-d);
@@ -355,7 +364,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
      publish(a,'revive','law',revival,revived);
     }
    }
-   if(!appliedDebuffs.has(s))s.turns--;
+   if(used.has(s))s.turns--;
   }
   a.u.statuses=a.u.statuses.filter(s=>s.turns>0);
   a.u.cooldowns=a.u.cooldowns.map(x=>Math.max(0,x-1));
