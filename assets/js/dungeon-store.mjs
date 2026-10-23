@@ -163,17 +163,17 @@ export async function putCircle(db,circle,{repairImage=false}={}){
 }
 export const deleteCircle=(db,id)=>mutate(db,(settings,items)=>{items.delete(id);settings.delete(thumbnailKey(id));});
 // Derived photos are not part of the sealed save or Drive backup.
-export async function getCircleThumbnail(db,circle,createThumbnail){
+export async function getCircleThumbnail(db,circle,createThumbnail,size=192){
  const [saved,integrity]=await Promise.all([
   request(db,'settings','readonly',s=>s.get(thumbnailKey(circle.id))),
   request(db,'settings','readonly',s=>s.get('integrity'))
  ]);
  const proof=integrity?.photos?.[circle.id];
- if(typeof proof==='string'&&saved?.proof===proof&&saved.image instanceof Blob&&saved.image.size)return saved.image;
- const image=await createThumbnail(circle.image);
+ if(typeof proof==='string'&&saved?.proof===proof&&saved.image instanceof Blob&&saved.image.size&&(saved.size||192)>=size)return saved.image;
+ const image=await createThumbnail(circle.image,size);
  if(typeof proof==='string'){
   // A full local-storage quota must not prevent viewing an existing photo.
-  try{await request(db,'settings','readwrite',s=>s.put({proof,image},thumbnailKey(circle.id)),{silent:true});}
+  try{await request(db,'settings','readwrite',s=>s.put({proof,image,size},thumbnailKey(circle.id)),{silent:true});}
   catch(error){console.warn('縮小画像のキャッシュを保存できませんでした',error);}
  }
  return image;

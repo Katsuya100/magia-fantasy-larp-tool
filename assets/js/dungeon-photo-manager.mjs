@@ -1,31 +1,40 @@
 import {createCircleImageUrls} from './dungeon-image-urls.mjs';
 import {createCircleThumbnail} from './dungeon-thumbnails.mjs';
-import {getCircleThumbnail} from './dungeon-store.mjs?v=20261020.25';
+import {getCircleThumbnail} from './dungeon-store.mjs?v=20261023.20';
 
+// Match the grimoire card's CSS width and device density; do not enlarge other UI.
+export function grimoireThumbnailSize(cssWidth,pixelRatio=globalThis.devicePixelRatio||1){
+ const width=Number(cssWidth)||0;
+ if(width<=0)return 192;
+ const density=Math.min(3,Math.max(1,Number(pixelRatio)||1));
+ return Math.max(192,Math.min(512,Math.ceil(width*density/64)*64));
+}
 // UI thumbnails are disposable, never part of the signed game save.
 export function createDungeonPhotoManager(getDatabase,findCircle){
  const originals=createCircleImageUrls(),thumbUrls=createCircleImageUrls();
  const displayed=new Map(),pending=new Map();
  let queue=Promise.resolve(),observer=null,visible=new Set();
- function thumbnail(circle){
-  if(displayed.has(circle.id))return Promise.resolve(displayed.get(circle.id));
-  let task=pending.get(circle.id);
-  if(!task){
-   task=queue.then(()=>getCircleThumbnail(getDatabase(),circle,createCircleThumbnail));
-   queue=task.catch(()=>{});
-   pending.set(circle.id,task);
-   void task.then(()=>{if(pending.get(circle.id)===task)pending.delete(circle.id);},
-    ()=>{if(pending.get(circle.id)===task)pending.delete(circle.id);});
-  }
+ function thumbnail(circle,size=192){
+  const cached=displayed.get(circle.id);
+  if(cached&&cached.size>=size)return Promise.resolve(cached.blob);
+  const inFlight=pending.get(circle.id);
+  if(inFlight?.size>=size)return inFlight.task;
+  const task=queue.then(()=>getCircleThumbnail(getDatabase(),circle,createCircleThumbnail,size));
+  queue=task.catch(()=>{});
+  pending.set(circle.id,{task,size});
+  void task.then(()=>{if(pending.get(circle.id)?.task===task)pending.delete(circle.id);},
+   ()=>{if(pending.get(circle.id)?.task===task)pending.delete(circle.id);});
   return task;
  }
  async function attach(img,circle){
   try{
-   const blob=await thumbnail(circle);
+   // Only cards inside the grimoire receive a density-matched thumbnail.
+   const size=img.closest?.('#library')?grimoireThumbnailSize(img.getBoundingClientRect?.().width):192;
+   const blob=await thumbnail(circle,size);
    if(!visible.has(img)||img.isConnected===false)return;
    const old=displayed.get(circle.id);
-   if(old&&old!==blob)thumbUrls.release(old);
-   displayed.set(circle.id,blob);
+   if(old?.blob&&old.blob!==blob)thumbUrls.release(old.blob);
+   displayed.set(circle.id,{blob,size:old?.blob===blob?Math.max(old.size,size):size});
    img.src=thumbUrls.get(blob);
   }catch(error){
    if(visible.has(img))img.alt='縮小画像を表示できません。';
@@ -39,8 +48,8 @@ export function createDungeonPhotoManager(getDatabase,findCircle){
   for(const img of visible)if(!next.has(img))img.removeAttribute?.('src');
   visible=next;
   const ids=new Set(images.map(img=>img.dataset.circlePhotoId));
-  for(const [id,blob] of displayed)if(!ids.has(id)){
-   thumbUrls.release(blob);displayed.delete(id);
+  for(const [id,entry] of displayed)if(!ids.has(id)){
+   thumbUrls.release(entry.blob);displayed.delete(id);
   }
   const load=img=>{
    const circle=findCircle(img.dataset.circlePhotoId);
@@ -57,7 +66,7 @@ export function createDungeonPhotoManager(getDatabase,findCircle){
  }
  function forget(id,original){
   const thumb=displayed.get(id);
-  if(thumb)thumbUrls.release(thumb);
+  if(thumb)thumbUrls.release(thumb.blob);
   displayed.delete(id);
   for(const img of visible)if(img.dataset.circlePhotoId===id)img.removeAttribute?.('src');
   originals.release(original);
