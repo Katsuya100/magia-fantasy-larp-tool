@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {openStore,getProfile,allCircles,saveProfile} from '../assets/js/dungeon-store.mjs';
 import {newestCirclesFirst} from '../assets/js/dungeon-circle-order.mjs';
+import {makeUnit} from '../assets/js/dungeon-core.mjs';
 const originalRandom=Math.random;Math.random=()=>.9999;
 const wait=async(check,message)=>{const end=Date.now()+9000;while(Date.now()<end){if(await check())return;await new Promise(r=>setTimeout(r,25));}throw Error('UI timeout: '+message);};
 const btn=data=>({disabled:false,dataset:data,closest(){return this;}});
@@ -34,6 +35,10 @@ try{
  assert.equal($('nameDialog').open,false,'naming dialog closes after saving');
  assert.equal((await getProfile(await openStore(env.factory))).name,'星渡り');
  assert.match($('playerStats').innerHTML,/星渡り/);
+ const initialProfile=await getProfile(await openStore(env.factory));
+ const initialVitals=makeUnit(initialProfile.base,initialProfile.level);
+ assert.match($('playerStats').innerHTML,new RegExp('<small>HP</small><strong>'+initialVitals.stats.hp+'</strong>'),'profile retains maximum HP');
+ assert.match($('playerStats').innerHTML,new RegExp('<small>MP</small><strong>'+initialVitals.maxMp+'</strong>'),'profile displays maximum MP');
  Math.random=()=>.01;
  assert.match($('collectionGrid').innerHTML,/？？？/);
  assert.doesNotMatch($('collectionGrid').innerHTML,/失われた王冠/);
