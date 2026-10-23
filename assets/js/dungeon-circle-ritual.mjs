@@ -6,14 +6,14 @@ export const CIRCLE_REVEAL_DURATION_MS=1000;
 export const CIRCLE_GRAND_REVEAL_DURATION_MS=2300;
 export const isGrandCircleReveal=analysis=>Number.isFinite(analysis?.power)&&analysis.power>=500;
 const ATTRIBUTES={
- flame:['🔥','炎'],bolt:['⚡','雷'],aqua:['💧','水'],storm:['🌪️','風'],
- gravity:['🪨','重力'],law:['⚖️','秩序'],chaos:['🌀','混沌']
+ flame:['🔥','flame'],bolt:['⚡','bolt'],aqua:['💧','aqua'],storm:['🌪️','storm'],
+ gravity:['🪨','gravity'],law:['⚖️','law'],chaos:['🌀','chaos']
 };
 const ROLES={attack:['⚔️','攻撃'],defense:['🛡️','防御'],support:['✚','回復'],debuff:['🕸️','弱体']};
 export function circleRitualLabels(analysis){
  const attribute=ATTRIBUTES[analysis?.attribute]||['✦','未知'];
  const role=ROLES[analysis?.role]||['✧','未知'];
- return [attribute[0]+' '+attribute[1]+'の相',role[0]+' '+role[1]+'の紋'];
+ return [attribute[0]+' '+attribute[1],role[0]+' '+role[1]+'の紋'];
 }
 function reducedMotion(){
  return typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true;

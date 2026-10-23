@@ -13,9 +13,9 @@ for(const power of [0,499,undefined,NaN])assert.equal(isGrandCircleReveal({power
 for(const power of [500,501,1000])assert.equal(isGrandCircleReveal({power}),true);
 assert.equal(isGrandCircleReveal(null),false);
 const attributes={
- flame:'🔥 炎の相',bolt:'⚡ 雷の相',aqua:'💧 水の相',storm:'🌪️ 風の相',
- gravity:'🪨 重力の相',law:'⚖️ 秩序の相',chaos:'🌀 混沌の相'
-};
+  flame:'🔥 flame',bolt:'⚡ bolt',aqua:'💧 aqua',storm:'🌪️ storm',
+  gravity:'🪨 gravity',law:'⚖️ law',chaos:'🌀 chaos'
+ };
 const roles={attack:'⚔️ 攻撃の紋',defense:'🛡️ 防御の紋',support:'✚ 回復の紋',debuff:'🕸️ 弱体の紋'};
 for(const [attribute,text] of Object.entries(attributes))
  assert.equal(circleRitualLabels({attribute,role:'attack'})[0],text);
@@ -162,9 +162,9 @@ try{
  assert.match(failedRoot.className,/circle-ritual--reveal circle-ritual--failed/,'failure retains the same result layout');
  assert.equal(failedRoot.children[0].src,'blob:failed-photo','failure result includes original photo');
  const labels=failedRoot.children.find(n=>n.className==='circle-ritual__labels');
- assert.deepEqual(labels.children.map(n=>n.textContent),['⚖️ 秩序の相','✚ 回復の紋'],
+ assert.deepEqual(labels.children.map(n=>n.textContent),['⚖️ law','✚ 回復の紋'],
   'failed reveal must have the same two labels as the original successful result');
- assert.equal(failedRoot.attributes['aria-label'],'⚖️ 秩序の相、✚ 回復の紋',
+ assert.equal(failedRoot.attributes['aria-label'],'⚖️ law、✚ 回復の紋',
   'failed reveal keeps the normal result dialog label');
  const proceed=failedRoot.children.at(-1);
  assert.equal(proceed.disabled,false,'reduced motion still permits dismissal');
