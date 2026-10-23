@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
@@ -18,6 +18,21 @@ assert.ok(p.base.hp>=90&&p.base.hp<=110);
 assert.equal(p.run,null);
 assert.deepEqual(p.obtainedItemIds,[],'new profiles begin without acquired item types');
 p.returns=2;p.inventory=[{id:'heal_s',value:27,bonus:'buff_aqua'}];p.run={floor:3,hp:42,loot:[]};
+await saveProfile(db,p);
+// Existing signed saves must convert EXP exactly once, including unbanked
+// battle rewards and unfinished return-screen rewards.
+p.level=92;p.xp=90000;p.run.xp=45000;
+p.pendingReturn={gained:22500,before:{level:92,xp:4500},steps:['xp'],step:0};
+await saveProfile(db,p);
+const converted=await migrateDungeonXp(db);
+assert.equal(converted.xp,2000);
+assert.equal(converted.run.xp,1000);
+assert.equal(converted.pendingReturn.gained,500);
+assert.equal(converted.pendingReturn.before.xp,100);
+assert.equal(converted.xpScaleVersion,45);
+assert.deepEqual(await migrateDungeonXp(db),converted,'repeat startup never scales twice');
+assert.equal((await getProfile(db)).xp,2000,'converted signed save persists');
+p.level=1;p.xp=0;p.run.xp=0;delete p.pendingReturn;p.xpScaleVersion=45;
 await saveProfile(db,p);
 const reread=await getProfile(db);
 assert.deepEqual(reread,p);
