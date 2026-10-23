@@ -94,15 +94,23 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// Magic stones keep one base chance on new or repeated layers at every level.
-// Retain the former signature for compatible saved expeditions.
-export function magicStoneDropChance(_playerLevel,_layer,_firstClear=false){
- return num('magic_stone_drop_chance');
+// Reward magic stones increasingly with dungeon depth, including beyond
+// the player Lv150 cap. Farming and first clears share the same probability.
+// Continuous geometric interpolation avoids sudden jumps at rank checkpoints.
+// Keep the existing (playerLevel, layer, firstClear) signature for callers.
+export function magicStoneDropChance(_playerLevel,layer=1,_firstClear=false){
+ const start=num('magic_stone_drop_chance');
+ const end=num('magic_stone_drop_chance_layer_150');
+ const maxLayer=num('magic_stone_drop_curve_end_layer');
+ if(!(start>0&&end>=start&&end<=1&&Number.isSafeInteger(maxLayer)&&maxLayer>1))
+  throw Error('魔導石の排出カーブの設定が不正です。');
+ const raw=Number(layer);
+ const depth=Number.isFinite(raw)?Math.min(maxLayer,Math.max(1,Math.floor(raw))):1;
+ const progress=(depth-1)/(maxLayer-1);
+ return Math.min(1,Number((start*Math.pow(end/start,progress)).toFixed(12)));
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
- const stoneChance=context.playerLevel==null
-  ?num('magic_stone_drop_chance')
-  :magicStoneDropChance(context.playerLevel,context.layer??1,context.firstClear===true);
+ const stoneChance=magicStoneDropChance(context.playerLevel,context.layer??1,context.firstClear===true);
  return {
   collection:countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r),
   stone:countSuccesses(num('magic_stone_drop_rolls'),stoneChance,r),
