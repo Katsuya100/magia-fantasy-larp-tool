@@ -1672,12 +1672,11 @@ function wire(){
  document.addEventListener('load',onCirclePhotoLoad,true);
  wireFavoriteHold();
  magicStoneTutorial=initMagicStoneTutorial(document);
- $('circleDrawingLessonDialog').addEventListener('close',tryDrawingFingerIntro);
  tutorial=initCircleTutorial(document,async toCamera=>{
   profile.tutorialDone=true;
   try{await persist();}catch(error){note('チュートリアルの保存に失敗しました：'+error.message);}
   if(toCamera||cameraAfterTutorial){cameraAfterTutorial=false;show('library');openCircleCamera();}
- });
+ },tryDrawingFingerIntro);
  $('tutorialReplay').addEventListener('click',()=>{
   if(!profile.run&&!activeAnalysis){cameraAfterTutorial=true;closeCamera();tutorial.open();}
  });
