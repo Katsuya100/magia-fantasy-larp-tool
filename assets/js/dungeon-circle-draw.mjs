@@ -54,7 +54,7 @@ export function normalizedGlyph(strokes){
  const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
  return strokes.map(stroke=>stroke.map(p=>({x:(p.x-cx)*1.7/span,y:(p.y-cy)*1.7/span})));
 }
-// Each touchpad coordinate is a real scaled position on the finished ring.
+// The active letter maps directly onto the finished ring; neighboring slots are angularly magnified only in the editor.
 // Left/right select slots, while history applies only to strokes of the central sigil.
 function snapshot(s){return s.sigil.map(stroke=>stroke.slice());}
 export function createDrawingModel(){
@@ -185,7 +185,7 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
   const glyph=visible[i];
   if(!glyph||glyph.space)continue;
   for(const stroke of glyph.strokes){
-   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,visible.length,exportImage?null:viewIndex);return {x:q.x*size,y:q.y*size};},size*.0072);
+   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,1,exportImage?null:viewIndex);return {x:q.x*size,y:q.y*size};},size*.0072);
   }
  }
  const transform=p=>{const q=sigilPoint(p);return {x:q.x*size,y:q.y*size};};
@@ -199,7 +199,7 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
  ctx.clearRect(0,0,size,size);
  if(state.mode!=='spell'||state.index>=DRAWN_GLYPH_LIMIT)return;
- const angle=viewIndex===null?glyphAngle(state.index,Math.max(1,state.letters.length)):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
+ const angle=viewIndex===null?glyphAngle(state.index,1):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
  const radius=size*.345,half=size*.027;
  ctx.beginPath();
  ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
