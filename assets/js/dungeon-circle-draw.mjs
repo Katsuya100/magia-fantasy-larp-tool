@@ -277,8 +277,9 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
    ctx.translate(w/2+dx*w,h/2+dy*h);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);
    paint();ctx.restore();
   };
-  layer(1-t,-.17*t,.14*t,1-.3*t,drawSpell);
-  layer(t,.17*(1-t),-.14*(1-t),.7+.3*t,drawSigil);
+  // The spell ring recedes upward toward its actual position outside the central sigil.
+  layer(1-t,0,-.42*t,1-.58*t,drawSpell);
+  layer(t,0,.2*(1-t),.7+.3*t,drawSigil);
  }else if(state.mode==='spell')drawSpell();
  else drawSigil();
 }
