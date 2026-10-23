@@ -8,8 +8,13 @@ const GUIDE_RADIUS=.92;
 export const GLYPH_INK_SCALE=.11;
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
-// The editor magnifies the angular sweep; saved glyph positions stay on the original 32-slot circle.
-export const EDITOR_GLYPH_STEP=GLYPH_STEP*2.25;
+const RING_RADIUS=.345;
+// Magnify the *view*, not individual angular gaps: the lower pad must be a true
+// rotated crop of the unchanged upper magic circle.
+export const EDITOR_ZOOM=1.3;
+export const EDITOR_GLYPH_STEP=GLYPH_STEP;
+const SPELL_VIEW_RADIUS=GLYPH_INK_SCALE/EDITOR_ZOOM;
+const SIGIL_VIEW_RADIUS=.39;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
  if(!Number.isFinite(power)||power<=0||!Number.isFinite(rate)||rate<=0||rate>1)throw Error('手書き魔法陣の威力が不正です。');
@@ -39,8 +44,8 @@ export function caretAngle(count){return -Math.PI/2+count*GLYPH_STEP/2;}
 export function glyphPoint(point,index,count=1,viewIndex=null){
  const angle=viewIndex===null?glyphAngle(index,count):-Math.PI/2+(index-viewIndex)*GLYPH_STEP;
  const tangent=angle+Math.PI/2,dx=point.x*GLYPH_INK_SCALE,dy=point.y*GLYPH_INK_SCALE;
- return {x:.5+.345*Math.cos(angle)+dx*Math.cos(tangent)-dy*Math.sin(tangent),
-  y:.5+.345*Math.sin(angle)+dx*Math.sin(tangent)+dy*Math.cos(tangent)};
+ return {x:.5+RING_RADIUS*Math.cos(angle)+dx*Math.cos(tangent)-dy*Math.sin(tangent),
+  y:.5+RING_RADIUS*Math.sin(angle)+dx*Math.sin(tangent)+dy*Math.cos(tangent)};
 }
 export function sigilPoint(point){
  return {x:.5+point.x*INNER_RADIUS/GUIDE_RADIUS,y:.5+point.y*INNER_RADIUS/GUIDE_RADIUS};
@@ -200,21 +205,40 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
  ctx.clearRect(0,0,size,size);
  if(state.mode!=='spell'||state.index>=DRAWN_GLYPH_LIMIT)return;
  const angle=viewIndex===null?glyphAngle(state.index,1):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
- const radius=size*.345,half=size*.027;
+ const radius=size*.481,half=size*.009; // Outside the outer ring and usual glyph ink.
  ctx.beginPath();
  ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
  ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
  ctx.strokeStyle='#a64a31';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.globalAlpha=.92;ctx.stroke();ctx.globalAlpha=1;
 }
-// The pad is a zoomed, un-clipped section of the circle: neighboring letters
-// stay visible and blend into the active-ink color as the revolver turns.
-function padGlyphPoint(point,index,viewIndex){
- const theta=-Math.PI/2+(index-viewIndex)*EDITOR_GLYPH_STEP,tangent=theta+Math.PI/2;
- const x=.345*Math.cos(theta)+GLYPH_INK_SCALE*(point.x*Math.cos(tangent)-point.y*Math.sin(tangent));
- const y=.345*Math.sin(theta)+GLYPH_INK_SCALE*(point.x*Math.sin(tangent)+point.y*Math.cos(tangent));
- return {x:x/GLYPH_INK_SCALE,y:(y+.345)/GLYPH_INK_SCALE};
+// Everything below is projected from the SAME saved circle coordinates.
+// Spell pad: rotate the world so the chosen slot is at twelve o'clock, then
+// uniformly magnify the ring section. No editor-only angular stretching.
+export function padGlyphPoint(point,index,viewIndex){
+ const world=glyphPoint(point,index,1);
+ const dx=world.x-.5,dy=world.y-.5,theta=-viewIndex*GLYPH_STEP;
+ const x=dx*Math.cos(theta)-dy*Math.sin(theta);
+ const y=dx*Math.sin(theta)+dy*Math.cos(theta);
+ return {x:x/SPELL_VIEW_RADIUS,y:(y+RING_RADIUS)/SPELL_VIEW_RADIUS};
 }
-// Canvas-space crosshairs follow the curved letter band, not a rectangular grid.
+export function glyphInputPoint(point){
+ return {x:point.x/EDITOR_ZOOM,y:point.y/EDITOR_ZOOM};
+}
+// Sigil pad is a centered, slightly wider crop, revealing the written ring
+// around the central sigil without independently relocating the letters.
+export function sigilGlyphPadPoint(point,index){
+ const world=glyphPoint(point,index,1);
+ return {x:(world.x-.5)/SIGIL_VIEW_RADIUS,y:(world.y-.5)/SIGIL_VIEW_RADIUS};
+}
+export function sigilPadPoint(point){
+ const world=sigilPoint(point);
+ return {x:(world.x-.5)/SIGIL_VIEW_RADIUS,y:(world.y-.5)/SIGIL_VIEW_RADIUS};
+}
+export function sigilInputPoint(point){
+ const scale=SIGIL_VIEW_RADIUS*GUIDE_RADIUS/INNER_RADIUS;
+ return {x:point.x*scale,y:point.y*scale};
+}
+// Curved crosshairs, slot spokes and both modes' ink all share these projections.
 export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,transition=null){
  const rect=canvas.getBoundingClientRect();
  if(!rect.width||!rect.height)return;
@@ -223,9 +247,9 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  ctx.fillStyle='#03050b';ctx.fillRect(0,0,w,h);
  const scale=Math.min(w,h)/2,at=p=>({x:w/2+p.x*scale,y:h/2+p.y*scale});
- const ringPoint=(radius,angle)=>at({x:radius*Math.sin(angle)/GLYPH_INK_SCALE,
-  y:(.345-radius*Math.cos(angle))/GLYPH_INK_SCALE});
- const halfStep=EDITOR_GLYPH_STEP/2;
+ const ringPoint=(radius,angle)=>at({x:radius*Math.sin(angle)/SPELL_VIEW_RADIUS,
+  y:(RING_RADIUS-radius*Math.cos(angle))/SPELL_VIEW_RADIUS});
+ const halfStep=GLYPH_STEP/2;
  const drawSpell=()=>{
   // Actual inner and outer ring arcs.
   ctx.save();ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,6*dpr]);
@@ -237,7 +261,7 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
    }
    ctx.strokeStyle=radius===INNER_RADIUS?'#a48968':'#866e9c';ctx.stroke();
   }
-  // The two spokes delimit exactly one magnified revolver turn.
+  // The two spokes delimit one actual circle slot, not a stretched angle.
   ctx.strokeStyle='#b8a0d6';ctx.lineWidth=1.35*dpr;ctx.setLineDash([3*dpr,5*dpr]);
   for(const theta of [-halfStep,halfStep]){
    const inner=ringPoint(INNER_RADIUS-.025,theta),outer=ringPoint(.43+.025,theta);
@@ -249,12 +273,12 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
   ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
   ctx.beginPath();
   for(let i=0;i<=96;i++){
-   p=ringPoint(.345,(i/96-.5)*EDITOR_GLYPH_STEP);
+   p=ringPoint(RING_RADIUS,(i/96-.5)*GLYPH_STEP);
    if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
   }
   ctx.stroke();ctx.restore();
   const drawn=state.letters.slice();
-  if(state.ink.length||activeStroke?.length)drawn[state.index]={strokes:[...state.ink,...(activeStroke?.length?[activeStroke]:[])]};
+  if(state.mode==='spell'&&(state.ink.length||activeStroke?.length))drawn[state.index]={strokes:[...state.ink,...(activeStroke?.length?[activeStroke]:[])]};
   for(let i=0;i<drawn.length;i++){
    const glyph=drawn[i];if(!glyph?.strokes||Math.abs(i-viewIndex)>3)continue;
    const highlight=Math.max(0,1-Math.abs(i-viewIndex));
@@ -263,10 +287,24 @@ export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index,tr
   }
  };
  const drawSigil=()=>{
-  ctx.save();ctx.strokeStyle='#74718b';ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,7*dpr]);
-  ctx.beginPath();ctx.arc(w/2,h/2,scale*GUIDE_RADIUS,0,Math.PI*2);ctx.stroke();ctx.restore();
-  for(const stroke of state.sigil)strokePath(ctx,stroke,at,2.4*dpr,'#d2b7ff',9*dpr);
-  if(activeStroke?.length&&state.mode==='sigil')strokePath(ctx,activeStroke,at,2.4*dpr,'#e8d9ff',13*dpr);
+  // Inner/outer circle guides, and all adjacent/remote letters, use the same
+  // fixed absolute coordinates as the upper finished-circle preview.
+  ctx.save();ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,7*dpr]);
+  for(const radius of [INNER_RADIUS,.43]){
+   ctx.beginPath();ctx.arc(w/2,h/2,scale*radius/SIGIL_VIEW_RADIUS,0,Math.PI*2);
+   ctx.strokeStyle=radius===INNER_RADIUS?'#a48968':'#866e9c';ctx.stroke();
+  }
+  ctx.restore();
+  const drawn=state.letters.slice();
+  if(state.mode==='spell'&&state.ink.length)drawn[state.index]={strokes:state.ink};
+  for(let i=0;i<drawn.length;i++){
+   if(!drawn[i]?.strokes)continue;
+   for(const stroke of drawn[i].strokes){
+    strokePath(ctx,stroke,p=>at(sigilGlyphPadPoint(p,i)),2.2*dpr,'#a99bc2',5*dpr);
+   }
+  }
+  for(const stroke of state.sigil)strokePath(ctx,stroke,p=>at(sigilPadPoint(p)),2.6*dpr,'#d2b7ff',9*dpr);
+  if(activeStroke?.length&&state.mode==='sigil')strokePath(ctx,activeStroke,p=>at(sigilPadPoint(p)),2.6*dpr,'#e8d9ff',13*dpr);
  };
  if(transition){
   const t=Math.max(0,Math.min(1,transition.progress));
@@ -327,7 +365,7 @@ export function initCircleDrawing(doc,{onSave}){
    const t=Math.min(1,(time-start)/REVOLVER_DURATION_MS);
    const eased=t*t*(3-2*t);
    viewIndex=startIndex+(target-startIndex)*eased;
-   // Restore the wheel's original angle before entering sigil mode.
+   // Only the rotated crop turns; the finished-circle preview stays fixed.
    repaint();
    if(t<1)raf.call(window,step);
    else{animating=false;repaint();}
@@ -362,13 +400,16 @@ export function initCircleDrawing(doc,{onSave}){
  pad.addEventListener('pointerdown',event=>{
   if(busy||animating||pointerId!==null||event.pointerType==='mouse'&&event.button!==0)return;
   event.preventDefault();
-  pointerId=event.pointerId;activeStroke=[pointOnPad(event.clientX,event.clientY,pad.getBoundingClientRect())];
+  pointerId=event.pointerId;
+  const p=pointOnPad(event.clientX,event.clientY,pad.getBoundingClientRect());
+  activeStroke=[model.state.mode==='spell'?glyphInputPoint(p):sigilInputPoint(p)];
   pad.setPointerCapture?.(event.pointerId);repaint();
  });
  pad.addEventListener('pointermove',event=>{
   if(pointerId!==event.pointerId||!activeStroke)return;
   event.preventDefault();
-  const p=pointOnPad(event.clientX,event.clientY,pad.getBoundingClientRect()),prev=activeStroke.at(-1);
+  const padPoint=pointOnPad(event.clientX,event.clientY,pad.getBoundingClientRect());
+  const p=model.state.mode==='spell'?glyphInputPoint(padPoint):sigilInputPoint(padPoint),prev=activeStroke.at(-1);
   if(Math.hypot(p.x-prev.x,p.y-prev.y)>.005&&activeStroke.length<2500){activeStroke.push(p);repaint();}
  });
  pad.addEventListener('pointerup',event=>finishPointer(event));
