@@ -203,6 +203,10 @@ try{
  assert.ok(draws.some(d=>d[0]==='stroke'&&d[1]==='rgb(169,155,194)'),'sigil crop preserves projected glyph strokes');
  draws.length=0;paintPad(canvas,state,[],.5);
  assert.ok(draws.some(d=>d[1]==='rgb(162,176,221)'),'color blends during the turn');
+ draws.length=0;paintPad(canvas,state,[],19.5);
+ assert.ok(draws.some(d=>d[1]==='rgb(162,176,221)'),'color blend stays smooth crossing the 19-to-0 seam');
+ draws.length=0;paintPad(canvas,state,[],20);
+ assert.ok(draws.some(d=>d[1]==='rgb(210,183,255)'),'wrapped slot zero has the original active ink color');
 }finally{if(originalWindow===undefined)delete globalThis.window;else globalThis.window=originalWindow;}
 
 const html=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
