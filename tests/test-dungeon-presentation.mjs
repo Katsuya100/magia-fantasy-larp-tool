@@ -152,7 +152,7 @@ assert.match(css,/\.relic-card\.locked/);
 assert.match(css,/\.name-dialog::backdrop/);
 assert.match(css,/\.circle-power-tips-dialog img/,'example image uses the shared tips popup');
 assert.match(css,/@media\(max-width:630px\)/);
-assert.match(page,/🔥flame\s*\/\s*⚡️bolt\s*\/\s*💧aqua/);
+assert.match(page,/<option value="flame">🔥flame<\/option><option value="bolt">⚡bolt<\/option><option value="aqua">💧aqua/,'element labels are English in grimoire filters');
 assert.match(page,/🌪️storm\s*\/\s*🪨gravity\s*\/\s*⚖️law\s*\/\s*🌀chaos/);
 assert.match(page,/<dialog id="loadoutDialog"/);
 assert.match(page,/id="loadoutOptions" class="picker-grid"/);
