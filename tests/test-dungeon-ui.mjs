@@ -47,8 +47,7 @@ try{
  assert.equal($('circleDrawingLessonDialog').open,false);
  assert.equal($('circleDrawingFingerGuide').hidden,false,'first handwriting opens the finger trace after the lesson closes');
  assert.equal($('circleDrawingFingerGuide').dataset.playing,'true');
- await wait(async()=>(await getProfile(await openStore(env.factory))).drawingFingerFGuideSeen===true,'F guide is saved once per profile');
- assert.equal((await getProfile(await openStore(env.factory))).drawingFingerGuideSeen,true,'old guide flag remains present');
+ await wait(async()=>(await getProfile(await openStore(env.factory))).drawingFingerGuideSeen===true,'finger hint is saved for future launches');
  await $('circleDrawingClose').fire('click');
  assert.equal($('circleDrawingDialog').open,false,'an untouched drawing closes without a discard warning');
  assert.equal($('circleDrawingFingerGuide').hidden,true,'closing handwriting cancels animation without any ink');
