@@ -1,3 +1,4 @@
+import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.27';
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
 import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
@@ -159,7 +160,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const confirm=dialog.querySelector('[data-action="confirm"]');
    const back=dialog.querySelector('[data-action="back"]');
    const finish=accepted=>{
-    dialog.close();
+    closeDungeonDialog(dialog);
     confirm.removeEventListener('click',approve);
     back.removeEventListener('click',reject);
     dialog.removeEventListener('cancel',cancel);
@@ -173,7 +174,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    back.addEventListener('click',reject);
    dialog.addEventListener('cancel',cancel);
    pendingConfirmCancel=reject;
-   dialog.showModal();
+   showDungeonDialog(dialog);
   });
  }
  function saveDetails(label,snapshot){
@@ -204,7 +205,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     }
     choicePending=false;
     pendingChoiceCancel=null;
-    conflictDialog.close();
+    closeDungeonDialog(conflictDialog);
     conflictDialog.removeEventListener('cancel',cancel);
     for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.removeEventListener('click',handler);
     resolve(choice);
@@ -219,7 +220,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    for(const [name,handler] of handlers)conflictDialog.querySelector('[data-action="'+name+'"]')?.addEventListener('click',handler);
    conflictDialog.addEventListener('cancel',cancel);
    pendingChoiceCancel=()=>finish('later');
-   conflictDialog.showModal();
+   showDungeonDialog(conflictDialog);
   });
  }
  async function checkedRemote(file,refresh=false){
@@ -580,11 +581,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  button.hidden=false;
  const expiredDialog=doc?.getElementById('googleDriveExpiredDialog');
  expiredDialog?.querySelector('[data-action="reconnect"]')?.addEventListener('click',()=>{
-  expiredDialog.close();
+  closeDungeonDialog(expiredDialog);
   oauthPending=Boolean(client);
   client?.requestAccessToken({prompt:'consent'});
  });
- expiredDialog?.querySelector('[data-action="later"]')?.addEventListener('click',()=>expiredDialog.close());
+ expiredDialog?.querySelector('[data-action="later"]')?.addEventListener('click',()=>closeDungeonDialog(expiredDialog));
  const connectOrCheck=()=>{
   if(drive&&Date.now()<expires){
    void sync(true).then(outcome=>{
