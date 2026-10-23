@@ -2,19 +2,19 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {
  DRAWN_GLYPH_LIMIT,DRAWN_POWER_RATE,MIN_DUNGEON_POWER,GLYPH_INK_SCALE,REVOLVER_DURATION_MS,EDITOR_GLYPH_STEP,EDITOR_ZOOM,
- drawnPower,withDrawnPowerFloor,pointOnPad,glyphPoint,glyphAngle,sigilPoint,visibleGlyphs,projectCircleToPad,
+ drawnPower,withDrawnPowerFloor,pointOnPad,glyphPoint,glyphAngle,sigilPoint,visibleGlyphs,writtenGlyphCount,projectCircleToPad,
  padGlyphPoint,glyphInputPoint,sigilPadPoint,sigilInputPoint,sigilGlyphPadPoint,
  createDrawingModel,paintCircle,paintCaret,paintPad,initCircleDrawing
 } from '../assets/js/dungeon-circle-draw.mjs';
 
-assert.equal(DRAWN_GLYPH_LIMIT,24,'upper and lower circles must both have 24 slots');
+assert.equal(DRAWN_GLYPH_LIMIT,20,'upper and lower circles both use 20 real character slots');
 assert.equal(DRAWN_POWER_RATE,.6);
 assert.equal(GLYPH_INK_SCALE,.11,'the pad can reach both rings and neighboring slots');
 assert.equal(REVOLVER_DURATION_MS,250);
-assert.ok(Math.abs(EDITOR_GLYPH_STEP-Math.PI/12)<1e-12,'each letter spans exactly 15 degrees on both screens');
+assert.ok(Math.abs(EDITOR_GLYPH_STEP-Math.PI/10)<1e-12,'each letter spans exactly 18 degrees on both screens');
 assert.ok(Math.abs(glyphAngle(1,1)-glyphAngle(0,1)-EDITOR_GLYPH_STEP)<1e-12,'upper letter interval equals lower revolver step');
 const visibleSlots=2*Math.asin((GLYPH_INK_SCALE/EDITOR_ZOOM)/.345)/EDITOR_GLYPH_STEP;
-assert.ok(visibleSlots>2&&visibleSlots<2.1,'lower viewport shows the center character and half of each neighbor');
+assert.ok(Math.abs(visibleSlots-2)<1e-12,'lower viewport remains precisely two real slots wide after the limit changes');
 assert.ok(EDITOR_ZOOM>1&&EDITOR_ZOOM<1.22,'real optical zoom preserves both visible ring guides');
 assert.equal(drawnPower(500),300);
 assert.equal(drawnPower(1),250);
@@ -28,7 +28,7 @@ assert.ok(Math.abs(glyphPoint({x:0,y:0},1,3).x-.5)<1e-9);
 assert.ok(glyphPoint({x:0,y:-1},0,1).y<.07,'letter ink reaches beyond the outer circle');
 assert.ok(glyphPoint({x:0,y:1},0,1).y>.24,'letter ink reaches beyond the inner circle');
 assert.ok(glyphPoint({x:1,y:0},0,2).x>.55,'a stroke overlaps the neighboring slot');
-for(const [i,count] of [[0,1],[1,3],[7,16],[23,24]]){
+for(const [i,count] of [[0,1],[1,3],[7,16],[19,20]]){
  const square=[{x:-.6,y:-.6},{x:.6,y:-.6},{x:.6,y:.6}].map(p=>glyphPoint(p,i,count));
  const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  assert.ok(Math.abs(d(square[0],square[1])-d(square[1],square[2]))<1e-12,'glyph aspect ratio remains square');
@@ -39,7 +39,7 @@ for(const [i,count] of [[0,1],[1,3],[7,16],[23,24]]){
 const eq=(a,b,msg)=>assert.ok(Math.abs(a-b)<1e-10,msg+': '+a+' != '+b);
 const spellRadius=GLYPH_INK_SCALE/EDITOR_ZOOM;
 const sigilRadius=(sigilPoint({x:1,y:0}).x-.5)/sigilPadPoint({x:1,y:0}).x;
-for(const i of [0,1,3,8,23]){
+for(const i of [0,1,3,8,19]){
  for(const view of [0,.5,1,3,7]){
   for(const point of [{x:0,y:0},{x:-1,y:.7},{x:.8,y:-1.2}]){
    const top=glyphPoint(point,i,1),dx=top.x-.5,dy=top.y-.5;
@@ -57,15 +57,15 @@ for(const i of [0,1,3,8,23]){
   eq(actual.y,p.y,'spell pointer mapped to pixel y');
  }
 }
-for(const i of [0,6,12,18,23]){
- const outside=sigilGlyphPadPoint({x:0,y:-1},i,24);
- const inside=sigilGlyphPadPoint({x:0,y:1},i,24);
+for(const i of [0,5,10,15,19]){
+ const outside=sigilGlyphPadPoint({x:0,y:-1},i,20);
+ const inside=sigilGlyphPadPoint({x:0,y:1},i,20);
  assert.ok(Math.hypot(outside.x,outside.y)>1,'sigil crop excludes outer-ring lettering');
  assert.ok(Math.hypot(inside.x,inside.y)<1,'sigil crop shows only glyph marks entering the original inner area');
 }
 eq(Math.hypot(sigilPadPoint({x:.92,y:0}).x,sigilPadPoint({x:.92,y:0}).y),.92,'sigil retains its original writing boundary');
 assert.ok(.43/sigilRadius>1.5,'outer ring cannot appear completely inside sigil pad');
-for(const count of [1,2,7,24]){
+for(const count of [1,2,7,20]){
  for(const i of [0,Math.min(count-1,1),count-1]){
   for(const p of [{x:0,y:0},{x:.8,y:-1}]){
    const top=glyphPoint(p,i,count);
@@ -90,13 +90,27 @@ for(const p of [{x:0,y:0},{x:.6,y:-.8},{x:-1,y:1}]){
 }
 
 const stroke=[{x:-.8,y:-.9},{x:.8,y:.9}];
+assert.equal(writtenGlyphCount([]),1,'empty spell starts with one neutral slot');
+assert.equal(writtenGlyphCount([{space:true},{space:true},{space:true}]),1,'trailing spaces never alter centering');
+assert.equal(writtenGlyphCount([{strokes:[stroke]},{space:true},{space:true}]),1,'trailing spaces after ink do not shift the spell');
+assert.equal(writtenGlyphCount([{strokes:[stroke]},{space:true},{strokes:[stroke]},{space:true}]),3,'inner spaces still count between inked slots');
+assert.equal(writtenGlyphCount([{strokes:[[]]},{space:true}]),1,'empty stroke lists do not affect centering');
+const blankState={mode:'spell',letters:[{space:true},{space:true},{space:true}],index:3,ink:[],sigil:[]};
+assert.equal(writtenGlyphCount(visibleGlyphs(blankState)),1,'navigating through blank slots does not move the preview center');
+const inkedState={...blankState,ink:[stroke]};
+assert.equal(writtenGlyphCount(visibleGlyphs(inkedState)),4,'the first live stroke immediately extends the centered spell');
+eq((glyphAngle(0,3)+glyphAngle(2,3))/2,-Math.PI/2,'rendered nonempty phrase remains centered');
 const model=createDrawingModel();
-assert.equal(model.canPrevious,false);
+assert.equal(model.canPrevious,true,'previous button is available at slot zero');
+assert.equal(model.canNext,true,'next button is available at slot zero');
 assert.equal(model.addStroke(stroke),true);
 assert.equal(model.canUndo,false,'spell mode repurposes history buttons as navigation');
-assert.equal(model.move(-1),false);
+assert.equal(model.move(-1),true,'left button wraps at first slot');
+assert.equal(model.state.index,19);
+assert.equal(model.move(1),true,'right button wraps from last slot to first');
+assert.equal(model.state.index,0);
+assert.deepEqual(model.state.ink[0],stroke,'character coordinates survive a full wrap');
 assert.equal(model.move(1),true);
-assert.deepEqual(model.state.letters[0].strokes[0],stroke,'character coordinates are not normalized or clipped');
 assert.equal(model.state.index,1);
 assert.equal(model.move(1),true,'passing an empty pad inserts a space');
 assert.equal(model.state.letters[1].space,true);
@@ -128,7 +142,10 @@ for(let i=0;i<DRAWN_GLYPH_LIMIT;i++){
  assert.equal(full.addStroke(stroke),true);
  if(i<DRAWN_GLYPH_LIMIT-1)assert.equal(full.move(1),true);
 }
-assert.equal(full.move(1),false);
+assert.equal(full.move(1),true,'next from last slot wraps to the first slot');
+assert.equal(full.state.index,0);
+assert.equal(full.move(-1),true,'previous from the first slot wraps to the last slot');
+assert.equal(full.state.index,19);
 assert.equal(full.goSigil(),true);
 assert.equal(full.state.letters.length,DRAWN_GLYPH_LIMIT);
 
@@ -210,7 +227,8 @@ assert.match(source,/const SIGIL_VIEW_RADIUS=INNER_RADIUS\/GUIDE_RADIUS;/,'origi
 assert.doesNotMatch(source,/layer\(1-t|layer\(t,0/,'no composited render layers');
 assert.match(css,/\.circle-drawing-pad-zone\{[^}]*container-type:size/);
 assert.match(css,/width:min\(100cqw,100cqh\);height:min\(100cqw,100cqh\)/);
-assert.match(source,/viewIndex=startIndex\+\(target-startIndex\)\*eased/);
+assert.match(source,/viewIndex=startIndex\+\(nextVisualIndex-startIndex\)\*eased/,'wraparound moves one slot, not nineteen');
+assert.match(source,/next=\(state\.index\+direction\+DRAWN_GLYPH_LIMIT\)%DRAWN_GLYPH_LIMIT/);
 assert.match(html,/id="circleDrawingDiscard"[^>]*role="alertdialog"/,'discard confirmation retained');
 
 let doc;
@@ -249,7 +267,11 @@ try{
  editor.open();
  assert.equal(get('circleDrawingClose').textContent,'閉じる');
  assert.equal(get('circleDrawingConfirm').textContent,'紋を描く');
- assert.equal(get('circleDrawingUndo').disabled,true);
+ assert.equal(get('circleDrawingUndo').disabled,false,'left arrow stays active at the first slot');
+ assert.equal(get('circleDrawingConfirm').disabled,true,'no spell ink means confirm is disabled immediately');
+ get('circleDrawingConfirm').dispatch('click');
+ assert.equal(get('circleDrawingStatus').textContent,'','disabled spell confirm never adds a layout-shifting warning');
+ assert.equal(get('circleDrawingConfirm').disabled,true,'confirm remains inactive without ink');
  get('circleDrawingClose').dispatch('click');
  assert.equal(dialog.open,false,'empty draft closes directly');
  editor.open();
@@ -272,6 +294,7 @@ try{
  pad.dispatch('pointerdown',pointer(1,40,45));
  pad.dispatch('pointermove',pointer(1,90,95));
  pad.dispatch('pointerup',pointer(1,90,95));
+ assert.equal(get('circleDrawingConfirm').disabled,false,'one drawn stroke enables the sigil step');
  // Exercise a real 250ms frame sequence, including disabled buttons during transition.
  const frames=[];
  globalThis.window.requestAnimationFrame=cb=>frames.push(cb);
@@ -320,7 +343,8 @@ try{
  assert.equal(saved.length,2);
  editor.open();
  assert.equal(get('circleDrawingStage').textContent,'呪文を1文字ずつ書く');
- assert.equal(get('circleDrawingUndo').disabled,true);
+ assert.equal(get('circleDrawingUndo').disabled,false,'wraparound arrow enabled after reopening');
+ assert.equal(get('circleDrawingConfirm').disabled,true,'reset editor begins with disabled confirm');
  dialog.close();
 }finally{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;}
-console.log('PASS centered spell, exact world projections, original sigil crop, one rotating camera and left-edge caret');
+console.log('PASS 20 centered 18-degree slots, exactly two-slot viewport, trailing-blank-safe centering, wraparound navigation, disabled empty confirm and rotating sigil camera');
