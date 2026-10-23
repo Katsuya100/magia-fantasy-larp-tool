@@ -10,7 +10,7 @@ import {
 assert.equal(DRAWN_GLYPH_LIMIT,30,'spell ring has 30 matching upper/lower character slots');
 assert.equal(DRAWN_POWER_RATE,.6);
 assert.ok(Math.abs(GLYPH_INK_SCALE-.11*4/9)<1e-12,'letter footprint shrinks with the two-thirds-width band');
-assert.equal(REVOLVER_DURATION_MS,250);
+assert.equal(REVOLVER_DURATION_MS,100);
 assert.ok(Math.abs(EDITOR_GLYPH_STEP-Math.PI/15)<1e-12,'each letter spans exactly 12 degrees on both screens, two thirds of 18 degrees');
 assert.ok(Math.abs(glyphAngle(1,1)-glyphAngle(0,1)-EDITOR_GLYPH_STEP)<1e-12,'upper letter interval equals lower revolver step');
 // The ring means the annular BAND, not the drawn glyphs or the whole disk.
