@@ -2477,6 +2477,12 @@ button.creator-congratulations-close{
  color:var(--pale);background:#090c17;box-shadow:0 25px 110px #000e;
  overflow:hidden
 }
+/* While a magic circle is being drawn, gestures must never select text or
+   turn into a browser drag even if a finger slips off the canvas. */
+#circleDrawingDialog,#circleDrawingDialog *{
+ user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+ -webkit-user-drag:none
+}
 .circle-drawing-dialog::backdrop{background:#02030cdd;backdrop-filter:blur(6px)}
 .circle-drawing-dialog[open]{display:flex}
 .circle-drawing-discard{

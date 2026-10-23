@@ -1,18 +1,19 @@
-import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.27';
+import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.28';
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
-// Twenty matching 18-degree slots in the upper circle and lower revolver.
-export const DRAWN_GLYPH_LIMIT=20;
+// Thirty matching 12-degree slots in the upper circle and lower revolver.
+export const DRAWN_GLYPH_LIMIT=30;
 export const DRAWN_POWER_RATE=0.6;
 export const MIN_DUNGEON_POWER=250;
 const INNER_RADIUS=.255;
 const GUIDE_RADIUS=.92;
 // The same scale in both axes preserves each drawn letter's aspect ratio.
-export const GLYPH_INK_SCALE=.11;
+// Smaller handwriting footprints match the two-thirds-wide 30-slot letter ring.
+export const GLYPH_INK_SCALE=.11*(2/3);
 export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 const RING_RADIUS=.345;
 // Set the lower camera's horizontal field of view to EXACTLY two real
-// 18-degree slots. Never widen the letter angles only in the editor.
+// 12-degree slots. Never widen the letter angles only in the editor.
 const SPELL_VIEW_RADIUS=RING_RADIUS*Math.sin(GLYPH_STEP);
 export const EDITOR_ZOOM=GLYPH_INK_SCALE/SPELL_VIEW_RADIUS;
 export const EDITOR_GLYPH_STEP=GLYPH_STEP;
@@ -96,8 +97,8 @@ export function createDrawingModel(){
   },
   move(direction){
    if(state.mode!=='spell'||!Number.isInteger(direction)||Math.abs(direction)!==1)return false;
-   // A turn always advances by exactly one of the 20 real slots, wrapping
-   // at either edge rather than stopping or spinning across 19 slots.
+   // A turn always advances by exactly one of the 30 real slots, wrapping
+   // at either edge rather than stopping or spinning across the entire ring.
    const next=(state.index+direction+DRAWN_GLYPH_LIMIT)%DRAWN_GLYPH_LIMIT;
    // Blank visited positions may be recorded; only INK determines centering.
    saveCurrent(direction===1);
@@ -221,7 +222,7 @@ export function paintCaret(canvas,state,{size=512,viewIndex=null,activeStroke=nu
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
  ctx.clearRect(0,0,size,size);
  if(state.mode!=='spell'||state.index>=DRAWN_GLYPH_LIMIT)return;
- // The caret marks the LEFT angular boundary of the current 18-degree
+ // The caret marks the LEFT angular boundary of the current 12-degree
  // glyph slot, inside the ring. It must not cover the letter's center.
  const count=writtenGlyphCount(visibleGlyphs(state,activeStroke));
  const centerAngle=viewIndex===null?glyphAngle(state.index,count):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
@@ -335,6 +336,11 @@ export function initCircleDrawing(doc,{onSave}){
  const dialog=get('circleDrawingDialog'),preview=get('circleDrawingPreview'),pad=get('circleDrawingPad');
  const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus'),shell=get('circleDrawingShell');
  const discard=get('circleDrawingDiscard'),keep=get('circleDrawingDiscardKeep'),discardButton=get('circleDrawingDiscardConfirm');
+ // Native text selections/HTML drags can steal a touch gesture mid-stroke,
+ // especially when the finger moves over the labels or outside the canvas.
+ dialog.addEventListener('selectstart',event=>event.preventDefault());
+ dialog.addEventListener('dragstart',event=>event.preventDefault());
+ pad.addEventListener('contextmenu',event=>event.preventDefault());
  let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,animating=false,previousFocus=null,viewIndex=0;
  let animationId=0,padTransition=null;
  const message=text=>{status.textContent=text;};
@@ -356,7 +362,7 @@ export function initCircleDrawing(doc,{onSave}){
  const release=()=>{pointerId=null;activeStroke=null;};
  function animateTurn(target,direction){
   const startIndex=viewIndex,token=++animationId;
-  // On wrap, animate the adjacent virtual index (20 equals 0 modulo a turn).
+  // On wrap, animate the adjacent virtual index (30 equals 0 modulo a turn).
   const nextVisualIndex=startIndex+direction;
   animating=true;
   repaint();
