@@ -69,8 +69,30 @@ for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4]
   G.round(hero,foe,-1,i===0?0:-1,buffs,()=>.1);
   countdown.push(G.status(hero,'debuff_'+attr)?.turns??0);
  }
- assert.deepEqual(countdown,Array.from({length:7},(_,i)=>Math.max(0,duration-i-1)),
-  'debuff countdown, same as defense '+attr+' P'+power);
+ assert.deepEqual(countdown,Array.from({length:7},(_,i)=>Math.max(0,duration-i)),
+  'debuff countdown starts after application '+attr+' P'+power);
+}
+// Regression: four-turn shock and confusion survive repeated casts on either side.
+for(const attr of ['bolt','chaos'])for(const casterSide of ['player','enemy']){
+ const curse=spell('debuff',attr,500),attack=spell('attack','law',120);
+ const fighterBase={hp:3000,mag:12,def:10,res:10};
+ const caster=G.makeUnit(fighterBase,1,{},[attack,curse],casterSide);
+ const victim=G.makeUnit(fighterBase,1,{},[attack],casterSide==='player'?'enemy':'player');
+ const fight=(castByCaster,castByVictim)=>casterSide==='player'
+  ?G.round(caster,victim,castByCaster,castByVictim,buffs,()=>.99)
+  :G.round(victim,caster,castByVictim,castByCaster,buffs,()=>.99);
+ fight(1,-1);
+ assert.equal(G.status(victim,'debuff_'+attr)?.turns,4,attr+' retains all four turns on application');
+ fight(-1,0);
+ assert.equal(G.status(victim,'debuff_'+attr)?.turns,3,attr+' persists after the first affected cast');
+ if(attr==='bolt')assert.equal(victim.cooldowns[0],num('spell_cooldown')+num('shock_cooldown_extra')-1,
+  'shock adds cooldown when a spell is used');
+ fight(-1,-1);
+ assert.equal(G.status(victim,'debuff_'+attr)?.turns,2,attr+' remains during the second affected round');
+ fight(-1,-1);
+ assert.equal(G.status(victim,'debuff_'+attr)?.turns,1,attr+' remains during the third affected round');
+ fight(-1,-1);
+ assert.equal(G.status(victim,'debuff_'+attr),undefined,attr+' expires after the fourth affected round');
 }
 const caster=unit();
 for(const power of [270,540,1000]){
@@ -310,11 +332,11 @@ assert.equal(G.status(chaosTarget,'debuff_chaos').effect,'confused','chaos appli
 assert.equal(chaosTarget.statuses.length,1,'chaos does not also apply unrelated debuffs');
 const chaosCast=G.prepare(chaosTarget,0,()=>.99);
 assert.equal(chaosCast.role,'support','chaos randomly changes the next magic');
-assert.equal(G.status(chaosTarget,'debuff_chaos'),undefined,'chaos is consumed after cast');
+assert.ok(G.status(chaosTarget,'debuff_chaos'),'chaos remains after a confused cast');
 const chaos=unit([spell('attack','law'),spell('support','law')]);
 G.addStatus(chaos,{id:'debuff_chaos',kind:'debuff',attribute:'chaos',effect:'confused',value:1,turns:2});
 G.prepare(chaos,0,()=>.99);
-assert.equal(G.status(chaos,'debuff_chaos'),undefined,'confusion consumed by cast');
+assert.ok(G.status(chaos,'debuff_chaos'),'confusion persists until its duration ends');
 const foe1=G.makeUnit(base,1,{flame:.3},[spell('attack','flame')]);
 const foe2=G.makeUnit(base,1,{flame:1.4},[spell('attack','flame')]);
 assert.ok(G.damage(a,foe1,spell('attack','flame'))<G.damage(a,foe2,spell('attack','flame')),'enemy-specific resistance');
