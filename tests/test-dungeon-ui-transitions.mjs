@@ -10,8 +10,8 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,17,'all dungeon dialogs are still present');
-assert.equal(new Set(dialogs).size,17);
+assert.equal(dialogs.length,19,'existing dialogs plus two scoped onboarding dialogs');
+assert.equal(new Set(dialogs).size,19);
 assert.match(css,/dialog\{[^}]*transition:opacity \.2s[^}]*display \.2s allow-discrete,overlay \.2s allow-discrete/);
 assert.match(css,/dialog\[open\]\{opacity:1;transform:none\}/);
 assert.match(css,/@starting-style\{\s*dialog\[open\]/);
@@ -148,7 +148,8 @@ const compactDialogs={
  googleDriveConflictDialog:'data-action="later"',
  googleDriveOverwriteDialog:'data-action="back"',
  googleDriveExpiredDialog:'data-action="later"',
- deleteDataDialog:'cancelDeleteData'
+ deleteDataDialog:'cancelDeleteData',
+ circleDrawingLessonDialog:'circleDrawingLessonClose'
 };
 const overlayFlows={
  circleDrawingDialog:['circleDrawingClose','閉じる'],
@@ -157,7 +158,7 @@ const overlayFlows={
  creatorCongratulationsDialog:['creatorCongratulationsClose','閉じる'],
  milestoneChoiceDialog:['milestoneClose','閉じる']
 };
-assert.equal(Object.keys(compactDialogs).length,10);
+assert.equal(Object.keys(compactDialogs).length,11);
 assert.equal(Object.keys(overlayFlows).length,5);
 const dialogMarkup=id=>{
  const start=html.indexOf('<dialog id="'+id+'"');
@@ -179,10 +180,10 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(button,'overlay footer action exists: '+id);
  assert.ok(button.includes('>'+label+'</button>'),'overlay footer label unchanged: '+id);
 }
-for(const id of ['backupSetupDialog','saveErrorDialog']){
+for(const id of ['backupSetupDialog','saveErrorDialog','circleFirstChoiceDialog']){
  assert.doesNotMatch(dialogMarkup(id),/dungeon-dialog-close/,'required decision stays explicit: '+id);
 }
-assert.equal(Object.keys(compactDialogs).length+Object.keys(overlayFlows).length+2,dialogs.length,'every native dialog has an explicit layout category');
+assert.equal(Object.keys(compactDialogs).length+Object.keys(overlayFlows).length+3,dialogs.length,'every native dialog has an explicit layout category');
 
 const cardMarkup=dialogMarkup('supportPromptDialog');
 assert.match(cardMarkup,/<canvas id="adventurerShareCanvas"[^>]+aria-label="冒険者名/,'the dialog contains the actual adventurer-card preview');
