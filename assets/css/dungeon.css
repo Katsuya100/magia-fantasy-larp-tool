@@ -772,9 +772,9 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 @keyframes dungeon-dialog-exit{from{opacity:1;transform:none}to{opacity:0;transform:translateY(9px) scale(.985)}}
 @keyframes dungeon-dialog-veil-hide{from{opacity:1}to{opacity:0}}
 
-/* Compact confirmation/input dialogs share a close control.
-   Full-screen editors, cameras, sharing sheets and celebration overlays retain
-   their own original footer controls even when implemented with <dialog>. */
+/* Compact dialogs, including the adventurer-card sharing dialog, share
+   one top-right close control. Editor, camera and celebration overlays retain
+   their original footer actions regardless of their HTML tag. */
 dialog button.dungeon-dialog-close{
  position:absolute!important;inset-block-start:max(10px,env(safe-area-inset-top));
  inset-inline-end:max(10px,env(safe-area-inset-right));z-index:20;
@@ -788,9 +788,15 @@ dialog button.dungeon-dialog-close{
  font-size:0!important;line-height:1!important;letter-spacing:0!important;
  cursor:pointer;touch-action:manipulation
 }
+/* SVG strokes are centered at (12,12) in a 24x24 viewBox; an absolutely
+   centered mask avoids text glyph baselines and platform-dependent fonts. */
 dialog button.dungeon-dialog-close::after{
- content:"×";display:block;font-family:Arial,sans-serif;
- font-weight:400;font-size:26px;line-height:1
+ content:"";position:absolute;inset-block-start:50%;inset-inline-start:50%;
+ width:24px;height:24px;transform:translate(-50%,-50%);
+ background-color:currentColor;pointer-events:none;
+ --dungeon-close-svg:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6L18 18M18 6L6 18' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
+ -webkit-mask:var(--dungeon-close-svg) center / contain no-repeat;
+ mask:var(--dungeon-close-svg) center / contain no-repeat
 }
 dialog button.dungeon-dialog-close:hover{background:#30273b!important;border-color:var(--gold)!important}
 dialog button.dungeon-dialog-close:focus-visible{outline:3px solid #ecd191!important;outline-offset:3px}
@@ -1829,6 +1835,8 @@ html,body{overflow-x:clip}
 .support-prompt-inner p{font-size:14px;color:var(--soft);margin:9px 0}
 .support-prompt-actions{display:flex;align-items:stretch;justify-content:center;gap:10px;margin-top:25px}
 .support-prompt-dialog{width:min(580px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
+/* The card title and preview begin below the shared top-right × button. */
+#supportPromptDialog .support-prompt-inner{padding-top:62px}
 #adventurerShareCanvas{display:block;width:100%;height:auto;aspect-ratio:1200 / 675;border:1px solid #c5a06a70;margin:17px auto 7px}
 .support-share-help{font-size:11px!important;line-height:1.5;color:var(--soft)!important}
 .support-card-tools{display:flex;gap:9px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:16px}

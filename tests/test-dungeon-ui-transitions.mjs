@@ -135,16 +135,16 @@ await new Promise(resolve=>setTimeout(resolve,DUNGEON_MODAL_DURATION_MS+30));
 assert.ok(appended.every(node=>node.removed),'ghosts are removed after the 200ms exit');
 
 
-// A tag named <dialog> does NOT imply it is a compact dialog. The drawing
-// editor, cameras, celebration, and share flows are overlay-style surfaces;
-// their original footer button placement must never be absorbed into the
-// common top-right dialog close component.
+// Editors, cameras and celebration screens have dedicated overlay controls;
+// the adventurer-card sharing popup is an ordinary dialog, so it uses the
+// shared top-right SVG close component regardless of the native HTML tag.
 const compactDialogs={
  nameDialog:'cancelNameDialog',
  loadoutDialog:'closeLoadoutDialog',
  magicDetailsDialog:'closeMagicDetails',
  circleActionDialog:'cancelCircleAction',
  magicStoneTutorialDialog:'closeMagicStoneTutorial',
+ supportPromptDialog:'supportPromptClose',
  googleDriveConflictDialog:'data-action="later"',
  googleDriveOverwriteDialog:'data-action="back"',
  googleDriveExpiredDialog:'data-action="later"',
@@ -155,11 +155,10 @@ const overlayFlows={
  circleCameraDialog:['cameraStop','閉じる'],
  imageRepairDialog:['imageRepairLater','あとで'],
  creatorCongratulationsDialog:['creatorCongratulationsClose','閉じる'],
- milestoneChoiceDialog:['milestoneClose','閉じる'],
- supportPromptDialog:['supportPromptClose','閉じる']
+ milestoneChoiceDialog:['milestoneClose','閉じる']
 };
-assert.equal(Object.keys(compactDialogs).length,9);
-assert.equal(Object.keys(overlayFlows).length,6);
+assert.equal(Object.keys(compactDialogs).length,10);
+assert.equal(Object.keys(overlayFlows).length,5);
 const dialogMarkup=id=>{
  const start=html.indexOf('<dialog id="'+id+'"');
  const end=html.indexOf('</dialog>',start);
@@ -184,6 +183,26 @@ for(const id of ['backupSetupDialog','saveErrorDialog']){
  assert.doesNotMatch(dialogMarkup(id),/dungeon-dialog-close/,'required decision stays explicit: '+id);
 }
 assert.equal(Object.keys(compactDialogs).length+Object.keys(overlayFlows).length+2,dialogs.length,'every native dialog has an explicit layout category');
+
+const cardMarkup=dialogMarkup('supportPromptDialog');
+assert.match(cardMarkup,/<canvas id="adventurerShareCanvas"[^>]+aria-label="冒険者名/,'the dialog contains the actual adventurer-card preview');
+assert.match(cardMarkup,/<button type="button" id="supportPromptClose" class="subtle dungeon-dialog-close" aria-label="冒険者カードを閉じる">閉じる<\/button>/,'card has the shared corner button and an explicit accessible name');
+assert.match(app,/function openAdventurerShare\(\)\{[\s\S]*?showSupportPrompt\(\{title:'冒険者カード'/,'adventurer-card entry actually opens the audited dialog');
+assert.match(app,/\$\('supportPromptClose'\)\.addEventListener\('click',\(\)=>closeDungeonDialog\(\$\('supportPromptDialog'\)\)\)/,'card close keeps its existing click handler');
+assert.match(css,/#supportPromptDialog \.support-prompt-inner\{padding-top:62px\}/,'the card title does not collide with the corner button');
+// Draw the X with symmetric SVG diagonals, not a font glyph whose baseline
+// varies across Android, iOS and desktop browsers.
+const glyph=css.match(/--dungeon-close-svg:url\("(data:image\/svg\+xml,[^"]+)"\)/);
+assert.ok(glyph,'shared icon uses SVG markup');
+const svgMarkup=decodeURIComponent(glyph[1].split(',')[1]);
+assert.match(svgMarkup,/viewBox='0 0 24 24'/,'the icon has a square coordinate system');
+assert.match(svgMarkup,/d='M6 6L18 18M18 6L6 18'/,'both diagonals are symmetric about (12,12)');
+assert.match(svgMarkup,/stroke-width='2\.4'/,'both strokes have equal weight');
+assert.match(css,/dialog button\.dungeon-dialog-close::after\{[^}]*content:"";position:absolute;inset-block-start:50%;inset-inline-start:50%;[^}]*width:24px;height:24px;transform:translate\(-50%,-50%\);/,'SVG is geometrically centered inside the 42px hit target');
+assert.match(css,/-webkit-mask:var\(--dungeon-close-svg\) center \/ contain no-repeat;/);
+assert.match(css,/\bmask:var\(--dungeon-close-svg\) center \/ contain no-repeat/);
+assert.doesNotMatch(css,/dialog button\.dungeon-dialog-close::after\{\s*content:"[×✕]"/,'the icon must not depend on font glyph alignment');
+
 assert.match(html,/<button[^>]*id="cancelNameDialog"[^>]*dungeon-dialog-close[^>]*hidden>/);
 assert.match(html,/<button[^>]*dungeon-dialog-close[^>]*data-action="later"[^>]*hidden>/);
 assert.match(css,/dialog button\.dungeon-dialog-close\{[^}]*position:absolute!important;[^}]*width:42px!important;[^}]*height:42px!important;/);
