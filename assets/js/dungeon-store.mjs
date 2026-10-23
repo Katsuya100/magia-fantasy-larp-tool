@@ -283,6 +283,8 @@ export function saveHeirName(db,name){
 export async function migrateDungeonXp(db){
  const p=await getProfile(db);
  if(!p||p.xpScaleVersion===XP_SCALE)return p;
+ if(p.xpScaleVersion!==undefined&&p.xpScaleVersion!==null)
+  throw Error('このセーブは未対応のEXPバージョンです。上書きせず復旧を停止しました。');
  const maxLevel=150;
  const oldNext=lvl=>Math.ceil(Number(levelRow(lvl).xp_to_next)*Math.pow(2.1,(Number(lvl)-1)/10));
  // Level and fraction of the current XP gauge are the durable progress.
