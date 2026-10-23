@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,getDungeonXpMigrationBackup,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,getDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 const {parseCsv}=G;
 import {configure} from '../assets/js/dungeon-tuning.mjs';
@@ -66,6 +66,19 @@ const backupFull=await getDungeonXpMigrationBackup(db);
 assert.equal(backupFull.profile.xp,legacyStartXp,'the migrated save retains its exact old EXP');
 assert.deepEqual(new Uint8Array(await backupFull.circles.find(x=>x.id==='xp-migration-photo').image.arrayBuffer()),
  new Uint8Array(await migrationPhoto.arrayBuffer()),'full backup retains original magic-circle photo bytes');
+// Recovery API restores the actual old profile, photo and original gauge,
+// then the converter can safely replay on the next startup.
+await restoreDungeonXpMigrationBackup(db);
+const originalRecovered=await getProfile(db);
+assert.equal(originalRecovered.xpScaleVersion,undefined,'recovery returns to the original unscaled XP format');
+assert.equal(originalRecovered.xp,legacyStartXp,'recovery retains the exact original gauge');
+assert.equal(originalRecovered.magicStones,77,'recovery retains original stones');
+assert.deepEqual(new Uint8Array(await (await allCircles(db)).find(x=>x.id==='xp-migration-photo').image.arrayBuffer()),
+ new Uint8Array(await migrationPhoto.arrayBuffer()),'recovery retains the actual photo bytes');
+const replayedMigration=await migrateDungeonXp(db);
+assert.equal(replayedMigration.xp,exact.xp,'the backed-up old save safely re-migrates');
+assert.equal(replayedMigration.run.xp,exact.run.xp,'the backed-up expedition safely re-migrates');
+assert.ok(await getDungeonXpMigrationBackup(db),'re-migration regenerates a valid rescue point');
 assert.equal(exact.level,92);
 assert.ok(Math.abs(exact.xp/G.nextXp(92)-legacyStartXp/oldNeed(92))<0.000001,
  'Lv92 current-level EXP progress remains the same');
