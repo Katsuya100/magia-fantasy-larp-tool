@@ -1648,10 +1648,9 @@ function showFirstCircleChoice(){
 function wire(){
  syncCameraUi(false);
  const tryDrawingFingerIntro=()=>{
-  if(profile.drawingFingerFGuideSeen||$('circleDrawingLessonDialog').open)return;
+  if(profile.drawingFingerGuideSeen||$('circleDrawingLessonDialog').open)return;
   if(drawingEditor.startFingerIntro()){
    profile.drawingFingerGuideSeen=true;
-   profile.drawingFingerFGuideSeen=true;
    void persist().catch(error=>note('手書きの案内記録を保存できませんでした：'+error.message));
   }
  };
