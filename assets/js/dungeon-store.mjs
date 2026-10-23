@@ -1,7 +1,7 @@
 import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs';
 import {level as levelRow} from './dungeon-tuning.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
-import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto} from './dungeon-cloud-integrity.mjs';
+import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto,verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs';
 import {prepareProfilePhotoRefs,restoreProfilePhotoRefs} from './dungeon-profile-photo-refs.mjs';
 const DB_NAME='magia-dungeon-v1';
 // v3 blocks old v2 game tabs from reopening after conversion.
@@ -389,6 +389,20 @@ export async function getDungeonXpMigrationBackup(db){
   throw Error('EXP変換前バックアップの署名が一致しません。');
  return backup;
 }
+export const hasDungeonXpMigrationBackup=db=>request(db,'settings','readonly',s=>s.getKey(XP_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
+// Rolling back also discards all play after migration; only explicit UI
+// confirmation may call this API. Full SHA checks guard original photos.
+export async function restoreDungeonXpMigrationBackup(db){
+ const backup=await getDungeonXpMigrationBackup(db);
+ if(!backup)throw Error('EXP変換前の保全データが見つかりません。');
+ const snapshot={profile:backup.profile,circles:backup.circles,integrity:backup.integrity,savedAt:backup.integrity?.savedAt||0};
+ const health=await verifyLocalSnapshot(snapshot);
+ if(health.status==='corrupt'||health.status==='badImages')
+  throw Error('EXP変換前の保全データの署名または写真が一致しません。復元を停止しました。');
+ if(health.status==='legacy'){await photoEvidence(snapshot.circles);await profilePhotoEvidence(snapshot.profile);}
+ const current=await readDungeonSnapshot(db);
+ await replaceDungeonSnapshot(db,snapshot,{expectedCurrentRecords:recordFingerprint(current)});
+}
 export async function getProfile(db){
   const [raw,nameOverride]=await Promise.all([
    request(db,'settings','readonly',s=>s.get('profile')),
@@ -429,7 +443,7 @@ export function readDungeonSnapshot(db){
   }catch(error){reject(error);}
  });
 }
-export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0}){
+export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{expectedCurrentRecords=null}={}){
  validateDatabase(db);
  const prepared=await prepareProfilePhotoRefs(profile);
  const all=[...circles];
@@ -442,10 +456,25 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0}){
    tx.onerror=()=>reject(tx.error||Error('セーブ復元に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブ復元が中断されました。'));
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
-   settings.clear();items.clear();
-   settings.put(prepared.profile,'profile');
-   for(const circle of all)items.put(circle);
-   settings.put({version:1,records,photos,profilePhotos,savedAt:Number(savedAt)||0,legacy:false},'integrity');
+   const write=()=>{
+    settings.clear();items.clear();
+    settings.put(prepared.profile,'profile');
+    for(const circle of all)items.put(circle);
+    settings.put({version:1,records,photos,profilePhotos,savedAt:Number(savedAt)||0,legacy:false},'integrity');
+   };
+   if(expectedCurrentRecords!==null){
+    const p=settings.get('profile'),c=items.getAll(),n=settings.get(HEIR_NAME_KEY);
+    let remaining=3;
+    const check=()=>{
+     if(--remaining)return;
+     try{
+      if(recordFingerprint({profile:applyHeirName(p.result,n.result),circles:c.result})!==expectedCurrentRecords)
+       throw Error('保全データの復元中に別のタブがセーブを更新しました。上書きを停止しました。');
+      write();
+     }catch(error){try{tx.abort?.();}catch{}reject(error);}
+    };
+    p.onsuccess=check;c.onsuccess=check;n.onsuccess=check;
+   }else write();
   }catch(error){reject(error);}
  });
 }
