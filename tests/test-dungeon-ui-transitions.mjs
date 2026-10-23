@@ -10,10 +10,13 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,22,'existing dialogs plus alchemy and item picker');
-assert.equal(new Set(dialogs).size,22);
+assert.equal(dialogs.length,23,'native dialogs include alchemy, magic ink and EXP recovery');
+assert.equal(new Set(dialogs).size,23);
 assert.ok(dialogs.includes('alchemyDialog')&&dialogs.includes('alchemyPickerDialog'),'alchemy dialogs share the native transition manager');
 assert.ok(dialogs.includes('magicInkDialog'),'magic ink selection uses the existing dialog manager');
+assert.ok(dialogs.includes('restoreOriginalXpDialog'),'migration recovery has a guarded confirmation');
+assert.match(html,/id="confirmRestoreOriginalXp"[^>]*class="danger"/,'recovery warns of irreversible progress loss');
+assert.match(app,/restoreDungeonXpMigrationBackup\(db\)/,'user-initiated legacy restoration is wired');
 assert.match(css,/dialog\{[^}]*transition:opacity \.2s[^}]*display \.2s allow-discrete,overlay \.2s allow-discrete/);
 assert.match(css,/dialog\[open\]\{opacity:1;transform:none\}/);
 assert.match(css,/@starting-style\{\s*dialog\[open\]/);
@@ -153,7 +156,7 @@ const closable={
  googleDriveExpiredDialog:'data-action="later"',
  deleteDataDialog:'cancelDeleteData'
 };
-const fixed=['saveErrorDialog','backupSetupDialog','circleFirstChoiceDialog','magicInkDialog','nameDialog'];
+const fixed=['saveErrorDialog','backupSetupDialog','circleFirstChoiceDialog','magicInkDialog','nameDialog','restoreOriginalXpDialog'];
 const overlayFlows={
  circleDrawingDialog:['circleDrawingClose','閉じる'],
  circleCameraDialog:['cameraStop','閉じる'],
@@ -198,7 +201,7 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
 const pagedNative=['circleDrawingLessonDialog'];
-assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 22 native dialogs accounted for');
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 23 native dialogs accounted for');
 for(const id of pagedNative){
  assert.match(tagOf(id),/data-dungeon-frame="paged"/,'native lesson is a paged frame');
  const content=dialogMarkup(id);

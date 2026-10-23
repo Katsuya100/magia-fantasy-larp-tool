@@ -33,7 +33,7 @@ profile.run={
   {type:'stone',id:'magic_stone'},
   {type:'collection',id:'relic_boss_001'}
  ],
- xp:G.nextXp(1)+5,usedItems:0,log:[],stage:'battle'
+ xp:G.nextXp(1)+1,usedItems:0,log:[],stage:'battle'
 };
 await saveProfile(db,profile);
 const env=fakeDungeonBrowser({factory}),doc=env.document,$=id=>doc.getElementById(id);
@@ -49,7 +49,7 @@ try{
  assert.equal(saved.run,null,'scroll exits immediately from battle');
  assert.equal(saved.returns,2,'escape counts as a successful return');
  assert.equal(saved.level,2,'pending battle XP is applied');
- assert.equal(saved.xp,5,'surplus XP is retained');
+ assert.equal(saved.xp,1,'surplus XP is retained after exactly one level up');
  assert.equal(saved.deepestReturnedLayer,1,'only the last completed boss counts toward returned depth');
  assert.deepEqual(saved.inventory.map(x=>x.id).sort(),['heal_s','mana_s'],'unused supplies and acquired consumables return, scroll is spent');
  assert.equal(saved.magicStones,1,'undelivered magic stone is banked');

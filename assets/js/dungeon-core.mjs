@@ -7,8 +7,24 @@ export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
 // Required XP curve offsets non-decaying repeat fight rewards.
-export const nextXp=level=>Math.ceil(Number(levelRow(level).xp_to_next)*
- Math.pow(num('xp_growth_per_10_levels'),(Number(level)-1)/10));
+export const XP_SCALE=45;
+// A fifth of an integer layer budget may be 0.2 EXP. Normalize each stored
+// accumulation to micro-EXP so five battles land on their exact threshold.
+export const normalizeXp=value=>Math.round(Number(value)*1e6)/1e6;
+// EXP is fractional internally so five fights sum to the exact level budget.
+// Keep the display short without changing the stored value.
+const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:1});
+export const formatXp=value=>xpDisplay.format(Number(value)||0);
+// Grow steeply until Lv100 to limit lower-floor replay, then taper so
+// the high-end required and earned EXP values remain under six figures.
+export const nextXp=level=>{
+ const steps=(Number(level)-1)/10;
+ const earlySteps=Math.min(steps,9.9);
+ const lateSteps=Math.max(0,steps-9.9);
+ return Math.ceil(Number(levelRow(level).xp_to_next)*
+  Math.pow(num('xp_growth_per_10_levels'),earlySteps)*
+  Math.pow(num('xp_growth_per_10_levels_late'),lateSteps)/XP_SCALE);
+};
 // Five fights at the intended level supply approximately the XP needed
 // to start the following layer. Replay rewards do not decay.
 export function fightExperience(enemyLevel,playerLevel,layer){
@@ -18,8 +34,7 @@ export function fightExperience(enemyLevel,playerLevel,layer){
  const budget=next>current
   ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
   :nextXp(current);
- const full=Math.max(1,Math.ceil(budget/5));
- return full;
+ return budget/5;
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
 // Same upgraded-power duration applies to defense and debuff, hero and enemy.
@@ -79,15 +94,23 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// Magic stones keep one base chance on new or repeated layers at every level.
-// Retain the former signature for compatible saved expeditions.
-export function magicStoneDropChance(_playerLevel,_layer,_firstClear=false){
- return num('magic_stone_drop_chance');
+// Reward magic stones increasingly with dungeon depth, including beyond
+// the player Lv150 cap. Farming and first clears share the same probability.
+// Continuous geometric interpolation avoids sudden jumps at rank checkpoints.
+// Keep the existing (playerLevel, layer, firstClear) signature for callers.
+export function magicStoneDropChance(_playerLevel,layer=1,_firstClear=false){
+ const start=num('magic_stone_drop_chance');
+ const end=num('magic_stone_drop_chance_layer_150');
+ const maxLayer=num('magic_stone_drop_curve_end_layer');
+ if(!(start>0&&end>=start&&end<=1&&Number.isSafeInteger(maxLayer)&&maxLayer>1))
+  throw Error('魔導石の排出カーブの設定が不正です。');
+ const raw=Number(layer);
+ const depth=Number.isFinite(raw)?Math.min(maxLayer,Math.max(1,Math.floor(raw))):1;
+ const progress=(depth-1)/(maxLayer-1);
+ return Math.min(1,Number((start*Math.pow(end/start,progress)).toFixed(12)));
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
- const stoneChance=context.playerLevel==null
-  ?num('magic_stone_drop_chance')
-  :magicStoneDropChance(context.playerLevel,context.layer??1,context.firstClear===true);
+ const stoneChance=magicStoneDropChance(context.playerLevel,context.layer??1,context.firstClear===true);
  return {
   collection:countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r),
   stone:countSuccesses(num('magic_stone_drop_rolls'),stoneChance,r),
@@ -111,7 +134,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
  if(bossDropsMagicInk(context.bossEnemyId,r))rewards.push({type:'ink',id:MAGIC_INK_ID});
  return rewards;
 }
-export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
+export function experience(p,xp){p.xp=normalizeXp(p.xp+xp);while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp=normalizeXp(p.xp-nextXp(p.level));p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
 export const debuffPowerFactor=spell=>clamp(Math.sqrt(Math.max(0,Number(spell?.power)||0)/num('debuff_power_reference')),num('debuff_power_min'),num('debuff_power_max'));

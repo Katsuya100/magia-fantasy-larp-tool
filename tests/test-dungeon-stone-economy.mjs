@@ -15,12 +15,18 @@ assert.deepEqual(Array.from({length:4},()=>randomA()),
  Array.from({length:4},()=>randomB()),'seeded random sequence reproduces exactly');
 assert.equal(simulateProgression(7213).stones,simulateProgression(7213).stones,'identical seed, identical stone result');
 assert.equal(targetClearLevel(100),150);
-assert.equal(magicStoneDropChance(150,100),.3,'at-level floor 100 is 30% per fight');
-assert.equal(magicStoneDropChance(150,101),.3,'level-151 enemies keep the capped hero eligible for full stone drops');
-assert.equal(magicStoneDropChance(150,91),.3,'replayed floor 91 gives normal drops');
-assert.equal(magicStoneDropChance(150,91,true),.3,'first and repeated clears pay equally');
-for(const level of [1,30,80,149,150])for(const layer of [1,10,50,91,100,101]){
- assert.equal(magicStoneDropChance(level,layer,true),magicStoneDropChance(level,layer,false));
+assert.equal(magicStoneDropChance(150,1),.3,'starting stone chance is preserved');
+assert.equal(magicStoneDropChance(150,150),.9,'chance grows to 90% at layer 150');
+assert.equal(magicStoneDropChance(150,151),.9,'drop chance stays at cap past layer 150');
+assert.ok(magicStoneDropChance(150,100)>.6&&magicStoneDropChance(150,100)<.7,
+ 'a Lv150 player still gains better stone odds in deeper dungeons');
+assert.ok(magicStoneDropChance(150,101)>magicStoneDropChance(150,100),
+ 'stone odds keep growing after the current designed 100F campaign');
+assert.ok(magicStoneDropChance(150,91)<magicStoneDropChance(150,100),
+ 'replaying deeper layers is more efficient than shallow ones');
+for(const level of [1,30,80,149,150])for(const layer of [1,10,50,91,100,101,150]){
+ assert.equal(magicStoneDropChance(level,layer,true),magicStoneDropChance(level,layer,false),
+  'farming is not penalized by its first-clear status');
 }
 
 for(const seed of [1,11,1234,20261019]){
@@ -60,7 +66,8 @@ assert.equal(summary.progression.returns,100);
 assert.equal(summary.progression.layerClears,550);
 assert.equal(summary.progression.fights,2750);
 assert.equal(summary.allFiveUltimate.cost,ALL_ULTIMATE_COST);
-assert.ok(summary.progression.earnedStones.mean>600&&summary.progression.earnedStones.mean<1200);
+assert.ok(summary.progression.earnedStones.mean>850&&summary.progression.earnedStones.mean<2200,
+ 'the new positive drop curve must not starve the 100F campaign or overrun the stone economy');
 assert.ok(summary.allFiveUltimate.farm101.sorties.mean>300);
 assert.ok(summary.allFiveUltimate.farm91to100.sorties.mean>0);
-console.log('PASS non-decaying magic stone farming and tiered 100-layer upgrade economy');
+console.log('PASS depth-growing magic stone drops and replay-compatible tiered upgrade economy');

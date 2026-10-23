@@ -64,3 +64,47 @@ jobs:
             echo "::endgroup::"
           done
           exit "$failed"
+
+  dungeon-journey-economy:
+    # Diagnostic modeling is not a substitute for the mandatory strict combat gate.
+    runs-on: ubuntu-latest
+    env:
+      ONNXRUNTIME_NODE_INSTALL_CUDA: skip
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - run: node tests/test-dungeon-journeys.mjs
+      - run: node scripts/dungeon-balance-manifest.mjs
+      - run: node scripts/simulate-dungeon-journeys.mjs 16 > reports/dungeon-journeys.log
+      - run: node scripts/check-dungeon-economy-baseline.mjs
+      - run: node scripts/dungeon-extra-economy-diagnostics.mjs
+      - run: node scripts/report-dungeon-journeys.mjs
+      - name: Archive diagnostic reports and seed traces
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dungeon-journey-economy
+          path: reports/
+          if-no-files-found: warn
+
+  dungeon-economy-combat-strict:
+    # Fail separately for unmet game difficulty and for unfrozen/incomplete
+    # preparation inventories. Nothing is force-fed from a test-only wallet.
+    runs-on: ubuntu-latest
+    env:
+      DUNGEON_BALANCE_SAMPLES: '256'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - run: node scripts/dungeon-economic-combat-benchmark.mjs
+      - name: Preserve every strict economic combat measurement
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dungeon-economic-combat-strict
+          path: reports/
+          if-no-files-found: warn
