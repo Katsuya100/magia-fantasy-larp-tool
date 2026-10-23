@@ -7,11 +7,14 @@ import {
  createDrawingModel,paintCircle,paintCaret,paintPad,initCircleDrawing
 } from '../assets/js/dungeon-circle-draw.mjs';
 
-assert.equal(DRAWN_GLYPH_LIMIT,32);
+assert.equal(DRAWN_GLYPH_LIMIT,24,'upper and lower circles must both have 24 slots');
 assert.equal(DRAWN_POWER_RATE,.6);
 assert.equal(GLYPH_INK_SCALE,.11,'the pad can reach both rings and neighboring slots');
 assert.equal(REVOLVER_DURATION_MS,250);
-assert.ok(Math.abs(EDITOR_GLYPH_STEP-(2*Math.PI/DRAWN_GLYPH_LIMIT))<1e-12,'editor and finished circle share the real per-letter angle');
+assert.ok(Math.abs(EDITOR_GLYPH_STEP-Math.PI/12)<1e-12,'each letter spans exactly 15 degrees on both screens');
+assert.ok(Math.abs(glyphAngle(1,1)-glyphAngle(0,1)-EDITOR_GLYPH_STEP)<1e-12,'upper letter interval equals lower revolver step');
+const visibleSlots=2*Math.asin((GLYPH_INK_SCALE/EDITOR_ZOOM)/.345)/EDITOR_GLYPH_STEP;
+assert.ok(visibleSlots>2&&visibleSlots<2.1,'lower viewport shows the center character and half of each neighbor');
 assert.ok(EDITOR_ZOOM>1&&EDITOR_ZOOM<1.22,'real optical zoom preserves both visible ring guides');
 assert.equal(drawnPower(500),300);
 assert.equal(drawnPower(1),250);
@@ -25,7 +28,7 @@ assert.ok(Math.abs(glyphPoint({x:0,y:0},1,3).x-.5)<1e-9);
 assert.ok(glyphPoint({x:0,y:-1},0,1).y<.07,'letter ink reaches beyond the outer circle');
 assert.ok(glyphPoint({x:0,y:1},0,1).y>.24,'letter ink reaches beyond the inner circle');
 assert.ok(glyphPoint({x:1,y:0},0,2).x>.55,'a stroke overlaps the neighboring slot');
-for(const [i,count] of [[0,1],[1,3],[7,16],[31,32]]){
+for(const [i,count] of [[0,1],[1,3],[7,16],[23,24]]){
  const square=[{x:-.6,y:-.6},{x:.6,y:-.6},{x:.6,y:.6}].map(p=>glyphPoint(p,i,count));
  const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  assert.ok(Math.abs(d(square[0],square[1])-d(square[1],square[2]))<1e-12,'glyph aspect ratio remains square');
@@ -36,7 +39,7 @@ for(const [i,count] of [[0,1],[1,3],[7,16],[31,32]]){
 const eq=(a,b,msg)=>assert.ok(Math.abs(a-b)<1e-10,msg+': '+a+' != '+b);
 const spellRadius=GLYPH_INK_SCALE/EDITOR_ZOOM;
 const sigilRadius=(sigilPoint({x:1,y:0}).x-.5)/sigilPadPoint({x:1,y:0}).x;
-for(const i of [0,1,3,8,31]){
+for(const i of [0,1,3,8,23]){
  for(const view of [0,.5,1,3,7]){
   for(const point of [{x:0,y:0},{x:-1,y:.7},{x:.8,y:-1.2}]){
    const top=glyphPoint(point,i,1),dx=top.x-.5,dy=top.y-.5;
@@ -54,7 +57,7 @@ for(const i of [0,1,3,8,31]){
   eq(actual.y,p.y,'spell pointer mapped to pixel y');
  }
 }
-for(const i of [0,8,16,24,31]){
+for(const i of [0,6,12,18,23]){
  const p=sigilGlyphPadPoint({x:0,y:-1},i);
  assert.ok(Math.hypot(p.x,p.y)<1,'sigil zoom keeps the complete normal outer glyph inside the drawing pad');
 }
