@@ -5,7 +5,8 @@ export const MIN_DUNGEON_POWER=250;
 const INNER_RADIUS=.255;
 const GUIDE_RADIUS=.92;
 // The same scale in both axes preserves each drawn letter's aspect ratio.
-const GLYPH_INK_SCALE=.036;
+export const GLYPH_INK_SCALE=.11;
+export const REVOLVER_DURATION_MS=250;
 const GLYPH_STEP=2*Math.PI/DRAWN_GLYPH_LIMIT;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
@@ -33,8 +34,8 @@ export function pointOnPad(clientX,clientY,rect){
 }
 export function glyphAngle(index,count){return -Math.PI/2+(index-(count-1)/2)*GLYPH_STEP;}
 export function caretAngle(count){return -Math.PI/2+count*GLYPH_STEP/2;}
-export function glyphPoint(point,index,count=1){
- const angle=glyphAngle(index,count);
+export function glyphPoint(point,index,count=1,viewIndex=null){
+ const angle=viewIndex===null?glyphAngle(index,count):-Math.PI/2+(index-viewIndex)*GLYPH_STEP;
  const tangent=angle+Math.PI/2,dx=point.x*GLYPH_INK_SCALE,dy=point.y*GLYPH_INK_SCALE;
  return {x:.5+.345*Math.cos(angle)+dx*Math.cos(tangent)-dy*Math.sin(tangent),
   y:.5+.345*Math.sin(angle)+dx*Math.sin(tangent)+dy*Math.cos(tangent)};
@@ -51,55 +52,69 @@ export function normalizedGlyph(strokes){
  const cx=(minX+maxX)/2,cy=(minY+maxY)/2;
  return strokes.map(stroke=>stroke.map(p=>({x:(p.x-cx)*1.7/span,y:(p.y-cy)*1.7/span})));
 }
-// Undo/redo only tracks committed characters (or complete sigil strokes), never pen movements.
-function snapshot(s){return {letters:s.letters.slice(),sigil:s.sigil.slice()};}
+// Each touchpad coordinate is a real scaled position on the finished ring.
+// Left/right select slots, while history applies only to strokes of the central sigil.
+function snapshot(s){return s.sigil.map(stroke=>stroke.slice());}
 export function createDrawingModel(){
- const state={mode:'spell',letters:[],ink:[],sigil:[]};
+ const state={mode:'spell',letters:[],index:0,ink:[],sigil:[]};
  let undo=[],redo=[];
- function checkpoint(){undo.push(snapshot(state));if(undo.length>100)undo.shift();redo=[];}
- function mutate(fn){checkpoint();fn();}
+ const load=()=>{state.ink=state.letters[state.index]?.strokes?.map(stroke=>stroke.slice())||[];};
+ function saveCurrent(allowSpace=false){
+  if(state.index>=DRAWN_GLYPH_LIMIT)return;
+  if(state.ink.length)state.letters[state.index]={strokes:state.ink.map(stroke=>stroke.slice())};
+  else if(state.index<state.letters.length||allowSpace)state.letters[state.index]={space:true};
+ }
  function history(direction){
   const from=direction==='undo'?undo:redo,to=direction==='undo'?redo:undo;
   if(!from.length)return false;
-  to.push(snapshot(state));Object.assign(state,from.pop());return true;
+  to.push(snapshot(state));state.sigil=from.pop();return true;
  }
  return {
   state,
-  get canUndo(){return undo.length>0;},
-  get canRedo(){return redo.length>0;},
+  get canUndo(){return state.mode==='sigil'&&undo.length>0;},
+  get canRedo(){return state.mode==='sigil'&&redo.length>0;},
+  get canPrevious(){return state.mode==='spell'&&state.index>0;},
+  get canNext(){return state.mode==='spell'&&state.index<DRAWN_GLYPH_LIMIT-1;},
   addStroke(points){
    if(!Array.isArray(points)||!points.length)return false;
    const stroke=points.map(p=>({x:Number(p.x),y:Number(p.y)}));
    if(stroke.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))return false;
    if(state.mode==='spell')state.ink.push(stroke);
-   else mutate(()=>state.sigil.push(stroke));
+   else {undo.push(snapshot(state));if(undo.length>100)undo.shift();redo=[];state.sigil.push(stroke);}
    return true;
   },
-  enterGlyph(){
-   if(state.mode!=='spell'||state.letters.length>=DRAWN_GLYPH_LIMIT)return false;
-   mutate(()=>{
-    state.letters.push(state.ink.length?{strokes:normalizedGlyph(state.ink)}:{space:true});
-    state.ink=[];
-   });
+  move(direction){
+   if(state.mode!=='spell'||!Number.isInteger(direction)||Math.abs(direction)!==1)return false;
+   const next=state.index+direction;
+   if(next<0||next>=DRAWN_GLYPH_LIMIT)return false;
+   // Moving right across an empty slot deliberately inserts a space.
+   saveCurrent(direction===1);
+   state.index=next;load();
    return true;
   },
+  // Kept for existing integrations: entering a glyph is a rightward turn.
+  enterGlyph(){return this.move(1);},
   goSigil(){
-   if(state.mode!=='spell'||!state.letters.some(x=>!x.space)||state.ink.length)return false;
+   if(state.mode!=='spell')return false;
+   saveCurrent();
+   if(!state.letters.some(glyph=>glyph&&!glyph.space))return false;
    state.mode='sigil';undo=[];redo=[];return true;
   },
-  goSpell(){state.mode='spell';undo=[];redo=[];},
+  goSpell(){state.mode='spell';undo=[];redo=[];load();},
   reset(){
    if(state.mode==='spell'){
-    if(!state.ink.length)return false;
-    state.ink=[];return true;
+    const hadInk=state.ink.length>0||Boolean(state.letters[state.index]&&!state.letters[state.index].space);
+    state.ink=[];
+    if(state.index<state.letters.length)state.letters[state.index]={space:true};
+    return hadInk;
    }
    if(!state.sigil.length)return false;
-   mutate(()=>state.sigil=[]);
-   return true;
+   undo.push(snapshot(state));if(undo.length>100)undo.shift();redo=[];
+   state.sigil=[];return true;
   },
   undo(){return history('undo');},
   redo(){return history('redo');},
-  get complete(){return state.letters.some(x=>!x.space)&&state.sigil.length>0&&state.mode==='sigil';}
+  get complete(){return state.letters.some(x=>x&&!x.space)&&state.sigil.length>0&&state.mode==='sigil';}
  };
 }
 function strokePath(ctx,points,transform,lineWidth,color,glow=0){
@@ -155,18 +170,20 @@ function brushStroke(ctx,points,transform,width){
  strokePath(ctx,jittered,p=>p,width*.42,'#75573b');
  ctx.globalAlpha=1;
 }
-export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,size=512}={}){
+export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,size=512,viewIndex=null}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('魔法陣を描画できません。');
  ctx.clearRect(0,0,size,size);
  paintParchment(ctx,size);
  brushCircle(ctx,size,.43,.0055);
  brushCircle(ctx,size,INNER_RADIUS,.0095);
- for(let i=0;i<state.letters.length;i++){
-  const glyph=state.letters[i];
-  if(glyph.space)continue;
+ const visible=state.letters.slice();
+ if(state.mode==='spell'&&state.ink.length)visible[state.index]={strokes:state.ink};
+ for(let i=0;i<visible.length;i++){
+  const glyph=visible[i];
+  if(!glyph||glyph.space)continue;
   for(const stroke of glyph.strokes){
-   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,state.letters.length);return {x:q.x*size,y:q.y*size};},size*.0072);
+   brushStroke(ctx,stroke,p=>{const q=glyphPoint(p,i,visible.length,exportImage?null:viewIndex);return {x:q.x*size,y:q.y*size};},size*.0072);
   }
  }
  const transform=p=>{const q=sigilPoint(p);return {x:q.x*size,y:q.y*size};};
@@ -175,38 +192,63 @@ export function paintCircle(canvas,state,{exportImage=false,activeStroke=null,si
 }
 // Draw the cursor on its own transparent layer so CSS can blink it without
 // dimming the parchment or affecting the exported image.
-export function paintCaret(canvas,state,{size=512}={}){
+export function paintCaret(canvas,state,{size=512,viewIndex=null}={}){
  if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('呪文の入力位置を描画できません。');
  ctx.clearRect(0,0,size,size);
- if(state.mode!=='spell'||state.letters.length>=DRAWN_GLYPH_LIMIT)return;
- const angle=caretAngle(state.letters.length),radius=size*.345,half=size*.027;
+ if(state.mode!=='spell'||state.index>=DRAWN_GLYPH_LIMIT)return;
+ const angle=viewIndex===null?caretAngle(state.letters.length):-Math.PI/2+(state.index-viewIndex)*GLYPH_STEP;
+ const radius=size*.345,half=size*.027;
  ctx.beginPath();
  ctx.moveTo(size/2+(radius-half)*Math.cos(angle),size/2+(radius-half)*Math.sin(angle));
  ctx.lineTo(size/2+(radius+half)*Math.cos(angle),size/2+(radius+half)*Math.sin(angle));
  ctx.strokeStyle='#a64a31';ctx.lineWidth=size*.006;ctx.lineCap='round';ctx.globalAlpha=.92;ctx.stroke();ctx.globalAlpha=1;
 }
-function paintPad(canvas,state,activeStroke){
+// The pad is a zoomed, un-clipped section of the circle: neighboring letters
+// stay visible and blend into the active-ink color as the revolver turns.
+function padGlyphPoint(point,index,viewIndex){
+ const theta=-Math.PI/2+(index-viewIndex)*GLYPH_STEP,tangent=theta+Math.PI/2;
+ const x=.345*Math.cos(theta)+GLYPH_INK_SCALE*(point.x*Math.cos(tangent)-point.y*Math.sin(tangent));
+ const y=.345*Math.sin(theta)+GLYPH_INK_SCALE*(point.x*Math.sin(tangent)+point.y*Math.cos(tangent));
+ return {x:x/GLYPH_INK_SCALE,y:(y+.345)/GLYPH_INK_SCALE};
+}
+export function paintPad(canvas,state,activeStroke=null,viewIndex=state.index){
  const rect=canvas.getBoundingClientRect();
  if(!rect.width||!rect.height)return;
  const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  ctx.fillStyle='#03050b';ctx.fillRect(0,0,w,h);
- const scale=Math.min(w,h)/2;
- const at=p=>({x:w/2+p.x*scale,y:h/2+p.y*scale});
- ctx.save();
- ctx.strokeStyle='rgba(176,168,204,.35)';ctx.lineWidth=dpr*.9;ctx.setLineDash([3*dpr,8*dpr]);
- ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
- ctx.restore();
- if(state.mode==='sigil'){
+ const scale=Math.min(w,h)/2,at=p=>({x:w/2+p.x*scale,y:h/2+p.y*scale});
+ if(state.mode==='spell'){
+  // Inner/outer guides are arcs of the real circle projected onto this pad.
+  ctx.save();ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,6*dpr]);
+  for(const radius of [.43,INNER_RADIUS]){
+   ctx.beginPath();
+   for(let i=0;i<=120;i++){
+    const angle=(i-60)*.015;
+    const p=at({x:radius*Math.sin(angle)/GLYPH_INK_SCALE,
+     y:(.345-radius*Math.cos(angle))/GLYPH_INK_SCALE});
+    if(!i)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+   }
+   ctx.strokeStyle=radius===INNER_RADIUS?'#a48968':'#866e9c';ctx.stroke();
+  }
+  ctx.restore();
+  const drawn=state.letters.slice();
+  if(state.ink.length)drawn[state.index]={strokes:state.ink};
+  for(let i=0;i<drawn.length;i++){
+   const glyph=drawn[i];if(!glyph?.strokes||Math.abs(i-viewIndex)>4)continue;
+   const highlight=Math.max(0,1-Math.abs(i-viewIndex));
+   const color='rgb('+[0,1,2].map(k=>Math.round([113,169,186][k]*(1-highlight)+[210,183,255][k]*highlight)).join(',')+')';
+   for(const stroke of glyph.strokes)strokePath(ctx,stroke,p=>at(padGlyphPoint(p,i,viewIndex)),3.2*dpr,color,7*dpr);
+  }
+  if(activeStroke?.length)strokePath(ctx,activeStroke,at,3.2*dpr,'#e8d9ff',9*dpr);
+ }else{
   ctx.save();ctx.strokeStyle='#74718b';ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,7*dpr]);
   ctx.beginPath();ctx.arc(w/2,h/2,scale*GUIDE_RADIUS,0,Math.PI*2);ctx.stroke();ctx.restore();
+  for(const stroke of state.sigil)strokePath(ctx,stroke,at,2.4*dpr,'#d2b7ff',9*dpr);
+  if(activeStroke?.length)strokePath(ctx,activeStroke,at,2.4*dpr,'#e8d9ff',13*dpr);
  }
- const strokes=state.mode==='spell'?state.ink:state.sigil;
- const width=state.mode==='spell'?4.8*dpr:2.4*dpr;
- for(const stroke of strokes)strokePath(ctx,stroke,at,width,'#d2b7ff',9*dpr);
- if(activeStroke?.length)strokePath(ctx,activeStroke,at,width,'#e8d9ff',13*dpr);
 }
 function canvasBlob(canvas,type,quality){
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?.size?resolve(blob):reject(Error('魔法陣画像を作成できません。')),type,quality));
@@ -215,35 +257,58 @@ function canvasBlob(canvas,type,quality){
 export function initCircleDrawing(doc,{onSave}){
  const get=id=>doc.getElementById(id);
  const dialog=get('circleDrawingDialog'),preview=get('circleDrawingPreview'),pad=get('circleDrawingPad');
- const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus');
- const shell=get('circleDrawingShell');
+ const confirm=get('circleDrawingConfirm'),status=get('circleDrawingStatus'),shell=get('circleDrawingShell');
  const discard=get('circleDrawingDiscard'),keep=get('circleDrawingDiscardKeep'),discardButton=get('circleDrawingDiscardConfirm');
- let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,previousFocus=null;
+ let model=createDrawingModel(),pointerId=null,activeStroke=null,busy=false,animating=false,previousFocus=null,viewIndex=0;
+ let animationId=0;
  const message=text=>{status.textContent=text;};
  function repaint(){
-  paintCircle(preview,model.state,{activeStroke,size:512});
-  paintCaret(get('circleDrawingCaret'),model.state,{size:512});
-  paintPad(pad,model.state,activeStroke);
   const sigil=model.state.mode==='sigil';
-  get('circleDrawingStage').textContent=sigil?'紋を書く':'呪文を1文字ずつ書く';
+  paintCircle(preview,model.state,{activeStroke,size:512,viewIndex:sigil?null:viewIndex});
+  paintCaret(get('circleDrawingCaret'),model.state,{size:512,viewIndex});
+  paintPad(pad,model.state,activeStroke,viewIndex);
+  get('circleDrawingStage').textContent=sigil?'紋':'呪文';
   get('circleDrawingClose').textContent=sigil?'戻る':'閉じる';
-  get('circleDrawingInput').hidden=sigil;
-  get('circleDrawingInput').disabled=model.state.letters.length>=DRAWN_GLYPH_LIMIT||busy;
- get('circleDrawingUndo').disabled=!model.canUndo||busy;
-  get('circleDrawingRedo').disabled=!model.canRedo||busy;
-  get('circleDrawingReset').disabled=busy;
-  confirm.disabled=busy;
-  confirm.textContent=busy?'登録中…':'決定';
+  get('circleDrawingUndo').disabled=busy||animating||!(sigil?model.canUndo:model.canPrevious);
+  get('circleDrawingRedo').disabled=busy||animating||!(sigil?model.canRedo:model.canNext);
+  get('circleDrawingUndo').setAttribute?.('aria-label',sigil?'取り消す':'前の文字');
+  get('circleDrawingRedo').setAttribute?.('aria-label',sigil?'やり直す':'次の文字');
+  get('circleDrawingReset').disabled=busy||animating;
+  confirm.disabled=busy||animating;
+  confirm.textContent=busy?'登録中…':sigil?'決定':'紋を描く';
  }
  const release=()=>{pointerId=null;activeStroke=null;};
+ function animateTurn(target,done=()=>{},toSigil=false){
+  const startIndex=viewIndex,token=++animationId;
+  animating=true;
+  if(toSigil)shell.classList?.add('is-to-sigil');
+  repaint();
+  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const raf=window.requestAnimationFrame;
+  if(typeof raf!=='function'||reduced){
+   viewIndex=target;animating=false;done();shell.classList?.remove('is-to-sigil');repaint();return;
+  }
+  let start=null;
+  const step=time=>{
+   if(token!==animationId||!dialog.open)return;
+   if(start===null)start=time;
+   const t=Math.min(1,(time-start)/REVOLVER_DURATION_MS);
+   const eased=t*t*(3-2*t);
+   viewIndex=startIndex+(target-startIndex)*eased;
+   // Restore the wheel's original angle before entering sigil mode.
+   repaint();
+   if(t<1)raf.call(window,step);
+   else{animating=false;done();shell.classList?.remove('is-to-sigil');repaint();}
+  };
+  raf.call(window,step);
+ }
  function finishPointer(event,cancel=false){
   if(pointerId!==event.pointerId)return;
   if(!cancel&&activeStroke?.length)model.addStroke(activeStroke);
   release();message('');repaint();
  }
  pad.addEventListener('pointerdown',event=>{
-  if(busy||pointerId!==null||event.pointerType==='mouse'&&event.button!==0)return;
-  if(model.state.mode==='spell'&&model.state.letters.length>=DRAWN_GLYPH_LIMIT){message('環は32文字までです。');return;}
+  if(busy||animating||pointerId!==null||event.pointerType==='mouse'&&event.button!==0)return;
   event.preventDefault();
   pointerId=event.pointerId;activeStroke=[pointOnPad(event.clientX,event.clientY,pad.getBoundingClientRect())];
   pad.setPointerCapture?.(event.pointerId);repaint();
@@ -251,30 +316,38 @@ export function initCircleDrawing(doc,{onSave}){
  pad.addEventListener('pointermove',event=>{
   if(pointerId!==event.pointerId||!activeStroke)return;
   event.preventDefault();
-  const p=pointOnPad(event.clientX,event.clientY,pad.getBoundingClientRect());
-  const prev=activeStroke.at(-1);
+  const p=pointOnPad(event.clientX,event.clientY,pad.getBoundingClientRect()),prev=activeStroke.at(-1);
   if(Math.hypot(p.x-prev.x,p.y-prev.y)>.005&&activeStroke.length<2500){activeStroke.push(p);repaint();}
  });
  pad.addEventListener('pointerup',event=>finishPointer(event));
  pad.addEventListener('pointercancel',event=>finishPointer(event,true));
  pad.addEventListener('lostpointercapture',event=>finishPointer(event,true));
- get('circleDrawingInput').addEventListener('click',()=>{
-  if(!busy&&model.enterGlyph()){message('');repaint();}
+ get('circleDrawingUndo').addEventListener('click',()=>{
+  if(busy||animating||pointerId!==null)return;
+  if(model.state.mode==='sigil'){if(model.undo())repaint();}
+  else if(model.move(-1)){message('');animateTurn(model.state.index);}
  });
-get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())repaint();});
- get('circleDrawingRedo').addEventListener('click',()=>{if(!busy&&model.redo())repaint();});
+ get('circleDrawingRedo').addEventListener('click',()=>{
+  if(busy||animating||pointerId!==null)return;
+  if(model.state.mode==='sigil'){if(model.redo())repaint();}
+  else if(model.move(1)){message('');animateTurn(model.state.index);}
+ });
  get('circleDrawingReset').addEventListener('click',()=>{
-  if(busy)return;
+  if(busy||animating||pointerId!==null)return;
   model.reset();message('');repaint();
  });
  async function finish(){
-  if(busy||pointerId!==null)return;
+  if(busy||animating||pointerId!==null)return;
   if(model.state.mode==='spell'){
-   if(model.state.ink.length&&model.state.letters.length<DRAWN_GLYPH_LIMIT)model.enterGlyph();
-   if(!model.goSigil()){message('呪文を1文字以上入力してください。');repaint();return;}
-   message('');repaint();return;
+   if(!model.state.ink.length&&!model.state.letters.some(x=>x&&!x.space)){
+    message('呪文を描いてください。');return;
+   }
+   const count=Math.max(model.state.letters.length,model.state.ink.length?model.state.index+1:0);
+   message('');
+   animateTurn((count-1)/2,()=>{model.goSigil();release();},true);
+   return;
   }
-  if(!model.complete){message('紋を描いてから決定してください。');return;}
+  if(!model.complete){message('紋を描いてください。');return;}
   busy=true;message('魔法陣を封印しています…');repaint();
   try{
    const canvas=doc.createElement('canvas');
@@ -293,39 +366,35 @@ get('circleDrawingUndo').addEventListener('click',()=>{if(!busy&&model.undo())re
   discardReturnFocus=null;
  }
  function close(){
-  if(busy||!dialog.open||!discard.hidden)return;
+  if(busy||animating||!dialog.open||!discard.hidden)return;
   if(model.state.mode==='sigil'){
-   model.goSpell();release();message('');repaint();return;
+   model.goSpell();viewIndex=model.state.index;release();message('');repaint();return;
   }
   if(!(model.state.letters.length||model.state.ink.length||model.state.sigil.length||activeStroke?.length)){
    dialog.close();return;
   }
-  discardReturnFocus=doc.activeElement;
-  shell.inert=true;
-  discard.hidden=false;keep.focus();
+  discardReturnFocus=doc.activeElement;shell.inert=true;discard.hidden=false;keep.focus();
  }
  get('circleDrawingClose').addEventListener('click',close);
  keep.addEventListener('click',()=>hideDiscard());
  discardButton.addEventListener('click',()=>{hideDiscard(false);dialog.close();});
  dialog.addEventListener('cancel',event=>{
   event.preventDefault();
-  if(!discard.hidden)hideDiscard();
-  else close();
+  if(!discard.hidden)hideDiscard();else close();
  });
- dialog.addEventListener('close',()=>{hideDiscard(false);release();previousFocus?.focus?.();});
+ dialog.addEventListener('close',()=>{
+  animationId++;animating=false;shell.classList?.remove('is-to-sigil');
+  hideDiscard(false);release();previousFocus?.focus?.();
+ });
  window.addEventListener('resize',()=>{if(dialog.open)repaint();});
  function present(){
-  release();hideDiscard(false);busy=false;message('');
+  release();hideDiscard(false);busy=false;animating=false;viewIndex=model.state.index;message('');
   if(!dialog.open)dialog.showModal();
   repaint();confirm.focus();
  }
  return {
-  open(){
-   model=createDrawingModel();previousFocus=doc.activeElement;
-   present();
-  },
-  // Reopen the exact draft after cancelling analysis. Never reset the model:
-  // this preserves letters, pen strokes, sigil stage and undo/redo history.
+  open(){model=createDrawingModel();previousFocus=doc.activeElement;present();},
+  // Analysis cancellation resumes the existing spell and sigil, not a fresh draft.
   resume(){present();}
  };
 }
