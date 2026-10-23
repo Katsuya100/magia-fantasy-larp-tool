@@ -1,4 +1,5 @@
-import {startingBase,XP_SCALE} from './dungeon-core.mjs';
+import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs';
+import {level as levelRow} from './dungeon-tuning.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
 import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto} from './dungeon-cloud-integrity.mjs';
 import {prepareProfilePhotoRefs,restoreProfilePhotoRefs} from './dungeon-profile-photo-refs.mjs';
@@ -282,12 +283,24 @@ export function saveHeirName(db,name){
 export async function migrateDungeonXp(db){
  const p=await getProfile(db);
  if(!p||p.xpScaleVersion===XP_SCALE)return p;
- const scale=x=>Number.isFinite(Number(x))?Number(x)/XP_SCALE:x;
- p.xp=scale(p.xp);
- if(p.run)p.run.xp=scale(p.run.xp);
+ // Preserve exact fractional progress to the next level across BOTH
+ // the 45x unit conversion and the flatter 2.1 -> 1.35 growth curve.
+ const convert=(xp,lvl)=>{
+  const n=Number(xp);
+  if(!Number.isFinite(n))return xp;
+  const oldNeed=Math.ceil(Number(levelRow(lvl).xp_to_next)*Math.pow(2.1,(Number(lvl)-1)/10));
+  return Math.max(0,Math.round(n/oldNeed*nextXp(lvl)*1e6)/1e6);
+ };
+ const ratioAtLevel=lvl=>nextXp(lvl)/Math.ceil(Number(levelRow(lvl).xp_to_next)*Math.pow(2.1,(Number(lvl)-1)/10));
+ p.xp=convert(p.xp,p.level);
+ // In-flight rewards have no historical per-fight ledger. Use the current
+ // expedition's level as the best available reference and retain fractional XP.
+ if(p.run)p.run.xp=Math.max(0,Math.round(Number(p.run.xp||0)*ratioAtLevel(p.level)*1e6)/1e6);
  if(p.pendingReturn){
-  p.pendingReturn.gained=scale(p.pendingReturn.gained);
-  if(p.pendingReturn.before)p.pendingReturn.before.xp=scale(p.pendingReturn.before.xp);
+  const before=p.pendingReturn.before;
+  const oldLevel=Number(before?.level||p.level);
+  p.pendingReturn.gained=Math.max(0,Math.round(Number(p.pendingReturn.gained||0)*ratioAtLevel(oldLevel)*1e6)/1e6);
+  if(before)before.xp=convert(before.xp,oldLevel);
  }
  p.xpScaleVersion=XP_SCALE;
  await saveProfile(db,p);
