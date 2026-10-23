@@ -227,7 +227,7 @@ export function applyLegacyHp(src,tgt,spell){
  const changed=Math.abs(unit.stats.hp-oldMax);
  return changed?'・最大HP'+(self?'+':'-')+changed:'';
 }
-export function cast(src,tgt,spell,buffs,r=Math.random){
+export function cast(src,tgt,spell,buffs,r=Math.random,onStatus){
  const a=spell.attribute,B=effectivePower(src,spell),q=strength(src,spell);
  if(!ATTRS.includes(a)||!ROLES.includes(spell.role))throw Error('Bad magic');
  const legacy=applyLegacyHp(src,tgt,spell);
@@ -243,8 +243,9 @@ export function cast(src,tgt,spell,buffs,r=Math.random){
  if(spell.role==='defense'){
   const duration=statusDuration(spell);
   addStatus(src,{id:'resist_'+a,kind:'buff',attribute:a,effect:'resist',value:clamp(num('defense_resistance_gain')*q,0,num('defense_resistance_cap')),turns:duration});
+  onStatus?.(status(src,'resist_'+a));
   const chosen=a==='chaos'?ATTRS[roll(0,5,r)]:a,row=buffs.find(x=>x.id==='buff_'+chosen);
-  if(row)addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:duration});
+  if(row){addStatus(src,{id:row.id,kind:'buff',attribute:a,effect:row.effect,value:Number(row.value)*q,turns:duration});onStatus?.(status(src,row.id));}
   return a+'耐性と強化'+legacy;
  }
  const row=buffs.find(x=>x.id==='debuff_'+a);
@@ -279,6 +280,7 @@ export function cast(src,tgt,spell,buffs,r=Math.random){
   }
   addStatus(tgt,{id:'debuff_'+a,kind:'debuff',attribute:a,effect:row.effect,value,shockExtra,
    sealedRoles,sealedRole:sealedRoles?.[0]??null,turns:statusDuration(spell)});
+   onStatus?.(status(tgt,'debuff_'+a));
  }
  return a+'弱体付与'+legacy;
 }
@@ -293,7 +295,7 @@ export function reviveOnFatal(unit){
 export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onStep){
  const ps=prepare(player,pickPlayer,r),es=prepare(enemy,pickEnemy,r);
  const actions=[{u:player,t:enemy,sp:ps,name:'自分',side:'hero'},{u:enemy,t:player,sp:es,name:'敵',side:'enemy'}],log=[];
- const appliedDebuffs=new Set();
+ const deferredStatuses=new Set();
  const snapshot=u=>({...u,statuses:u.statuses.map(x=>({...x})),cooldowns:[...u.cooldowns]});
  const publish=(a,role,attribute,message,amount=0)=>{
   if(onStep)onStep({side:a.side,role,attribute,text:message,amount,
@@ -320,12 +322,14 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
     a.t.hp=Math.max(0,a.t.hp-d);
     message=a.name+'：通常攻撃 '+d;
    }else {
-    const previous=role==='debuff'?status(a.t,'debuff_'+a.sp.attribute):null;
-    message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
-    if(role==='debuff'&&!previous){
-     const applied=status(a.t,'debuff_'+a.sp.attribute);
-     if(applied&&['shock','seal','confused'].includes(applied.effect))appliedDebuffs.add(applied);
-    }
+    message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r,s=>{
+     // Count a status only from a turn when its effect can be used.
+     const targetRole=actions.find(x=>x.u===a.t).sp.role;
+     if(s.kind==='buff'&&['attack','output','heal'].includes(s.effect)||
+      s.kind==='debuff'&&(['shock','seal','confused','soak'].includes(s.effect)||
+       ['dizzy','output'].includes(s.effect)&&!['attack','basic'].includes(targetRole)))
+      deferredStatuses.add(s);
+    });
    }
    log.push(message);
    const amount=role==='support'?a.u.hp-oldHp:oldHp-a.t.hp;
@@ -355,7 +359,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
      publish(a,'revive','law',revival,revived);
     }
    }
-   if(!appliedDebuffs.has(s))s.turns--;
+   if(!deferredStatuses.has(s))s.turns--;
   }
   a.u.statuses=a.u.statuses.filter(s=>s.turns>0);
   a.u.cooldowns=a.u.cooldowns.map(x=>Math.max(0,x-1));
