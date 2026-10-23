@@ -16,7 +16,7 @@ import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261023.19';
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261023.19';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261023.19';
-import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261023.19';
+import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261023.20';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261023.19';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261023.19';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261023.19';
