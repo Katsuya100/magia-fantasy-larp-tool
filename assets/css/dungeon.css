@@ -2696,3 +2696,18 @@ button.creator-congratulations-close{
 #circleDrawingDialog .circle-drawing-practice{position:absolute;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));z-index:3;min-height:36px;margin:0;padding:5px 10px;font-size:12px}
 .circle-first-choice-actions{display:flex;flex-direction:column;gap:12px;margin:20px 0 12px}
 .circle-first-choice-actions button{width:100%;min-height:50px}
+
+/* Drawing guidance is an overlay: neither touch coordinates nor exported strokes change. */
+.circle-drawing-pad-frame{position:relative;width:min(100cqw,100cqh);height:min(100cqw,100cqh);max-width:100%;max-height:100%;aspect-ratio:1 / 1}
+.circle-drawing-pad-frame .circle-drawing-pad{width:100%;height:100%;max-width:100%;max-height:100%}
+.circle-drawing-brush-icon{position:absolute;top:9px;right:10px;z-index:3;pointer-events:none;font-size:24px;line-height:1;filter:drop-shadow(0 1px 5px #000)}
+.circle-drawing-finger-guide{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.circle-drawing-finger-guide[hidden]{display:none!important}
+.circle-drawing-finger-guide svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.circle-drawing-finger-guide path{fill:none;stroke:#f2cc9c;stroke-width:1.35;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;filter:drop-shadow(0 0 2px #edbe7a)}
+.circle-drawing-finger{position:absolute;left:24%;top:70%;font-size:34px;line-height:1;transform:translate(-38%,-85%);opacity:0;filter:drop-shadow(1px 3px 4px #000)}
+.circle-drawing-finger-guide[data-playing="true"] path{animation:dungeon-finger-trace 2.5s ease-in-out both}
+.circle-drawing-finger-guide[data-playing="true"] .circle-drawing-finger{animation:dungeon-finger-move 2.5s ease-in-out both}
+@keyframes dungeon-finger-trace{0%,8%{stroke-dashoffset:100;opacity:0}12%{opacity:1}88%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes dungeon-finger-move{0%{left:24%;top:70%;opacity:0}9%{opacity:1}40%{left:42%;top:43%}67%{left:59%;top:48%}88%{left:74%;top:36%;opacity:1}100%{left:74%;top:36%;opacity:0}}
+@media(prefers-reduced-motion:reduce){.circle-drawing-finger-guide[data-playing="true"] path,.circle-drawing-finger-guide[data-playing="true"] .circle-drawing-finger{animation:none}}
