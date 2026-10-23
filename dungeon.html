@@ -347,7 +347,11 @@
               <canvas id="circleDrawingPad" class="circle-drawing-pad" width="420" height="420" aria-label="指またはマウスで線を描く正方形のタッチパッド"></canvas>
               <span class="circle-drawing-brush-icon" aria-hidden="true">🖌️</span>
               <div id="circleDrawingFingerGuide" class="circle-drawing-finger-guide" aria-hidden="true" hidden>
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M32 24 L32 76 M32 24 L70 24 M32 49 L60 49"/></svg>
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <path class="finger-f-vertical" pathLength="100" d="M32 24 L32 76"/>
+                  <path class="finger-f-top" pathLength="100" d="M32 24 L70 24"/>
+                  <path class="finger-f-middle" pathLength="100" d="M32 49 L60 49"/>
+                </svg>
                 <span id="circleDrawingFinger" class="circle-drawing-finger">👆</span>
               </div>
             </div>
