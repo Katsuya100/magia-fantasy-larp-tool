@@ -52,8 +52,8 @@ for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4]
   bonusTurns.push(defender.statuses.find(x=>x.id.startsWith('buff_'))?.turns??0);
  }
  const expectedResist=Array.from({length:7},(_,i)=>Math.max(0,duration-i-1));
- const bonusUsedImmediately=['storm','gravity'].includes(attr);
- const expectedBonus=Array.from({length:7},(_,i)=>Math.max(0,duration-i-(bonusUsedImmediately?1:0)));
+ const bonusStarts=['storm','gravity'].includes(attr)?0:['flame','bolt'].includes(attr)?1:Infinity;
+ const expectedBonus=Array.from({length:7},(_,i)=>Math.max(0,duration-Math.max(0,i-bonusStarts+1)));
  assert.deepEqual(resistTurns,expectedResist,'resistance consumed after matching hit '+attr+' P'+power);
  assert.deepEqual(bonusTurns,expectedBonus,'buff countdown starts with an affected turn '+attr+' P'+power);
  assert.ok(damageTaken.slice(0,duration).every(d=>d<normalDamage),'protected hits '+attr+' P'+power);
@@ -70,8 +70,8 @@ for(const attr of ['flame','storm','aqua','law']){
   'defensive buff counts a basic hit, other buffs await their first effect '+attr);
  G.round(actor,foe,-1,0,buffs,()=>.99);
  assert.equal(G.status(actor,'resist_'+attr)?.turns,3,'resistance counts matching hit '+attr);
- assert.equal(actor.statuses.find(s=>s.id.startsWith('buff_'))?.turns,activeDefense?2:3,
-  'buff counts the rounds in which its effect is active '+attr);
+ assert.equal(actor.statuses.find(s=>s.id.startsWith('buff_'))?.turns,activeDefense?2:attr==='flame'?3:4,
+  'buff counts only rounds where its effect is applied '+attr);
 }
 for(const [attr,role] of [['flame','attack'],['bolt','attack'],['aqua','support'],
  ['storm','attack'],['gravity','attack'],['law','attack'],['chaos','attack']]){
@@ -83,7 +83,8 @@ for(const [attr,role] of [['flame','attack'],['bolt','attack'],['aqua','support'
  const defended=['storm','gravity'].includes(attr);
  assert.equal(bonus?.turns,defended?3:4,'buff consumes application turn only when it protects a hit '+attr);
  G.round(actor,foe,1,-1,buffs,()=>.99);
- assert.equal(G.status(actor,bonus.id)?.turns,defended?2:3,'buff counts its next active turn '+attr);
+ assert.equal(G.status(actor,bonus.id)?.turns,defended?2:['law','chaos'].includes(attr)?4:3,
+  'buff consumes a turn only when its effect applies '+attr);
 }
 const upgraded={role:'defense',attribute:'flame',power:1000,basePower:270};
 assert.equal(G.defenseDuration(upgraded),6,'stone-upgraded power, not original MP basis');
@@ -97,7 +98,8 @@ for(const attr of G.ATTRS)for(const [power,duration] of [[120,2],[270,3],[540,4]
   G.round(hero,foe,-1,i===0?0:-1,buffs,()=>.1);
   countdown.push(G.status(hero,'debuff_'+attr)?.turns??0);
  }
- assert.deepEqual(countdown,Array.from({length:7},(_,i)=>Math.max(0,duration-i-(['bolt','aqua','law','chaos'].includes(attr)?0:1))),
+ const affected=['flame','storm','gravity'].includes(attr)?i=>i+1:attr==='law'?i=>i:()=>0;
+ assert.deepEqual(countdown,Array.from({length:7},(_,i)=>Math.max(0,duration-affected(i))),
   'debuff countdown begins when its effect can first apply '+attr+' P'+power);
 }
 // Regression: four-turn shock and confusion survive repeated casts on either side.
@@ -116,11 +118,14 @@ for(const attr of ['bolt','chaos'])for(const casterSide of ['player','enemy']){
  if(attr==='bolt')assert.equal(victim.cooldowns[0],num('spell_cooldown')+num('shock_cooldown_extra')-1,
   'shock adds cooldown when a spell is used');
  fight(-1,-1);
- assert.equal(G.status(victim,'debuff_'+attr)?.turns,2,attr+' remains during the second affected round');
- fight(-1,-1);
- assert.equal(G.status(victim,'debuff_'+attr)?.turns,1,attr+' remains during the third affected round');
- fight(-1,-1);
- assert.equal(G.status(victim,'debuff_'+attr),undefined,attr+' expires after the fourth affected round');
+ assert.equal(G.status(victim,'debuff_'+attr)?.turns,3,attr+' keeps its turns during a basic attack');
+ for(const remaining of [2,1,0]){
+  victim.cooldowns[0]=0;
+  fight(-1,0);
+  assert.equal(G.status(victim,'debuff_'+attr)?.turns??0,remaining,
+   attr+' consumes exactly one turn for each affected cast');
+ }
+ assert.equal(G.status(victim,'debuff_'+attr),undefined,attr+' expires after its fourth affected cast');
 }
 const caster=unit();
 for(const power of [270,540,1000]){
