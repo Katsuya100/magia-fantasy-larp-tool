@@ -405,15 +405,15 @@ try{
  pad.dispatch('pointermove',pointer(1,90,95));
  pad.dispatch('pointerup',pointer(1,90,95));
  assert.equal(get('circleDrawingConfirm').disabled,false,'one drawn stroke enables the sigil step');
- // Exercise a real 250ms frame sequence, including disabled buttons during transition.
+ // Exercise the revolver duration, including disabled buttons during transition.
  const frames=[];
  globalThis.window.requestAnimationFrame=cb=>frames.push(cb);
  get('circleDrawingRedo').dispatch('click');
  assert.equal(get('circleDrawingRedo').disabled,true);
  assert.equal(frames.length,1);
- frames.shift()(0);frames.shift()(125);
+ frames.shift()(0);frames.shift()(REVOLVER_DURATION_MS/2);
  assert.equal(get('circleDrawingRedo').disabled,true);
- frames.shift()(250);
+ frames.shift()(REVOLVER_DURATION_MS);
  assert.equal(get('circleDrawingRedo').disabled,false);
  delete globalThis.window.requestAnimationFrame;
  get('circleDrawingUndo').dispatch('click');
