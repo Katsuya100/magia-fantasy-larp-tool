@@ -324,6 +324,41 @@ try{
  assert.equal(get('circleDrawingStage').textContent,'呪文を1文字ずつ書く','a truly new drawing still starts empty');
  assert.equal(get('circleDrawingUndo').disabled,true,'fresh editor does not inherit old history');
  dialog.close();
+
+ const padColors=[];
+ const padCtx={...fakeContext,stroke(){padColors.push(this.strokeStyle);}};
+ const canvasPad={width:0,height:0,getBoundingClientRect:()=>({width:240,height:240}),getContext:()=>padCtx};
+ paintPad(canvasPad,{mode:'spell',letters:[{strokes:[stroke]},{strokes:[stroke]}],ink:[],sigil:[]});
+ assert.ok(padColors.some(c=>String(c).includes('244,197,127')),'outer ring is shown as a dotted guide');
+ assert.ok(padColors.some(c=>String(c).includes('138,190,206')),'inner ring is shown as a dotted guide');
+ assert.ok(padColors.includes('#77d5ff')&&padColors.includes('#dfb0fa'),'adjacent letters glow in alternating distinct colors');
+
+ // Exercise actual requestAnimationFrame advancement without browser libraries.
+ const frames=[];
+ globalThis.window.requestAnimationFrame=callback=>{frames.push(callback);return frames.length;};
+ const step=time=>{const frame=frames.shift();assert.equal(typeof frame,'function');frame(time);};
+ const animated=initCircleDrawing(fakeDoc,{onSave:async()=>{}});
+ animated.open();
+ drawingPad.dispatch('pointerdown',inkEvent(3,40,50));
+ drawingPad.dispatch('pointermove',inkEvent(3,95,100));
+ drawingPad.dispatch('pointerup',inkEvent(3,95,100));
+ get('circleDrawingInput').dispatch('click');
+ assert.equal(get('circleDrawingInput').disabled,true,'revolver blocks new input until the rotation finishes');
+ assert.equal(get('circleDrawingConfirm').disabled,true,'cannot switch mode in the middle of a reel');
+ step(1000);step(1210);
+ assert.equal(get('circleDrawingInput').disabled,true,'Input remains disabled halfway through the animated advance');
+ step(1421);
+ assert.equal(get('circleDrawingInput').disabled,false,'Input is restored after the revolver settles');
+ get('circleDrawingConfirm').dispatch('click');
+ assert.equal(get('circleDrawingStage').textContent,'紋を書く');
+ assert.equal(get('circleDrawingConfirm').disabled,true,'sigil zoom blocks premature registration');
+ step(2000);step(2360);step(2721);
+ assert.equal(get('circleDrawingConfirm').disabled,false,'sigil edit is enabled after the rotate/zoom settles');
+ get('circleDrawingClose').dispatch('click');
+ assert.equal(get('circleDrawingStage').textContent,'呪文を1文字ずつ書く','Back begins returning to the spell camera');
+ step(3000);step(3290);step(3581);
+ assert.equal(get('circleDrawingInput').disabled,false,'reversed zoom settles at the next spell entry');
+ dialog.close();
 }finally{if(oldWindow===undefined)delete globalThis.window;else globalThis.window=oldWindow;}
 
 console.log('PASS ritual blank Input, pad-only reset, character undo, centered caret, thick ink and parchment');
