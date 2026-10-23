@@ -367,8 +367,8 @@ export function repairInvalidMp(hero){
 // tenth-layer checkpoints still use their separate full-recovery rules.
 export const VICTORY_MP_LAYER_CURVE=Object.freeze(
  [[1,1],[10,1],[15,.815],[20,.5976],[21,.5799],[22,.547],[25,.541],[29,.53955],[30,.5395],[35,.462],[40,.406],
-  [41,.387],[45,.343],[49,.3339],[50,.3332],[51,.3037],[52,.3013],[55,.2965],[59,.29282],[60,.2924],
-  [65,.228],[70,.2244],[71,.1904],[75,.1854],[79,.1827],[80,.182],[85,.174],[89,.145],
+  [41,.387],[45,.343],[49,.3339],[50,.3332],[51,.30345],[52,.30115],[55,.2962],[59,.29282],[60,.2924],
+  [65,.228],[70,.2244],[71,.1906],[75,.18545],[79,.1827],[80,.182],[85,.174],[89,.145],
   [90,.1288],[95,.079],[100,0]].map(point=>Object.freeze(point)));
 export function victoryMpLayerFactor(layer,policy=VICTORY_MP_LAYER_CURVE){
  const floor=Number(layer);
