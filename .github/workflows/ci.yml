@@ -78,11 +78,27 @@ jobs:
       - run: node tests/test-dungeon-journeys.mjs
       - run: node scripts/dungeon-balance-manifest.mjs
       - run: node scripts/simulate-dungeon-journeys.mjs 16 > reports/dungeon-journeys.log
-      - run: node scripts/check-dungeon-economy-baseline.mjs
+      - name: Detect unapproved economic benchmark drift
+        id: economic_baseline
+        continue-on-error: true # preserve diagnosis; gate explicitly at the end
+        run: node scripts/check-dungeon-economy-baseline.mjs
       - run: node scripts/dungeon-extra-economy-diagnostics.mjs
       - run: node scripts/report-dungeon-journeys.mjs
       - run: node scripts/dungeon-ink-recovery.mjs
-      - run: node scripts/dungeon-ink-paired.mjs
+      - name: Check both ink strategies against identical owner states
+        id: ink_pair
+        continue-on-error: true # preserve full paired report; gate explicitly at the end
+        run: node scripts/dungeon-ink-paired.mjs
+      - name: Enforce benchmark and magic ink hard gates
+        if: always()
+        env:
+          BASELINE_OUTCOME: ${{ steps.economic_baseline.outcome }}
+          INK_OUTCOME: ${{ steps.ink_pair.outcome }}
+        run: |
+          if [ "$BASELINE_OUTCOME" != success ] || [ "$INK_OUTCOME" != success ]; then
+            echo "::error::Unapproved benchmark drift or unmet magic ink strategy proof; CI remains RED"
+            exit 1
+          fi
       - name: Archive diagnostic reports and seed traces
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
