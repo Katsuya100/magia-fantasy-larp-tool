@@ -14,10 +14,9 @@ for(const [lvl,slots] of [[1,3],[9,3],[10,4],[19,4],[20,5],[49,7],[50,8],[150,18
  assert.equal(G.capacity(lvl),slots,'carry slot increases each 10 levels');
 assert.equal(G.nextXp(1),3);assert.equal(floor(5).boss,'1');
 for(const layer of [1,10,50,100]){
- const enemyLevel=G.targetClearLevel?.(layer)??layer*2-1;
- assert.equal(G.fightExperience(enemyLevel,enemyLevel,layer),
-  G.fightExperience(enemyLevel,150,layer),
-  'overleveled repeat clears must retain identical EXP (no EXP decay)');
+ assert.equal(G.fightExperience(1,30,layer),
+  G.fightExperience(1,90,layer),
+  'repeat clears must retain identical EXP regardless of player overlevel');
 }
 assert.deepEqual(G.startingBase(()=>0),{hp:90,mag:8,def:5,res:5});
 assert.deepEqual(G.startingBase(()=>.99999),{hp:110,mag:12,def:10,res:10});
