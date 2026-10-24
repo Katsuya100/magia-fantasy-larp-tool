@@ -46,7 +46,7 @@ const report={schemaVersion:'dungeon-linked-256-economy-v1',source:ECONOMY_VERSI
   'No 101-150F authored combat, mandatory 101-150F clear, or new p90 replay threshold is implied.'
  ]};
 for(const style of ['A','B','C'])for(const route of ['short','long']){
- const accounts=[],entries=Array.from({length:10},(_,i)=>({band:10*i+1,
+ const accounts=[],ownerEntries=[],entries=Array.from({length:10},(_,i)=>({band:10*i+1,
   level:[],hp:[],mp:[],stone:[],ink:[],upgrades:[],
   records:0,carriedCleansers:[],storedCleansers:[]}));
  const floors=Array.from({length:100},(_,i)=>({layer:i+1,attempted:0,cleared:0,
@@ -71,6 +71,18 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   assert.ok(run.rankAudit.every(r=>r.hpPercent>=80&&r.mpPercent>=80||!r.eligible));
   conservationChecks++;
   accounts.push(select(run));
+  ownerEntries.push({seed,snapshots:goals.bands.map(b=>{
+   const snap=run.entrySnapshots[b.from];
+   return snap?{from:b.from,layer:snap.layer,sortie:snap.sortie,
+    level:snap.level,rank:snap.rank,xp:snap.xp,
+    playerBase:snap.playerBase,playerHp:snap.playerHp,playerMp:snap.playerMp,
+    maxHp:snap.maxHp,maxMp:snap.maxMp,
+    circles:snap.circles,cooldowns:snap.cooldowns,statuses:snap.statuses,
+    carry:snap.carry,bankedItems:snap.bankedInventory.length,
+    bankedStones:snap.bankedStones,bankedInk:snap.bankedInk,
+    unbankedXp:snap.unbankedXp,unbankedStone:snap.unbankedStone,
+    unbankedInk:snap.unbankedInk}:null;
+  })});
   for(const [i,e] of entries.entries()){
    const snap=run.entrySnapshots[e.band];
    if(!snap)continue;
@@ -119,7 +131,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    gradeChecks:f.gradeChecks,gradeEligible:f.gradeEligible,gradeBanked:f.gradeBanked,
    entryHp:stats(f.entryHp),entryMp:stats(f.entryMp),
    winExitHp:stats(f.exitHp),winExitMp:stats(f.exitMp)})),
-  accounts};
+  accounts,ownerEntries};
  report.policies.push(policy);
  console.log('DUNGEON_LINKED_256_POLICY '+JSON.stringify({style,route,samples:accounts.length,
   completion,nonCompletion:accounts.length-completion,conservationChecks,
