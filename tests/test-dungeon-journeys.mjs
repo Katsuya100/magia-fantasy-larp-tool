@@ -104,6 +104,31 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  assert.ok(run.lost.stone>=0&&run.lost.ink>=0&&run.lost.xp>=0);
  assert.ok(run.fights<=120);
  assert.equal(run.circles.filter(c=>c.active).length,5);
+ const {items,collections}=run.resourceLedger;
+ assert.equal(items.held,run.inventory,'owned item balances must match warehouse');
+ assert.equal(items.bankedDrops+items.alchemyCreated,
+  items.held+items.battleConsumed+items.alchemyConsumed,
+  'consumable drops, battle usage and alchemy inputs conserve physical items');
+ assert.equal(collections.bankedDrops,
+  collections.held+collections.alchemyConsumed,
+  'collection drops and alchemy inputs conserve collections');
+ assert.equal(run.floorAudit.reduce((sum,row)=>sum+row.attemptedFights,0),run.fights,
+  'every actual fight belongs to exactly one audited floor');
+ assert.ok(run.floorAudit.every(row=>row.layer>=1&&row.layer<=100&&
+  row.attemptedFights>=1&&row.attemptedFights<=5&&
+  row.entryHpPercent>=0&&row.entryMpPercent>=0));
+ assert.ok(run.floorAudit.every(row=>row.usedOwnedCleansers===0||row.layer>=51),
+  'specialist cleansing must never happen before 51F');
+ assert.ok(run.rankAudit.every(row=>row.eligible===
+  (row.hpPercent>=80&&row.mpPercent>=80&&row.failure===null)),
+  'boss-only 80/80 checks are independent of victory restoration');
+ assert.ok(run.rankAudit.every(row=>!row.banked||row.eligible),
+  'only earned, banked badges can be marked safely acquired');
+ const initialIds=[...entry.carry,...entry.bankedInventory].map(item=>item.instanceId);
+ assert.equal(new Set(initialIds).size,initialIds.length,
+  'real owner snapshots cannot duplicate owned consumable instances');
+ assert.ok(Array.isArray(entry.bankedInventory)&&entry.bankedCollections);
+
  // Per-battle intro prohibition is asserted inside the simulator itself.
  if(style==='B')assert.equal(run.circles.length,8);
  if(style==='C')assert.ok(run.spent.ink<=run.earned.ink);
@@ -121,5 +146,19 @@ assert.ok(rebuild.redrawEvents.every(event=>event.sameDrawingQuality===true&&
  event.stoneInvestmentTransferred===0&&event.newMarginalPowerPerStone>event.oldMarginalPowerPerStone),
  'same-quality ink rebuild cannot transfer sunk upgrades');
 assert.ok(rebuild.redrawEvents.every(event=>event.sunkStones>=0));
+assert.equal(rebuild.floorAudit.reduce((n,x)=>n+x.attemptedFights,0),rebuild.fights);
+assert.equal(rebuild.resourceLedger.items.held,rebuild.inventory);
+assert.ok(rebuild.floorAudit.every(f=>f.bossRank===null||f.layer%10===0),
+ 'only an actual tenth-floor boss can trigger a rank event');
+const repeat=runJourney(20261024,{style:'A',route:'short',maxSorties:2,maxFights:120});
+const repeatAgain=runJourney(20261024,{style:'A',route:'short',maxSorties:2,maxFights:120});
+assert.deepEqual(repeatAgain,repeat,'identical seed and policy must reproduce every battle and earned resource');
+const alchemy=runJourney(20261024,{style:'A',route:'short',alchemy:true,maxSorties:4,maxFights:180});
+assert.equal(alchemy.resourceLedger.items.alchemyConsumed,5*alchemy.alchemyCrafts);
+assert.equal(alchemy.resourceLedger.items.alchemyCreated,alchemy.alchemyCrafts);
+assert.equal(alchemy.resourceLedger.collections.alchemyConsumed,alchemy.alchemyCrafts);
+assert.equal(alchemy.resourceLedger.items.held,alchemy.inventory);
+assert.equal(alchemy.resourceLedger.collections.held,
+ Object.values(alchemy.collection).reduce((a,b)=>a+b,0));
 
-console.log('PASS manifest coverage, 80% rank rule, conservation and 6 journey route structural checks '+ECONOMY_VERSION);
+console.log('PASS manifest coverage, reproducible seeded combat, 80/80 rank, item/collection/stone/ink conservation and 6 routes '+ECONOMY_VERSION);
