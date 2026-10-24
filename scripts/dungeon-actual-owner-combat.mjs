@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {enemyForFight} from '../assets/js/dungeon-design.mjs';
+import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
 import {rng,spread} from './simulate-dungeon-journeys.mjs';
 
@@ -47,7 +47,7 @@ function cleanse(hero,carry,layer,uses){
  carry[i]=null;
 }
 function challenge(snapshot,from,seed){
- const random=rng(seed);
+ const random=rng(seed),encounterForFight=createSortieEncounterSelector(data.enemies,random);
  const hero=G.makeUnit(snapshot.playerBase,snapshot.level,{},
   snapshot.circles.map(x=>({role:x.role,attribute:x.attribute,power:x.power,
    basePower:x.basePower,upgradeLevel:x.upgradeLevel})),'hero');
@@ -72,7 +72,7 @@ function challenge(snapshot,from,seed){
   startHp:100*hero.hp/hero.stats.hp,startMp:100*hero.mp/hero.maxMp};
  for(let layer=from;layer<from+10;layer++){
   for(let slot=1;slot<=5;slot++){
-   const fight=(layer-1)*5+slot,foe=enemyForFight(data.enemies,fight,random);
+   const fight=(layer-1)*5+slot,foe=encounterForFight(fight);
    const enemy=G.fromEnemy(foe,Number(data.floors[fight-1].enemy_level));
    let victorious=false;
    for(let turn=0;turn<80;turn++){
