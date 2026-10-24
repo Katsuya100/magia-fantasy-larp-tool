@@ -48,8 +48,9 @@ function chooseHero(hero,enemy,layer,utilityUnlocked){
  // Novice rank at F10 checks HP and MP BEFORE the ordinary victory reward.
  // Once utility is legally unlocked, heal proactively for that real badge;
  // never mint a recovery or bypass G.available / actual MP spending.
- const healBelow=layer===10&&utilityUnlocked?.88:.69;
- if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&hero.mp/hero.maxMp>.85)return heal;
+ const healBelow=layer===10&&utilityUnlocked ? .88 : .69;
+ if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
+  (layer!==10||hero.mp/hero.maxMp>.85))return heal;
  // Use the already equipped law-defense circle only when it can protect
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
