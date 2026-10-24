@@ -36,11 +36,12 @@ assert.ok(earnedAt10<=intro.maxMp&&earnedAt11<=intro.maxMp);
 assert.equal(G.chooseEnemySpell(
  G.fromEnemy(foes.find(x=>x.id==='foe_l001_1'),1),()=>.001)>=0,true);
 const introFoe=G.fromEnemy(foes.find(x=>x.id==='foe_l001_1'),1);
-assert.equal(num('enemy_intro_attack_preference'),.003);
-const pickedAttack=G.chooseEnemySpell(introFoe,()=>.001);
-const pickedGuard=G.chooseEnemySpell(introFoe,()=>.004);
-assert.equal(introFoe.spells[pickedAttack].role,'attack','intro attacks still exist');
-assert.equal(introFoe.spells[pickedGuard].role,'defense','intro enemies otherwise defend');
+assert.ok(num('enemy_attack_preference')>.5,'intro foes must attack frequently, not be passive dummies');
+const pickedAttack=G.chooseEnemySpell(introFoe,()=>.5);
+const pickedGuard=G.chooseEnemySpell(introFoe,()=>.9);
+assert.equal(introFoe.spells[pickedAttack].role,'attack','intro attacks share the standard enemy attack chance');
+assert.equal(introFoe.spells[pickedGuard].role,'defense','intro guards remain possible');
+assert.ok(introFoe.base.mag<7,'intro damage is tuned using authored enemy base stats');
 
 const manifest=buildManifest();
 assert.equal(manifest.schemaVersion,'dungeon-levers-v1');
