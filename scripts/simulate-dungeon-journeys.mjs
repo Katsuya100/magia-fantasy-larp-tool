@@ -40,12 +40,16 @@ const equipped=circles=>circles.filter(c=>c.active).map(c=>({
 const percent=(value,max)=>max>0?100*value/max:null;
 const chestSummary=p=>({level:p.level,rank:p.adventurerRank,xp:p.xp});
 
-function chooseHero(hero,enemy,utilityUnlocked){
+function chooseHero(hero,enemy,layer,utilityUnlocked){
  const ready=G.available(hero);
  // Attack-only through the first banked F2 clear. Unlock utility only
  // after a legitimate return; do not simulate a free unlock.
  const heal=utilityUnlocked?ready.find(i=>hero.spells[i].role==='support'):undefined;
- if(heal!==undefined&&hero.hp/hero.stats.hp<.69)return heal;
+ // Novice rank at F10 checks HP and MP BEFORE the ordinary victory reward.
+ // Once utility is legally unlocked, heal proactively for that real badge;
+ // never mint a recovery or bypass G.available / actual MP spending.
+ const healBelow=layer===10&&utilityUnlocked?.88:.69;
+ if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&hero.mp/hero.maxMp>.85)return heal;
  // Use the already equipped law-defense circle only when it can protect
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
@@ -299,7 +303,7 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
  let healCasts=0,enemyHealCasts=0,rounds=0,enemyDebuffs=0;
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
-  const ours=chooseHero(hero,enemy,utilityUnlocked),theirs=G.chooseEnemySpell(enemy,random);
+  const ours=chooseHero(hero,enemy,layer,utilityUnlocked),theirs=G.chooseEnemySpell(enemy,random);
   if(!utilityUnlocked&&ours>=0&&hero.spells[ours].role!=='attack')
    throw Error('Only attack magic is permitted before the banked F2 clear');
   if(ours>=0&&hero.spells[ours].role==='support')healCasts++;
