@@ -230,6 +230,7 @@ function commit(state,pending,unused,bestLayer){
   else if(reward.type==='rank'&&acquireAdventurerRank(p,reward.layer))state.rankGranted++;
  }
  state.inventory.push(...unused.filter(Boolean));
+ state.bankedXp=G.normalizeXp(state.bankedXp+pending.xp);
  G.experience(p,pending.xp);
  state.best=Math.max(bestLayer,state.best);
  state.returns++;
@@ -270,6 +271,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
   circles:spells.map(([role,attribute,power])=>circle(role,attribute,power)),
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
+  bankedXp:0,
   ledger:{items:{bankedDrops:0,alchemyCreated:0,battleConsumed:0,alchemyConsumed:0,lostUnbanked:0},
    collections:{bankedDrops:0,alchemyConsumed:0,lostUnbanked:0}},
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
@@ -469,6 +471,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    remainingGap:state.recoveryRemainingGap,comparison:state.recoveryReference,
    targetUpgrades:state.recoveryTarget},
   earned:state.earned,spent:state.spent,lost:state.lost,
+  xpLedger:{banked:state.bankedXp,lost:state.lost.xp,
+   level:profile.level,unspentLevelProgress:profile.xp},
    resourceLedger,balances:{stone:state.stones,ink:state.ink},
   inventory:state.inventory.length,collection:state.collection,circles:invested,
   sunkCircles:state.sunkCircles,replacements:state.replacements,redrawEvents:state.redrawEvents,
