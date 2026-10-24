@@ -573,7 +573,9 @@ export function summarizeJourneys(samples=16,seed=20261024){
   });
   const comparisonStates=runs.map(r=>({seed:r.seed,best:r.best,rank:r.profile.rank,
    snapshots:Object.fromEntries(Array.from({length:10},(_,i)=>i*10+1).flatMap(layer=>
-    r.entrySnapshots[layer]?[[layer,r.entrySnapshots[layer]]]:[]))}));
+    r.entrySnapshots[layer]?[[layer,r.entrySnapshots[layer]]]:[])),
+   preparedSnapshots:Object.fromEntries(Array.from({length:10},(_,i)=>i*10+1).flatMap(layer=>
+    r.preparedSnapshots[layer]?[[layer,r.preparedSnapshots[layer]]]:[]))}));
   return {style,route,samples,distributions,checkpoints,floorObservations,
     completed:runs.filter(x=>x.best>=100).length,
    blocked:runs.length-runs.filter(x=>x.best>=100).length,comparisonStates,examples:runs.slice(0,2)};
