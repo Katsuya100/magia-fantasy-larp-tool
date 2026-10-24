@@ -56,7 +56,11 @@ export function challenge(snapshot,from,seed){
   const record=data.items.find(x=>x.id===item.id);
   // Existing owned items may be carried from a lower unlocked start.
   // The drop min_layer is not a combat-use or pack restriction.
-  return record&&(record.kind==='clear'||record.kind==='clear_all');
+  // Initial owner-entry snapshots can legitimately include rank-only mana.
+  // This *strict* 50-fight evaluator NEVER uses that mana; only the real
+  // journey's unearned 20F+ grade boss is permitted to consume it.
+  return record&&(record.kind==='clear'||record.kind==='clear_all'||
+   (record.kind==='mana'&&from+9>=20));
  }),'a carry item must be owned and floor-legal');
  const result={won:false,cleared:from-1,casts:0,heals:0,
   enemyHeals:0,used,bossPreRecovery:null,bossRankEligible:null,firstLoss:null,
