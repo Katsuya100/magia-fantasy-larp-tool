@@ -4,7 +4,7 @@
 // this base-power circle is guaranteed. Full additional-farming comparison
 // remains an independent mandatory gap until simulated.
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
-import {enemyForFight} from '../assets/js/dungeon-design.mjs';
+import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
@@ -42,7 +42,7 @@ function cleanse(hero,items,layer){
  return item.id;
 }
 function fightSortie(snapshot,changedCircles,start,seed){
- const random=rng(seed),hero=G.makeUnit(snapshot.playerBase,snapshot.level,{},
+ const random=rng(seed),encounterForFight=createSortieEncounterSelector(data.enemies,random),hero=G.makeUnit(snapshot.playerBase,snapshot.level,{},
   changedCircles.map(c=>({role:c.role,attribute:c.attribute,
    power:strengthenedPower(c.basePower,c.upgradeLevel),basePower:c.basePower})),'player');
  const carry=snapshot.carry.map(item=>({...item}));
@@ -52,7 +52,7 @@ function fightSortie(snapshot,changedCircles,start,seed){
   stats.reached=layer;
   for(let slot=1;slot<=5;slot++){
    const fight=(layer-1)*5+slot;
-   const enemy=G.fromEnemy(enemyForFight(data.enemies,fight,random),
+   const enemy=G.fromEnemy(encounterForFight(fight),
     Number(data.floors[fight-1].enemy_level));
    let won=false;
    for(let turn=0;turn<80;turn++){
