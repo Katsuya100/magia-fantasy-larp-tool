@@ -95,15 +95,19 @@ jobs:
         id: ink_pair
         continue-on-error: true # preserve full paired report; gate explicitly at the end
         run: node scripts/dungeon-ink-paired.mjs
-      - name: Record old-baseline and ink comparison diagnostic status
+      - name: Enforce independent magic ink strategy proof
         if: always()
         env:
           BASELINE_OUTCOME: ${{ steps.economic_baseline.outcome }}
           INK_OUTCOME: ${{ steps.ink_pair.outcome }}
         run: |
-          echo "Old first-entry baseline: $BASELINE_OUTCOME (diagnostic, not an approved 256-owner reference)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Paired ink comparison: $INK_OUTCOME (diagnostic; incompleteness must remain visible)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Authoritative 256-seed × 60-case pass/fail is dungeon-linked-256-combat-strict." >> "$GITHUB_STEP_SUMMARY"
+          echo "Unapproved old first-entry benchmark: $BASELINE_OUTCOME (diagnostic only)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Actual 256-owner, 60-case difficulty acceptance: dungeon-linked-256-combat-strict" >> "$GITHUB_STEP_SUMMARY"
+          echo "Independent ink opportunity-cost proof: $INK_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$INK_OUTCOME" != success ]; then
+            echo "::error::Real paired ink opportunity cost has not yet met its independent strategy proof"
+            exit 1
+          fi
       - name: Archive diagnostic reports and seed traces
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
