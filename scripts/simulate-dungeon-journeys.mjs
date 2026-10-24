@@ -40,14 +40,16 @@ const equipped=circles=>circles.filter(c=>c.active).map(c=>({
 const percent=(value,max)=>max>0?100*value/max:null;
 const chestSummary=p=>({level:p.level,rank:p.adventurerRank,xp:p.xp});
 
-function chooseHero(hero,enemy,layer){
+function chooseHero(hero,enemy,utilityUnlocked){
  const ready=G.available(hero);
- const heal=layer>10?ready.find(i=>hero.spells[i].role==='support'):undefined;
+ // Attack-only through the first banked F2 clear. Unlock utility only
+ // after a legitimate return; do not simulate a free unlock.
+ const heal=utilityUnlocked?ready.find(i=>hero.spells[i].role==='support'):undefined;
  if(heal!==undefined&&hero.hp/hero.stats.hp<.69)return heal;
  // Use the already equipped law-defense circle only when it can protect
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
- const guard=layer>10?ready.find(i=>hero.spells[i].role==='defense'):undefined;
+ const guard=utilityUnlocked?ready.find(i=>hero.spells[i].role==='defense'):undefined;
  const needsGuard=hero.hp/hero.stats.hp<.69||
   enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law');
  if(guard!==undefined&&needsGuard&&
@@ -290,16 +292,16 @@ function commit(state,pending,unused,bestLayer){
  invest(state);considerInkRedraw(state);
  observePrepared(state);
 }
-function battle(state,hero,layer,fight,carry,random,usage,encounterForFight){
+function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked){
  const foe=encounterForFight(fight);
  const enemyLevel=Number(data.floors[fight-1]?.enemy_level??targetClearLevel(layer));
  const enemy=G.fromEnemy(foe,enemyLevel);
  let healCasts=0,enemyHealCasts=0,rounds=0,enemyDebuffs=0;
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
-  const ours=chooseHero(hero,enemy,layer),theirs=G.chooseEnemySpell(enemy,random);
-  if(layer<=10&&ours>=0&&hero.spells[ours].role!=='attack')
-   throw Error('Only attack magic is permitted for the hero through 10F');
+  const ours=chooseHero(hero,enemy,utilityUnlocked),theirs=G.chooseEnemySpell(enemy,random);
+  if(!utilityUnlocked&&ours>=0&&hero.spells[ours].role!=='attack')
+   throw Error('Only attack magic is permitted before the banked F2 clear');
   if(ours>=0&&hero.spells[ours].role==='support')healCasts++;
   if(theirs>=0&&enemy.spells[theirs].role==='support')enemyHealCasts++;
   if(theirs>=0&&enemy.spells[theirs].role==='debuff')enemyDebuffs++;
@@ -351,9 +353,11 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
   if(recovering&&state.recoveryInitialGap===null)state.recoveryInitialGap=[...deficit];
   if(style==='B'&&state.best>=30&&state.recoveryTarget&&!recovering)state.recoveryAchieved=true;
-  // A fresh character must actually beat the first floor boss and bank a
-   // return before continuing ANY short/long journey; never grant a free win.
-   const goal=state.best===0?1:recovering?state.best:route==='short'?upcoming:100;
+  // Every first-time adventurer banks each newly cleared floor until an
+  // ACTUAL F10 boss victory. Only then do short/long routes diverge.
+  const tutorial=state.best<10;
+  const goal=recovering?state.best:tutorial?upcoming:route==='short'?upcoming:100;
+  const utilityUnlocked=state.best>=2;
   if(recovering)state.recoverySorties++;
   const firstLevel=profile.level;
   const hero=G.makeUnit(state.playerBase,firstLevel,{},equipped(state.circles),'hero');
@@ -389,7 +393,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    let allWon=true;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
-    const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight);
+    const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked);
     state.fights++;
     if(recovering)state.recoveryFights++;
     if(layer<=state.best)state.replayedFights++;
@@ -397,8 +401,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     state.healCasts+=outcome.healCasts;
     state.enemyHealCasts+=outcome.enemyHealCasts;
     state.enemyDebuffs+=outcome.enemyDebuffs;
-    if(layer<=10&&(outcome.healCasts||outcome.enemyHealCasts))
-     throw Error('Illegal 1-10F healing spell');
+    if(!utilityUnlocked&&outcome.healCasts)
+     throw Error('Illegal tutorial heal before the banked F2 clear');
     if(!outcome.win){defeat=true;allWon=false;break;}
     const boss=slot===5?outcome.foe.id:null;
     const drops=G.drops(data.items,data.collections,outcome.enemyLevel,random,{
@@ -482,6 +486,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   if(style==='B'&&state.best>=30){state.recoveryRemainingGap=recoveryGap(state);
    if(state.recoveryTarget&&state.recoveryRemainingGap.every(x=>x===0))state.recoveryAchieved=true;}
   state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,recovering,
+   tutorial,utilityUnlocked,
    levelBefore:firstLevel,levelAfter:profile.level,rank:profile.adventurerRank,
    gainedPending:earnedPending,banked:!defeat,stone:state.stones,ink:state.ink,
    usedItems:usage,fights:state.fights,returned:!defeat,
