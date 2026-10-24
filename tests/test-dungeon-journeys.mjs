@@ -218,6 +218,8 @@ assert.ok(rebuild.floorAudit.every(row=>row.usedOwnedMana===0||
 assert.equal(rebuild.floorAudit.reduce((n,row)=>n+row.usedOwnedMana,0),
  Object.values(rebuild.rankManaUses).reduce((n,v)=>n+v,0),
  'full actual journey accounts for every rank-only potion');
+assert.ok(Object.values(rebuild.rankManaUses).reduce((n,v)=>n+v,0)>0,
+ 'a real seeded F20+ boss grade consumes an actually earned potion');
 assert.ok(rebuild.floorAudit.every(f=>f.bossRank===null||f.layer%10===0),
  'only an actual tenth-floor boss can trigger a rank event');
 const repeat=runJourney(20261024,{style:'A',route:'short',maxSorties:2,maxFights:120});
