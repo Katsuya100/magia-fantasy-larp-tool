@@ -86,8 +86,12 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   assert.equal(run.seed,seed);
   assert.equal(run.spent.ink,run.replacements*5,
    'every paid circle redraw must use exactly five genuinely banked inks');
-  assert.equal(run.recovery.comparison==='REAL_SAME_SEED_A_F31',style==='B',
-   'B rehabilitation benchmark must be same-seed A, never candidate equipment');
+  assert.equal(run.recovery.comparison==='REAL_SAME_SEED_A_F31',
+   style==='B'&&run.recovery.targetUpgrades!==null,
+   'B may use a real same-seed A F31 target only when that owner actually reached F31');
+  if(style==='B'&&run.recovery.targetUpgrades===null)
+   assert.ok(run.blockers.some(x=>x.includes('No same-seed A F31 entry')),
+    'unavailable A F31 state must be a recorded blocker, never a free target');
   assert.equal(run.style,style);assert.equal(run.route,route);
   assert.equal(run.resourceLedger.items.held,run.inventory);
   assert.equal(run.resourceLedger.collections.held,
