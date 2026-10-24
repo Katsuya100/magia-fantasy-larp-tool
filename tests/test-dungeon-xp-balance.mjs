@@ -9,8 +9,8 @@ const [balance,levels,floors,playerBase]=['balance','levels','floors','player-ba
 configure({balance,levels,floors,playerBase});
 assert.equal(num('xp_growth_per_10_levels'),1.85,'steeper pre-100 EXP growth');
 assert.equal(num('xp_growth_per_10_levels_late'),1.1,'tapered late EXP growth');
-assert.equal(num('xp_overlevel_decay_per_10_levels'),1.85,
- 'source-controlled underdepth farming decay is separate from stone drops');
+assert.ok(!balance.some(row=>row.key==='xp_overlevel_decay_per_10_levels'),
+ 'deleted EXP decay parameter must not be reintroduced');
 
 // At-level adventurers should still reach the recommended level for the
 // next layer after five victories followed by a safe return.
@@ -56,28 +56,22 @@ const capped={level:149,xp:0};
 G.experience(capped,2*G.nextXp(149));
 assert.deepEqual(capped,{level:150,xp:0},'level cap clears excess experience');
 
-// At-level/under-level rewards preserve the designed per-layer EXP budget.
-// When a player farms substantially weaker layers, XP (NOT magic stones)
-// now tapers so B/C recovery loops do not erase the challenge band.
+// Every lower-floor repeat awards the same per-battle XP at any player
+// level below the level cap.  This is a permanent regression of the
+// deliberately removed EXP decay system, NOT a target-combat shortcut.
 for(const layer of [1,3,10,20,50,80,99]){
  const enemy=targetClearLevel(layer);
- const full=G.fightExperience(enemy,enemy,layer);
- assert.ok(full>0,'appropriate foe yields XP');
- assert.equal(G.fightExperience(enemy,Math.max(1,enemy-5),layer),full,
-  'underleveled heroes are not penalized for taking on difficult foes');
- for(const gap of [1,2,3,5,10]){
-  if(enemy+gap>=150)continue;
-  const replay=G.fightExperience(enemy,enemy+gap,layer);
-  assert.ok(replay>0&&replay<full,
-   'overlevel replay is still rewarding but cannot equal at-level XP at layer '+layer+', gap '+gap);
- }
+ const baseline=G.fightExperience(enemy,enemy,layer);
+ assert.ok(baseline>0,'a layer yields positive XP');
+ for(const playerLevel of [1,enemy,Math.min(149,enemy+1),Math.min(149,enemy+15),149])
+  assert.equal(G.fightExperience(enemy,playerLevel,layer),baseline,
+   'XP must not diminish for low-floor repeats at layer '+layer+' and level '+playerLevel);
 }
 assert.ok(G.fightExperience(139,139,90)>G.fightExperience(19,19,10)*15,
  'endgame enemy rewards must be worth considerably more than early monsters');
 
-// Regression: farming layers 1–10 with a level 30 adventurer must no longer
-// push them to 44. Simulate 30 complete 50-fight clears, banking XP after
-// each layer just as returning at its checkpoint does.
+// Thirty actual repeat clears award unreduced XP. The level obtained is
+// measured rather than restricted by an invented or revived decay limit.
 const farmer={level:30,xp:0};
 let total=0;
 for(let run=0;run<30;run++){
@@ -88,7 +82,7 @@ for(let run=0;run<30;run++){
   G.experience(farmer,reward);
  }
 }
-assert.ok(farmer.level>30&&farmer.level<100,'repeated farming advances without instantly reaching the cap');
+assert.ok(farmer.level>30&&farmer.level<=150,'repeated farming increases XP without artificial penalties');
 assert.ok(total>G.nextXp(30),'repeated farming rewards remain meaningful');
 
 // Repeating nearby floors should produce meaningful XP while distinctly
@@ -100,11 +94,11 @@ for(let run=0;run<10;run++){
   G.experience(nearbyFarmer,5*G.fightExperience(enemy,nearbyFarmer.level,layer));
  }
 }
-assert.ok(nearbyFarmer.level>30&&nearbyFarmer.level<100,'nearby replay remains useful');
+assert.ok(nearbyFarmer.level>30&&nearbyFarmer.level<=150,'nearby replay remains useful');
 assert.ok(G.fightExperience(targetClearLevel(15),80,15)>G.fightExperience(targetClearLevel(1),80,1),
  'deeper layers reward more XP without level penalties');
 
-// Higher appropriate dungeons remain useful after lower ones stop paying.
+// Higher-level dungeons keep their authored XP value without suppressing lower ones.
 const farmedLevel=farmer.level;
 const before=farmer.level;
 G.experience(farmer,5*G.fightExperience(37,farmer.level,20));
@@ -129,8 +123,8 @@ const replayDiagnostics=replayCases.map(({level,from,to})=>{
 });
 const level92Replay=replayDiagnostics.find(x=>x.level===92);
 const full41Replay=5*G.fightExperience(targetClearLevel(41),targetClearLevel(41),41);
-assert.ok(level92Replay.earned>0&&level92Replay.earned<full41Replay,
- '41F five battles award less EXP to an overleveled Lv92 farmer than at-level');
+assert.equal(level92Replay.earned,full41Replay,
+ '41F five battles award equal EXP irrespective of player overlevel');
 assert.ok(G.nextXp(149)<100000,'the redesigned late-game curve keeps required XP below six digits');
 assert.equal(G.formatXp(121.40000000000002),'121.4','combat EXP display hides floating point noise');
 assert.equal(G.formatXp(12345.67),'12,345.7','EXP keeps its real units with one decimal at most');
@@ -143,4 +137,4 @@ console.log('XP_BAND_BALANCE '+JSON.stringify({
  lvl100Needed:G.nextXp(100),lvl150Needed:G.nextXp(150)
 }));
 assert.match(readFileSync(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8'),/EXP MAX/,'level cap is labeled in the profile');
-console.log('PASS level-band XP growth, 100-layer targets and meaningful depth-aware replay awards');
+console.log('PASS level-band XP growth, 100-layer targets and never-decaying replay awards');
