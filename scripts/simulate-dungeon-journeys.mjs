@@ -69,7 +69,9 @@ function chooseHero(hero,enemy,layer,utilityUnlocked){
  // The exact existing normal attack costs no MP. Finish a weakened
  // opponent with it only when the shipped damage expression predicts a KO;
  // never grant mana, suppress an enemy turn, or fake a hit.
- if(layer>=51){
+ // MP-safe finishers are valid once the beginner F2 return is banked;
+ // protect scarce 11F-20F MP without item recovery before the F20 grade.
+ if(layer>=11){
   const relativeArmor=G.armor(enemy)/Math.max(1,enemy.stats.hp/Math.max(1,enemy.base.hp));
   const basic=Math.max(1,Math.round(num('basic_attack')*hero.stats.hp*
    G.factor(hero,'attack')*G.factor(hero,'output')*G.factor(enemy,'incoming')*
