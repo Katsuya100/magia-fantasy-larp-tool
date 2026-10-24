@@ -10,6 +10,18 @@ import {readFileSync} from 'node:fs';
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 configure({balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')});
 const foes=csv('enemies');
+// Prevent undoing explicit user bans on game-balance escape hatches.
+// A future new balance knob requires review, not a passing test fixture.
+const forbiddenKnobs=['xp_overlevel_decay_per_10_levels',
+ 'victory_mp_intro_floor_bonus','enemy_intro_attack_preference'];
+const actualBalanceKeys=new Set(csv('balance').map(row=>row.key));
+const shippedCore=readFileSync(new URL('../assets/js/dungeon-core.mjs',import.meta.url),'utf8');
+for(const key of forbiddenKnobs){
+ assert.ok(!actualBalanceKeys.has(key),'removed gameplay knob must not be recreated: '+key);
+ assert.ok(!shippedCore.includes("num('"+key+"')"),
+  'shipped gameplay must not depend on removed knob: '+key);
+}
+
 let shuffleRolls=0;
 const selector=createSortieEncounterSelector(foes,()=>{shuffleRolls++;return .3;});
 const shuffled=Array.from({length:4},(_,i)=>selector(i+1).id);
