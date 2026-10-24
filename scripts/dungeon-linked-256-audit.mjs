@@ -73,6 +73,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   records:0,carriedCleansers:[],storedCleansers:[]}));
  const floors=Array.from({length:100},(_,i)=>({layer:i+1,attempted:0,cleared:0,
   lost:0,replays:0,banked:0,cleansers:0,gradeChecks:0,gradeEligible:0,
+  stoneDrops:0,stoneBanked:0,stoneLost:0,
+  inkDrops:0,inkBanked:0,inkLost:0,
+  itemDrops:0,itemBanked:0,itemLost:0,
+  collectionDrops:0,collectionBanked:0,collectionLost:0,
   gradeBanked:0,entryHp:[],entryMp:[],exitHp:[],exitMp:[]}));
  let conservationChecks=0;
  for(const seed of seeds){
@@ -92,6 +96,18 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    run.resourceLedger.items.battleConsumed+run.resourceLedger.items.alchemyConsumed+run.inventory);
   assert.equal(run.floorAudit.reduce((a,f)=>a+f.attemptedFights,0),run.fights,
    'every real battle must be in the per-floor audit');
+  const earnedByFloor=field=>run.floorAudit.filter(f=>f.banked).reduce((n,f)=>n+f[field],0);
+  const lostByFloor=field=>run.floorAudit.filter(f=>!f.banked).reduce((n,f)=>n+f[field],0);
+  assert.equal(earnedByFloor('pendingStone'),run.earned.stone-run.alchemyByproducts.stone,
+   'fought floor stone drops after banking must equal the stone wallet ledger');
+  assert.equal(lostByFloor('pendingStone'),run.lost.stone,
+   'every dropped and defeated stone must be accounted for');
+  assert.equal(earnedByFloor('pendingInk'),run.earned.ink-run.alchemyByproducts.ink);
+  assert.equal(lostByFloor('pendingInk'),run.lost.ink);
+  assert.equal(earnedByFloor('pendingItems'),run.resourceLedger.items.bankedDrops);
+  assert.equal(lostByFloor('pendingItems'),run.resourceLedger.items.lostUnbanked);
+  assert.equal(earnedByFloor('pendingCollections'),run.resourceLedger.collections.bankedDrops);
+  assert.equal(lostByFloor('pendingCollections'),run.resourceLedger.collections.lostUnbanked);
   assert.ok(run.floorAudit.every(f=>!f.bossRank||f.layer%10===0));
   assert.ok(run.rankAudit.every(r=>!r.banked||r.eligible));
   assert.ok(run.rankAudit.every(r=>r.hpPercent>=80&&r.mpPercent>=80||!r.eligible));
@@ -129,6 +145,11 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    const f=floors[row.layer-1];
    f.attempted++;f.cleared+=Number(row.cleared);f.lost+=Number(row.defeated);
    f.replays+=Number(row.replay);f.banked+=Number(row.cleared&&row.banked);
+   for(const [kind,source] of [['stone','pendingStone'],['ink','pendingInk'],
+    ['item','pendingItems'],['collection','pendingCollections']]){
+    f[kind+'Drops']+=row[source];
+    f[kind+(row.banked?'Banked':'Lost')]+=row[source];
+   }
    f.cleansers+=row.usedOwnedCleansers;f.entryHp.push(row.entryHpPercent);
    f.entryMp.push(row.entryMpPercent);
    if(row.cleared){f.exitHp.push(row.exitHpPercent);f.exitMp.push(row.exitMpPercent);}
@@ -155,6 +176,11 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   floors:floors.map(f=>({layer:f.layer,attempted:f.attempted,cleared:f.cleared,
    lost:f.lost,replays:f.replays,banked:f.banked,cleansersUsed:f.cleansers,
    gradeChecks:f.gradeChecks,gradeEligible:f.gradeEligible,gradeBanked:f.gradeBanked,
+   stoneDrops:f.stoneDrops,stoneBanked:f.stoneBanked,stoneLost:f.stoneLost,
+   inkDrops:f.inkDrops,inkBanked:f.inkBanked,inkLost:f.inkLost,
+   itemDrops:f.itemDrops,itemBanked:f.itemBanked,itemLost:f.itemLost,
+   collectionDrops:f.collectionDrops,collectionBanked:f.collectionBanked,
+   collectionLost:f.collectionLost,
    entryHp:stats(f.entryHp),entryMp:stats(f.entryMp),
    winExitHp:stats(f.exitHp),winExitMp:stats(f.exitMp)})),
   accounts,ownerEntries};
