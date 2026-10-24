@@ -153,10 +153,15 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dungeon-foundation-256-accounts
-          # Archive the exact authored sources with the 256 earned-account
-          # ledgers so a failed 60-case battle is reproducible offline.
+          # Keep reports at ZIP root: linked job downloads into reports/.
+          path: reports/
+          if-no-files-found: warn
+      - name: Archive matching authored replay sources separately
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dungeon-simulator-sources
           path: |
-            reports/
             assets/js/dungeon-*.mjs
             assets/data/dungeon-*.csv
             scripts/dungeon-*.mjs
