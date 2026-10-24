@@ -410,8 +410,15 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // No unearned level, resource, or return between floors is manufactured.
   const lastBoss=Math.floor(state.best/10)*10;
   const nextBoss=Math.min(100,Math.ceil((state.best+1)/10)*10);
+  // After a failed deep sortie, first replay the preceding *complete*
+  // ten-floor expedition to bank genuinely earned XP and stones. Repeated
+  // losses otherwise leave a capped long-route player in a dead-end loop.
+  // This is not an emergency return inside 1F-50F.
+  const failedNewDepth=state.trace.at(-1)?.defeat===true&&
+   state.trace.at(-1).goal>lastBoss;
   const training=route==='long'&&state.best>=10&&
-   (profile.level<targetClearLevel(nextBoss)||profile.adventurerRank<lastBoss);
+   (profile.level<targetClearLevel(nextBoss)||
+    profile.adventurerRank<lastBoss||failedNewDepth);
   const trainingStart=Math.max(1,lastBoss-9);
   const start=allowedStartLayer(profile,recovering?farmStart:
    training?trainingStart:profile.adventurerRank+1);
