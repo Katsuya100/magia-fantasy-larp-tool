@@ -7,7 +7,8 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {enemyForFight,targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import {allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
@@ -210,8 +211,8 @@ function commit(state,pending,unused,bestLayer){
  optionalAlchemy(state);
  invest(state);considerInkRedraw(state);
 }
-function battle(state,hero,layer,fight,carry,random,usage){
- const foe=enemyForFight(data.enemies,fight,random);
+function battle(state,hero,layer,fight,carry,random,usage,encounterForFight){
+ const foe=encounterForFight(fight);
  const enemyLevel=Number(data.floors[fight-1]?.enemy_level??targetClearLevel(layer));
  const enemy=G.fromEnemy(foe,enemyLevel);
  let healCasts=0,enemyHealCasts=0,rounds=0,enemyDebuffs=0;
@@ -267,6 +268,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   let pending={xp:0,loot:[]},lastClear=start-1,defeat=false;
   const carry=pack(state,start,goal);
   const usage={};
+  const encounterForFight=createSortieEncounterSelector(data.enemies,random);
   state.sorties++;
   for(let layer=start;layer<=goal&&state.fights<maxFights;layer++){
    if(layer%10===1&&!state.entrySnapshots[layer]){
@@ -289,7 +291,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    let allWon=true;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
-    const outcome=battle(state,hero,layer,fight,carry,random,usage);
+    const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight);
     state.fights++;
     if(recovering)state.recoveryFights++;
     if(layer<=state.best)state.replayedFights++;
