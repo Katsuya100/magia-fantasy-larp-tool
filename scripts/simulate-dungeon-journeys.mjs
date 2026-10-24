@@ -428,8 +428,12 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
  if(style==='B')state.circles.push(circle('attack','storm',300,false),circle('attack','aqua',290,false),circle('support','law',260,false));
  // D is the route axis; this permits A+D, B+D and C+D without
  // inventing a mutually exclusive 'D character'.
- for(let sortie=0;sortie<maxSorties&&state.best<100&&state.fights<maxFights;sortie++){
+ for(let sortie=0;sortie<maxSorties&&
+  (state.best<100||profile.adventurerRank<100)&&state.fights<maxFights;sortie++){
   const upcoming=state.best+1;
+  // The first F100 clear is not a substitute for earned rank badges.
+  // Recover missing earlier badges in order through genuine fights/returns.
+  const missingRankAfterClear=state.best>=100&&profile.adventurerRank<100;
   // B deliberately recovers its four original spells via REAL repeat sorties.
   // Same-seed actual A F31 equipment is a comparative preparation target,
   // never a level override, free stone injection, or a hard user-approved cap.
@@ -461,7 +465,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const rankBehind=profile.adventurerRank<lastBoss;
   const trainingStart=rankBehind?profile.adventurerRank+1:Math.max(1,lastBoss-9);
   const trainingGoal=rankBehind?profile.adventurerRank+10:lastBoss;
-  const start=allowedStartLayer(profile,recovering?farmStart:
+  const start=allowedStartLayer(profile,missingRankAfterClear
+   ?profile.adventurerRank+1:recovering?farmStart:
    training?trainingStart:profile.adventurerRank+1);
   if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
   if(training&&start>lastBoss)throw Error('Long training must begin from a legal cleared decade');
@@ -470,7 +475,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // Every first-time adventurer banks each newly cleared floor until an
   // ACTUAL F10 boss victory. Only then do short/long routes diverge.
   const tutorial=state.best<10;
-  const goal=recovering?state.best:tutorial?upcoming:
+  const goal=missingRankAfterClear?profile.adventurerRank+10:
+   recovering?state.best:tutorial?upcoming:
    training?trainingGoal:route==='short'?upcoming:100;
   const utilityUnlocked=state.best>=2;
   if(recovering)state.recoverySorties++;
@@ -624,6 +630,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   }
  }
  if(state.best<100)state.blockers.push('Failed to clear 100F within measured sortie/fight budget (diagnostic cap, not a passing condition)');
+ if(state.best>=100&&profile.adventurerRank<100)
+  state.blockers.push('Reached F100 but real rank badges remain unearned within the measurement budget');
  if(style==='B'&&!state.recoveryTarget)state.blockers.push('No same-seed A F31 entry; no invented stone-recovery target');
  const invested=state.circles.map(c=>({active:c.active,role:c.role,attribute:c.attribute,basePower:c.basePower,
   upgradeLevel:c.upgrades,power:actualPower(c),mpCost:G.mpCost(c.basePower),ink:c.ink}));
