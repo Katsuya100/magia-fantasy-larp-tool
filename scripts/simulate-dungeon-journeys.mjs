@@ -120,7 +120,7 @@ const manaCount=usage=>Object.entries(usage).reduce((n,[id,count])=>
  n+(id.startsWith('mana_')?count:0),0);
 // Loadouts are selected only from real banked inventory, with the real
 // level-dependent carry cap. No stocked-item fixture is smuggled into economy.
-function pack(state,start,goal){
+function pack(state,start,goal,rankItems=true){
  // The inventory has *actually dropped* item instances only. Optimise
  // counter-attributes within the legal carry capacity, without adding items.
  const eligible=item=>{
@@ -132,7 +132,7 @@ function pack(state,start,goal){
  };
  const cap=G.capacity(state.profile.level);
  const rankTarget=Math.max(20,Math.ceil(start/10)*10);
- const seekingRank=rankTarget<=goal&&rankTarget<=100&&
+ const seekingRank=rankItems&&rankTarget<=goal&&rankTarget<=100&&
   state.profile.adventurerRank<rankTarget;
  const mana=seekingRank?state.inventory.filter(item=>
   data.items.find(row=>row.id===item.id)?.kind==='mana').sort((a,b)=>
@@ -292,7 +292,9 @@ function observePrepared(state){
   // Select from the ACTUAL banked inventory via the ordinary packing rule,
   // but do not remove items from the on-going economic journey.
   const copy={...state,inventory:[...state.inventory]};
-  const carry=pack(copy,band,to);
+  // Strict 50-fight readiness explicitly excludes any MP potion in the
+  // prepared combat reference. Rank-specific potion use is journey-only.
+  const carry=pack(copy,band,to,false);
   const snapshot={layer:band,to,sortie:state.sorties,level:p.level,
    targetLevel:requiredLevel,rank:p.adventurerRank,xp:p.xp,
    bankedStones:state.stones,bankedInk:state.ink,
