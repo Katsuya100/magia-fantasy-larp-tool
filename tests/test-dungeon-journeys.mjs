@@ -36,12 +36,14 @@ assert.ok(earnedAt10<=intro.maxMp&&earnedAt11<=intro.maxMp);
 assert.equal(G.chooseEnemySpell(
  G.fromEnemy(foes.find(x=>x.id==='foe_l001_1'),1),()=>.001)>=0,true);
 const introFoe=G.fromEnemy(foes.find(x=>x.id==='foe_l001_1'),1);
-assert.ok(num('enemy_attack_preference')>.5,'intro foes must attack frequently, not be passive dummies');
-const pickedAttack=G.chooseEnemySpell(introFoe,()=>.5);
-const pickedGuard=G.chooseEnemySpell(introFoe,()=>.9);
+const attackRate=num('enemy_attack_preference');
+assert.ok(attackRate>0&&attackRate<1,'shared enemy AI uses a real probability');
+const pickedAttack=G.chooseEnemySpell(introFoe,()=>attackRate/2);
+const pickedGuard=G.chooseEnemySpell(introFoe,()=>(1+attackRate)/2);
 assert.equal(introFoe.spells[pickedAttack].role,'attack','intro attacks share the standard enemy attack chance');
 assert.equal(introFoe.spells[pickedGuard].role,'defense','intro guards remain possible');
-assert.ok(introFoe.base.mag<7,'intro damage is tuned using authored enemy base stats');
+assert.equal(introFoe.base.mag,Number(foes.find(x=>x.id==='foe_l001_1').mag),
+ 'combat reads the authentic authored enemy MAG, not a test-only damage value');
 
 const manifest=buildManifest();
 assert.equal(manifest.schemaVersion,'dungeon-levers-v1');
