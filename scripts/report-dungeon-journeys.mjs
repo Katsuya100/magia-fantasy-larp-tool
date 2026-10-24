@@ -19,6 +19,8 @@ const status={
   p90ReplayFights:x.distributions.replayedFights.p90,
   p90PurposefulRecoveryFights:x.distributions.recoveryFights.p90,
   p90PreRestoreGradeEligible:x.distributions.gradeEligible.p90,
+  acquiredGradeMedian:x.distributions.rankGranted.median,
+  acquiredGradeP90:x.distributions.rankGranted.p90,
   p90GradeFailedMp:x.distributions.gradeFailedMp.p90,
   p90GradeFailedHp:x.distributions.gradeFailedHp.p90,
   p90Losses:x.distributions.losses.p90,
@@ -38,12 +40,12 @@ const md=['## Dungeon journeys — measured diagnostics only',
  '` · strict combat CI: `'+goals.strictSamples+'` seeds (separate job).',
  'Balance manifest: **'+manifest.entries.length+'** source parameters.',
  '',
- '| Investment | Expedition | 100F completes | p90 extra fights | p90 defeats | p90 stones earned |',
- '|---|---|---:|---:|---:|---:|',
+ '| Investment | Expedition | 100F completes | p90 extra fights | p90 defeats | p90 stones earned | Median safely acquired grades |',
+ '|---|---|---:|---:|---:|---:|---:|',
  ...journeys.combinations.map(x=>{
   const d=x.distributions;
   return '| '+x.style+' | '+x.route+' | '+x.completed+'/'+x.samples+
-   ' | '+d.replayedFights.p90+' | '+d.losses.p90+' | '+d['earned.stone'].p90+' |';
+   ' | '+d.replayedFights.p90+' | '+d.losses.p90+' | '+d['earned.stone'].p90+' | '+d.rankGranted.median+' |';
  }),
  '',
  '**Independent grade reserves:** observed pre-victory-restore HP and MP are captured on each actual boss defeat; zero demonstrated grade wins cannot be called a pass.',
