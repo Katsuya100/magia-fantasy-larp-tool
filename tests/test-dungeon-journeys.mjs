@@ -152,7 +152,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  assert.ok(run.floorAudit.every(row=>row.usedOwnedCleansers===0||row.layer>=51),
   'specialist cleansing must never happen before 51F');
  assert.ok(run.floorAudit.every(row=>row.usedOwnedMana===0||
-  (row.layer>=20&&row.layer%10===0&&row.bossRank)),
+  (row.rankPendingAtEntry&&row.attemptedFights===5)),
   'only earned mana may be spent when challenging an unearned 20F+ rank boss');
  assert.equal(run.floorAudit.reduce((n,row)=>n+row.usedOwnedMana,0),
   Object.values(run.rankManaUses).reduce((n,v)=>n+v,0),
@@ -211,7 +211,7 @@ assert.ok(rebuild.redrawEvents.every(event=>event.sunkStones>=0));
 assert.equal(rebuild.floorAudit.reduce((n,x)=>n+x.attemptedFights,0),rebuild.fights);
 assert.equal(rebuild.resourceLedger.items.held,rebuild.inventory);
 assert.ok(rebuild.floorAudit.every(row=>row.usedOwnedMana===0||
- (row.layer>=20&&row.layer%10===0&&row.bossRank)),
+ (row.rankPendingAtEntry&&row.attemptedFights===5)),
  'full 100F real-owner journey never uses a mana item outside an unearned rank boss');
 assert.equal(rebuild.floorAudit.reduce((n,row)=>n+row.usedOwnedMana,0),
  Object.values(rebuild.rankManaUses).reduce((n,v)=>n+v,0),
