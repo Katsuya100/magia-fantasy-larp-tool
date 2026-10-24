@@ -44,6 +44,15 @@ function chooseHero(hero,enemy,layer){
  const ready=G.available(hero);
  const heal=layer>10?ready.find(i=>hero.spells[i].role==='support'):undefined;
  if(heal!==undefined&&hero.hp/hero.stats.hp<.69)return heal;
+ // Use the already equipped law-defense circle only when it can protect
+ // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
+ // through G.available; do not change battle rules or grant free defense.
+ const guard=ready.find(i=>hero.spells[i].role==='defense');
+ const needsGuard=hero.hp/hero.stats.hp<.69||
+  enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law');
+ if(guard!==undefined&&needsGuard&&
+  !hero.statuses.some(s=>s.id==='resist_'+hero.spells[guard].attribute||
+   s.id==='buff_'+hero.spells[guard].attribute))return guard;
  const attacks=ready.filter(i=>hero.spells[i].role==='attack');
  if(attacks.length)return attacks.sort((a,b)=>{
   const score=i=>G.effectivePower(hero,hero.spells[i])*G.resist(enemy,hero.spells[i].attribute);
@@ -446,7 +455,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    // A risk-aware long dive can still return at a completed layer when
    // resources become critical. These are strategy parameters, NOT new
    // acceptance thresholds for game balance.
-   if(route==='long'&&(hero.hp/hero.stats.hp<.3||hero.mp/hero.maxMp<.2))break;
+   if(route==='long'&&layer>=51&&(hero.hp/hero.stats.hp<.3||hero.mp/hero.maxMp<.2))break;
   }
   for(const [id,count] of Object.entries(usage)){
     state.cleanseUses[id]=(state.cleanseUses[id]||0)+count;
