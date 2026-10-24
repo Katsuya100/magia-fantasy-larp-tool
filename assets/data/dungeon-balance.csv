@@ -50,6 +50,7 @@ checkpoint_interval,5,帰還可能な戦闘間隔
 spell_slots,5,携帯魔法陣の固定数
 item_per_round,1,ラウンドあたりの無料使用上限
 level_max,150,レベル上限
+enemy_intro_attack_preference,0.003,1〜10Fの通常敵・ボスが使用可能な攻撃を優先する確率（回復・弱体使用なし）
 enemy_heal_threshold,0.4529,敵が回復を優先するHP比率
 enemy_attack_preference,0.612,敵が攻撃優先する確率
 enemy_debuff_specialist_preference,0.24,弱体魔法を持つ敵がその魔法を優先して使う確率
