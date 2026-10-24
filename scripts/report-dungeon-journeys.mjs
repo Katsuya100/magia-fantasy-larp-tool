@@ -13,7 +13,7 @@ const status={
  strictCombatSamples:goals.strictSamples,economyModel:journeys.schemaVersion,
  manifestEntries:manifest.entries.length,
  structural:{status:'validated by separate tests/test-dungeon-journeys.mjs'},
- mandatory:{status:'NOT CERTIFIED',reason:'Existing strict 256-seed combat Action is authoritative. Economy baseline has not been approved or frozen; route-specific combat benchmark missing.'},
+ mandatory:{status:'NOT CERTIFIED',reason:'Frozen economic candidate v1 remains unapproved. The separate 256 independent-owner six-route strict Action is now implemented; its results and the original fixed-sortie hard gate must pass before approval.'},
  diagnostics:{status:'MEASURED',complete:journeys.combinations.map(x=>({
   style:x.style,route:x.route,reached100:x.completed,samples:x.samples,
   p90ReplayFights:x.distributions.replayedFights.p90,
@@ -27,9 +27,9 @@ const status={
   p90StoneEarned:x.distributions['earned.stone'].p90
  }))},
  outstanding:['Get per-route measured median baselines and lock a versioned, reviewed candidate',
-  'Run independent 256-seed linked-combat acceptance on both economic routes',
-  'Construct identical-state paired ink versus stone strategy samples',
-  'Alchemy paired diagnostics and 101-150F conditional extrapolation are not a substitute for authored combat/bankable resources',
+  'Evaluate the separately gated independent 256-account owner-combat strict results (all six routes); never replace frozen v1 automatically',
+  'Validate complete equal-readiness ink versus stone strategy break-even after actual re-farming; existing paired initial fights alone are insufficient',
+  'Alchemy paired diagnostics and 101-150F conditional extrapolation remain distinct from actual authored combat; 101-150F has no equivalent authored enemies',
   'Fix any combat win targets by changing game parameters rather than the assertions'],
  warning:'No economy p90 cap is approved. No modeled achievements imply target acceptance.'
 };
@@ -50,9 +50,9 @@ const md=['## Dungeon journeys — measured diagnostics only',
  '',
  '**Independent grade reserves:** observed pre-victory-restore HP and MP are captured on each actual boss defeat; zero demonstrated grade wins cannot be called a pass.',
  '',
- '**Hard targets: NOT CERTIFIED.** Existing strict combat gates still apply unchanged. No fixed economy-derived median equipment or route-specific strict comparison is yet approved.',
+ '**Hard targets: NOT CERTIFIED.** Strict combat gates apply unchanged. An independent 256-real-owner strict linked Action is available; no measured/economic median candidate is user approved.',
  '',
- '**Missing work:** per-route baseline lock; coupled 256-seed combat; grade feasibility; paired ink/stone replacement; alchemy and 101–150F diagnostics.',
+ '**Missing acceptance:** approval of baseline, passing strict 256-seed combat targets, independently eligible grades, equal-readiness ink break-even. Authored 101–150F combat is out of scope.',
  '',
  '**Assumptions:** fixed named circles; actual enemy combat and drops; no alchemy; no automatic ranks; bank XP only on return; unbanked rewards lost on defeat.'];
 if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,md.join('\n')+'\n');
