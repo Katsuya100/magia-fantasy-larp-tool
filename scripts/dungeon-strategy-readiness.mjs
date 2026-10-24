@@ -19,8 +19,8 @@ const report={schemaVersion:'dungeon-paired-opportunity-v1',
  status:'MEASURED_NOT_EQUAL_READINESS_CERTIFIED',
  notes:[
   'Same initial account seed is preserved; subsequent divergent decisions consume independent portions of the PRNG stream.',
-  'All combat measures use the unaltered true starting HP, MP, spells and owned items at each band first entry.',
-  'A/B/C short or long may enter a 10-floor band at differing levels/HP/MP; a 50-fight counterfactual does not secretly level up.',
+  'First entry is economic diagnosis only; mandatory combat uses the first genuinely banked, independently rank/level-ready sortie with the real equipped five circles and owned carry.',
+  'Owners missing that legally prepared state remain ECONOMY_NOT_READY rather than being silently selected away or scored as combat defeats.',
   'The full-campaign cost vector is real additional battles, defeats, ranks, spent stones and 5-ink circle redraws. It cannot prove a level/power-equated causal comparison by itself.',
   'Equal combat readiness requires BOTH economic strategies to meet the approved 256-seed win/MP criteria. No alternate target, p90 cap or free resources are fabricated.'
  ],pairedCases:[],strictReadyPairs:0,missingReadinessCases:0};
@@ -47,8 +47,12 @@ for(const pair of eco.pairedLongitudinalCosts){
   assert.equal(checkpoint.to,band.to);
   const equalReady=ref.hardTargetPassed&&test.hardTargetPassed;
   const issues=[];
-  if(!ref.hardTargetPassed)issues.push('A reference does not meet unchanged 256-seed combat goals');
-  if(!test.hardTargetPassed)issues.push(pair.style+' does not meet unchanged 256-seed combat goals');
+  if(ref.readinessGate!=='ALL_256_INDEPENDENTLY_PREPARED')
+   issues.push('A real owners not all banked/rank/level ready: economy/reachability unmet');
+  else if(!ref.hardTargetPassed)issues.push('A ready cohort does not meet unchanged 256-seed combat goals');
+  if(test.readinessGate!=='ALL_256_INDEPENDENTLY_PREPARED')
+   issues.push(pair.style+' real owners not all banked/rank/level ready: economy/reachability unmet');
+  else if(!test.hardTargetPassed)issues.push(pair.style+' ready cohort does not meet unchanged 256-seed combat goals');
   if(checkpoint.comparedPairs<256)issues.push('Not all 256 accounts reached the same checkpoint');
   const cost={pairedAccounts:checkpoint.comparedPairs,
    extraActualFights:checkpoint.extraFights,
@@ -63,11 +67,14 @@ for(const pair of eco.pairedLongitudinalCosts){
    verdict:issues.length?'REAL_COST_MEASURED_READINESS_UNPROVEN':'BOTH_STRICT_GOALS_MET_COST_COMPARABLE',
    actualOwnerCombat:{A:{available:ref.ownersAvailable,wins:ref.clears,
      winRate:ref.winRateOf256,winMpMedian:ref.winnerMp.median,
-     gradeEligible:ref.gradeIndependent.eligible},
+     gradeEligible:ref.gradeIndependent.eligible,
+     economicUnready:ref.ownersMissing,readinessGate:ref.readinessGate},
     alternative:{available:test.ownersAvailable,wins:test.clears,
      winRate:test.winRateOf256,winMpMedian:test.winnerMp.median,
-     gradeEligible:test.gradeIndependent.eligible},
-    observedWinRateDifference:test.winRateOf256-ref.winRateOf256,
+     gradeEligible:test.gradeIndependent.eligible,
+     economicUnready:test.ownersMissing,readinessGate:test.readinessGate},
+    observedWinRateDifference:ref.winRateOf256!==null&&test.winRateOf256!==null
+     ?test.winRateOf256-ref.winRateOf256:null,
     observedMedianMpDifference:ref.winnerMp.median!==null&&test.winnerMp.median!==null
      ?test.winnerMp.median-ref.winnerMp.median:null},
    realEconomyOpportunityCost:cost,issues};
