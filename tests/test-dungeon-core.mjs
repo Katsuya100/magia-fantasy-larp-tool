@@ -147,7 +147,7 @@ const victoryMpRate=level=>{
 // The pre-existing intervals are adjusted by the *actual source default*,
 // not by relaxing any 256-seed approved win/MP goals.
 const introReward=num('victory_mp_intro_floor_bonus');
-assert.equal(introReward,.03,'initial F1-10-only tuning value is source controlled');
+assert.equal(introReward,.10,'initial F1-10-only tuning value is source controlled');
 assert.ok(victoryMpRate(1)>=.18+introReward&&victoryMpRate(1)<=.20+introReward,'early layers grant generous beginner MP recovery');
 assert.ok(victoryMpRate(30)>.12+introReward&&victoryMpRate(30)<.14+introReward,'early-layer victory MP recovery also helps established adventurers');
 assert.ok(victoryMpRate(75)>.09+introReward&&victoryMpRate(75)<.115+introReward,'the early-layer bonus does not erase level scaling');
