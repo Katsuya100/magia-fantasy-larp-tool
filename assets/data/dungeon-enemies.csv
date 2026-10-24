@@ -198,7 +198,7 @@ foe_l040_1,スワンプシング,72,7,4,8,1.2,1.05,0.8,1,0.88,1,1.17,attack:aqua
 foe_l040_2,霧水スライム,77,9,5,8,1.2,1,0.8,0.95,1,1,1,attack:aqua:149|defense:aqua:119|support:storm:97|defense:aqua:112|attack:storm:134,10,72,0,slime_core|relic_137
 foe_l040_3,沼の水精,84,8,5,11,1,1,0.8,1.2,0.88,1,1.12,attack:aqua:161|defense:aqua:129|support:flame:105|debuff:aqua:121|attack:flame:145,10,72,0,relic_056|relic_112
 foe_l040_4,毒大ガマ,76,10,5,11,1.2,1,0.95,1,1,1,0.8,attack:aqua:173|defense:aqua:138|support:chaos:112|defense:aqua:130|attack:chaos:156,10,72,0,relic_007|relic_107
-boss_l040,沼底の呪王,109,10,6,12,1.2,1.33,0.95,1,1,1.02,0.95,attack:aqua:170|defense:aqua:136|support:chaos:111|debuff:aqua:128|attack:chaos:153,1,72,1,relic_050|relic_130|relic_boss_040
+boss_l040,沼底の呪王,108,10,6,12,1.2,1.33,0.95,1,1,1.02,0.95,attack:aqua:170|defense:aqua:136|support:chaos:111|debuff:aqua:128|attack:chaos:153,1,72,1,relic_050|relic_130|relic_boss_040
 foe_l041_1,サイクロプス,87,7,9,7,1,0.8,1,1,1.2,1,1,attack:bolt:143|defense:bolt:114|support:law:93|defense:bolt:107|attack:law:129,10,73,0,relic_043|relic_136|relic_157
 foe_l041_2,赤オーガ,87,9,9,8,0.8,1.2,1,1,1,1,1,attack:flame:155|defense:flame:124|support:aqua:101|defense:flame:116|attack:aqua:140,10,73,0,relic_088|relic_138
 foe_l041_3,ベルセルク,70,8,8,10,1,0.8,1,1,1.2,1,1,attack:bolt:167|defense:bolt:134|support:flame:109|debuff:bolt:125|attack:flame:150,10,73,0,relic_045|relic_139
