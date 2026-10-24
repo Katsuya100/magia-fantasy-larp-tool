@@ -37,6 +37,7 @@ const select=x=>({seed:x.seed,level:x.profile.level,rank:x.profile.rank,
  reachedLayer:x.best,fights:x.fights,repeatedFights:x.replayedFights,
  bankedStone:x.balances.stone,bankedInk:x.balances.ink,
  stoneEarned:x.earned.stone,inkEarned:x.earned.ink,
+ bankedXp:x.xpLedger.banked,lostXp:x.xpLedger.lost,
  stoneSpent:x.spent.stone,inkSpent:x.spent.ink,
  deathCount:x.losses,sorties:x.sorties,returns:x.returns,
  redraws:x.replacements,crafts:x.alchemyCrafts,
@@ -77,6 +78,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   inkDrops:0,inkBanked:0,inkLost:0,
   itemDrops:0,itemBanked:0,itemLost:0,
   collectionDrops:0,collectionBanked:0,collectionLost:0,
+  xpBanked:0,xpLost:0,
   gradeBanked:0,entryHp:[],entryMp:[],exitHp:[],exitMp:[]}));
  let conservationChecks=0;
  for(const seed of seeds){
@@ -108,6 +110,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   assert.equal(lostByFloor('pendingItems'),run.resourceLedger.items.lostUnbanked);
   assert.equal(earnedByFloor('pendingCollections'),run.resourceLedger.collections.bankedDrops);
   assert.equal(lostByFloor('pendingCollections'),run.resourceLedger.collections.lostUnbanked);
+  assert.ok(Math.abs(earnedByFloor('gainedXp')-run.xpLedger.banked)<.001,
+   'only banked actual combat XP may contribute to progression');
+  assert.ok(Math.abs(lostByFloor('gainedXp')-run.xpLedger.lost)<.001,
+   'all XP from a failed expedition must be counted as lost');
   assert.ok(run.floorAudit.every(f=>!f.bossRank||f.layer%10===0));
   assert.ok(run.rankAudit.every(r=>!r.banked||r.eligible));
   assert.ok(run.rankAudit.every(r=>r.hpPercent>=80&&r.mpPercent>=80||!r.eligible));
@@ -150,6 +156,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
     f[kind+'Drops']+=row[source];
     f[kind+(row.banked?'Banked':'Lost')]+=row[source];
    }
+   f[row.banked?'xpBanked':'xpLost']+=row.gainedXp;
    f.cleansers+=row.usedOwnedCleansers;f.entryHp.push(row.entryHpPercent);
    f.entryMp.push(row.entryMpPercent);
    if(row.cleared){f.exitHp.push(row.exitHpPercent);f.exitMp.push(row.exitMpPercent);}
@@ -160,6 +167,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   }
  }
  const distributionKeys=['reachedLayer','fights','repeatedFights','stoneEarned','inkEarned',
+  'bankedXp','lostXp',
   'stoneSpent','inkSpent','bankedStone','bankedInk','deathCount','sorties','returns',
   'redraws','crafts','purposeFarmFights','recoveryFights','rankGranted','gradeEligible',
   'gradeFailedMp','gradeFailedHp','ownedItems','collections'];
@@ -181,6 +189,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    itemDrops:f.itemDrops,itemBanked:f.itemBanked,itemLost:f.itemLost,
    collectionDrops:f.collectionDrops,collectionBanked:f.collectionBanked,
    collectionLost:f.collectionLost,
+   xpBanked:f.xpBanked,xpLost:f.xpLost,
    entryHp:stats(f.entryHp),entryMp:stats(f.entryMp),
    winExitHp:stats(f.exitHp),winExitMp:stats(f.exitMp)})),
   accounts,ownerEntries};
