@@ -56,7 +56,7 @@ function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // HP reserve before the kill on an unearned 20F+ badge, with ordinary
  // spell MP costs and cooldowns (mana items are separately banked/paid).
  const healBelow=layer===10&&utilityUnlocked?.95:
-  pendingGrade?.95:
+  pendingGrade&&route==='long'?.95:
   route==='long'&&layer>=11&&layer<=20?.84:
   layer>=81?(layer%10===0?.87:.35):.69;
  if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
