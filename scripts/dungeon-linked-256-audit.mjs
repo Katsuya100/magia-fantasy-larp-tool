@@ -6,6 +6,7 @@ import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runJourney,spread,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
+import {unlockedStartLayers,targetClearLevel} from './dungeon-preparation-contract.mjs';
 
 const load=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const goals=load('config/dungeon-approved-goals.v1.json');
@@ -135,7 +136,39 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
     bankedStones:snap.bankedStones,bankedInk:snap.bankedInk,
     unbankedXp:snap.unbankedXp,unbankedStone:snap.unbankedStone,
     unbankedInk:snap.unbankedInk}:null;
-  })});
+  }),
+   prepared:goals.bands.map(b=>{
+    const snap=run.preparedSnapshots[b.from];
+    if(!snap)return null;
+    assert.equal(snap.layer,b.from);
+    assert.equal(snap.to,b.to);
+    assert.equal(snap.targetLevel,targetClearLevel(b.to));
+    assert.ok(snap.level>=snap.targetLevel);
+    assert.ok(unlockedStartLayers({adventurerRank:snap.rank}).includes(b.from));
+    assert.equal(snap.source,'POST_RETURN_BANKED_AND_INVESTED');
+    assert.equal(snap.circles.length,5);
+    assert.equal(snap.playerHp,snap.maxHp);
+    assert.equal(snap.playerMp,snap.maxMp);
+    assert.equal(snap.unbankedXp,0);
+    assert.equal(snap.unbankedStone,0);
+    assert.equal(snap.unbankedInk,0);
+    assert.ok(snap.actualFights<=run.fights&&snap.actualSorties<=run.sorties);
+    const owned=[...snap.carry,...snap.bankedInventory];
+    assert.equal(new Set(owned.map(x=>x.instanceId)).size,owned.length);
+    assert.ok(snap.carry.length<=G.capacity(snap.level));
+    return {from:b.from,layer:snap.layer,to:snap.to,sortie:snap.sortie,
+     level:snap.level,targetLevel:snap.targetLevel,rank:snap.rank,xp:snap.xp,
+     playerBase:snap.playerBase,playerHp:snap.playerHp,playerMp:snap.playerMp,
+     maxHp:snap.maxHp,maxMp:snap.maxMp,
+     circles:snap.circles,cooldowns:snap.cooldowns,statuses:snap.statuses,
+     carry:snap.carry,bankedItems:snap.bankedInventory.length,
+     bankedStones:snap.bankedStones,bankedInk:snap.bankedInk,
+     unbankedXp:snap.unbankedXp,unbankedStone:snap.unbankedStone,
+     unbankedInk:snap.unbankedInk,actualFights:snap.actualFights,
+     actualSorties:snap.actualSorties,actualLosses:snap.actualLosses,
+     actualReturns:snap.actualReturns,source:snap.source,status:snap.status};
+   })
+  });
   for(const [i,e] of entries.entries()){
    const snap=run.entrySnapshots[e.band];
    if(!snap)continue;
@@ -181,6 +214,16 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  const policy={style,route,meaning:style+' + '+(route==='long'?'D long expedition':'short returns'),
   samples:accounts.length,completion,nonCompletion:accounts.length-completion,
   conservationChecks,distributions:dist,
+  preparedCoverage:goals.bands.map((b,i)=>{
+   const present=ownerEntries.map(x=>x.prepared[i]).filter(Boolean);
+   const absent=ownerEntries.filter(x=>!x.prepared[i]).map(x=>x.seed);
+   return {from:b.from,to:b.to,prepared:present.length,unprepared:absent.length,
+    unpreparedSeeds:absent,levels:stats(present.map(s=>s.level)),
+    actualPreparationFights:stats(present.map(s=>s.actualFights)),
+    actualPreparationSorties:stats(present.map(s=>s.actualSorties)),
+    actualPreparationLosses:stats(present.map(s=>s.actualLosses)),
+    firstEntryAccounts:ownerEntries.filter(x=>x.snapshots[i]).length};
+  }),
   firstEntry:entries.map(e=>({from:e.band,to:e.band+9,actualAccounts:e.records,
    level:stats(e.level),entryHp:stats(e.hp),entryMp:stats(e.mp),stone:stats(e.stone),
    ink:stats(e.ink),ownedCarry:stats(e.carriedCleansers),
