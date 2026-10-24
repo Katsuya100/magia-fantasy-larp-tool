@@ -62,6 +62,9 @@ for(const cohort of economy.policies){
     sourceMp:100*snapshot.playerMp/snapshot.maxMp,
     ownedItems:snapshot.carry.length,bankedInventory:snapshot.bankedItems,
     bankedStones:snapshot.bankedStones,bankedInk:snapshot.bankedInk,
+    circleUpgrades:snapshot.circles.map(x=>x.upgradeLevel),
+    circlePowers:snapshot.circles.map(x=>x.power),
+    carriedKinds:snapshot.carry.map(x=>x.id),
     win:consumed.won,cleared:consumed.cleared,endingHp:consumed.endHp,
     endingMp:consumed.endMp,heals:consumed.heals,enemyHeals:consumed.enemyHeals,
     firstLoss:consumed.firstLoss,gradeEligible:consumed.bossRankEligible,
@@ -125,6 +128,25 @@ for(const cohort of economy.policies){
    observedWinPercent:winRate,winnerMpMedian:mp.median,
    rankEligibleBeforeRecovery:row.gradeIndependent.eligible,
    passed:row.hardTargetPassed,issues}));
+  // Diagnostics only: audit all seeds, including failed battles and missing
+  // genuine owners. None of these observations changes eligibility or goals.
+  console.log('DUNGEON_LINKED_256_DIAGNOSTIC '+JSON.stringify({
+   style:row.style,route:row.route,band:row.band,
+   ready:count,missing:missing.length,missingSeeds:row.missingSeeds,
+   level:row.actualPreparation.level,
+   upgrades:results.length?Array.from({length:5},(_,i)=>spread(results.map(r=>r.circleUpgrades[i]))):[],
+   spellPowers:results.length?Array.from({length:5},(_,i)=>spread(results.map(r=>r.circlePowers[i]))):[],
+   bankedStone:spread(results.map(r=>r.bankedStones)),
+   bankedInk:spread(results.map(r=>r.bankedInk)),
+   carried:spread(results.map(r=>r.ownedItems)),
+   itemKinds:Object.entries(results.reduce((acc,r)=>{
+    for(const kind of r.carriedKinds)acc[kind]=(acc[kind]||0)+1;
+    return acc;
+   },{})),
+   winnerHp:row.winnerHp,winnerMp:row.winnerMp,
+   lossesByLayer:row.firstLosses,
+   cleanserUses:row.cleanserUses,
+   gradeEligible:row.gradeIndependent.eligible}));
  }
 }
 assert.equal(report.cases.length,6*goals.bands.length,'evaluate all 60 policy-decade combinations');
