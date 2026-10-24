@@ -78,6 +78,7 @@ jobs:
       - run: node tests/test-dungeon-journeys.mjs
       - run: node scripts/dungeon-balance-manifest.mjs
       - run: node scripts/simulate-dungeon-journeys.mjs 16 > reports/dungeon-journeys.log
+      - run: node scripts/dungeon-baseline-review-proposal.mjs
       - name: Detect unapproved economic benchmark drift
         id: economic_baseline
         continue-on-error: true # preserve diagnosis; gate explicitly at the end
