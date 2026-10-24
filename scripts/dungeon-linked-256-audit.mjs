@@ -32,7 +32,12 @@ const select=x=>({seed:x.seed,level:x.profile.level,rank:x.profile.rank,
  gradeFailedMp:x.rankAudit.filter(r=>r.failure?.includes('MP_BELOW_80')).length,
  gradeFailedHp:x.rankAudit.filter(r=>r.failure?.includes('HP_BELOW_80')).length,
  ownedItems:x.resourceLedger.items.held,collections:x.resourceLedger.collections.held,
- completed:x.best>=100,blockers:x.blockers});
+ completed:x.best>=100,blockers:x.blockers,
+ firstDecadeClearances:goals.bands.map(b=>{
+  const cleared=x.trace.find(t=>t.cleared>=b.to&&!t.defeat);
+  return {layer:b.to,fights:cleared?.fights??null,
+   sorties:cleared?.sortie??null,level:cleared?.levelAfter??null};
+ })});
 const stats=values=>spread(values.filter(Number.isFinite));
 const report={schemaVersion:'dungeon-linked-256-economy-v1',source:ECONOMY_VERSION,
  status:'STRUCTURAL_AUDIT_NOT_BALANCE_CERTIFICATION',
@@ -138,6 +143,48 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   p90RepeatFights:dist.repeatedFights.p90,p90Defeats:dist.deathCount.p90,
   gradeMedian:dist.rankGranted.median,
   noAutoAcceptance:true}));
+}
+// Full-campaign opportunity costs: same initial seed and source spells.
+// Decisions may diverge, so later loot RNG streams are not forced identical.
+report.pairedLongitudinalCosts=[];
+for(const route of ['short','long']){
+ const reference=report.policies.find(x=>x.style==='A'&&x.route===route);
+ for(const style of ['B','C']){
+  const variant=report.policies.find(x=>x.style===style&&x.route===route);
+  const pairs=reference.accounts.map((a,i)=>{
+   const b=variant.accounts[i];
+   assert.equal(a.seed,b.seed,'paired strategy must use the same initial economic seed');
+   const checkpointDeltas=goals.bands.map((goal,j)=>{
+    const left=a.firstDecadeClearances[j],right=b.firstDecadeClearances[j];
+    return {layer:goal.to,reachedBoth:left.fights!==null&&right.fights!==null,
+     additionalFights:left.fights!==null&&right.fights!==null?right.fights-left.fights:null,
+     additionalSorties:left.sorties!==null&&right.sorties!==null?right.sorties-left.sorties:null};
+   });
+   return {seed:a.seed,reached100A:a.completed,reached100Variant:b.completed,
+    extraTotalFights:b.fights-a.fights,extraRepeatFights:b.repeatedFights-a.repeatedFights,
+    extraDeaths:b.deathCount-a.deathCount,extraReturns:b.returns-a.returns,
+    acquiredRankDifference:b.rankGranted-a.rankGranted,
+    stoneBalanceDifference:b.bankedStone-a.bankedStone,
+    inkBalanceDifference:b.bankedInk-a.bankedInk,
+    inkActuallyConsumed:b.inkSpent,stoneActuallyConsumed:b.stoneSpent,
+    paidRedraws:b.redraws,purposeFarmFights:b.purposeFarmFights,
+    checkpointDeltas};
+  });
+  report.pairedLongitudinalCosts.push({route,style,baselineStyle:'A',
+   samples:pairs.length,actualSameSeed:true,
+   status:'LONGITUDINAL_OPPORTUNITY_MEASURED_NOT_EQUAL_READINESS_PROOF',
+   measured:{extraTotalFights:stats(pairs.map(x=>x.extraTotalFights)),
+    extraRepeatFights:stats(pairs.map(x=>x.extraRepeatFights)),
+    extraDeaths:stats(pairs.map(x=>x.extraDeaths)),
+    acquiredRankDifference:stats(pairs.map(x=>x.acquiredRankDifference)),
+    inkActuallyConsumed:stats(pairs.map(x=>x.inkActuallyConsumed)),
+    paidRedraws:stats(pairs.map(x=>x.paidRedraws))},
+   checkpoints:goals.bands.map((b,i)=>({to:b.to,
+    comparedPairs:pairs.filter(x=>x.checkpointDeltas[i].reachedBoth).length,
+    extraFights:stats(pairs.map(x=>x.checkpointDeltas[i].additionalFights)),
+    extraSorties:stats(pairs.map(x=>x.checkpointDeltas[i].additionalSorties))})),
+   pairs});
+ }
 }
 report.structuralChecks=report.policies.reduce((n,x)=>n+x.conservationChecks,0);
 assert.equal(report.structuralChecks,6*goals.strictSamples);
