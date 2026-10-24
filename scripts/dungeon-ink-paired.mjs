@@ -157,6 +157,13 @@ for(const route of ['short','long']){
   if(combatDowngrade)report.requirements.continueRational=true;
   const cost=powerRecovery.studied.find(x=>x.route===route&&x.layer===start&&x.samples);
   if(!cost||cost.referenceSeed!==source.seed)throw Error('Recovery is not for the same owner state');
+  if(!(cost.samples>0&&cost.samples===cost.trials.length))
+   throw Error('Ink recovery cost requires actual recorded farming trials');
+  for(const trial of cost.trials){
+   if(trial.inkConsumed!==5||trial.extraFights<0||
+    trial.stoneEarned<0||trial.stoneSpent<0)
+    throw Error('Ink redraw farming must consume real materials and log genuine fights');
+  }
   const row={route,from:start,to:start+9,status:'MEASURED',
    initialState:{seed:source.seed,level:source.snapshot.level,bankedInk:source.snapshot.bankedInk,
     bankedStone:source.snapshot.bankedStones,spentStone:source.snapshot.spent.stone,
@@ -164,7 +171,14 @@ for(const route of ['short','long']){
    eligibleAccounts:candidates.length,outOf:group.comparisonStates.length,
    opportunity:{inkConsumed:5,stoneConsumedNow:0,priorStoneSunk:p.sunkStoneCost,
     oldUpgradesLost:p.lostCircles,additionalStoneToMatchOldPower:p.stonesNeededToMatchOldPower,
-    additionalCombatFightsForReacquisition:null,additionalSortiesForReacquisition:null},
+    // Real 24-seed farm distributions from the SAME banked owner and original
+    // ink-spent redraw; not free stones or an invented median/ready owner.
+    additionalCombatFightsForReacquisition:cost.distributions.extraFights,
+    additionalSortiesForReacquisition:cost.distributions.sorties,
+    additionalStoneSpentForReacquisition:cost.distributions.stoneSpent,
+    actualReacquisitionSuccesses:cost.successes,
+    actualReacquisitionTrials:cost.samples,
+    actualFailedSortiesForReacquisition:cost.distributions.losses},
    spells:{oldPower:p.oldPower,oldMpCost:p.oldMpCost,
     newPower:p.redrawnPower,newMpCost:p.redrawnMpCost},
    keep:continuous,redraw:replacement,
