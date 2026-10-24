@@ -268,7 +268,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    collections:{bankedDrops:0,alchemyConsumed:0,lostUnbanked:0}},
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
-  rankAudit:[],
+  rankAudit:[],floorAudit:[],
   entrySnapshots:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
@@ -321,6 +321,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
      unbankedInk:pending.loot.filter(x=>x.type==='ink').length,
      status:'ACTUAL_FIRST_ENTRY_WITH_IN_EXPEDITION_RESOURCES'};
    }
+   const entryHp=percent(hero.hp,hero.stats.hp),entryMp=percent(hero.mp,hero.maxMp);
+   const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
+   const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
    let allWon=true;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
@@ -359,6 +362,21 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
     G.recoverVictoryMp(hero,layer);
    }
+   const layerLoot=pending.loot.slice(lootBeforeLayer);
+   state.floorAudit.push({sortie:state.sorties,layer,style,route,
+    attemptedFights:state.fights-fightsBeforeLayer,replay:layer<=state.best,
+    entryHpPercent:entryHp,entryMpPercent:entryMp,
+    exitHpPercent:percent(hero.hp,hero.stats.hp),
+    exitMpPercent:percent(hero.mp,hero.maxMp),
+    defeated:!allWon,cleared:allWon,
+    gainedXp:Math.max(0,G.normalizeXp(pending.xp-xpBeforeLayer)),
+    pendingStone:layerLoot.filter(x=>x.type==='stone').length,
+    pendingInk:layerLoot.filter(x=>x.type==='ink').length,
+    pendingItems:layerLoot.filter(x=>x.type==='use').length,
+    pendingCollections:layerLoot.filter(x=>x.type==='collection').length,
+    usedOwnedCleansers:Object.values(usage).reduce((a,b)=>a+b,0)-usedBeforeLayer,
+    bossRank:state.rankAudit.findLast(x=>x.layer===layer&&x.sortie===state.sorties)??null,
+    banked:false});
    if(!allWon)break;
    lastClear=layer;
    if(layer%10===0){
@@ -387,6 +405,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    }
   const earnedPending={stone:pending.loot.filter(x=>x.type==='stone').length,
    ink:pending.loot.filter(x=>x.type==='ink').length};
+  for(const row of state.floorAudit.filter(x=>x.sortie===state.sorties))
+   row.banked=!defeat;
   if(defeat){
    state.losses++;state.lost.stone+=earnedPending.stone;
    state.lost.ink+=earnedPending.ink;state.lost.xp+=pending.xp;
@@ -447,7 +467,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   healCasts:state.healCasts,enemyHealCasts:state.enemyHealCasts,
   enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
-  trace:state.trace,milestones:state.milestones,entrySnapshots:state.entrySnapshots,blockers:state.blockers};
+  floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,entrySnapshots:state.entrySnapshots,blockers:state.blockers};
 }
 export function summarizeJourneys(samples=16,seed=20261024){
  if(!Number.isSafeInteger(samples)||samples<1||samples>512)throw Error('Invalid economy sample count');
@@ -483,10 +503,25 @@ export function summarizeJourneys(samples=16,seed=20261024){
   });
   // Actual indivisible player states for paired combat. Never synthesize
   // an impossible inventory by combining unrelated per-field medians.
+  const floorObservations=Array.from({length:100},(_,i)=>{
+   const layer=i+1,observed=runs.flatMap(r=>r.floorAudit.filter(x=>x.layer===layer));
+   const clears=observed.filter(x=>x.cleared);
+   return {layer,entries:observed.length,clears:clears.length,defeats:observed.length-clears.length,
+    replayEntries:observed.filter(x=>x.replay).length,
+    bankedClearances:clears.filter(x=>x.banked).length,
+    entryHp:spread(observed.map(x=>x.entryHpPercent)),
+    entryMp:spread(observed.map(x=>x.entryMpPercent)),
+    exitHp:spread(clears.map(x=>x.exitHpPercent)),
+    exitMp:spread(clears.map(x=>x.exitMpPercent)),
+    spentCleanserCount:observed.reduce((n,x)=>n+x.usedOwnedCleansers,0),
+    rankEligible:observed.filter(x=>x.bossRank?.eligible).length,
+    rankAcquired:observed.filter(x=>x.bossRank?.banked).length};
+  });
   const comparisonStates=runs.map(r=>({seed:r.seed,best:r.best,rank:r.profile.rank,
    snapshots:Object.fromEntries(Array.from({length:10},(_,i)=>i*10+1).flatMap(layer=>
     r.entrySnapshots[layer]?[[layer,r.entrySnapshots[layer]]]:[]))}));
-  return {style,route,samples,distributions,checkpoints,completed:runs.filter(x=>x.best>=100).length,
+  return {style,route,samples,distributions,checkpoints,floorObservations,
+    completed:runs.filter(x=>x.best>=100).length,
    blocked:runs.length-runs.filter(x=>x.best>=100).length,comparisonStates,examples:runs.slice(0,2)};
  });
  return {schemaVersion:ECONOMY_VERSION,seed,samples,alchemy:'off',
