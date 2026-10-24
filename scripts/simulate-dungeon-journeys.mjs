@@ -390,7 +390,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    const entryHp=percent(hero.hp,hero.stats.hp),entryMp=percent(hero.mp,hero.maxMp);
    const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
    const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
-   let allWon=true;
+   let allWon=true,bossRounds=null;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
     const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked);
@@ -404,6 +404,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     if(!utilityUnlocked&&outcome.healCasts)
      throw Error('Illegal tutorial heal before the banked F2 clear');
     if(!outcome.win){defeat=true;allWon=false;break;}
+    if(slot===5)bossRounds=outcome.rounds;
     const boss=slot===5?outcome.foe.id:null;
     const drops=G.drops(data.items,data.collections,outcome.enemyLevel,random,{
      layer,playerLevel:firstLevel,firstClear:layer>state.best,bossEnemyId:boss,
@@ -431,6 +432,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    const layerLoot=pending.loot.slice(lootBeforeLayer);
    state.floorAudit.push({sortie:state.sorties,layer,style,route,
     attemptedFights:state.fights-fightsBeforeLayer,replay:layer<=state.best,
+    bossRounds,
     entryHpPercent:entryHp,entryMpPercent:entryMp,
     exitHpPercent:percent(hero.hp,hero.stats.hp),
     exitMpPercent:percent(hero.mp,hero.maxMp),
@@ -585,6 +587,7 @@ export function summarizeJourneys(samples=16,seed=20261024){
     entryMp:spread(observed.map(x=>x.entryMpPercent)),
     exitHp:spread(clears.map(x=>x.exitHpPercent)),
     exitMp:spread(clears.map(x=>x.exitMpPercent)),
+    bossRounds:spread(clears.filter(x=>x.bossRounds!==null).map(x=>x.bossRounds)),
     spentCleanserCount:observed.reduce((n,x)=>n+x.usedOwnedCleansers,0),
     rankEligible:observed.filter(x=>x.bossRank?.eligible).length,
     rankAcquired:observed.filter(x=>x.bossRank?.banked).length};
