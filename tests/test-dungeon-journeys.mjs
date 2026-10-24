@@ -4,10 +4,27 @@ import {runJourney,spread,investmentRate,ECONOMY_VERSION} from '../scripts/simul
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
+import {createSortieEncounterSelector} from '../scripts/dungeon-balance-encounters.mjs';
 import {readFileSync} from 'node:fs';
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 configure({balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')});
+const foes=csv('enemies');
+let shuffleRolls=0;
+const selector=createSortieEncounterSelector(foes,()=>{shuffleRolls++;return .3;});
+const shuffled=Array.from({length:4},(_,i)=>selector(i+1).id);
+assert.equal(new Set(shuffled).size,4,'all ordinary encounters must appear once');
+assert.deepEqual(new Set(shuffled),new Set(
+ Array.from({length:4},(_,i)=>'foe_l001_'+(i+1))),
+ 'the browser shuffles only within an authored floor');
+assert.equal(shuffleRolls,3,'floor order is rolled only once');
+assert.equal(selector(1).id,shuffled[0],'returning to same slot does not reroll');
+assert.equal(shuffleRolls,3);
+assert.equal(selector(5).id,'boss_l001','boss remains fifth, never shuffled');
+assert.equal(shuffleRolls,3);
+assert.equal(new Set(Array.from({length:4},(_,i)=>selector(6+i).id)).size,4);
+assert.equal(shuffleRolls,6,'different floor shuffles independently');
+
 const manifest=buildManifest();
 assert.equal(manifest.schemaVersion,'dungeon-levers-v1');
 assert.ok(manifest.entries.length>500,'must inventory more than balance CSV');
