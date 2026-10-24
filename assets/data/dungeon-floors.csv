@@ -448,7 +448,7 @@ floor,enemy_level,boss,minimum_enemy_level,boss_enemy_id
 447,139,0,139,
 448,139,0,139,
 449,139,0,139,
-450,147,1,147,boss_l090
+450,175,1,175,boss_l090
 451,141,0,141,
 452,141,0,141,
 453,141,0,141,
@@ -498,4 +498,4 @@ floor,enemy_level,boss,minimum_enemy_level,boss_enemy_id
 497,150,0,150,
 498,150,0,150,
 499,150,0,150,
-500,158,1,158,boss_l100
+500,185,1,185,boss_l100
