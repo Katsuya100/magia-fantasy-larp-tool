@@ -37,6 +37,33 @@ full `offline` test expose the canonical enemy-plan mismatch. Do **not**
 modify the enemy-plan expectations merely to turn the test green. Resolve
 the game-master conflict only in a separately authorized tuning phase.
 
+### Actual GitHub Actions evidence and unresolved game-master mismatch
+
+[CI #40050473763](https://github.com/Katsuya100/magia-fantasy-larp-tool/actions/runs/40050473763)
+completed the separately gated **structural 256-account × 6-policy audit**:
+1,536 independent real-economic accounts checked, real banked resource ledgers
+reconciled, reproducible first-entry profiles archived. The 100F reach counts
+were A short 256/256, A long 256/256, B short **255/256**, B long
+256/256, C short 256/256 and C long 256/256. The single B non-completion
+is retained as a failed run, not concealed. The companion
+`dungeon-linked-256-combat-strict` ran all 60 policy/depth cases and **failed
+all 60 approved target gates**. Those failures are faithfully reported, not
+a failure of the structural engine itself.
+
+Later source changes add same-original-seed A/B/C full-campaign **paired
+opportunity-cost traces** and replace B's earlier unapproved first-entry
+median comparison with the actual same-seed A F31 equipment (without granting
+stones or victory). Their current HEAD Actions rerun must be checked before
+calling that latest refinement verified.
+
+The unrelated `offline` full suite is still red on published-enemy
+master-plan congruence: previous premature changes to F1–10 authored enemy
+MAG have not been reconciled with the canonical enemy-plan expectation.
+**No game value or expectation was silently changed during the
+infrastructure-first correction.** Fix this in a separately approved
+balance-data restoration/tuning step, rather than making the source-of-truth
+validation accept inconsistent masters.
+
 ### Structural and hard-goal checks must stay separate
 
 - `dungeon-foundation-256-accounts` measures **256 genuinely fought and
