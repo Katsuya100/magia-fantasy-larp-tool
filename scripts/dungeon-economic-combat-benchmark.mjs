@@ -1,5 +1,6 @@
+// Historical first-entry comparison only (not the acceptance gate).
 // Approved observed win/MP targets are immutable inputs; measured economic
-// loadouts are pinned in a separate candidate file and may not auto-change.
+// loadouts are pinned in a separate unapproved candidate and may not auto-change.
 // Run on GitHub Actions only. A missing real carry loadout is a HARD blocker,
 // never repaired by granting hypothetical cleanse items.
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
@@ -138,4 +139,5 @@ console.log('DUNGEON_ECONOMIC_COMBAT_SUMMARY '+JSON.stringify({status:report.man
 if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,
  '## '+headline+'\n'+report.routes.map(r=>'**'+r.route+'**: '+
  r.bands.map(b=>b.band+' '+b.winRate.toFixed(1)+'% win / '+(b.mp.median===null?'—':b.mp.median.toFixed(1))+'% MP').join(', ')).join('\n\n')+'\n');
-if(report.mandatoryFailures.length)process.exitCode=1;
+if(report.mandatoryFailures.length&&process.env.DUNGEON_ECONOMIC_COMBAT_DIAGNOSTIC!=='1')
+ process.exitCode=1;
