@@ -195,6 +195,28 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  if(style==='B')assert.equal(run.circles.length,8);
  if(style==='C')assert.ok(run.spent.ink<=run.earned.ink);
 }
+// At the first F10 boss clear all six policies must follow the SAME
+// novice route. One newly conquered floor is genuinely banked per return;
+// only a returned F2 clear unlocks support and defense on subsequent sorties.
+for(const style of ['A','B','C'])for(const route of ['short','long']){
+ const tutorial=runJourney(20261024,{style,route,maxSorties:12,maxFights:700});
+ const firstBoss=tutorial.trace.findIndex(t=>t.returned&&t.cleared===10);
+ assert.ok(firstBoss>=0,'novice actually banks first F10 boss before branching: '+style+route);
+ const firstDecade=tutorial.trace.slice(0,firstBoss+1);
+ const banked=new Set();
+ for(const step of firstDecade){
+  assert.equal(step.tutorial,true,'no early long dive before first F10 boss');
+  assert.ok(step.goal>=1&&step.goal<=10,'novice chooses only a legal next floor');
+  assert.equal(step.utilityUnlocked,banked.has(2),
+   'only banked F2 victory unlocks non-attack utility');
+  if(step.returned){
+   assert.equal(step.cleared,step.goal,'novice banks the intended floor');
+   banked.add(step.cleared);
+  }
+ }
+ assert.deepEqual([...banked].sort((a,b)=>a-b),Array.from({length:10},(_,i)=>i+1),
+  'all 10 floor-clears are genuinely returned before a strategy can change');
+}
 // An actual banked five-ink C redraw must take place in a mature seeded
 // journey. Old stones remain sunk, original drawing quality is not rerolled,
 // and no material can appear merely to make the test pass.
