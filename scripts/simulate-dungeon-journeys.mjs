@@ -192,10 +192,18 @@ function optionalAlchemy(state){
    .filter(x=>['heal','mana','elixir','escape','revive'].includes(x.kind)).slice(0,5).map(x=>x.i);
   if(indexes.length!==5||state.inventory.length< G.capacity(state.profile.level)+5)break;
   const beforeStones=state.stones,beforeInk=state.ink;
+  const beforeItemCount=state.inventory.length;
+  const beforeCollectionCount=Object.values(state.collection).reduce((a,b)=>a+b,0);
   const profile={inventory:state.inventory,collection:state.collection,magicStones:state.stones,
    magicInk:state.ink,alchemyCount:state.alchemyCount,carrySlots:[]};
   const after=craftAlchemy(profile,relic,indexes,data.items,data.buffs,state.random,
    ()=>'crafted-'+(++state.itemSerial));
+  if(after.inventory.length!==beforeItemCount-4||
+     Object.values(after.collection).reduce((a,b)=>a+b,0)!==beforeCollectionCount-1)
+   throw Error('Alchemy must consume exactly five owned items and one collected relic to create one item');
+  state.ledger.items.alchemyCreated++;
+  state.ledger.items.alchemyConsumed+=5;
+  state.ledger.collections.alchemyConsumed++;
   state.alchemyCount=after.alchemyCount;state.alchemyCrafts++;
   state.inventory=after.inventory;state.collection=after.collection;
   state.stones=after.magicStones;state.ink=after.magicInk;
@@ -209,11 +217,15 @@ function commit(state,pending,unused,bestLayer){
  for(const reward of pending.loot){
   if(reward.type==='stone'){state.stones++;state.earned.stone++;}
   else if(reward.type==='ink'){state.ink++;state.earned.ink++;}
-  else if(reward.type==='use')state.inventory.push({
-   id:reward.id,value:reward.value,bonus:reward.bonus,
-   instanceId:'item-'+(++state.itemSerial)
-  });
-  else if(reward.type==='collection')state.collection[reward.id]=(state.collection[reward.id]||0)+1;
+  else if(reward.type==='use'){
+   state.ledger.items.bankedDrops++;
+   state.inventory.push({id:reward.id,value:reward.value,bonus:reward.bonus,
+    instanceId:'item-'+(++state.itemSerial)});
+  }
+  else if(reward.type==='collection'){
+   state.ledger.collections.bankedDrops++;
+   state.collection[reward.id]=(state.collection[reward.id]||0)+1;
+  }
   else if(reward.type==='rank'&&acquireAdventurerRank(p,reward.layer))state.rankGranted++;
  }
  state.inventory.push(...unused.filter(Boolean));
@@ -252,6 +264,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
   circles:spells.map(([role,attribute,power])=>circle(role,attribute,power)),
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
+  ledger:{items:{bankedDrops:0,alchemyCreated:0,battleConsumed:0,alchemyConsumed:0,lostUnbanked:0},
+   collections:{bankedDrops:0,alchemyConsumed:0,lostUnbanked:0}},
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
   rankAudit:[],
@@ -364,12 +378,17 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    // acceptance thresholds for game balance.
    if(route==='long'&&(hero.hp/hero.stats.hp<.3||hero.mp/hero.maxMp<.2))break;
   }
-  for(const [id,count] of Object.entries(usage))state.cleanseUses[id]=(state.cleanseUses[id]||0)+count;
+  for(const [id,count] of Object.entries(usage)){
+    state.cleanseUses[id]=(state.cleanseUses[id]||0)+count;
+    state.ledger.items.battleConsumed+=count;
+   }
   const earnedPending={stone:pending.loot.filter(x=>x.type==='stone').length,
    ink:pending.loot.filter(x=>x.type==='ink').length};
   if(defeat){
    state.losses++;state.lost.stone+=earnedPending.stone;
    state.lost.ink+=earnedPending.ink;state.lost.xp+=pending.xp;
+    state.ledger.items.lostUnbanked+=pending.loot.filter(x=>x.type==='use').length;
+    state.ledger.collections.lostUnbanked+=pending.loot.filter(x=>x.type==='collection').length;
    // The shipped game returns unused equipped items to the warehouse on defeat.
    state.inventory.push(...carry.filter(Boolean));
   }else if(lastClear>=start){
@@ -395,7 +414,22 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   upgradeLevel:c.upgrades,power:actualPower(c),mpCost:G.mpCost(c.basePower),ink:c.ink}));
  const stoneReconciled=state.earned.stone-state.spent.stone-state.stones;
  const inkReconciled=state.earned.ink-state.spent.ink-state.ink;
- if(stoneReconciled!==0||inkReconciled!==0)throw Error('Resource conservation violated');
+ if(stoneReconciled!==0||inkReconciled!==0)throw Error('Stone or ink conservation violated');
+  const items=state.ledger.items,collections=state.ledger.collections;
+  const itemBalance=items.bankedDrops+items.alchemyCreated-items.battleConsumed-items.alchemyConsumed;
+  const collectionBalance=collections.bankedDrops-collections.alchemyConsumed;
+  const collectionHeld=Object.values(state.collection).reduce((a,b)=>a+b,0);
+  if(itemBalance!==state.inventory.length||collectionBalance!==collectionHeld)
+   throw Error('Owned item or collection resource conservation violated');
+  const instanceIds=state.inventory.map(item=>item.instanceId);
+  if(instanceIds.some(id=>typeof id!=='string')||new Set(instanceIds).size!==instanceIds.length)
+   throw Error('Duplicate or untracked owned inventory instance');
+  const resourceLedger={items:{...items,held:state.inventory.length,reconciled:itemBalance},
+   collections:{...collections,held:collectionHeld,reconciled:collectionBalance},
+   stones:{banked:state.earned.stone,upgrades:state.spent.stone,held:state.stones,
+    lostUnbanked:state.lost.stone},
+   ink:{banked:state.earned.ink,redrawSpent:state.spent.ink,held:state.ink,
+    lostUnbanked:state.lost.ink}};
  return {seed,style,route,alchemy,alchemyCrafts:state.alchemyCrafts,
   alchemyByproducts:state.alchemyByproducts,profile:chestSummary(profile),best:state.best,
   sorties:state.sorties,returns:state.returns,losses:state.losses,fights:state.fights,
@@ -403,7 +437,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   recovery:{extraFights:state.recoveryFights,sorties:state.recoverySorties,
    achieved:state.recoveryAchieved,initialGap:state.recoveryInitialGap,
    remainingGap:state.recoveryRemainingGap,comparison:FROZEN_A.schemaVersion},
-  earned:state.earned,spent:state.spent,lost:state.lost,balances:{stone:state.stones,ink:state.ink},
+  earned:state.earned,spent:state.spent,lost:state.lost,
+   resourceLedger,balances:{stone:state.stones,ink:state.ink},
   inventory:state.inventory.length,collection:state.collection,circles:invested,
   sunkCircles:state.sunkCircles,replacements:state.replacements,redrawEvents:state.redrawEvents,
   healCasts:state.healCasts,enemyHealCasts:state.enemyHealCasts,
