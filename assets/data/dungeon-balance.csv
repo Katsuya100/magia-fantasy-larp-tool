@@ -1,5 +1,5 @@
 key,value,description
-power_scale,30,魔法威力から基礎魔力への変換係数
+power_scale,22,魔法威力から基礎魔力への変換係数
 power_divisor,100,魔法威力の除数
 mp_base,40,最大MPの固定値
 mp_per_mag,6,MAGあたり最大MP
