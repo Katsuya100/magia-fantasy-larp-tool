@@ -588,6 +588,8 @@ export function summarizeJourneys(samples=16,seed=20261024){
     exitHp:spread(clears.map(x=>x.exitHpPercent)),
     exitMp:spread(clears.map(x=>x.exitMpPercent)),
     bossRounds:spread(clears.filter(x=>x.bossRounds!==null).map(x=>x.bossRounds)),
+    firstClearBossRounds:spread(clears.filter(x=>!x.replay&&x.bossRounds!==null)
+     .map(x=>x.bossRounds)),
     spentCleanserCount:observed.reduce((n,x)=>n+x.usedOwnedCleansers,0),
     rankEligible:observed.filter(x=>x.bossRank?.eligible).length,
     rankAcquired:observed.filter(x=>x.bossRank?.banked).length};
