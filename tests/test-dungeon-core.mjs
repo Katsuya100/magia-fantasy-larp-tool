@@ -143,10 +143,15 @@ const victoryMpRate=level=>{
  unit.mp=0;
  return G.recoverVictoryMp(unit)/unit.maxMp;
 };
-assert.ok(victoryMpRate(1)>=.18&&victoryMpRate(1)<=.20,'early layers grant generous beginner MP recovery');
-assert.ok(victoryMpRate(30)>.12&&victoryMpRate(30)<.14,'early-layer victory MP recovery also helps established adventurers');
-assert.ok(victoryMpRate(75)>.09&&victoryMpRate(75)<.115,'the early-layer bonus does not erase level scaling');
-assert.ok(victoryMpRate(150)>.069&&victoryMpRate(150)<.085,'high-level heroes only receive the early-layer bonus at low depth');
+// This is a shipped 1-10F victory reward, never a combat healing action.
+// The pre-existing intervals are adjusted by the *actual source default*,
+// not by relaxing any 256-seed approved win/MP goals.
+const introReward=num('victory_mp_intro_floor_bonus');
+assert.equal(introReward,.03,'initial F1-10-only tuning value is source controlled');
+assert.ok(victoryMpRate(1)>=.18+introReward&&victoryMpRate(1)<=.20+introReward,'early layers grant generous beginner MP recovery');
+assert.ok(victoryMpRate(30)>.12+introReward&&victoryMpRate(30)<.14+introReward,'early-layer victory MP recovery also helps established adventurers');
+assert.ok(victoryMpRate(75)>.09+introReward&&victoryMpRate(75)<.115+introReward,'the early-layer bonus does not erase level scaling');
+assert.ok(victoryMpRate(150)>.069+introReward&&victoryMpRate(150)<.085+introReward,'high-level heroes only receive the early-layer bonus at low depth');
 // Added recovery applies only to layers 1-19. The baseline is mathematically
 // identical at layer 20 and beyond, regardless of the adventurer's level.
 for(let layer=1;layer<=10;layer++)assert.equal(G.earlyVictoryMpBonusRate(layer),num('victory_mp_early_layer_bonus'));
@@ -163,11 +168,11 @@ for(const playerLevel of [1,5,19,37,55,150]){
   (num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
   num('victory_mp_beginner_bonus')*Math.max(0,(13-playerLevel)/12)-
   num('victory_mp_middle_taper')*middle*(1-middle);
- for(const layer of [20,21,30,50,100,110]){
+ for(const layer of [11,15,19,20,21,30,50,100,110]){
   actor.mp=0;
   assert.equal(G.recoverVictoryMp(actor,layer),
-   Math.round(actor.maxMp*originalRate*G.victoryMpLayerFactor(layer)),
-   'layer 20+ must retain the exact historical recovery at layer '+layer+' and Lv'+playerLevel);
+   Math.round(actor.maxMp*(originalRate*G.victoryMpLayerFactor(layer)+G.earlyVictoryMpBonusRate(layer))),
+   'layer 11+ must retain the exact historical recovery at layer '+layer+' and Lv'+playerLevel);
  }
 }
 assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75)&&victoryMpRate(75)>victoryMpRate(150),
