@@ -170,10 +170,15 @@ jobs:
           path: reports/
       - name: Strict 256-independent-owner 50-fight targets for six routes
         run: node scripts/dungeon-linked-256-combat.mjs
+      - name: Pair real re-farming cost to actual 256-owner combat readiness
+        if: always()
+        run: node scripts/dungeon-strategy-readiness.mjs
       - name: Preserve red strict gate without hiding failed bands
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dungeon-linked-256-combat
-          path: reports/dungeon-linked-256-combat-v1.json
+          path: |
+            reports/dungeon-linked-256-combat-v1.json
+            reports/dungeon-strategy-readiness-v1.json
           if-no-files-found: warn
