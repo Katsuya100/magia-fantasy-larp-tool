@@ -94,6 +94,30 @@ function cleanse(hero,carry,layer,usage){
  G.potion(hero,item,data.items,data.buffs);
  carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
 }
+// Only consume genuinely banked mana potions against an unearned 20F+ rank
+// boss, if the hero is below the 80% MP badge threshold plus a spell buffer.
+// Consumables are paid from the original carried inventory via G.potion.
+function restoreRankMp(state,hero,carry,layer,fight,usage){
+ if(layer<20||layer%10!==0||fight%5!==0||
+  state.profile.adventurerRank>=layer||hero.mp>=hero.maxMp*.9)return;
+ const need=hero.maxMp*.9-hero.mp;
+ const choices=carry.map((item,i)=>({item,i})).filter(x=>x.item&&
+  data.items.find(row=>row.id===x.item.id)?.kind==='mana'&&
+  G.canUseBattleItem(hero,x.item,data.items,data.buffs));
+ if(!choices.length)return;
+ // Prefer the smallest genuine dose that can meet the target, otherwise
+ // the largest real dose; do not manufacture MP or items.
+ choices.sort((a,b)=>{
+  const av=Number(a.item.value),bv=Number(b.item.value);
+  return (av>=need?0:1)-(bv>=need?0:1)||
+   (av>=need?av-bv:bv-av);
+ });
+ const {item,i}=choices[0];
+ G.potion(hero,item,data.items,data.buffs);
+ carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
+}
+const manaCount=usage=>Object.entries(usage).reduce((n,[id,count])=>
+ n+(id.startsWith('mana_')?count:0),0);
 // Loadouts are selected only from real banked inventory, with the real
 // level-dependent carry cap. No stocked-item fixture is smuggled into economy.
 function pack(state,start,goal){
@@ -106,12 +130,17 @@ function pack(state,start,goal){
   // intend to use it. Item-use policy is enforced separately in cleanse().
   return row&&(row.kind==='clear'&&goal>=51||row.kind==='clear_all'&&goal>=71);
  };
- if(goal<51)return [];
- const available=state.inventory.filter(eligible);
  const cap=G.capacity(state.profile.level);
+ const rankTarget=Math.max(20,Math.ceil(start/10)*10);
+ const seekingRank=rankTarget<=goal&&rankTarget<=100&&
+  state.profile.adventurerRank<rankTarget;
+ const mana=seekingRank?state.inventory.filter(item=>
+  data.items.find(row=>row.id===item.id)?.kind==='mana').sort((a,b)=>
+  Number(b.value)-Number(a.value)).slice(0,Math.min(3,cap)):[];
+ const available=state.inventory.filter(eligible);
  const specific=available.filter(item=>item.id!=='luna_stone');
  const luna=available.filter(item=>item.id==='luna_stone');
- const selected=goal>=71?luna.slice(0,Math.min(2,cap)):[];
+ const selected=[...mana,...(goal>=71?luna.slice(0,Math.min(2,cap-mana.length)):[])];
  const pressure=new Map();
  const end=Math.min(100,goal);
  for(let layer=Math.max(51,start);layer<=end;layer++)
@@ -320,6 +349,7 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
  let healCasts=0,enemyHealCasts=0,rounds=0,enemyDebuffs=0;
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
+  restoreRankMp(state,hero,carry,layer,fight,usage);
   const ours=chooseHero(hero,enemy,layer,utilityUnlocked),theirs=G.chooseEnemySpell(enemy,random);
   if(!utilityUnlocked&&ours>=0&&hero.spells[ours].role!=='attack')
    throw Error('Only attack magic is permitted before the banked F2 clear');
@@ -353,7 +383,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
   rankAudit:[],floorAudit:[],
   entrySnapshots:{},preparedSnapshots:{},
-  healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},trace:[],blockers:[],milestones:[],
+  healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
   recoveryInitialGap:null,recoveryRemainingGap:null};
  if(style==='B')state.circles.push(circle('attack','storm',300,false),circle('attack','aqua',290,false),circle('support','law',260,false));
@@ -395,7 +425,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const firstLevel=profile.level;
   const hero=G.makeUnit(state.playerBase,firstLevel,{},equipped(state.circles),'hero');
   let pending={xp:0,loot:[]},lastClear=start-1,defeat=false;
-  const carry=pack(state,start,goal);
+  // Long dives bank each decade, so reserve slots for only the next boss.
+  const packingGoal=route==='long'?Math.min(goal,Math.ceil(start/10)*10):goal;
+  const carry=pack(state,start,packingGoal);
   const usage={};
   const encounterForFight=createSortieEncounterSelector(data.enemies,random);
   state.sorties++;
@@ -423,6 +455,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    const entryHp=percent(hero.hp,hero.stats.hp),entryMp=percent(hero.mp,hero.maxMp);
    const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
    const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
+   const manaBeforeLayer=manaCount(usage);
    let allWon=true,bossRounds=null;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
@@ -475,7 +508,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     pendingInk:layerLoot.filter(x=>x.type==='ink').length,
     pendingItems:layerLoot.filter(x=>x.type==='use').length,
     pendingCollections:layerLoot.filter(x=>x.type==='collection').length,
-    usedOwnedCleansers:Object.values(usage).reduce((a,b)=>a+b,0)-usedBeforeLayer,
+    usedOwnedCleansers:Object.values(usage).reduce((a,b)=>a+b,0)-usedBeforeLayer-
+     (manaCount(usage)-manaBeforeLayer),
+    usedOwnedMana:manaCount(usage)-manaBeforeLayer,
     bossRank:state.rankAudit.findLast(x=>x.layer===layer&&x.sortie===state.sorties)??null,
     banked:false});
    if(!allWon)break;
@@ -501,7 +536,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    if(route==='long'&&layer>=51&&(hero.hp/hero.stats.hp<.3||hero.mp/hero.maxMp<.2))break;
   }
   for(const [id,count] of Object.entries(usage)){
-    state.cleanseUses[id]=(state.cleanseUses[id]||0)+count;
+    const sink=id.startsWith('mana_')?state.rankManaUses:state.cleanseUses;
+    sink[id]=(sink[id]||0)+count;
     state.ledger.items.battleConsumed+=count;
    }
   const earnedPending={stone:pending.loot.filter(x=>x.type==='stone').length,
@@ -571,7 +607,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   inventory:state.inventory.length,collection:state.collection,circles:invested,
   sunkCircles:state.sunkCircles,replacements:state.replacements,redrawEvents:state.redrawEvents,
   healCasts:state.healCasts,enemyHealCasts:state.enemyHealCasts,
-  enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,
+  enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,rankManaUses:state.rankManaUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
   floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,
   entrySnapshots:state.entrySnapshots,preparedSnapshots:state.preparedSnapshots,blockers:state.blockers};
