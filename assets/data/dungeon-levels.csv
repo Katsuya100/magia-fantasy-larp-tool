@@ -1,4 +1,5 @@
 level,hp_multiplier,mag_multiplier,def_multiplier,res_multiplier,xp_to_next,carry_limit
+0,0.20,0.10,0.50,0.50,0,3
 1,1,1,1,1,108,3
 2,1.0559,1.0455,1.0354,1.0354,107,3
 3,1.1136,1.092,1.0716,1.0716,148,3
