@@ -197,14 +197,17 @@ const profile={level:1,xp:0},base={hp:100,mag:10,def:7,res:7};
 const attack={role:'attack',attribute:'flame',power:1200};
 for(let layer=1;layer<=100;layer++){
  const expected=targetClearLevel(layer);
+ // Keep the player progression curve; the approved F1-F9 enemy-only
+ // level-1 exception cannot bleed into F10 or 101F+ scaling.
+ const encounterLevel=layer<=9?1:expected;
  assert.ok(layer===1||expected>=targetClearLevel(layer-1));
  const ids=[];
  for(let slot=1;slot<=5;slot++){
   const fight=(layer-1)*5+slot,foe=enemyForFight(enemies,fight,()=>.999),spec=floor(fight);
-  assert.equal(+spec.enemy_level,expected);
+  assert.equal(+spec.enemy_level,encounterLevel);
   assert.equal(+spec.boss,slot===5?1:0);
   assert.equal(foe.boss_only,slot===5?'1':'0');
-  assert.equal(+foe.min_level,expected);
+  assert.equal(+foe.min_level,encounterLevel);
   assert.equal(spec.boss_enemy_id,slot===5?foe.id:'');
   ids.push(foe.id);
  }
