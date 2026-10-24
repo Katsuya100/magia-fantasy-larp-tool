@@ -54,7 +54,7 @@ for(const cohort of economy.policies){
    assert.ok(snapshot.level>=snapshot.targetLevel,'no underlevel early-entry combat may enter the mandatory cohort');
    assert.equal(snapshot.unbankedXp,0);
    assert.equal(snapshot.circles.length,5);
-   const consumed=challenge(snapshot,band.from,37011+13*i);
+   const consumed=challenge(snapshot,band.from,37011+13*i,{route:cohort.route});
    results.push({seed:account.seed,combatSeed:37011+13*i,sourceLevel:snapshot.level,
     preparationFights:snapshot.actualFights,preparationSorties:snapshot.actualSorties,
     firstEntryLevel:firstEntry?.level??null,

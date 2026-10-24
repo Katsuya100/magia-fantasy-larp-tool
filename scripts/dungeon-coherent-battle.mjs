@@ -7,30 +7,14 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
-import {rng} from './simulate-dungeon-journeys.mjs';
+import {rng,chooseHero} from './simulate-dungeon-journeys.mjs';
 const csv=p=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+p+'.csv',import.meta.url),'utf8'));
 const data={balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),
  playerBase:csv('player-base'),items:csv('consumables'),
  enemies:csv('enemies'),buffs:csv('buffs'),collections:csv('collections')};
 configure(data);
-function choose(hero,enemy,layer){
- const ready=G.available(hero);
- const heal=layer>=11?ready.find(i=>hero.spells[i].role==='support'):undefined;
- if(heal!==undefined&&hero.hp/hero.stats.hp<(layer<=20?.84:.69))return heal;
- // A defensive cast was empirically costing 20-50 points of win rate:
- // spending an attack turn every time HP falls below 88% is not a valid
- // survival strategy. Keep the law ward for genuine seal threats only.
- const defense=layer>=11?ready.find(i=>hero.spells[i].role==='defense'):undefined;
- if(defense!==undefined&&hero.mp/hero.maxMp>.8&&
-  enemy.spells.some(x=>x?.role==='debuff'&&x.attribute==='law')&&
-  !hero.statuses.some(s=>s.id==='buff_law'))return defense;
- const attack=ready.filter(i=>hero.spells[i].role==='attack');
- if(attack.length)return attack.sort((a,b)=>{
-  const weight=i=>G.effectivePower(hero,hero.spells[i])*G.resist(enemy,hero.spells[i].attribute);
-  return weight(b)-weight(a)||a-b;
- })[0];
- return heal!==undefined&&hero.hp/hero.stats.hp<.9?heal:-1;
-}
+// Apply the journey's actual legal tactics, including owned spell cooldowns
+// and ordinary attack finishers, rather than another divergent chooser.
 function cleanse(hero,carry,layer,uses){
  if(layer<51)return;
  const effect=hero.statuses.find(x=>x.kind==='debuff');
@@ -45,7 +29,7 @@ function cleanse(hero,carry,layer,uses){
  uses[item.id]=(uses[item.id]||0)+1;
  carry[i]=null;
 }
-export function challenge(snapshot,from,seed){
+export function challenge(snapshot,from,seed,{route='short'}={}){
  const random=rng(seed),encounterForFight=createSortieEncounterSelector(data.enemies,random);
  const hero=G.makeUnit(snapshot.playerBase,snapshot.level,{},
   snapshot.circles.map(x=>({role:x.role,attribute:x.attribute,power:x.power,
@@ -80,7 +64,9 @@ export function challenge(snapshot,from,seed){
    let victorious=false;
    for(let turn=0;turn<80;turn++){
     cleanse(hero,carry,layer,used);
-    const h=choose(hero,enemy,layer),e=G.chooseEnemySpell(enemy,random);
+    const h=chooseHero(hero,enemy,layer,layer>10,route,
+     layer>=20&&layer%10===0&&snapshot.rank<layer),
+     e=G.chooseEnemySpell(enemy,random);
     if(h>=0&&hero.spells[h].role==='support')result.heals++;
     if(e>=0&&enemy.spells[e].role==='support')result.enemyHeals++;
     if(layer<=10&&(h>=0&&hero.spells[h].role==='support'||

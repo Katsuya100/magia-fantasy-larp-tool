@@ -40,7 +40,7 @@ const equipped=circles=>circles.filter(c=>c.active).map(c=>({
 const percent=(value,max)=>max>0?100*value/max:null;
 const chestSummary=p=>({level:p.level,rank:p.adventurerRank,xp:p.xp});
 
-function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
+export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  const ready=G.available(hero);
  // Attack-only through the first banked F2 clear. Unlock utility only
  // after a legitimate return; do not simulate a free unlock.

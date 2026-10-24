@@ -45,7 +45,7 @@ for(const cohort of economy.combinations){
   const median=owners[Math.floor((owners.length-1)/2)];
   const actual=median.snapshot;
   const trials=Array.from({length:goals.strictSamples},(_,i)=>
-   challenge(actual,band.from,17011+13*i));
+   challenge(actual,band.from,17011+13*i,{route:cohort.route}));
   const wins=trials.filter(x=>x.won);
   const winRate=100*wins.length/trials.length;
   const mp=quantize(wins.map(x=>x.endMp));
