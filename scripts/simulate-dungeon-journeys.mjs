@@ -244,8 +244,11 @@ function considerInkRedraw(state){
  // drawing quality, and pay the real five-ink charge for a new base.
  // No favorable randomized circle, free base improvement or upgrade transfer.
  const candidates=state.circles.filter(c=>c.active&&!c.redrawn);
+ // Draw sooner, while ten genuine sunk upgrades can still be rebuilt by
+ // ordinary stone farming. Waiting until 20+ upgrades made C routinely
+ // sacrifice half its current strength immediately before the 100F boss.
  const eligible=state.forceRedraw?candidates:candidates.filter(c=>
-  ['attack','support'].includes(c.role)&&c.upgrades>=20);
+  ['attack','support'].includes(c.role)&&c.upgrades>=10);
  if(!eligible.length||state.ink<5||state.replacements>=state.redrawLimit)return;
  const candidate=[...eligible].sort((a,b)=>state.forceRedraw
   ?actualPower(a)-actualPower(b)
