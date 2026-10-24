@@ -55,10 +55,14 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // An already legally unlocked support spell should protect the *real*
  // HP reserve before the kill on an unearned 20F+ badge, with ordinary
  // spell MP costs and cooldowns (mana items are separately banked/paid).
+ // In a fifty-fight sortie, conserving MP while losing most current HP
+ // was empirically causing early deaths with an almost untouched MP gauge.
+ // Proactive, paid healing trades that existing MP for survival. It never
+ // bypasses available(), consumes no item, and shares ordinary G.round rules.
  const healBelow=layer===10&&utilityUnlocked?.95:
   pendingGrade&&route==='long'?.95:
-  route==='long'&&layer>=11&&layer<=20?.84:
-  layer>=81?(layer%10===0?.87:.35):.69;
+  route==='long'&&layer>=11&&layer<=20?.93:
+  layer>=81?(layer%10===0?.95:.90):.90;
  if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
   (layer!==10||hero.mp/hero.maxMp>.85))return heal;
  // Use the already equipped law-defense circle only when it can protect
