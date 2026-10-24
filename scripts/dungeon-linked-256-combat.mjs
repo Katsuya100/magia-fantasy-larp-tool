@@ -1,8 +1,9 @@
 // Accepted combat goals measured using 256 INDEPENDENT real economic owners.
 // Each owner has actually fought/banked/levelled under A/B/C and short/D.
-// This is a separate ten-layer counterfactual at first entry; for short-return
-// journeys it is intentionally NOT a claim of what happens after intermediate
-// banking and leveling. No baseline medians or invented consumables are used.
+// Initial entry is economic diagnostic ONLY. Mandatory ten-layer difficulty
+// is evaluated after REAL completed returns, level-ups, banked upgrades and
+// independently verified rank/level readiness. Missing readiness is an
+// economic reachability failure, not an artificial combat defeat.
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
@@ -25,12 +26,12 @@ const report={schemaVersion:'dungeon-linked-256-owner-combat-v1',
  approvedGoals:goals.schemaVersion,combatSamples:goals.strictSamples,
  seedRule:'one owner seed 17011+13*i, independent combat seed 37011+13*i',
  cohortDefinitions:'A/B/C strategy x short or long D route',
- methodology:'First entry from the SAME real economic player for each seeded sample; exact pre-entry HP/MP, five circles, cooldowns, status and owned carried cleansers. 50 battles without invented refills, banking or level-ups between fights. Independent of frozen reference median.',
+ methodology:'Separate first entry as economic diagnosis. Evaluate 50 fights only from the first actual post-return banked/prepared state per seed, with authored recommended end-of-band level, legal rank checkpoint, five owned reference circles and earned inventory; never infer readiness from a winning combat seed.',
  cases:[],failures:[],coverage:[],
  warnings:[
-  'A full decade in short route is a stress-test counterfactual: normal short players return and level between layers.',
+  'A prepared 50-fight challenge starts a new, legal sortie after an actual banked return; full start HP/MP comes from normal game sortie initialization, never from an intra-sortie refill.',
   'The 256 distinct actual owner entry accounts are NOT a random photo-circle population; reference circles are an explicit controlled assumption.',
-  'No eligibility gap, zero winners, rank failure or absent cleanser stock can be silently replaced by a test-only fixture.',
+  'An owner without a verified prepared snapshot counts as ECONOMY_NOT_READY; zero combat observations must never be represented as zero combat victories.',
   'This report does not auto-approve or replace the user-frozen candidate v1; it measures alternative genuine-owner outcomes.'
  ]};
 for(const cohort of economy.policies){
@@ -42,12 +43,21 @@ for(const cohort of economy.policies){
    const source=cohort.accounts[i];
    assert.equal(account.seed,source.seed,'combat owner must equal economic owner seed');
    assert.equal(account.seed,17011+13*i,'no skipped or substituted economic owner seed');
-   const snapshot=account.snapshots[bandIndex];
-   if(!snapshot){missing.push(account.seed);continue;}
+   const firstEntry=account.snapshots[bandIndex];
+   const snapshot=account.prepared?.[bandIndex];
+   if(!snapshot){missing.push({seed:account.seed,firstEntryReached:Boolean(firstEntry),
+    firstEntryLevel:firstEntry?.level??null,
+    reason:!firstEntry?'NOT_REACHED_ON_JOURNEY':'NO_LEGAL_BANKED_LEVEL_RANK_READY_SORTIE'});
+    continue;}
    assert.equal(snapshot.from,band.from);
+   assert.equal(snapshot.source,'POST_RETURN_BANKED_AND_INVESTED');
+   assert.ok(snapshot.level>=snapshot.targetLevel,'no underlevel early-entry combat may enter the mandatory cohort');
+   assert.equal(snapshot.unbankedXp,0);
    assert.equal(snapshot.circles.length,5);
    const consumed=challenge(snapshot,band.from,37011+13*i);
    results.push({seed:account.seed,combatSeed:37011+13*i,sourceLevel:snapshot.level,
+    preparationFights:snapshot.actualFights,preparationSorties:snapshot.actualSorties,
+    firstEntryLevel:firstEntry?.level??null,
     sourceRank:snapshot.rank,sourceHp:100*snapshot.playerHp/snapshot.maxHp,
     sourceMp:100*snapshot.playerMp/snapshot.maxMp,
     ownedItems:snapshot.carry.length,bankedInventory:snapshot.bankedItems,
@@ -58,26 +68,39 @@ for(const cohort of economy.policies){
     gradeBeforeRecovery:consumed.bossPreRecovery,itemsUsed:consumed.used});
   }
   const wins=results.filter(r=>r.win),count=results.length;
-  const winRate=100*wins.length/goals.strictSamples;
+  // No missing player may be counted as a lost 50-fight challenge, and
+  // no successful-owner filtering may be promoted into 256-seed acceptance.
+  const fullCohort=count===goals.strictSamples;
+  const winRate=fullCohort?100*wins.length/goals.strictSamples:null;
   const conditionalWinRate=count?100*wins.length/count:null;
   const mp=spread(wins.map(r=>r.endingMp)),hp=spread(wins.map(r=>r.endingHp));
   const issues=[];
-  if(missing.length)issues.push('Some real owners did not reach this first-entry floor; no 256-sample prepared cohort');
-  if(winRate<band.winRate[0]||winRate>band.winRate[1])
-   issues.push('Observed 256-denominator win rate outside user-approved interval');
-  if(winRate<band.winSafety[0]||winRate>band.winSafety[1])
-   issues.push('Observed 256-denominator win rate outside user-approved interior safety margin');
-  if(mp.median===null||mp.median<band.winnerMedianMp[0]||mp.median>band.winnerMedianMp[1])
-   issues.push('Winner MP median outside user-approved interval');
+  if(missing.length)issues.push('ECONOMY_NOT_READY: real prepared owner accounts missing; no 256-sample combat acceptance claim');
+  if(fullCohort){
+   if(winRate<band.winRate[0]||winRate>band.winRate[1])
+    issues.push('Observed 256-denominator win rate outside user-approved interval');
+   if(winRate<band.winSafety[0]||winRate>band.winSafety[1])
+    issues.push('Observed 256-denominator win rate outside user-approved interior safety margin');
+   if(mp.median===null||mp.median<band.winnerMedianMp[0]||mp.median>band.winnerMedianMp[1])
+    issues.push('Winner MP median outside user-approved interval');
+  }
   if(band.from>=51&&results.some(r=>r.ownedItems===0))
    issues.push('Some owners lack earned and carried specialist cleanser supply');
   if(band.from<=10&&results.some(r=>r.heals||r.enemyHeals))
    throw Error('Early no-combat-healing invariant broken');
   const grade=wins.filter(r=>r.gradeBeforeRecovery);
   const row={style:cohort.style,route:cohort.route,band:band.from+'-'+band.to,
-   ownersAvailable:count,ownersMissing:missing.length,missingSeeds:missing,
+   ownersAvailable:count,ownersMissing:missing.length,
+   missingSeeds:missing.map(x=>x.seed),missingOwnerReasons:missing,
+   firstEntryAccounts:cohort.ownerEntries.filter(x=>x.snapshots[bandIndex]).length,
+   readinessGate:fullCohort?'ALL_256_INDEPENDENTLY_PREPARED':'ECONOMY_NOT_READY',
    strictDenominator:goals.strictSamples,clears:wins.length,
    winRateOf256:winRate,conditionalWinRate,
+   conditionalSampleNotForApproval:!fullCohort,
+   actualPreparation:{fights:spread(results.map(x=>x.preparationFights)),
+    sorties:spread(results.map(x=>x.preparationSorties)),
+    level:spread(results.map(x=>x.sourceLevel))},
+   firstEntryDiagnostic:{level:spread(results.map(x=>x.firstEntryLevel).filter(Number.isFinite))},
    winnerMp:mp,winnerHp:hp,ownerFirstEntry:{
     hp:spread(results.map(r=>r.sourceHp)),mp:spread(results.map(r=>r.sourceMp)),
     level:spread(results.map(r=>r.sourceLevel)),
@@ -91,12 +114,14 @@ for(const cohort of economy.policies){
    cleanserUses:results.reduce((n,r)=>n+Object.values(r.itemsUsed).reduce((a,b)=>a+b,0),0),
    firstLosses:Object.entries(results.filter(r=>!r.win).reduce((a,r)=>
     (a[r.firstLoss]=(a[r.firstLoss]||0)+1,a),{})),
-   issues,hardTargetPassed:issues.length===0};
+   issues,hardTargetPassed:fullCohort&&issues.length===0,
+   status:!fullCohort?'ECONOMY_NOT_READY':issues.length?'COMBAT_TARGET_UNMET':'COMBAT_TARGET_MET'};
   report.cases.push(row);
   if(issues.length)report.failures.push({style:cohort.style,route:cohort.route,band:row.band,issues});
   console.log('DUNGEON_LINKED_256_COMBAT '+JSON.stringify({
    style:row.style,route:row.route,band:row.band,
    realOwners:count,missing:missing.length,wins:row.clears,
+   gate:row.status,
    observedWinPercent:winRate,winnerMpMedian:mp.median,
    rankEligibleBeforeRecovery:row.gradeIndependent.eligible,
    passed:row.hardTargetPassed,issues}));
