@@ -40,7 +40,7 @@ const equipped=circles=>circles.filter(c=>c.active).map(c=>({
 const percent=(value,max)=>max>0?100*value/max:null;
 const chestSummary=p=>({level:p.level,rank:p.adventurerRank,xp:p.xp});
 
-function chooseHero(hero,enemy,layer,utilityUnlocked){
+function chooseHero(hero,enemy,layer,utilityUnlocked,route){
  const ready=G.available(hero);
  // Attack-only through the first banked F2 clear. Unlock utility only
  // after a legitimate return; do not simulate a free unlock.
@@ -71,7 +71,7 @@ function chooseHero(hero,enemy,layer,utilityUnlocked){
  // never grant mana, suppress an enemy turn, or fake a hit.
  // MP-safe finishers are valid once the beginner F2 return is banked;
  // protect scarce 11F-20F MP without item recovery before the F20 grade.
- if(layer>=11){
+ if(layer>=51||(route==='long'&&layer>=11)){
   const relativeArmor=G.armor(enemy)/Math.max(1,enemy.stats.hp/Math.max(1,enemy.base.hp));
   const basic=Math.max(1,Math.round(num('basic_attack')*hero.stats.hp*
    G.factor(hero,'attack')*G.factor(hero,'output')*G.factor(enemy,'incoming')*
@@ -354,7 +354,7 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
   restoreRankMp(state,hero,carry,layer,fight,usage);
-  const ours=chooseHero(hero,enemy,layer,utilityUnlocked),theirs=G.chooseEnemySpell(enemy,random);
+  const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route),theirs=G.chooseEnemySpell(enemy,random);
   if(!utilityUnlocked&&ours>=0&&hero.spells[ours].role!=='attack')
    throw Error('Only attack magic is permitted before the banked F2 clear');
   if(ours>=0&&hero.spells[ours].role==='support')healCasts++;
