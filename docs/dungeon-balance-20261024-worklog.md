@@ -56,6 +56,31 @@ median comparison with the actual same-seed A F31 equipment (without granting
 stones or victory). Their current HEAD Actions rerun must be checked before
 calling that latest refinement verified.
 
+After the first successful foundation, the real-account audit was strengthened:
+the player base is now **rolled once per seed using the actual shipped
+`G.startingBase` and retained across casual-mode sorties** instead of always
+using the reference HP/MAG/DEF/RES values. This materially changes the
+measured account outcomes; incomplete runs must remain incomplete rather than
+being replaced with a stronger profile. For B, if the matching A account
+never reaches F31, the recovery target is explicitly **UNAVAILABLE**, not
+silently substituted with a frozen median. The infrastructure checks this
+absence and the 5-ink-per-redraw conservation. Owner rewards can be summed
+per floor into banked or lost stones, ink, items, collections and XP;
+that sum is asserted equal to the actual character's resource ledger.
+Optional permanent-death/legacy mode is not claimed covered: the required
+A/B/C/D cohort models the shipped casual-mode defeat rules.
+
+The new `dungeon-strategy-readiness-v1.json` joins the same-seed A-versus-B/C
+full-campaign re-farming/return/redraw costs to both arms' **actual 256-owner
+win rate, MP and grade readiness** in each decade. It can calculate genuine
+costs even when identical combat readiness is not demonstrated; it cannot
+promote either policy to an approved break-even result unless both pass
+the unchanged hard targets. [CI #40051278967](https://github.com/Katsuya100/magia-fantasy-larp-tool/actions/runs/40051278967)
+verified the previous fixed-hero cohort and ran the new readiness report:
+40 real paired decade comparisons measured, **0/40** with both policies
+meeting all approved readiness targets. The subsequently rolled-hero cohort
+is a different source fingerprint; its results must be rechecked on HEAD.
+
 The unrelated `offline` full suite is still red on published-enemy
 master-plan congruence: previous premature changes to F1–10 authored enemy
 MAG have not been reconciled with the canonical enemy-plan expectation.
