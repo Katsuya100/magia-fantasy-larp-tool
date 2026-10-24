@@ -497,6 +497,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    }
    const layerLoot=pending.loot.slice(lootBeforeLayer);
    state.floorAudit.push({sortie:state.sorties,layer,style,route,
+    rankPendingAtEntry:layer>=20&&layer%10===0&&profile.adventurerRank<layer,
     attemptedFights:state.fights-fightsBeforeLayer,replay:layer<=state.best,
     bossRounds,
     entryHpPercent:entryHp,entryMpPercent:entryMp,
