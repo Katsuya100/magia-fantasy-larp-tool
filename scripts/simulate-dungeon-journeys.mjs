@@ -47,7 +47,7 @@ function chooseHero(hero,enemy,layer){
  // Use the already equipped law-defense circle only when it can protect
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
- const guard=ready.find(i=>hero.spells[i].role==='defense');
+ const guard=layer>10?ready.find(i=>hero.spells[i].role==='defense'):undefined;
  const needsGuard=hero.hp/hero.stats.hp<.69||
   enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law');
  if(guard!==undefined&&needsGuard&&
@@ -298,6 +298,8 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight){
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
   const ours=chooseHero(hero,enemy,layer),theirs=G.chooseEnemySpell(enemy,random);
+  if(layer<=10&&ours>=0&&hero.spells[ours].role!=='attack')
+   throw Error('Only attack magic is permitted for the hero through 10F');
   if(ours>=0&&hero.spells[ours].role==='support')healCasts++;
   if(theirs>=0&&enemy.spells[theirs].role==='support')enemyHealCasts++;
   if(theirs>=0&&enemy.spells[theirs].role==='debuff')enemyDebuffs++;
@@ -349,7 +351,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
   if(recovering&&state.recoveryInitialGap===null)state.recoveryInitialGap=[...deficit];
   if(style==='B'&&state.best>=30&&state.recoveryTarget&&!recovering)state.recoveryAchieved=true;
-  const goal=recovering?state.best:route==='short'?upcoming:100;
+  // A fresh character must actually beat the first floor boss and bank a
+   // return before continuing ANY short/long journey; never grant a free win.
+   const goal=state.best===0?1:recovering?state.best:route==='short'?upcoming:100;
   if(recovering)state.recoverySorties++;
   const firstLevel=profile.level;
   const hero=G.makeUnit(state.playerBase,firstLevel,{},equipped(state.circles),'hero');
