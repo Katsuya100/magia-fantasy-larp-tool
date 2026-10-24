@@ -184,6 +184,8 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   assert.ok(snap.actualSorties<=run.sorties);
   assert.equal(snap.circles.length,5);
   assert.ok(snap.carry.length<=G.capacity(snap.level));
+  assert.ok(snap.carry.every(item=>!item.id.startsWith('mana_')),
+   'strict 50-battle prepared owners never bring the new rank-only mana allowance');
   assert.equal(new Set([...snap.carry,...snap.bankedInventory].map(x=>x.instanceId)).size,
    snap.carry.length+snap.bankedInventory.length);
  }
