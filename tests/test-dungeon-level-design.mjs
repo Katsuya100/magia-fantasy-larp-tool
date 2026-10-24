@@ -209,7 +209,7 @@ for(let layer=1;layer<=100;layer++){
   const fight=(layer-1)*5+slot,foe=enemyForFight(enemies,fight,()=>.999),spec=floor(fight);
   // The F10 boss has its own level for the requested multi-turn encounter.
   const encounterLevel=layer===10?(slot===5?8:0)
-   :slot===5&&layer===90?175:slot===5&&layer===100?185:tutorialLevel;
+   :slot===5&&layer===90?164:slot===5&&layer===100?210:tutorialLevel;
   assert.equal(+spec.enemy_level,encounterLevel);
   assert.equal(+spec.boss,slot===5?1:0);
   assert.equal(foe.boss_only,slot===5?'1':'0');
