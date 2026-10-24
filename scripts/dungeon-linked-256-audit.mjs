@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runJourney,spread,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
+import * as G from '../assets/js/dungeon-core.mjs';
 
 const load=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const goals=load('config/dungeon-approved-goals.v1.json');
@@ -74,8 +75,8 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    const snap=run.entrySnapshots[e.band];
    if(!snap)continue;
    assert.equal(snap.circles.length,5);
-   assert.ok(snap.carry.length<=Math.max(18,snap.carry.length),
-    'carry source must be real inventory; level cap is tested by journey suite');
+   assert.ok(snap.carry.length<=G.capacity(snap.level),
+    'no first-entry owner may carry more than the actual game slots');
    const owned=[...snap.carry,...snap.bankedInventory];
    assert.equal(new Set(owned.map(x=>x.instanceId)).size,owned.length);
    assert.ok(owned.every(x=>typeof x.instanceId==='string'));
