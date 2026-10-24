@@ -446,7 +446,7 @@ export function recoverVictoryMp(hero,layer=1){
  const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
   num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12)-
   num('victory_mp_middle_taper')*middle*(1-middle);
- const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*(rate*victoryMpLayerFactor(floor)+earlyVictoryMpBonusRate(floor)))));
+ const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*(rate*victoryMpLayerFactor(floor)+earlyVictoryMpBonusRate(floor)+(floor<=10?num('victory_mp_intro_floor_bonus'):0)))));
  hero.mp+=gained;
  return gained;
 }
