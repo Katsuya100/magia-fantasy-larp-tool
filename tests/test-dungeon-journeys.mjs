@@ -276,6 +276,8 @@ const rebuild=runJourney(20261024,{style:'C',route:'short'});
 // Observe the actual strategy; any performed redraw must be fully paid.
 assert.ok(rebuild.replacements>=0&&rebuild.replacements<=3,
  'the real C account cannot exceed its allowed paid redraw count');
+assert.ok(rebuild.redrawEvents.every(event=>event.role==='attack'),
+ 'Ordinary C ink strategy never discards the sole earned healing circle; forced diagnostics are separate');
 assert.equal(rebuild.redrawEvents.length,rebuild.replacements);
 assert.equal(rebuild.spent.ink,rebuild.replacements*5);
 assert.equal(rebuild.earned.ink,rebuild.spent.ink+rebuild.balances.ink);
