@@ -216,6 +216,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  }
  assert.deepEqual([...banked].sort((a,b)=>a-b),Array.from({length:10},(_,i)=>i+1),
   'all 10 floor-clears are genuinely returned before a strategy can change');
+ if(route==='long')for(const step of tutorial.trace.slice(firstBoss+1)){
+  if(step.returned)assert.ok(step.cleared%10===0||step.cleared>=51,
+   'long journeys bank only at complete decade bosses until 51F');
+ }
 }
 // An actual banked five-ink C redraw must take place in a mature seeded
 // journey. Old stones remain sunk, original drawing quality is not rerolled,
