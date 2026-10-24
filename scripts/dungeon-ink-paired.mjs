@@ -45,7 +45,16 @@ function fightSortie(snapshot,changedCircles,start,seed){
  const random=rng(seed),encounterForFight=createSortieEncounterSelector(data.enemies,random),hero=G.makeUnit(snapshot.playerBase,snapshot.level,{},
   changedCircles.map(c=>({role:c.role,attribute:c.attribute,
    power:strengthenedPower(c.basePower,c.upgradeLevel),basePower:c.basePower})),'player');
+ // Both arms must start with the same actual entry HP/MP and statuses;
+ // restoring either arm to full would fake the economic opportunity cost.
+ if(!(snapshot.playerHp>0&&snapshot.playerHp<=hero.stats.hp)||
+    !(snapshot.playerMp>=0&&snapshot.playerMp<=hero.maxMp))
+  throw Error('Invalid actual-owner ink comparison resources');
+ hero.hp=snapshot.playerHp;hero.mp=snapshot.playerMp;
+ hero.statuses=(snapshot.statuses||[]).map(status=>({...status}));
+ hero.cooldowns=[...(snapshot.cooldowns||hero.cooldowns)];
  const carry=snapshot.carry.map(item=>({...item}));
+ if(carry.length>G.capacity(snapshot.level))throw Error('Unowned or overcapacity ink comparison');
  const stats={win:false,reached:start,cleared:start-1,winFights:0,
   mp:0,hp:0,casts:0,healCasts:0,itemsUsed:{},minMp:hero.maxMp};
  for(let layer=start;layer<start+10;layer++){
