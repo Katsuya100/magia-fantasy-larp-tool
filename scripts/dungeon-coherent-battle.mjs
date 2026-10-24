@@ -16,16 +16,14 @@ configure(data);
 function choose(hero,enemy,layer){
  const ready=G.available(hero);
  const heal=layer>=11?ready.find(i=>hero.spells[i].role==='support'):undefined;
- if(heal!==undefined&&hero.hp/hero.stats.hp<.69)return heal;
- // The prepared real-owner reference includes an authentic defensive spell.
- // Use it when battle conditions justify protection; this is a legal paid
- // cast with the game's own MP cost/status duration, never a free mitigation.
+ if(heal!==undefined&&hero.hp/hero.stats.hp<(layer<=20?.84:.69))return heal;
+ // A defensive cast was empirically costing 20-50 points of win rate:
+ // spending an attack turn every time HP falls below 88% is not a valid
+ // survival strategy. Keep the law ward for genuine seal threats only.
  const defense=layer>=11?ready.find(i=>hero.spells[i].role==='defense'):undefined;
- const exposed=hero.hp/hero.stats.hp<.88||
-  enemy.spells.some(x=>x?.role==='debuff'&&x.attribute==='law');
- if(defense!==undefined&&exposed&&
-  !hero.statuses.some(s=>s.id==='resist_'+hero.spells[defense].attribute||
-   s.id==='buff_'+hero.spells[defense].attribute))return defense;
+ if(defense!==undefined&&hero.mp/hero.maxMp>.8&&
+  enemy.spells.some(x=>x?.role==='debuff'&&x.attribute==='law')&&
+  !hero.statuses.some(s=>s.id==='buff_law'))return defense;
  const attack=ready.filter(i=>hero.spells[i].role==='attack');
  if(attack.length)return attack.sort((a,b)=>{
   const weight=i=>G.effectivePower(hero,hero.spells[i])*G.resist(enemy,hero.spells[i].attribute);
