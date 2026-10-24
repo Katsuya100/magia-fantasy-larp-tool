@@ -107,4 +107,18 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  if(style==='B')assert.equal(run.circles.length,8);
  if(style==='C')assert.ok(run.spent.ink<=run.earned.ink);
 }
+// An actual banked five-ink C redraw must take place in a mature seeded
+// journey. Old stones remain sunk, original drawing quality is not rerolled,
+// and no material can appear merely to make the test pass.
+const rebuild=runJourney(20261024,{style:'C',route:'short'});
+assert.ok(rebuild.replacements>0&&rebuild.replacements<=3,
+ 'marginal-efficiency C route must actually exercise paid ink redraws');
+assert.equal(rebuild.redrawEvents.length,rebuild.replacements);
+assert.equal(rebuild.spent.ink,rebuild.replacements*5);
+assert.equal(rebuild.earned.ink,rebuild.spent.ink+rebuild.balances.ink);
+assert.ok(rebuild.redrawEvents.every(event=>event.sameDrawingQuality===true&&
+ event.stoneInvestmentTransferred===0&&event.newMarginalPowerPerStone>event.oldMarginalPowerPerStone),
+ 'same-quality ink rebuild cannot transfer sunk upgrades');
+assert.ok(rebuild.redrawEvents.every(event=>event.sunkStones>=0));
+
 console.log('PASS manifest coverage, 80% rank rule, conservation and 6 journey route structural checks '+ECONOMY_VERSION);
