@@ -179,10 +179,19 @@ function pack(state,start,goal,rankItems=true){
  return selected;
 }
 function chooseUpgrade(state){
- const candidates=state.circles.filter(c=>['attack','support'].includes(c.role));
+ // B must repay the exact same-seed A F31 equipment deficit using its OWN
+ // banked stones. After F30, unrelated upgrades can exhaust the legal 75%
+ // investment budget and stall the recovery route for many repeat sorties.
+ // Include defense if it is genuinely behind, but never invent upgrades.
+ const gap=state.style==='B'&&state.best>=30?recoveryGap(state):[];
+ const recovering=gap.some(required=>required>0);
+ const candidates=state.circles.filter((c,i)=>recovering
+  ?c.active&&gap[i]>0
+  :['attack','support'].includes(c.role));
  if(!candidates.length)return null;
- // Split-stone journey spends deliberately on alternative non-equipped circles
- // until F30. Later it directs all new stones into the five equipped circles.
+ // Before F30 B deliberately splits stones across the inactive alternatives.
+ // After F30 all banked investments go into the remaining original deficits
+ // until the real same-owner reference has been recovered.
  const current=state.best+1;
  const eligible=state.style==='B'&&current<=30?candidates:candidates.filter(c=>c.active);
  const options=eligible.filter(c=>upgradeStoneCost(c.upgrades)<=state.stones);
