@@ -63,23 +63,25 @@ function cleanse(hero,carry,layer,usage){
 }
 // Loadouts are selected only from real banked inventory, with the real
 // level-dependent carry cap. No stocked-item fixture is smuggled into economy.
-function pack(state,start){
+function pack(state,start,goal){
  // The inventory has *actually dropped* item instances only. Optimise
  // counter-attributes within the legal carry capacity, without adding items.
  const eligible=item=>{
   const row=data.items.find(r=>r.id===item.id);
-  return row&&Number(row.min_layer)<=start &&
-   (row.kind==='clear'&&start>=51||row.kind==='clear_all'&&start>=71);
+  // min_layer constrains *drop eligibility*, not ownership or packing.
+  // Deep divers can pack a cleanser before reaching the floor where they
+  // intend to use it. Item-use policy is enforced separately in cleanse().
+  return row&&(row.kind==='clear'&&goal>=51||row.kind==='clear_all'&&goal>=71);
  };
- if(start<51)return [];
+ if(goal<51)return [];
  const available=state.inventory.filter(eligible);
  const cap=G.capacity(state.profile.level);
  const specific=available.filter(item=>item.id!=='luna_stone');
  const luna=available.filter(item=>item.id==='luna_stone');
- const selected=start>=71?luna.slice(0,Math.min(2,cap)):[];
+ const selected=goal>=71?luna.slice(0,Math.min(2,cap)):[];
  const pressure=new Map();
- const end=Math.min(100,start+9);
- for(let layer=start;layer<=end;layer++)
+ const end=Math.min(100,goal);
+ for(let layer=Math.max(51,start);layer<=end;layer++)
   for(let slot=0;slot<5;slot++){
    const foe=data.enemies[(layer-1)*5+slot];
    for(const notation of String(foe?.spells||'').split('|')){
@@ -263,7 +265,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const firstLevel=profile.level;
   const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},firstLevel,{},equipped(state.circles),'hero');
   let pending={xp:0,loot:[]},lastClear=start-1,defeat=false;
-  const carry=pack(state,start);
+  const carry=pack(state,start,goal);
   const usage={};
   state.sorties++;
   for(let layer=start;layer<=goal&&state.fights<maxFights;layer++){
