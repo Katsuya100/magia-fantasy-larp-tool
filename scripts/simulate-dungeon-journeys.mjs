@@ -52,7 +52,7 @@ function chooseHero(hero,enemy,layer,utilityUnlocked){
  // then heal during the actual tenth-floor boss when the HP badge demands it.
  // The same equipped support spell still pays its normal MP cost and turn.
  const healBelow=layer===10&&utilityUnlocked?.95:
-  layer>=81?(layer%10===0?.87:.50):.69;
+  layer>=81?(layer%10===0?.87:.35):.69;
  if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
   (layer!==10||hero.mp/hero.maxMp>.85))return heal;
  // Use the already equipped law-defense circle only when it can protect
@@ -60,7 +60,7 @@ function chooseHero(hero,enemy,layer,utilityUnlocked){
  // through G.available; do not change battle rules or grant free defense.
  const guard=utilityUnlocked?ready.find(i=>hero.spells[i].role==='defense'):undefined;
  const needsGuard=(layer===10&&utilityUnlocked&&enemy.id==='boss_l010')||
-  (layer>=81?hero.hp/hero.stats.hp<.40:
+  (layer>=81?hero.hp/hero.stats.hp<.25:
    hero.hp/hero.stats.hp<.69||
    enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law'));
  if(guard!==undefined&&needsGuard&&
