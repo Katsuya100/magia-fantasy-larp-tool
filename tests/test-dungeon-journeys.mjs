@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {buildManifest} from '../scripts/dungeon-balance-manifest.mjs';
-import {runJourney,spread,investmentRate,ECONOMY_VERSION} from '../scripts/simulate-dungeon-journeys.mjs';
+import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {rankBadgeDrop,unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
@@ -57,6 +57,25 @@ assert.equal(introFoe.spells[pickedAttack].role,'attack','intro attacks share th
 assert.equal(introFoe.spells[pickedGuard].role,'defense','intro guards remain possible');
 assert.equal(introFoe.base.mag,Number(foes.find(x=>x.id==='foe_l001_1').mag),
  'combat reads the authentic authored enemy MAG, not a test-only damage value');
+
+// Paid law defense must actually counter the enemy's law element.
+// Against an unrelated attribute, it wastes a turn without protection.
+const tacticalSpells=[
+ {role:'attack',attribute:'flame',power:420,basePower:420},
+ {role:'support',attribute:'aqua',power:320,basePower:320},
+ {role:'defense',attribute:'law',power:270,basePower:270}
+];
+const tacticalHero=G.makeUnit({hp:100,mag:10,def:7,res:7},37,{},tacticalSpells,'hero');
+tacticalHero.hp=Math.floor(tacticalHero.stats.hp*.6);
+tacticalHero.cooldowns[1]=1; // Healing is cooling down; no mana bypass.
+const unrelated=G.fromEnemy(foes.find(x=>x.id==='foe_l017_2'),32);
+const matching=G.fromEnemy(foes.find(x=>x.id==='foe_l016_1'),30);
+assert.equal(chooseHero(tacticalHero,unrelated,17,true,'short',false),0,
+ 'Do not waste a defense cast against an enemy with no law threat');
+assert.equal(chooseHero(tacticalHero,matching,17,true,'short',false),2,
+ 'The same earned law ward remains available against a real law threat');
+assert.equal(chooseHero(tacticalHero,matching,10,false,'short',false),0,
+ 'Strict pre-F2 tutorial policy cannot use support or defensive magic');
 
 const manifest=buildManifest();
 assert.equal(manifest.schemaVersion,'dungeon-levers-v1');
