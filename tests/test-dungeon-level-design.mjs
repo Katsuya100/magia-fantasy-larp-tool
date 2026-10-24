@@ -125,7 +125,10 @@ assert.equal(Object.values(affinityCounts).reduce((sum,n)=>sum+n,0),500);
 assert.ok(Object.values(affinityCounts).every(count=>count>=10&&count<=200),
  'all seven elements remain meaningfully represented in the 500 enemy catalog');
 
-assert.equal(levels.length,150);
+assert.equal(levels.length,151,'150 unchanged player levels plus one isolated enemy-only Lv0');
+assert.equal(levels.filter(row=>Number(row.level)>=1).length,150);
+assert.deepEqual(G.stats({hp:100,mag:10,def:7,res:7},0),{hp:20,mag:1,def:4,res:4},
+ 'F1-F9 enemy-only level uses the shared stat formula without changing player base stats');
 assert.equal(floors.length,500);
 assert.equal(num('level_max'),150);
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
@@ -198,12 +201,14 @@ const attack={role:'attack',attribute:'flame',power:1200};
 for(let layer=1;layer<=100;layer++){
  const expected=targetClearLevel(layer);
  // Keep the player progression curve; the approved F1-F9 enemy-only
- // level-1 exception cannot bleed into F10 or 101F+ scaling.
- const encounterLevel=layer<=9?1:expected;
+ // level-0 exception cannot bleed into F11-F100 or 101F+ scaling.
+ const tutorialLevel=layer<=9?0:expected;
  assert.ok(layer===1||expected>=targetClearLevel(layer-1));
  const ids=[];
  for(let slot=1;slot<=5;slot++){
   const fight=(layer-1)*5+slot,foe=enemyForFight(enemies,fight,()=>.999),spec=floor(fight);
+  // The F10 boss has its own level for the requested multi-turn encounter.
+  const encounterLevel=layer===10&&slot===5?8:tutorialLevel;
   assert.equal(+spec.enemy_level,encounterLevel);
   assert.equal(+spec.boss,slot===5?1:0);
   assert.equal(foe.boss_only,slot===5?'1':'0');
