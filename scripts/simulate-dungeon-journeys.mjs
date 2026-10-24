@@ -65,10 +65,15 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
  const guard=utilityUnlocked?ready.find(i=>hero.spells[i].role==='defense'):undefined;
+ // A law ward is not generic armor: it only protects against law damage
+ // and law curses. Casting it merely because HP is low against flame or
+ // gravity opponents wastes the paid turn and can cause preventable losses.
+ const lawThreat=enemy.spells.some(s=>s?.attribute==='law'&&
+  (s.role==='attack'||s.role==='debuff'));
  const needsGuard=(layer===10&&utilityUnlocked&&enemy.id==='boss_l010')||
-  (layer>=81?hero.hp/hero.stats.hp<.25:
+  (lawThreat&&(layer>=81?hero.hp/hero.stats.hp<.25:
    hero.hp/hero.stats.hp<.69||
-   enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law'));
+   enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law')));
  if(guard!==undefined&&needsGuard&&
   !hero.statuses.some(s=>s.id==='resist_'+hero.spells[guard].attribute||
    s.id==='buff_'+hero.spells[guard].attribute))return guard;
