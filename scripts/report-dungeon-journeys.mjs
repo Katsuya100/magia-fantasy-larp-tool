@@ -18,6 +18,9 @@ const status={
   style:x.style,route:x.route,reached100:x.completed,samples:x.samples,
   p90ReplayFights:x.distributions.replayedFights.p90,
   p90PurposefulRecoveryFights:x.distributions.recoveryFights.p90,
+  p90PreRestoreGradeEligible:x.distributions.gradeEligible.p90,
+  p90GradeFailedMp:x.distributions.gradeFailedMp.p90,
+  p90GradeFailedHp:x.distributions.gradeFailedHp.p90,
   p90Losses:x.distributions.losses.p90,
   p90StoneEarned:x.distributions['earned.stone'].p90
  }))},
@@ -42,6 +45,8 @@ const md=['## Dungeon journeys — measured diagnostics only',
   return '| '+x.style+' | '+x.route+' | '+x.completed+'/'+x.samples+
    ' | '+d.replayedFights.p90+' | '+d.losses.p90+' | '+d['earned.stone'].p90+' |';
  }),
+ '',
+ '**Independent grade reserves:** observed pre-victory-restore HP and MP are captured on each actual boss defeat; zero demonstrated grade wins cannot be called a pass.',
  '',
  '**Hard targets: NOT CERTIFIED.** Existing strict combat gates still apply unchanged. No fixed economy-derived median equipment or route-specific strict comparison is yet approved.',
  '',
