@@ -5,7 +5,7 @@
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {enemyForFight} from '../assets/js/dungeon-design.mjs';
+import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
 import {strengthenedPower,upgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
@@ -76,6 +76,7 @@ function replay(seed,snapshot,requestedLayer,limit=20){
    const item=data.items.find(row=>row.id===x.id);
    return item&&(item.kind==='clear'&&from>=51||item.kind==='clear_all'&&from>=71);
   };
+  const encounterForFight=createSortieEncounterSelector(data.enemies,random);
   const carry=stocked.filter(permitted).slice(0,G.capacity(profile.level));
   const taken=new Set(carry);
   stocked=stocked.filter(x=>!taken.has(x));
@@ -83,7 +84,7 @@ function replay(seed,snapshot,requestedLayer,limit=20){
   for(let layer=from;layer<=to&&!defeat;layer++){
    for(let slot=1;slot<=5;slot++){
     const n=(layer-1)*5+slot;
-    const foe=enemyForFight(data.enemies,n,random),enemy=G.fromEnemy(foe,
+    const foe=encounterForFight(n),enemy=G.fromEnemy(foe,
      Number(data.floors[n-1].enemy_level));
     fights++;
     let won=false;
