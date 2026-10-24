@@ -47,7 +47,7 @@ const hardcoded=[
  ['test.startingSpells',[[360,420,540,320,270],[220,260,300,200,160]],'tests/test-dungeon-default-balance.mjs:NORMAL/INTRO','power','A,B,C,D'],
  ['test.stoneSpendRamps',[[10,.25],[20,.75]],'tests/test-dungeon-default-balance.mjs:targetStoneRate','ratio','A,B,C,D'],
  ['test.samples',256,'tests/test-dungeon-default-balance.mjs:SAMPLES','trials','A,B,C,D'],
- ['test.introEnemyAttackChance',.01,'assets/js/dungeon-core.mjs:chooseEnemySpell','probability','A,B,C,D'],
+ ['design.introEnemyAttackChance',0.003,'assets/data/dungeon-balance.csv:enemy_intro_attack_preference','probability','A,B,C,D'],
  ['design.rarityWeights',BASE_RARITY_WEIGHTS,'assets/js/dungeon-design.mjs:BASE_RARITY_WEIGHTS','weights','A,B,C,D']
 ];
 const numeric=v=>typeof v==='string'&&v.trim()!==''&&Number.isFinite(Number(v))?Number(v):v;
