@@ -619,7 +619,10 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  for(const row of report.combinations){
   const d=row.distributions;
   console.log('DUNGEON_JOURNEY '+JSON.stringify({style:row.style,route:row.route,completed:row.completed,samples:row.samples,
-   best:d.best,levelAt10:row.checkpoints[0].level,stoneAt100:row.checkpoints[9].stone,
+   best:d.best,levelAt10:row.checkpoints[0].level,
+    bossRoundsAtF10:row.floorObservations[9].bossRounds,
+    bossF10Clears:row.floorObservations[9].clears,
+    stoneAt100:row.checkpoints[9].stone,
    extraFights:d.replayedFights,p90ExtraFights:d.replayedFights.p90,losses:d.losses,
    earnedStone:d['earned.stone'],spentStone:d['spent.stone'],earnedInk:d['earned.ink'],
    replacements:d.replacements}));
