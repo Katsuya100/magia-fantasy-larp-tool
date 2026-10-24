@@ -148,21 +148,33 @@ function recoveryGap(state){
 }
 function considerInkRedraw(state){
  if(state.style!=='C'||state.best<30)return;
- const upgraded=state.circles.filter(c=>c.active&&!c.redrawn);
- if(!upgraded.length||state.ink<5||state.replacements>=state.redrawLimit)return;
- // Use a fixed, non-rerolled 250-power newly drawn spell: conservative and
- // transparent; no transferred stone levels, no free ink.
- const candidate=upgraded.sort((a,b)=>actualPower(a)-actualPower(b))[0];
+ // Conservative reproducible redraw: preserve the CURRENT OWNED ORIGINAL
+ // drawing quality, and pay the real five-ink charge for a new base.
+ // No favorable randomized circle, free base improvement or upgrade transfer.
+ const candidates=state.circles.filter(c=>c.active&&!c.redrawn);
+ const eligible=state.forceRedraw?candidates:candidates.filter(c=>
+  ['attack','support'].includes(c.role)&&c.upgrades>=20);
+ if(!eligible.length||state.ink<5||state.replacements>=state.redrawLimit)return;
+ const candidate=[...eligible].sort((a,b)=>state.forceRedraw
+  ?actualPower(a)-actualPower(b)
+  :upgradeStoneCost(b.upgrades)-upgradeStoneCost(a.upgrades)||
+   b.upgrades-a.upgrades||actualPower(a)-actualPower(b))[0];
  const used=5;
- const newBase=inkEnhancedAnalysis({power:250},used).power;
+ const newBase=inkEnhancedAnalysis({power:candidate.basePower},used).power;
  const oldPower=actualPower(candidate);
- // Refuse to spend a rare material for a strictly inferior immediate spell.
- // Both strategy branches must still be assessed by a paired benchmark.
- if(newBase<=oldPower&&!state.forceRedraw)return;
+ // A knowingly weaker immediate spell can have better future stone economy
+ // once the original circle's tier becomes costly. C is allowed to take that
+ // investment risk, but its actual farming, losses, and power are measured.
+ const oldMarginal=candidate.basePower*.1/upgradeStoneCost(candidate.upgrades);
+ const newMarginal=newBase*.1/upgradeStoneCost(0);
+ if(!state.forceRedraw&&!(newMarginal>oldMarginal&&
+  upgradeStoneCost(candidate.upgrades)>upgradeStoneCost(0)))return;
  state.redrawEvents.push({layer:state.best,role:candidate.role,attribute:candidate.attribute,
   oldPower,newPower:newBase,upgradesLost:candidate.upgrades,
   sunkStones:totalUpgradeStoneCost(candidate.upgrades),inkConsumed:used,
-  forcedDiagnostic:state.forceRedraw,stoneInvestmentTransferred:0});
+  forcedDiagnostic:state.forceRedraw,stoneInvestmentTransferred:0,
+  oldMarginalPowerPerStone:oldMarginal,newMarginalPowerPerStone:newMarginal,
+  sameDrawingQuality:true});
  state.ink-=used;state.spent.ink+=used;
  if(candidate.upgrades>0)state.sunkCircles++;
  state.replacements++;
