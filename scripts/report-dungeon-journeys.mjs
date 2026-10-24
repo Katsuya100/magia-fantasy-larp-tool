@@ -16,6 +16,8 @@ const status={
  mandatory:{status:'NOT CERTIFIED',reason:'Frozen economic candidate v1 remains unapproved. The separate 256 independent-owner six-route strict Action is now implemented; its results and the original fixed-sortie hard gate must pass before approval.'},
  diagnostics:{status:'MEASURED',complete:journeys.combinations.map(x=>({
   style:x.style,route:x.route,reached100:x.completed,samples:x.samples,
+   boss10Rounds:x.floorObservations[9].bossRounds,
+   boss10Clears:x.floorObservations[9].clears,
   p90ReplayFights:x.distributions.replayedFights.p90,
   p90PurposefulRecoveryFights:x.distributions.recoveryFights.p90,
   p90PreRestoreGradeEligible:x.distributions.gradeEligible.p90,
