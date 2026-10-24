@@ -40,7 +40,7 @@ const equipped=circles=>circles.filter(c=>c.active).map(c=>({
 const percent=(value,max)=>max>0?100*value/max:null;
 const chestSummary=p=>({level:p.level,rank:p.adventurerRank,xp:p.xp});
 
-function chooseHero(hero,enemy,layer,utilityUnlocked,route){
+function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  const ready=G.available(hero);
  // Attack-only through the first banked F2 clear. Unlock utility only
  // after a legitimate return; do not simulate a free unlock.
@@ -51,7 +51,12 @@ function chooseHero(hero,enemy,layer,utilityUnlocked,route){
  // For high-rank expeditions preserve real MP on ordinary encounters,
  // then heal during the actual tenth-floor boss when the HP badge demands it.
  // The same equipped support spell still pays its normal MP cost and turn.
+ // The badge samples HP/MP immediately after the lethal boss round.
+ // An already legally unlocked support spell should protect the *real*
+ // HP reserve before the kill on an unearned 20F+ badge, with ordinary
+ // spell MP costs and cooldowns (mana items are separately banked/paid).
  const healBelow=layer===10&&utilityUnlocked?.95:
+  pendingGrade?.95:
   route==='long'&&layer>=11&&layer<=20?.84:
   layer>=81?(layer%10===0?.87:.35):.69;
  if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
@@ -382,7 +387,9 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
   restoreRankMp(state,hero,carry,layer,fight,usage);
-  const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route),theirs=G.chooseEnemySpell(enemy,random);
+  const pendingGrade=layer>=20&&layer%10===0&&
+   state.profile.adventurerRank<layer;
+  const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route,pendingGrade),theirs=G.chooseEnemySpell(enemy,random);
   if(!utilityUnlocked&&ours>=0&&hero.spells[ours].role!=='attack')
    throw Error('Only attack magic is permitted before the banked F2 clear');
   if(ours>=0&&hero.spells[ours].role==='support')healCasts++;
