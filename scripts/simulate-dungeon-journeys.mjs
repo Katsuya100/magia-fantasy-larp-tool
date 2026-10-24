@@ -208,6 +208,9 @@ function commit(state,pending,unused,bestLayer){
  G.experience(p,pending.xp);
  state.best=Math.max(bestLayer,state.best);
  state.returns++;
+ for(const entry of state.rankAudit){
+  if(entry.sortie===state.sorties&&entry.eligible)entry.banked=true;
+ }
  optionalAlchemy(state);
  invest(state);considerInkRedraw(state);
 }
@@ -239,6 +242,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
+  rankAudit:[],
   entrySnapshots:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
@@ -308,7 +312,17 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
      favoredCollectionIds:outcome.foe.favored_collection_ids?.split('|')||[]});
     if(boss&&layer%10===0&&layer<=100){
      state.rankChecks++;
+     // Two independent outputs: did the ACTUAL player finish the boss
+     // above the 80% reserve, and was the banked badge eventually acquired?
+     // Observe immediately after the lethal round, before any MP recovery.
+     const hpPercent=percent(hero.hp,hero.stats.hp);
+     const mpPercent=percent(hero.mp,hero.maxMp);
      const badge=rankBadgeDrop(fight,hero,profile,pending.loot);
+     state.rankAudit.push({layer,sortie:state.sorties,level:firstLevel,
+      hpPercent,mpPercent,eligible:Boolean(badge),banked:false,
+      failure:badge?null:hpPercent<80&&mpPercent<80?'HP_AND_MP_BELOW_80'
+       :hpPercent<80?'HP_BELOW_80':mpPercent<80?'MP_BELOW_80'
+       :'PRIOR_RANK_OR_DUPLICATE'});
      if(badge)drops.push(badge);
     }
     pending.loot.push(...drops);
@@ -382,7 +396,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   sunkCircles:state.sunkCircles,replacements:state.replacements,redrawEvents:state.redrawEvents,
   healCasts:state.healCasts,enemyHealCasts:state.enemyHealCasts,
   enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,
-  rankChecks:state.rankChecks,rankGranted:state.rankGranted,
+  rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
   trace:state.trace,milestones:state.milestones,entrySnapshots:state.entrySnapshots,blockers:state.blockers};
 }
 export function summarizeJourneys(samples=16,seed=20261024){
@@ -394,6 +408,9 @@ export function summarizeJourneys(samples=16,seed=20261024){
   const distributions=Object.fromEntries(metrics.map(name=>[name,spread(runs.map(x=>x[name]))]));
   distributions.recoveryFights=spread(runs.map(x=>x.recovery.extraFights));
   distributions.recoverySorties=spread(runs.map(x=>x.recovery.sorties));
+  distributions.gradeEligible=spread(runs.map(x=>x.rankAudit.filter(y=>y.eligible).length));
+  distributions.gradeFailedMp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('MP_BELOW_80')).length));
+  distributions.gradeFailedHp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('HP_BELOW_80')).length));
   for(const type of ['stone','ink']){
    for(const field of ['earned','spent','lost','balances']){
     distributions[field+'.'+type]=spread(runs.map(x=>x[field][type]));
