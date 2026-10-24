@@ -197,7 +197,8 @@ function chooseUpgrade(state){
  // When a long dive repeatedly loses its unbanked rewards, use actually
  // owned stone reserves to repair survival-critical equipped magic first.
  // B resumes its normal split investments once no longer stalled.
- const survivalRecovery=state.route==='long'&&state.best>=10&&state.losses>=2;
+ const survivalRecovery=state.route==='long'&&state.best>=10&&
+  state.losses>=2&&state.trace.at(-1)?.defeat===true;
  const eligible=state.style==='B'&&current<=30&&!survivalRecovery
   ?candidates:candidates.filter(c=>c.active);
  const options=eligible.filter(c=>upgradeStoneCost(c.upgrades)<=state.stones);
@@ -215,7 +216,8 @@ function invest(state){
  // A player who has failed multiple long dives may rationally deploy more
  // ALREADY BANKED stones instead of losing 100+ identical attempts at F11.
  // This is the existing .75 late-investment cap, not a free upgrade.
- const survivalRecovery=state.route==='long'&&state.best>=10&&state.losses>=2;
+ const survivalRecovery=state.route==='long'&&state.best>=10&&
+  state.losses>=2&&state.trace.at(-1)?.defeat===true;
  const budget=Math.floor(state.earned.stone*
   (survivalRecovery?.75:investmentRate(Math.max(1,state.best+1)))+1e-8);
  // A sunk upgrade is still counted as spent after a redraw.
