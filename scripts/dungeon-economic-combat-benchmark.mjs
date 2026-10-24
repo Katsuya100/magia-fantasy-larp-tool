@@ -6,7 +6,7 @@ import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {enemyForFight} from '../assets/js/dungeon-design.mjs';
+import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
 import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
 import {rng,spread} from './simulate-dungeon-journeys.mjs';
@@ -44,7 +44,7 @@ function tryCleanse(hero,carry,layer,used){
  used[item.id]=(used[item.id]||0)+1;carry[at]=null;
 }
 function combat(seed,band,baseline){
- const random=rng(seed),spellList=frozen.powers.map((power,i)=>({
+ const random=rng(seed),encounterForFight=createSortieEncounterSelector(data.enemies,random),spellList=frozen.powers.map((power,i)=>({
   role:frozen.roles[i],attribute:frozen.attributes[i],power:strengthenedPower(power,baseline.upgradeLevels[i]),
   basePower:power,upgradeLevel:baseline.upgradeLevels[i]}));
  const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},baseline.level,{},spellList,'player');
@@ -55,7 +55,7 @@ function combat(seed,band,baseline){
  for(let layer=band.from;layer<=band.to;layer++){
   for(let slot=1;slot<=5;slot++){
    const fight=(layer-1)*5+slot,enemy=G.fromEnemy(
-    enemyForFight(data.enemies,fight,random),Number(data.floors[fight-1].enemy_level));
+    encounterForFight(fight),Number(data.floors[fight-1].enemy_level));
    let won=false;
    for(let turn=0;turn<80;turn++){
     tryCleanse(hero,carry,layer,result.usedItems);
