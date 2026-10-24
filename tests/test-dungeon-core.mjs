@@ -13,6 +13,12 @@ assert.ok(G.validateMasters(enemies,items,collections,buffs));
 for(const [lvl,slots] of [[1,3],[9,3],[10,4],[19,4],[20,5],[49,7],[50,8],[150,18]])
  assert.equal(G.capacity(lvl),slots,'carry slot increases each 10 levels');
 assert.equal(G.nextXp(1),3);assert.equal(floor(5).boss,'1');
+for(const layer of [1,10,50,100]){
+ const enemyLevel=G.targetClearLevel?.(layer)??layer*2-1;
+ assert.equal(G.fightExperience(enemyLevel,enemyLevel,layer),
+  G.fightExperience(enemyLevel,150,layer),
+  'overleveled repeat clears must retain identical EXP (no EXP decay)');
+}
 assert.deepEqual(G.startingBase(()=>0),{hp:90,mag:8,def:5,res:5});
 assert.deepEqual(G.startingBase(()=>.99999),{hp:110,mag:12,def:10,res:10});
 const base={hp:100,mag:10,def:7,res:7};
@@ -143,11 +149,10 @@ const victoryMpRate=level=>{
  unit.mp=0;
  return G.recoverVictoryMp(unit)/unit.maxMp;
 };
-// This is a shipped 1-10F victory reward, never a combat healing action.
-// The pre-existing intervals are adjusted by the *actual source default*,
-// not by relaxing any 256-seed approved win/MP goals.
-const introReward=num('victory_mp_intro_floor_bonus');
-assert.equal(introReward,.10,'initial F1-10-only tuning value is source controlled');
+// The already existing early-layer victory reward knob controls recovery.
+// No intro-only recovery setting is allowed.
+const introReward=num('victory_mp_early_layer_bonus')-.0485;
+assert.ok(introReward>0,'existing early-layer reward is used for tuning');
 assert.ok(victoryMpRate(1)>=.18+introReward&&victoryMpRate(1)<=.20+introReward,'early layers grant generous beginner MP recovery');
 assert.ok(victoryMpRate(30)>.12+introReward&&victoryMpRate(30)<.14+introReward,'early-layer victory MP recovery also helps established adventurers');
 assert.ok(victoryMpRate(75)>.09+introReward&&victoryMpRate(75)<.115+introReward,'the early-layer bonus does not erase level scaling');
