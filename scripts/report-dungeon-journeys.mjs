@@ -17,6 +17,7 @@ const status={
  diagnostics:{status:'MEASURED',complete:journeys.combinations.map(x=>({
   style:x.style,route:x.route,reached100:x.completed,samples:x.samples,
    boss10Rounds:x.floorObservations[9].bossRounds,
+   boss10FirstClearRounds:x.floorObservations[9].firstClearBossRounds,
    boss10Clears:x.floorObservations[9].clears,
   p90ReplayFights:x.distributions.replayedFights.p90,
   p90PurposefulRecoveryFights:x.distributions.recoveryFights.p90,
