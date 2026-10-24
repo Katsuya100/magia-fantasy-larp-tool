@@ -83,6 +83,12 @@ const nearlyDown=G.fromEnemy(foes.find(x=>x.id==='foe_l017_2'),32);
 nearlyDown.hp=1;
 assert.equal(chooseHero(finishingHero,nearlyDown,17,true,'short',false),0,
  'An available real finishing attack avoids wasting MP and another exposed round');
+assert.equal(chooseHero(finishingHero,nearlyDown,20,true,'short',true),0,
+ 'A pending badge must not forbid a finishing blow against ordinary enemies');
+const nearlyDownBoss=G.fromEnemy(foes.find(x=>x.id==='boss_l020'),37);
+nearlyDownBoss.hp=1;
+assert.equal(chooseHero(finishingHero,nearlyDownBoss,20,true,'short',true),1,
+ 'Protect the pending rank boss HP and MP reserve rather than bypassing the healing plan');
 nearlyDown.hp=nearlyDown.stats.hp;
 assert.equal(chooseHero(finishingHero,nearlyDown,17,true,'short',false),1,
  'Healing remains available against an enemy that cannot be finished immediately');
