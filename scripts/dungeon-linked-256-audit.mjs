@@ -28,7 +28,11 @@ const select=x=>({seed:x.seed,level:x.profile.level,rank:x.profile.rank,
  deathCount:x.losses,sorties:x.sorties,returns:x.returns,
  redraws:x.replacements,crafts:x.alchemyCrafts,
  purposeFarmFights:x.farmingFights,recoveryFights:x.recovery.extraFights,
- rankGranted:x.rankGranted,gradeEligible:x.rankAudit.filter(r=>r.eligible).length,
+ rankGranted:x.rankGranted,
+ recoveryComparison:x.recovery.comparison,
+ recoveryTargetUpgrades:x.recovery.targetUpgrades,
+ recoveryAchieved:x.recovery.achieved,
+ gradeEligible:x.rankAudit.filter(r=>r.eligible).length,
  gradeFailedMp:x.rankAudit.filter(r=>r.failure?.includes('MP_BELOW_80')).length,
  gradeFailedHp:x.rankAudit.filter(r=>r.failure?.includes('HP_BELOW_80')).length,
  ownedItems:x.resourceLedger.items.held,collections:x.resourceLedger.collections.held,
@@ -61,6 +65,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  for(const seed of seeds){
   const run=runJourney(seed,{style,route});
   assert.equal(run.seed,seed);
+  assert.equal(run.spent.ink,run.replacements*5,
+   'every paid circle redraw must use exactly five genuinely banked inks');
+  assert.equal(run.recovery.comparison==='REAL_SAME_SEED_A_F31',style==='B',
+   'B rehabilitation benchmark must be same-seed A, never candidate equipment');
   assert.equal(run.style,style);assert.equal(run.route,route);
   assert.equal(run.resourceLedger.items.held,run.inventory);
   assert.equal(run.resourceLedger.collections.held,
@@ -154,6 +162,12 @@ for(const route of ['short','long']){
   const pairs=reference.accounts.map((a,i)=>{
    const b=variant.accounts[i];
    assert.equal(a.seed,b.seed,'paired strategy must use the same initial economic seed');
+   if(style==='B'){
+    const a31=reference.ownerEntries[i].snapshots[3];
+    const actualAUpgrades=a31?.circles.map(c=>c.upgradeLevel)??null;
+    assert.deepEqual(b.recoveryTargetUpgrades,actualAUpgrades,
+     'B may target only actual same-seed A upgrades at F31');
+   }
    const checkpointDeltas=goals.bands.map((goal,j)=>{
     const left=a.firstDecadeClearances[j],right=b.firstDecadeClearances[j];
     return {layer:goal.to,reachedBoth:left.fights!==null&&right.fights!==null,
