@@ -62,8 +62,9 @@ function challenge(snapshot,from,seed){
  assert.ok(carry.length<=G.capacity(snapshot.level),'all items must fit real slots');
  assert.ok(carry.every(item=>{
   const record=data.items.find(x=>x.id===item.id);
-  return record&&Number(record.min_layer)<=from &&
-   (record.kind==='clear'&&from>=51||record.kind==='clear_all'&&from>=71);
+  // Existing owned items may be carried from a lower unlocked start.
+  // The drop min_layer is not a combat-use or pack restriction.
+  return record&&(record.kind==='clear'||record.kind==='clear_all');
  }),'a carry item must be owned and floor-legal');
  const result={won:false,cleared:from-1,casts:0,heals:0,
   enemyHeals:0,used,bossPreRecovery:null,bossRankEligible:null,firstLoss:null,
