@@ -289,11 +289,11 @@ foe_l058_2,深淵サハギン,79,10,5,8,1,1,0.8,0.95,1.2,1,1,attack:aqua:161|def
 foe_l058_3,アビスフィッシュ,86,9,8,10,1,1,0.8,1,1.2,1,1,attack:aqua:173|defense:aqua:138|support:chaos:112|defense:aqua:335|attack:chaos:156,10,99,0,relic_018|relic_108|relic_158|relic_179
 foe_l058_4,青水スライム,75,12,4,12,1,1,0.8,1,1.2,1,1,attack:aqua:185|defense:aqua:148|support:flame:120|defense:aqua:342|attack:flame:167,10,99,0,slime_core|relic_112
 boss_l058,深海の妖姫,102,11,8,12,1,1.3,0.95,1,1.2,1,1,attack:aqua:200|defense:aqua:160|support:storm:130|debuff:aqua:351|attack:storm:180,1,99,1,relic_028|relic_106|aqua_pearl|relic_boss_058
-foe_l059_1,デュラハン,80,8,8,7,0.8,1.05,1,1,1,1.2,1,attack:flame:155|defense:flame:124|defense:aqua:101|defense:flame:332|attack:aqua:140,10,100,0,relic_020|relic_109|relic_159
-foe_l059_2,闇リビングアーマー,80,10,8,8,1,1,1,1,0.95,1.2,0.8,attack:chaos:167|defense:chaos:134|support:gravity:109|defense:chaos:338|attack:gravity:150,10,100,0,relic_051|relic_126
+foe_l059_1,デュラハン,81,8,8,7,0.8,1.05,1,1,1,1.2,1,attack:flame:155|defense:flame:124|defense:aqua:101|defense:flame:332|attack:aqua:140,10,100,0,relic_020|relic_109|relic_159
+foe_l059_2,闇リビングアーマー,81,10,8,8,1,1,1,1,0.95,1.2,0.8,attack:chaos:167|defense:chaos:134|support:gravity:109|defense:chaos:338|attack:gravity:150,10,100,0,relic_051|relic_126
 foe_l059_3,ブラックレイス,84,9,5,10,1,1,1,1,1,1.2,0.8,attack:chaos:179|defense:chaos:143|defense:flame:116|debuff:chaos:332|attack:flame:161,10,100,0,relic_022|relic_111|relic_161|relic_180
-foe_l059_4,鉄スケルトン兵,84,12,9,10,1,1,1,1,1,1.2,0.8,attack:gravity:191|defense:gravity:153|defense:chaos:124|defense:gravity:351|attack:chaos:172,10,100,0,bone|relic_146
-boss_l059,闇を纏う剣聖,99,12,10,13,1,1,1,1,1.5,0.95,1,attack:law:210|defense:law:168|support:chaos:137|debuff:law:362|attack:chaos:189,1,100,1,relic_033|relic_114|relic_164|relic_boss_059
+foe_l059_4,鉄スケルトン兵,85,12,9,10,1,1,1,1,1,1.2,0.8,attack:gravity:191|defense:gravity:153|defense:chaos:124|defense:gravity:351|attack:chaos:172,10,100,0,bone|relic_146
+boss_l059,闇を纏う剣聖,100,12,10,13,1,1,1,1,1.5,0.95,1,attack:law:210|defense:law:168|support:chaos:137|debuff:law:362|attack:chaos:189,1,100,1,relic_033|relic_114|relic_164|relic_boss_059
 foe_l060_1,デーモン,66,8,4,10,0.8,1,1.05,1.05,1,1.2,0.95,attack:chaos:137|defense:chaos:110|support:flame:89|defense:chaos:342|attack:flame:123,10,102,0,relic_023|relic_115|relic_162
 foe_l060_2,毒大グモ,75,10,5,8,0.8,1,1,1.05,1,1.2,0.95,attack:chaos:149|defense:chaos:119|support:flame:97|defense:chaos:352|attack:flame:134,10,102,0,relic_057|relic_132
 foe_l060_3,ヘルスパイダー,80,9,8,10,1,1,0.8,0.95,1,1.25,1,attack:storm:161|defense:storm:129|support:aqua:105|debuff:storm:342|attack:aqua:145,10,102,0,relic_025|relic_116|relic_165|relic_181
