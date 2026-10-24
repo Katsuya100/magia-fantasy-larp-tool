@@ -6,7 +6,8 @@ import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runJourney,spread,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
-import {unlockedStartLayers,targetClearLevel} from './dungeon-preparation-contract.mjs';
+import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
+import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 
 const load=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const goals=load('config/dungeon-approved-goals.v1.json');
