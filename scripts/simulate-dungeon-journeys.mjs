@@ -355,14 +355,26 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // when B has earned the rank at that exact checkpoint. Farm from the
   // previous LEGAL rank checkpoint, never from a non-existent floor.
   const farmStart=Math.max(1,profile.adventurerRank-9);
-  const start=allowedStartLayer(profile,recovering?farmStart:profile.adventurerRank+1);
+  // A long expedition banks at complete ten-floor bosses. Before risking
+  // the next ten floors, the same real owner can replay the PREVIOUS entire
+  // ten-floor expedition, banking only genuine XP, stones and rank awards.
+  // No unearned level, resource, or return between floors is manufactured.
+  const lastBoss=Math.floor(state.best/10)*10;
+  const nextBoss=Math.min(100,Math.ceil((state.best+1)/10)*10);
+  const training=route==='long'&&state.best>=10&&
+   (profile.level<targetClearLevel(nextBoss)||profile.adventurerRank<lastBoss);
+  const trainingStart=Math.max(1,lastBoss-9);
+  const start=allowedStartLayer(profile,recovering?farmStart:
+   training?trainingStart:profile.adventurerRank+1);
   if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
+  if(training&&start>lastBoss)throw Error('Long training must begin from a legal cleared decade');
   if(recovering&&state.recoveryInitialGap===null)state.recoveryInitialGap=[...deficit];
   if(style==='B'&&state.best>=30&&state.recoveryTarget&&!recovering)state.recoveryAchieved=true;
   // Every first-time adventurer banks each newly cleared floor until an
   // ACTUAL F10 boss victory. Only then do short/long routes diverge.
   const tutorial=state.best<10;
-  const goal=recovering?state.best:tutorial?upcoming:route==='short'?upcoming:100;
+  const goal=recovering?state.best:tutorial?upcoming:
+   training?lastBoss:route==='short'?upcoming:100;
   const utilityUnlocked=state.best>=2;
   if(recovering)state.recoverySorties++;
   const firstLevel=profile.level;
@@ -494,7 +506,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   if(style==='B'&&state.best>=30){state.recoveryRemainingGap=recoveryGap(state);
    if(state.recoveryTarget&&state.recoveryRemainingGap.every(x=>x===0))state.recoveryAchieved=true;}
   state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,recovering,
-   tutorial,utilityUnlocked,
+   tutorial,training,utilityUnlocked,
    levelBefore:firstLevel,levelAfter:profile.level,rank:profile.adventurerRank,
    gainedPending:earnedPending,banked:!defeat,stone:state.stones,ink:state.ink,
    usedItems:usage,fights:state.fights,returned:!defeat,
