@@ -101,6 +101,16 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  const run=runJourney(20261024,{style,route,maxSorties:2,maxFights:120});
  assert.equal(run.style,style);assert.equal(run.route,route);
  assert.ok(run.trace.length>0);
+ // Every route banks one NEW floor at a time before the first F10 clear;
+ // utility is unlocked only after a real banked F2 return.
+ for(const step of run.trace){
+  if(step.tutorial){
+   assert.equal(step.start,1,'tutorial sorties begin at the legal F1 gate');
+   assert.ok(step.goal>=1&&step.goal<=10,'tutorial journeys never dive ahead');
+   assert.equal(step.utilityUnlocked,step.goal>=3,'F2 must be banked before utility');
+   if(step.returned)assert.equal(step.cleared,step.goal,'bank one new tutorial floor');
+  }else assert.ok(step.goal>10,'normal route begins after real F10 success');
+ }
  assert.ok(run.entrySnapshots[1],'actual first dungeon entry must be captured');
  const entry=run.entrySnapshots[1];
  assert.deepEqual(entry.playerBase,run.playerBase,
