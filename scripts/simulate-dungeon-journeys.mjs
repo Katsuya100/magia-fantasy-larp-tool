@@ -18,7 +18,7 @@ const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
  buffs:csv('buffs'),balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')};
 configure(data);
-const FROZEN_A=JSON.parse(readFileSync(new URL('../config/dungeon-economy-baseline-candidate.v1.json',import.meta.url),'utf8'));
+// B compares against an actual same-seed A journey, never unapproved median equipment.
 const spells=[
  ['attack','flame',360],['attack','bolt',420],['attack','gravity',540],
  ['support','aqua',320],['defense','law',270]
@@ -143,7 +143,8 @@ function invest(state){
  }
 }
 function recoveryGap(state){
- const target=FROZEN_A.routes[state.route][3].upgradeLevels;
+ const target=state.recoveryTarget;
+ if(!target)return [];
  return target.map((required,i)=>Math.max(0,required-state.circles[i].upgrades));
 }
 function considerInkRedraw(state){
@@ -258,9 +259,14 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
  redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
+ const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
+  forceRedraw:false,maxSorties,maxFights}):null;
+ const atA31=aReference?.entrySnapshots[31]??null;
+ const recoveryTarget=atA31?.circles.map(c=>c.upgradeLevel)??null;
  const random=rng(seed),profile={level:1,xp:0,adventurerRank:0};
  const state={style,route,alchemy,random,profile,stones:0,ink:0,inventory:[],collection:{},
   redrawLimit,forceRedraw,redrawEvents:[],
+  recoveryTarget,recoveryReference:atA31?'REAL_SAME_SEED_A_F31':'UNAVAILABLE',
   alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
   circles:spells.map(([role,attribute,power])=>circle(role,attribute,power)),
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
@@ -279,7 +285,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
  for(let sortie=0;sortie<maxSorties&&state.best<100&&state.fights<maxFights;sortie++){
   const upcoming=state.best+1;
   // B deliberately recovers its four original spells via REAL repeat sorties.
-  // A's measured fixed F31 equipment is a comparative preparation target,
+  // Same-seed actual A F31 equipment is a comparative preparation target,
   // never a level override, free stone injection, or a hard user-approved cap.
   const deficit=style==='B'&&state.best===30?recoveryGap(state):[];
   const recovering=deficit.some(x=>x>0);
@@ -290,7 +296,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const start=allowedStartLayer(profile,recovering?farmStart:profile.adventurerRank+1);
   if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
   if(recovering&&state.recoveryInitialGap===null)state.recoveryInitialGap=[...deficit];
-  if(style==='B'&&state.best>=30&&!recovering)state.recoveryAchieved=true;
+  if(style==='B'&&state.best>=30&&state.recoveryTarget&&!recovering)state.recoveryAchieved=true;
   const goal=recovering?state.best:route==='short'?upcoming:100;
   if(recovering)state.recoverySorties++;
   const firstLevel=profile.level;
@@ -418,7 +424,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    commit(state,pending,carry,lastClear);
   }else state.inventory.push(...carry.filter(Boolean));
   if(style==='B'&&state.best>=30){state.recoveryRemainingGap=recoveryGap(state);
-   if(state.recoveryRemainingGap.every(x=>x===0))state.recoveryAchieved=true;}
+   if(state.recoveryTarget&&state.recoveryRemainingGap.every(x=>x===0))state.recoveryAchieved=true;}
   state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,recovering,
    levelBefore:firstLevel,levelAfter:profile.level,rank:profile.adventurerRank,
    gainedPending:earnedPending,banked:!defeat,stone:state.stones,ink:state.ink,
@@ -433,6 +439,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   }
  }
  if(state.best<100)state.blockers.push('Failed to clear 100F within measured sortie/fight budget (diagnostic cap, not a passing condition)');
+ if(style==='B'&&!state.recoveryTarget)state.blockers.push('No same-seed A F31 entry; no invented stone-recovery target');
  const invested=state.circles.map(c=>({active:c.active,role:c.role,attribute:c.attribute,basePower:c.basePower,
   upgradeLevel:c.upgrades,power:actualPower(c),mpCost:G.mpCost(c.basePower),ink:c.ink}));
  const stoneReconciled=state.earned.stone-state.spent.stone-state.stones;
@@ -459,7 +466,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   replayedFights:state.replayedFights,farmingFights:state.farmingFights,
   recovery:{extraFights:state.recoveryFights,sorties:state.recoverySorties,
    achieved:state.recoveryAchieved,initialGap:state.recoveryInitialGap,
-   remainingGap:state.recoveryRemainingGap,comparison:FROZEN_A.schemaVersion},
+   remainingGap:state.recoveryRemainingGap,comparison:state.recoveryReference,
+   targetUpgrades:state.recoveryTarget},
   earned:state.earned,spent:state.spent,lost:state.lost,
    resourceLedger,balances:{stone:state.stones,ink:state.ink},
   inventory:state.inventory.length,collection:state.collection,circles:invested,
