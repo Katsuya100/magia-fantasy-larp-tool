@@ -130,7 +130,13 @@ for(const cohort of economy.policies){
 assert.equal(report.cases.length,6*goals.bands.length,'evaluate all 60 policy-decade combinations');
 report.coverage={cases:report.cases.length,policies:economy.policies.length,
  approvedSeeds:goals.strictSamples,met:report.cases.filter(x=>x.hardTargetPassed).length,
+ economyNotReady:report.cases.filter(x=>x.status==='ECONOMY_NOT_READY').length,
+ preparedCombatUnmet:report.cases.filter(x=>x.status==='COMBAT_TARGET_UNMET').length,
+ preparedCombatMet:report.cases.filter(x=>x.status==='COMBAT_TARGET_MET').length,
  unmet:report.failures.length};
+assert.equal(report.coverage.economyNotReady+report.coverage.preparedCombatUnmet+
+ report.coverage.preparedCombatMet,report.coverage.cases,
+ 'a missing economic owner must never be recategorised as a battle loss');
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
 writeFileSync(new URL('../reports/dungeon-linked-256-combat-v1.json',import.meta.url),
  JSON.stringify(report,null,2)+'\n');
@@ -139,6 +145,8 @@ if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMAR
  '## Paired strict 256-real-owner ten-layer combat\n'+
  'Real owner states: '+report.coverage.cases+' policy/depth cases, 256 seeds/case.\n'+
  'User-approved target met: '+report.coverage.met+'/'+report.coverage.cases+
- '; remaining unmet: '+report.coverage.unmet+'.\n'+
+ '; economic unready: '+report.coverage.economyNotReady+
+ '; fully prepared but combat unmatched: '+report.coverage.preparedCombatUnmet+
+ '; remaining unmet total: '+report.coverage.unmet+'.\n'+
  '**A completed structural CI does NOT imply this acceptance gate passes.**\n');
 if(report.failures.length)process.exitCode=1;
