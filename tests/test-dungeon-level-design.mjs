@@ -207,7 +207,7 @@ for(let layer=1;layer<=100;layer++){
   assert.equal(+spec.enemy_level,encounterLevel);
   assert.equal(+spec.boss,slot===5?1:0);
   assert.equal(foe.boss_only,slot===5?'1':'0');
-  assert.equal(+foe.min_level,encounterLevel);
+  assert.equal(+foe.min_level,expected,'original enemy identity and intended minimum level remain unchanged');
   assert.equal(spec.boss_enemy_id,slot===5?foe.id:'');
   ids.push(foe.id);
  }
