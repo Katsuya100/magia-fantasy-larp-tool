@@ -52,6 +52,7 @@ function chooseHero(hero,enemy,layer,utilityUnlocked,route){
  // then heal during the actual tenth-floor boss when the HP badge demands it.
  // The same equipped support spell still pays its normal MP cost and turn.
  const healBelow=layer===10&&utilityUnlocked?.95:
+  route==='long'&&layer>=11&&layer<=20?.84:
   layer>=81?(layer%10===0?.87:.35):.69;
  if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
   (layer!==10||hero.mp/hero.maxMp>.85))return heal;
