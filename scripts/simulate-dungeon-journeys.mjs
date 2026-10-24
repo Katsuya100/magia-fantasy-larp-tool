@@ -234,7 +234,11 @@ function chooseUpgrade(state){
  options.sort((a,b)=>{
   const score=c=>{
    const gain=G.basePower(strengthenedPower(c.basePower,c.upgrades+1))-G.basePower(actualPower(c));
-   return (gain+.15)/(c.upgrades+1)**.25/upgradeStoneCost(c.upgrades);
+   // A paid heal prevents an extra enemy round on every later fight.
+   // Compare that repeatable survival benefit against raw one-hit damage,
+   // without changing stone costs, limits, magic strength, or enemy rules.
+   const survivalWeight=c.role==='support'?2:1;
+   return survivalWeight*(gain+.15)/(c.upgrades+1)**.25/upgradeStoneCost(c.upgrades);
   };
   return score(b)-score(a)||candidates.indexOf(a)-candidates.indexOf(b);
  });
