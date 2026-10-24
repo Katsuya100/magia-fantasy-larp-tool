@@ -6,7 +6,7 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import * as G from '../assets/js/dungeon-core.mjs';
-import {configure} from '../assets/js/dungeon-tuning.mjs';
+import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import {allowedStartLayer,unlockedStartLayers,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
@@ -61,6 +61,16 @@ function chooseHero(hero,enemy,layer,utilityUnlocked){
  if(guard!==undefined&&needsGuard&&
   !hero.statuses.some(s=>s.id==='resist_'+hero.spells[guard].attribute||
    s.id==='buff_'+hero.spells[guard].attribute))return guard;
+ // The exact existing normal attack costs no MP. Finish a weakened
+ // opponent with it only when the shipped damage expression predicts a KO;
+ // never grant mana, suppress an enemy turn, or fake a hit.
+ if(layer>=51){
+  const relativeArmor=G.armor(enemy)/Math.max(1,enemy.stats.hp/Math.max(1,enemy.base.hp));
+  const basic=Math.max(1,Math.round(num('basic_attack')*hero.stats.hp*
+   G.factor(hero,'attack')*G.factor(hero,'output')*G.factor(enemy,'incoming')*
+   num('def_divisor')/(num('def_divisor')+relativeArmor)));
+  if(enemy.hp<=basic)return -1;
+ }
  const attacks=ready.filter(i=>hero.spells[i].role==='attack');
  if(attacks.length)return attacks.sort((a,b)=>{
   const score=i=>G.effectivePower(hero,hero.spells[i])*G.resist(enemy,hero.spells[i].attribute);
