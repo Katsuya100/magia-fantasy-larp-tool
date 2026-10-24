@@ -63,7 +63,8 @@ const report={schemaVersion:'dungeon-linked-256-economy-v1',source:ECONOMY_VERSI
  samplesPerPolicy:goals.strictSamples,seedRule:'17011+13*i',
  sourceHashes,policies:[],warnings:[
   'A/B/C are different genuine stone/ink allocation strategies; D is long-expedition route paired with each.',
-  'Reference five-circle drawing and fixed hero base are explicit controlled assumptions, not real photo/image RNG.',
+  'The five reference circles are an explicit controlled drawing assumption; initial hero HP/MAG/DEF/RES are genuinely seeded and rolled by the shipped G.startingBase rules.',
+  'This cohort models shipped casual-mode defeat (unbanked XP/items lost, unused carry returned). Optional permanent-death heir and legacy mechanics need a distinct cohort; no survivor is silently reset.',
   '256 independent complete accounts are not interchangeable with 256 attempts from a fully pre-prepared 50-fight sortie.',
   'Do not declare any win-rate, MP or rank goal met from account completion alone.',
   'No 101-150F authored combat, mandatory 101-150F clear, or new p90 replay threshold is implied.'
