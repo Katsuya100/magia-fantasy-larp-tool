@@ -51,7 +51,7 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  const attacks=ready.filter(i=>hero.spells[i].role==='attack');
  const maxIncoming=Math.max(0,...enemy.spells.filter(s=>s?.role==='attack')
   .map(s=>G.damage(enemy,hero,s,()=>1)));
- if(hero.hp>maxIncoming*1.25&&layer>10&&!pendingGrade){
+ if(hero.hp>maxIncoming*1.25&&layer>10&&layer<=20&&!pendingGrade){
   const finisher=attacks.find(i=>G.damage(hero,enemy,hero.spells[i],()=>1)>=enemy.hp);
   if(finisher!==undefined)return finisher;
  }
