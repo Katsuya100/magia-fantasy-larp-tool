@@ -10,14 +10,56 @@
 4. **Entry snapshots were mixing real economy with an implicit full HP/MP start.** Each entry now records the hero's actual current HP, MP, cooldowns, statuses, all five spell upgrades, physically carried items, plus banked and unbanked XP/stone/ink. The `dungeon-actual-owner-combat.mjs` 256-seed diagnostic starts from *one coherent player account* rather than medians independently spliced into an impossible loadout. It never grants HP/MP restores between floors.
 5. **Grade outcomes need independent evidence.** Each actual tenth boss victory now records HP and MP *before* victory MP restore, eligibility against the unchanged simultaneous ≥80% rule, and whether the earned grade was eventually safely banked. This is separate from the 0–15% winner-MP difficulty criterion. No rank is handed out for free.
 
-## Real game tuning, without approved target changes
+## Parameter rollback and validation-first correction (after user feedback)
 
-Source `assets/data/dungeon-balance.csv`:
-- `victory_mp_intro_floor_bonus=0.10` adds only to the shipped **on-victory** MP recovery at 1–10F. It cannot be triggered as a combat healing spell or item; 11F onward retains the original exact recovery formula. First 0.03 trial confirmed improvement in 1–10F (247/256 wins, 96.48%, MP median 25%). A 0.10 trial, with the same seeded shuffled foes, yielded **249/256 wins (97.27%) and median winner MP 94%**. Thus MP is in the target interval, but the 99–100% win target still fails.
-- `enemy_intro_attack_preference=0.003` replaces the source-hardcoded 0.01 attack choice for 1–10F only, while the existing early rules still forbid both opponents' use of combat healing/debuff spells. This candidate is being checked in [GitHub Actions #40048172287](https://github.com/Katsuya100/magia-fantasy-larp-tool/actions/runs/40048172287) and should **not be presented as certified** before reading the completed job.
-- The earlier `xp_overlevel_decay_per_10_levels=1.85` remains part of the real EXP rule; at-level XP, recommended Lv checkpoints and player Lv150 cap were not altered. Deeper stone rates (1F 30%, 150F 90%) and boss ink chance (20%) stay unchanged.
+The earlier tuning-first approach was **not authorized**. Three invented knobs
+(`xp_overlevel_decay_per_10_levels`, `victory_mp_intro_floor_bonus`,
+`enemy_intro_attack_preference`) have been **removed from the actual game
+CSV and core logic**. Specifically:
 
-No main change, PR merge, release, deployment or Copilot use has occurred. Existing EXP migration, backup, rollback and Drive sync functionality was not edited.
+- EXP decay on overleveled replay is **prohibited** and removed. The XP test
+  now enforces equal replay rewards at every below-cap player level.
+- Victory MP continues through the already existing
+  `victory_mp_early_layer_bonus` mechanism. No intro-only recovery term remains.
+- Early foes use existing `enemy_attack_preference` rather than an almost
+  nonattacking introduction. The *previously changed* authored early MAG
+  master rows and early-layer existing MP value are still on the branch;
+  **these are unapproved, premature tuning candidates, not accepted balance**.
+
+The earlier 100% win-rate statement with 0.3% intro attacks has **no
+relevance as acceptance evidence**, because that AI rule has been withdrawn.
+Subsequent strict runs report different outcomes, including first-decade
+failure. No target was relaxed and no new balance knob was added during the
+subsequent **validation infrastructure** work.
+
+A prior change to the authored enemy MAG values also makes the separate
+full `offline` test expose the canonical enemy-plan mismatch. Do **not**
+modify the enemy-plan expectations merely to turn the test green. Resolve
+the game-master conflict only in a separately authorized tuning phase.
+
+### Structural and hard-goal checks must stay separate
+
+- `dungeon-foundation-256-accounts` measures **256 genuinely fought and
+  banked seeded accounts per A/B/C x short/long strategy (1536 accounts)**.
+  Its per-floor observations and individual-owner snapshots are reproducible.
+  It checks owned consumables/collections, alchemy input conservation,
+  banked vs lost stones/ink/XP, replay, grade checks and grade banking.
+- `dungeon-linked-256-combat-strict` consumes only the upstream genuine
+  owner states and independently evaluates each ten-floor 50-fight challenge
+  across all sixty route x band cases with the exact approved 256 denominator.
+  It must stay RED when win/MP targets or real equipment readiness fail.
+- The earlier fixed optimized-circle strict suite remains an independent
+  reference. Candidate economic baseline v1 remains explicitly **not
+  user approved** and must not be overwritten from measured medians.
+- Magic-ink paired battle and actual power-restoration farming remain
+  separately reported, with the unsolved equal-readiness break-even explicitly
+  marked unproven. Layers 101-150 have no equivalent authored encounter
+  design; only conditional drop extrapolation is possible.
+
+The completion gate is **not** a fabricated green score. Structural scripts
+must pass Actions, source-master/regression mismatches must be identified
+without altering game values, and all unmet balance goals must remain
+visible separately. No main merge, deploy, release, or local test.
 
 ## Reality check
 
