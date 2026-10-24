@@ -81,13 +81,50 @@ verified the previous fixed-hero cohort and ran the new readiness report:
 meeting all approved readiness targets. The subsequently rolled-hero cohort
 is a different source fingerprint; its results must be rechecked on HEAD.
 
-The unrelated `offline` full suite is still red on published-enemy
-master-plan congruence: previous premature changes to F1–10 authored enemy
-MAG have not been reconciled with the canonical enemy-plan expectation.
-**No game value or expectation was silently changed during the
-infrastructure-first correction.** Fix this in a separately approved
-balance-data restoration/tuning step, rather than making the source-of-truth
-validation accept inconsistent masters.
+The prior `offline` source-master mismatch has now been addressed by
+reverting the unauthorized F1–10 MAG override to its original canonical
+values; this is a *rollback*, not a new balancing hypothesis. Gameplay
+formulae and expectation data were untouched. Actions evidence is tracked
+on PR #264, with original hard difficulty failures remaining visible.
+
+### 2026-10-24 verification-foundation correction: independent readiness, untouched difficulty
+
+**Issue 1 (false first-entry combat difficulty):** `dungeon-linked-256-combat.mjs`
+previously passed raw first-entry snapshots to every mandatory 50-fight
+challenge, effectively scoring underprepared players as combat losses. This
+has been corrected without relaxing `config/dungeon-approved-goals.v1.json`:
+
+- `entrySnapshots` remain unchanged, labelled **FIRST_ENTRY_ECONOMIC_DIAGNOSTIC**.
+- After each *actually banked return*, character level comes from *banked
+  actual combat XP*, magic stone upgrades and magic-ink redraws are *paid
+  for*, and the actual rank is preserved. Only then do we capture the FIRST
+  `preparedSnapshots` entry for each band whose player level reaches the
+  **authored end-of-band target level**, whose rank enables a **legal start
+  directly at the band's first floor**, and which has five actually equipped
+  reference circles. The new simulated sortie starts at full HP/MP exactly
+  as shipped `dungeon-app.begin()` does after preparing at home, with
+  carried cleansers drawn from the same actual warehouse and game capacity.
+  This qualification does not examine the outcome of any challenge.
+- The strict 256-seed hard gate consumes **prepared** snapshots only.
+  Any absent snapshot is reported for that individual seed as
+  `ECONOMY_NOT_READY` / reachability failure, never converted into an
+  automatic 50-fight combat defeat; no subset of ready winners can pass a
+  256-denominator acceptance. A fully prepared cohort is still held to
+  precisely the original win-rate and MP bands, unchanged.
+- The paired ink/stone strategy readiness join also distinguishes economy
+  unready from tested combat failure. Existing C strategy does **not** have
+  to redraw by force on a seed that never earns a rational redraw; the test
+  now verifies exact payment **when** an actual redraw occurs.
+
+**Issue 2 (authored enemy MAG):** All **50 MAG cells on F1–10** in
+`assets/data/dungeon-enemies.csv` were restored from the never-modified
+`tests/fixtures/dungeon-enemies-before-distribution.csv` canonical
+source. `scripts/dungeon-element-distribution.mjs`,
+`assets/data/dungeon-element-plan.csv`, and
+`tests/test-dungeon-element-distribution.mjs` were **not altered**.
+The standard 500-enemy deterministic regeneration test must pass on
+GitHub Actions. No gameplay core, math, status, new balance constant or
+balance CSV was changed for either correction.
 
 ### Structural and hard-goal checks must stay separate
 
