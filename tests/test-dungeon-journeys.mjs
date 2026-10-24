@@ -3,7 +3,8 @@ import {buildManifest} from '../scripts/dungeon-balance-manifest.mjs';
 import {runJourney,spread,investmentRate,ECONOMY_VERSION} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
-import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
+import {rankBadgeDrop,unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
+import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 import {createSortieEncounterSelector} from '../scripts/dungeon-balance-encounters.mjs';
 import {readFileSync} from 'node:fs';
 
@@ -149,6 +150,28 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  assert.equal(new Set(initialIds).size,initialIds.length,
   'real owner snapshots cannot duplicate owned consumable instances');
  assert.ok(Array.isArray(entry.bankedInventory)&&entry.bankedCollections);
+ // Discovery must not be promoted to 50-fight combat readiness.
+ assert.ok(entry.level<entry.targetLevel,'first real 1F entry is not 10F-ready');
+ for(const [floor,snap] of Object.entries(run.preparedSnapshots)){
+  const from=Number(floor);
+  assert.equal(snap.layer,from);
+  assert.equal(snap.targetLevel,targetClearLevel(from+9));
+  assert.ok(snap.level>=snap.targetLevel);
+  assert.ok(unlockedStartLayers({adventurerRank:snap.rank}).includes(from));
+  assert.equal(snap.source,'POST_RETURN_BANKED_AND_INVESTED');
+  assert.equal(snap.playerHp,snap.maxHp);
+  assert.equal(snap.playerMp,snap.maxMp);
+  assert.equal(snap.unbankedXp,0);
+  assert.equal(snap.unbankedStone,0);
+  assert.equal(snap.unbankedInk,0);
+  assert.ok(snap.actualFights>0&&snap.actualReturns>0);
+  assert.ok(snap.actualSorties<=run.sorties);
+  assert.equal(snap.circles.length,5);
+  assert.ok(snap.carry.length<=G.capacity(snap.level));
+  assert.equal(new Set([...snap.carry,...snap.bankedInventory].map(x=>x.instanceId)).size,
+   snap.carry.length+snap.bankedInventory.length);
+ }
+ assert.ok(Object.keys(run.preparedSnapshots).length<=10);
 
  // Per-battle intro prohibition is asserted inside the simulator itself.
  if(style==='B')assert.equal(run.circles.length,8);
