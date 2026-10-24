@@ -17,6 +17,15 @@ function choose(hero,enemy,layer){
  const ready=G.available(hero);
  const heal=layer>=11?ready.find(i=>hero.spells[i].role==='support'):undefined;
  if(heal!==undefined&&hero.hp/hero.stats.hp<.69)return heal;
+ // The prepared real-owner reference includes an authentic defensive spell.
+ // Use it when battle conditions justify protection; this is a legal paid
+ // cast with the game's own MP cost/status duration, never a free mitigation.
+ const defense=layer>=11?ready.find(i=>hero.spells[i].role==='defense'):undefined;
+ const exposed=hero.hp/hero.stats.hp<.88||
+  enemy.spells.some(x=>x?.role==='debuff'&&x.attribute==='law');
+ if(defense!==undefined&&exposed&&
+  !hero.statuses.some(s=>s.id==='resist_'+hero.spells[defense].attribute||
+   s.id==='buff_'+hero.spells[defense].attribute))return defense;
  const attack=ready.filter(i=>hero.spells[i].role==='attack');
  if(attack.length)return attack.sort((a,b)=>{
   const weight=i=>G.effectivePower(hero,hero.spells[i])*G.resist(enemy,hero.spells[i].attribute);
