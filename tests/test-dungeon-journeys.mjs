@@ -77,6 +77,17 @@ assert.equal(chooseHero(tacticalHero,matching,17,true,'short',false),2,
 assert.equal(chooseHero(tacticalHero,matching,10,false,'short',false),0,
  'Strict pre-F2 tutorial policy cannot use support or defensive magic');
 
+const finishingHero=G.makeUnit({hp:100,mag:10,def:7,res:7},37,{},tacticalSpells,'hero');
+finishingHero.hp=Math.floor(finishingHero.stats.hp*.65);
+const nearlyDown=G.fromEnemy(foes.find(x=>x.id==='foe_l017_2'),32);
+nearlyDown.hp=1;
+assert.equal(chooseHero(finishingHero,nearlyDown,17,true,'short',false),0,
+ 'An available real finishing attack avoids wasting MP and another exposed round');
+nearlyDown.hp=nearlyDown.stats.hp;
+assert.equal(chooseHero(finishingHero,nearlyDown,17,true,'short',false),1,
+ 'Healing remains available against an enemy that cannot be finished immediately');
+
+
 const manifest=buildManifest();
 assert.equal(manifest.schemaVersion,'dungeon-levers-v1');
 assert.ok(manifest.entries.length>500,'must inventory more than balance CSV');

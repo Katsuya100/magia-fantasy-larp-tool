@@ -45,6 +45,16 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // Attack-only through the first banked F2 clear. Unlock utility only
  // after a legitimate return; do not simulate a free unlock.
  const heal=utilityUnlocked?ready.find(i=>hero.spells[i].role==='support'):undefined;
+ // A finishing blow must not be postponed for a costly heal. Both units
+ // still resolve the current round, so require enough HP for a real
+ // enemy attack before choosing to end the encounter immediately.
+ const attacks=ready.filter(i=>hero.spells[i].role==='attack');
+ const maxIncoming=Math.max(0,...enemy.spells.filter(s=>s?.role==='attack')
+  .map(s=>G.damage(enemy,hero,s,()=>1)));
+ if(hero.hp>maxIncoming*1.25&&layer>10&&!pendingGrade){
+  const finisher=attacks.find(i=>G.damage(hero,enemy,hero.spells[i],()=>1)>=enemy.hp);
+  if(finisher!==undefined)return finisher;
+ }
  // Novice rank at F10 checks HP and MP BEFORE the ordinary victory reward.
  // Once utility is legally unlocked, heal proactively for that real badge;
  // never mint a recovery or bypass G.available / actual MP spending.
@@ -93,7 +103,6 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
    num('def_divisor')/(num('def_divisor')+relativeArmor)));
   if(enemy.hp<=basic)return -1;
  }
- const attacks=ready.filter(i=>hero.spells[i].role==='attack');
  if(attacks.length)return attacks.sort((a,b)=>{
   const score=i=>G.effectivePower(hero,hero.spells[i])*G.resist(enemy,hero.spells[i].attribute);
   return score(b)-score(a)||a-b;
