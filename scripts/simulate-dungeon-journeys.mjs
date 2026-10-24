@@ -447,7 +447,13 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const training=route==='long'&&state.best>=10&&
    (profile.level<targetClearLevel(nextBoss)||
     profile.adventurerRank<lastBoss||failedNewDepth);
-  const trainingStart=Math.max(1,lastBoss-9);
+  // Missing earlier earned rank badges must be recovered IN ORDER. A
+  // player with rank 70 and deepest 90 cannot legally start from 81:
+  // replay 71-80 first, bank the real 80F badge, then replay 81-90.
+  // Otherwise a doomed 20-layer dive needlessly loses all pending rewards.
+  const rankBehind=profile.adventurerRank<lastBoss;
+  const trainingStart=rankBehind?profile.adventurerRank+1:Math.max(1,lastBoss-9);
+  const trainingGoal=rankBehind?profile.adventurerRank+10:lastBoss;
   const start=allowedStartLayer(profile,recovering?farmStart:
    training?trainingStart:profile.adventurerRank+1);
   if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
@@ -458,7 +464,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // ACTUAL F10 boss victory. Only then do short/long routes diverge.
   const tutorial=state.best<10;
   const goal=recovering?state.best:tutorial?upcoming:
-   training?lastBoss:route==='short'?upcoming:100;
+   training?trainingGoal:route==='short'?upcoming:100;
   const utilityUnlocked=state.best>=2;
   if(recovering)state.recoverySorties++;
   const firstLevel=profile.level;
