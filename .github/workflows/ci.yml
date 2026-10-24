@@ -84,6 +84,7 @@ jobs:
         run: node scripts/check-dungeon-economy-baseline.mjs
       - run: node scripts/dungeon-extra-economy-diagnostics.mjs
       - run: node scripts/report-dungeon-journeys.mjs
+      - run: node scripts/dungeon-actual-owner-combat.mjs
       - run: node scripts/dungeon-portfolio-redraw.mjs
       - run: node scripts/dungeon-ink-recovery.mjs
       - name: Check both ink strategies against identical owner states
