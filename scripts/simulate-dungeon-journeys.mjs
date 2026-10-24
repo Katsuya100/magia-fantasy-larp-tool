@@ -55,7 +55,8 @@ function chooseHero(hero,enemy,layer,utilityUnlocked){
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
  const guard=utilityUnlocked?ready.find(i=>hero.spells[i].role==='defense'):undefined;
- const needsGuard=hero.hp/hero.stats.hp<.69||
+ const needsGuard=(layer===10&&utilityUnlocked&&enemy.id==='boss_l010')||
+  hero.hp/hero.stats.hp<.69||
   enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law');
  if(guard!==undefined&&needsGuard&&
   !hero.statuses.some(s=>s.id==='resist_'+hero.spells[guard].attribute||
