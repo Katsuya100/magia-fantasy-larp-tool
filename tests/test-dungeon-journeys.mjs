@@ -257,6 +257,17 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    'long journeys bank only at complete decade bosses until 51F');
  }
 }
+// B's same-seed comparison restores its original equipped spells with
+// genuinely earned stones BEFORE taking the mandatory F31 prepared snapshot.
+const dispersed=runJourney(20261024,{style:'B',route:'short'});
+const restored=dispersed.preparedSnapshots[31];
+assert.ok(restored,'B recovery must create a legally banked F31 state');
+assert.ok(Array.isArray(dispersed.recovery.targetUpgrades));
+assert.ok(restored.circles.every((c,i)=>c.upgradeLevel>=dispersed.recovery.targetUpgrades[i]),
+ 'The B prepared owner may only enter F31 after paid recovery of the actual A equipment gap');
+assert.ok(restored.actualReturns>0&&restored.unbankedStone===0,
+ 'B recovery preparations must be banked rather than free upgrades');
+
 // An actual banked five-ink C redraw must take place in a mature seeded
 // journey. Old stones remain sunk, original drawing quality is not rerolled,
 // and no material can appear merely to make the test pass.

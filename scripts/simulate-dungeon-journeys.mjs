@@ -336,6 +336,10 @@ function optionalAlchemy(state){
 // consults win rates, or guesses a frozen economic median. Preparing a fresh
 // sortie legitimately gives full starting HP/MP as in dungeon-app.begin().
 function observePrepared(state){
+ // A B-strategy return never starts an unbanked 31F attempt while its
+ // same-owner, paid F31 recovery deficit remains. The earlier post-F30
+ // intermediate state is not a strategy-ready new sortie.
+ if(state.style==='B'&&state.best===30&&recoveryGap(state).some(v=>v>0))return;
  const p=state.profile;
  for(let band=1;band<=91;band+=10){
   if(state.preparedSnapshots[band])continue;
