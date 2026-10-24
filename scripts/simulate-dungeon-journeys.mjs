@@ -379,7 +379,10 @@ function commit(state,pending,unused,bestLayer){
   if(entry.sortie===state.sorties&&entry.eligible)entry.banked=true;
  }
  optionalAlchemy(state);
- invest(state);considerInkRedraw(state);
+ // A replacement circle can immediately receive only legitimately banked
+ // stones. Do not send C into the next sortie with its sunk upgrades gone
+ // while affordable replacements sit unused in the bank.
+ considerInkRedraw(state);invest(state);
  observePrepared(state);
 }
 function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked){
