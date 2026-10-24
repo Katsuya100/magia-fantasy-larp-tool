@@ -25,6 +25,14 @@ assert.equal(shuffleRolls,3);
 assert.equal(new Set(Array.from({length:4},(_,i)=>selector(6+i).id)).size,4);
 assert.equal(shuffleRolls,6,'different floor shuffles independently');
 
+const intro=G.makeUnit({hp:100,mag:10,def:7,res:7},1,{},[],'hero');
+intro.mp=0;
+const earnedAt10=G.recoverVictoryMp(intro,10);
+intro.mp=0;
+const earnedAt11=G.recoverVictoryMp(intro,11);
+assert.ok(earnedAt10>earnedAt11,'intro victory reward is greater, not a battle recovery spell');
+assert.ok(earnedAt10<=intro.maxMp&&earnedAt11<=intro.maxMp);
+
 const manifest=buildManifest();
 assert.equal(manifest.schemaVersion,'dungeon-levers-v1');
 assert.ok(manifest.entries.length>500,'must inventory more than balance CSV');
