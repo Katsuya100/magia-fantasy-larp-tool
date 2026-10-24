@@ -263,8 +263,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   forceRedraw:false,maxSorties,maxFights}):null;
  const atA31=aReference?.entrySnapshots[31]??null;
  const recoveryTarget=atA31?.circles.map(c=>c.upgradeLevel)??null;
- const random=rng(seed),profile={level:1,xp:0,adventurerRank:0};
- const state={style,route,alchemy,random,profile,stones:0,ink:0,inventory:[],collection:{},
+ const random=rng(seed),playerBase=G.startingBase(random),profile={level:1,xp:0,adventurerRank:0};
+ const state={style,route,alchemy,random,profile,playerBase,stones:0,ink:0,inventory:[],collection:{},
   redrawLimit,forceRedraw,redrawEvents:[],
   recoveryTarget,recoveryReference:atA31?'REAL_SAME_SEED_A_F31':'UNAVAILABLE',
   alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
@@ -300,7 +300,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const goal=recovering?state.best:route==='short'?upcoming:100;
   if(recovering)state.recoverySorties++;
   const firstLevel=profile.level;
-  const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},firstLevel,{},equipped(state.circles),'hero');
+  const hero=G.makeUnit(state.playerBase,firstLevel,{},equipped(state.circles),'hero');
   let pending={xp:0,loot:[]},lastClear=start-1,defeat=false;
   const carry=pack(state,start,goal);
   const usage={};
@@ -460,7 +460,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     lostUnbanked:state.lost.stone},
    ink:{banked:state.earned.ink,redrawSpent:state.spent.ink,held:state.ink,
     lostUnbanked:state.lost.ink}};
- return {seed,style,route,alchemy,alchemyCrafts:state.alchemyCrafts,
+ return {seed,style,route,alchemy,playerBase:{...state.playerBase},alchemyCrafts:state.alchemyCrafts,
   alchemyByproducts:state.alchemyByproducts,profile:chestSummary(profile),best:state.best,
   sorties:state.sorties,returns:state.returns,losses:state.losses,fights:state.fights,
   replayedFights:state.replayedFights,farmingFights:state.farmingFights,
@@ -533,10 +533,10 @@ export function summarizeJourneys(samples=16,seed=20261024){
    blocked:runs.length-runs.filter(x=>x.best>=100).length,comparisonStates,examples:runs.slice(0,2)};
  });
  return {schemaVersion:ECONOMY_VERSION,seed,samples,alchemy:'off',
-  assumptions:{circles:spells,referenceBase:{hp:100,mag:10,def:7,res:7},
+  assumptions:{circles:spells,playerBase:'one canonical seeded G.startingBase roll per real adventurer, retained across casual-mode losses',
    preparation:'only banked resources; combat uses shipped rules; no HP/MP or revival items',
    cleansers:'only real drops, prepared at start; specific 51F+, Luna Stone 71F+',
-   noRankGuarantee:true,defeat:'unbanked loot+XP lost; unused carried items return',
+   noRankGuarantee:true,defeat:'casual-mode loss: unbanked loot+XP lost; unused carried items return. Permanent-death character reset and legacy recovery are outside this cohort',
    milestones:'choose real full recovery at 10-layer checkpoints',
    cap:'sorties/fights cap is diagnostic and never a success criterion',
    extrapolation:'not evaluated: authored 1-100F only'},
