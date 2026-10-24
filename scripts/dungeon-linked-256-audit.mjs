@@ -17,6 +17,19 @@ const sourceHashes=Object.fromEntries([
  'assets/data/dungeon-enemies.csv',
  'assets/data/dungeon-floors.csv',
  'assets/data/dungeon-levels.csv',
+ 'assets/data/dungeon-player-base.csv',
+ 'assets/data/dungeon-consumables.csv',
+ 'assets/data/dungeon-collections.csv',
+ 'assets/data/dungeon-buffs.csv',
+ 'assets/js/dungeon-core.mjs',
+ 'assets/js/dungeon-design.mjs',
+ 'assets/js/dungeon-upgrades.mjs',
+ 'assets/js/dungeon-ink.mjs',
+ 'assets/js/dungeon-ranks.mjs',
+ 'assets/js/dungeon-alchemy.mjs',
+ 'scripts/dungeon-balance-encounters.mjs',
+ 'scripts/simulate-dungeon-journeys.mjs',
+ 'scripts/dungeon-coherent-battle.mjs',
  'config/dungeon-approved-goals.v1.json'
 ].map(p=>[p,createHash('sha256').update(readFileSync(new URL('../'+p,import.meta.url))).digest('hex')]));
 const seeds=Array.from({length:goals.strictSamples},(_,i)=>17011+13*i);
