@@ -693,7 +693,13 @@ function createEnemy(fight,run){
   row=masters.enemies.find(enemy=>enemy.id===run.layerEnemyOrder.ids[slot]);
   if(!row||row.boss_only==='1')throw Error('階層の敵順が不正');
  }else row=enemyForFight(masters.enemies,fight);
- if(Number(row.min_level)>level||(isLayerBoss(fight)&&row.boss_only!=='1'))throw Error('敵の設定が不正');
+ // F1-F9 (and F10's introductory encounters) deliberately lower the
+ // *spawn level*, not the authentic enemy master's minimum or base stats.
+ // Keep the master-level guard unchanged for every later dungeon floor.
+ const introductoryLevel=layer<=9&&level===0||layer===10&&
+  (isLayerBoss(fight)?level===8:level===0);
+ if((Number(row.min_level)>level&&!introductoryLevel)||
+  (isLayerBoss(fight)&&row.boss_only!=='1'))throw Error('敵の設定が不正');
  if(spec.boss_enemy_id&&row.id!==spec.boss_enemy_id)throw Error('ボスの設定が不正');
  return {unit:G.fromEnemy(row,level),name:row.name};
 }
