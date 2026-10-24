@@ -4,6 +4,7 @@
 // journeys it is intentionally NOT a claim of what happens after intermediate
 // banking and leveling. No baseline medians or invented consumables are used.
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import {spread} from './simulate-dungeon-journeys.mjs';
 import {challenge} from './dungeon-coherent-battle.mjs';
@@ -14,6 +15,10 @@ assert.equal(goals.strictSamples,256);
 assert.equal(economy.samplesPerPolicy,goals.strictSamples);
 assert.equal(economy.policies.length,6);
 assert.equal(economy.structuralChecks,6*goals.strictSamples);
+for(const [path,expected] of Object.entries(economy.sourceHashes)){
+ const current=createHash('sha256').update(readFileSync(new URL('../'+path,import.meta.url))).digest('hex');
+ assert.equal(current,expected,'economic and combat source master mismatch: '+path);
+}
 const report={schemaVersion:'dungeon-linked-256-owner-combat-v1',
  status:'HARD_TARGETS_SEPARATE_FROM_STRUCTURAL_MEASUREMENT',
  economicSource:economy.schemaVersion,economicSourceHashes:economy.sourceHashes,
@@ -36,6 +41,7 @@ for(const cohort of economy.policies){
   for(const [i,account] of cohort.ownerEntries.entries()){
    const source=cohort.accounts[i];
    assert.equal(account.seed,source.seed,'combat owner must equal economic owner seed');
+   assert.equal(account.seed,17011+13*i,'no skipped or substituted economic owner seed');
    const snapshot=account.snapshots[bandIndex];
    if(!snapshot){missing.push(account.seed);continue;}
    assert.equal(snapshot.from,band.from);
