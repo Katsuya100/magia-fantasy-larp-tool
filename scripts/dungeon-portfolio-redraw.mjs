@@ -4,9 +4,9 @@
 import {writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import {runJourney,spread} from './simulate-dungeon-journeys.mjs';
 const report={version:'dungeon-portfolio-redraw-v1',seed:20261024,samples:16,
- assumptions:{art:'fixed 250 raw drawing floor, 5 real inks per replaced circle',
+ assumptions:{art:'same owned original drawing quality, 5 real inks per replaced circle',
  investment:'past upgrades sunk; new circle starts at upgrade 0',
- forced:'extra redraws can be strictly worse than the old circle; this is diagnostic only',
+ forced:'1-3 diagnostic replacements can cost more than continuation; not a universal best choice',
  alchemy:false},combinations:[],warnings:[]};
 for(const route of ['short','long'])for(const limit of [1,2,3]){
  const runs=Array.from({length:report.samples},(_,i)=>runJourney(
