@@ -54,7 +54,14 @@ function replay(seed,snapshot,requestedLayer,limit=20){
  circles[0]={...old,basePower:newPower,power:newPower,upgradeLevel:0,ink:inkCost};
  let stones=snapshot.bankedStones,grossStones=snapshot.earned.stone,spentStones=snapshot.spent.stone;
  let fights=0,sorties=0,losses=0,inkFound=0,xpLost=0,stonesLost=0,stoneEarned=0,itemsSpent=0;
- let stocked=(snapshot.carry||[]).map(x=>({...x})),xpEarned=0;
+ // A fresh legal farming sortie may repack BOTH warehouse and previously
+ // carried items. Neither branch is granted an item not owned at entry.
+ let stocked=[...(snapshot.bankedInventory||[]),...(snapshot.carry||[])]
+  .map(x=>({...x})),xpEarned=0;
+ const stockedIds=stocked.map(x=>x.instanceId);
+ if(stockedIds.some(id=>typeof id!=='string')||
+    new Set(stockedIds).size!==stockedIds.length)
+  throw Error('Duplicate or unidentified item in real-owner replay stock');
  const spentAfter=()=>{
   const budget=Math.floor(grossStones*investmentRate(requestedLayer)+1e-8);
   while(getPower(circles[0])<originalPower){
