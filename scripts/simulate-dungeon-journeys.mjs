@@ -64,16 +64,52 @@ function cleanse(hero,carry,layer,usage){
 // Loadouts are selected only from real banked inventory, with the real
 // level-dependent carry cap. No stocked-item fixture is smuggled into economy.
 function pack(state,start){
- const allowable=item=>{
+ // The inventory has *actually dropped* item instances only. Optimise
+ // counter-attributes within the legal carry capacity, without adding items.
+ const eligible=item=>{
   const row=data.items.find(r=>r.id===item.id);
-  return row&&(row.kind==='clear'&&start>=51||row.kind==='clear_all'&&start>=71);
+  return row&&Number(row.min_layer)<=start &&
+   (row.kind==='clear'&&start>=51||row.kind==='clear_all'&&start>=71);
  };
- const available=state.inventory.filter(allowable);
- available.sort((a,b)=>Number(a.id==='luna_stone')-Number(b.id==='luna_stone'));
- const count=Math.min(G.capacity(state.profile.level),available.length);
- const selected=available.slice(0,count);
+ if(start<51)return [];
+ const available=state.inventory.filter(eligible);
+ const cap=G.capacity(state.profile.level);
+ const specific=available.filter(item=>item.id!=='luna_stone');
+ const luna=available.filter(item=>item.id==='luna_stone');
+ const selected=start>=71?luna.slice(0,Math.min(2,cap)):[];
+ const pressure=new Map();
+ const end=Math.min(100,start+9);
+ for(let layer=start;layer<=end;layer++)
+  for(let slot=0;slot<5;slot++){
+   const foe=data.enemies[(layer-1)*5+slot];
+   for(const notation of String(foe?.spells||'').split('|')){
+    const [role,attribute]=notation.split(':');
+    if(role==='debuff')pressure.set(attribute,(pressure.get(attribute)||0)+1);
+   }
+  }
+ const allocated=new Map();
+ while(selected.length<cap&&specific.length){
+  let best=-1,bestScore=-Infinity;
+  for(let i=0;i<specific.length;i++){
+   const attr=specific[i].id.slice('clear_'.length);
+   const score=(pressure.get(attr)||0)/(1+(allocated.get(attr)||0));
+   if(score>bestScore){best=i;bestScore=score;}
+  }
+  const [item]=specific.splice(best,1);
+  selected.push(item);
+  const attr=item.id.slice('clear_'.length);
+  allocated.set(attr,(allocated.get(attr)||0)+1);
+ }
+ // Once all actually-owned specialist stock has been selected, extra
+ // originally owned broad-spectrum stones may fill still-empty slots.
+ for(const item of luna.slice(selected.filter(i=>i.id==='luna_stone').length)){
+  if(selected.length===cap)break;
+  selected.push(item);
+ }
  const chosen=new Set(selected.map(x=>x.instanceId));
  state.inventory=state.inventory.filter(x=>!chosen.has(x.instanceId));
+ if(selected.some(item=>!chosen.has(item.instanceId))||selected.length>cap)
+  throw Error('Illegal carry capacity or duplicated inventory item');
  return selected;
 }
 function chooseUpgrade(state){
@@ -240,8 +276,13 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
       basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
       mpCost:G.mpCost(c.basePower),ink:c.ink})),
      carry:carry.filter(Boolean).map(item=>({id:item.id,value:item.value,bonus:item.bonus})),
-     playerBase:{hp:100,mag:10,def:7,res:7},
-     status:'FIRST_ENTRY_NOT_A_FIXED_BENCHMARK'};
+     playerBase:{...hero.base},playerHp:hero.hp,playerMp:hero.mp,
+     maxHp:hero.stats.hp,maxMp:hero.maxMp,
+     cooldowns:[...hero.cooldowns],statuses:hero.statuses.map(x=>({...x})),
+     unbankedXp:pending.xp,
+     unbankedStone:pending.loot.filter(x=>x.type==='stone').length,
+     unbankedInk:pending.loot.filter(x=>x.type==='ink').length,
+     status:'ACTUAL_FIRST_ENTRY_WITH_IN_EXPEDITION_RESOURCES'};
    }
    let allWon=true;
    for(let slot=1;slot<=5;slot++){
@@ -372,7 +413,7 @@ export function summarizeJourneys(samples=16,seed=20261024){
   // Actual indivisible player states for paired combat. Never synthesize
   // an impossible inventory by combining unrelated per-field medians.
   const comparisonStates=runs.map(r=>({seed:r.seed,best:r.best,rank:r.profile.rank,
-   snapshots:Object.fromEntries([11,21,31,51,71,91].flatMap(layer=>
+   snapshots:Object.fromEntries(Array.from({length:10},(_,i)=>i*10+1).flatMap(layer=>
     r.entrySnapshots[layer]?[[layer,r.entrySnapshots[layer]]]:[]))}));
   return {style,route,samples,distributions,checkpoints,completed:runs.filter(x=>x.best>=100).length,
    blocked:runs.length-runs.filter(x=>x.best>=100).length,comparisonStates,examples:runs.slice(0,2)};
