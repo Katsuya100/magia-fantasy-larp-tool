@@ -379,7 +379,11 @@ for(let lv=1;lv<=150;lv++){
  assert.ok(+row.xp_to_next>0);
 }
 for(let f=1;f<=500;f++){
- const spec=floor(f);assert.ok(+spec.enemy_level>=1);
+ const spec=floor(f);
+ // User-approved isolated tutorial encounters have an exact Lv0 only in
+ // fights 1-49. Keep the >=1 invariant for every other authored encounter.
+ if(f<=49)assert.equal(+spec.enemy_level,0,'only the novice F1-F10 non-boss uses Lv0');
+ else assert.ok(+spec.enemy_level>=1,'post-tutorial enemies preserve level >=1');
  if(+spec.boss===1)assert.ok(enemies.some(e=>e.id===spec.boss_enemy_id));
 }
 for(const en of enemies){
