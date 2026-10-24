@@ -102,6 +102,13 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  assert.ok(run.trace.length>0);
  assert.ok(run.entrySnapshots[1],'actual first dungeon entry must be captured');
  const entry=run.entrySnapshots[1];
+ assert.deepEqual(entry.playerBase,run.playerBase,
+  'every sortie uses the same authentically rolled player base for this adventurer');
+ const minStats=G.startingBase(()=>0),maxStats=G.startingBase(()=>.99999);
+ for(const key of ['hp','mag','def','res']){
+  assert.ok(run.playerBase[key]>=minStats[key]&&run.playerBase[key]<=maxStats[key],
+   'seeded initial '+key+' must fall inside game-authored roll limits');
+ }
  assert.equal(entry.playerHp,entry.maxHp,'initial dungeon entry begins at full HP');
  assert.equal(entry.playerMp,entry.maxMp,'initial dungeon entry begins at full MP');
  assert.equal(entry.unbankedXp,0,'no unbanked experience before first fight');
