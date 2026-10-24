@@ -6,8 +6,8 @@ export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
-// EXP uses the approved scaling while overlevel replay receives less EXP;
-// this does not touch the independently rolled magic stone economy.
+// EXP scaling and rewards are independent of replay/overlevel status.
+// Previously removed EXP falloff must not be reintroduced.
 export const XP_SCALE=45;
 // A fifth of an integer layer budget may be 0.2 EXP. Normalize each stored
 // accumulation to micro-EXP so five battles land on their exact threshold.
@@ -35,15 +35,9 @@ export function fightExperience(enemyLevel,playerLevel,layer){
  const budget=next>current
   ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
   :nextXp(current);
- // At-level or under-leveled victories keep the existing designed
- // five-fight XP budget. Farming substantially weaker layers must not
- // overlevel away the 95% target before a real encounter takes place.
- // One 10-level gap uses the current 1.85 early progression factor as a
- // source-controlled, tunable game value (no test-only level rewrites).
- const gap=Math.max(0,Number(playerLevel)-current);
- const decay=num('xp_overlevel_decay_per_10_levels');
- if(!(decay>=1&&Number.isFinite(decay)))throw Error('Invalid overlevel EXP falloff');
- return budget/5/Math.pow(decay,gap/10);
+ // Five victories award the same designed layer budget regardless of
+ // player overlevel/repeats; never revive the deleted EXP decay mechanic.
+ return budget/5;
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
 // Same upgraded-power duration applies to defense and debuff, hero and enemy.
@@ -193,8 +187,9 @@ export function chooseEnemySpell(unit,r=Math.random){
   const guards=ids.filter(i=>unit.spells[i].role==='defense');
   const attack=()=>attacks[Math.floor(r()*attacks.length)];
   if(!guards.length)return attacks.length?attack():-1;
-  // A nearly all-guard opening keeps fifty consecutive fights survivable without HP healing.
-  if(attacks.length&&r()<num('enemy_intro_attack_preference'))return attack();
+  // Early enemies remain active opponents: use the existing attack
+  // preference, and tune their authored base stats instead of suppressing AI.
+  if(attacks.length&&r()<num('enemy_attack_preference'))return attack();
   const strongest=unit.id==='boss_l010';
   return guards.reduce((best,i)=>strongest
    ?unit.spells[i].power>unit.spells[best].power?i:best
@@ -446,7 +441,7 @@ export function recoverVictoryMp(hero,layer=1){
  const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
   num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12)-
   num('victory_mp_middle_taper')*middle*(1-middle);
- const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*(rate*victoryMpLayerFactor(floor)+earlyVictoryMpBonusRate(floor)+(floor<=10?num('victory_mp_intro_floor_bonus'):0)))));
+ const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*(rate*victoryMpLayerFactor(floor)+earlyVictoryMpBonusRate(floor)))));
  hero.mp+=gained;
  return gained;
 }
