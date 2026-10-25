@@ -9,7 +9,7 @@ const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs','assets/js/du
  'assets/js/dungeon-combat-fx.mjs','assets/js/dungeon-store.mjs','assets/js/dungeon-legacy-cache.mjs',
  'assets/js/dungeon-photo-manager.mjs','assets/js/dungeon-thumbnails.mjs','assets/js/dungeon-battle-cards.mjs',
  'assets/js/dungeon-upgrades.mjs','assets/js/dungeon-share.mjs',
- 'assets/js/dungeon-card-art.mjs','assets/js/dungeon-circle-ritual.mjs','assets/js/dungeon-circle-draw.mjs','assets/js/dungeon-preparation-ui.mjs',
+ 'assets/js/dungeon-card-art.mjs','assets/js/dungeon-circle-ritual.mjs','assets/js/dungeon-circle-draw.mjs','assets/js/dungeon-preparation-ui.mjs','assets/js/dungeon-ui-transitions.mjs',
  'assets/js/dungeon-list-view.mjs',
  'assets/js/dungeon-alchemy.mjs',
  'assets/js/dungeon-core.mjs','assets/js/dungeon-magic-knowledge.mjs','assets/js/dungeon-circle-ritual.mjs','assets/js/dungeon-design.mjs','assets/js/dungeon-tuning.mjs','assets/js/dungeon-permadeath.mjs','assets/data/dungeon-balance.csv','assets/data/dungeon-buffs.csv',

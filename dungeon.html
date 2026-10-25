@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261025.01">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261025.02">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261025.01" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261025.02" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261025.01" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261025.02" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -76,13 +76,13 @@
         <section class="icon-guide-group" aria-labelledby="iconGuideAttributes">
           <h3 id="iconGuideAttributes">属性</h3>
           <table class="icon-guide-table"><tbody>
-            <tr><td>🔥</td><td>炎</td></tr>
-            <tr><td>⚡</td><td>雷</td></tr>
-            <tr><td>💧</td><td>水</td></tr>
-            <tr><td>🌪️</td><td>風</td></tr>
-            <tr><td>🪨</td><td>重力</td></tr>
-            <tr><td>⚖️</td><td>秩序</td></tr>
-            <tr><td>🌀</td><td>混沌</td></tr>
+            <tr><td>🔥</td><td>flame</td></tr>
+            <tr><td>⚡</td><td>bolt</td></tr>
+            <tr><td>💧</td><td>aqua</td></tr>
+            <tr><td>🌪️</td><td>storm</td></tr>
+            <tr><td>🪨</td><td>gravity</td></tr>
+            <tr><td>⚖️</td><td>law</td></tr>
+            <tr><td>🌀</td><td>chaos</td></tr>
           </tbody></table>
         </section>
         <section class="icon-guide-group" aria-labelledby="iconGuideRoles">
@@ -104,7 +104,7 @@
             <tr><td>🪨↑</td><td>防御力上昇</td></tr>
             <tr><td>⚖️↑</td><td>弱体耐性上昇</td></tr>
             <tr><td>🌀↑</td><td>魔法の出力上昇</td></tr>
-            <tr><td>🛡️🔥↑</td><td>属性耐性上昇（例：炎）</td></tr>
+            <tr><td>🛡️🔥↑</td><td>属性耐性上昇（例：flame）</td></tr>
           </tbody></table>
         </section>
         <section class="icon-guide-group" aria-labelledby="iconGuideDebuffs">
@@ -436,7 +436,7 @@
     </div>
 
     <dialog id="circleDrawingDialog" class="circle-drawing-dialog" aria-labelledby="circleDrawingStage" data-dungeon-frame="overlay">
-      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261025.01" alt="" hidden>
+      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261025.02" alt="" hidden>
       <div id="circleDrawingShell" class="circle-drawing-shell">
         <strong id="circleDrawingStage" class="circle-drawing-stage" aria-live="polite">呪文を1文字ずつ書く</strong>
         <button type="button" id="circleDrawingPowerTips" class="subtle circle-power-tips-button">強い魔法のコツ</button>
@@ -674,7 +674,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.25.01</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.25.02</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" data-dungeon-frame="paged" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet dungeon-dialog-frame">
@@ -695,6 +695,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261025.01"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261025.02"></script>
 </body>
 </html>
