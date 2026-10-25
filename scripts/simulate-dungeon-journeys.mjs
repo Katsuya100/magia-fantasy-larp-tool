@@ -879,7 +879,10 @@ export function summarizeJourneys(samples=16,seed=20261024){
     r.preparedSnapshots[layer]?[[layer,r.preparedSnapshots[layer]]]:[]))}));
   return {style,route,samples,distributions,checkpoints,floorObservations,
     completed:runs.filter(x=>x.best>=100).length,
-   blocked:runs.length-runs.filter(x=>x.best>=100).length,comparisonStates,examples:runs.slice(0,2)};
+   blocked:runs.length-runs.filter(x=>x.best>=100).length,comparisonStates,
+    examples:runs.slice(0,2).map(r=>({seed:r.seed,best:r.best,
+     level:r.profile.level,sorties:r.sorties,returns:r.returns,
+     losses:r.losses,fights:r.fights,trace:r.trace.slice(0,30)}))};
  });
  return {schemaVersion:ECONOMY_VERSION,seed,samples,alchemy:'off',
   assumptions:{circles:spells,playerBase:'one canonical seeded G.startingBase roll per real adventurer, retained across casual-mode losses',
