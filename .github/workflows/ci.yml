@@ -108,7 +108,7 @@ jobs:
           INK_OUTCOME: ${{ steps.ink_pair.outcome }}
         run: |
           echo "Unapproved old first-entry benchmark: $BASELINE_OUTCOME (diagnostic only)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Formal difficulty acceptance: COMBAT_BALANCE from fixed candidate, pending approval" >> "$GITHUB_STEP_SUMMARY"
+          echo "Formal difficulty acceptance: COMBAT_BALANCE from original fixed deck (not the unapproved candidate)" >> "$GITHUB_STEP_SUMMARY"
           echo "BUILD_STRATEGY evidence: $INK_OUTCOME (unmet stays unmet)" >> "$GITHUB_STEP_SUMMARY"
       - name: Archive diagnostic reports and seed traces
         if: always()
@@ -201,6 +201,8 @@ jobs:
         run: node tests/test-dungeon-default-balance.mjs > reports/dungeon-fixed-deck-detail.log
       - name: Evaluate COMBAT_BALANCE, JOURNEY_READINESS, BUILD_STRENGTH, EXTRA_FARMING, RANK_ACQUISITION, BUILD_STRATEGY
         run: node scripts/dungeon-redefined-evaluation.mjs
+      - name: Prove real replay-built decks against the fixed deck with paired combat
+        run: node scripts/dungeon-build-strength.mjs
       - name: Pair real re-farming cost to actual 256-owner combat readiness
         if: always()
         run: node scripts/dungeon-strategy-readiness.mjs
@@ -213,6 +215,7 @@ jobs:
             reports/dungeon-linked-256-combat-v1.json
             reports/dungeon-strategy-readiness-v1.json
             reports/dungeon-redefined-verdicts-v1.json
+            reports/dungeon-paired-build-strength-v1.json
             reports/dungeon-fixed-deck-combat-v1.json
           if-no-files-found: warn
       - name: Enforce real journey readiness without per-journey win-rate limits
