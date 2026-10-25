@@ -5,7 +5,7 @@ import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261025.11'
 import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261025.11';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261025.11';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261025.11';
-import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261025.11';
+import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261025.12';
 import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from './dungeon-alchemy.mjs?v=20261025.11';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261025.11';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261025.11';
@@ -1557,7 +1557,7 @@ async function confirmAlchemy(){
 
 function renderLoadoutChoices(){
  if(!picker)return;
- $('loadoutOptions').className=picker.kind==='circle'?'picker-grid circle-picker-grid':'picker-grid';
+ $('loadoutOptions').className=picker.kind==='circle'?'picker-grid circle-picker-grid':'item-picker-list';
  if(picker.kind==='circle'){
   const filter=pickerView.circle.filter;
   const role=['attack','defense','support','debuff'].includes(filter)?filter:'all';
