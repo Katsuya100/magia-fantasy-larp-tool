@@ -110,14 +110,26 @@ export function circleChoices(circles,slots,imageUrl,escapeText,summary,buffs=[]
    +'<button type="button" class="subtle magic-expand" data-circle-detail="'+escapeText(c.id)+'" aria-label="魔法陣の詳細">詳細</button></div>';
  }).join('');
 }
+// Preparation and alchemy use the same native, initially collapsed accordion.
+// Every button retains its original inventory index, even for identical items.
 export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventory.map((_,i)=>i),editingSlot=-1,action='choose-item'){
- if(!inventory.length)return '<p class="collection-empty">携行品がありません。</p>';
- return indexes.map(index=>[inventory[index],index]).map(([item,index])=>{
-  const selectedSlot=slots.indexOf(index),selected=selectedSlot>=0,current=selected&&selectedSlot===editingSlot;
-  return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-'+action+'="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(itemName(item))+'・'+escapeText(itemEffectText(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
-   +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
-   +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
-   +(item.id==='luna_stone'||item.id==='life_ruby'||item.id?.startsWith('elixir_')||item.id==='escape_scroll'?itemEffectText({...item,bonus:null}):item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' '+itemBonusEffect(item).icons:'')+'</small></span>'
-   +'</button>';
- }).join('');
+  if(!inventory.length)return '<p class="collection-empty">携行品がありません。</p>';
+  const groups=new Map();
+  for(const index of indexes){
+    const item=inventory[index];
+    if(!item)continue;
+    const name=itemName(item);
+    if(!groups.has(name))groups.set(name,[]);
+    groups.get(name).push(index);
+  }
+  return [...groups].map(([name,group])=>'<details class="item-picker-group">'
+    +'<summary class="item-picker-summary"><span class="item-picker-chevron" aria-hidden="true"></span>'
+    +'<span class="item-picker-name">'+escapeText(name)+'</span><span class="item-picker-count">×'+group.length+'</span></summary>'
+    +'<div class="item-picker-options">'+group.map(index=>{
+      const item=inventory[index],selectedSlot=slots.indexOf(index),selected=selectedSlot>=0,current=selected&&selectedSlot===editingSlot;
+      return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-'+action+'="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(name)+'・'+escapeText(itemEffectText(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
+        +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
+        +'<span class="picker-label"><small>'+escapeText(itemEffectIcons(item))+'</small></span>'
+        +'</button>';
+    }).join('')+'</div></details>').join('');
 }

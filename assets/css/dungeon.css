@@ -45,6 +45,32 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .picker-label{display:block;flex:1;min-width:0;font-size:12px;overflow-wrap:anywhere}
 .picker-label small{display:block;margin-top:5px;font-size:10px;color:var(--soft)}
 .picker-item-icon{width:44px;text-align:center;font-size:31px;color:var(--gold)}
+/* Item-name foldouts shared by preparation and alchemy. */
+.item-picker-list{display:grid;align-content:start;gap:10px;max-height:55vh;overflow-y:auto;padding:3px 2px 12px}
+.item-picker-group{min-width:0;overflow:hidden;border:1px solid #b9946261;border-radius:12px;background:linear-gradient(125deg,#262537,#171d2b);box-shadow:0 4px 13px #0004}
+.item-picker-group[open]{border-color:#d9b97b9c;box-shadow:0 6px 21px #0006,0 0 14px #c4974930}
+.item-picker-summary{display:flex;align-items:center;gap:13px;min-height:52px;padding:11px 16px;cursor:pointer;list-style:none;color:var(--pale);font-weight:650;background:linear-gradient(110deg,#4c38424d,#1a243044)}
+.item-picker-summary::-webkit-details-marker{display:none}
+.item-picker-summary::marker{content:''}
+.item-picker-summary:hover{background:linear-gradient(110deg,#65494b77,#25384d77)}
+.item-picker-summary:focus-visible{outline:2px solid #9ae3db;outline-offset:-3px}
+.item-picker-chevron{flex:none;width:9px;height:9px;border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);transform:rotate(-45deg);transition:transform .2s ease}
+.item-picker-group[open] .item-picker-chevron{transform:rotate(45deg)}
+.item-picker-name{flex:1;min-width:0;overflow-wrap:anywhere}
+.item-picker-count{flex:none;color:var(--gold);font-variant-numeric:tabular-nums}
+.item-picker-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px 12px 12px;border-top:1px solid #d2aa7250}
+.item-picker-options .picker-option{min-height:75px;gap:8px;border-radius:8px;justify-content:center}
+.item-picker-options .picker-item-icon{flex:0 0 40px;width:40px;font-size:29px}
+.item-picker-options .picker-label small{margin:0;font-size:12px;line-height:1.5}
+@media(max-width:630px){
+ .item-picker-summary{min-height:48px;padding:10px 12px}
+ .item-picker-options{gap:6px;padding:8px}
+ .item-picker-options .picker-option{min-height:68px;gap:4px;padding:7px 4px!important}
+ .item-picker-options .picker-item-icon{flex-basis:30px;width:30px;font-size:25px}
+ .item-picker-options .picker-label small{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){.item-picker-chevron{transition:none}}
+
 #clearLoadoutSlot{margin-top:15px}
 @media(max-width:630px){.loadout-grid{gap:5px}.loadout-tile{padding:16px 3px 6px!important;gap:4px}.loadout-tile img{width:85%}.tile-index{top:3px;left:5px;font-size:9px}.tile-title{font-size:9px}.tile-empty-icon{font-size:28px}.tile-item-icon{font-size:31px}.loadout-dialog-inner{padding:14px}.picker-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.picker-option{min-height:80px;gap:6px;padding:6px!important}.picker-option img{width:45px;height:45px}.picker-label{font-size:11px}}
 

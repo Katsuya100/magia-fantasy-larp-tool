@@ -224,7 +224,7 @@ assert.match(page,/<option value="1">1層から<\/option>/,'first layer label is
 assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!important;/,'selected choice border does not change the button box size');
 const app=await read('assets/js/dungeon-app.mjs');
 assert.doesNotMatch(app,/startLayerHint|10層ごとの冒険者章を獲得すると開始階層が増えます。/,'hint must not reappear after JS starts');
-assert.match(app,/className=picker\.kind==='circle'\?'picker-grid circle-picker-grid':'picker-grid'/,'item picker keeps its layout');
+assert.match(app,/className=picker\.kind==='circle'\?'picker-grid circle-picker-grid':'item-picker-list'/,'item picker uses the shared accordion layout');
 assert.match(app,/run\.checkpointBattleScrollY=window\.scrollY/,'boss victory captures the battle scroll before showing checkpoint');
 assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing deeper restores the original battle scroll');
 assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
