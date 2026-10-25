@@ -17,7 +17,7 @@ const tipDialog=page.split('id="circlePowerTipsDialog"')[1].split('</dialog>')[0
 for(const phrase of ['線やカーブを綺麗に','読みやすく','円の線に重ねない','重複しない英単語'])
  assert.match(tipDialog,new RegExp('<strong>'+phrase+'</strong>'),'important parts bold');
 assert.match(tipDialog,/assets\/images\/sample\.png/,'sample is the ideal drawing');
-assert.match(tipDialog,/<figure><figcaption>理想形<\/figcaption><img/,'ideal example is labeled before the image');
+assert.match(tipDialog,/<figure><figcaption>理想的な例<\/figcaption><img/,'ideal example is labeled before the image');
 assert.match(css,/#circleDrawingDialog \.circle-power-tips-button\{position:absolute;top:max\(10px,env\(safe-area-inset-top\)\);left:max\(10px,env\(safe-area-inset-left\)\)/,'drawing tips are aligned to the existing header buttons');
 assert.match(css,/\n\.circle-power-tips-button\{\s*min-height:34px/,'camera tips use normal flow while drawing positioning stays scoped');
 assert.match(css,/\.circle-camera-dialog \.camera-viewfinder-toolbar\{display:flex;justify-content:space-between/,'camera actions share a toolbar above the viewfinder');
