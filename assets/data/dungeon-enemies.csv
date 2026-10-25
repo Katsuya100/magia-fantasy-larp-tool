@@ -48,7 +48,7 @@ foe_l010_1,魔法使い,61,7,4,11,1,1,1.2,1,1,0.8,1,attack:law:104|defense:law:8
 foe_l010_2,メイジ,69,8,5,11,1,1,1.2,1,1,0.8,1,attack:law:112|defense:law:90|support:gravity:73|defense:law:84|attack:gravity:101,10,19,0,relic_055|ancient_scroll
 foe_l010_3,ノーム,73,7,5,11,1,1,1.2,1,1,0.8,1,attack:gravity:121|defense:gravity:96|support:law:78|defense:gravity:91|attack:law:109,10,19,0,relic_041
 foe_l010_4,ピクシー,66,10,4,12,1,1,1.2,1,1,0.8,1,attack:storm:129|defense:storm:103|support:law:84|defense:storm:97|attack:law:116,10,19,0,relic_042
-boss_l010,呪術の大司祭,130,9,8,12,1.35,1,1.2,1,1,0.95,0.95,attack:chaos:119|defense:chaos:95|support:law:77|defense:chaos:89|attack:law:107,1,19,1,relic_047|relic_boss_010
+boss_l010,呪術の大司祭,89,9,8,12,1.35,1,1.2,1,1,0.95,0.95,attack:chaos:119|defense:chaos:95|support:law:77|defense:chaos:89|attack:law:107,1,19,1,relic_047|relic_boss_010
 foe_l011_1,ウルフ,77,2,5,7,1,0.8,1,1,1,1,1.2,attack:gravity:112|defense:gravity:90|support:storm:73|defense:gravity:84|attack:storm:102,10,21,0,relic_043
 foe_l011_2,イノシシ,83,3,5,8,1,0.8,1,1,1,1,1.2,attack:gravity:121|defense:gravity:97|support:storm:79|defense:gravity:91|attack:storm:109,10,21,0,relic_046|relic_101
 foe_l011_3,野犬,91,3,8,10,1,0.8,1,1,1,1,1.2,attack:gravity:130|defense:gravity:104|support:storm:84|defense:gravity:97|attack:storm:117,10,21,0,fang
