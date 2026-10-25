@@ -208,8 +208,12 @@ for(let layer=1;layer<=100;layer++){
  for(let slot=1;slot<=5;slot++){
   const fight=(layer-1)*5+slot,foe=enemyForFight(enemies,fight,()=>.999),spec=floor(fight);
   // The F10 boss has its own level for the requested multi-turn encounter.
-  const encounterLevel=layer===10?(slot===5?8:0)
+  const baseEnemyLevel=layer===10?(slot===5?14:0)
+   :layer===6&&slot===5?1
    :slot===5&&layer===90?140:slot===5&&layer===100?150:tutorialLevel;
+  // Explicit authored difficulty offsets; 101F+ uses the untouched generated curve.
+  const offset=layer<21?0:layer<=80?3:layer<=90?6:8;
+  const encounterLevel=baseEnemyLevel+offset;
   assert.equal(+spec.enemy_level,encounterLevel);
   assert.equal(+spec.boss,slot===5?1:0);
   assert.equal(foe.boss_only,slot===5?'1':'0');
