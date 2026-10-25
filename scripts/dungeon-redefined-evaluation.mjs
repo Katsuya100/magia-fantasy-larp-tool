@@ -6,6 +6,7 @@ import {createHash} from 'node:crypto';
 import {spread} from './simulate-dungeon-journeys.mjs';
 import {reference,specFor,stoneCost,expectedPowers,assess,combatFixture} from './dungeon-readiness-reference.mjs';
 import {challenge} from './dungeon-coherent-battle.mjs';
+import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 const read=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const economy=read('reports/dungeon-linked-256-economy-v1.json');
 const approved=read('config/dungeon-approved-goals.v1.json');
@@ -39,6 +40,9 @@ const report={schemaVersion:'dungeon-redefined-verdicts-v1',
  designIntegrity:'PASS',warnings:[
   'UNAPPROVED combat fixture is a frozen proposal, not a physically proven economic owner.',
   'Only conditional combat fixtures receive prearranged cleansers; JOURNEY_READINESS only counts actually banked player inventory.',
+  'The reference is a PRE-TRAINED 50-fight sortie at the existing FINAL boss recommended level; lower individual-floor recommended levels are not a claim that the hero levels up mid-sortie.',
+  'F1-10 first-time play is a series of banked, short tutorial sorties, NOT this continuous 50-fight combat reference.',
+  'Actual owner preparation after already clearing the target decade is reported separately from pre-first-clear preparation.',
   'New sortie HP/MP are full solely because the shipped game starts legal sorties full. No intra-sortie replenishment is performed.',
   'A 50-fight diagnostic is not an actual rewarded sortie and never changes its owning journey.',
   'Unobserved additional replays or incomplete readiness are recorded as missing observations, never filled by successful owners.',
@@ -48,14 +52,22 @@ const combatResults=[];
 for(const [bandIndex,goal] of approved.bands.entries()){
  const s=specFor(goal.from);
  assert.equal(goal.from,s.from);assert.equal(goal.to,s.to);
- assert.equal(s.startLevel,goal.from===1?1:approved.targetLevelCheckpoints[String(goal.from-1)]);
- assert.equal(s.endingCheckpointLevel,approved.targetLevelCheckpoints[String(goal.to)]);
+ assert.equal(s.priorCheckpointLevel,goal.from===1?1:approved.targetLevelCheckpoints[String(goal.from-1)]);
+ assert.equal(s.startLevel,approved.targetLevelCheckpoints[String(goal.to)]);
+ assert.equal(s.endingCheckpointLevel,s.startLevel);
+ const floorRecommendedLevels=Array.from({length:10},(_,i)=>targetClearLevel(s.from+i));
+ assert.ok(floorRecommendedLevels.every(level=>level<=s.startLevel),
+  'one banked start level must cover all ten actual floor recommendations');
  const tries=[];
  for(let i=0;i<samples;i++){
   const entry=referenceOwners.ownerEntries[i].snapshots[0];
   assert.ok(entry?.playerBase,'a genuine seeded initial hero base is required');
   assert.equal(referenceOwners.ownerEntries[i].seed,17011+13*i);
   const result=challenge(combatFixture(s,entry.playerBase),s.from,seed(i));
+  assert.equal(result.startLevel,s.startLevel);
+  assert.equal(result.endLevel,s.startLevel,'combat must not invent mid-sortie level ups');
+  assert.ok(result.fightsAttempted>=1&&result.fightsAttempted<=50);
+  if(result.won)assert.equal(result.fightsAttempted,50,'winning the full decade requires 50 fights');
   tries.push({seed:seed(i),won:result.won,hp:result.endHp,mp:result.endMp,
    rank:result.bossRankEligible,preRecovery:result.bossPreRecovery,
    cleansers:result.used,firstLoss:result.firstLoss});
@@ -69,7 +81,10 @@ for(const [bandIndex,goal] of approved.bands.entries()){
  if(s.from<=10&&tries.some(x=>Object.values(x.cleansers).some(v=>v)))throw Error('Early item use invariant broken');
  const row={band:s.from+'-'+s.to,referenceStatus:reference.status,
   approvalGate:reference.status==='USER_APPROVED'?'APPROVED_STRICT':'CANDIDATE_AWAITING_USER_APPROVAL',
-  startLevel:s.startLevel,endCheckpointLevel:s.endingCheckpointLevel,
+  startLevel:s.startLevel,priorCheckpointLevel:s.priorCheckpointLevel,
+  endCheckpointLevel:s.endingCheckpointLevel,
+  levelBasis:'ALREADY_BANKED_FINAL_BOSS_RECOMMENDATION_BEFORE_50_FIGHTS',
+  firstTimeClearIsSeparate:true,floorRecommendedLevels,
   requiredPriorRank:s.requiredPriorRank,spells:reference.spells,
   upgrades:s.upgrades,powers:expectedPowers(s),stoneCost:stoneCost(s),
   inkRequired:0,redrawOptional:true,requiredItems:s.requiredItems,
@@ -100,6 +115,8 @@ for(const cohort of economy.policies){
     assert.equal(check.ready,true,'unready owner must never be promoted to prepared');
     assert.equal(accepted.source,'POST_RETURN_BANKED_AND_INVESTED');
     assert.ok(accepted.actualFights<=cohort.accounts[i].fights);
+    assert.ok(Number.isInteger(accepted.bankedBestLayer)&&accepted.bankedBestLayer>=0,
+     'reference readiness needs actual pre-sortie cleared depth');
     ready.push({seed:owner.seed,snapshot:accepted});
    }else{
     const reasons=last?.reasons||(!original?['NEVER_REACHED_BAND']:['NO_POST_RETURN_CANDIDATE_READY_SNAPSHOT']);
@@ -124,6 +141,9 @@ for(const cohort of economy.policies){
   const replay=ready.map(x=>x.snapshot.repeatedFights??0);
   const r={style:cohort.style,route:cohort.route,band:s.from+'-'+s.to,
    count:samples,prepared:ready.length,unprepared:absent.length,
+   preparedBeforeFirstBandClear:ready.filter(x=>x.snapshot.bankedBestLayer<s.to).length,
+   preparedOnlyAfterBandClear:ready.filter(x=>x.snapshot.bankedBestLayer>=s.to).length,
+   readinessBasis:'REAL_BANKED_BEFORE_SORTIE; BEFORE_FIRST_CLEAR tracked separately',
    preparedPercent:pct(ready.length),levelObservedPercent:pct(hasLevel),
    powerObservedPercent:pct(hasPower),itemsObservedPercent:pct(hasItems),
    cumulativeFights:percentile(ready.map(x=>x.snapshot.actualFights)),
@@ -186,6 +206,18 @@ for(const cohort of economy.policies){
   console.log('EXTRA_FARMING '+JSON.stringify(farm));
  }
 }
+// F1-10 initial discovery is NOT the fully-prepared 50-fight test: all six actual
+// journey policies bank one new floor at a time before their first F10 clear.
+report.tutorialEvidence=economy.policies.map(cohort=>{
+ const firsts=cohort.accounts.map(a=>a.firstDecadeClearances[0]);
+ const reached=firsts.filter(x=>x.sorties!==null);
+ assert.ok(reached.every(x=>x.sorties>=10),
+  'first F10 clear must require the ten separate banked tutorial expeditions');
+ return {style:cohort.style,route:cohort.route,owners:cohort.accounts.length,
+  first10Cleared:reached.length,first10NotCleared:samples-reached.length,
+  first10ClearSorties:percentile(reached.map(x=>x.sorties)),
+  interpretation:'ACTUAL_FIRST_TIME_TUTORIAL_NOT_A_50_FIGHT_REFERENCE'};
+});
 assert.equal(report.COMBAT_BALANCE.length,10);
 assert.equal(report.JOURNEY_READINESS.length,60);
 assert.equal(report.EXTRA_FARMING.length,60);
@@ -216,6 +248,8 @@ assert.equal(report.BUILD_STRATEGY.length,4);
 const summary={referenceApproval:reference.status,combatMet:report.COMBAT_BALANCE.filter(x=>x.actualGoalsMet).length,
  combatUnmet:report.COMBAT_BALANCE.filter(x=>!x.actualGoalsMet).length,
  journeyReadyCases:report.JOURNEY_READINESS.filter(x=>x.prepared===256).length,
+ journeyBeforeClearAccounts:report.JOURNEY_READINESS.reduce((n,x)=>n+x.preparedBeforeFirstBandClear,0),
+ journeyAfterClearAccounts:report.JOURNEY_READINESS.reduce((n,x)=>n+x.preparedOnlyAfterBandClear,0),
  journeyIncompleteCases:report.JOURNEY_READINESS.filter(x=>x.prepared<256).length,
  farmingPairedCases:report.EXTRA_FARMING.filter(x=>x.paired.some(p=>p.matchedSeeds>0)).length,
  status:'DESIGN_INTEGRITY_PASS_SEPARATE_GAME_BALANCE_RESULTS'};

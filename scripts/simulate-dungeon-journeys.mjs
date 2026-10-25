@@ -410,7 +410,9 @@ function observeReference(state){
   const copy={...state,inventory:[...state.inventory]};
   const carry=pack(copy,band,to,false);
   const snapshot={layer:band,to,sortie:state.sorties,level:p.level,
-   targetLevel:s.startLevel,rank:p.adventurerRank,xp:p.xp,
+   targetLevel:s.startLevel,bankedBestLayer:state.best,
+   preparedBeforeFirstBandClear:state.best<to,
+   rank:p.adventurerRank,xp:p.xp,
    bankedStones:state.stones,bankedInk:state.ink,
    earned:{...state.earned},spent:{...state.spent},
    circles:active.map(c=>({role:c.role,attribute:c.attribute,

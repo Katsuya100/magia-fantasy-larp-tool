@@ -1,4 +1,5 @@
-// Frozen, unapproved 50-fight reference and independent real-owner readiness.
+// Frozen, unapproved 50-fight reference: PRE-BANK the final boss's existing recommended level.
+// An uninterrupted 50-fight sortie does not gain banked levels; first-time journeys are separate.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
@@ -20,8 +21,13 @@ export function checkReference(){
  assert.deepEqual(reference.spells.map(x=>x.role),['attack','attack','attack','support','defense']);
  for(const s of reference.bands){
   assert.equal(s.to,s.from+9);
-  assert.equal(s.startLevel,s.from===1?1:targetClearLevel(s.from-1));
+  assert.equal(s.priorCheckpointLevel,s.from===1?1:targetClearLevel(s.from-1));
   assert.equal(s.endingCheckpointLevel,targetClearLevel(s.to));
+  assert.equal(s.startLevel,s.endingCheckpointLevel,
+   'a no-return fifty-fight benchmark must be ready for its final boss on entry');
+  for(let floor=s.from;floor<=s.to;floor++)
+   assert.ok(s.startLevel>=targetClearLevel(floor),
+    'start level must cover the recommended level of every floor without phantom leveling');
   assert.equal(s.requiredPriorRank,s.from-1);
   assert.equal(s.upgrades.length,5);
   for(const [i,n] of s.upgrades.entries())assert.ok(Number.isInteger(n)&&n>=0&&

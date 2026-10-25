@@ -2,14 +2,16 @@
   "schemaVersion": "dungeon-recommended-reference-candidate-v1",
   "status": "CANDIDATE_NOT_USER_APPROVED",
   "approval": "Requires explicit user review; cannot certify combat balance until approved",
-  "evidence": "Existing fixed five authored journey circles; 16-sample 2026-10-24 first-entry long-route upgrade medians as a frozen proposal, NOT a demonstrated 50-fight loadout",
+  "evidence": "Existing fixed five authored journey circles; 16-sample 2026-10-24 first-entry long-route upgrade medians as a frozen proposal, NOT a demonstrated 50-fight loadout; immutable 10F/20F/.../100F recommended boss-level checkpoints are the prepared sortie level (not a win-rate-tuned level)",
   "caveats": [
-    "Start levels are preceding checkpoint levels, NOT the ending boss level; in-sortie EXP remains unbanked until a legal return",
+    "The fixed 50-fight combat reference starts at the EXISTING recommended level of its final boss, earned and banked BEFORE entry; no mid-sortie level ups. Earlier floors have lower individual recommended levels.",
     "Upgrade levels are candidates, not proven affordable within a journey. Actual stones and ink must be accounted for by JOURNEY_READINESS",
     "Seven specialist cleansers and two Luna Stones at 71F+ are combat reference inventory hypotheses only; never grant them in the economic simulation",
     "Rank prerequisite is the previous earned decade badge and cannot be assumed for real owner accounts",
     "No alchemy. Reference inventory and rank represent *conditional* legal equipment, not an assertion that any sampled account owns them",
-    "No rank-potions, HP/MP recovery or resurrection consumables; rank attempts are evaluated separately"
+    "No rank-potions, HP/MP recovery or resurrection consumables; rank attempts are evaluated separately",
+    "The first-time F1-10 tutorial banks one floor per sortie; the full 50-fight reference is a separately trained replay, NOT a first-time unbroken clear.",
+    "Economic readiness is observed in real owners; whether it was reached before the band's FIRST clear or only on a later replay must be reported separately."
   ],
   "spells": [
     {
@@ -42,7 +44,7 @@
     {
       "from": 1,
       "to": 10,
-      "startLevel": 1,
+      "startLevel": 19,
       "endingCheckpointLevel": 19,
       "requiredPriorRank": 0,
       "upgrades": [
@@ -52,12 +54,13 @@
         0,
         0
       ],
-      "requiredItems": {}
+      "requiredItems": {},
+      "priorCheckpointLevel": 1
     },
     {
       "from": 11,
       "to": 20,
-      "startLevel": 19,
+      "startLevel": 37,
       "endingCheckpointLevel": 37,
       "requiredPriorRank": 10,
       "upgrades": [
@@ -67,12 +70,13 @@
         0,
         0
       ],
-      "requiredItems": {}
+      "requiredItems": {},
+      "priorCheckpointLevel": 19
     },
     {
       "from": 21,
       "to": 30,
-      "startLevel": 37,
+      "startLevel": 55,
       "endingCheckpointLevel": 55,
       "requiredPriorRank": 20,
       "upgrades": [
@@ -82,12 +86,13 @@
         1,
         0
       ],
-      "requiredItems": {}
+      "requiredItems": {},
+      "priorCheckpointLevel": 37
     },
     {
       "from": 31,
       "to": 40,
-      "startLevel": 55,
+      "startLevel": 72,
       "endingCheckpointLevel": 72,
       "requiredPriorRank": 30,
       "upgrades": [
@@ -97,12 +102,13 @@
         3,
         0
       ],
-      "requiredItems": {}
+      "requiredItems": {},
+      "priorCheckpointLevel": 55
     },
     {
       "from": 41,
       "to": 50,
-      "startLevel": 72,
+      "startLevel": 87,
       "endingCheckpointLevel": 87,
       "requiredPriorRank": 40,
       "upgrades": [
@@ -112,12 +118,13 @@
         7,
         0
       ],
-      "requiredItems": {}
+      "requiredItems": {},
+      "priorCheckpointLevel": 72
     },
     {
       "from": 51,
       "to": 60,
-      "startLevel": 87,
+      "startLevel": 102,
       "endingCheckpointLevel": 102,
       "requiredPriorRank": 50,
       "upgrades": [
@@ -135,12 +142,13 @@
         "clear_gravity": 1,
         "clear_law": 1,
         "clear_chaos": 1
-      }
+      },
+      "priorCheckpointLevel": 87
     },
     {
       "from": 61,
       "to": 70,
-      "startLevel": 102,
+      "startLevel": 115,
       "endingCheckpointLevel": 115,
       "requiredPriorRank": 60,
       "upgrades": [
@@ -158,12 +166,13 @@
         "clear_gravity": 1,
         "clear_law": 1,
         "clear_chaos": 1
-      }
+      },
+      "priorCheckpointLevel": 102
     },
     {
       "from": 71,
       "to": 80,
-      "startLevel": 115,
+      "startLevel": 128,
       "endingCheckpointLevel": 128,
       "requiredPriorRank": 70,
       "upgrades": [
@@ -182,12 +191,13 @@
         "clear_law": 1,
         "clear_chaos": 1,
         "luna_stone": 2
-      }
+      },
+      "priorCheckpointLevel": 115
     },
     {
       "from": 81,
       "to": 90,
-      "startLevel": 128,
+      "startLevel": 139,
       "endingCheckpointLevel": 139,
       "requiredPriorRank": 80,
       "upgrades": [
@@ -206,12 +216,13 @@
         "clear_law": 1,
         "clear_chaos": 1,
         "luna_stone": 2
-      }
+      },
+      "priorCheckpointLevel": 128
     },
     {
       "from": 91,
       "to": 100,
-      "startLevel": 139,
+      "startLevel": 150,
       "endingCheckpointLevel": 150,
       "requiredPriorRank": 90,
       "upgrades": [
@@ -230,7 +241,8 @@
         "clear_law": 1,
         "clear_chaos": 1,
         "luna_stone": 2
-      }
+      },
+      "priorCheckpointLevel": 139
     }
   ]
 }

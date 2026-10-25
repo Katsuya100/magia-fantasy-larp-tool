@@ -56,9 +56,12 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
  const result={won:false,cleared:from-1,casts:0,heals:0,
   enemyHeals:0,used,bossPreRecovery:null,bossRankEligible:null,firstLoss:null,
   remainingCarry:null,endHp:null,endMp:null,
+  startLevel:snapshot.level,endLevel:snapshot.level,fightsAttempted:0,
   startHp:100*hero.hp/hero.stats.hp,startMp:100*hero.mp/hero.maxMp};
  for(let layer=from;layer<from+10;layer++){
   for(let slot=1;slot<=5;slot++){
+   assert.equal(hero.level,snapshot.level,'no intra-sortie character leveling');
+   result.fightsAttempted++;
    const fight=(layer-1)*5+slot,foe=encounterForFight(fight);
    const enemy=G.fromEnemy(foe,Number(data.floors[fight-1].enemy_level));
    let victorious=false,rounds=0;
@@ -87,6 +90,7 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
     result.endHp=100*hero.hp/hero.stats.hp;
     result.endMp=100*hero.mp/hero.maxMp;
     result.remainingCarry=carry.filter(Boolean).length;
+    result.endLevel=hero.level;
     return result;
    }
    // Rank eligibility is a separate outcome, sampled before ALL healing,
@@ -105,5 +109,6 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
  result.won=true;result.endHp=100*hero.hp/hero.stats.hp;
  result.endMp=100*hero.mp/hero.maxMp;
  result.remainingCarry=carry.filter(Boolean).length;
+ result.endLevel=hero.level;
  return result;
 }
