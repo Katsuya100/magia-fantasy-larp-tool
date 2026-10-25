@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261025.05">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261025.06">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261025.05" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261025.06" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261025.05" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261025.06" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -187,6 +187,10 @@
       </div>
     </dialog>
     <dialog id="nameDialog" class="name-dialog" aria-labelledby="nameDialogTitle" data-dungeon-frame="fixed">
+      <header id="nameDialogHeader" class="dungeon-dialog-header" hidden>
+        <h2 id="nameDialogHeaderTitle" class="dungeon-dialog-frame-title" aria-hidden="true">冒険者の名を刻む</h2>
+        <button type="button" id="cancelNameDialog" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="名前変更を閉じる" hidden>✕</button>
+      </header>
       <div class="name-dialog-inner dungeon-dialog-frame">
         <span class="dialog-sigil" aria-hidden="true">✦</span>
         <p class="chapter">THE ADVENTURER'S NAME</p>
@@ -206,7 +210,7 @@
           <p id="nameError" class="name-error" role="alert"></p>
           <button type="submit" id="savePlayerName" class="primary-action">この名で冒険する <span aria-hidden="true">⟶</span></button>
         </form>
-        <button type="button" id="cancelNameDialog" class="subtle dungeon-dialog-close" hidden>戻る</button>
+        
       </div>
     </dialog>
 
@@ -441,7 +445,7 @@
     </div>
 
     <dialog id="circleDrawingDialog" class="circle-drawing-dialog" aria-labelledby="circleDrawingStage" data-dungeon-frame="overlay">
-      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261025.05" alt="" hidden>
+      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261025.06" alt="" hidden>
       <div id="circleDrawingShell" class="circle-drawing-shell">
         <strong id="circleDrawingStage" class="circle-drawing-stage" aria-live="polite">呪文を1文字ずつ書く</strong>
         <button type="button" id="circleDrawingPowerTips" class="subtle circle-power-tips-button">強い魔法のコツ</button>
@@ -551,22 +555,30 @@
       </div>
     </dialog>
     <dialog id="circleActionDialog" class="name-dialog circle-action-dialog" aria-labelledby="circleActionTitle" data-dungeon-frame="closable">
+      <header class="dungeon-dialog-header">
+        <h2 id="circleActionTitle" class="dungeon-dialog-frame-title"></h2>
+        <button type="button" id="cancelCircleAction" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="キャンセル">✕</button>
+      </header>
       <div class="circle-action-inner dungeon-dialog-frame">
         <span class="dialog-sigil" aria-hidden="true">✦</span>
-        <h2 id="circleActionTitle" class="dungeon-dialog-frame-title"></h2>
+
         <p id="circleActionMessage"></p>
         <div class="buttons">
-          <button type="button" id="cancelCircleAction" class="subtle dungeon-dialog-close">キャンセル</button>
+
           <button type="button" id="confirmCircleAction" class="primary-action"></button>
         </div>
       </div>
     </dialog>
     <dialog id="magicStoneTutorialDialog" class="name-dialog circle-action-dialog" aria-labelledby="magicStoneTutorialTitle" aria-describedby="magicStoneTutorialMessage" data-dungeon-frame="closable">
-      <div class="circle-action-inner dungeon-dialog-frame">
+      <header class="dungeon-dialog-header">
         <h2 id="magicStoneTutorialTitle" class="dungeon-dialog-frame-title">魔導石</h2>
+        <button type="button" id="closeMagicStoneTutorial" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="閉じる">✕</button>
+      </header>
+      <div class="circle-action-inner dungeon-dialog-frame">
+
         <img src="assets/images/magic-stone-tutorial.webp" alt="魔法陣カードの詳細・削除・魔導石で強化ボタン" width="350" height="359" style="display:block;width:min(100%,350px);height:auto;margin:16px auto">
         <p id="magicStoneTutorialMessage">魔導石を使えば、あなたの魔法を強化できます。</p>
-        <div class="buttons"><button type="button" id="closeMagicStoneTutorial" class="primary-action dungeon-dialog-close">閉じる</button></div>
+        <div class="buttons"></div>
       </div>
     </dialog>
     <dialog id="creatorCongratulationsDialog" class="creator-congratulations-dialog" aria-labelledby="creatorCongratulationsTitle" aria-describedby="creatorCongratulationsMessage" data-dungeon-frame="overlay">
@@ -599,8 +611,12 @@
       </div>
     </dialog>
     <dialog id="supportPromptDialog" class="name-dialog support-prompt-dialog" aria-labelledby="supportPromptTitle" aria-describedby="supportPromptMessage" data-dungeon-frame="closable">
-      <div class="support-prompt-inner dungeon-dialog-frame">
+      <header class="dungeon-dialog-header">
         <h2 id="supportPromptTitle" class="dungeon-dialog-frame-title"></h2>
+        <button type="button" id="supportPromptClose" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="冒険者カードを閉じる">✕</button>
+      </header>
+      <div class="support-prompt-inner dungeon-dialog-frame">
+
         <p id="supportPromptMessage"></p>
         <canvas id="adventurerShareCanvas" width="1200" height="675" role="img" aria-label="冒険者名・等級・レベル・最深到達階層・最深帰還階層のカード"></canvas>
         <p id="supportShareHelp" class="support-share-help">Xの投稿には本文が入ります。画像は保存して添付できます。</p>
@@ -610,7 +626,7 @@
         </div>
         <div class="support-card-tools">
           <button type="button" id="supportSaveImage">画像を保存</button>
-          <button type="button" id="supportPromptClose" class="subtle dungeon-dialog-close" aria-label="冒険者カードを閉じる">閉じる</button>
+
         </div>
       </div>
     </dialog>
@@ -635,40 +651,56 @@
       </div>
     </dialog>
     <dialog id="googleDriveConflictDialog" class="name-dialog" aria-labelledby="googleDriveConflictTitle" data-dungeon-frame="closable">
-      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+      <header class="dungeon-dialog-header">
         <h2 id="googleDriveConflictTitle" class="dungeon-dialog-frame-title">バックアップが見つかりました</h2>
+        <button type="button" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" data-action="later" aria-label="あとで">✕</button>
+      </header>
+      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+
         <p data-role="description">引き継ぐか、上書きするか選んでください。</p>
         <p id="googleDriveOverwriteWarning">上書きすると以前のバックアップは失われます。</p>
         <div class="buttons">
           <button type="button" class="subtle" data-action="restore">引き継ぐ</button>
           <button type="button" class="danger" data-action="overwrite">新しいデータで上書きする</button>
-          <button type="button" class="subtle dungeon-dialog-close" data-action="later">あとで</button>
+
         </div>
       </div>
     </dialog>
     <dialog id="googleDriveOverwriteDialog" class="name-dialog" aria-labelledby="googleDriveOverwriteTitle" data-dungeon-frame="closable">
-      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+      <header class="dungeon-dialog-header">
         <h2 id="googleDriveOverwriteTitle" class="dungeon-dialog-frame-title">バックアップを上書きしますか？</h2>
+        <button type="button" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" data-action="back" aria-label="戻る">✕</button>
+      </header>
+      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+
         <p>Driveの以前のデータは失われます。</p>
         <div class="buttons">
-          <button type="button" class="subtle dungeon-dialog-close" data-action="back">戻る</button>
+
           <button type="button" class="danger" data-action="confirm">上書きする</button>
         </div>
       </div>
     </dialog>
     <dialog id="googleDriveExpiredDialog" class="name-dialog" aria-labelledby="googleDriveExpiredTitle" data-dungeon-frame="closable">
-      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+      <header class="dungeon-dialog-header">
         <h2 id="googleDriveExpiredTitle" class="dungeon-dialog-frame-title">Google Driveの接続が切れました</h2>
+        <button type="button" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" data-action="later" aria-label="あとで">✕</button>
+      </header>
+      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+
         <p>冒険データは端末に残っています。再接続すると同期を再開します。</p>
         <div class="buttons">
-          <button type="button" class="subtle dungeon-dialog-close" data-action="later">あとで</button>
+
           <button type="button" class="subtle" data-action="reconnect">Google Driveに再接続</button>
         </div>
       </div>
     </dialog>
     <dialog id="deleteDataDialog" class="name-dialog delete-data-dialog" aria-labelledby="deleteDataTitle" data-dungeon-frame="closable">
-      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+      <header class="dungeon-dialog-header">
         <h2 id="deleteDataTitle" class="dungeon-dialog-frame-title">この端末の冒険データを削除しますか？</h2>
+        <button type="button" id="cancelDeleteData" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="キャンセル">✕</button>
+      </header>
+      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+
         <p>冒険者プロフィール・レベル・実績・魔導石・所持品・登録済み魔法陣の画像・進行中の探索を、この端末から完全に削除します。</p>
         <p>Google Drive側のバックアップは削除されません。端末データの削除後、自動復元は停止します。</p>
         <p><strong>この操作は取り消せません。</strong> 続行する場合は「削除」と入力してください。</p>
@@ -676,12 +708,12 @@
         <input type="text" id="deleteDataPhrase" autocomplete="off" spellcheck="false" placeholder="削除" aria-describedby="deleteDataError">
         <p id="deleteDataError" class="name-error" role="alert"></p>
         <div class="buttons">
-          <button type="button" id="cancelDeleteData" class="subtle dungeon-dialog-close">キャンセル</button>
+
           <button type="button" id="confirmDeleteData" class="danger" disabled>端末内データを削除</button>
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.25.05</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.25.06</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" data-dungeon-frame="paged" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet dungeon-dialog-frame">
@@ -704,6 +736,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261025.05"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261025.06"></script>
 </body>
 </html>
