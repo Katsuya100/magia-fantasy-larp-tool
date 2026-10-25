@@ -156,8 +156,8 @@ assert.ok(victoryMpRate(1)>=.18+introReward&&victoryMpRate(1)<=.20+introReward,'
 assert.ok(victoryMpRate(30)>.12+introReward&&victoryMpRate(30)<.14+introReward,'early-layer victory MP recovery also helps established adventurers');
 assert.ok(victoryMpRate(75)>.09+introReward&&victoryMpRate(75)<.115+introReward,'the early-layer bonus does not erase level scaling');
 assert.ok(victoryMpRate(150)>.069+introReward&&victoryMpRate(150)<.085+introReward,'high-level heroes only receive the early-layer bonus at low depth');
-// Added recovery applies only to layers 1-19. The baseline is mathematically
-// identical at layer 20 and beyond, regardless of the adventurer's level.
+// Recovery is intentionally reduced after the first decade. The existing
+// MP-bonus still disappears at layer 20, and the deep curve remains monotone.
 for(let layer=1;layer<=10;layer++)assert.equal(G.earlyVictoryMpBonusRate(layer),num('victory_mp_early_layer_bonus'));
 for(let layer=11;layer<20;layer++){
  assert.ok(G.earlyVictoryMpBonusRate(layer)<G.earlyVictoryMpBonusRate(layer-1));
@@ -176,21 +176,21 @@ for(const playerLevel of [1,5,19,37,55,150]){
   actor.mp=0;
   assert.equal(G.recoverVictoryMp(actor,layer),
    Math.round(actor.maxMp*(originalRate*G.victoryMpLayerFactor(layer)+G.earlyVictoryMpBonusRate(layer))),
-   'layer 11+ must retain the exact historical recovery at layer '+layer+' and Lv'+playerLevel);
+   'layer 11+ must match the actual shared configured recovery at layer '+layer+' and Lv'+playerLevel);
  }
 }
 assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75)&&victoryMpRate(75)>victoryMpRate(150),
  'victory MP recovery decreases with level');
 
 assert.deepEqual(G.VICTORY_MP_LAYER_CURVE.map(([floor,rate])=>[floor,rate]),
- [[1,1],[10,1],[15,.815],[20,.5976],[21,.5799],[22,.547],[25,.541],[29,.53955],[30,.5395],[35,.462],[40,.406],
-  [41,.387],[45,.338],[49,.317],[50,.316],[51,.30324],[52,.30102],[55,.29597],[59,.29282],[60,.2924],
-  [65,.228],[70,.2244],[71,.19065],[75,.18547],[79,.18271],[80,.182],[85,.172],[89,.143],
-  [90,.1288],[95,.0751],[100,0]]);
-for(const [layer,expected] of [[1,1],[10,1],[15,.815],[20,.5976],
- [21,.5799],[22,.547],[25,.541],[29,.53955],[35,.462],[41,.387],[45,.338],[49,.317],[51,.30324],[52,.30102],[55,.29597],[59,.29282],
- [65,.228],[71,.19065],[75,.18547],[79,.18271],[80,.182],[85,.172],[89,.143],
- [90,.1288],[95,.0751],[100,0],[105,0]]){
+ [[1,1],[10,1],[11,.4815],[15,0.4075],[20,0.2988],[21,0.28995],[22,0.2735],[25,0.2705],[29,0.269775],[30,0.26975],[35,0.231],[40,0.203],
+  [41,0.1935],[45,0.169],[49,0.1585],[50,0.158],[51,0.15162],[52,0.15051],[55,0.147985],[59,0.14641],[60,0.1462],
+  [65,0.114],[70,0.1122],[71,0.095325],[75,0.092735],[79,0.091355],[80,0.091],[85,0.086],[89,0.0715],
+  [90,0.0644],[95,0.03755],[100,0]]);
+for(const [layer,expected] of [[1,1],[10,1],[11,.4815],[15,0.4075],[20,0.2988],
+ [21,0.28995],[22,0.2735],[25,0.2705],[29,0.269775],[35,0.231],[41,0.1935],[45,0.169],[49,0.1585],[51,0.15162],[52,0.15051],[55,0.147985],[59,0.14641],
+ [65,0.114],[71,0.095325],[75,0.092735],[79,0.091355],[80,0.091],[85,0.086],[89,0.0715],
+ [90,0.0644],[95,0.03755],[100,0],[105,0]]){
  assert.ok(Math.abs(G.victoryMpLayerFactor(layer)-expected)<1e-10,
   'victory MP recovery multiplier for floor '+layer);
 }
