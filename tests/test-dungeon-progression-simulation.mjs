@@ -119,12 +119,17 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
   const foe=enemyForFight(enemyMaster,fight);
   const enemy=G.fromEnemy(foe,+data.floors[fight-1].enemy_level);
   const hpBefore=hero.hp,mpBefore=hero.mp;
-  let turns=0,win=false,debuffInFight=false;
+  let turns=0,win=false,debuffInFight=false,enemyAttacks=0,enemyDefenses=0,enemyHeals=0,heroAttackCasts=0,spellMpSpent=0;
   stats.fightsReached++;
   for(;turns<80;turns++){
    const pick=heroAction(hero,enemy,Math.ceil(fight/5));
    if(fight<=50&&pick>=0&&hero.spells[pick].role==='support')stats.earlyHeroRecoveryCasts++;
    const enemyPick=enemyAction(enemy,r);
+   if(enemyPick>=0&&enemy.spells[enemyPick].role==='attack')enemyAttacks++;
+   if(enemyPick>=0&&enemy.spells[enemyPick].role==='defense')enemyDefenses++;
+   if(enemyPick>=0&&enemy.spells[enemyPick].role==='support')enemyHeals++;
+   if(pick>=0){spellMpSpent+=G.spellMpCost(hero.spells[pick]);
+    if(hero.spells[pick].role==='attack')heroAttackCasts++;}
    if(enemyPick>=0&&enemy.spells[enemyPick].role==='debuff'){
     stats.enemyDebuffCasts++;debuffInFight=true;
    }
@@ -136,7 +141,8 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
    if(enemy.hp<=0){win=true;break;}
   }
   if(debuffInFight)stats.enemyDebuffFights++;
-  stats.fightStats.push({fight,layer:Math.ceil(fight/5),win,turns:turns+1,hpBefore,hpAfter:hero.hp,mpBefore,mpAfter:hero.mp});
+  stats.fightStats.push({fight,layer:Math.ceil(fight/5),win,turns:turns+1,hpBefore,hpAfter:hero.hp,mpBefore,mpAfter:hero.mp,
+   enemyAttacks,enemyDefenses,enemyHeals,heroAttackCasts,spellMpSpent,mpAfterVictoryRecovery:null});
   if(!win){
    const layerStats=stats.layerStats.at(-1);
    layerStats.endHp=hero.hp;layerStats.endMp=hero.mp;
@@ -145,6 +151,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
   stats.clear=fight;
   hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
   stats.mpRestored+=G.recoverVictoryMp(hero,Math.ceil(fight/5));
+  stats.fightStats.at(-1).mpAfterVictoryRecovery=hero.mp;
   if(fight%50===0&&fight<last){ // 10th/20th/... layer, after the boss
    hero.hp=hero.stats.hp;hero.mp=hero.maxMp;stats.restores++;
   }
