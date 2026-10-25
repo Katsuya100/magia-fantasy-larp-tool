@@ -1,38 +1,38 @@
-import * as G from './dungeon-core.mjs?v=20261025.12';
-import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261025.12';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261025.12';
-import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261025.12';
-import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261025.12';
-import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261025.12';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261025.12';
-import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261025.12';
-import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from './dungeon-alchemy.mjs?v=20261025.12';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261025.12';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261025.12';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261025.12';
+import * as G from './dungeon-core.mjs?v=20261025.13';
+import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261025.13';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261025.13';
+import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261025.13';
+import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261025.13';
+import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261025.13';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261025.13';
+import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261025.13';
+import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from './dungeon-alchemy.mjs?v=20261025.13';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261025.13';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261025.13';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261025.13';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261025.12';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261025.12';
-import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261025.12';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261025.12';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261025.12';
-import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261025.12';
-import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261025.12';
-import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261025.12';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261025.12';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261025.12';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261025.12';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261025.12';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261025.12';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261025.12';
-import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261025.12';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261025.12';
-import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261025.12';
-import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261025.12';
-import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261025.12';
-import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261025.12';
-import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261025.12';
-import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261025.12';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261025.13';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261025.13';
+import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261025.13';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261025.13';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261025.13';
+import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261025.13';
+import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261025.13';
+import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261025.13';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261025.13';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261025.13';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261025.13';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261025.13';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261025.13';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261025.13';
+import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261025.13';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261025.13';
+import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261025.13';
+import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261025.13';
+import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261025.13';
+import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261025.13';
+import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261025.13';
+import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261025.13';
 let cloudSyncController,drawingEditor;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -41,9 +41,9 @@ const listView={
  collectionDiscovery:'all',collectionRarity:'all',collectionSort:'common',
  pickerFilter:'all',pickerSort:'newest'
 };
-const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'default'}};
+const pickerView={circle:{filter:'all',sort:'newest'},item:{filter:'all',sort:'kind',previousSort:'default'}};
 let alchemy=null,alchemyPickerSlot=-1;
-const alchemyPickerView={filter:'all',sort:'default'};
+const alchemyPickerView={filter:'all',sort:'kind',previousSort:'default'};
 const circleImages=createDungeonPhotoManager(()=>db,id=>circles.find(c=>c.id===id));
 function refreshCirclePhotos(){
  circleImages.refresh([...sceneIds.filter(id=>!$(id).hidden).map(id=>$(id)),
@@ -1498,7 +1498,7 @@ function closeAlchemy(){
 }
 function renderAlchemyPicker(){
  if(!alchemy||alchemyPickerSlot<0)return;
- const indexes=itemListIndexes(profile.inventory,masters.items,{kind:alchemyPickerView.filter,sort:alchemyPickerView.sort});
+ const indexes=itemListIndexes(profile.inventory,masters.items,{kind:alchemyPickerView.filter,sort:alchemyPickerView.sort,withinKindSort:alchemyPickerView.previousSort});
  $('alchemyPickerOptions').innerHTML=indexes.length
   ?itemChoices(profile.inventory,alchemy.slots,itemName,esc,indexes,alchemyPickerSlot,'choose-alchemy-item')
   :'<p class="collection-empty">条件に合うアイテムはありません。</p>';
@@ -1507,8 +1507,8 @@ function renderAlchemyPicker(){
 function openAlchemyPicker(index){
  if(!alchemy||!Number.isInteger(index)||index<0||index>=5)return;
  alchemyPickerSlot=index;
- const filters=[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['elixir','HP/MP回復'],['clear','状態異常解除'],['clear_all','全状態異常解除'],['escape','脱出'],['revive','復活']];
- const sorts=[['default','入手順'],['count','数が多い順'],['name','名前順'],['kind','種類順'],['value','効果量が高い順'],['value-asc','効果量が低い順']];
+ const filters=[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['elixir','HP/MP回復'],['clear','状態異常解除'],['revive','復活'],['escape','脱出']];
+ const sorts=[['kind','種類順'],['default','入手順'],['count','数が多い順'],['name','名前順'],['value','効果量が高い順'],['value-asc','効果量が低い順']];
  $('alchemyPickerFilter').innerHTML=filters.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
  $('alchemyPickerSort').innerHTML=sorts.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
  $('alchemyPickerFilter').value=alchemyPickerView.filter;
@@ -1566,7 +1566,7 @@ function renderLoadoutChoices(){
   $('loadoutOptions').innerHTML=indexes.length?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost,indexes,picker.index)
    :'<p class="collection-empty">条件に合う魔法陣はありません。</p>';
  }else{
-  const indexes=itemListIndexes(profile.inventory,masters.items,{kind:pickerView.item.filter,sort:pickerView.item.sort});
+  const indexes=itemListIndexes(profile.inventory,masters.items,{kind:pickerView.item.filter,sort:pickerView.item.sort,withinKindSort:pickerView.item.previousSort});
   $('loadoutOptions').innerHTML=indexes.length?itemChoices(profile.inventory,carry,itemName,esc,indexes,picker.index)
    :'<p class="collection-empty">条件に合うアイテムはありません。</p>';
  }
@@ -1585,10 +1585,10 @@ function openLoadoutPicker(kind,index){
  const filters=kind==='circle'
   ?[['all','すべて'],['attack','⚔️攻撃'],['defense','🛡️防御'],['support','✚回復'],['debuff','🕸️弱体'],
     ['flame','🔥flame'],['bolt','⚡bolt'],['aqua','💧aqua'],['storm','🌪️storm'],['gravity','🪨gravity'],['law','⚖️law'],['chaos','🌀chaos']]
-  :[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['elixir','HP/MP回復'],['clear','状態異常解除'],['escape','脱出'],['revive','復活']];
+  :[['all','すべて'],['heal','HP回復'],['mana','MP回復'],['elixir','HP/MP回復'],['clear','状態異常解除'],['revive','復活'],['escape','脱出']];
  const sorts=kind==='circle'
   ?[['newest','登録が新しい順'],['oldest','登録が古い順'],['role','役割順'],['attribute','属性順'],['power','判明済みの威力順']]
-  :[['default','入手順'],['name','名前順'],['kind','種類順'],['value','効果量が高い順'],['value-asc','効果量が低い順']];
+  :[['kind','種類順'],['default','入手順'],['name','名前順'],['value','効果量が高い順'],['value-asc','効果量が低い順']];
  $('pickerFilter').innerHTML=filters.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
  $('pickerSort').innerHTML=sorts.map(([value,label])=>'<option value="'+value+'">'+label+'</option>').join('');
  $('pickerFilter').value=pickerView[kind].filter;
@@ -1837,7 +1837,7 @@ function wire(){
  }
  $('startLayer').addEventListener('change',()=>{selectedStartLayer=allowedStartLayer(profile,$('startLayer').value);$('startLayer').value=String(selectedStartLayer);});
  for(const [id,key] of [['alchemyPickerFilter','filter'],['alchemyPickerSort','sort']]){
-  $(id).addEventListener('change',()=>{alchemyPickerView[key]=$(id).value;renderAlchemyPicker();});
+  $(id).addEventListener('change',()=>{const value=$(id).value;if(key==='sort'&&value!=='kind')alchemyPickerView.previousSort=value;alchemyPickerView[key]=value;renderAlchemyPicker();});
  }
  $('alchemyAutoPick').addEventListener('click',()=>{
   if(!alchemy)return;
@@ -1846,7 +1846,7 @@ function wire(){
   renderAlchemy();
  });
  for(const [id,key] of [['pickerFilter','pickerFilter'],['pickerSort','pickerSort']]){
-  $(id).addEventListener('change',()=>{if(!picker)return;pickerView[picker.kind][key==='pickerFilter'?'filter':'sort']=$(id).value;renderLoadoutChoices();});
+  $(id).addEventListener('change',()=>{if(!picker)return;const view=pickerView[picker.kind],field=key==='pickerFilter'?'filter':'sort',value=$(id).value;if(field==='sort'&&picker.kind==='item'&&value!=='kind')view.previousSort=value;view[field]=value;renderLoadoutChoices();});
  }
  document.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
  if(b.dataset.view){
