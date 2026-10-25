@@ -28,9 +28,12 @@ export function circleListIndexes(circles,{role='all',attribute='all',sort='newe
  }).map(row=>row.index);
 }
 export function itemListIndexes(inventory,masterItems=[],{kind='all',sort='default'}={}){
+ const counts=new Map();
+ if(sort==='count')for(const item of inventory)counts.set(item.id,(counts.get(item.id)||0)+1);
  return inventory.map((item,index)=>({item,index})).filter(({item})=>kind==='all'||itemKind(item,masterItems)===kind)
  .sort((a,b)=>{
   let order=0;
+  if(sort==='count')order=(counts.get(b.item.id)||0)-(counts.get(a.item.id)||0);
   if(sort==='name')order=compareText(masterItems.find(r=>r.id===a.item.id)?.name||a.item.id,
    masterItems.find(r=>r.id===b.item.id)?.name||b.item.id);
   if(sort==='kind')order=compareText(itemKind(a.item,masterItems),itemKind(b.item,masterItems));
