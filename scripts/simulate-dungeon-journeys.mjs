@@ -417,7 +417,9 @@ function observeReference(state){
     basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
     mpCost:G.mpCost(c.basePower),ink:c.ink})),
    carry:carry.map(item=>({...item})),
-   bankedInventory:copy.inventory.map(item=>({...item})),
+   // The global owner ledger already proves all banked items; duplicating
+   // hundreds of item instances in every replay checkpoint can exhaust V8.
+   bankedItems:copy.inventory.length,
    playerBase:{...hero.base},playerHp:hero.hp,playerMp:hero.mp,
    maxHp:hero.stats.hp,maxMp:hero.maxMp,cooldowns:[...hero.cooldowns],
    statuses:hero.statuses.map(x=>({...x})),
