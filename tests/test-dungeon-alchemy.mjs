@@ -174,7 +174,7 @@ assert.match(page,/id="alchemyBaseIcon" class="relic-art"/);
 assert.match(app,/\$\('alchemyBaseIcon'\)\.innerHTML=relicSymbolSvg\(relicIndex,true\)/);
 assert.match(css,/\.alchemy-base-relic \.relic-art\{margin:5px auto 10px\}/);
 // Every part of the craft reveal, including bonus stone/ink rewards, must settle
-// within 250ms.  Visual reward symbols remain conditional on actual drops.
+// within 500ms.  Visual reward symbols remain conditional on actual drops.
 const animationSelectors=['alchemy-ring','alchemy-ring-outer','alchemy-flash',
  'alchemy-created-icon','alchemy-created-name','alchemy-created-effect','alchemy-rewards','alchemy-reward'];
 for(const selector of animationSelectors){
@@ -183,10 +183,12 @@ for(const selector of animationSelectors){
  assert.ok(animation,'animation is defined for '+selector);
  const seconds=[...animation.matchAll(/(?:^|\s)(\d*\.?\d+)s(?=\s|$)/g)].map(match=>Number(match[1]));
  assert.ok(seconds.length>=1,'animation duration is explicit for '+selector);
- assert.ok(seconds.reduce((sum,value)=>sum+value,0)<=.25+1e-9,
-  selector+' duration including delay is within 250ms');
+ assert.ok(seconds.reduce((sum,value)=>sum+value,0)<=.5+1e-9,
+  selector+' duration including delay is within 500ms');
 }
-assert.match(css,/\.alchemy-ring-inner\{[^}]*animation-delay:\.02s/);
+assert.match(css,/\.alchemy-ring-inner\{[^}]*animation-delay:\.04s/);
+assert.match(css,/\.alchemy-rewards\{[^}]*animation:alchemy-materialize \.3s \.2s/,
+ 'bonus rewards now appear at the end of the half-second animation');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{[^}]*\.alchemy-reward\{animation:none\}/);
 assert.match(app,/addedStones\?'<span class="alchemy-reward"[^']+魔導石/);
 assert.match(app,/addedInk\?'<span class="alchemy-reward"[^']+魔導墨/);
