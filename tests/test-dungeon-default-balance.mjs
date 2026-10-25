@@ -130,7 +130,51 @@ for(let to=10;to<=100;to+=10){
  const pointWinRateInTarget=winRate>=winLower&&winRate<=winUpper;
  const pointWinRateInsideMargin=winRate>=marginLower&&winRate<=marginUpper;
  const statisticallyCompatible=winInterval.lower<=winUpper&&winInterval.upper>=winLower;
+ const introFights=from===1?runs.flatMap(x=>x.fightStats||[]):[];
+ const floorMetrics=from===1?Array.from({length:10},(_,i)=>{
+  const layer=i+1,fights=introFights.filter(x=>x.layer===layer);
+  const rounds=average(fights.map(x=>x.turns));
+  const damage=average(fights.map(x=>Math.max(0,x.hpBefore-x.hpAfter)));
+  return {layer,fights:fights.length,roundsMedian:median(fights.map(x=>x.turns)),
+   roundsMean:percentile(rounds,3),
+   damageMedian:median(fights.map(x=>Math.max(0,x.hpBefore-x.hpAfter))),
+   damageMean:percentile(damage,3),
+   enemyAttacks:percentile(average(fights.map(x=>x.enemyAttacks)),3),
+   enemyDefenses:percentile(average(fights.map(x=>x.enemyDefenses)),3),
+   heroAttackCasts:percentile(average(fights.map(x=>x.heroAttackCasts)),3),
+   spellMpSpent:percentile(average(fights.map(x=>x.spellMpSpent)),3),
+   clearedFights:fights.filter(x=>x.win).length,
+   // Threat combines engagement length with real damage scaled by HP.
+   // No damage/combat rule is changed by this reporting-only index.
+   threat:rounds+damage*5/runs[0].maxHp};
+ }):[];
+ const finalBoss=introFights.filter(x=>x.fight===50&&x.win);
+ const bossRounds=finalBoss.map(x=>x.turns).sort((a,b)=>a-b);
+ const bossPercentile=q=>bossRounds.length?bossRounds[Math.floor((bossRounds.length-1)*q)]:null;
+ const bossStats=from===1?{
+  wins:finalBoss.length,medianRounds:median(bossRounds),
+  p10:bossPercentile(.1),p90:bossPercentile(.9),
+  damageTakenMedian:median(finalBoss.map(x=>Math.max(0,x.hpBefore-x.hpAfter))),
+  hpBeforeMedian:median(finalBoss.map(x=>x.hpBefore)),
+  hpAfterMedian:median(finalBoss.map(x=>x.hpAfter)),
+  mpBeforeMedian:median(finalBoss.map(x=>x.mpBefore)),
+  mpAfterBeforeRecoveryMedian:median(finalBoss.map(x=>x.mpAfter)),
+  mpAfterVictoryRecoveryMedian:median(finalBoss.map(x=>x.mpAfterVictoryRecovery)),
+  enemyAttacksMedian:median(finalBoss.map(x=>x.enemyAttacks)),
+  enemyDefensesMedian:median(finalBoss.map(x=>x.enemyDefenses)),
+  enemyHealsMedian:median(finalBoss.map(x=>x.enemyHeals))
+ }:null;
  const issues=[];
+ if(from===1){
+  if(bossStats.medianRounds!==4)issues.push('10F boss median must be four real rounds');
+  if(medianMp<50||medianMp>60)issues.push('10F post-victory/pre-checkpoint median MP must be 50-60%');
+  if(bossStats.mpAfterVictoryRecoveryMedian!==median(winners.map(x=>x.mp/100*x.maxMp)))
+   issues.push('10F recorded MP must be after ordinary victory recovery');
+  for(let i=6;i<10;i++){
+   if(floorMetrics[i].threat+1e-6<floorMetrics[i-1].threat)
+    issues.push('threat did not rise from '+i+'F to '+(i+1)+'F');
+  }
+ }
  if(!pointWinRateInTarget)issues.push('observed winRate outside '+winLower+'-'+winUpper+'%');
  else if(!pointWinRateInsideMargin)issues.push('observed winRate outside '+marginLower+'-'+marginUpper+'% safety margin');
  if(medianMp===null||medianMp<mpLower||medianMp>mpUpper)
@@ -148,6 +192,7 @@ for(let to=10;to<=100;to+=10){
   winRatePointInTarget:pointWinRateInTarget,winRatePointInsideMargin:pointWinRateInsideMargin,
   winRate95Interval:[percentile(winInterval.lower),percentile(winInterval.upper)],
   winRateCompatibleWithTarget:statisticallyCompatible,
+  floorMetrics:from===1?floorMetrics:undefined,boss10:bossStats,
   medianCleanses:withItems?median(runs.map(x=>x.cleanses)):0,
   controlNoItemWinRate:withItems?percentile(100*controlRuns.filter(x=>x.win).length/SAMPLES):null,
   lossesByLayer:Object.entries(runs.filter(x=>!x.win).reduce((acc,x)=>{
@@ -190,6 +235,10 @@ for(let to=10;to<=100;to+=10){
     fights:fights.length,bossWins:bossWins.length,
     fightRoundsMedian:percentile(median(fights.map(x=>x.turns))),
     playerDamagePerFightMedian:percentile(median(fights.map(x=>Math.max(0,x.hpBefore-x.hpAfter)))),
+    enemyAttacksPerFightMedian:median(fights.map(x=>x.enemyAttacks)),
+    enemyDefensesPerFightMedian:median(fights.map(x=>x.enemyDefenses)),
+    heroAttackCastsPerFightMedian:median(fights.map(x=>x.heroAttackCasts)),
+    magicMpSpentPerFightMedian:median(fights.map(x=>x.spellMpSpent)),
     bossRounds:{p10:at(.1),median:median(rounds),p90:at(.9)}
    }:null,
    conditions:{
