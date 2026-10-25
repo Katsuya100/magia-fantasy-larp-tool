@@ -187,6 +187,12 @@ for(const [id,control] of Object.entries(closable)){
  const buttons=controlButtons(content).filter(t=>t.includes('dungeon-dialog-close'));
  assert.equal(buttons.length,1,'exactly one shared close button: '+id);
  assert.ok(buttons[0].includes(control.startsWith('data-action')?control:'id="'+control+'"'),'original button and handler retained: '+id);
+ const header=content.match(/<header class="[^"]*dungeon-dialog-header"[^>]*>[\s\S]*?<\/header>/)?.[0];
+ assert.ok(header,'fixed header provided for '+id);
+ assert.match(header,/dungeon-dialog-frame-title/,'title is in the fixed header: '+id);
+ assert.ok(header.includes(buttons[0]),'round X lives inside the fixed header: '+id);
+ assert.ok(buttons[0].includes('dungeon-dialog-close-icon'),'text footer did not replace X: '+id);
+ assert.ok(content.indexOf(header)<content.indexOf('dungeon-dialog-frame">'),'header precedes scrolling body: '+id);
 }
 for(const id of fixed){
  assert.match(tagOf(id),/data-dungeon-frame="fixed"/,'fixed variant: '+id);
@@ -223,7 +229,9 @@ assert.match(html,/<button type="button" id="tutorialPrevious" class="subtle" hi
 assert.match(html,/<button type="button" id="tutorialContinue" class="primary-action tutorial-next">次へ<\/button>/,'paged next');
 assert.match(html,/<button type="button" id="tutorialSkip" class="subtle">スキップ<\/button>/,'page skip stays in overlay');
 // Required first naming switches from fixed to closable only when rename is allowed.
-assert.match(app,/dialog\.dataset\.dungeonFrame=required\?'fixed':'closable';\s*\$\('cancelNameDialog'\)\.hidden=required;/,'naming changes frame type and button visibility together');
+assert.match(app,/dialog\.dataset\.dungeonFrame=required\?'fixed':'closable';\s*\$\('nameDialogHeader'\)\.hidden=required;/,'required naming hides header, optional rename shows its fixed header');
+assert.match(app,/\$\('nameDialogTitle'\)\.hidden=!required;/,'rename title moves into header');
+assert.match(app,/\$\('cancelNameDialog'\)\.hidden=required;/,'original close-button guard remains');
 assert.match(dialogMarkup('nameDialog'),/<button[^>]*id="cancelNameDialog"[^>]*dungeon-dialog-close[^>]*hidden>/);
 // A scrollable dialog has a real header sibling, never a relocated footer button.
 const frameStyles=css.slice(css.indexOf('/* Reusable dialog *frame*'),css.indexOf('/* Confirmation for the irreversible local-save reset. */'));
@@ -237,7 +245,7 @@ for(const value of ['border-radius:50%!important','background:#151725ed!importan
  assert.ok(controlStyle.includes(value),'preserve round gold X: '+value);
 }
 assert.match(frameStyles,/--dungeon-close-svg:url\("data:image\/svg\+xml/,'same original vector X');
-for(const id of ['iconGuideDialog','loadoutDialog','alchemyDialog','alchemyPickerDialog','magicDetailsDialog','circlePowerTipsDialog']){
+for(const id of ['iconGuideDialog','loadoutDialog','alchemyDialog','alchemyPickerDialog','magicDetailsDialog','circlePowerTipsDialog','supportPromptDialog']){
  const content=dialogMarkup(id);
  const header=content.match(/<header class="[^"]*dungeon-dialog-header"[^>]*>[\s\S]*?<\/header>/)?.[0];
  assert.ok(header,'separate header: '+id);
@@ -246,14 +254,24 @@ for(const id of ['iconGuideDialog','loadoutDialog','alchemyDialog','alchemyPicke
  assert.ok(content.indexOf(header)<content.indexOf('dungeon-dialog-frame">'),'header sits above scrollable body: '+id);
 }
 for(const id of ['circleActionDialog','magicStoneTutorialDialog','supportPromptDialog','googleDriveConflictDialog','googleDriveOverwriteDialog','googleDriveExpiredDialog','deleteDataDialog']){
- assert.doesNotMatch(dialogMarkup(id),/dungeon-dialog-header|dungeon-dialog-close-icon/,'textual footer action must remain unchanged: '+id);
+ const markup=dialogMarkup(id);
+ assert.match(markup,/<header class="dungeon-dialog-header">/,'fixed header for formerly broken footer X: '+id);
+ assert.equal((markup.match(/dungeon-dialog-close-icon/g)||[]).length,1,'one header X, not a footer action: '+id);
+ const icon=markup.match(/<button[^>]*dungeon-dialog-close-icon[^>]*>✕<\/button>/)?.[0];
+ assert.ok(icon,'true X, not text: '+id);
 }
+const naming=dialogMarkup('nameDialog');
+assert.match(naming,/id="nameDialogHeader"[^>]*hidden/,'required name entry has no dismiss button');
+assert.match(naming,/id="cancelNameDialog"[^>]*dungeon-dialog-close-icon[^>]*hidden>✕<\/button>/,'rename has the original round X');
+assert.match(frameStyles,/width:100%;max-width:100%;min-width:0/,'header cannot overrun modal width');
+assert.match(frameStyles,/margin:0!important;border-bottom:/,'other chooser margins do not shift X');
+assert.match(frameStyles,/inset:auto!important/,'X resets inherited offset');
 assert.match(frameStyles,/#tutorialOverlay\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'existing tutorial overlay preserved');
 // The card is a closable frame; the on-screen canvas and its original action
 // are still wired. Screens that were overlays stay outside this component.
 const card=dialogMarkup('supportPromptDialog');
 assert.match(card,/<canvas id="adventurerShareCanvas"/);
-assert.match(card,/<button type="button" id="supportPromptClose" class="subtle dungeon-dialog-close" aria-label="冒険者カードを閉じる">/);
+assert.match(card,/<button type="button" id="supportPromptClose" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="冒険者カードを閉じる">✕<\/button>/);
 assert.match(app,/function openAdventurerShare\(\)\{[\s\S]*?showSupportPrompt\(\{title:'冒険者カード'/);
 assert.match(app,/\$\('supportPromptClose'\)\.addEventListener\('click',\(\)=>closeDungeonDialog\(\$\('supportPromptDialog'\)\)\)/);
 for(const id of ['startupMask','circleDrawingDiscard']){
