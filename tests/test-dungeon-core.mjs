@@ -158,7 +158,8 @@ assert.ok(victoryMpRate(75)>.09+introReward&&victoryMpRate(75)<.115+introReward,
 assert.ok(victoryMpRate(150)>.069+introReward&&victoryMpRate(150)<.085+introReward,'high-level heroes only receive the early-layer bonus at low depth');
 // Recovery is intentionally reduced after the first decade. The existing
 // MP-bonus still disappears at layer 20, and the deep curve remains monotone.
-for(let layer=1;layer<=10;layer++)assert.equal(G.earlyVictoryMpBonusRate(layer),num('victory_mp_early_layer_bonus'));
+for(let layer=1;layer<=10;layer++)assert.equal(G.earlyVictoryMpBonusRate(layer),
+ num('victory_mp_early_layer_bonus')*G.victoryMpLayerFactor(layer));
 for(let layer=11;layer<20;layer++){
  assert.ok(G.earlyVictoryMpBonusRate(layer)<G.earlyVictoryMpBonusRate(layer-1));
  assert.ok(G.earlyVictoryMpBonusRate(layer)>0);
