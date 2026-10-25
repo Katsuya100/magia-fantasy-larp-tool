@@ -869,11 +869,6 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  outline:3px solid #ecd191!important;outline-offset:3px
 }
 #dungeonApp dialog button.dungeon-dialog-close[hidden]{display:none!important}
-/* Headers live below the rail, never beneath the floating close control.
-   This also protects long Japanese headings on narrow phones. */
-#dungeonApp dialog[data-dungeon-frame="closable"] .chooser-header{
- padding-inline-end:0
-}
 /* Confirmation for the irreversible local-save reset. */
 .profile-data-actions{margin-top:26px;padding-top:18px;border-top:1px solid var(--border);text-align:right}
 .profile-data-actions p{font-size:12px;color:var(--soft);margin:0 0 10px}
