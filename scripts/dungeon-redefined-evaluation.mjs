@@ -11,13 +11,17 @@ const read=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const economy=read('reports/dungeon-linked-256-economy-v1.json');
 const approved=read('config/dungeon-approved-goals.v1.json');
 const previous=read('reports/dungeon-linked-256-combat-v1.json');
+const fixedDeck=read('reports/dungeon-fixed-deck-combat-v1.json');
 const candidateOwners=read('reports/dungeon-linked-256-reference-v1.json');
 assert.equal(candidateOwners.referenceStatus,reference.status);
 assert.equal(candidateOwners.samplesPerPolicy,256);
 assert.equal(approved.strictSamples,256);
 assert.equal(economy.samplesPerPolicy,256);
 assert.equal(economy.policies.length,6);
-assert.equal(previous.cases.length,60,'all sixty actual-owner battles must be reported for the independent strict gate');
+assert.equal(previous.cases.length,60,'all sixty actual-owner combat diagnostics must be reported');
+assert.equal(fixedDeck.samples,approved.strictSamples);
+assert.equal(fixedDeck.approvedGoals,approved.schemaVersion);
+assert.equal(fixedDeck.bands.length,10);
 assert.deepEqual(previous.economicSourceHashes,economy.sourceHashes);
 for(const path of ['config/dungeon-approved-goals.v1.json',
  'config/dungeon-recommended-reference-candidate.v1.json',
@@ -34,8 +38,8 @@ const median=x=>percentile(x).median;
 const report={schemaVersion:'dungeon-redefined-verdicts-v1',
  approval:reference.status,approvedGoals:approved.schemaVersion,
  seedPolicy:'256 owners 17011+13*i, paired battle 37011+13*i',
- purpose:'Separate the unapproved fixed reference from the mandatory real-owner 60-case strict acceptance and economic preparation',
- COMBAT_BALANCE:[],JOURNEY_READINESS:[],EXTRA_FARMING:[],
+ purpose:'Original fixed-deck strict combat is independent from six journey growth strategies; candidate reference remains unapproved',
+ COMBAT_BALANCE:fixedDeck.bands,CANDIDATE_COMBAT_DIAGNOSTIC:[],JOURNEY_READINESS:[],EXTRA_FARMING:[],
  RANK_ACQUISITION:[],BUILD_STRATEGY:[],
  designIntegrity:'PASS',warnings:[
   'UNAPPROVED combat fixture is a frozen proposal, not a physically proven economic owner.',
@@ -100,7 +104,7 @@ for(const [bandIndex,goal] of approved.bands.entries()){
   winningHpMedian:hp,winRateTarget:goal.winRate,winSafety:goal.winSafety,
   winningMpTarget:goal.winnerMedianMp,issues,actualGoalsMet:!issues.length,
   result:issues.length?'COMBAT_TARGET_UNMET':'COMBAT_TARGET_MET'};
- report.COMBAT_BALANCE.push(row);combatResults.push(tries);
+ report.CANDIDATE_COMBAT_DIAGNOSTIC.push(row);combatResults.push(tries);
  console.log('COMBAT_BALANCE '+JSON.stringify(row));
 }
 for(const cohort of economy.policies){
@@ -226,6 +230,7 @@ report.tutorialEvidence=economy.policies.map(cohort=>{
   interpretation:'ACTUAL_FIRST_TIME_TUTORIAL_NOT_A_50_FIGHT_REFERENCE'};
 });
 assert.equal(report.COMBAT_BALANCE.length,10);
+assert.equal(report.CANDIDATE_COMBAT_DIAGNOSTIC.length,10);
 assert.equal(report.JOURNEY_READINESS.length,60);
 assert.equal(report.EXTRA_FARMING.length,60);
 for(const goal of approved.bands){
@@ -252,8 +257,8 @@ for(const pair of economy.pairedLongitudinalCosts){
 }
 assert.equal(report.RANK_ACQUISITION.length,10);
 assert.equal(report.BUILD_STRATEGY.length,4);
-const summary={referenceApproval:reference.status,combatMet:report.COMBAT_BALANCE.filter(x=>x.actualGoalsMet).length,
- combatUnmet:report.COMBAT_BALANCE.filter(x=>!x.actualGoalsMet).length,
+const summary={referenceApproval:reference.status,combatMet:report.COMBAT_BALANCE.filter(x=>x.passed).length,
+ combatUnmet:report.COMBAT_BALANCE.filter(x=>!x.passed).length,
  journeyReadyCases:report.JOURNEY_READINESS.filter(x=>x.prepared===256).length,
  journeyBeforeClearAccounts:report.JOURNEY_READINESS.reduce((n,x)=>n+x.preparedBeforeFirstBandClear,0),
  journeyAfterClearAccounts:report.JOURNEY_READINESS.reduce((n,x)=>n+x.preparedOnlyAfterBandClear,0),
@@ -272,4 +277,4 @@ if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMAR
  summary.combatUnmet+' actual balance failures (NOT passed by CI design success).\n'+
  'Real owner readiness fully reached '+summary.journeyReadyCases+'/60 conditions; 50-fight extra farming measured in '+
  summary.farmingPairedCases+'/60 conditions.\n');
-if(reference.status==='USER_APPROVED'&&summary.combatUnmet)process.exitCode=1;
+// The fixed deck strict CI job independently fails when any of its approved combat goals miss.
