@@ -133,7 +133,12 @@ assert.equal((groupedHtml.match(/class="item-picker-options"/g)||[]).length,2,'e
 assert.equal((groupedHtml.match(/data-choose-item=/g)||[]).length,5,'each instance stays individually selectable');
 assert.match(groupedHtml,/data-choose-item="2" aria-pressed="true"[^>]*選択中 1枠目/);
 assert.match(groupedHtml,/data-choose-item="4" aria-pressed="true"[^>]*選択中 3枠目/);
-assert.match(groupedHtml,/❤️\+50 ⚔️↑/,'different bonuses remain visible within the same group');
+assert.match(groupedHtml,/class="picker-label">heal_s<small>効果量 50 ⚔️↑<\/small>/,
+ 'original item cell keeps its visible name, effect value and bonus icons');
+assert.match(groupedHtml,/class="picker-label">mana_s<small>効果量 24<\/small>/,
+ 'regular item cards retain their original text, not icon-only summaries');
+assert.doesNotMatch(groupedHtml,/class="picker-label"><small>/,
+ 'item name must not be removed from the existing picker cells');
 assert.equal((groupedHtml.match(/picker-option picker-selected/g)||[]).length,2);
 assert.equal((groupedHtml.match(/picker-option picker-selected picker-current/g)||[]).length,1);
 const alchemyHtml=itemChoices(groupedInventory,[2],itemName,esc,[3,2,0,1,4],0,'choose-alchemy-item');
