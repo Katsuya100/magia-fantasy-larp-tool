@@ -243,7 +243,7 @@ assert.match(page,/data-action="restore">引き継ぐ<\/button>/,'restoration ch
 assert.match(page,/data-action="overwrite">新しいデータで上書きする<\/button>/,'overwrite option uses an explicit label at startup and from profile');
 assert.doesNotMatch(page,/data-action="overwrite">新しく始める<\/button>/,'old ambiguous overwrite label is gone');
 assert.match(page,/<dialog id="googleDriveOverwriteDialog" class="name-dialog"/,'destructive overwrite requires its own confirmation');
-assert.match(page,/data-action="back">戻る<\/button>/,'overwrite can be canceled');
+assert.match(page,/data-action="back" aria-label="戻る">✕<\/button>/,'overwrite can be canceled by the original X, with accessible action name');
 assert.match(page,/data-action="confirm">上書きする<\/button>/,'overwrite requires a separate explicit confirmation');
 assert.match(css,/#googleDriveConflictDialog \[data-action="overwrite"\],#googleDriveOverwriteDialog \[data-action="confirm"\]\{background:linear-gradient\(#d9494f,#941f32\)/,'both destructive actions are red');
 assert.match(page,/<p id="googleDriveOverwriteWarning">上書きすると以前のバックアップは失われます。<\/p>/,'overwrite warning can be hidden when overwrite is forbidden');
