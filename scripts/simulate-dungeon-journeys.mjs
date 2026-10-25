@@ -190,6 +190,17 @@ function pack(state,start,goal,rankItems=true){
    }
   }
  const allocated=new Map();
+ // A single cure against every actually authored hostile status should be
+ // packed before duplicate cures for common statuses. The stock must be
+ // genuinely owned and the normal carry limit applies to the entire kit.
+ for(const [attribute] of [...pressure].sort((a,b)=>b[1]-a[1])){
+  if(selected.length>=cap)break;
+  const i=specific.findIndex(item=>item.id==='clear_'+attribute);
+  if(i<0)continue;
+  const [item]=specific.splice(i,1);
+  selected.push(item);
+  allocated.set(attribute,1);
+ }
  while(selected.length<cap&&specific.length){
   let best=-1,bestScore=-Infinity;
   for(let i=0;i<specific.length;i++){
