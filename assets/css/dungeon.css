@@ -59,15 +59,9 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .item-picker-name{flex:1;min-width:0;overflow-wrap:anywhere}
 .item-picker-count{flex:none;color:var(--gold);font-variant-numeric:tabular-nums}
 .item-picker-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px 12px 12px;border-top:1px solid #d2aa7250}
-.item-picker-options .picker-option{min-height:75px;gap:8px;border-radius:8px;justify-content:center}
-.item-picker-options .picker-item-icon{flex:0 0 40px;width:40px;font-size:29px}
-.item-picker-options .picker-label small{margin:0;font-size:12px;line-height:1.5}
 @media(max-width:630px){
  .item-picker-summary{min-height:48px;padding:10px 12px}
  .item-picker-options{gap:6px;padding:8px}
- .item-picker-options .picker-option{min-height:68px;gap:4px;padding:7px 4px!important}
- .item-picker-options .picker-item-icon{flex-basis:30px;width:30px;font-size:25px}
- .item-picker-options .picker-label small{font-size:11px}
 }
 @media(prefers-reduced-motion:reduce){.item-picker-chevron{transition:none}}
 
