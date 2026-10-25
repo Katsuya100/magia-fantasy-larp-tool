@@ -81,6 +81,21 @@ export function itemGrid(slots,inventory,capacity,unlocked,itemName,escapeText,a
      +'</button>';
    }).join('')+'</div>';
 }
+// Alchemy mirrors the spell loadout: the button holds only the icon, while
+// the item name and effect live in a separate, same-height information panel.
+export function alchemyItemGrid(slots,inventory,itemName,escapeText){
+ return '<div class="loadout-grid" role="group" aria-label="錬金素材">'
+  +slots.slice(0,5).map((inventoryIndex,index)=>{
+   const item=Number.isInteger(inventoryIndex)?inventory[inventoryIndex]:null;
+   return '<div class="alchemy-item-frame">'
+    +'<button type="button" class="loadout-tile '+(item?'equipped':'empty')+'" data-open-alchemy-item="'+index+'" aria-label="錬金素材 '+(index+1)+'枠目'+(item?' '+escapeText(itemName(item))+'・'+escapeText(itemEffectText(item)):' 空き')+'">'
+    +'<span class="tile-index">'+String(index+1).padStart(2,'0')+'</span>'
+    +'<span class="tile-item-icon" aria-hidden="true">'+(item?itemSymbol(item):'＋')+'</span></button>'
+    +(item?'<div class="alchemy-item-info" aria-hidden="true"><span class="alchemy-item-name">'+escapeText(itemName(item))+'</span><span class="alchemy-item-effect">'+escapeText(itemEffectIcons(item))+'</span></div>':'')
+    +'</div>';
+  }).join('')+'</div>';
+}
+
 // Highlight every equipped choice, including when the picker is sorted or filtered.
 // The editing slot receives a second focus indicator; choosing another equipped
 // entry still uses the existing swap behavior.

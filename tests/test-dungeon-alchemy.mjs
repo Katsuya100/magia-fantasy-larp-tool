@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {alchemyRecipe,alchemyAutoSelect,craftAlchemy,alchemyByproductRates,alchemyMilestones} from '../assets/js/dungeon-alchemy.mjs';
+import {alchemyItemGrid,itemGrid} from '../assets/js/dungeon-preparation-ui.mjs';
 
 const csv=readFileSync(new URL('../assets/data/dungeon-consumables.csv',import.meta.url),'utf8').trim().split(/\r?\n/);
 const keys=csv.shift().split(',');
@@ -134,6 +135,27 @@ assert.match(page,/id="alchemyCreatedIcon"/);
 assert.match(page,/id="alchemyRevealDone"/);
 assert.match(app,/\$\('alchemyInputs'\)\.hidden=true;\s*\$\('alchemyReveal'\)\.hidden=false;/);
 assert.match(app,/await saveProfile\(db,next\);[\s\S]*?\$\('alchemyCreatedIcon'\)\.textContent=itemSymbol\(item\)/);
+// Only alchemy splits the selectable icon square from its name/effect panel.
+const visible=alchemyItemGrid([0,1,2,null,4],five('heal_s',25),item=>item.id,x=>x);
+assert.equal((visible.match(/class="alchemy-item-frame"/g)||[]).length,5);
+assert.equal((visible.match(/data-open-alchemy-item=/g)||[]).length,5);
+assert.equal((visible.match(/class="alchemy-item-info"/g)||[]).length,4);
+assert.equal((visible.match(/class="alchemy-item-effect"/g)||[]).length,4);
+assert.equal((visible.match(/❤️\+25/g)||[]).length,4);
+assert.match(visible,/data-open-alchemy-item="3"[^>]*>[^<]*<span class="tile-index">04<\/span><span class="tile-item-icon" aria-hidden="true">＋<\/span><\/button>/);
+assert.doesNotMatch(visible,/class="tile-title"/,'names are below, not inside, icon squares');
+assert.doesNotMatch(itemGrid([0],five('heal_s',25),1,true,item=>item.id,x=>x),/alchemy-item-frame/,'other loadouts use their existing layout');
+assert.match(app,/alchemyItemGrid\(choices,profile\.inventory,itemName,esc\)/);
+assert.match(css,/#alchemySlots \.alchemy-item-frame\{[^}]*flex-direction:column/);
+assert.match(css,/#alchemySlots \.alchemy-item-frame \.loadout-tile\{[^}]*aspect-ratio:1 \/ 1/);
+assert.match(css,/#alchemySlots \.alchemy-item-info\{[^}]*min-height:54px/);
+assert.match(css,/#alchemySlots \.alchemy-item-name\{[^}]*white-space:nowrap/);
+assert.match(css,/#alchemySlots \.alchemy-item-effect\{[^}]*white-space:nowrap/);
+// The base collection icon is the same SVG and .relic-art sizing as the collection grid.
+assert.match(page,/id="alchemyBaseRelic"[^>]*class="alchemy-base-relic relic-card discovered"/);
+assert.match(page,/id="alchemyBaseIcon" class="relic-art"/);
+assert.match(app,/\$\('alchemyBaseIcon'\)\.innerHTML=relicSymbolSvg\(relicIndex,true\)/);
+assert.match(css,/\.alchemy-base-relic \.relic-art\{margin:5px auto 10px\}/);
 assert.match(css,/@keyframes alchemy-materialize/);
 assert.match(css,/prefers-reduced-motion:reduce[^\n]*\.alchemy-ring/);
 
