@@ -12,8 +12,12 @@ export function depthRetunedEnemies(original){
   const band=Math.floor((layer-1)/10)*10+1;
   const factor=bandFactors[band];
   if(!factor)return {...row};
+  // Preserve the exact integer-boundary outcome of the final two depth
+  // refinements. These are authored CSV values, never runtime multipliers.
+  const initialHp=Math.max(20,Math.round(Number(row.hp)*factor[0]));
+  const finalFactor=band===31?.91:band===51?.83:1;
   return {...row,
-   hp:String(Math.max(20,Math.round(Number(row.hp)*factor[0]))),
+   hp:String(Math.max(20,Math.round(initialHp*finalFactor))),
    mag:String(Math.max(1,Math.round(Number(row.mag)*factor[1])))};
  });
 }
