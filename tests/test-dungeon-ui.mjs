@@ -42,7 +42,7 @@ try{
  assert.equal($('circleFirstChoiceDialog').open,false,'choice closes after saving');
  assert.equal($('circleDrawingDialog').open,true,'draw option opens the drawing editor directly');
  assert.equal($('circleDrawingLessonDialog').open,true,'first spell entry explains the handwritten spell');
- assert.equal($('tutorialTitle').textContent,'呪文を書きましょう');
+ assert.equal($('tutorialTitle').textContent,'呪文を英語で書きましょう');
  await $('circleDrawingLessonClose').fire('click');
  assert.equal($('circleDrawingLessonDialog').open,false);
   await $('circleDrawingPowerTips').fire('click');
