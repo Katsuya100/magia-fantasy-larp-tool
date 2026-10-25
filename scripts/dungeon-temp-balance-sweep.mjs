@@ -117,37 +117,41 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
 }
 
 
-/* TEMPORARY: diagnostic only; all actual acceptance uses original strict 256. */
+/* TEMPORARY: verify real 256 seeded generated heroes against original combat code. */
 import {combatFixture,specFor} from './dungeon-readiness-reference.mjs';
 const pristine=data,seed=i=>37011+13*i;
-const bases=Array.from({length:40},(_,i)=>G.startingBase(rng(17011+13*i)));
-const median=a=>a.length?[...a].sort((x,y)=>x-y)[Math.floor(a.length/2)]:null;
-for(let from=21;from<=91;from+=10){
- const out=[];
- for(const hp of [1,1.15,1.3,1.5,1.8,2.1]){
-  for(const mag of [.15,.25,.35,.45,.55]){
-   data={...pristine,enemies:pristine.enemies.map((e,j)=>{
-    const layer=Math.floor(j/5)+1;
-    if(layer<from||layer>=from+10)return e;
-    return {...e,hp:String(Math.max(20,Math.round(Number(e.hp)*hp))),
-      mag:String(Math.max(1,Math.round(Number(e.mag)*mag)))};
-   })};
-   configure(data);
-   for(const scale of [.1,.3,.5,.7,.9,1]){
-    recoveryScale=scale;
-    let wins=0,mps=[];
-    for(let i=0;i<40;i++){
-     const got=challenge(combatFixture(specFor(from),bases[i]),from,seed(i));
-     if(got.won){wins++;mps.push(got.endMp);}
-    }
-    out.push({hp,mag,scale,wins,rate:Number((wins/40*100).toFixed(1)),mp:median(mps)});
-   }
+const bases=Array.from({length:256},(_,i)=>G.startingBase(rng(17011+13*i)));
+const mid=a=>a.length?[...a].sort((x,y)=>x-y)[Math.floor((a.length-1)/2)]:null;
+const variants={
+ 11:[[1,.25],[1,.35],[1,.45],[1.15,.35]],
+ 21:[[1.5,.45],[1.3,.55],[1.8,.35],[1,.45],[1.3,.45],[1.8,.25]],
+ 31:[[1.5,.35],[1,.35],[1.3,.35],[1.15,.45],[1.8,.25],[1.5,.25]],
+ 41:[[1,.55],[1.3,.45],[1.5,.25],[1,.35],[1.15,.55],[1.5,.45]],
+ 51:[[1.3,.45],[1.5,.45],[2.1,.35],[1,.35],[1.5,.35],[1.3,.55]],
+ 61:[[1.3,.35],[1.3,.45],[1.8,.15],[1.5,.35],[1.8,.25],[1.15,.55]],
+ 71:[[1.8,.15],[1.3,.35],[1.5,.35],[1.3,.15],[2.1,.15],[1.15,.45]],
+ 81:[[1.15,.55],[1.3,.35],[1.5,.45],[2.1,.25],[1.5,.55],[1.3,.55]],
+ 91:[[2.1,.15],[1.3,.25],[1.5,.25],[1.5,.35],[1.8,.25],[1.3,.35]]
+};
+for(const [fromText,combos] of Object.entries(variants)){
+ const from=+fromText,out=[];
+ for(const [hp,mag] of combos){
+  data={...pristine,enemies:pristine.enemies.map((e,j)=>{
+   const layer=Math.floor(j/5)+1;
+   if(layer<from||layer>=from+10)return e;
+   return {...e,hp:String(Math.max(20,Math.round(Number(e.hp)*hp))),
+    mag:String(Math.max(1,Math.round(Number(e.mag)*mag)))};
+  })};
+  configure(data);recoveryScale=.5;
+  let wins=0,mps=[],hpEnd=[],losingMp=[];
+  for(let i=0;i<256;i++){
+   const got=challenge(combatFixture(specFor(from),bases[i]),from,seed(i));
+   if(got.won){wins++;mps.push(got.endMp);hpEnd.push(got.endHp);}
+   else losingMp.push(got.endMp);
   }
+  out.push({hp,mag,wins,rate:Number((100*wins/256).toFixed(3)),
+    medianMp:mid(mps),medianHp:mid(hpEnd),loserMp:mid(losingMp),
+    pass:wins>=(from===11?254:236)&&wins<=(from===11?256:243)&&mid(mps)<=15});
  }
- const ranked=out.sort((a,b)=>{
-  const score=x=>Math.abs(x.rate-93.5)*6+Math.max(0,(x.mp??100)-15)*1.2;
-  return score(a)-score(b);
- });
- console.log('HP_SWEEP '+JSON.stringify({from,top:ranked.slice(0,16),met:ranked.filter(x=>x.rate>=90&&x.rate<=97&&x.mp!==null&&x.mp<=15).slice(0,12),
-  range:ranked.filter(x=>x.rate>=90&&x.rate<=97).length}));
+ console.log('VERIFY_256 '+JSON.stringify({from,scale:.5,variants:out}));
 }
