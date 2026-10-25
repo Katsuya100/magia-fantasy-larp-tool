@@ -118,4 +118,27 @@ assert.match(selectedItems,/data-choose-item="0" aria-pressed="true"[^>]*選択�
 assert.equal((itemChoices(inventory,[],itemName,esc).match(/picker-selected/g)||[]).length,0,'unselected items never glow');
 assert.equal((circleChoices(circles,[],makeImg,esc).match(/picker-selected/g)||[]).length,0,'unselected circles never glow');
 assert.equal((itemChoices(inventory,[0],itemName,esc,[2,1,0]).match(/picker-selected/g)||[]).length,1,'the inventory index survives sorting');
+
+const groupedInventory=[
+ {id:'heal_s',value:20},{id:'mana_s',value:12},{id:'heal_s',value:30},
+ {id:'heal_s',value:50,bonus:'buff_flame'},{id:'mana_s',value:24}
+];
+const groupedHtml=itemChoices(groupedInventory,[2,null,4],itemName,esc,[4,2,0,3,1],0);
+assert.equal((groupedHtml.match(/<details class="item-picker-group">/g)||[]).length,2,'same-name items are one accordion');
+assert.equal((groupedHtml.match(/<summary class="item-picker-summary">/g)||[]).length,2,'each group has a native keyboard toggle');
+assert.doesNotMatch(groupedHtml,/<details[^>]*\\sopen(?:\\s|>|=)/,'every group starts collapsed');
+assert.match(groupedHtml,/class="item-picker-name">mana_s<\\/span><span class="item-picker-count">×2<\\/span>/);
+assert.match(groupedHtml,/class="item-picker-name">heal_s<\\/span><span class="item-picker-count">×3<\\/span>/);
+assert.equal((groupedHtml.match(/class="item-picker-options"/g)||[]).length,2,'each accordion shows its own item grid');
+assert.equal((groupedHtml.match(/data-choose-item=/g)||[]).length,5,'each instance stays individually selectable');
+assert.match(groupedHtml,/data-choose-item="2" aria-pressed="true"[^>]*選択中 1枠目/);
+assert.match(groupedHtml,/data-choose-item="4" aria-pressed="true"[^>]*選択中 3枠目/);
+assert.match(groupedHtml,/❤️\\+50 ⚔️↑/,'different bonuses remain visible within the same group');
+assert.equal((groupedHtml.match(/picker-option picker-selected/g)||[]).length,2);
+assert.equal((groupedHtml.match(/picker-option picker-selected picker-current/g)||[]).length,1);
+const alchemyHtml=itemChoices(groupedInventory,[2],itemName,esc,[3,2,0,1,4],0,'choose-alchemy-item');
+assert.match(alchemyHtml,/<details class="item-picker-group">/,'alchemy uses the same accordion');
+assert.equal((alchemyHtml.match(/data-choose-alchemy-item=/g)||[]).length,5);
+assert.match(alchemyHtml,/data-choose-alchemy-item="2" aria-pressed="true"[^>]*選択中 1枠目/);
+assert.doesNotMatch(alchemyHtml,/<details[^>]*\\sopen(?:\\s|>|=)/);
 console.log('PASS indexed five-column spell/item slots, swap, upgrades, legacy data and picker markup');
