@@ -145,6 +145,10 @@ assert.match(page,/<select id="alchemyAutoPriority"><option value="value-asc" se
 assert.match(page,/id="alchemyPickerSort"[^>]*>[\s\S]*?<option value="count">数が多い順<\/option>/);
 assert.match(app,/\['count','数が多い順'\]/,'alchemy picker has count sorting option');
 assert.match(app,/\['default','入手順'\]/);
+assert.match(page,/<select id="alchemyPickerSort"><option value="kind">種類順<\/option>/,'alchemy defaults to kind');
+assert.match(app,/const alchemyPickerView=\{filter:'all',sort:'kind',previousSort:'default'\}/);
+assert.match(app,/alchemyPickerView\.previousSort=value/,'alchemy remembers the previously selected secondary sort');
+assert.doesNotMatch(app,/\['clear_all','全状態異常解除'\]/,'Luna Stone is included in the status recovery type');
 assert.match(page,/id="alchemyReveal"[^>]*hidden/);
 assert.match(page,/id="alchemyCreatedIcon"/);
 assert.match(page,/id="alchemyRevealDone"/);
