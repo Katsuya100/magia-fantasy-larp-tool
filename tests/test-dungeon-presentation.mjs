@@ -225,6 +225,10 @@ assert.match(css,/\.picker-option\.picker-selected\{\s*border:1px solid #f2cf81!
 const app=await read('assets/js/dungeon-app.mjs');
 assert.doesNotMatch(app,/startLayerHint|10層ごとの冒険者章を獲得すると開始階層が増えます。/,'hint must not reappear after JS starts');
 assert.match(app,/className=picker\.kind==='circle'\?'picker-grid circle-picker-grid':'item-picker-list'/,'item picker uses the shared accordion layout');
+assert.match(app,/item:\{filter:'all',sort:'kind',previousSort:'default'\}/,'kind is the default only for item picker');
+assert.match(app,/picker\.kind==='item'&&value!=='kind'\)view\.previousSort=value/,'preparation picker remembers last sorting when kind is reselected');
+assert.doesNotMatch(css,/\.item-picker-options \.picker-option\{/, 'original item button spacing and alignment must not be overridden');
+assert.doesNotMatch(css,/\.item-picker-options \.picker-label small\{/, 'original item effect text style must not be overridden');
 assert.match(app,/run\.checkpointBattleScrollY=window\.scrollY/,'boss victory captures the battle scroll before showing checkpoint');
 assert.match(app,/restoreContinuedBattleScroll\(previousScroll\)/,'continuing deeper restores the original battle scroll');
 assert.match(app,/if\(terminalSwap&&before!==name&&\(before==='battle'/,'other return transitions retain their previous navigation behavior');
