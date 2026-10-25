@@ -1693,6 +1693,7 @@ function openNameDialog(required){
  dialog.dataset.dungeonFrame=required?'fixed':'closable';
  $('nameDialogHeader').hidden=required;
  $('nameDialogHeaderTitle').textContent=$('nameDialogTitle').textContent;
+ dialog.setAttribute('aria-labelledby',required?'nameDialogTitle':'nameDialogHeaderTitle');
  $('nameDialogTitle').hidden=!required;
  $('cancelNameDialog').hidden=required;
  if(!dialog.open)showDungeonDialog(dialog);
