@@ -117,7 +117,7 @@ import {combatFixture,specFor} from './dungeon-readiness-reference.mjs';
 const pristine=data;
 const originalHeroBases=Array.from({length:256},(_,i)=>G.startingBase(rng(17011+13*i)));
 function med(values){if(!values.length)return null;values.sort((a,b)=>a-b);return (values[Math.floor((values.length-1)/2)]+values[Math.floor(values.length/2)])/2;}
-const matrix={"31":[[1,1],[0.965,1],[0.95,1],[0.93,1],[1,0.95],[1,0.9],[1,0.85],[0.97,0.96],[0.96,0.94]],"51":[[1,1],[0.9,1],[0.87,1],[0.84,1],[1,0.95],[1,0.9],[1,0.85],[0.92,0.9],[0.9,0.9],[0.85,0.9]]};
+const matrix={"31":[[0.92,1],[0.91,1],[0.9,1],[0.89,1],[0.88,1],[0.86,1],[0.84,1],[0.92,0.85],[0.94,0.85],[0.96,0.85],[1,0.82]],"51":[[0.84,1],[0.85,1],[0.83,1],[0.82,1],[0.86,1],[0.84,0.85]]};
 for(const [key,pairs] of Object.entries(matrix)){
  const from=Number(key);
  const result=[];
