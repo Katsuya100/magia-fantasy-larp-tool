@@ -32,6 +32,8 @@ const sourceHashes=Object.fromEntries([
  'scripts/dungeon-balance-encounters.mjs',
  'scripts/simulate-dungeon-journeys.mjs',
  'scripts/dungeon-coherent-battle.mjs',
+ 'scripts/dungeon-readiness-reference.mjs',
+ 'config/dungeon-recommended-reference-candidate.v1.json',
  'config/dungeon-approved-goals.v1.json'
 ].map(p=>[p,createHash('sha256').update(readFileSync(new URL('../'+p,import.meta.url))).digest('hex')]));
 const seeds=Array.from({length:goals.strictSamples},(_,i)=>17011+13*i);
@@ -168,7 +170,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
      unbankedInk:snap.unbankedInk,actualFights:snap.actualFights,
      actualSorties:snap.actualSorties,actualLosses:snap.actualLosses,
      actualReturns:snap.actualReturns,source:snap.source,status:snap.status};
-   })
+   }),
+   reference:goals.bands.map(b=>run.referenceSnapshots[b.from]??null),
+   lastReadiness:goals.bands.map(b=>run.referenceLastAttempt[b.from]??null),
+   farming:goals.bands.map(b=>run.farmingSnapshots[b.from]??[])
   });
   for(const [i,e] of entries.entries()){
    const snap=run.entrySnapshots[e.band];

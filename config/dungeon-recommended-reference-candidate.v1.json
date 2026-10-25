@@ -1,0 +1,236 @@
+{
+  "schemaVersion": "dungeon-recommended-reference-candidate-v1",
+  "status": "CANDIDATE_NOT_USER_APPROVED",
+  "approval": "Requires explicit user review; cannot certify combat balance until approved",
+  "evidence": "Existing fixed five authored journey circles; 16-sample 2026-10-24 first-entry long-route upgrade medians as a frozen proposal, NOT a demonstrated 50-fight loadout",
+  "caveats": [
+    "Start levels are preceding checkpoint levels, NOT the ending boss level; in-sortie EXP remains unbanked until a legal return",
+    "Upgrade levels are candidates, not proven affordable within a journey. Actual stones and ink must be accounted for by JOURNEY_READINESS",
+    "Seven specialist cleansers and two Luna Stones at 71F+ are combat reference inventory hypotheses only; never grant them in the economic simulation",
+    "Rank prerequisite is the previous earned decade badge and cannot be assumed for real owner accounts",
+    "No alchemy. Reference inventory and rank represent *conditional* legal equipment, not an assertion that any sampled account owns them",
+    "No rank-potions, HP/MP recovery or resurrection consumables; rank attempts are evaluated separately"
+  ],
+  "spells": [
+    {
+      "role": "attack",
+      "attribute": "flame",
+      "basePower": 360
+    },
+    {
+      "role": "attack",
+      "attribute": "bolt",
+      "basePower": 420
+    },
+    {
+      "role": "attack",
+      "attribute": "gravity",
+      "basePower": 540
+    },
+    {
+      "role": "support",
+      "attribute": "aqua",
+      "basePower": 320
+    },
+    {
+      "role": "defense",
+      "attribute": "law",
+      "basePower": 270
+    }
+  ],
+  "bands": [
+    {
+      "from": 1,
+      "to": 10,
+      "startLevel": 1,
+      "endingCheckpointLevel": 19,
+      "requiredPriorRank": 0,
+      "upgrades": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "requiredItems": {}
+    },
+    {
+      "from": 11,
+      "to": 20,
+      "startLevel": 19,
+      "endingCheckpointLevel": 37,
+      "requiredPriorRank": 10,
+      "upgrades": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "requiredItems": {}
+    },
+    {
+      "from": 21,
+      "to": 30,
+      "startLevel": 37,
+      "endingCheckpointLevel": 55,
+      "requiredPriorRank": 20,
+      "upgrades": [
+        2,
+        2,
+        2,
+        1,
+        0
+      ],
+      "requiredItems": {}
+    },
+    {
+      "from": 31,
+      "to": 40,
+      "startLevel": 55,
+      "endingCheckpointLevel": 72,
+      "requiredPriorRank": 30,
+      "upgrades": [
+        4,
+        3,
+        7,
+        3,
+        0
+      ],
+      "requiredItems": {}
+    },
+    {
+      "from": 41,
+      "to": 50,
+      "startLevel": 72,
+      "endingCheckpointLevel": 87,
+      "requiredPriorRank": 40,
+      "upgrades": [
+        7,
+        6,
+        7,
+        7,
+        0
+      ],
+      "requiredItems": {}
+    },
+    {
+      "from": 51,
+      "to": 60,
+      "startLevel": 87,
+      "endingCheckpointLevel": 102,
+      "requiredPriorRank": 50,
+      "upgrades": [
+        10,
+        10,
+        10,
+        9,
+        0
+      ],
+      "requiredItems": {
+        "clear_flame": 1,
+        "clear_bolt": 1,
+        "clear_aqua": 1,
+        "clear_storm": 1,
+        "clear_gravity": 1,
+        "clear_law": 1,
+        "clear_chaos": 1
+      }
+    },
+    {
+      "from": 61,
+      "to": 70,
+      "startLevel": 102,
+      "endingCheckpointLevel": 115,
+      "requiredPriorRank": 60,
+      "upgrades": [
+        13,
+        12,
+        12,
+        12,
+        0
+      ],
+      "requiredItems": {
+        "clear_flame": 1,
+        "clear_bolt": 1,
+        "clear_aqua": 1,
+        "clear_storm": 1,
+        "clear_gravity": 1,
+        "clear_law": 1,
+        "clear_chaos": 1
+      }
+    },
+    {
+      "from": 71,
+      "to": 80,
+      "startLevel": 115,
+      "endingCheckpointLevel": 128,
+      "requiredPriorRank": 70,
+      "upgrades": [
+        15,
+        15,
+        15,
+        15,
+        0
+      ],
+      "requiredItems": {
+        "clear_flame": 1,
+        "clear_bolt": 1,
+        "clear_aqua": 1,
+        "clear_storm": 1,
+        "clear_gravity": 1,
+        "clear_law": 1,
+        "clear_chaos": 1,
+        "luna_stone": 2
+      }
+    },
+    {
+      "from": 81,
+      "to": 90,
+      "startLevel": 128,
+      "endingCheckpointLevel": 139,
+      "requiredPriorRank": 80,
+      "upgrades": [
+        19,
+        18,
+        18,
+        18,
+        0
+      ],
+      "requiredItems": {
+        "clear_flame": 1,
+        "clear_bolt": 1,
+        "clear_aqua": 1,
+        "clear_storm": 1,
+        "clear_gravity": 1,
+        "clear_law": 1,
+        "clear_chaos": 1,
+        "luna_stone": 2
+      }
+    },
+    {
+      "from": 91,
+      "to": 100,
+      "startLevel": 139,
+      "endingCheckpointLevel": 150,
+      "requiredPriorRank": 90,
+      "upgrades": [
+        22,
+        22,
+        22,
+        22,
+        0
+      ],
+      "requiredItems": {
+        "clear_flame": 1,
+        "clear_bolt": 1,
+        "clear_aqua": 1,
+        "clear_storm": 1,
+        "clear_gravity": 1,
+        "clear_law": 1,
+        "clear_chaos": 1,
+        "luna_stone": 2
+      }
+    }
+  ]
+}

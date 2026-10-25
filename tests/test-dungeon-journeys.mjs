@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {buildManifest} from '../scripts/dungeon-balance-manifest.mjs';
+import {specFor,assess} from '../scripts/dungeon-readiness-reference.mjs';
 import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
@@ -226,6 +227,20 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    snap.carry.length+snap.bankedInventory.length);
  }
  assert.ok(Object.keys(run.preparedSnapshots).length<=10);
+ // Frozen reference is separate from the legacy end-of-decade level gate.
+ for(const [floor,snap] of Object.entries(run.referenceSnapshots)){
+  const s=specFor(Number(floor));
+  assert.equal(snap.targetLevel,s.startLevel);
+  assert.equal(snap.source,'POST_RETURN_BANKED_AND_INVESTED');
+  assert.ok(assess(snap,s).ready,'reference reached only with real levels, power and carried items');
+  assert.ok(snap.actualFights<=run.fights&&snap.actualReturns<=run.returns);
+  for(const [i,extra] of (run.farmingSnapshots[floor]||[]).entries()){
+   assert.equal(extra.completedExtraLoops,i+1);
+   assert.ok(extra.additionalBankedReplayFights>=50*(i+1));
+   assert.ok(extra.earned.stone>=snap.earned.stone);
+   assert.ok(extra.earned.ink>=snap.earned.ink);
+  }
+ }
 
  // Per-battle intro prohibition is asserted inside the simulator itself.
  if(style==='B')assert.equal(run.circles.length,8);

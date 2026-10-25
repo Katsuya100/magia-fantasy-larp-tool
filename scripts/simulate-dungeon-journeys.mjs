@@ -13,6 +13,7 @@ import {allowedStartLayer,unlockedStartLayers,rankBadgeDrop,acquireAdventurerRan
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
+import {specFor,assess} from './dungeon-readiness-reference.mjs';
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
@@ -382,10 +383,64 @@ function observePrepared(state){
    unbankedXp:0,unbankedStone:0,unbankedInk:0,
    actualFights:state.fights,actualSorties:state.sorties,
    actualLosses:state.losses,actualReturns:state.returns,
+   repeatedFights:state.replayedFights,bankedExperience:state.bankedXp,
    source:'POST_RETURN_BANKED_AND_INVESTED',
    status:'PREPARED_FROM_ACTUAL_ECONOMY_NOT_FROM_BATTLE_OUTCOME'};
   if(carry.length>G.capacity(p.level))throw Error('Prepared carrying capacity exceeded');
   state.preparedSnapshots[band]=snapshot;
+ }
+}
+
+// Independent proposed reference readiness, never a revision of the existing
+// final-boss-level prepared snapshot, never decided using combat victories.
+function observeReference(state){
+ const p=state.profile;
+ const starts=unlockedStartLayers(p);
+ for(let band=1;band<=91;band+=10){
+  const s=specFor(band),to=band+9;
+  if(state.best<band-1||!starts.includes(band)||p.level<s.startLevel)continue;
+  const baseline=state.referenceSnapshots[band];
+  const completed=state.farmingSnapshots[band]?.length||0;
+  const extra=baseline&&completed<3&&
+   state.replayBanked[band]-state.referenceReplayAt[band]>=50*(completed+1);
+  if(baseline&&!extra)continue;
+  const active=state.circles.filter(c=>c.active);
+  if(active.length!==5)continue;
+  const hero=G.makeUnit(state.playerBase,p.level,{},equipped(state.circles),'hero');
+  const copy={...state,inventory:[...state.inventory]};
+  const carry=pack(copy,band,to,false);
+  const snapshot={layer:band,to,sortie:state.sorties,level:p.level,
+   targetLevel:s.startLevel,rank:p.adventurerRank,xp:p.xp,
+   bankedStones:state.stones,bankedInk:state.ink,
+   earned:{...state.earned},spent:{...state.spent},
+   circles:active.map(c=>({role:c.role,attribute:c.attribute,
+    basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
+    mpCost:G.mpCost(c.basePower),ink:c.ink})),
+   carry:carry.map(item=>({...item})),
+   bankedInventory:copy.inventory.map(item=>({...item})),
+   playerBase:{...hero.base},playerHp:hero.hp,playerMp:hero.mp,
+   maxHp:hero.stats.hp,maxMp:hero.maxMp,cooldowns:[...hero.cooldowns],
+   statuses:hero.statuses.map(x=>({...x})),
+   unbankedXp:0,unbankedStone:0,unbankedInk:0,
+   actualFights:state.fights,actualSorties:state.sorties,
+   actualLosses:state.losses,actualReturns:state.returns,
+   source:'POST_RETURN_BANKED_AND_INVESTED'};
+  const check=assess(snapshot,s);
+  if(!baseline){
+   state.referenceLastAttempt[band]={level:p.level,sorties:state.sorties,
+    fights:state.fights,reasons:check.reasons};
+   if(check.ready){
+    state.referenceSnapshots[band]={...snapshot,status:'ACTUAL_OWNER_CANDIDATE_READY'};
+    state.referenceReplayAt[band]=state.replayBanked[band];
+   }
+  }else if(extra){
+   // One measured extra loop = fifty actually banked repeated encounters in
+   // this decade, not an invented free upgrade or cloned player inventory.
+   state.farmingSnapshots[band]??=[];
+   state.farmingSnapshots[band].push({...snapshot,
+    completedExtraLoops:completed+1,
+    additionalBankedReplayFights:state.replayBanked[band]-state.referenceReplayAt[band]});
+  }
  }
 }
 function commit(state,pending,unused,bestLayer){
@@ -417,7 +472,13 @@ function commit(state,pending,unused,bestLayer){
  // stones. Do not send C into the next sortie with its sunk upgrades gone
  // while affordable replacements sit unused in the bank.
  considerInkRedraw(state);invest(state);
+ for(const row of state.floorAudit){
+  if(row.sortie!==state.sorties||!row.banked||!row.replay||!row.cleared)continue;
+  const band=10*Math.floor((row.layer-1)/10)+1;
+  state.replayBanked[band]+=row.attemptedFights;
+ }
  observePrepared(state);
+ observeReference(state);
 }
 function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked){
  const foe=encounterForFight(fight);
@@ -461,7 +522,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
   rankAudit:[],floorAudit:[],
-  entrySnapshots:{},preparedSnapshots:{},
+  entrySnapshots:{},preparedSnapshots:{},referenceSnapshots:{},referenceLastAttempt:{},
+  farmingSnapshots:{},referenceReplayAt:{},replayBanked:Object.fromEntries(Array.from({length:10},(_,i)=>[10*i+1,0])),
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
   recoveryInitialGap:null,recoveryRemainingGap:null};
@@ -533,7 +595,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    if(layer%10===1&&!state.entrySnapshots[layer]){
     state.entrySnapshots[layer]={layer,sortie:state.sorties,level:firstLevel,
      targetLevel:targetClearLevel(Math.min(100,layer+9)),rank:profile.adventurerRank,
-     xp:profile.xp,bankedStones:state.stones,bankedInk:state.ink,
+     xp:profile.xp,actualFights:state.fights,actualSorties:state.sorties,
+     actualLosses:state.losses,actualReturns:state.returns,
+     bankedStones:state.stones,bankedInk:state.ink,
      earned:{...state.earned},spent:{...state.spent},
      circles:state.circles.filter(c=>c.active).map(c=>({role:c.role,attribute:c.attribute,
       basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
@@ -719,7 +783,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,rankManaUses:state.rankManaUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
   floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,
-  entrySnapshots:state.entrySnapshots,preparedSnapshots:state.preparedSnapshots,blockers:state.blockers};
+  entrySnapshots:state.entrySnapshots,preparedSnapshots:state.preparedSnapshots,
+  referenceSnapshots:state.referenceSnapshots,referenceLastAttempt:state.referenceLastAttempt,
+  farmingSnapshots:state.farmingSnapshots,replayBanked:state.replayBanked,blockers:state.blockers};
 }
 export function summarizeJourneys(samples=16,seed=20261024){
  if(!Number.isSafeInteger(samples)||samples<1||samples>512)throw Error('Invalid economy sample count');
