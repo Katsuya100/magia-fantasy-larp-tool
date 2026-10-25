@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {reference,specFor,assess,stoneCost,combatFixture,expectedPowers} from '../scripts/dungeon-readiness-reference.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {parseCsv} from '../assets/js/dungeon-core.mjs';
 const approved=JSON.parse(readFileSync(new URL('../config/dungeon-approved-goals.v1.json',import.meta.url),'utf8'));
 assert.equal(reference.status,'CANDIDATE_NOT_USER_APPROVED','candidate may not auto-approve');
 assert.equal(approved.strictSamples,256);
@@ -10,6 +11,19 @@ assert.deepEqual(approved.bands.map(x=>x.winRate),[[99,100],[99,100],...Array.fr
 assert.deepEqual(approved.bands.map(x=>x.winSafety),[[99,100],[99,100],...Array.from({length:8},()=>[92,95])]);
 assert.deepEqual(approved.bands.map(x=>x.winnerMedianMp),[[50,100],...Array.from({length:9},()=>[0,15])]);
 assert.equal(approved.rank.bothHpMpPercentAtLeast,80);
+// The candidate's carried cures must correspond to curses actually cast by
+// authored enemies in the same fifty-fight band, never phantom effects.
+const authoredEnemies=parseCsv(readFileSync(new URL('../assets/data/dungeon-enemies.csv',import.meta.url),'utf8'));
+for(const s of reference.bands.filter(x=>x.from>=51)){
+ const foes=authoredEnemies.slice((s.from-1)*5,s.to*5);
+ assert.equal(foes.length,50,'ten authored floors must contain fifty enemies');
+ const encountered=new Set(foes.flatMap(foe=>foe.spells.split('|')
+  .filter(spell=>spell.startsWith('debuff:'))
+  .map(spell=>'clear_'+spell.split(':')[1])));
+ const required=Object.keys(s.requiredItems).filter(id=>id.startsWith('clear_'));
+ assert.deepEqual(required.sort(),[...encountered].sort(),
+  'required cleansers must match real enemy curse attributes in '+s.from+'-'+s.to);
+}
 for(const s of reference.bands){
  assert.equal(s.priorCheckpointLevel,s.from===1?1:targetClearLevel(s.from-1));
  assert.equal(s.startLevel,targetClearLevel(s.to));
