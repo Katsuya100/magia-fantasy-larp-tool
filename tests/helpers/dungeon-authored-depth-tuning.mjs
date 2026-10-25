@@ -16,8 +16,13 @@ export function depthRetunedEnemies(original){
   // refinements. These are authored CSV values, never runtime multipliers.
   const initialHp=Math.max(20,Math.round(Number(row.hp)*factor[0]));
   const finalFactor=band===31?.91:band===51?.83:1;
+  const authoredHp=Math.max(20,Math.round(initialHp*finalFactor));
+  const authoredMag=Math.max(1,Math.round(Number(row.mag)*factor[1]));
+  // F21–30: a more aggressive but less durable opponent profile.
+  // Record the actual CSV edit here so the full-roster provenance test
+  // reproduces gameplay data, rather than weakening the assertion.
   return {...row,
-   hp:String(Math.max(20,Math.round(initialHp*finalFactor))),
-   mag:String(Math.max(1,Math.round(Number(row.mag)*factor[1])))};
+   hp:String(band===21?Math.round(authoredHp*.9):authoredHp),
+   mag:String(band===21?Math.round(authoredMag*1.3):authoredMag)};
  });
 }
