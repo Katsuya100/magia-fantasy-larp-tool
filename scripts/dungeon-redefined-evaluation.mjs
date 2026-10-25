@@ -105,7 +105,7 @@ for(const [bandIndex,goal] of approved.bands.entries()){
   winningMpTarget:goal.winnerMedianMp,issues,actualGoalsMet:!issues.length,
   result:issues.length?'COMBAT_TARGET_UNMET':'COMBAT_TARGET_MET'};
  report.CANDIDATE_COMBAT_DIAGNOSTIC.push(row);combatResults.push(tries);
- console.log('COMBAT_BALANCE '+JSON.stringify(row));
+ console.log('CANDIDATE_COMBAT_DIAGNOSTIC '+JSON.stringify(row));
 }
 for(const cohort of economy.policies){
  assert.equal(cohort.ownerEntries.length,samples);
@@ -180,7 +180,7 @@ for(const cohort of economy.policies){
    return {seed:x.seed,points:snapshots.map((snap,k)=>{
     if(!snap)return null;
     if(k>0)assert.ok(snap.additionalBankedReplayFights>=50*k,'extra loop was not actually banked');
-    const result=challenge(snap,s.from,seed((x.seed-17011)/13),{route:cohort.route});
+    const result=challenge(snap,s.from,seed((x.seed-17011)/13),{route:'short'});
     return {won:result.won,hp:result.endHp,mp:result.endMp,
      level:snap.level,stoneEarned:snap.earned.stone,stoneSpent:snap.spent.stone,
      inkEarned:snap.earned.ink,inkSpent:snap.spent.ink,
