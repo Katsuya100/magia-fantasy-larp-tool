@@ -24,7 +24,7 @@ import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartL
 import {statusBadges} from './dungeon-status-ui.mjs?v=20261025.02';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261025.02';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261025.02';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261025.02';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261025.03';
 import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261025.02';
 import {selectCardCircle} from './dungeon-card-art.mjs?v=20261025.02';
 import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261025.02';
