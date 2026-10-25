@@ -3,8 +3,8 @@ power_scale,20,魔法威力から基礎魔力への変換係数
 power_divisor,100,魔法威力の除数
 mp_base,40,最大MPの固定値
 mp_per_mag,6,MAGあたり最大MP
-mp_cost_base,2,魔法MP消費固定値
-mp_cost_divisor,16,基礎魔力のMP換算
+mp_cost_base,1,魔法MP消費固定値
+mp_cost_divisor,12,基礎魔力のMP換算
 magic_magnitude_divisor,35,状態効果強度の基準
 magic_magnitude_min,0.5,効果強度の最小倍率
 magic_magnitude_max,1.5,効果強度の最大倍率
