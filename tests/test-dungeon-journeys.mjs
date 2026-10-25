@@ -43,8 +43,11 @@ const intro=G.makeUnit({hp:100,mag:10,def:7,res:7},1,{},[],'hero');
 intro.mp=0;
 const earnedAt10=G.recoverVictoryMp(intro,10);
 intro.mp=0;
+const earnedAt1=G.recoverVictoryMp(intro,1);
+intro.mp=0;
 const earnedAt11=G.recoverVictoryMp(intro,11);
-assert.ok(earnedAt10>earnedAt11,'intro victory reward is greater, not a battle recovery spell');
+assert.ok(earnedAt1>earnedAt11,'early intro victories keep greater recovery than later floors');
+assert.ok(earnedAt10<earnedAt1,'6-10F restores less MP through normal victory recovery');
 assert.ok(earnedAt10<=intro.maxMp&&earnedAt11<=intro.maxMp);
 
 assert.equal(G.chooseEnemySpell(
