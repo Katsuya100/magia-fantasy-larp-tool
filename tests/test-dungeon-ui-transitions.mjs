@@ -141,30 +141,8 @@ assert.ok(appended.every(node=>node.removed),'ghosts are removed after the 200ms
 // Frame components: one shared inner container, with exactly three layout
 // variants (closable, fixed, paged). Fullscreen/ceremony surfaces are explicitly
 // excluded. An HTML <dialog> tag alone does not establish the visual category.
-// Opening a compact dialog moves its real close control outside the scroll body.
-const closeButton={parentElement:null};
-const scrollBody={button:closeButton,scrollTop:0,querySelector(){return this.button;}};
-closeButton.parentElement=scrollBody;
-const pinnedDialog={
- dataset:{dungeonFrame:'closable'},open:false,
- querySelector(){return scrollBody;},
- appendChild(button){this.control=button;button.parentElement=this;scrollBody.button=null;},
- showModal(){this.open=true;},close(){this.open=false;}
-};
-showDungeonDialog(pinnedDialog);
-assert.equal(pinnedDialog.control,closeButton,'original button is moved, not duplicated');
-assert.equal(scrollBody.button,null,'close is no longer a child of the scrolled body');
-scrollBody.scrollTop=300;
-assert.equal(closeButton.parentElement,pinnedDialog,'scrolling leaves the control anchored to its dialog');
-closeDungeonDialog(pinnedDialog);
-showDungeonDialog(pinnedDialog);
-assert.equal(pinnedDialog.control,closeButton,'reopening preserves the same control');
-closeDungeonDialog(pinnedDialog);
-scrollBody.button=closeButton;closeButton.parentElement=scrollBody;
-pinnedDialog.dataset.dungeonFrame='fixed';
-showDungeonDialog(pinnedDialog);
-assert.equal(closeButton.parentElement,scrollBody,'fixed confirmations keep their normal actions');
-closeDungeonDialog(pinnedDialog);
+// Native opening must not move existing actions out of their original parents.
+assert.doesNotMatch(await read('assets/js/dungeon-ui-transitions.mjs'),/pinDungeonDialogClose|appendChild\(close\)/);
 
 const closable={
  iconGuideDialog:'closeIconGuide',
@@ -228,12 +206,12 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
 const drawingLessons=['circleDrawingLessonDialog'];
 assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+drawingLessons.length,dialogs.length,'all 24 native dialogs accounted for');
 for(const id of drawingLessons){
- assert.match(tagOf(id),/data-dungeon-frame="fixed"/,'drawing lesson uses a fixed frame without close rail');
+ assert.match(tagOf(id),/data-dungeon-frame="fixed"/,'drawing lesson is a fixed frame without close rail');
  const content=dialogMarkup(id);
  assert.match(content,/<div class="tutorial-sheet dungeon-dialog-frame">/,'lesson retains the shared frame');
- assert.match(content,/<div id="circleDrawingLessonSlot"><\/div>/,'lesson content remains in the normal slot');
- assert.match(content,/<button type="button" id="circleDrawingLessonStart" class="primary-action tutorial-next">描いてみる<\/button>/,'lesson has a single drawing CTA');
- assert.doesNotMatch(content,/dungeon-dialog-close|circleDrawingLessonClose/,'lesson has no close button');
+ assert.match(content,/<div id="circleDrawingLessonSlot"><\/div>/,'lesson content remains in the slot');
+ assert.match(content,/<button type="button" id="circleDrawingLessonStart" class="primary-action tutorial-next">描いてみる<\/button>/,'lesson presents its drawing CTA');
+ assert.doesNotMatch(content,/dungeon-dialog-close|circleDrawingLessonClose/,'no close button in drawing lesson');
 }
 
 const tutorialTag=html.match(/<div id="tutorialOverlay"[^>]+>/)?.[0];
@@ -247,39 +225,30 @@ assert.match(html,/<button type="button" id="tutorialSkip" class="subtle">スキ
 // Required first naming switches from fixed to closable only when rename is allowed.
 assert.match(app,/dialog\.dataset\.dungeonFrame=required\?'fixed':'closable';\s*\$\('cancelNameDialog'\)\.hidden=required;/,'naming changes frame type and button visibility together');
 assert.match(dialogMarkup('nameDialog'),/<button[^>]*id="cancelNameDialog"[^>]*dungeon-dialog-close[^>]*hidden>/);
-// The header control lives *inside the shared frame*, not relative to a
-// screen-specific footer, and has a full reserved top rail above all titles.
+// A scrollable dialog has a real header sibling, never a relocated footer button.
 const frameStyles=css.slice(css.indexOf('/* Reusable dialog *frame*'),css.indexOf('/* Confirmation for the irreversible local-save reset. */'));
-assert.ok(frameStyles.length>1200,'shared component stylesheet exists');
-assert.match(frameStyles,/\.dungeon-dialog-frame\{[\s\S]*?--dungeon-frame-top-rail:74px;/,'shared top rail variable');
-assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="closable"\] > \.dungeon-dialog-frame\{\s*padding-block-start:var\(--dungeon-frame-top-rail\)!important\s*\}/,'all closable frames reserve the same collision-free title row');
-assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="fixed"\] > \.dungeon-dialog-frame/,'fixed frame does not reserve a close rail');
-assert.match(frameStyles,/#tutorialOverlay\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'tutorial overlay remains paged');
-assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'native lesson reserves its header rail');
-assert.match(frameStyles,/dialog:is\(\[data-dungeon-frame="closable"\],\[data-dungeon-frame="paged"\]\)\[open\]\{\s*display:flex;flex-direction:column;overflow:hidden/,'the dialog shell never scrolls');
-assert.match(frameStyles,/> \.dungeon-dialog-frame\{\s*flex:1 1 auto;min-height:0;overflow-y:auto/,'only the inner content frame scrolls');
-assert.match(frameStyles,/#dungeonApp dialog:is\(\[data-dungeon-frame="closable"\],\[data-dungeon-frame="paged"\]\) > button\.dungeon-dialog-close\{/,'one shared close control anchored to the dialog, outside the scroll container');
-const controlStyle=frameStyles.slice(frameStyles.indexOf('button.dungeon-dialog-close{'),frameStyles.indexOf('button.dungeon-dialog-close::after{'));
-for(const prop of [
- 'position:absolute!important','inset-block-start:14px!important','inset-inline-end:14px!important',
- 'width:var(--dungeon-frame-close-size)!important','height:var(--dungeon-frame-close-size)!important',
- 'min-width:var(--dungeon-frame-close-size)!important','max-width:var(--dungeon-frame-close-size)!important',
- 'padding:0!important','margin:0!important','border-radius:50%!important','font-size:0!important',
- 'background:#151725ed!important','color:var(--gold)!important','transform:none!important'
-])assert.ok(controlStyle.includes(prop),'one uniform close style: '+prop);
-assert.ok(14+42<74,'close icon ends before the shared title row');
-assert.match(frameStyles,/dialog:is\(/,'paged lesson and closable dialogs share one button style');
-// The close icon is a symmetric SVG, not a font-dependent X.
-const glyph=css.match(/--dungeon-close-svg:url\("(data:image\/svg\+xml,[^"]+)"\)/);
-assert.ok(glyph);
-const svgMarkup=decodeURIComponent(glyph[1].split(',')[1]);
-assert.match(svgMarkup,/viewBox='0 0 24 24'/);
-assert.match(svgMarkup,/d='M6 6L18 18M18 6L6 18'/);
-assert.match(frameStyles,/width:24px;height:24px;transform:translate\(-50%,-50%\)/);
-assert.match(frameStyles,/-webkit-mask:var\(--dungeon-close-svg\) center \/ contain no-repeat/);
-assert.match(frameStyles,/\bmask:var\(--dungeon-close-svg\) center \/ contain no-repeat/);
-assert.doesNotMatch(frameStyles,/content:"[×✕]"/);
-assert.doesNotMatch(css,/#supportPromptDialog \.support-prompt-inner\{padding-top:62px\}/,'adventurer card no longer needs a one-off padding hack');
+assert.match(frameStyles,/dialog:has\(> \.dungeon-dialog-header\)\[open\]/,'shell only scrolls its body');
+assert.match(frameStyles,/flex:1 1 auto;min-height:0;overflow-y:auto/,'inner content scrolls independently');
+assert.match(frameStyles,/min-height:74px/,'shared stationary header');
+assert.match(frameStyles,/button\.dungeon-dialog-close-icon\{/,'icon style only for header buttons');
+assert.doesNotMatch(frameStyles,/\.dungeon-dialog-frame button\.dungeon-dialog-close\{/,'footer actions are not restyled');
+const controlStyle=frameStyles.slice(frameStyles.indexOf('button.dungeon-dialog-close-icon{'),frameStyles.indexOf('button.dungeon-dialog-close-icon::after{'));
+for(const value of ['border-radius:50%!important','background:#151725ed!important','color:var(--gold)!important','width:var(--dungeon-frame-close-size,42px)!important']){
+ assert.ok(controlStyle.includes(value),'preserve round gold X: '+value);
+}
+assert.match(frameStyles,/--dungeon-close-svg:url\("data:image\/svg\+xml/,'same original vector X');
+for(const id of ['iconGuideDialog','loadoutDialog','alchemyDialog','alchemyPickerDialog','magicDetailsDialog','circlePowerTipsDialog']){
+ const content=dialogMarkup(id);
+ const header=content.match(/<header class="[^"]*dungeon-dialog-header"[^>]*>[\s\S]*?<\/header>/)?.[0];
+ assert.ok(header,'separate header: '+id);
+ assert.ok(header.includes('dungeon-dialog-frame-title'),'title belongs to header: '+id);
+ assert.ok(header.includes('dungeon-dialog-close-icon'),'round X belongs to header: '+id);
+ assert.ok(content.indexOf(header)<content.indexOf('dungeon-dialog-frame">'),'header sits above scrollable body: '+id);
+}
+for(const id of ['circleActionDialog','magicStoneTutorialDialog','supportPromptDialog','googleDriveConflictDialog','googleDriveOverwriteDialog','googleDriveExpiredDialog','deleteDataDialog']){
+ assert.doesNotMatch(dialogMarkup(id),/dungeon-dialog-header|dungeon-dialog-close-icon/,'textual footer action must remain unchanged: '+id);
+}
+assert.match(frameStyles,/#tutorialOverlay\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'existing tutorial overlay preserved');
 // The card is a closable frame; the on-screen canvas and its original action
 // are still wired. Screens that were overlays stay outside this component.
 const card=dialogMarkup('supportPromptDialog');

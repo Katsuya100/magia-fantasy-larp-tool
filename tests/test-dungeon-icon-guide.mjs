@@ -18,7 +18,9 @@ const battle=page.split('<section id="battle"')[1].split('</section>')[0];
 assert.equal((page.match(/data-action="icon-guide"/g)||[]).length,2,'exactly two launch buttons');
 assert.match(prepare,/data-action="icon-guide"/);
 assert.match(battle,/data-action="icon-guide"/);
-assert.match(fragment,/id="closeIconGuide"/);
+assert.match(fragment,/<header class="dungeon-dialog-header">[\s\S]*?<h2 id="iconGuideTitle"[^>]*>アイコン一覧<\/h2>/,'title belongs to fixed header');
+assert.match(fragment,/id="closeIconGuide"[^>]*dungeon-dialog-close-icon/,'X is in the header');
+assert.match(fragment,/<div class="delete-data-dialog-inner dungeon-dialog-frame">[\s\S]*?<section class="icon-guide-group"/,'tables belong to the scrolling body');
 
 const env=fakeDungeonBrowser(),$=id=>env.document.getElementById(id);
 const button=dataset=>({disabled:false,dataset,closest(){return this;}});
