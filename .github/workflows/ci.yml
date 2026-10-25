@@ -203,3 +203,6 @@ jobs:
             reports/dungeon-strategy-readiness-v1.json
             reports/dungeon-redefined-verdicts-v1.json
           if-no-files-found: warn
+      - name: Enforce all 60 approved real-owner battle targets
+        if: always()
+        run: node scripts/check-dungeon-linked-256-combat.mjs
