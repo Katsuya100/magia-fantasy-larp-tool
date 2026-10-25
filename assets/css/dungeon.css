@@ -810,22 +810,36 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 #tutorialOverlay[data-dungeon-frame="paged"] > .dungeon-dialog-frame{
  --dungeon-frame-top-rail:0px
 }
-/* The close control belongs to the dialog shell; only its body can scroll. */
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"])[open]{
+/* Common dialog header is fixed; text actions stay in their original rows. */
+#dungeonApp dialog:has(> .dungeon-dialog-header)[open]{
  display:flex;flex-direction:column;overflow:hidden
 }
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > .dungeon-dialog-frame{
+#dungeonApp dialog:has(> .dungeon-dialog-header) > .dungeon-dialog-frame{
  flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior-y:contain
 }
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > button.dungeon-dialog-close{
- position:absolute!important;
- inset-block-start:14px!important;inset-inline-end:14px!important;z-index:20;
+#dungeonApp dialog > .dungeon-dialog-header{
+ position:relative;flex:none;box-sizing:border-box;
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ min-height:74px;padding:14px 14px 14px clamp(16px,4vw,24px);
+ margin:0;border-bottom:1px solid var(--border)
+}
+#dungeonApp dialog > .dungeon-dialog-header .dungeon-dialog-frame-title{
+ margin:0;min-width:0;max-width:calc(100% - 54px);font-size:clamp(18px,3vw,23px);color:var(--gold)
+}
+#dungeonApp dialog > .dungeon-dialog-header .dungeon-dialog-lesson-heading{
+ font-size:18px;color:var(--gold)
+}
+#dungeonApp dialog > .dungeon-dialog-header + .dungeon-dialog-frame{
+ padding-block-start:16px!important
+}
+#dungeonApp dialog > .dungeon-dialog-header > button.dungeon-dialog-close-icon{
+ position:relative!important;z-index:20;
  appearance:none!important;box-sizing:border-box!important;
  display:grid!important;place-items:center!important;
- width:var(--dungeon-frame-close-size)!important;height:var(--dungeon-frame-close-size)!important;
- min-width:var(--dungeon-frame-close-size)!important;min-height:var(--dungeon-frame-close-size)!important;
- max-width:var(--dungeon-frame-close-size)!important;max-height:var(--dungeon-frame-close-size)!important;
- flex:none!important;align-self:auto!important;
+ width:var(--dungeon-frame-close-size,42px)!important;height:var(--dungeon-frame-close-size,42px)!important;
+ min-width:var(--dungeon-frame-close-size,42px)!important;min-height:var(--dungeon-frame-close-size,42px)!important;
+ max-width:var(--dungeon-frame-close-size,42px)!important;max-height:var(--dungeon-frame-close-size,42px)!important;
+ flex:none!important;align-self:center!important;
  padding:0!important;margin:0!important;
  border:1px solid #a58c67!important;border-radius:50%!important;
  background:#151725ed!important;color:var(--gold)!important;
@@ -833,8 +847,7 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  font-size:0!important;line-height:1!important;letter-spacing:0!important;
  transform:none!important;cursor:pointer;touch-action:manipulation
 }
-/* A centered SVG mask (not a baseline-dependent text glyph). */
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > button.dungeon-dialog-close::after{
+#dungeonApp dialog > .dungeon-dialog-header > button.dungeon-dialog-close-icon::after{
  content:"";position:absolute;inset-block-start:50%;inset-inline-start:50%;
  width:24px;height:24px;transform:translate(-50%,-50%);
  background-color:currentColor;pointer-events:none;
@@ -842,10 +855,10 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  -webkit-mask:var(--dungeon-close-svg) center / contain no-repeat;
  mask:var(--dungeon-close-svg) center / contain no-repeat
 }
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > button.dungeon-dialog-close:hover{
+#dungeonApp dialog > .dungeon-dialog-header > button.dungeon-dialog-close-icon:hover{
  background:#30273b!important;border-color:var(--gold)!important
 }
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > button.dungeon-dialog-close:focus-visible{
+#dungeonApp dialog > .dungeon-dialog-header > button.dungeon-dialog-close-icon:focus-visible{
  outline:3px solid #ecd191!important;outline-offset:3px
 }
 #dungeonApp dialog button.dungeon-dialog-close[hidden]{display:none!important}
@@ -2820,7 +2833,7 @@ button.creator-congratulations-close{
 #dungeonApp button.icon-guide-trigger{display:grid;place-items:center;width:42px;height:42px;padding:0;border:1px solid var(--border);border-radius:50%;background:#151725;color:var(--gold);font:700 20px/1 Georgia,serif;box-shadow:none}
 #dungeonApp button.icon-guide-trigger:focus-visible{outline:2px solid #9ae3db;outline-offset:3px}
 .icon-guide-dialog{width:min(620px,calc(100vw - 24px));max-height:85dvh}
-.icon-guide-dialog .dungeon-dialog-frame{padding:24px clamp(16px,4vw,32px) 30px}
+.icon-guide-dialog .dungeon-dialog-frame{padding:16px clamp(16px,4vw,32px) 30px}
 .icon-guide-dialog .icon-guide-group{margin-top:22px}
 .icon-guide-dialog .icon-guide-group h3{margin:0 0 8px;color:var(--gold);font-size:17px}
 .icon-guide-table{width:100%;border-collapse:collapse;font-size:14px}
