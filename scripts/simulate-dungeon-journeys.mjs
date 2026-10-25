@@ -721,7 +721,12 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    // after clearing the rank-gated route's first repeated layer.
    // Long journeys prefer a full decade of NEW layers, banking risky
    // unconfirmed loot at that milestone instead of assuming every win.
-   if(route==='long'&&layer%10===0&&layer>=state.best+10)break;
+   // In deep long-route play, bank at the newly earned 80F/90F boss,
+   // even when the expedition began partway through the decade. Otherwise
+   // a 71F-to-90F leap skips the only legal return at which the next
+   // reference-level equipment can be purchased from earned stones.
+   if(route==='long'&&layer%10===0&&
+    (layer>=state.best+10||(layer>=80&&layer>state.best)))break;
    // A risk-aware long dive can still return at a completed layer when
    // resources become critical. These are strategy parameters, NOT new
    // acceptance thresholds for game balance.
