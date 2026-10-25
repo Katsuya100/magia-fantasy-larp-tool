@@ -3,7 +3,7 @@
 // set DUNGEON_BALANCE_STRICT=1 to make balance target misses fail the job.
 // Structural/gameplay contract violations always fail CI.
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
@@ -28,10 +28,12 @@ const INTRO=[
 assert.ok(INTRO.every(([role,attr,power])=>power>=100&&power<=300));
 assert.ok(NORMAL.every(([role,attr,power])=>Number.isInteger(power)));
 assert.equal(G.capacity(102),13);
-const SAMPLES=Number(process.env.DUNGEON_BALANCE_SAMPLES||256);
+const goals=JSON.parse(readFileSync(new URL('../config/dungeon-approved-goals.v1.json',import.meta.url),'utf8'));
+const SAMPLES=Number(process.env.DUNGEON_BALANCE_SAMPLES||goals.strictSamples);
 assert.ok(Number.isSafeInteger(SAMPLES)&&SAMPLES>=32&&SAMPLES<=512,
  'DUNGEON_BALANCE_SAMPLES must be between 32 and 512');
 const STRICT=process.env.DUNGEON_BALANCE_STRICT==='1';
+if(STRICT)assert.equal(SAMPLES,goals.strictSamples,'strict fixed-deck CI needs all approved seeds');
 const seed=i=>17011+i*13;
 const percentile=(v,decimals=1)=>v===null?null:Number(v.toFixed(decimals));
 function median(values){
@@ -66,7 +68,8 @@ assert.equal(targetStoneRate(20),.75);
 assert.equal(targetStoneRate(21),.75);
 for(let floor=11;floor<=19;floor++)
  assert.ok(targetStoneRate(floor)<targetStoneRate(floor+1));
-const LEVELS={10:19,20:37,30:55,40:72,50:87,60:102,70:115,80:128,90:139,100:150};
+const LEVELS=goals.targetLevelCheckpoints;
+assert.equal(goals.bands.length,10);
 const report=[];
 for(let to=10;to<=100;to+=10){
  const from=to-9,level=LEVELS[to],withItems=from>=51;
@@ -111,7 +114,7 @@ for(let to=10;to<=100;to+=10){
    runs.push({win:result.win,hp:result.hp/result.initialHp*100,
     mp:result.mp/result.initialMp*100,cleared:result.clear,spent:result.spentStones,
     maxHp:result.initialHp,maxMp:result.initialMp,layerStats:result.layerStats,
-    initialLoadout:[],upgradedPower});
+    initialLoadout:[],upgradedPower,fightStats:result.fightStats});
   }
  }
  const winners=runs.filter(x=>x.win);
@@ -119,9 +122,10 @@ for(let to=10;to<=100;to+=10){
   medianMp=median(winners.map(x=>x.mp)),
   medianHp=median(winners.map(x=>x.hp)),
   medianUsed=median(runs.map(x=>x.spent));
- const winLower=from<=20?99:90,winUpper=from<=20?100:97;
- const marginLower=from<=20?99:92,marginUpper=from<=20?100:95;
- const mpLower=from<=10?50:0,mpUpper=from<=10?100:15;
+ const goal=goals.bands.find(x=>x.from===from&&x.to===to);
+ const [winLower,winUpper]=goal.winRate;
+ const [marginLower,marginUpper]=goal.winSafety;
+ const [mpLower,mpUpper]=goal.winnerMedianMp;
  const winInterval=winRateWilson95(winners.length,SAMPLES);
  const pointWinRateInTarget=winRate>=winLower&&winRate<=winUpper;
  const pointWinRateInsideMargin=winRate>=marginLower&&winRate<=marginUpper;
@@ -176,8 +180,18 @@ for(let to=10;to<=100;to+=10){
   const cleared=reached.filter(x=>x.state.cleared);
   const controls=withItems?controlRuns.flatMap(run=>run.layerStats.filter(state=>state.layer===layer)
    .map(state=>({run,state}))):[];
+  const fights=from===1?runs.flatMap(run=>(run.fightStats||[]).filter(x=>x.layer===layer)):[];
+  const bossFights=fights.filter(x=>x.fight===layer*5),bossWins=bossFights.filter(x=>x.win);
+  const rounds=bossWins.map(x=>x.turns).sort((a,b)=>a-b);
+  const at=q=>rounds.length?rounds[Math.floor((rounds.length-1)*q)]:null;
   const layerRow={
    layer,band:from+'-'+to,
+   combatDetail:from===1?{
+    fights:fights.length,bossWins:bossWins.length,
+    fightRoundsMedian:percentile(median(fights.map(x=>x.turns))),
+    playerDamagePerFightMedian:percentile(median(fights.map(x=>Math.max(0,x.hpBefore-x.hpAfter)))),
+    bossRounds:{p10:at(.1),median:median(rounds),p90:at(.9)}
+   }:null,
    conditions:{
     sortieStartLayer:from,heroLevel:level,enemyLevel:Number(data.floors[(layer-1)*5].enemy_level),
     stoneRatePercent:percentile(rate*100),attackAttributes:chosen.attackAttributes,
@@ -227,6 +241,11 @@ if(SAMPLES===128){
 // Keep the original approved bands. Strict CI requires observed wins inside
 // the interior safety margin; Wilson intervals are visible but not an escape
 // hatch for an out-of-range observed rate.
+mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
+writeFileSync(new URL('../reports/dungeon-fixed-deck-combat-v1.json',import.meta.url),
+ JSON.stringify({schemaVersion:'dungeon-fixed-deck-combat-v1',approvedGoals:goals.schemaVersion,
+  samples:SAMPLES,source:'tests/test-dungeon-default-balance.mjs',
+  status:'AUTHORITATIVE_FIXED_DECK_COMBAT',bands:report},null,2)+'\n');
 const unmet=report.filter(x=>!x.passed);
 console.log('DUNGEON_DEFAULT_BALANCE_SUMMARY '+JSON.stringify({
  samples:SAMPLES,median:'successful sorties only',bands:report.length,
