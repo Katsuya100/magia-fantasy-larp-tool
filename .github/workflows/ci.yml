@@ -23,7 +23,7 @@ jobs:
   dungeon-balance-diagnostic:
     # The earlier fixed-loadout simulator remains fully executed as a
     # structural/regression comparison, not the sole approved battle gate.
-    # Actual 60 owner loadouts stay diagnostic; fixed reference owns difficulty targets.
+    # Fixed-reference numbers are separately diagnosed; all 60 real-owner outcomes receive the final strict gate.
     runs-on: ubuntu-latest
     env:
       ONNXRUNTIME_NODE_INSTALL_CUDA: skip
@@ -172,8 +172,8 @@ jobs:
           if-no-files-found: warn
 
   dungeon-linked-256-combat-strict:
-    # Existing job ID retained for CI compatibility. Unapproved reference
-    # is a proposal, and 60 journey-equipped battles are only diagnostic.
+    # Existing job ID retained for CI compatibility. The unapproved reference
+    # stays a proposal; the real-owner 60-case target is mandatory.
     needs: dungeon-foundation-256-accounts
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -186,7 +186,7 @@ jobs:
         with:
           name: dungeon-foundation-256-accounts
           path: reports/
-      - name: Diagnose real-owner battles for all 60 journey conditions
+      - name: Measure real-owner battles for all 60 approved journey conditions
         run: node scripts/dungeon-linked-256-combat.mjs
       - name: Evaluate COMBAT_BALANCE, JOURNEY_READINESS, EXTRA_FARMING, RANK_ACQUISITION, BUILD_STRATEGY
         run: node scripts/dungeon-redefined-evaluation.mjs
