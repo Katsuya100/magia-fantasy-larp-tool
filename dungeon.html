@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261025.03">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261025.04">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261025.03" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261025.04" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261025.03" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261025.04" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -70,9 +70,11 @@
     </nav>
 
     <dialog id="iconGuideDialog" class="name-dialog icon-guide-dialog" aria-labelledby="iconGuideTitle" data-dungeon-frame="closable">
-      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+      <header class="dungeon-dialog-header">
         <h2 id="iconGuideTitle" class="dungeon-dialog-frame-title">アイコン一覧</h2>
-        <button type="button" id="closeIconGuide" class="subtle dungeon-dialog-close" aria-label="一覧を閉じる">✕</button>
+        <button type="button" id="closeIconGuide" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="一覧を閉じる">✕</button>
+      </header>
+      <div class="delete-data-dialog-inner dungeon-dialog-frame">
         <section class="icon-guide-group" aria-labelledby="iconGuideAttributes">
           <h3 id="iconGuideAttributes">属性</h3>
           <table class="icon-guide-table"><tbody>
@@ -298,8 +300,9 @@
       <div class="subheading"><h3>携行品</h3><span>SUPPLIES</span></div>
       <div id="gearCards"><div class="loadout-grid" role="group" aria-label="携行品"></div></div><p id="gearCounter" class="gear-counter"></p>
       <dialog id="loadoutDialog" class="loadout-dialog" aria-labelledby="loadoutDialogTitle" data-dungeon-frame="closable">
+        <header class="chooser-header dungeon-dialog-header"><div><p class="chapter">GRIMOIRE · EQUIPMENT</p><h3 id="loadoutDialogTitle" class="dungeon-dialog-frame-title">魔法陣を選ぶ</h3></div><button type="button" id="closeLoadoutDialog" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="選択を閉じる">✕</button></header>
+
         <div class="loadout-dialog-inner dungeon-dialog-frame">
-          <div class="chooser-header"><div><p class="chapter">GRIMOIRE · EQUIPMENT</p><h3 id="loadoutDialogTitle" class="dungeon-dialog-frame-title">魔法陣を選ぶ</h3></div><button type="button" id="closeLoadoutDialog" class="subtle dungeon-dialog-close" aria-label="選択を閉じる">✕</button></div>
           <div class="list-controls picker-controls" role="group" aria-label="候補のソートとフィルター">
             <label>絞り込み<select id="pickerFilter"><option value="all">すべて</option></select></label>
             <label>並べ替え<select id="pickerSort"><option value="newest">登録が新しい順</option></select></label>
@@ -327,8 +330,9 @@
       </div>
       <div id="collectionGrid" class="collection-grid" role="list" aria-label="コレクション一覧"></div>
       <dialog id="alchemyDialog" class="loadout-dialog" aria-labelledby="alchemyDialogTitle" data-dungeon-frame="closable">
+        <header class="chooser-header dungeon-dialog-header"><h3 id="alchemyDialogTitle" class="dungeon-dialog-frame-title">錬金</h3><button type="button" id="closeAlchemy" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="錬金を閉じる">✕</button></header>
+
         <div class="loadout-dialog-inner dungeon-dialog-frame">
-          <div class="chooser-header"><h3 id="alchemyDialogTitle" class="dungeon-dialog-frame-title">錬金</h3><button type="button" id="closeAlchemy" class="subtle dungeon-dialog-close" aria-label="錬金を閉じる">✕</button></div>
           <div id="alchemyInputs">
           <p id="alchemyBaseName"></p>
           <div id="alchemySlots"></div>
@@ -358,8 +362,9 @@
         </div>
       </dialog>
       <dialog id="alchemyPickerDialog" class="loadout-dialog" aria-labelledby="alchemyPickerTitle" data-dungeon-frame="closable">
+        <header class="chooser-header dungeon-dialog-header"><h3 id="alchemyPickerTitle" class="dungeon-dialog-frame-title">携行品を選ぶ</h3><button type="button" id="closeAlchemyPicker" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="選択を閉じる">✕</button></header>
+
         <div class="loadout-dialog-inner dungeon-dialog-frame">
-          <div class="chooser-header"><h3 id="alchemyPickerTitle" class="dungeon-dialog-frame-title">携行品を選ぶ</h3><button type="button" id="closeAlchemyPicker" class="subtle dungeon-dialog-close" aria-label="選択を閉じる">✕</button></div>
           <div class="list-controls picker-controls">
             <label>絞り込み<select id="alchemyPickerFilter"><option value="all">すべて</option></select></label>
             <label>並べ替え<select id="alchemyPickerSort"><option value="default">入手順</option></select></label>
@@ -436,7 +441,7 @@
     </div>
 
     <dialog id="circleDrawingDialog" class="circle-drawing-dialog" aria-labelledby="circleDrawingStage" data-dungeon-frame="overlay">
-      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261025.03" alt="" hidden>
+      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261025.04" alt="" hidden>
       <div id="circleDrawingShell" class="circle-drawing-shell">
         <strong id="circleDrawingStage" class="circle-drawing-stage" aria-live="polite">呪文を1文字ずつ書く</strong>
         <button type="button" id="circleDrawingPowerTips" class="subtle circle-power-tips-button">強い魔法のコツ</button>
@@ -487,8 +492,9 @@
       </div>
     </dialog>
     <dialog id="circlePowerTipsDialog" class="circle-power-tips-dialog" aria-labelledby="circlePowerTipsTitle" data-dungeon-frame="closable">
+      <header class="circle-power-tips-heading dungeon-dialog-header"><h2 id="circlePowerTipsTitle" class="dungeon-dialog-frame-title">強い魔法のコツ</h2><button type="button" id="closeCirclePowerTips" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="閉じる">✕</button></header>
+
       <div class="circle-power-tips-content dungeon-dialog-frame">
-        <div class="circle-power-tips-heading"><h2 id="circlePowerTipsTitle" class="dungeon-dialog-frame-title">強い魔法のコツ</h2><button type="button" id="closeCirclePowerTips" class="subtle dungeon-dialog-close" aria-label="閉じる">✕</button></div>
         <ol>
           <li><strong>線やカーブを綺麗に</strong>描く</li>
           <li>呪文は<strong>読みやすく</strong>書く</li>
@@ -499,9 +505,12 @@
       </div>
     </dialog>
     <dialog id="circleDrawingLessonDialog" class="drawing-lesson-dialog" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" data-dungeon-frame="paged">
+      <header class="dungeon-dialog-header">
+        <span class="dungeon-dialog-lesson-heading">描き方を練習</span>
+        <button type="button" id="circleDrawingLessonClose" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="描き方の練習を閉じる">✕</button>
+      </header>
       <div class="tutorial-sheet dungeon-dialog-frame">
         <div id="circleDrawingLessonSlot"></div>
-        <button type="button" id="circleDrawingLessonClose" class="subtle dungeon-dialog-close" aria-label="描き方の練習を閉じる">閉じる</button>
       </div>
     </dialog>
     <dialog id="circleCameraDialog" class="circle-drawing-dialog circle-camera-dialog" aria-label="魔法陣を撮る" data-dungeon-frame="overlay">
@@ -529,8 +538,9 @@
       </div>
     </dialog>
     <dialog id="magicDetailsDialog" class="magic-details-dialog" aria-labelledby="magicDetailsTitle" data-dungeon-frame="closable">
+      <header class="chooser-header dungeon-dialog-header"><h3 id="magicDetailsTitle" class="dungeon-dialog-frame-title">魔法陣の効果</h3><button type="button" id="closeMagicDetails" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="詳細を閉じる">✕</button></header>
+
       <div class="magic-details-content dungeon-dialog-frame">
-        <div class="chooser-header"><h3 id="magicDetailsTitle" class="dungeon-dialog-frame-title">魔法陣の効果</h3><button type="button" id="closeMagicDetails" class="subtle dungeon-dialog-close" aria-label="詳細を閉じる">✕</button></div>
         <div id="magicDetailsLegacyTitle" class="legacy-provenance" hidden></div>
         <div class="magic-details-art"><img id="magicDetailsImage" alt="選択した魔法陣の画像"><div id="magicUpgradeEffect" aria-hidden="true"></div></div>
         <button type="button" id="repairSelectedCircleImage" class="subtle" hidden>撮り直す</button>
@@ -674,7 +684,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.25.03</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.25.04</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" data-dungeon-frame="paged" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet dungeon-dialog-frame">
@@ -697,6 +707,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261025.03"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261025.04"></script>
 </body>
 </html>

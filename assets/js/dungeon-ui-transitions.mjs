@@ -33,20 +33,10 @@ export function hideUiOverlay(element,{reducedMotion=false}={}){
  timer.unref?.();
 }
 
-// Keep the original close button (and its listeners) outside the scroll frame.
-// This shared shell behavior applies to every closable/paged dungeon dialog.
-function pinDungeonDialogClose(dialog){
- if(!['closable','paged'].includes(dialog?.dataset?.dungeonFrame))return;
- const frame=dialog.querySelector?.(':scope > .dungeon-dialog-frame');
- const close=frame?.querySelector?.('button.dungeon-dialog-close');
- if(close)dialog.appendChild(close);
-}
-
 // The entering keyframes restart on *every* showModal, even on repeat naming,
 // and do not rely on CSS @starting-style implementation differences.
 export function showDungeonDialog(dialog){
  if(!dialog||dialog.open)return;
- pinDungeonDialogClose(dialog);
  const timer=pendingEntries.get(dialog);
  if(timer!==undefined){clearTimeout(timer);pendingEntries.delete(dialog);}
  if(dialog.dataset){delete dialog.dataset.uiClosing;if(!motionReduced(dialog))dialog.dataset.uiEntering='true';}
