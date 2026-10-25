@@ -203,14 +203,15 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(button,'original overlay footer button: '+id);
  assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
-const pagedNative=['circleDrawingLessonDialog'];
-assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+pagedNative.length,dialogs.length,'all 24 native dialogs accounted for');
-for(const id of pagedNative){
- assert.match(tagOf(id),/data-dungeon-frame="paged"/,'native lesson is a paged frame');
+const drawingLessons=['circleDrawingLessonDialog'];
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+drawingLessons.length,dialogs.length,'all 24 native dialogs accounted for');
+for(const id of drawingLessons){
+ assert.match(tagOf(id),/data-dungeon-frame="fixed"/,'drawing lesson is a fixed frame without close rail');
  const content=dialogMarkup(id);
- assert.match(content,/<div class="tutorial-sheet dungeon-dialog-frame">/,'lesson has shared paged frame');
- assert.match(content,/<div id="circleDrawingLessonSlot"><\/div>/,'page content is inserted in the normal slot');
- assert.match(content,/<header class="dungeon-dialog-header">[\s\S]*?<button type="button" id="circleDrawingLessonClose" class="subtle dungeon-dialog-close dungeon-dialog-close-icon"/,'paged lesson has stationary header icon');
+ assert.match(content,/<div class="tutorial-sheet dungeon-dialog-frame">/,'lesson retains the shared frame');
+ assert.match(content,/<div id="circleDrawingLessonSlot"><\/div>/,'lesson content remains in the slot');
+ assert.match(content,/<button type="button" id="circleDrawingLessonStart" class="primary-action tutorial-next">描いてみる<\/button>/,'lesson presents its drawing CTA');
+ assert.doesNotMatch(content,/dungeon-dialog-close|circleDrawingLessonClose/,'no close button in drawing lesson');
 }
 
 const tutorialTag=html.match(/<div id="tutorialOverlay"[^>]+>/)?.[0];
