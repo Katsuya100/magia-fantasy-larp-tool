@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {CIRCLE_TUTORIAL_STEPS,initCircleTutorial} from '../assets/js/dungeon-tutorial.mjs';
 assert.equal(CIRCLE_TUTORIAL_STEPS.length,5);
-assert.deepEqual(CIRCLE_TUTORIAL_STEPS.map(x=>x.title),['準備しましょう','外円を書きましょう','内円を書きましょう','呪文を書きましょう','紋を書きましょう']);
+assert.deepEqual(CIRCLE_TUTORIAL_STEPS.map(x=>x.title),['準備しましょう','外円を書きましょう','内円を書きましょう','呪文を英語で書きましょう','紋を書きましょう']);
 assert.match(CIRCLE_TUTORIAL_STEPS[0].hint,/最初にお手元に紙とペンをご用意ください/);
 assert.match(CIRCLE_TUTORIAL_STEPS[0].detail,/できれば太めの油性ペンをお使いください/);
 assert.match(CIRCLE_TUTORIAL_STEPS[1].hint,/大きな円.*ください/);
@@ -19,7 +19,9 @@ assert.deepEqual(CIRCLE_TUTORIAL_STEPS[3].attributes.split('\n'),[
 assert.match(CIRCLE_TUTORIAL_STEPS[3].attributes,/flame.*bolt.*aqua.*storm.*gravity.*law.*chaos/s);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].detail,/紋の種別.*形.*決まります。/);
 assert.match(CIRCLE_TUTORIAL_STEPS[4].attributes,/攻撃.*防御.*回復.*弱体/);
-for(const i of [3,4])assert.match(CIRCLE_TUTORIAL_STEPS[i].freedom,/サンプルに合わせる必要はありません.*自由.*ください/);
+assert.equal(CIRCLE_TUTORIAL_STEPS[3].note,'※ サンプルに合わせる必要はありません。自由な英文を書いてください。');
+assert.equal(CIRCLE_TUTORIAL_STEPS[3].freedom,undefined);
+assert.match(CIRCLE_TUTORIAL_STEPS[4].freedom,/サンプルに合わせる必要はありません.*自由.*ください/);
 for(const step of CIRCLE_TUTORIAL_STEPS){
  assert.match(step.title,/ましょう$/,step.title);
  assert.match(step.hint,/ください。$/,step.title+' hint');
@@ -37,6 +39,8 @@ try{
  assert.equal($('tutorialDetails').textContent,CIRCLE_TUTORIAL_STEPS[0].detail);
  assert.equal($('tutorialPrevious').hidden,true);
  assert.equal($('tutorialFreedom').hidden,true);
+ assert.equal($('tutorialSpellNote').hidden,true);
+ assert.equal($('tutorialAttributeLabel').hidden,true);
  assert.equal($('tutorialAttributes').hidden,true);
  assert.equal($('tutorialTitle').textContent,CIRCLE_TUTORIAL_STEPS[0].title);
  assert.equal($('dungeonApp').attributes.inert,'');
@@ -48,11 +52,18 @@ try{
   assert.ok($('tutorialAnimation').src.includes(CIRCLE_TUTORIAL_STEPS[i].image));
   assert.equal($('tutorialTitle').textContent,CIRCLE_TUTORIAL_STEPS[i].title);
   assert.equal($('tutorialHint').textContent,CIRCLE_TUTORIAL_STEPS[i].hint);
+  assert.equal($('tutorialSpellNote').hidden,i!==3);
+  assert.equal($('tutorialAttributeLabel').hidden,i!==3);
+  assert.equal($('tutorialSpellNote').textContent,CIRCLE_TUTORIAL_STEPS[i].note||'');
+  if(i===3){
+   assert.match($('tutorialTitle').innerHTML,/<strong class="tutorial-title-keyword">英語で<\/strong>/);
+   assert.equal($('tutorialAttributes').className,'tutorial-spell-attributes');
+  }else assert.equal($('tutorialAttributes').className,'');
   assert.equal($('tutorialDetails').textContent,CIRCLE_TUTORIAL_STEPS[i].detail);
   assert.equal($('tutorialAttributes').hidden,i<3);
   if(i>=3)assert.equal($('tutorialAttributes').textContent,CIRCLE_TUTORIAL_STEPS[i].attributes);
-  assert.equal($('tutorialFreedom').hidden,i<3);
-  if(i>=3)assert.equal($('tutorialFreedom').textContent,CIRCLE_TUTORIAL_STEPS[i].freedom);
+  assert.equal($('tutorialFreedom').hidden,i!==4);
+  if(i===4)assert.equal($('tutorialFreedom').textContent,CIRCLE_TUTORIAL_STEPS[i].freedom);
  }
  assert.equal($('tutorialContinue').textContent,'撮影する📷','final lesson offers a direct camera action');
  $('tutorialPrevious').fire('click');
@@ -80,7 +91,10 @@ try{
  assert.equal($('tutorialTitle').textContent,CIRCLE_TUTORIAL_STEPS[3].title);
  assert.equal($('tutorialHint').textContent,CIRCLE_TUTORIAL_STEPS[3].hint);
  assert.equal($('tutorialAttributes').textContent,CIRCLE_TUTORIAL_STEPS[3].attributes);
- assert.equal($('tutorialFreedom').textContent,CIRCLE_TUTORIAL_STEPS[3].freedom);
+ assert.equal($('tutorialSpellNote').textContent,CIRCLE_TUTORIAL_STEPS[3].note);
+ assert.equal($('tutorialSpellNote').hidden,false);
+ assert.equal($('tutorialFreedom').hidden,true);
+ assert.equal($('tutorialAttributeLabel').hidden,false);
  assert.ok($('tutorialAnimation').src.includes('tutorial-spell.gif'));
  assert.equal(tutorial.openLesson('sigil'),false,'focused lesson cannot stack');
  $('circleDrawingLessonClose').fire('click');
@@ -107,6 +121,10 @@ assert.match(html,/id="tutorialFigure" class="tutorial-animation" hidden/);
 assert.match(html,/id="tutorialAnimation" alt="" width="320" height="320"/);
 assert.match(html,/id="tutorialReplay"/);
 assert.match(html,/id="tutorialAttributes" hidden/);
+assert.match(html,/id="tutorialHint"[^>]*>[\s\S]*?id="tutorialSpellNote"[^>]*>[\s\S]*?id="tutorialFigure"[^>]*>[\s\S]*?id="tutorialDetails"[^>]*>[\s\S]*?id="tutorialAttributeLabel"[^>]*>[\s\S]*?id="tutorialAttributes"/);
+const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+assert.match(css,/#tutorialAttributes\.tutorial-spell-attributes\{[^}]*border:/);
+assert.match(css,/#tutorialTitle\.tutorial-spell-title/);
 const release=html.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 assert.ok(release,'tutorial HTML contains a release version');
 assert.ok(html.includes('dungeon-app.mjs?v='+release),'tutorial HTML loads the current app');

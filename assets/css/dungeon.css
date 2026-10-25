@@ -1920,6 +1920,11 @@ html,body{overflow-x:clip}
 }
 .tutorial-sheet #tutorialHint,.tutorial-sheet #tutorialDetails,.tutorial-sheet #tutorialFreedom{white-space:pre-line}
 .tutorial-sheet #tutorialAttributes{margin:0 0 9px;color:var(--gold);font-weight:700;line-height:1.7;letter-spacing:.02em;white-space:pre-line;word-break:keep-all}
+.tutorial-sheet #tutorialTitle.tutorial-spell-title{font-size:16px;font-weight:500;line-height:1.55}
+.tutorial-sheet .tutorial-title-keyword{margin:0 .12em;font-size:1.7em;font-weight:800;color:#ffe3a3}
+.tutorial-sheet #tutorialSpellNote{margin:4px auto 2px;color:var(--soft);font-size:11px;line-height:1.55}
+.tutorial-sheet #tutorialAttributeLabel{margin:10px 0 4px;color:var(--soft);font-size:12px}
+.tutorial-sheet #tutorialAttributes.tutorial-spell-attributes{box-sizing:border-box;width:max-content;max-width:100%;margin:0 auto 12px;padding:10px 12px;border:1px solid #e1bf8177;border-radius:10px;background:#0b152088;font-size:clamp(11px,3vw,13px)}
 
 /* On a tenth-layer victory, offer two choices before opening the full card. */
 .milestone-choice-dialog{width:min(620px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
