@@ -2841,23 +2841,24 @@ button.creator-congratulations-close{
 #alchemyInputs[hidden],#alchemyReveal[hidden]{display:none}
 .alchemy-reveal{display:grid;justify-items:center;gap:8px;padding:12px 0 0;text-align:center}
 .alchemy-ritual{width:min(210px,60vw);aspect-ratio:1;position:relative;display:grid;place-items:center;isolation:isolate}
-.alchemy-ring{position:absolute;border:2px solid rgba(222,186,108,.82);border-radius:50%;inset:12%;box-shadow:0 0 22px rgba(232,178,75,.35),inset 0 0 19px rgba(232,178,75,.22);animation:alchemy-ring-appear 1.2s ease-out both}
-.alchemy-ring-outer{inset:5%;border-style:dashed;animation:alchemy-ring-spin 2s cubic-bezier(.22,.65,.32,1) both}
-.alchemy-ring-inner{inset:23%;border-color:rgba(244,215,150,.76);animation-delay:.12s}
-.alchemy-flash{position:absolute;inset:28%;border-radius:50%;background:radial-gradient(circle,rgba(255,244,201,.95) 0,rgba(246,194,90,.52) 28%,transparent 70%);animation:alchemy-flash .85s ease-out both}
-.alchemy-created-icon{position:relative;z-index:1;font-size:clamp(64px,15vw,92px);line-height:1;text-shadow:0 0 18px rgba(248,205,116,.8),0 0 44px rgba(243,188,77,.38);animation:alchemy-materialize .9s .35s cubic-bezier(.18,.85,.22,1) both}
-.alchemy-created-name{font-size:18px;color:var(--gold);animation:alchemy-materialize .55s .7s ease-out both}
-.alchemy-created-effect{font-size:14px;color:var(--soft);animation:alchemy-materialize .55s .8s ease-out both}
-.alchemy-rewards{display:flex;justify-content:center;gap:12px;min-height:38px;animation:alchemy-materialize .55s 1s ease-out both}
+.alchemy-ring{position:absolute;border:2px solid rgba(222,186,108,.82);border-radius:50%;inset:12%;box-shadow:0 0 22px rgba(232,178,75,.35),inset 0 0 19px rgba(232,178,75,.22);animation:alchemy-ring-appear .22s ease-out both}
+.alchemy-ring-outer{inset:5%;border-style:dashed;animation:alchemy-ring-spin .24s cubic-bezier(.22,.65,.32,1) both}
+.alchemy-ring-inner{inset:23%;border-color:rgba(244,215,150,.76);animation-delay:.02s}
+.alchemy-flash{position:absolute;inset:28%;border-radius:50%;background:radial-gradient(circle,rgba(255,244,201,.95) 0,rgba(246,194,90,.52) 28%,transparent 70%);animation:alchemy-flash .2s ease-out both}
+.alchemy-created-icon{position:relative;z-index:1;font-size:clamp(64px,15vw,92px);line-height:1;text-shadow:0 0 18px rgba(248,205,116,.8),0 0 44px rgba(243,188,77,.38);animation:alchemy-materialize .2s .04s cubic-bezier(.18,.85,.22,1) both}
+.alchemy-created-name{font-size:18px;color:var(--gold);animation:alchemy-materialize .16s .08s ease-out both}
+.alchemy-created-effect{font-size:14px;color:var(--soft);animation:alchemy-materialize .15s .1s ease-out both}
+.alchemy-rewards{display:flex;justify-content:center;gap:12px;min-height:38px;animation:alchemy-materialize .15s .1s ease-out both}
 .alchemy-rewards:empty{display:none}
-.alchemy-reward{display:flex;align-items:center;gap:5px;padding:7px 15px;border:1px solid rgba(222,186,108,.65);border-radius:24px;background:rgba(232,178,75,.09);font-size:20px;color:var(--gold);box-shadow:0 0 14px rgba(232,178,75,.16)}
+.alchemy-reward{display:flex;align-items:center;gap:5px;padding:7px 15px;border:1px solid rgba(222,186,108,.65);border-radius:24px;background:rgba(232,178,75,.09);font-size:20px;color:var(--gold);box-shadow:0 0 14px rgba(232,178,75,.16);animation:alchemy-bonus-pop .16s .09s ease-out both}
 .alchemy-reward small{font-size:12px;font-weight:700}
 #alchemyRevealDone{width:100%;margin-top:12px}
+@keyframes alchemy-bonus-pop{0%{transform:scale(.62);opacity:0;filter:brightness(2)}100%{transform:scale(1);opacity:1;filter:brightness(1)}}
 @keyframes alchemy-ring-spin{0%{transform:scale(.3) rotate(-100deg);opacity:0}45%{opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
 @keyframes alchemy-ring-appear{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
 @keyframes alchemy-flash{0%{transform:scale(.2);opacity:0}35%{opacity:1}100%{transform:scale(2.8);opacity:0}}
 @keyframes alchemy-materialize{0%{transform:translateY(14px) scale(.75);opacity:0;filter:blur(7px)}100%{transform:translateY(0) scale(1);opacity:1;filter:blur(0)}}
-@media(prefers-reduced-motion:reduce){.alchemy-ring,.alchemy-flash,.alchemy-created-icon,.alchemy-created-name,.alchemy-created-effect,.alchemy-rewards{animation:none}.alchemy-flash{display:none}}
+@media(prefers-reduced-motion:reduce){.alchemy-ring,.alchemy-flash,.alchemy-created-icon,.alchemy-created-name,.alchemy-created-effect,.alchemy-rewards,.alchemy-reward{animation:none}.alchemy-flash{display:none}}
 @media(max-width:630px){#alchemySlots .loadout-grid{gap:5px}#alchemySlots .tile-item-icon{font-size:26px}#alchemySlots .alchemy-item-info{min-height:49px;padding:4px 1px;gap:3px}}
 
 /* Shared, read-only icon guide for preparation and the dungeon. */
