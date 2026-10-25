@@ -67,7 +67,7 @@ for(const cohort of economy.policies){
     carriedKinds:snapshot.carry.map(x=>x.id),
     win:consumed.won,cleared:consumed.cleared,endingHp:consumed.endHp,
     endingMp:consumed.endMp,heals:consumed.heals,enemyHeals:consumed.enemyHeals,
-    firstLoss:consumed.firstLoss,gradeEligible:consumed.bossRankEligible,
+    firstLoss:consumed.firstLoss,firstLossDetail:consumed.firstLossDetail??null,gradeEligible:consumed.bossRankEligible,
     gradeBeforeRecovery:consumed.bossPreRecovery,itemsUsed:consumed.used});
   }
   const wins=results.filter(r=>r.win),count=results.length;
@@ -145,6 +145,7 @@ for(const cohort of economy.policies){
    },{})),
    winnerHp:row.winnerHp,winnerMp:row.winnerMp,
    lossesByLayer:row.firstLosses,
+   sampleLosses:results.filter(r=>!r.win).slice(0,3).map(r=>({seed:r.seed,...r.firstLossDetail})),
    cleanserUses:row.cleanserUses,
    gradeEligible:row.gradeIndependent.eligible}));
  }
