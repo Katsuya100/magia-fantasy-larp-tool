@@ -95,6 +95,17 @@ assert.equal(chooseHero(finishingHero,nearlyDown,17,true,'short',false),1,
  'Healing remains available against an enemy that cannot be finished immediately');
 
 
+// A long expedition cannot silently jump past either late checkpoint:
+// both 80F and 90F must be banked through real boss victories before
+// deliberately replaying the previous decade for paid spell preparation.
+const checkpointJourney=runJourney(17011,{style:'A',route:'long'});
+assert.ok(checkpointJourney.best>=100,'the deterministic checkpoint test owner must clear 100F');
+for(const depth of [80,90]){
+ const first=checkpointJourney.trace.find(t=>!t.defeat&&t.cleared>=depth);
+ assert.ok(first,'late checkpoint must be reached via a banked legal return');
+ assert.equal(first.cleared,depth,'long route must bank the actual '+depth+'F checkpoint before advancing');
+}
+
 const manifest=buildManifest();
 assert.equal(manifest.schemaVersion,'dungeon-levers-v1');
 assert.ok(manifest.entries.length>500,'must inventory more than balance CSV');
