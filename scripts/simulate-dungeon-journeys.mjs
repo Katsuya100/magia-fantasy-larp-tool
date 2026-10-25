@@ -577,9 +577,18 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // This is not an emergency return inside 1F-50F.
   const failedNewDepth=state.trace.at(-1)?.defeat===true&&
    state.trace.at(-1).goal>lastBoss;
+  // Real long-route players can choose to replay the last fully cleared
+  // decade until the *next* authored ten-floor challenge has enough paid
+  // spell investment and genuinely banked status cures. Every training
+  // sortie fights the real enemies, risks defeat and banks actual drops.
+  // Never grant levels, spells, stones, consumables or victory by fiat.
+  const nextReference=state.best>=70&&state.best<100&&state.best%10===0
+   ?specFor(state.best+1):null;
+  const gearTraining=Boolean(nextReference&&
+   !state.referenceSnapshots[nextReference.from]);
   const training=route==='long'&&state.best>=10&&
    (profile.level<targetClearLevel(nextBoss)||
-    profile.adventurerRank<lastBoss||failedNewDepth);
+    profile.adventurerRank<lastBoss||failedNewDepth||gearTraining);
   // Missing earlier earned rank badges must be recovered IN ORDER. A
   // player with rank 70 and deepest 90 cannot legally start from 81:
   // replay 71-80 first, bank the real 80F badge, then replay 81-90.
