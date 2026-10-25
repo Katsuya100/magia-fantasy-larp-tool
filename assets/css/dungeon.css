@@ -810,10 +810,14 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 #tutorialOverlay[data-dungeon-frame="paged"] > .dungeon-dialog-frame{
  --dungeon-frame-top-rail:0px
 }
-/* The identical close button wins over theme-specific rules in every compact
-   dialog, including the adventurer card, stone help, Drive and confirmations.
-   Its containing block is the frame, never a random nested action row. */
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close{
+/* The close control belongs to the dialog shell; only its body can scroll. */
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"])[open]{
+ display:flex;flex-direction:column;overflow:hidden
+}
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > .dungeon-dialog-frame{
+ flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior-y:contain
+}
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > button.dungeon-dialog-close{
  position:absolute!important;
  inset-block-start:14px!important;inset-inline-end:14px!important;z-index:20;
  appearance:none!important;box-sizing:border-box!important;
@@ -830,7 +834,7 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  transform:none!important;cursor:pointer;touch-action:manipulation
 }
 /* A centered SVG mask (not a baseline-dependent text glyph). */
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close::after{
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > button.dungeon-dialog-close::after{
  content:"";position:absolute;inset-block-start:50%;inset-inline-start:50%;
  width:24px;height:24px;transform:translate(-50%,-50%);
  background-color:currentColor;pointer-events:none;
@@ -838,13 +842,13 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  -webkit-mask:var(--dungeon-close-svg) center / contain no-repeat;
  mask:var(--dungeon-close-svg) center / contain no-repeat
 }
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close:hover{
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > button.dungeon-dialog-close:hover{
  background:#30273b!important;border-color:var(--gold)!important
 }
-#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) .dungeon-dialog-frame button.dungeon-dialog-close:focus-visible{
+#dungeonApp dialog:is([data-dungeon-frame="closable"],[data-dungeon-frame="paged"]) > button.dungeon-dialog-close:focus-visible{
  outline:3px solid #ecd191!important;outline-offset:3px
 }
-#dungeonApp dialog .dungeon-dialog-frame button.dungeon-dialog-close[hidden]{display:none!important}
+#dungeonApp dialog button.dungeon-dialog-close[hidden]{display:none!important}
 /* Headers live below the rail, never beneath the floating close control.
    This also protects long Japanese headings on narrow phones. */
 #dungeonApp dialog[data-dungeon-frame="closable"] .chooser-header{
@@ -2810,7 +2814,7 @@ button.creator-congratulations-close{
 .section-tools{display:flex;align-items:center;gap:10px;flex:none}
 #dungeonApp button.icon-guide-trigger{display:grid;place-items:center;width:42px;height:42px;padding:0;border:1px solid var(--border);border-radius:50%;background:#151725;color:var(--gold);font:700 20px/1 Georgia,serif;box-shadow:none}
 #dungeonApp button.icon-guide-trigger:focus-visible{outline:2px solid #9ae3db;outline-offset:3px}
-.icon-guide-dialog{width:min(620px,calc(100vw - 24px));max-height:85dvh;overflow-y:auto}
+.icon-guide-dialog{width:min(620px,calc(100vw - 24px));max-height:85dvh}
 .icon-guide-dialog .dungeon-dialog-frame{padding:24px clamp(16px,4vw,32px) 30px}
 .icon-guide-dialog .icon-guide-group{margin-top:22px}
 .icon-guide-dialog .icon-guide-group h3{margin:0 0 8px;color:var(--gold);font-size:17px}

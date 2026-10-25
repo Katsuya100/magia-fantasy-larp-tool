@@ -141,6 +141,31 @@ assert.ok(appended.every(node=>node.removed),'ghosts are removed after the 200ms
 // Frame components: one shared inner container, with exactly three layout
 // variants (closable, fixed, paged). Fullscreen/ceremony surfaces are explicitly
 // excluded. An HTML <dialog> tag alone does not establish the visual category.
+// Opening a compact dialog moves its real close control outside the scroll body.
+const closeButton={parentElement:null};
+const scrollBody={button:closeButton,scrollTop:0,querySelector(){return this.button;}};
+closeButton.parentElement=scrollBody;
+const pinnedDialog={
+ dataset:{dungeonFrame:'closable'},open:false,
+ querySelector(){return scrollBody;},
+ appendChild(button){this.control=button;button.parentElement=this;scrollBody.button=null;},
+ showModal(){this.open=true;},close(){this.open=false;}
+};
+showDungeonDialog(pinnedDialog);
+assert.equal(pinnedDialog.control,closeButton,'original button is moved, not duplicated');
+assert.equal(scrollBody.button,null,'close is no longer a child of the scrolled body');
+scrollBody.scrollTop=300;
+assert.equal(closeButton.parentElement,pinnedDialog,'scrolling leaves the control anchored to its dialog');
+closeDungeonDialog(pinnedDialog);
+showDungeonDialog(pinnedDialog);
+assert.equal(pinnedDialog.control,closeButton,'reopening preserves the same control');
+closeDungeonDialog(pinnedDialog);
+scrollBody.button=closeButton;closeButton.parentElement=scrollBody;
+pinnedDialog.dataset.dungeonFrame='fixed';
+showDungeonDialog(pinnedDialog);
+assert.equal(closeButton.parentElement,scrollBody,'fixed confirmations keep their normal actions');
+closeDungeonDialog(pinnedDialog);
+
 const closable={
  iconGuideDialog:'closeIconGuide',
  circlePowerTipsDialog:'closeCirclePowerTips',
@@ -230,7 +255,9 @@ assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="closable"\] > 
 assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="fixed"\] > \.dungeon-dialog-frame/,'fixed frame does not reserve a close rail');
 assert.match(frameStyles,/#tutorialOverlay\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'tutorial overlay remains paged');
 assert.match(frameStyles,/#dungeonApp dialog\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'native lesson reserves its header rail');
-assert.match(frameStyles,/#dungeonApp dialog:is\(\[data-dungeon-frame="closable"\],\[data-dungeon-frame="paged"\]\) \.dungeon-dialog-frame button\.dungeon-dialog-close\{/,'one scoped, high-priority button part across all compact dialogs');
+assert.match(frameStyles,/dialog:is\(\[data-dungeon-frame="closable"\],\[data-dungeon-frame="paged"\]\)\[open\]\{\s*display:flex;flex-direction:column;overflow:hidden/,'the dialog shell never scrolls');
+assert.match(frameStyles,/> \.dungeon-dialog-frame\{\s*flex:1 1 auto;min-height:0;overflow-y:auto/,'only the inner content frame scrolls');
+assert.match(frameStyles,/#dungeonApp dialog:is\(\[data-dungeon-frame="closable"\],\[data-dungeon-frame="paged"\]\) > button\.dungeon-dialog-close\{/,'one shared close control anchored to the dialog, outside the scroll container');
 const controlStyle=frameStyles.slice(frameStyles.indexOf('button.dungeon-dialog-close{'),frameStyles.indexOf('button.dungeon-dialog-close::after{'));
 for(const prop of [
  'position:absolute!important','inset-block-start:14px!important','inset-inline-end:14px!important',

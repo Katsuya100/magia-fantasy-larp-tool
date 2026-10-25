@@ -10,7 +10,7 @@ for(const title of ['属性','魔法の役割','強化','弱体','携行品']){
  assert.match(fragment,new RegExp('<h3[^>]*>'+title+'</h3>'),'category is a table group: '+title);
 }
 assert.equal((fragment.match(/class="icon-guide-table"/g)||[]).length,5,'each category has one table');
-for(const {icon} of Object.values(ATTRIBUTES))assert.ok(fragment.includes('<td>'+icon+'</td>'),'attribute icon matches gameplay');
+for(const {icon,label} of Object.values(ATTRIBUTES))assert.ok(fragment.includes('<td>'+icon+'</td><td>'+label+'</td>'),'icon and label match the grimoire: '+label);
 for(const label of Object.values(ROLES))assert.ok(fragment.includes('<td>'+label.slice(0,2).replace('✚回','✚')+'</td>')||fragment.includes('<td>'+label.slice(0,1)+'</td>')||fragment.includes('<td>'+label.match(/^(?:⚔️|🛡️|✚|🕸️)/)?.[0]+'</td>'),'role icon matches gameplay');
 for(const icon of ['🔥↓','⚡↓','💧↓','🌪️↓','🪨↓','⚖️↓','🌀↓','🛡️🔥↑','🌙','🔴','📜'])assert.ok(fragment.includes(icon),'status and supply icons are listed');
 const prepare=page.split('<section id="prepare"')[1].split('</section>')[0];
