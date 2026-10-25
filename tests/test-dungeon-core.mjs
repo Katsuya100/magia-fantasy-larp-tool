@@ -160,7 +160,8 @@ assert.ok(victoryMpRate(150)>.069+introReward&&victoryMpRate(150)<.085+introRewa
 // MP-bonus still disappears at layer 20, and the deep curve remains monotone.
 for(let layer=1;layer<=10;layer++)assert.equal(G.earlyVictoryMpBonusRate(layer),
  num('victory_mp_early_layer_bonus')*G.victoryMpLayerFactor(layer));
-for(let layer=11;layer<20;layer++){
+// F11 begins a fresh legal sortie: recovery rises again after the drained F10 boss.
+for(let layer=12;layer<20;layer++){
  assert.ok(G.earlyVictoryMpBonusRate(layer)<G.earlyVictoryMpBonusRate(layer-1));
  assert.ok(G.earlyVictoryMpBonusRate(layer)>0);
 }
