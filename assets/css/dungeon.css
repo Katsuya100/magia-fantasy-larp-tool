@@ -2841,16 +2841,16 @@ button.creator-congratulations-close{
 #alchemyInputs[hidden],#alchemyReveal[hidden]{display:none}
 .alchemy-reveal{display:grid;justify-items:center;gap:8px;padding:12px 0 0;text-align:center}
 .alchemy-ritual{width:min(210px,60vw);aspect-ratio:1;position:relative;display:grid;place-items:center;isolation:isolate}
-.alchemy-ring{position:absolute;border:2px solid rgba(222,186,108,.82);border-radius:50%;inset:12%;box-shadow:0 0 22px rgba(232,178,75,.35),inset 0 0 19px rgba(232,178,75,.22);animation:alchemy-ring-appear .22s ease-out both}
-.alchemy-ring-outer{inset:5%;border-style:dashed;animation:alchemy-ring-spin .24s cubic-bezier(.22,.65,.32,1) both}
-.alchemy-ring-inner{inset:23%;border-color:rgba(244,215,150,.76);animation-delay:.02s}
-.alchemy-flash{position:absolute;inset:28%;border-radius:50%;background:radial-gradient(circle,rgba(255,244,201,.95) 0,rgba(246,194,90,.52) 28%,transparent 70%);animation:alchemy-flash .2s ease-out both}
-.alchemy-created-icon{position:relative;z-index:1;font-size:clamp(64px,15vw,92px);line-height:1;text-shadow:0 0 18px rgba(248,205,116,.8),0 0 44px rgba(243,188,77,.38);animation:alchemy-materialize .2s .04s cubic-bezier(.18,.85,.22,1) both}
-.alchemy-created-name{font-size:18px;color:var(--gold);animation:alchemy-materialize .16s .08s ease-out both}
-.alchemy-created-effect{font-size:14px;color:var(--soft);animation:alchemy-materialize .15s .1s ease-out both}
-.alchemy-rewards{display:flex;justify-content:center;gap:12px;min-height:38px;animation:alchemy-materialize .15s .1s ease-out both}
+.alchemy-ring{position:absolute;border:2px solid rgba(222,186,108,.82);border-radius:50%;inset:12%;box-shadow:0 0 22px rgba(232,178,75,.35),inset 0 0 19px rgba(232,178,75,.22);animation:alchemy-ring-appear .44s ease-out both}
+.alchemy-ring-outer{inset:5%;border-style:dashed;animation:alchemy-ring-spin .48s cubic-bezier(.22,.65,.32,1) both}
+.alchemy-ring-inner{inset:23%;border-color:rgba(244,215,150,.76);animation-delay:.04s}
+.alchemy-flash{position:absolute;inset:28%;border-radius:50%;background:radial-gradient(circle,rgba(255,244,201,.95) 0,rgba(246,194,90,.52) 28%,transparent 70%);animation:alchemy-flash .4s ease-out both}
+.alchemy-created-icon{position:relative;z-index:1;font-size:clamp(64px,15vw,92px);line-height:1;text-shadow:0 0 18px rgba(248,205,116,.8),0 0 44px rgba(243,188,77,.38);animation:alchemy-materialize .4s .08s cubic-bezier(.18,.85,.22,1) both}
+.alchemy-created-name{font-size:18px;color:var(--gold);animation:alchemy-materialize .32s .16s ease-out both}
+.alchemy-created-effect{font-size:14px;color:var(--soft);animation:alchemy-materialize .3s .2s ease-out both}
+.alchemy-rewards{display:flex;justify-content:center;gap:12px;min-height:38px;animation:alchemy-materialize .3s .2s ease-out both}
 .alchemy-rewards:empty{display:none}
-.alchemy-reward{display:flex;align-items:center;gap:5px;padding:7px 15px;border:1px solid rgba(222,186,108,.65);border-radius:24px;background:rgba(232,178,75,.09);font-size:20px;color:var(--gold);box-shadow:0 0 14px rgba(232,178,75,.16);animation:alchemy-bonus-pop .16s .09s ease-out both}
+.alchemy-reward{display:flex;align-items:center;gap:5px;padding:7px 15px;border:1px solid rgba(222,186,108,.65);border-radius:24px;background:rgba(232,178,75,.09);font-size:20px;color:var(--gold);box-shadow:0 0 14px rgba(232,178,75,.16);animation:alchemy-bonus-pop .32s .18s ease-out both}
 .alchemy-reward small{font-size:12px;font-weight:700}
 #alchemyRevealDone{width:100%;margin-top:12px}
 @keyframes alchemy-bonus-pop{0%{transform:scale(.62);opacity:0;filter:brightness(2)}100%{transform:scale(1);opacity:1;filter:brightness(1)}}
