@@ -139,7 +139,6 @@
         "clear_bolt": 1,
         "clear_aqua": 1,
         "clear_storm": 1,
-        "clear_gravity": 1,
         "clear_law": 1,
         "clear_chaos": 1
       },
@@ -163,7 +162,6 @@
         "clear_bolt": 1,
         "clear_aqua": 1,
         "clear_storm": 1,
-        "clear_gravity": 1,
         "clear_law": 1,
         "clear_chaos": 1
       },
@@ -211,7 +209,6 @@
         "clear_flame": 1,
         "clear_bolt": 1,
         "clear_aqua": 1,
-        "clear_storm": 1,
         "clear_gravity": 1,
         "clear_law": 1,
         "clear_chaos": 1,
