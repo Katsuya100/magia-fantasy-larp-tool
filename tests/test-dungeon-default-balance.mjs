@@ -168,7 +168,7 @@ for(let to=10;to<=100;to+=10){
  if(from===1){
   if(bossStats.medianRounds!==4)issues.push('10F boss median must be four real rounds');
   if(medianMp<50||medianMp>60)issues.push('10F post-victory/pre-checkpoint median MP must be 50-60%');
-  if(bossStats.mpAfterVictoryRecoveryMedian!==median(winners.map(x=>x.mp/100*x.maxMp)))
+  if(Math.abs(bossStats.mpAfterVictoryRecoveryMedian-median(winners.map(x=>x.mp/100*x.maxMp)))>1e-7)
    issues.push('10F recorded MP must be after ordinary victory recovery');
   for(let i=6;i<10;i++){
    if(floorMetrics[i].threat+1e-6<floorMetrics[i-1].threat)
