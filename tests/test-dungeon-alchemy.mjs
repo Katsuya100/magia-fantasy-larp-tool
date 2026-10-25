@@ -41,6 +41,8 @@ const inventory=[make('clear_flame',0,0),make('heal_s',2,1),make('heal_l',500,2)
 assert.deepEqual(alchemyAutoSelect(inventory,rows,'hp','value'),[2,4,1]);
 assert.deepEqual(alchemyAutoSelect(inventory,rows,'mp','value-asc'),[5,3]);
 assert.deepEqual(alchemyAutoSelect(inventory,rows,'status'),[0]);
+assert.deepEqual(alchemyAutoSelect(inventory,rows,'hp'),[1,4,2],
+ 'unspecified auto-select priority defaults to lowest effect first');
 const abundant=[make('heal_s',25,0),make('mana_s',40,1),make('heal_s',30,2),
  make('clear_flame',0,3),make('heal_s',12,4),make('mana_s',50,5)];
 assert.deepEqual(alchemyAutoSelect(abundant,rows,'all','count'),[0,2,4,1,5],
@@ -138,6 +140,8 @@ assert.doesNotMatch(app,/錬金成功：|副産物なし/);
 assert.doesNotMatch(page+app,/所持品の順(?:番)?/,'all item-order labels use acquisition order');
 assert.match(page,/<option value="default">入手順<\/option>/);
 assert.match(page,/id="alchemyAutoPriority"[^>]*>[\s\S]*?<option value="count">数が多い順<\/option>/);
+assert.match(page,/<select id="alchemyAutoPriority"><option value="value-asc" selected>効果量が低い順<\/option>/,
+ 'new alchemy dialogs default to low-effect ingredients');
 assert.match(page,/id="alchemyPickerSort"[^>]*>[\s\S]*?<option value="count">数が多い順<\/option>/);
 assert.match(app,/\['count','数が多い順'\]/,'alchemy picker has count sorting option');
 assert.match(app,/\['default','入手順'\]/);
@@ -169,6 +173,24 @@ assert.match(page,/id="alchemyBaseRelic"[^>]*class="alchemy-base-relic relic-car
 assert.match(page,/id="alchemyBaseIcon" class="relic-art"/);
 assert.match(app,/\$\('alchemyBaseIcon'\)\.innerHTML=relicSymbolSvg\(relicIndex,true\)/);
 assert.match(css,/\.alchemy-base-relic \.relic-art\{margin:5px auto 10px\}/);
+// Every part of the craft reveal, including bonus stone/ink rewards, must settle
+// within 250ms.  Visual reward symbols remain conditional on actual drops.
+const animationSelectors=['alchemy-ring','alchemy-ring-outer','alchemy-flash',
+ 'alchemy-created-icon','alchemy-created-name','alchemy-created-effect','alchemy-rewards','alchemy-reward'];
+for(const selector of animationSelectors){
+ const styles=css.match(new RegExp('\\.'+selector+'\\{([^}]+)\\}'))?.[1]||'';
+ const animation=styles.match(/animation:([^;}]+)/)?.[1]||'';
+ assert.ok(animation,'animation is defined for '+selector);
+ const seconds=[...animation.matchAll(/(?:^|\s)(\d*\.?\d+)s(?=\s|$)/g)].map(match=>Number(match[1]));
+ assert.ok(seconds.length>=1,'animation duration is explicit for '+selector);
+ assert.ok(seconds.reduce((sum,value)=>sum+value,0)<=.25+1e-9,
+  selector+' duration including delay is within 250ms');
+}
+assert.match(css,/\.alchemy-ring-inner\{[^}]*animation-delay:\.02s/);
+assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{[^}]*\.alchemy-reward\{animation:none\}/);
+assert.match(app,/addedStones\?'<span class="alchemy-reward"[^']+魔導石/);
+assert.match(app,/addedInk\?'<span class="alchemy-reward"[^']+魔導墨/);
+assert.match(app,/\]\.join\(''\);[\s\S]*?\$\('alchemyInputs'\)\.hidden=true/);
 assert.match(css,/@keyframes alchemy-materialize/);
 assert.match(css,/prefers-reduced-motion:reduce[^\n]*\.alchemy-ring/);
 
