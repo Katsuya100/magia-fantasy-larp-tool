@@ -47,7 +47,7 @@ export function alchemyRecipe(relic,ingredients,rows){
  return {id:'escape_scroll',value:0};
 }
 
-export function alchemyAutoSelect(inventory,rows,kind='all',priority='value'){
+export function alchemyAutoSelect(inventory,rows,kind='all',priority='value-asc'){
  const counts=new Map();
  if(priority==='count')for(const item of inventory)counts.set(item.id,(counts.get(item.id)||0)+1);
  const types=kind==='hp'?['heal']:kind==='mp'?['mana']:kind==='status'?['clear','clear_all']:null;
