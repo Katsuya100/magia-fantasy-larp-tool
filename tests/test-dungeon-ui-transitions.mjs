@@ -265,6 +265,10 @@ assert.match(naming,/id="nameDialogHeader"[^>]*hidden/,'required name entry has 
 assert.match(naming,/id="cancelNameDialog"[^>]*dungeon-dialog-close-icon[^>]*hidden>✕<\/button>/,'rename has the original round X');
 assert.match(frameStyles,/width:100%;max-width:100%;min-width:0/,'header cannot overrun modal width');
 assert.match(frameStyles,/margin:0!important;border-bottom:/,'other chooser margins do not shift X');
+assert.match(frameStyles,/min-height:74px;padding:14px clamp\(16px,4vw,24px\)/,'shared header keeps a right-side gutter');
+assert.doesNotMatch(frameStyles,/\.chooser-header\s*\{[^}]*padding-inline-end:\s*0/,'chooser headers must not override the shared right-side gutter');
+assert.match(html,/<dialog id="alchemyDialog"[^>]*>[\s\S]*?<header class="chooser-header dungeon-dialog-header">/,'alchemy uses shared gutter');
+assert.match(html,/<dialog id="magicDetailsDialog"[^>]*>[\s\S]*?<header class="chooser-header dungeon-dialog-header">/,'magic details uses shared gutter');
 assert.match(frameStyles,/inset:auto!important/,'X resets inherited offset');
 assert.match(frameStyles,/#tutorialOverlay\[data-dungeon-frame="paged"\] > \.dungeon-dialog-frame/,'existing tutorial overlay preserved');
 // The card is a closable frame; the on-screen canvas and its original action
