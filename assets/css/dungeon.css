@@ -812,19 +812,26 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 }
 /* Common dialog header is fixed; text actions stay in their original rows. */
 #dungeonApp dialog:has(> .dungeon-dialog-header)[open]{
- display:flex;flex-direction:column;overflow:hidden
+ display:flex;flex-direction:column;overflow:hidden!important;
+ box-sizing:border-box;max-width:calc(100vw - 24px);min-width:0
 }
 #dungeonApp dialog:has(> .dungeon-dialog-header) > .dungeon-dialog-frame{
  flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior-y:contain
 }
 #dungeonApp dialog > .dungeon-dialog-header{
- position:relative;flex:none;box-sizing:border-box;
+ position:relative;flex:0 0 auto;box-sizing:border-box;
  display:flex;align-items:center;justify-content:space-between;gap:12px;
- min-height:74px;padding:14px 14px 14px clamp(16px,4vw,24px);
- margin:0;border-bottom:1px solid var(--border)
+ width:100%;max-width:100%;min-width:0;
+ min-height:74px;padding:14px clamp(16px,4vw,24px);
+ margin:0!important;border-bottom:1px solid var(--border)
+}
+#dungeonApp dialog > .dungeon-dialog-header[hidden]{display:none!important}
+#dungeonApp dialog > .dungeon-dialog-header > div{
+ flex:1 1 auto;min-width:0
 }
 #dungeonApp dialog > .dungeon-dialog-header .dungeon-dialog-frame-title{
- margin:0;min-width:0;max-width:calc(100% - 54px);font-size:clamp(18px,3vw,23px);color:var(--gold)
+ flex:1 1 auto;margin:0;min-width:0;max-width:100%;
+ font-size:clamp(18px,3vw,23px);color:var(--gold);overflow-wrap:anywhere
 }
 #dungeonApp dialog > .dungeon-dialog-header .dungeon-dialog-lesson-heading{
  font-size:18px;color:var(--gold)
@@ -833,7 +840,7 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  padding-block-start:16px!important
 }
 #dungeonApp dialog > .dungeon-dialog-header > button.dungeon-dialog-close-icon{
- position:relative!important;z-index:20;
+ position:relative!important;inset:auto!important;z-index:20;
  appearance:none!important;box-sizing:border-box!important;
  display:grid!important;place-items:center!important;
  width:var(--dungeon-frame-close-size,42px)!important;height:var(--dungeon-frame-close-size,42px)!important;
@@ -1899,8 +1906,7 @@ html,body{overflow-x:clip}
 .support-prompt-inner p{font-size:14px;color:var(--soft);margin:9px 0}
 .support-prompt-actions{display:flex;align-items:stretch;justify-content:center;gap:10px;margin-top:25px}
 .support-prompt-dialog{width:min(580px,calc(100vw - 26px));max-height:90dvh;overflow:auto}
-/* The card title and preview begin below the shared top-right × button. */
-/* Shared closable frames reserve the adventurer-card title rail. */
+/* Adventurer-card content scrolls below the shared header. */
 #adventurerShareCanvas{display:block;width:100%;height:auto;aspect-ratio:1200 / 675;border:1px solid #c5a06a70;margin:17px auto 7px}
 .support-share-help{font-size:11px!important;line-height:1.5;color:var(--soft)!important}
 .support-card-tools{display:flex;gap:9px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:16px}
