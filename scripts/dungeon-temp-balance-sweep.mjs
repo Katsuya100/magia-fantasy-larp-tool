@@ -9,6 +9,7 @@ import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
 import {rng,chooseHero} from './simulate-dungeon-journeys.mjs';
 const csv=p=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+p+'.csv',import.meta.url),'utf8'));
+let recoveryScale=1;
 let data={balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),
  playerBase:csv('player-base'),items:csv('consumables'),
  enemies:csv('enemies'),buffs:csv('buffs'),collections:csv('collections')};
@@ -102,7 +103,9 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
      {adventurerRank:Math.min(snapshot.rank,layer-10)}));
    }
    hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
-   G.recoverVictoryMp(hero,layer);
+   const beforeMp=hero.mp;
+   const normalRestore=G.recoverVictoryMp(hero,layer);
+   if(layer>10)hero.mp=beforeMp+Math.round(normalRestore*recoveryScale);
   }
   result.cleared=layer;
  }
@@ -113,36 +116,50 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
  return result;
 }
 
-/* TEMPORARY DIAGNOSTIC: parameter sweep is never a shipped rule or approval. */
+
+/* TEMPORARY: independent seeded 50-fight combat diagnostic, NEVER a shipped rule. */
 import {combatFixture,specFor} from './dungeon-readiness-reference.mjs';
 const baseline=data,seed=i=>37011+13*i;
-const randomBases=Array.from({length:48},(_,i)=>G.startingBase(rng(17011+13*i)));
+const bases=Array.from({length:64},(_,i)=>G.startingBase(rng(17011+13*i)));
 const median=ns=>ns.length?[...ns].sort((a,b)=>a-b)[Math.floor(ns.length/2)]:null;
-for(let from=11;from<=91;from+=10){
- const outcomes=[];
- for(const hp of [.40,.55,.65,.75,.85,1]){
-  for(const mag of [.35,.55,.75,1]){
-   data={...baseline,enemies:baseline.enemies.map((e,j)=>{
-    const layer=Math.floor(j/5)+1;
-    if(layer<from||layer>=from+10)return e;
-    return {...e,hp:String(Math.max(20,Math.round(Number(e.hp)*hp))),
-      mag:String(Math.max(1,Math.round(Number(e.mag)*mag)))};
-   })};
-   configure(data);
-   let wins=0,allMp=[],failedMp=[],failedFloors=[];
-   for(let i=0;i<48;i++){
-    const result=challenge(combatFixture(specFor(from),randomBases[i]),from,seed(i));
-    if(result.won){wins++;allMp.push(result.endMp);}
-    else {failedMp.push(result.endMp);failedFloors.push(result.firstLoss);}
+const options={
+ 11:[[.85,.75],[1,.55],[.75,.75],[1,.35],[.65,.75]],
+ 21:[[.85,.75],[1,.55],[1,.75],[.75,.75]],
+ 31:[[1,.55],[.85,.75],[.75,.75]],
+ 41:[[.85,.75],[1,.55],[1,.75]],
+ 51:[[1,.75],[.85,1],[.75,1],[1,.55],[.85,.75]],
+ 61:[[1,.75],[.85,.75],[.75,1],[1,.55]],
+ 71:[[.75,1],[.85,.75],[1,.55],[1,.75]],
+ 81:[[.85,1],[1,.75],[1,.55]],
+ 91:[[1,.75],[.85,1],[1,.55]]
+};
+for(const [key,combos] of Object.entries(options)){
+ const from=+key,outcomes=[];
+ for(const [hp,mag] of combos){
+  data={...baseline,enemies:baseline.enemies.map((e,j)=>{
+   const layer=Math.floor(j/5)+1;
+   if(layer<from||layer>=from+10)return e;
+   return {...e,hp:String(Math.max(20,Math.round(Number(e.hp)*hp))),
+    mag:String(Math.max(1,Math.round(Number(e.mag)*mag)))};
+  })};
+  configure(data);
+  for(const scale of [.05,.15,.25,.35,.5,.65,.8,1]){
+   recoveryScale=scale;
+   let wins=0,mps=[],loserMp=[];
+   for(let i=0;i<64;i++){
+    const got=challenge(combatFixture(specFor(from),bases[i]),from,seed(i));
+    if(got.won){wins++;mps.push(got.endMp);}else loserMp.push(got.endMp);
    }
-   outcomes.push({hp,mag,wins,mp:median(allMp),failMP:median(failedMp),
-      losses:failedFloors.length,winRate:Number((wins/48*100).toFixed(1))});
+   outcomes.push({hp,mag,scale,wins,mp:median(mps),loserMp:median(loserMp),
+    rate:100*wins/64});
   }
  }
- const sorted=outcomes.sort((a,b)=>Math.abs(a.winRate-(from===11?99.5:93.5))-
-      Math.abs(b.winRate-(from===11?99.5:93.5))||
-      Math.abs((a.mp??0)-12)-Math.abs((b.mp??0)-12));
- console.log('SWEEP_BAND '+JSON.stringify({from,top:sorted.slice(0,12),
-   strongest:sorted.filter(x=>x.wins>=43).sort((a,b)=>(a.mp??0)-(b.mp??0)).slice(0,6),
-   original:sorted.find(x=>x.hp===1&&x.mag===1)}));
+ const target=from===11?99.5:93.5;
+ outcomes.sort((a,b)=>{
+  const quality=x=>Math.abs(x.rate-target)*3+Math.max(0,(x.mp??100)-15)*.7;
+  return quality(a)-quality(b);
+ });
+ console.log('RECOVERY_SWEEP '+JSON.stringify({from,top:outcomes.slice(0,14),
+   closestWin:outcomes.slice().sort((a,b)=>Math.abs(a.rate-target)-Math.abs(b.rate-target)).slice(0,3),
+   eligible:outcomes.filter(x=>x.rate>=(from===11?98:90)&&x.rate<=(from===11?100:97)&&x.mp<=15).length}));
 }
