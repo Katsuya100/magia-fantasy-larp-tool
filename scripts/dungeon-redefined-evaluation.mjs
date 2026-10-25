@@ -72,6 +72,9 @@ for(const [bandIndex,goal] of approved.bands.entries()){
    rank:result.bossRankEligible,preRecovery:result.bossPreRecovery,
    cleansers:result.used,firstLoss:result.firstLoss});
  }
+ const losses=tries.filter(x=>!x.won);
+ const lossByFloor=Object.fromEntries([...new Set(losses.map(x=>x.firstLoss))]
+  .sort((a,b)=>a-b).map(floor=>[floor,losses.filter(x=>x.firstLoss===floor).length]));
  const winners=tries.filter(x=>x.won),winRate=100*winners.length/samples,
   mp=median(winners.map(x=>x.mp)),hp=median(winners.map(x=>x.hp));
  const issues=[];
@@ -89,7 +92,11 @@ for(const [bandIndex,goal] of approved.bands.entries()){
   upgrades:s.upgrades,powers:expectedPowers(s),stoneCost:stoneCost(s),
   inkRequired:0,redrawOptional:true,requiredItems:s.requiredItems,
   startHpPercent:100,startMpPercent:100,sortieStart:s.from,
-  count:samples,wins:winners.length,winRate,winningMpMedian:mp,
+  count:samples,wins:winners.length,winRate,
+  lossByFloor,losingMpMedian:median(losses.map(x=>x.mp)),
+  winningMpP10:percentile(winners.map(x=>x.mp)).p10,
+  winningMpP90:percentile(winners.map(x=>x.mp)).p90,
+  winningMpMedian:mp,
   winningHpMedian:hp,winRateTarget:goal.winRate,winSafety:goal.winSafety,
   winningMpTarget:goal.winnerMedianMp,issues,actualGoalsMet:!issues.length,
   result:issues.length?'COMBAT_TARGET_UNMET':'COMBAT_TARGET_MET'};
