@@ -2808,7 +2808,7 @@ button.creator-congratulations-close{
 }
 #alchemySlots .tile-item-icon{display:grid;place-items:center;width:100%;min-width:0;line-height:1}
 #alchemySlots .alchemy-item-info{
- display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;align-items:center;gap:3px;
+ display:grid;grid-template-rows:minmax(min-content,1fr) auto;justify-items:center;align-items:center;gap:3px;
  flex:1;width:100%;min-width:0;min-height:54px;box-sizing:border-box;padding:5px 3px;
  border:1px solid #b9986259;border-radius:5px;
  background:linear-gradient(145deg,#251f2e,#15202a);
