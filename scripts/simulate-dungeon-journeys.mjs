@@ -632,7 +632,15 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    // A risk-aware long dive can still return at a completed layer when
    // resources become critical. These are strategy parameters, NOT new
    // acceptance thresholds for game balance.
-   if(route==='long'&&layer>=51&&(hero.hp/hero.stats.hp<.3||hero.mp/hero.maxMp<.2))break;
+   // A real carried mana potion can justify one more floor for an unearned rank boss.
+   // The normal return rule still applies to low HP and every non-rank floor.
+   const canContinueForRankBoss=layer>=51&&layer%10===9&&layer+1>=20&&
+    profile.adventurerRank<layer+1&&carry.some(item=>item&&
+     data.items.find(row=>row.id===item.id)?.kind==='mana'&&Number(item.value)>0&&
+     G.canUseBattleItem(hero,item,data.items,data.buffs));
+   if(route==='long'&&layer>=51&&
+    (hero.hp/hero.stats.hp<.3||
+     (hero.mp/hero.maxMp<.2&&!canContinueForRankBoss)))break;
   }
   for(const [id,count] of Object.entries(usage)){
     const sink=id.startsWith('mana_')?state.rankManaUses:state.cleanseUses;
