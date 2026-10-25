@@ -81,7 +81,22 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
   route==='long'&&layer>=11&&layer<=20?.93:
   layer>=81?(layer%10===0?.95:.90):.90;
  if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
-  (layer!==10||hero.mp/hero.maxMp>.85))return heal;
+  (layer!==10||hero.mp/hero.maxMp>.85)){
+  // When a paid attack can finish this foe, healing first can invite an
+  // unnecessary additional round. Both combatants still act in the current
+  // round: only take a genuine castable finisher if the hero can survive the
+  // foe's strongest immediate response. Never skip badge HP preparation.
+  if(layer>=21&&!(pendingGrade&&String(enemy.id).startsWith('boss_l'))&&
+   !hero.statuses.some(s=>s.id==='debuff_storm'||s.id==='debuff_chaos')){
+   const finisher=attacks.find(i=>G.damage(hero,enemy,hero.spells[i],()=>1)>=enemy.hp);
+   if(finisher!==undefined){
+    const maxIncoming=Math.max(0,...enemy.spells.filter(s=>s?.role==='attack')
+     .map(s=>G.damage(enemy,hero,s,()=>1)));
+    if(hero.hp>maxIncoming*1.25)return finisher;
+   }
+  }
+  return heal;
+ }
  // Use the already equipped law-defense circle only when it can protect
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
