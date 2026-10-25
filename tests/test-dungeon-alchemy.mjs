@@ -118,4 +118,23 @@ assert.equal(legacy.alchemyCount,1,'older save has no alchemy progress');
 assert.equal(legacy.magicStones,0);
 assert.equal(legacy.magicInk,0);
 
+// Alchemy mechanics stay intact, while hidden outcomes are revealed only after crafting.
+const page=readFileSync(new URL('../dungeon.html',import.meta.url),'utf8');
+const app=readFileSync(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
+const css=readFileSync(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+assert.doesNotMatch(page,/id="alchemy(?:Preview|Result|ByproductChance|MilestoneProgress)"/);
+assert.doesNotMatch(page,/副産物の確率|魔導石確定まで|魔導墨確定まで|副産物なし/);
+assert.doesNotMatch(app,/\$\('alchemy(?:Preview|Result|ByproductChance|MilestoneProgress)'\)/);
+assert.doesNotMatch(app,/錬金成功：|副産物なし/);
+assert.doesNotMatch(page+app,/所持品の順(?:番)?/,'all item-order labels use acquisition order');
+assert.match(page,/<option value="default">入手順<\/option>/);
+assert.match(app,/\['default','入手順'\]/);
+assert.match(page,/id="alchemyReveal"[^>]*hidden/);
+assert.match(page,/id="alchemyCreatedIcon"/);
+assert.match(page,/id="alchemyRevealDone"/);
+assert.match(app,/\$\('alchemyInputs'\)\.hidden=true;\s*\$\('alchemyReveal'\)\.hidden=false;/);
+assert.match(app,/await saveProfile\(db,next\);[\s\S]*?\$\('alchemyCreatedIcon'\)\.textContent=itemSymbol\(item\)/);
+assert.match(css,/@keyframes alchemy-materialize/);
+assert.match(css,/prefers-reduced-motion:reduce[^\n]*\.alchemy-ring/);
+
 console.log('PASS dungeon alchemy: recipes, rarity, slots, byproduct odds and milestones');
