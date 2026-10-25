@@ -61,8 +61,9 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
   for(let slot=1;slot<=5;slot++){
    const fight=(layer-1)*5+slot,foe=encounterForFight(fight);
    const enemy=G.fromEnemy(foe,Number(data.floors[fight-1].enemy_level));
-   let victorious=false;
+   let victorious=false,rounds=0;
    for(let turn=0;turn<80;turn++){
+    rounds++;
     cleanse(hero,carry,layer,used);
     const h=chooseHero(hero,enemy,layer,layer>10,route,
      layer>=20&&layer%10===0&&snapshot.rank<layer),
@@ -78,7 +79,12 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
     if(enemy.hp<=0){victorious=true;break;}
    }
    if(!victorious){
-    result.firstLoss=layer;result.endHp=100*hero.hp/hero.stats.hp;
+    result.firstLoss=layer;
+    result.firstLossDetail={enemy:enemy.id,enemyLevel:enemy.level,
+     enemyHp:enemy.hp,enemyMaxHp:enemy.stats.hp,
+     heroHp:hero.hp,heroMaxHp:hero.stats.hp,
+     heroMp:hero.mp,heroMaxMp:hero.maxMp,rounds};
+    result.endHp=100*hero.hp/hero.stats.hp;
     result.endMp=100*hero.mp/hero.maxMp;
     result.remainingCarry=carry.filter(Boolean).length;
     return result;
