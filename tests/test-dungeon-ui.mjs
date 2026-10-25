@@ -28,6 +28,7 @@ try{
  assert.equal($('nameDialog').open,true,'new adventurer is named in a dialog');
  assert.equal($('nameDialog').dataset.dungeonFrame,'fixed','required naming uses a no-close frame');
  assert.equal($('cancelNameDialog').hidden,true,'required naming is not dismissible');
+ assert.equal($('nameDialogHeader').hidden,true,'initial naming does not show optional X header');
  $('playerNameInput').value='　 ';
  await $('nameForm').fire('submit');
  assert.match($('nameError').textContent,/1〜20文字/);
@@ -79,6 +80,12 @@ try{
  assert.equal($('nameDialog').open,true);
  assert.equal($('nameDialog').dataset.dungeonFrame,'closable','rename opens a closable shared frame');
  assert.equal($('cancelNameDialog').hidden,false,'rename has a common close button');
+ assert.equal($('nameDialogHeader').hidden,false,'rename exposes fixed round X header');
+ assert.equal($('nameDialogTitle').hidden,true,'rename title is in the header, not duplicated in the body');
+ await $('cancelNameDialog').fire('click');
+ assert.equal($('nameDialog').open,false,'rename X closes without saving');
+ await doc.click(btn({action:'rename'}));
+ assert.equal($('nameDialog').open,true,'rename can reopen after using X');
  $('playerNameInput').value='暁の旅人';
  await $('nameForm').fire('submit');
  assert.equal($('nameDialog').open,false);
