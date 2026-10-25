@@ -129,7 +129,8 @@ export function itemChoices(inventory,slots,itemName,escapeText,indexes=inventor
       const item=inventory[index],selectedSlot=slots.indexOf(index),selected=selectedSlot>=0,current=selected&&selectedSlot===editingSlot;
       return '<button type="button" class="picker-option'+(selected?' picker-selected':'')+(current?' picker-current':'')+'" data-'+action+'="'+index+'" aria-pressed="'+selected+'" aria-label="'+escapeText(name)+'・'+escapeText(itemEffectText(item))+(selected?'・選択中 '+(selectedSlot+1)+'枠目':'')+'">'
         +'<span class="picker-item-icon" aria-hidden="true">'+itemSymbol(item)+'</span>'
-        +'<span class="picker-label"><small>'+escapeText(itemEffectIcons(item))+'</small></span>'
+        +'<span class="picker-label">'+escapeText(itemName(item))+'<small>'
+        +(item.id==='luna_stone'||item.id==='life_ruby'||item.id?.startsWith('elixir_')||item.id==='escape_scroll'?itemEffectText({...item,bonus:null}):item.value?'効果量 '+item.value:'状態異常解除')+(item.bonus?' '+itemBonusEffect(item).icons:'')+'</small></span>'
         +'</button>';
     }).join('')+'</div></details>').join('');
 }

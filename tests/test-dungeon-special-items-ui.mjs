@@ -41,7 +41,7 @@ try{
   await $('closeLoadoutDialog').fire('click');
   await doc.click(btn({openItem:'0'}));
   assert.equal($('pickerFilter').value,'all','items have independent filter history');
-  assert.equal($('pickerSort').value,'default');
+  assert.equal($('pickerSort').value,'kind','item picker defaults to requested kind sorting');
   assert.match($('pickerFilter').innerHTML,/value="elixir"/);
   assert.match($('pickerFilter').innerHTML,/value="revive"/);
   assert.match($('pickerSort').innerHTML,/value="value-asc"/);
@@ -50,6 +50,10 @@ try{
   $('pickerFilter').value='elixir';await $('pickerFilter').fire('change');
   $('pickerSort').value='value-asc';await $('pickerSort').fire('change');
   assert.deepEqual([...$('loadoutOptions').innerHTML.matchAll(/data-choose-item="(\d+)"/g)].map(x=>Number(x[1])),[2,0],'ascending values sort only the elixirs');
+  $('pickerSort').value='kind';await $('pickerSort').fire('change');
+  assert.deepEqual([...$('loadoutOptions').innerHTML.matchAll(/data-choose-item="(\d+)"/g)].map(x=>Number(x[1])),[2,0],
+   'kind sorting preserves the previous ascending order within one category');
+  $('pickerSort').value='value-asc';await $('pickerSort').fire('change');
   await $('closeLoadoutDialog').fire('click');
   await doc.click(btn({view:'home'}));await doc.click(btn({view:'library'}));
   for(const [id,expected] of [['libraryRoleFilter','support'],['libraryAttributeFilter','aqua'],['librarySort','oldest'],['collectionDiscoveryFilter','missing'],['collectionRarityFilter','epic'],['collectionSort','name']]){

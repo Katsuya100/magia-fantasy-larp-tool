@@ -39,7 +39,26 @@ assert.equal(itemKind(kinds[1]),'revive');
 assert.deepEqual(itemListIndexes(kinds,[],{kind:'elixir'}),[0]);
 assert.deepEqual(itemListIndexes(kinds,[],{kind:'revive'}),[1]);
 assert.deepEqual(itemListIndexes(kinds,[],{sort:'value-asc'}),[1,2,0]);
-assert.deepEqual(itemListIndexes(inventory,master,{sort:'kind'}),[2,1,3,0]);
+assert.deepEqual(itemListIndexes(inventory,master,{sort:'kind'}),[1,3,0,2],'types use HP → MP → status, not alphabetic order');
+assert.deepEqual(itemListIndexes(inventory,master,{sort:'kind',withinKindSort:'value'}),[3,1,0,2],'kind sort preserves previously chosen descending effects within HP group');
+assert.deepEqual(itemListIndexes(inventory,master,{sort:'kind',withinKindSort:'value-asc'}),[1,3,0,2],'kind sort preserves previously chosen ascending effects');
+const everyKind=[
+ {id:'escape_scroll',value:0},{id:'life_ruby',value:0},{id:'clear_bolt',value:0},
+ {id:'elixir_s',value:35},{id:'mana_s',value:12},{id:'heal_s',value:30},
+ {id:'luna_stone',value:0},{id:'clear_flame',value:0}
+];
+const everyMaster=[...master,{id:'escape_scroll',kind:'escape',name:'脱出の巻物'},
+ {id:'life_ruby',kind:'revive',name:'生命の紅石'},{id:'elixir_s',kind:'elixir',name:'エリクシール小'},
+ {id:'luna_stone',kind:'clear_all',name:'ルナストーン'},{id:'clear_flame',kind:'clear',name:'浄化'}];
+assert.deepEqual(itemListIndexes(everyKind,everyMaster,{sort:'kind'}),[5,4,3,2,6,7,1,0],
+ 'all six kinds appear in the requested order; full cleanse stays with condition recovery');
+assert.deepEqual(itemListIndexes(everyKind,everyMaster,{kind:'clear',sort:'kind'}),[2,6,7],
+ 'status recovery filter includes Luna Stone');
+assert.deepEqual(itemListIndexes(everyKind,everyMaster,{sort:'kind',withinKindSort:'name'}).slice(0,3),[5,4,3],
+ 'kind ordering always takes priority over previous name sorting');
+assert.deepEqual(everyKind.map(x=>x.id),['escape_scroll','life_ruby','clear_bolt','elixir_s','mana_s','heal_s','luna_stone','clear_flame'],
+ 'kind ordering never modifies inventory');
+
 assert.deepEqual([...itemChoices(inventory,[1],x=>x.id,esc,[3,1]).matchAll(/data-choose-item="(\d+)"/g)].map(x=>Number(x[1])),[3,1],'filtered item indices match untouched inventory');
 const short=itemGrid([0,1,null,null,null],inventory,3,true,x=>x.id,esc);
 assert.equal((short.match(/data-open-item=/g)||[]).length,3,'three visual slots for level 1');
