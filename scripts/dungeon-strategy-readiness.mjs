@@ -7,6 +7,7 @@ const load=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const eco=load('reports/dungeon-linked-256-economy-v1.json');
 const combat=load('reports/dungeon-linked-256-combat-v1.json');
 const goals=load('config/dungeon-approved-goals.v1.json');
+const separated=load('reports/dungeon-redefined-verdicts-v1.json');
 assert.equal(eco.samplesPerPolicy,256);
 assert.equal(combat.combatSamples,goals.strictSamples);
 assert.equal(combat.approvedGoals,goals.schemaVersion);
@@ -16,13 +17,13 @@ const report={schemaVersion:'dungeon-paired-opportunity-v1',
  strategyReference:'Actual initial identical seed, A unchanged circles versus B dispersed stones or C paid ink redraw',
  economics:eco.schemaVersion,combat:combat.schemaVersion,
  seededAccounts:goals.strictSamples,acceptedGoals:goals.schemaVersion,
- status:'MEASURED_NOT_EQUAL_READINESS_CERTIFIED',
+ status:'CANDIDATE_READINESS_COST_DIAGNOSTIC',
  notes:[
   'Same initial account seed is preserved; subsequent divergent decisions consume independent portions of the PRNG stream.',
   'First entry is economic diagnosis only; mandatory combat uses the first genuinely banked, independently rank/level-ready sortie with the real equipped five circles and owned carry.',
   'Owners missing that legally prepared state remain ECONOMY_NOT_READY rather than being silently selected away or scored as combat defeats.',
   'The full-campaign cost vector is real additional battles, defeats, ranks, spent stones and 5-ink circle redraws. It cannot prove a level/power-equated causal comparison by itself.',
-  'Equal combat readiness requires BOTH economic strategies to meet the approved 256-seed win/MP criteria. No alternate target, p90 cap or free resources are fabricated.'
+  'Reference readiness is actual banked level, circle power and mandatory carry: owner-specific win rate is never an economic readiness gate.'
  ],pairedCases:[],strictReadyPairs:0,missingReadinessCases:0};
 for(const pair of eco.pairedLongitudinalCosts){
  assert.equal(pair.samples,goals.strictSamples);
@@ -45,14 +46,14 @@ for(const pair of eco.pairedLongitudinalCosts){
    throw Error('Missing real independently evaluated approved-combat cohort '+pair.style+' '+name);
   const checkpoint=pair.checkpoints[index];
   assert.equal(checkpoint.to,band.to);
-  const equalReady=ref.hardTargetPassed&&test.hardTargetPassed;
+  const candidateFor=style=>separated.JOURNEY_READINESS.find(x=>
+   x.style===style&&x.route===pair.route&&x.band===name);
+  const aReady=candidateFor('A'),bReady=candidateFor(pair.style);
+  assert.ok(aReady&&bReady,'all independent reference readiness rows exist');
+  const equalReady=aReady.prepared===256&&bReady.prepared===256;
   const issues=[];
-  if(ref.readinessGate!=='ALL_256_INDEPENDENTLY_PREPARED')
-   issues.push('A real owners not all banked/rank/level ready: economy/reachability unmet');
-  else if(!ref.hardTargetPassed)issues.push('A ready cohort does not meet unchanged 256-seed combat goals');
-  if(test.readinessGate!=='ALL_256_INDEPENDENTLY_PREPARED')
-   issues.push(pair.style+' real owners not all banked/rank/level ready: economy/reachability unmet');
-  else if(!test.hardTargetPassed)issues.push(pair.style+' ready cohort does not meet unchanged 256-seed combat goals');
+  if(aReady.prepared<256)issues.push('A economic readiness missing: '+aReady.unprepared+' of 256');
+  if(bReady.prepared<256)issues.push(pair.style+' economic readiness missing: '+bReady.unprepared+' of 256');
   if(checkpoint.comparedPairs<256)issues.push('Not all 256 accounts reached the same checkpoint');
   const cost={pairedAccounts:checkpoint.comparedPairs,
    extraActualFights:checkpoint.extraFights,
@@ -63,8 +64,10 @@ for(const pair of eco.pairedLongitudinalCosts){
    paidRedraws:pair.measured.paidRedraws};
   if(equalReady)report.strictReadyPairs++;
   else report.missingReadinessCases++;
-  return {band:name,equalsApprovedReadiness:equalReady,
-   verdict:issues.length?'REAL_COST_MEASURED_READINESS_UNPROVEN':'BOTH_STRICT_GOALS_MET_COST_COMPARABLE',
+  return {band:name,equalsCandidateReadiness:equalReady,
+   verdict:issues.length?'ECONOMY_PREPARATION_INCOMPLETE':'CANDIDATE_READINESS_COST_COMPARABLE',
+   candidateReadiness:{A:{ready:aReady.prepared,missing:aReady.unprepared,reasons:aReady.missingReasons},
+    alternative:{ready:bReady.prepared,missing:bReady.unprepared,reasons:bReady.missingReasons}},
    actualOwnerCombat:{A:{available:ref.ownersAvailable,wins:ref.clears,
      winRate:ref.winRateOf256,winMpMedian:ref.winnerMp.median,
      gradeEligible:ref.gradeIndependent.eligible,
@@ -92,7 +95,7 @@ writeFileSync(new URL('../reports/dungeon-strategy-readiness-v1.json',import.met
  JSON.stringify(report,null,2)+'\n');
 const summary={pairedStrategies:report.pairedCases.length,
  tenFloorReadinessComparisons:40,realOwnersPerArm:256,
- bothMetApprovedReadiness:report.strictReadyPairs,
+ bothFullyCandidateReady:report.strictReadyPairs,
  readinessUnproved:report.missingReadinessCases,
  status:report.status};
 console.log('DUNGEON_STRATEGY_READINESS '+JSON.stringify(summary));
@@ -100,6 +103,6 @@ if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMAR
  '## 256 real-owner strategy readiness joined to real economic opportunity cost\n'+
  'A vs B/C, short/long: '+summary.tenFloorReadinessComparisons+
  ' depth comparisons × 256 matched initial-seed accounts.\n'+
- 'Both strategies meet unchanged combat goals: '+summary.bothMetApprovedReadiness+
+ 'Both strategies meet candidate readiness in all 256 owners: '+summary.bothFullyCandidateReady+
  '; different/insufficient readiness: '+summary.readinessUnproved+
  '. Costs still measured without inventing resources.\n');

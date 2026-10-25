@@ -10,6 +10,9 @@ const read=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const economy=read('reports/dungeon-linked-256-economy-v1.json');
 const approved=read('config/dungeon-approved-goals.v1.json');
 const previous=read('reports/dungeon-linked-256-combat-v1.json');
+const candidateOwners=read('reports/dungeon-linked-256-reference-v1.json');
+assert.equal(candidateOwners.referenceStatus,reference.status);
+assert.equal(candidateOwners.samplesPerPolicy,256);
 assert.equal(approved.strictSamples,256);
 assert.equal(economy.samplesPerPolicy,256);
 assert.equal(economy.policies.length,6);
@@ -80,15 +83,18 @@ for(const [bandIndex,goal] of approved.bands.entries()){
 }
 for(const cohort of economy.policies){
  assert.equal(cohort.ownerEntries.length,samples);
+ const referencePolicy=candidateOwners.policies.find(p=>p.style===cohort.style&&p.route===cohort.route);
+ assert.ok(referencePolicy&&referencePolicy.owners.length===samples,'matching owner reference artifact is required');
  for(const [index,goal] of approved.bands.entries()){
   const s=specFor(goal.from),ready=[],absent=[],farmRows=[];
   let hasLevel=0,hasPower=0,hasItems=0;
   for(let i=0;i<samples;i++){
-   const owner=cohort.ownerEntries[i];
+   const owner=cohort.ownerEntries[i],banked=referencePolicy.owners[i];
    assert.equal(owner.seed,17011+13*i);
+   assert.equal(banked.seed,owner.seed,'actual seeded reference must match economy account');
    const original=owner.snapshots[index];
-   const accepted=owner.reference?.[index]??null;
-   const last=owner.lastReadiness?.[index]??null;
+   const accepted=banked.reference?.[index]??null;
+   const last=banked.lastReadiness?.[index]??null;
    if(accepted){
     const check=assess(accepted,s);
     assert.equal(check.ready,true,'unready owner must never be promoted to prepared');
@@ -106,14 +112,15 @@ for(const cohort of economy.policies){
      c.power>=expectedPowers(s)[j]))hasPower++;
    if(closest&&Object.entries(s.requiredItems).every(([id,n])=>
      closest.carry.filter(x=>x.id===id).length>=n))hasItems++;
-   farmRows.push({seed:owner.seed,base:accepted,post:owner.farming?.[index]??[]});
+   farmRows.push({seed:owner.seed,base:accepted,post:banked.farming?.[index]??[]});
   }
   const outcomes=Object.entries(absent.reduce((a,x)=>
    (x.reasons.forEach(reason=>a[reason]=(a[reason]||0)+1),a),{}));
   const pct=n=>100*n/samples;
   const firstEntry=cohort.ownerEntries.map(x=>x.snapshots[index]).filter(Boolean);
-  const extraFights=ready.map(x=>x.snapshot.actualFights-
-    (cohort.ownerEntries[(x.seed-17011)/13].snapshots[index]?.actualFights??0));
+  const extraFights=ready.map(x=>Math.max(0,x.snapshot.actualFights-
+    (cohort.ownerEntries[(x.seed-17011)/13].snapshots[index]?.actualFights??0)));
+  // A banked prepared state may precede first entrance; never invent a negative preparation cost.
   const replay=ready.map(x=>x.snapshot.repeatedFights??0);
   const r={style:cohort.style,route:cohort.route,band:s.from+'-'+s.to,
    count:samples,prepared:ready.length,unprepared:absent.length,

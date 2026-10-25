@@ -61,6 +61,8 @@ const select=x=>({seed:x.seed,level:x.profile.level,rank:x.profile.rank,
    sorties:cleared?.sortie??null,level:cleared?.levelAfter??null};
  })});
 const stats=values=>spread(values.filter(Number.isFinite));
+const referenceReport={schemaVersion:'dungeon-linked-256-reference-v1',samplesPerPolicy:goals.strictSamples,
+ seedRule:'17011+13*i',sourceHashes,referenceStatus:'CANDIDATE_NOT_USER_APPROVED',policies:[]};
 const report={schemaVersion:'dungeon-linked-256-economy-v1',source:ECONOMY_VERSION,
  status:'STRUCTURAL_AUDIT_NOT_BALANCE_CERTIFICATION',
  scope:'authored 1-100F only; 101-150F is conditional drop extrapolation',
@@ -74,7 +76,7 @@ const report={schemaVersion:'dungeon-linked-256-economy-v1',source:ECONOMY_VERSI
   'No 101-150F authored combat, mandatory 101-150F clear, or new p90 replay threshold is implied.'
  ]};
 for(const style of ['A','B','C'])for(const route of ['short','long']){
- const accounts=[],ownerEntries=[],entries=Array.from({length:10},(_,i)=>({band:10*i+1,
+ const accounts=[],ownerEntries=[],referenceOwners=[],entries=Array.from({length:10},(_,i)=>({band:10*i+1,
   level:[],hp:[],mp:[],stone:[],ink:[],upgrades:[],
   records:0,carriedCleansers:[],storedCleansers:[]}));
  const floors=Array.from({length:100},(_,i)=>({layer:i+1,attempted:0,cleared:0,
@@ -128,6 +130,9 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   assert.ok(run.rankAudit.every(r=>r.hpPercent>=80&&r.mpPercent>=80||!r.eligible));
   conservationChecks++;
   accounts.push(select(run));
+  referenceOwners.push({seed,reference:goals.bands.map(b=>run.referenceSnapshots[b.from]??null),
+   lastReadiness:goals.bands.map(b=>run.referenceLastAttempt[b.from]??null),
+   farming:goals.bands.map(b=>run.farmingSnapshots[b.from]??[])});
   ownerEntries.push({seed,snapshots:goals.bands.map(b=>{
    const snap=run.entrySnapshots[b.from];
    return snap?{from:b.from,layer:snap.layer,sortie:snap.sortie,
@@ -170,10 +175,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
      unbankedInk:snap.unbankedInk,actualFights:snap.actualFights,
      actualSorties:snap.actualSorties,actualLosses:snap.actualLosses,
      actualReturns:snap.actualReturns,source:snap.source,status:snap.status};
-   }),
-   reference:goals.bands.map(b=>run.referenceSnapshots[b.from]??null),
-   lastReadiness:goals.bands.map(b=>run.referenceLastAttempt[b.from]??null),
-   farming:goals.bands.map(b=>run.farmingSnapshots[b.from]??[])
+   })
   });
   for(const [i,e] of entries.entries()){
    const snap=run.entrySnapshots[e.band];
@@ -248,6 +250,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    winExitHp:stats(f.exitHp),winExitMp:stats(f.exitMp)})),
   accounts,ownerEntries};
  report.policies.push(policy);
+ referenceReport.policies.push({style,route,owners:referenceOwners});
  console.log('DUNGEON_LINKED_256_POLICY '+JSON.stringify({style,route,samples:accounts.length,
   completion,nonCompletion:accounts.length-completion,conservationChecks,
   p90RepeatFights:dist.repeatedFights.p90,p90Defeats:dist.deathCount.p90,
@@ -306,6 +309,8 @@ report.structuralChecks=report.policies.reduce((n,x)=>n+x.conservationChecks,0);
 assert.equal(report.structuralChecks,6*goals.strictSamples);
 assert.equal(report.policies.length,6);
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
+writeFileSync(new URL('../reports/dungeon-linked-256-reference-v1.json',import.meta.url),
+ JSON.stringify(referenceReport)+'\n');
 writeFileSync(new URL('../reports/dungeon-linked-256-economy-v1.json',import.meta.url),
  JSON.stringify(report,null,2)+'\n');
 const summary={status:'STRUCTURAL_ECONOMY_COMPLETE_NOT_BALANCE_CERTIFIED',
