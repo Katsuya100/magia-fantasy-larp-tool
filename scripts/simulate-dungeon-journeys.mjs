@@ -62,22 +62,6 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
    if(finisher!==undefined)return finisher;
   }
  }
- // For deeper enemies, use the lowest-cost genuine finishing attack
- // rather than spending extra MP on a stronger spell that deals only
- // overkill. The chosen spell must actually be available, and both
- // combatants still execute their normal actions in the same round.
- if(layer>20&&attacks.length&&
-  !(pendingGrade&&String(enemy.id).startsWith('boss_l')&&
-   (hero.hp/hero.stats.hp<.85||hero.mp/hero.maxMp<.9))&&
-  !hero.statuses.some(s=>s.id==='debuff_storm'||s.id==='debuff_chaos')){
-  const lethal=attacks.filter(i=>G.damage(hero,enemy,hero.spells[i],()=>1)>=enemy.hp)
-   .sort((a,b)=>G.spellMpCost(hero.spells[a])-G.spellMpCost(hero.spells[b])||a-b);
-  if(lethal.length){
-   const worstHit=Math.max(0,...enemy.spells.filter(s=>s?.role==='attack')
-    .map(s=>G.damage(enemy,hero,s,()=>1)));
-   if(hero.hp>worstHit*1.25)return lethal[0];
-  }
- }
  // Novice rank at F10 checks HP and MP BEFORE the ordinary victory reward.
  // Once utility is legally unlocked, heal proactively for that real badge;
  // never mint a recovery or bypass G.available / actual MP spending.
