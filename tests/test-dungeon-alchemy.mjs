@@ -150,6 +150,11 @@ assert.match(page,/id="alchemyCreatedIcon"/);
 assert.match(page,/id="alchemyRevealDone"/);
 assert.match(app,/\$\('alchemyInputs'\)\.hidden=true;\s*\$\('alchemyReveal'\)\.hidden=false;/);
 assert.match(app,/await saveProfile\(db,next\);[\s\S]*?\$\('alchemyCreatedIcon'\)\.textContent=itemSymbol\(item\)/);
+
+assert.match(page,/id="alchemyPickerOptions" class="item-picker-list"/,'alchemy shares the accordion container');
+assert.match(app,/\\$\\('alchemyPickerOptions'\\)\\.innerHTML=indexes\\.length[\\s\\S]*?itemChoices\\(profile\\.inventory,alchemy\\.slots,itemName,esc,indexes,alchemyPickerSlot,'choose-alchemy-item'\\)/);
+assert.match(app,/\\$\\('loadoutOptions'\\)\\.className=picker\\.kind==='circle'\\?'picker-grid circle-picker-grid':'item-picker-list'/);
+assert.match(css,/\\.item-picker-options\\{[^}]*grid-template-columns:repeat\\(2,minmax\\(0,1fr\\)\\)/,'both pickers use a two-column item grid');
 // Only alchemy splits the selectable icon square from its name/effect panel.
 const visible=alchemyItemGrid([0,1,2,null,4],five('heal_s',25),item=>item.id,x=>x);
 assert.equal((visible.match(/class="alchemy-item-frame"/g)||[]).length,5);
