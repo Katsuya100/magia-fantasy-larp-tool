@@ -17,7 +17,7 @@ assert.equal(candidateOwners.samplesPerPolicy,256);
 assert.equal(approved.strictSamples,256);
 assert.equal(economy.samplesPerPolicy,256);
 assert.equal(economy.policies.length,6);
-assert.equal(previous.cases.length,60,'sixty actual-owner battles must remain diagnostic');
+assert.equal(previous.cases.length,60,'all sixty actual-owner battles must be reported for the independent strict gate');
 assert.deepEqual(previous.economicSourceHashes,economy.sourceHashes);
 for(const path of ['config/dungeon-approved-goals.v1.json',
  'config/dungeon-recommended-reference-candidate.v1.json',
@@ -34,7 +34,7 @@ const median=x=>percentile(x).median;
 const report={schemaVersion:'dungeon-redefined-verdicts-v1',
  approval:reference.status,approvedGoals:approved.schemaVersion,
  seedPolicy:'256 owners 17011+13*i, paired battle 37011+13*i',
- purpose:'CI validates the separation, even while the actual approved combat targets or economic preparation remain unmet',
+ purpose:'Separate the unapproved fixed reference from the mandatory real-owner 60-case strict acceptance and economic preparation',
  COMBAT_BALANCE:[],JOURNEY_READINESS:[],EXTRA_FARMING:[],
  RANK_ACQUISITION:[],BUILD_STRATEGY:[],
  designIntegrity:'PASS',warnings:[
