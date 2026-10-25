@@ -432,7 +432,7 @@ export function earlyVictoryMpBonusRate(layer){
  // Floor 1-10 keeps its beginner recovery; 11+ scales the existing
  // paid-spell economy to the 50-fight target without any extra item or MP.
  return Number.isFinite(floor)?num('victory_mp_early_layer_bonus')*
-  clamp((20-floor)/10,0,1)*(floor<=10?1:.5):0;
+  clamp((20-floor)/10,0,1)*(floor<=10?victoryMpLayerFactor(floor):.5):0;
 }
 export function recoverVictoryMp(hero,layer=1){
  const floor=Number(layer);
