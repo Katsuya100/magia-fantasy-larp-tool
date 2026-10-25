@@ -41,6 +41,14 @@ const inventory=[make('clear_flame',0,0),make('heal_s',2,1),make('heal_l',500,2)
 assert.deepEqual(alchemyAutoSelect(inventory,rows,'hp','value'),[2,4,1]);
 assert.deepEqual(alchemyAutoSelect(inventory,rows,'mp','value-asc'),[5,3]);
 assert.deepEqual(alchemyAutoSelect(inventory,rows,'status'),[0]);
+const abundant=[make('heal_s',25,0),make('mana_s',40,1),make('heal_s',30,2),
+ make('clear_flame',0,3),make('heal_s',12,4),make('mana_s',50,5)];
+assert.deepEqual(alchemyAutoSelect(abundant,rows,'all','count'),[0,2,4,1,5],
+ 'more of the same item ID wins regardless of effect value; tied quantities preserve acquisition order');
+assert.deepEqual(alchemyAutoSelect(abundant,rows,'mp','count'),[1,5],
+ 'count-based auto-selection works together with category filtering');
+assert.deepEqual(alchemyAutoSelect(abundant,rows,'all','default'),[0,1,2,3,4],
+ 'existing acquisition-order priority is unchanged');
 
 // Crafting is immutable, consumes exactly one relic and five instances,
 // removes equipped ingredients by instance ID, and keeps other slots intact.
@@ -129,6 +137,9 @@ assert.doesNotMatch(app,/\$\('alchemy(?:Preview|Result|ByproductChance|Milestone
 assert.doesNotMatch(app,/錬金成功：|副産物なし/);
 assert.doesNotMatch(page+app,/所持品の順(?:番)?/,'all item-order labels use acquisition order');
 assert.match(page,/<option value="default">入手順<\/option>/);
+assert.match(page,/id="alchemyAutoPriority"[^>]*>[\s\S]*?<option value="count">数が多い順<\/option>/);
+assert.match(page,/id="alchemyPickerSort"[^>]*>[\s\S]*?<option value="count">数が多い順<\/option>/);
+assert.match(app,/\['count','数が多い順'\]/,'alchemy picker has count sorting option');
 assert.match(app,/\['default','入手順'\]/);
 assert.match(page,/id="alchemyReveal"[^>]*hidden/);
 assert.match(page,/id="alchemyCreatedIcon"/);
@@ -149,7 +160,9 @@ assert.match(app,/alchemyItemGrid\(choices,profile\.inventory,itemName,esc\)/);
 assert.match(css,/#alchemySlots \.alchemy-item-frame\{[^}]*flex-direction:column/);
 assert.match(css,/#alchemySlots \.alchemy-item-frame \.loadout-tile\{[^}]*aspect-ratio:1 \/ 1/);
 assert.match(css,/#alchemySlots \.alchemy-item-info\{[^}]*min-height:54px/);
-assert.match(css,/#alchemySlots \.alchemy-item-name\{[^}]*white-space:nowrap/);
+assert.match(css,/#alchemySlots \.alchemy-item-name\{[^}]*white-space:normal/,'long item names wrap without clipping');
+assert.match(css,/#alchemySlots \.alchemy-item-name\{[^}]*overflow-wrap:anywhere/,'long names fit narrow mobile slots');
+assert.match(css,/#alchemySlots \.alchemy-item-info\{[^}]*grid-template-rows:minmax\(min-content,1fr\) auto/,'effects align below variable-height names');
 assert.match(css,/#alchemySlots \.alchemy-item-effect\{[^}]*white-space:nowrap/);
 // The base collection icon is the same SVG and .relic-art sizing as the collection grid.
 assert.match(page,/id="alchemyBaseRelic"[^>]*class="alchemy-base-relic relic-card discovered"/);

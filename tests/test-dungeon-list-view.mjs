@@ -27,6 +27,12 @@ assert.equal(itemKind(inventory[2],master),'clear');
 assert.deepEqual(itemListIndexes(inventory,master,{kind:'heal'}),[1,3]);
 assert.deepEqual(itemListIndexes(inventory,master,{sort:'value'}),[3,1,0,2]);
 assert.deepEqual(itemListIndexes(inventory,master,{sort:'value-asc'}),[2,0,1,3],'ascending item value preserves inventory indices');
+assert.deepEqual(itemListIndexes(inventory,master,{sort:'count'}),[1,3,0,2],
+ 'count sort groups identical item IDs by number held, with ties in inventory order');
+assert.deepEqual(itemListIndexes(inventory,master,{kind:'heal',sort:'count'}),[1,3],
+ 'count sort honors item kind filters without changing saved indices');
+assert.deepEqual(inventory.map(item=>item.id),['mana_s','heal_s','clear_bolt','heal_s'],
+ 'count sorting must not mutate saved inventory order');
 const kinds=[{id:'elixir_s',value:35},{id:'life_ruby',value:0},{id:'heal_s',value:24}];
 assert.equal(itemKind(kinds[0]),'elixir');
 assert.equal(itemKind(kinds[1]),'revive');

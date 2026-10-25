@@ -2799,7 +2799,7 @@ button.creator-congratulations-close{
 /* Alchemy reuses the preparation slots, chooser and selectable item tiles. */
 .relic-card .relic-alchemy{margin-top:auto;padding:6px 18px!important;font-size:12px;position:relative;z-index:1}
 .relic-card .relic-alchemy:disabled{opacity:.4;cursor:not-allowed}
-#alchemySlots .loadout-grid{grid-template-columns:repeat(5,minmax(0,1fr));align-items:start}
+#alchemySlots .loadout-grid{grid-template-columns:repeat(5,minmax(0,1fr));align-items:stretch}
 #alchemySlots .alchemy-item-frame{display:flex;flex-direction:column;gap:4px;min-width:0}
 #alchemySlots .alchemy-item-frame .loadout-tile{
  box-sizing:border-box;display:grid;place-items:center;flex:0 0 auto;
@@ -2808,16 +2808,16 @@ button.creator-congratulations-close{
 }
 #alchemySlots .tile-item-icon{display:grid;place-items:center;width:100%;min-width:0;line-height:1}
 #alchemySlots .alchemy-item-info{
- display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
- width:100%;min-width:0;min-height:54px;box-sizing:border-box;padding:5px 3px;
+ display:grid;grid-template-rows:minmax(min-content,1fr) auto;justify-items:center;align-items:center;gap:3px;
+ flex:1;width:100%;min-width:0;min-height:54px;box-sizing:border-box;padding:5px 3px;
  border:1px solid #b9986259;border-radius:5px;
  background:linear-gradient(145deg,#251f2e,#15202a);
  color:var(--pale);text-align:center
 }
 #alchemySlots .alchemy-item-name{
- display:block;width:100%;min-width:0;overflow:hidden;
- white-space:nowrap;text-overflow:ellipsis;font-size:clamp(10px,1.45vw,13px);
- line-height:1.3
+ display:block;width:100%;min-width:0;max-width:100%;
+ white-space:normal;overflow-wrap:anywhere;word-break:normal;
+ font-size:clamp(10px,1.45vw,13px);line-height:1.3
 }
 #alchemySlots .alchemy-item-effect{
  display:block;width:100%;min-width:0;overflow:hidden;
