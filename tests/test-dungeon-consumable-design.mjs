@@ -77,7 +77,7 @@ for(const layer of [100,101,150]){
  assert.equal(potions.length,3);
  assert.ok(potions.every(x=>x.id==='heal_xl'&&x.value>=G.rollPotionValue(items.find(i=>i.id==='heal_xl'),layer,()=>0)),'numeric rewards scale to the target level at depth '+layer);
 }
-const lateCleanser=G.drops(items,collections,150,scriptedRoll([1,1,1,1,1,1,0,1,1,.76,.5,.965]),{layer:101});
+const lateCleanser=G.drops(items,collections,150,scriptedRoll([1,1,1,1,1,1,0,1,1,.81,.5,.965]),{layer:101});
 assert.equal(lateCleanser[0].id,'clear_chaos','specialist cleanser remains available in the endless dungeon');
 const lateLuna=G.drops(items,collections,150,scriptedRoll([1,1,1,1,1,1,0,1,1,.85,.5,.965]),{layer:101});
 assert.equal(lateLuna[0].id,'luna_stone','deep status recovery can now draw broad-spectrum cleanser');
