@@ -117,41 +117,35 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
 }
 
 
-/* TEMPORARY: verify real 256 seeded generated heroes against original combat code. */
+/* TEMPORARY: full 256-seed neighborhood refinement around approved 92-95% range. */
 import {combatFixture,specFor} from './dungeon-readiness-reference.mjs';
-const pristine=data,seed=i=>37011+13*i;
-const bases=Array.from({length:256},(_,i)=>G.startingBase(rng(17011+13*i)));
-const mid=a=>a.length?[...a].sort((x,y)=>x-y)[Math.floor((a.length-1)/2)]:null;
-const variants={
- 11:[[1,.25],[1,.35],[1,.45],[1.15,.35]],
- 21:[[1.5,.45],[1.3,.55],[1.8,.35],[1,.45],[1.3,.45],[1.8,.25]],
- 31:[[1.5,.35],[1,.35],[1.3,.35],[1.15,.45],[1.8,.25],[1.5,.25]],
- 41:[[1,.55],[1.3,.45],[1.5,.25],[1,.35],[1.15,.55],[1.5,.45]],
- 51:[[1.3,.45],[1.5,.45],[2.1,.35],[1,.35],[1.5,.35],[1.3,.55]],
- 61:[[1.3,.35],[1.3,.45],[1.8,.15],[1.5,.35],[1.8,.25],[1.15,.55]],
- 71:[[1.8,.15],[1.3,.35],[1.5,.35],[1.3,.15],[2.1,.15],[1.15,.45]],
- 81:[[1.15,.55],[1.3,.35],[1.5,.45],[2.1,.25],[1.5,.55],[1.3,.55]],
- 91:[[2.1,.15],[1.3,.25],[1.5,.25],[1.5,.35],[1.8,.25],[1.3,.35]]
+const base=data,seed=i=>37011+13*i;
+const seeds=Array.from({length:256},(_,i)=>G.startingBase(rng(17011+13*i)));
+const median=a=>a.length?[...a].sort((x,y)=>x-y)[Math.floor((a.length-1)/2)]:null;
+const combos={
+ 21:[[1.35,.45],[1.4,.45],[1.45,.45],[1.3,.5],[1.35,.5],[1.4,.5],[1.25,.55]],
+ 31:[[1.35,.35],[1.4,.35],[1.45,.35],[1.45,.3],[1.5,.3],[1.6,.25],[1.25,.4]],
+ 41:[[.95,.55],[.975,.55],[1,.5],[1,.48],[1,.52],[1.1,.45],[1.15,.45]],
+ 51:[[1.55,.35],[1.6,.35],[1.65,.35],[1.7,.35],[1.45,.4],[1.5,.4],[1.4,.4]],
+ 71:[[1.65,.15],[1.7,.15],[1.75,.15],[1.8,.12],[1.5,.2],[1.55,.2],[1.6,.2]],
+ 81:[[1.05,.55],[1.08,.55],[1.1,.55],[1.12,.55],[1.15,.5],[1.18,.5],[1.2,.5]],
+ 91:[[1.18,.25],[1.2,.25],[1.23,.25],[1.25,.25],[1.28,.25],[1.2,.28],[1.25,.28]]
 };
-for(const [fromText,combos] of Object.entries(variants)){
- const from=+fromText,out=[];
- for(const [hp,mag] of combos){
-  data={...pristine,enemies:pristine.enemies.map((e,j)=>{
-   const layer=Math.floor(j/5)+1;
-   if(layer<from||layer>=from+10)return e;
-   return {...e,hp:String(Math.max(20,Math.round(Number(e.hp)*hp))),
-    mag:String(Math.max(1,Math.round(Number(e.mag)*mag)))};
-  })};
-  configure(data);recoveryScale=.5;
-  let wins=0,mps=[],hpEnd=[],losingMp=[];
+for(const [key,variants] of Object.entries(combos)){
+ const from=+key,results=[];
+ for(const [hp,mag] of variants){
+  data={...base,enemies:base.enemies.map((e,i)=>{
+    const layer=Math.floor(i/5)+1;if(layer<from||layer>=from+10)return e;
+    return {...e,hp:String(Math.max(20,Math.round(Number(e.hp)*hp))),
+     mag:String(Math.max(1,Math.round(Number(e.mag)*mag)))};
+  })};configure(data);recoveryScale=.5;
+  let wins=0,mps=[],hps=[];
   for(let i=0;i<256;i++){
-   const got=challenge(combatFixture(specFor(from),bases[i]),from,seed(i));
-   if(got.won){wins++;mps.push(got.endMp);hpEnd.push(got.endHp);}
-   else losingMp.push(got.endMp);
+   const out=challenge(combatFixture(specFor(from),seeds[i]),from,seed(i));
+   if(out.won){wins++;mps.push(out.endMp);hps.push(out.endHp);}
   }
-  out.push({hp,mag,wins,rate:Number((100*wins/256).toFixed(3)),
-    medianMp:mid(mps),medianHp:mid(hpEnd),loserMp:mid(losingMp),
-    pass:wins>=(from===11?254:236)&&wins<=(from===11?256:243)&&mid(mps)<=15});
+  results.push({hp,mag,wins,rate:Number((wins*100/256).toFixed(3)),mp:median(mps),hpEnd:median(hps),
+   pass:wins>=236&&wins<=243&&median(mps)<=15});
  }
- console.log('VERIFY_256 '+JSON.stringify({from,scale:.5,variants:out}));
+ console.log('REFINE_256 '+JSON.stringify({from,results}));
 }
