@@ -98,7 +98,7 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // gravity opponents wastes the paid turn and can cause preventable losses.
  const lawThreat=enemy.spells.some(s=>s?.attribute==='law'&&
   (s.role==='attack'||s.role==='debuff'));
- const needsGuard=(layer===10&&utilityUnlocked&&enemy.id==='boss_l010')||
+ const needsGuard=(rankBoss&&lawThreat)||(layer===10&&utilityUnlocked&&enemy.id==='boss_l010')||
   (lawThreat&&(layer>=81?hero.hp/hero.stats.hp<.25:
    hero.hp/hero.stats.hp<.69||
    enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law')));
@@ -162,6 +162,20 @@ export function consumeOwnedRecovery(hero,carry,layer,usage){
   break;
  }
 }
+// For an unearned grade, pack and actually consume owned healing before the
+// lethal boss action; the post-kill grade still checks real remaining HP/MP.
+function restoreRankHp(state,hero,carry,layer,fight,usage){
+ if(layer<20||layer%10!==0||fight%5!==0||
+  state.profile.adventurerRank>=layer||hero.hp>=hero.stats.hp*.99)return;
+ const items=carry.map((item,i)=>({item,i,row:item&&data.items.find(x=>x.id===item.id)}))
+  .filter(x=>x.item&&['heal','elixir'].includes(x.row?.kind)&&
+   G.canUseBattleItem(hero,x.item,data.items,data.buffs));
+ if(!items.length)return;
+ items.sort((a,b)=>Number(b.item.value)-Number(a.item.value));
+ const {item,i}=items[0];
+ G.potion(hero,item,data.items,data.buffs);
+ carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
+}
 function restoreRankMp(state,hero,carry,layer,fight,usage){
  if(layer<10||layer%10!==0||fight%5!==0||
   state.profile.adventurerRank>=layer||hero.mp>=hero.maxMp*.9)return;
@@ -207,7 +221,13 @@ function pack(state,start,goal,rankItems=true){
  const available=state.inventory.filter(eligible);
  const specific=available.filter(item=>item.id!=='luna_stone');
  const luna=available.filter(item=>item.id==='luna_stone');
- const selected=[...mana,...(goal>=71?luna.slice(0,Math.min(2,cap-mana.length)):[])];
+ // A high-rank attempt is allowed two actually owned healing items before
+ // duplicate cleansers. This preserves the genuine level-dependent carry cap.
+ const rankedHealing=seekingRank&&goal>=20?state.inventory.filter(item=>
+  ['heal','elixir'].includes(data.items.find(row=>row.id===item.id)?.kind))
+  .sort((a,b)=>Number(b.value)-Number(a.value)).slice(0,Math.min(2,cap-mana.length)):[];
+ const selected=[...mana,...rankedHealing,
+  ...(goal>=71?luna.slice(0,Math.min(2,cap-mana.length-rankedHealing.length)):[])];
  const pressure=new Map();
  const end=Math.min(100,goal);
  for(let layer=Math.max(51,start);layer<=end;layer++)
@@ -579,6 +599,7 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
   cleanse(hero,carry,layer,usage);
   consumeOwnedRecovery(hero,carry,layer,usage);
   restoreRankMp(state,hero,carry,layer,fight,usage);
+  restoreRankHp(state,hero,carry,layer,fight,usage);
   const pendingGrade=layer>=20&&layer%10===0&&
    state.profile.adventurerRank<layer;
   const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route,pendingGrade),theirs=G.chooseEnemySpell(enemy,random);
