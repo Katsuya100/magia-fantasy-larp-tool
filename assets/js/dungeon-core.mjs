@@ -50,7 +50,10 @@ export function statusDuration(spell){
 }
 export const defenseDuration=statusDuration; // Compatibility for existing API consumers.
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
-export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
+// Base powers above 200 share a minimum ritual MP tier. Higher raw power still
+// increases cost past that tier, while stone upgrades never alter basePower.
+// This rule is shared by adventurers and enemies without role-specific bonuses.
+export const mpCost=p=>num('mp_cost_base')+Math.max(Math.ceil(basePower(p)/num('mp_cost_divisor')),Number(p)>=200?4:0);
 export const spellMpCost=spell=>mpCost(spell.basePower??spell.power);
 const levelRow=l=>level(l);
 const growthKeys=['hp','mag','def','res'];
