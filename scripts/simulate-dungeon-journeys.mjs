@@ -52,10 +52,10 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // still resolve the current round, so require enough HP for a real
  // enemy attack before choosing to end the encounter immediately.
  const attacks=ready.filter(i=>hero.spells[i].role==='attack');
- // Only estimate a lethal reply when early MP-safe finishing is relevant.
- // Deep encounters never use this choice; computing it every round adds
- // millions of pointless damage projections to the 256-owner strict CI.
- if(layer>10&&layer<=20&&
+ // Evaluate an immediate magical finishing blow before buying a needless
+ // heal, but only when the hero can survive the enemy's simultaneous reply.
+ // Real rank bosses retain their independent pre-recovery HP/MP reserve.
+ if(layer>=6&&
   !(pendingGrade&&String(enemy.id).startsWith('boss_l'))){
   const maxIncoming=Math.max(0,...enemy.spells.filter(s=>s?.role==='attack')
    .map(s=>G.damage(enemy,hero,s,()=>1)));
