@@ -157,7 +157,7 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
  const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},band.level,{},invested.spells,'hero');
  const carry=equipped?cleanseLoadout(band):[];
  const initialLoadout=carry.map(item=>item.id);
- const layerStats=[];
+ const layerStats=[],fightStats=[];
  let cleared=(band.from-1)*5,rounds=0,debuffCasts=0,cleanseUsed=0,cleanseByType={};
  const first=cleared+1,last=band.to*5;
  for(let fight=first;fight<=last;fight++){
@@ -167,6 +167,7 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
    usedBefore:cleanseUsed,cleared:false,endHp:null,endMp:null,
    itemsAtEnd:null,usedAfter:null});
   const enemy=G.fromEnemy(enemyForFight(enemyMaster,fight),+data.floors[fight-1].enemy_level);
+  const hpBefore=hero.hp,mpBefore=hero.mp,itemsBefore=carry.filter(Boolean).length;
   let won=false;
   for(let turn=0;turn<80;turn++){
    if(equipped){
@@ -180,7 +181,10 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
    if(hero.hp<=0)break;
    if(enemy.hp<=0){won=true;break;}
   }
+  const battleEndMp=hero.mp,itemsAfter=carry.filter(Boolean).length;
   if(!won){
+   fightStats.push({fight,win:false,hpBefore,mpBefore,hpAfter:hero.hp,
+    mpAfter:battleEndMp,mpAfterVictoryRecovery:null,itemsBefore,itemsAfter});
    const entry=layerStats.at(-1);
    entry.endHp=hero.hp;entry.endMp=hero.mp;
    entry.itemsAtEnd=carry.filter(Boolean).length;entry.usedAfter=cleanseUsed;
@@ -189,6 +193,8 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
   cleared=fight;
   hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
   G.recoverVictoryMp(hero,Math.ceil(fight/5));
+  fightStats.push({fight,win:true,hpBefore,mpBefore,hpAfter:hero.hp,
+   mpAfter:battleEndMp,mpAfterVictoryRecovery:hero.mp,itemsBefore,itemsAfter});
   if(fight%5===0){
    const entry=layerStats.at(-1);
    entry.cleared=true;entry.endHp=hero.hp;entry.endMp=hero.mp;
@@ -198,7 +204,7 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
  return {win:cleared===last,cleared,hp:hero.hp,mp:hero.mp,maxHp:hero.stats.hp,maxMp:hero.maxMp,
   stones,spent:invested.actuallySpent,stoneBudget:spent,rounds,debuffCasts,cleanseUsed,cleanseByType,attackAttributes:chosen.attackAttributes,
    carryCount:carry.length,
-  remaining:carry.filter(Boolean).length,initialLoadout,layerStats};
+  remaining:carry.filter(Boolean).length,initialLoadout,layerStats,fightStats};
 }
 // Keep standalone cleanse trials mandatory, but don't rerun them as an import.
 if(process.argv[1]===fileURLToPath(import.meta.url)){

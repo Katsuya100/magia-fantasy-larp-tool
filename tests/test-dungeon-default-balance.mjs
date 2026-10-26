@@ -102,7 +102,7 @@ for(let to=10;to<=100;to+=10){
    runs.push({win:yes.win,hp:yes.hp/yes.maxHp*100,mp:yes.mp/yes.maxMp*100,
     cleanses:yes.cleanseUsed,remaining:yes.remaining,cleared:yes.cleared,spent:yes.spent,
     maxHp:yes.maxHp,maxMp:yes.maxMp,layerStats:yes.layerStats,
-    initialLoadout:yes.initialLoadout,upgradedPower});
+    initialLoadout:yes.initialLoadout,upgradedPower,fightStats:yes.fightStats});
    const no=deepRun(randomSeed,{from,to,level},false);
    assert.deepEqual(no.attackAttributes,chosen.attackAttributes);
    controlRuns.push(no);

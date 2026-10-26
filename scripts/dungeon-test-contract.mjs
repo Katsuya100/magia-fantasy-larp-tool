@@ -16,6 +16,31 @@ export function assertFixedTrace(run,from,to){
  assert.equal(run.layerStats[0].startHp,run.maxHp);
  assert.equal(run.layerStats[0].startMp,run.maxMp);
  assert.equal(run.restores??0,0,'no mid-sortie full recovery');
+ const fights=run.fightStats;
+ assert.ok(Array.isArray(fights)&&fights.length>0&&fights.length<=50,
+  'fixed deck must provide individual combat traces, not only floor summaries');
+ assert.equal(fights[0].fight,(from-1)*5+1,'fixed deck starts at the actual first encounter');
+ assert.equal(fights[0].hpBefore,run.maxHp,'first fight starts with full HP');
+ assert.equal(fights[0].mpBefore,run.maxMp,'first fight starts with full MP');
+ for(let i=1;i<fights.length;i++){
+  const previous=fights[i-1],current=fights[i];
+  assert.equal(previous.win,true,'cannot skip a lost fight');
+  assert.equal(current.fight,previous.fight+1,'exactly consecutive battles');
+  assert.equal(current.hpBefore,previous.hpAfter,
+   'unexpected HP refill between fights, including inside a floor');
+  assert.equal(current.mpBefore,previous.mpAfterVictoryRecovery,
+   'unexpected MP refill between fights, including inside a floor');
+  if(from>=51){
+   assert.equal(current.itemsBefore,previous.itemsAfter,'no between-fight inventory restock');
+  }
+ }
+ if(from>=51){
+  assert.equal(fights[0].itemsBefore,run.initialLoadout.length);
+  for(const fight of fights){
+   assert.ok(Number.isInteger(fight.itemsBefore)&&Number.isInteger(fight.itemsAfter));
+   assert.ok(fight.itemsAfter<=fight.itemsBefore,'no new items during fixed combat');
+  }
+ }
  for(let i=1;i<run.layerStats.length;i++){
   const a=run.layerStats[i-1],b=run.layerStats[i];
   assert.equal(a.cleared,true,'previous floor must be cleared');
@@ -24,7 +49,13 @@ export function assertFixedTrace(run,from,to){
   assert.equal(b.startMp,a.endMp,'no inter-floor MP recovery');
   if(from>=51)assert.equal(b.itemsAtStart,a.itemsAtEnd,'no free item restock');
  }
- if(run.win){assert.equal(run.layerStats.length,10);assert.equal(run.cleared,to*5);}
+ if(run.win){
+  assert.equal(run.layerStats.length,10);
+  assert.equal(run.cleared,to*5);
+  assert.equal(fights.length,50,'a claimed fifty-win sortie needs fifty fought encounters');
+  assert.equal(fights.at(-1).mpAfterVictoryRecovery,run.layerStats.at(-1).endMp,
+   'winner MP must be sampled after ordinary victory recovery, before optional full heal');
+ }
 }
 export const journeySpellAllowed=(layer,unlocked,role)=>
  role==='attack'||role==='basic'||Boolean(unlocked)&&(layer>=6||layer>=3&&role!=='support');
