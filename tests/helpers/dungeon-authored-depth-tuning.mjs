@@ -3,13 +3,13 @@
 // The input is the existing element-distribution output, including curated MAG.
 const bandFactors=Object.freeze({
   11:[1.15,.35],21:[1.35,.65],31:[1.45,.50],41:[.95,.92],
-  51:[1.55,.57],61:[1.30,.50],71:[1.50,.42],81:[1.10,1.40],91:[1.25,1.00]
+  51:[1.55,.57],61:[1.30,.50],71:[1.50,.42],81:[1.10,1.34],91:[1.25,1.20]
 });
 const authoredMagIncreases=Object.freeze({
-  "foe_l029_4": 0.1,
+  "foe_l029_4": 0.3,
   "boss_l050": 0.4,
   "boss_l079": 0.5,
-  "boss_l080": 1.5
+  "boss_l080": 1.8
 });
 export function depthRetunedEnemies(original){
  if(original.length!==500)throw Error('Expected full authored 500-enemy roster');
