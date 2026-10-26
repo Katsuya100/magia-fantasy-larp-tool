@@ -55,6 +55,10 @@ export function assertFixedTrace(run,from,to){
   assert.equal(fights.length,50,'a claimed fifty-win sortie needs fifty fought encounters');
   assert.equal(fights.at(-1).mpAfterVictoryRecovery,run.layerStats.at(-1).endMp,
    'winner MP must be sampled after ordinary victory recovery, before optional full heal');
+  assert.ok(Math.abs(run.mp*run.maxMp/100-run.layerStats.at(-1).endMp)<1e-6,
+   'winner sampled MP cannot include post-boss elective full recovery');
+  assert.ok(Math.abs(run.hp*run.maxHp/100-run.layerStats.at(-1).endHp)<1e-6,
+   'winner sampled HP cannot include post-boss elective full recovery');
  }
 }
 export const journeySpellAllowed=(layer,unlocked,role)=>

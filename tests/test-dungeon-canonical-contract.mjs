@@ -3,7 +3,8 @@ import {assertFixedTrace,assertFixedInventory,journeySpellAllowed,journeyItemAll
  assertPairedCharacters,assert256Seeds,assertEntireFloorCoverage,
  assertBankedJourneySnapshot,assertPreRecoveryRankGate,assertNotFalsePass,
  certifiesPreEntryReadiness} from '../scripts/dungeon-test-contract.mjs';
-const good={win:true,cleared:50,maxHp:100,maxMp:100,restores:0,initialLoadout:[],
+const good={win:true,cleared:50,maxHp:100,maxMp:100,hp:90,mp:90,
+ restores:0,initialLoadout:[],
  layerStats:Array.from({length:10},(_,i)=>({layer:i+1,startHp:100-i,startMp:100-i,
  endHp:99-i,endMp:99-i,cleared:true})),
  fightStats:Array.from({length:50},(_,i)=>({fight:i+1,win:true,
@@ -11,6 +12,8 @@ const good={win:true,cleared:50,maxHp:100,maxMp:100,restores:0,initialLoadout:[]
   mpBefore:100-i/5,mpAfter:100-(i+1)/5,
   mpAfterVictoryRecovery:100-(i+1)/5}))};
 assert.doesNotThrow(()=>assertFixedTrace(good,1,10));
+assert.throws(()=>assertFixedTrace({...good,mp:100},1,10),/elective full recovery/);
+assert.throws(()=>assertFixedTrace({...good,hp:100},1,10),/elective full recovery/);
 assert.throws(()=>assertFixedTrace({...good,restores:1},1,10),/mid-sortie/);
 const midFightHeal=structuredClone(good);
 midFightHeal.fightStats[2].hpBefore=100;
