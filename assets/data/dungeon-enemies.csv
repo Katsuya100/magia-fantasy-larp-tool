@@ -448,7 +448,7 @@ foe_l090_1,不死の神官,81,8,4,11,1,1.08,1,1.17,1,0.8,0.95,attack:law:149|def
 foe_l090_2,静寂の聖騎士,99,9,8,8,1,1,1,1,0.92,0.8,1.33,attack:law:161|defense:law:129|support:bolt:105|defense:law:658|attack:bolt:145,10,139,0,copper_sigil|relic_121|relic_161|relic_181|forgotten_crown
 foe_l090_3,無音の告死鳥,78,9,6,10,1,1.08,1,0.95,1,0.92,1,attack:storm:173|defense:storm:138|support:chaos:112|defense:storm:668|attack:chaos:156,10,139,0,relic_043|relic_143|relic_168|relic_182
 foe_l090_4,封声の精霊,81,12,4,12,1,0.92,1,1,1,0.8,1.28,attack:law:185|defense:law:148|support:aqua:120|debuff:law:678|attack:aqua:167,10,139,0,relic_068|relic_143|relic_168|relic_183
-boss_l090,静寂を統べる天使,106,20.4,8,12,1,0.92,1,1,1,0.95,1.58,attack:law:170|defense:law:136|support:gravity:111|debuff:law:648|attack:gravity:153,1,139,1,relic_012|relic_132|relic_152|relic_178|relic_boss_090
+boss_l090,静寂を統べる天使,106,20.6,8,12,1,0.92,1,1,1,0.95,1.58,attack:law:170|defense:law:136|support:gravity:111|debuff:law:648|attack:gravity:153,1,139,1,relic_012|relic_132|relic_152|relic_178|relic_boss_090
 foe_l091_1,星影の竜人,119,6,8,9,1.2,1,0.8,1,1.05,1.05,0.95,attack:bolt:155|defense:bolt:124|support:chaos:101|defense:bolt:658|attack:chaos:140,10,141,0,relic_060|relic_140|relic_120|relic_160|relic_175
 foe_l091_2,黒虹の魔獣,100,7,5,8,1,1,0.8,1,1,1,1.2,attack:aqua:167|defense:aqua:134|support:bolt:109|defense:aqua:668|attack:bolt:150,10,141,0,relic_096|relic_146|relic_171|relic_173|relic_185
 foe_l091_3,星屑のセイレーン,99,6,5,11,1,1,0.8,1,1,1,1.2,attack:aqua:179|defense:aqua:143|support:bolt:116|debuff:aqua:658|attack:bolt:161,10,141,0,relic_075|relic_125|relic_150|relic_175
