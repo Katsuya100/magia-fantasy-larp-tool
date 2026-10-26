@@ -37,8 +37,6 @@ const sourceHashes=Object.fromEntries([
  'scripts/dungeon-coherent-battle.mjs',
  'scripts/dungeon-test-contract.mjs',
  'scripts/dungeon-fixed-deck-pair.mjs',
- 'scripts/dungeon-readiness-reference.mjs',
- 'config/dungeon-recommended-reference-candidate.v1.json',
  'config/dungeon-approved-goals.v1.json'
 ].map(p=>[p,createHash('sha256').update(readFileSync(new URL('../'+p,import.meta.url))).digest('hex')]));
 const seeds=Array.from({length:goals.strictSamples},(_,i)=>17011+13*i);
@@ -68,8 +66,6 @@ const select=x=>({seed:x.seed,level:x.profile.level,rank:x.profile.rank,
    sorties:cleared?.sortie??null,level:cleared?.levelAfter??null};
  })});
 const stats=values=>spread(values.filter(Number.isFinite));
-const referenceReport={schemaVersion:'dungeon-linked-256-reference-v1',samplesPerPolicy:goals.strictSamples,
- seedRule:'17011+13*i',sourceHashes,referenceStatus:'CANDIDATE_NOT_USER_APPROVED',policies:[]};
 const report={schemaVersion:'dungeon-linked-256-economy-v1',source:ECONOMY_VERSION,
  status:'STRUCTURAL_AUDIT_NOT_BALANCE_CERTIFICATION',
  scope:'authored 1-100F only; 101-150F is conditional drop extrapolation',
@@ -83,7 +79,7 @@ const report={schemaVersion:'dungeon-linked-256-economy-v1',source:ECONOMY_VERSI
   'No 101-150F authored combat, mandatory 101-150F clear, or new p90 replay threshold is implied.'
  ]};
 for(const style of ['A','B','C'])for(const route of ['short','long']){
- const accounts=[],ownerEntries=[],referenceOwners=[],entries=Array.from({length:10},(_,i)=>({band:10*i+1,
+ const accounts=[],ownerEntries=[],entries=Array.from({length:10},(_,i)=>({band:10*i+1,
   level:[],hp:[],mp:[],stone:[],ink:[],upgrades:[],
   records:0,carriedCleansers:[],storedCleansers:[]}));
  const floors=Array.from({length:100},(_,i)=>({layer:i+1,attempted:0,cleared:0,
@@ -102,6 +98,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  for(const seed of seeds){
   const pairedCache=new Map();
   const run=runJourney(seed,{style,route,verifyFarming:true,
+   collectCandidateDiagnostic:false,
    // Continue well beyond 1/2/3 genuine banked cycles when needed.
    // 4,000 TOTAL played fights is an explicit measurement budget (not
    // a 3-loop or 4-loop acceptance limit). Exhaustion remains UNRESOLVED.
@@ -154,9 +151,6 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   for(const rank of run.rankAudit)assertPreRecoveryRankGate(rank);
   conservationChecks++;
   accounts.push(select(run));
-  referenceOwners.push({seed,reference:goals.bands.map(b=>run.referenceSnapshots[b.from]??null),
-   lastReadiness:goals.bands.map(b=>run.referenceLastAttempt[b.from]??null),
-   farming:goals.bands.map(b=>run.farmingSnapshots[b.from]??[])});
   ownerEntries.push({seed,farmingResolution:{
    completedLoops:run.completedReplayLoops,
    pairedProof:run.earnedStrengthProof,
@@ -337,7 +331,6 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   accounts,ownerEntries};
  assertEntireFloorCoverage(policy.floors);
  report.policies.push(policy);
- referenceReport.policies.push({style,route,owners:referenceOwners});
  console.log('DUNGEON_LINKED_256_POLICY '+JSON.stringify({style,route,samples:accounts.length,
   completion,nonCompletion:accounts.length-completion,conservationChecks,
   p90RepeatFights:dist.repeatedFights.p90,p90Defeats:dist.deathCount.p90,
@@ -396,8 +389,6 @@ report.structuralChecks=report.policies.reduce((n,x)=>n+x.conservationChecks,0);
 assert.equal(report.structuralChecks,6*goals.strictSamples);
 assert.equal(report.policies.length,6);
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
-writeFileSync(new URL('../reports/dungeon-linked-256-reference-v1.json',import.meta.url),
- JSON.stringify(referenceReport)+'\n');
 writeFileSync(new URL('../reports/dungeon-linked-256-economy-v1.json',import.meta.url),
  JSON.stringify(report,null,2)+'\n');
 const summary={status:'STRUCTURAL_ECONOMY_COMPLETE_NOT_BALANCE_CERTIFIED',
