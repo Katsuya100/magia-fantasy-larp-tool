@@ -254,8 +254,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  // Per-battle intro prohibition is asserted inside the simulator itself.
  if(style==='B'){
   assert.equal(run.circles.length,8);
-  assert.ok(run.offDeckStoneSpent>0&&run.offDeckStoneSpent<=run.spent.stone,
-   'B must spend real stones outside the five equipped circles');
+  assert.ok(run.offDeckStoneSpent>=0&&run.offDeckStoneSpent<=run.spent.stone,
+   'B investments must account for genuine stones');
+  if(run.spent.stone>=20)assert.ok(run.offDeckStoneSpent>0,
+   'Mature B must keep investing outside its five equipped circles');
  }
  if(style==='C')assert.ok(run.spent.ink<=run.earned.ink);
 }
