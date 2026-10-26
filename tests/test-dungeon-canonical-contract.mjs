@@ -66,6 +66,8 @@ console.log('PASS canonical test contract and mutation regressions');
 
 const observedFloor={layer:16,attemptedFights:5,cleared:true,
  floorPreparation:{layer:16,recommendedLevel:20,level:25,ready:true,
+  strengthEvidence:{ready:true,reference:'ORIGINAL_FIXED_DECK_SAME_CHARACTER',
+   actual:{won:true,attempted:5},fixed:{won:true,attempted:5}},
   completeCombatKit:true,sustainableAttackActions:3,
   circleIntegrity:true,itemIntegrity:true,rankLegal:true,attackCoverage:5,
   powerPerMp:42,acquiredUpgrades:3}};
@@ -88,3 +90,10 @@ assert.equal(certifiesPreEntryReadiness({...observedFloor,
  'unusable MP efficiency cannot certify readiness');
 assert.equal(certifiesPreEntryReadiness({...observedFloor,
  floorPreparation:{...observedFloor.floorPreparation,level:19}}),false);
+
+assert.equal(certifiesPreEntryReadiness({...observedFloor,
+ floorPreparation:{...observedFloor.floorPreparation,strengthEvidence:null}}),false,
+ 'winning five real fights without proof against fixed deck cannot certify recommended strength');
+assert.equal(certifiesPreEntryReadiness({...observedFloor,
+ floorPreparation:{...observedFloor.floorPreparation,strengthEvidence:{ready:false}}}),false,
+ 'loss, incomparable combat, and unfinished measurements cannot be promoted to PASS');
