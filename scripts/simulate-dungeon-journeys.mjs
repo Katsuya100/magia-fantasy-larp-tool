@@ -385,7 +385,7 @@ function observePrepared(state){
   // prepared combat reference. Rank-specific potion use is journey-only.
   const carry=pack(copy,band,to,false);
   const snapshot={layer:band,to,sortie:state.sorties,level:p.level,
-   targetLevel:requiredLevel,rank:p.adventurerRank,xp:p.xp,
+   targetLevel:requiredLevel,bankedBestLayer:state.best,rank:p.adventurerRank,xp:p.xp,
    bankedStones:state.stones,bankedInk:state.ink,
    earned:{...state.earned},spent:{...state.spent},
    circles:active.map(c=>({role:c.role,attribute:c.attribute,
