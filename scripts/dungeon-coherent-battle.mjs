@@ -29,7 +29,8 @@ function cleanse(hero,carry,layer,uses){
  uses[item.id]=(uses[item.id]||0)+1;
  carry[i]=null;
 }
-export function challenge(snapshot,from,seed,{route='short',paired=false}={}){
+export function challenge(snapshot,from,seed,{route='short',paired=false,floorCount=10}={}){
+  assert.ok(Number.isInteger(floorCount)&&floorCount>=1&&floorCount<=10,'valid authored contiguous floor count');
  const random=rng(seed);
  // Paired deck comparisons must face exactly the same actual encounter IDs.
  // Ordinary owner diagnostics retain the original uninterrupted RNG stream.
@@ -62,7 +63,7 @@ export function challenge(snapshot,from,seed,{route='short',paired=false}={}){
   remainingCarry:null,endHp:null,endMp:null,
   startLevel:snapshot.level,endLevel:snapshot.level,fightsAttempted:0,
   startHp:100*hero.hp/hero.stats.hp,startMp:100*hero.mp/hero.maxMp};
- for(let layer=from;layer<from+10;layer++){
+ for(let layer=from;layer<from+floorCount;layer++){
   for(let slot=1;slot<=5;slot++){
    assert.equal(hero.level,snapshot.level,'no intra-sortie character leveling');
    result.fightsAttempted++;
