@@ -29,8 +29,12 @@ function cleanse(hero,carry,layer,uses){
  uses[item.id]=(uses[item.id]||0)+1;
  carry[i]=null;
 }
-export function challenge(snapshot,from,seed,{route='short'}={}){
- const random=rng(seed),encounterForFight=createSortieEncounterSelector(data.enemies,random);
+export function challenge(snapshot,from,seed,{route='short',paired=false}={}){
+ const random=rng(seed);
+ // Paired deck comparisons must face exactly the same actual encounter IDs.
+ // Ordinary owner diagnostics retain the original uninterrupted RNG stream.
+ const encounterRandom=paired?rng((seed^0x9e3779b9)>>>0):random;
+ const encounterForFight=createSortieEncounterSelector(data.enemies,encounterRandom);
  const hero=G.makeUnit(snapshot.playerBase,snapshot.level,{},
   snapshot.circles.map(x=>({role:x.role,attribute:x.attribute,power:x.power,
    basePower:x.basePower,upgradeLevel:x.upgradeLevel})),'hero');
@@ -53,7 +57,8 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
   return record&&(record.kind==='clear'||record.kind==='clear_all'||
    (record.kind==='mana'&&from+9>=20));
  }),'a carry item must be owned and floor-legal');
- const result={won:false,cleared:from-1,casts:0,heals:0,
+ const result={won:false,cleared:from-1,casts:0,heals:0,spellMpSpent:0,
+  opponents:[],fightRounds:[],
   enemyHeals:0,used,bossPreRecovery:null,bossRankEligible:null,firstLoss:null,
   remainingCarry:null,endHp:null,endMp:null,
   startLevel:snapshot.level,endLevel:snapshot.level,fightsAttempted:0,
@@ -64,23 +69,29 @@ export function challenge(snapshot,from,seed,{route='short'}={}){
    result.fightsAttempted++;
    const fight=(layer-1)*5+slot,foe=encounterForFight(fight);
    const enemy=G.fromEnemy(foe,Number(data.floors[fight-1].enemy_level));
+   // Every encounter in either arm starts from the same per-fight stream.
+   // Different actions may consume different draws within the fight.
+   const combatRandom=paired?rng((seed+Math.imul(fight,1013904223))>>>0):random;
+   if(paired)result.opponents.push(foe.id);
    let victorious=false,rounds=0;
    for(let turn=0;turn<80;turn++){
     rounds++;
     cleanse(hero,carry,layer,used);
     const h=chooseHero(hero,enemy,layer,layer>10,route,
      layer>=20&&layer%10===0&&snapshot.rank<layer),
-     e=G.chooseEnemySpell(enemy,random);
+     e=G.chooseEnemySpell(enemy,combatRandom);
     if(h>=0&&hero.spells[h].role==='support')result.heals++;
     if(e>=0&&enemy.spells[e].role==='support')result.enemyHeals++;
     if(layer<=10&&(h>=0&&hero.spells[h].role==='support'||
      e>=0&&enemy.spells[e].role==='support'))
       throw Error('Illegal 1-10F combat healing');
-    G.round(hero,enemy,h,e,data.buffs,random);
+    if(h>=0)result.spellMpSpent+=G.spellMpCost(hero.spells[h]);
+    G.round(hero,enemy,h,e,data.buffs,combatRandom);
     result.casts++;
     if(hero.hp<=0)break;
     if(enemy.hp<=0){victorious=true;break;}
    }
+   if(paired)result.fightRounds.push(rounds);
    if(!victorious){
     result.firstLoss=layer;
     result.firstLossDetail={enemy:enemy.id,enemyLevel:enemy.level,
