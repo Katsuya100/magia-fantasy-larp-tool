@@ -5,7 +5,7 @@
   "seedPolicy": "17011 + i * 13",
   "winRateBasis": "observed wins / 256; confidence interval never substitutes",
   "bands": [
-    {"from": 1, "to": 10, "winRate": [99,100], "winSafety": [99,100], "winnerMedianMp": [50,100], "noCombatHealingBothSides": true},
+    {"from": 1, "to": 10, "winRate": [99,100], "winSafety": [99,100], "winnerMedianMp": [50,60], "noCombatHealingBothSides": true},
     {"from": 11, "to": 20, "winRate": [99,100], "winSafety": [99,100], "winnerMedianMp": [0,15], "playerHealingAvailable": true},
     {"from": 21, "to": 30, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15]},
     {"from": 31, "to": 40, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15]},

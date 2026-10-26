@@ -3,6 +3,7 @@
 // set DUNGEON_BALANCE_STRICT=1 to make balance target misses fail the job.
 // Structural/gameplay contract violations always fail CI.
 import assert from 'node:assert/strict';
+import {assertFixedTrace} from '../scripts/dungeon-test-contract.mjs';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
@@ -110,11 +111,15 @@ for(let to=10;to<=100;to+=10){
     spells:from===1?'intro':'five',stones:spending});
    assert.ok(result.spentStones<=spending&&spending-result.spentStones<16,'cost tiers never overspend');
    assert.deepEqual(result.attackAttributes,chosen.attackAttributes);
-   if(from===1)assert.equal(result.earlyHeroRecoveryCasts,0,'1-10F is tested without HP healing');
+   if(from===1){
+    assert.equal(result.earlyHeroRecoveryCasts,0,'1-10F is tested without HP healing');
+    assert.ok(result.fightStats.every(f=>f.enemyHeals===0),'1-10F enemy combat recovery is prohibited');
+   }
    runs.push({win:result.win,hp:result.hp/result.initialHp*100,
     mp:result.mp/result.initialMp*100,cleared:result.clear,spent:result.spentStones,
     maxHp:result.initialHp,maxMp:result.initialMp,layerStats:result.layerStats,
-    initialLoadout:[],upgradedPower,fightStats:result.fightStats});
+    initialLoadout:[],upgradedPower,fightStats:result.fightStats,
+    restores:result.restores,cleared:result.clear});
   }
  }
  const winners=runs.filter(x=>x.win);
@@ -167,6 +172,7 @@ for(let to=10;to<=100;to+=10){
  const issues=[];
  if(from===1){
   if(bossStats.medianRounds!==4)issues.push('10F boss median must be four real rounds');
+  if(bossStats.enemyAttacksMedian<=0)issues.push('10F boss must perform real counterattacks');
   if(medianMp<50||medianMp>60)issues.push('10F post-victory/pre-checkpoint median MP must be 50-60%');
   if(Math.abs(bossStats.mpAfterVictoryRecoveryMedian-median(winners.map(x=>x.mp/100*x.maxMp)))>1e-7)
    issues.push('10F recorded MP must be after ordinary victory recovery');
@@ -201,6 +207,7 @@ for(let to=10;to<=100;to+=10){
  // Sanity check: every completed floor carries the actual post-boss MP and
  // remaining inventory into the next floor; only the sortie start is full.
  for(const run of runs){
+  assertFixedTrace(run,from,to);
   assert.equal(run.layerStats[0].layer,from);
   assert.equal(run.layerStats[0].startMp,run.maxMp);
   assert.equal(run.layerStats[0].startHp,run.maxHp);

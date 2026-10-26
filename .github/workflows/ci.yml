@@ -17,6 +17,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: node tests/test-dungeon-canonical-contract.mjs
       - run: npm run simulate:dungeon-stones -- 512
       - run: npm run check
       - run: npm run build
@@ -35,6 +36,7 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - run: node tests/test-dungeon-canonical-contract.mjs
       - run: node tests/test-dungeon-default-balance.mjs
       - name: Archive strict fixed-deck results even on failure
         if: always()
