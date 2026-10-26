@@ -459,7 +459,7 @@ function observePrepared(state){
    earned:{...state.earned},spent:{...state.spent},
    circles:active.map(c=>({role:c.role,attribute:c.attribute,
     basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
-    mpCost:G.mpCost(c.basePower),ink:c.ink})),
+    mpCost:G.spellMpCost({role:c.role,basePower:c.basePower,upgradeLevel:c.upgrades}),ink:c.ink})),
    carry:carry.map(item=>({...item})),
    bankedInventory:copy.inventory.map(item=>({...item})),
    bankedCollections:{...state.collection},playerBase:{...hero.base},
@@ -523,7 +523,7 @@ function observeReference(state){
    earned:{...state.earned},spent:{...state.spent},
    circles:active.map(c=>({role:c.role,attribute:c.attribute,
     basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
-    mpCost:G.mpCost(c.basePower),ink:c.ink})),
+    mpCost:G.spellMpCost({role:c.role,basePower:c.basePower,upgradeLevel:c.upgrades}),ink:c.ink})),
    carry:carry.map(item=>({...item})),
    // The global owner ledger already proves all banked items; duplicating
    // hundreds of item instances in every replay checkpoint can exhaust V8.
@@ -745,7 +745,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
      earned:{...state.earned},spent:{...state.spent},
      circles:state.circles.filter(c=>c.active).map(c=>({role:c.role,attribute:c.attribute,
       basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
-      mpCost:G.mpCost(c.basePower),ink:c.ink})),
+      mpCost:G.spellMpCost({role:c.role,basePower:c.basePower,upgradeLevel:c.upgrades}),ink:c.ink})),
      carry:carry.filter(Boolean).map(item=>({id:item.id,value:item.value,bonus:item.bonus,
        instanceId:item.instanceId})),
       bankedInventory:state.inventory.map(item=>({...item})),
@@ -961,7 +961,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   state.blockers.push('Reached F100 but real rank badges remain unearned within the measurement budget');
  if(style==='B'&&!state.recoveryTarget)state.blockers.push('No same-seed A F31 entry; no invented stone-recovery target');
  const invested=state.circles.map(c=>({active:c.active,role:c.role,attribute:c.attribute,basePower:c.basePower,
-  upgradeLevel:c.upgrades,power:actualPower(c),mpCost:G.mpCost(c.basePower),ink:c.ink}));
+  upgradeLevel:c.upgrades,power:actualPower(c),mpCost:G.spellMpCost({role:c.role,basePower:c.basePower,upgradeLevel:c.upgrades}),ink:c.ink}));
  const stoneReconciled=state.earned.stone-state.spent.stone-state.stones;
  const inkReconciled=state.earned.ink-state.spent.ink-state.ink;
  if(stoneReconciled!==0||inkReconciled!==0)throw Error('Stone or ink conservation violated');
