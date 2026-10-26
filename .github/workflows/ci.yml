@@ -70,7 +70,8 @@ jobs:
             dungeon-enemy-durability \
             dungeon-enemy-flavor \
             dungeon-normal-affinity \
-            dungeon-c-redraw-comparison; do
+            dungeon-c-redraw-comparison \
+            dungeon-floor-strength; do
             echo "::group::$suite"
             node "tests/test-$suite.mjs" || failed=1
             echo "::endgroup::"
