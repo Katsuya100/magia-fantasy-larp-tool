@@ -29,7 +29,6 @@ assert.throws(()=>assertPairedCharacters(hero,{...hero,level:38}),/level/);
 assert.throws(()=>assertPairedCharacters(hero,{...hero,playerBase:{...hero.playerBase,mag:11}}),/playerBase/);
 assert.throws(()=>assert256Seeds(Array.from({length:256},()=>42)),/duplicate/);
 assert.throws(()=>assert256Seeds(Array.from({length:255},(_,i)=>i)),/denominator/);
-console.log('PASS canonical test contract and mutation regressions');
 
 const floors=Array.from({length:100},(_,i)=>({layer:i+1,readiness:{
  firstEntryReady:256,additionalFarmingReady:0,prepared:256,missingSeeds:[]}}));
@@ -48,3 +47,5 @@ assert.doesNotThrow(()=>assertPreRecoveryRankGate({hpPercent:90,mpPercent:79,eli
 assert.throws(()=>assertPreRecoveryRankGate({hpPercent:90,mpPercent:79,eligible:true,failure:null}),/before victory recovery/);
 assert.throws(()=>assertNotFalsePass({passed:true,missing:1}),/cannot PASS/);
 assert.throws(()=>assertNotFalsePass({passed:true,cutoff:true}),/cannot PASS/);
+
+console.log('PASS canonical test contract and mutation regressions');

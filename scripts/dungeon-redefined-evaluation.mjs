@@ -256,7 +256,35 @@ for(const pair of economy.pairedLongitudinalCosts){
   status:'ACTUAL_ECONOMIC_DIFFERENCE_MEASURED_NOT_A_WIN_RATE_GATE'});
 }
 assert.equal(report.RANK_ACQUISITION.length,10);
-assert.equal(report.BUILD_STRATEGY.length,4);
+// D is a path-axis comparison for the same A/B/C owner seeds, never a seventh character.
+for(const style of ['A','B','C']){
+ const short=economy.policies.find(p=>p.style===style&&p.route==='short');
+ const long=economy.policies.find(p=>p.style===style&&p.route==='long');
+ assert.ok(short&&long&&short.accounts.length===samples&&long.accounts.length===samples);
+ const pairs=short.accounts.map((s,i)=>{
+  const l=long.accounts[i];assert.equal(s.seed,l.seed,'D path comparison requires the same owner seed');
+  return {seed:s.seed,shortClear:s.completed,longClear:l.completed,
+   shortReturns:s.returns,longReturns:l.returns,
+   shortLostXp:s.lostXp,longLostXp:l.lostXp,
+   shortDeaths:s.deathCount,longDeaths:l.deathCount,
+   shortFights:s.fights,longFights:l.fights,
+   shortBankedStone:s.stoneEarned,longBankedStone:l.stoneEarned};
+ });
+ report.BUILD_STRATEGY.push({strategy:'D',style,route:'short-vs-long',
+  commonRealSeeds:samples,comparisonTo:'SAME_SEED_D_PATH_AXIS',
+  costs:{returnDelta:percentile(pairs.map(x=>x.longReturns-x.shortReturns)),
+   lostXpDelta:percentile(pairs.map(x=>x.longLostXp-x.shortLostXp)),
+   deathDelta:percentile(pairs.map(x=>x.longDeaths-x.shortDeaths)),
+   fightDelta:percentile(pairs.map(x=>x.longFights-x.shortFights)),
+   bankedStoneDelta:percentile(pairs.map(x=>x.longBankedStone-x.shortBankedStone)),
+   shortCompleted:pairs.filter(x=>x.shortClear).length,
+   longCompleted:pairs.filter(x=>x.longClear).length},
+  checkpoints:approved.bands.map((goal,index)=>({
+   to:goal.to,shortClears:short.accounts.filter(x=>x.firstDecadeClearances[index].fights!==null).length,
+   longClears:long.accounts.filter(x=>x.firstDecadeClearances[index].fights!==null).length})),
+  pairs,status:'ACTUAL_256_SEED_PATH_RISK_AND_RETURN_COSTS'};
+}
+assert.equal(report.BUILD_STRATEGY.length,7);
 const summary={referenceApproval:reference.status,combatMet:report.COMBAT_BALANCE.filter(x=>x.passed).length,
  combatUnmet:report.COMBAT_BALANCE.filter(x=>!x.passed).length,
  journeyReadyCases:report.JOURNEY_READINESS.filter(x=>x.prepared===256).length,

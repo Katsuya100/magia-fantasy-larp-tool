@@ -18,7 +18,7 @@ assert.equal(verdict.COMBAT_BALANCE.length,10);
 assert.equal(verdict.JOURNEY_READINESS.length,60);
 assert.equal(verdict.EXTRA_FARMING.length,60);
 assert.equal(verdict.RANK_ACQUISITION.length,10);
-assert.equal(verdict.BUILD_STRATEGY.length,4);
+assert.equal(verdict.BUILD_STRATEGY.length,7);
 assert.equal(combat.cases.length,60);
 assert.equal(paired.cases.length,60);
 assert.equal(paired.candidatePromoted,false,'unapproved candidate must remain unapproved');
@@ -99,9 +99,10 @@ for(const rank of verdict.RANK_ACQUISITION){
  }
 }
 for(const s of verdict.BUILD_STRATEGY){
- if(s.commonRealSeeds!==samples||!['B','C'].includes(s.strategy)||
-    !['short','long'].includes(s.route)||!s.costs||s.checkpoints?.length!==10)
-  failures.push('BUILD_STRATEGY missing paid, paired evidence '+s.route+'/'+s.strategy);
+ if(s.commonRealSeeds!==samples||!['B','C','D'].includes(s.strategy)||!s.costs||s.checkpoints?.length!==10||
+   (s.strategy==='D'?(s.route!=='short-vs-long'||s.pairs?.length!==samples||!['A','B','C'].includes(s.style)):
+    !['short','long'].includes(s.route)))
+  failures.push('BUILD_STRATEGY missing paid 256-seed evidence '+s.route+'/'+s.strategy);
 }
 const coverage=combat.coverage;
 if(coverage?.cases!==60||coverage.policies!==6||
