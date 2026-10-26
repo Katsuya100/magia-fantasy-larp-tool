@@ -51,7 +51,11 @@ export function statusDuration(spell){
 export const defenseDuration=statusDuration; // Compatibility for existing API consumers.
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
 export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
-export const spellMpCost=spell=>mpCost(spell.basePower??spell.power);
+// Ten paid permanent upgrades make a circle slightly more mana-efficient.
+// The same cost calculation applies to either combatant; magic stones are
+// still earned and spent, and no spell may become free.
+export const spellMpCost=spell=>Math.max(1,mpCost(spell.basePower??spell.power)-
+ (Number(spell.upgradeLevel||0)>=10?1:0));
 const levelRow=l=>level(l);
 const growthKeys=['hp','mag','def','res'];
 export const startingBase=(r=Math.random)=>Object.fromEntries(growthKeys.map(k=>[k,roll(...range(k),r)]));
