@@ -572,11 +572,12 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
  return {win:enemy.hp<=0&&hero.hp>0,foe,enemyLevel,rounds,healCasts,enemyHealCasts,enemyDebuffs};
 }
 export function runJourney(seed,{style='A',route='short',alchemy=false,
- redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000}={}){
+ redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000,
+ verifyFarming=false}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
-  forceRedraw:false,maxSorties,maxFights}):null;
+  forceRedraw:false,maxSorties,maxFights,verifyFarming}):null;
  const atA31=aReference?.entrySnapshots[31]??null;
  const recoveryTarget=atA31?.circles.map(c=>c.upgradeLevel)??null;
  const random=rng(seed),playerBase=G.startingBase(random),profile={level:1,xp:0,adventurerRank:0};
@@ -601,8 +602,16 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
  if(style==='B')state.circles.push(circle('attack','storm',300,false),circle('attack','aqua',290,false),circle('support','law',260,false));
  // D is the route axis; this permits A+D, B+D and C+D without
  // inventing a mutually exclusive 'D character'.
+ const extraBand=()=>verifyFarming?Array.from({length:10},(_,i)=>i*10+1).find(b=>
+  state.best>=b+9&&state.preparedSnapshots[b]&&
+  (state.preparedFarmingSnapshots[b]?.length||0)<3&&
+  unlockedStartLayers(profile).includes(b))??null:null;
  for(let sortie=0;sortie<maxSorties&&
-  (state.best<100||profile.adventurerRank<100)&&state.fights<maxFights;sortie++){
+  (state.best<100||profile.adventurerRank<100||extraBand()!==null)&&state.fights<maxFights;sortie++){
+  // The canonical evidence cohort deliberately revisits already beaten
+  // floors in the REAL game, banks all gains, and pays every consumable.
+  // This is an optional journey route, never a fake 50-fight level-up.
+  const auditedReplayBand=extraBand();
   const upcoming=state.best+1;
   // The first F100 clear is not a substitute for earned rank badges.
   // Recover missing earlier badges in order through genuine fights/returns.
@@ -647,8 +656,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const rankBehind=profile.adventurerRank<lastBoss;
   const trainingStart=rankBehind?profile.adventurerRank+1:Math.max(1,lastBoss-9);
   const trainingGoal=rankBehind?profile.adventurerRank+10:lastBoss;
-  const start=allowedStartLayer(profile,missingRankAfterClear
-   ?profile.adventurerRank+1:recovering?farmStart:
+  const start=allowedStartLayer(profile,auditedReplayBand!==null?auditedReplayBand:
+   missingRankAfterClear?profile.adventurerRank+1:recovering?farmStart:
    training?trainingStart:profile.adventurerRank+1);
   if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
   if(training&&start>lastBoss)throw Error('Long training must begin from a legal cleared decade');
@@ -657,7 +666,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // Every first-time adventurer banks each newly cleared floor until an
   // ACTUAL F10 boss victory. Only then do short/long routes diverge.
   const tutorial=state.best<10;
-  const goal=missingRankAfterClear?profile.adventurerRank+10:
+  const goal=auditedReplayBand!==null?
+   (route==='short'?Math.min(auditedReplayBand+1,auditedReplayBand+9):auditedReplayBand+9):
+   missingRankAfterClear?profile.adventurerRank+10:
    recovering?state.best:tutorial?upcoming:
    training?trainingGoal:route==='short'?upcoming:100;
   const utilityUnlocked=state.best>=2;
@@ -827,6 +838,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   if(style==='B'&&state.best>=30){state.recoveryRemainingGap=recoveryGap(state);
    if(state.recoveryTarget&&state.recoveryRemainingGap.every(x=>x===0))state.recoveryAchieved=true;}
   state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,recovering,
+   auditedReplayBand,
    tutorial,training,utilityUnlocked,
    levelBefore:firstLevel,levelAfter:profile.level,rank:profile.adventurerRank,
    gainedPending:earnedPending,banked:!defeat,stone:state.stones,ink:state.ink,
@@ -864,7 +876,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     lostUnbanked:state.lost.stone},
    ink:{banked:state.earned.ink,redrawSpent:state.spent.ink,held:state.ink,
     lostUnbanked:state.lost.ink}};
- return {seed,style,route,alchemy,playerBase:{...state.playerBase},alchemyCrafts:state.alchemyCrafts,
+ if(verifyFarming&&extraBand()!==null)
+  state.blockers.push('Real 50-fight additional farming budget exhausted before three observed rounds in F'+extraBand());
+ return {seed,style,route,alchemy,verifyFarming,playerBase:{...state.playerBase},alchemyCrafts:state.alchemyCrafts,
   alchemyByproducts:state.alchemyByproducts,profile:chestSummary(profile),best:state.best,
   sorties:state.sorties,returns:state.returns,losses:state.losses,fights:state.fights,
   replayedFights:state.replayedFights,farmingFights:state.farmingFights,

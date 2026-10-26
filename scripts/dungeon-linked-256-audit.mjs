@@ -94,7 +94,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   gradeBanked:0,entryHp:[],entryMp:[],exitHp:[],exitMp:[]}));
  let conservationChecks=0;
  for(const seed of seeds){
-  const run=runJourney(seed,{style,route});
+  const run=runJourney(seed,{style,route,verifyFarming:true,maxSorties:400,maxFights:10000});
   assert.equal(run.seed,seed);
   assert.equal(run.spent.ink,run.replacements*5,
    'every paid circle redraw must use exactly five genuinely banked inks');
