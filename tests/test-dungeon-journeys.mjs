@@ -346,6 +346,20 @@ assert.equal(chooseAdditionalFarmingBand([1,11],{1:4,11:4},{1:true},true),11);
 assert.equal(chooseAdditionalFarmingBand([1,11],{1:7,11:4},{1:true,11:true},true),null);
 assert.equal(chooseAdditionalFarmingBand([1],{1:3},{},false),null,
  'without paired combat proof, no unearned superiority is certified');
+// The never-approved candidate is allowed for diagnostics but cannot steer
+// return, training, combat or investment. Remove it entirely and compare.
+for(const route of ['short','long']){
+ const opts={style:'C',route,maxSorties:50,maxFights:500};
+ const diagnostic=runJourney(20261024,{...opts,collectCandidateDiagnostic:true});
+ const without=runJourney(20261024,{...opts,collectCandidateDiagnostic:false});
+ assert.deepEqual(diagnostic.trace,without.trace,
+  'candidate reference must never choose a different journey route');
+ assert.deepEqual(diagnostic.floorAudit,without.floorAudit);
+ assert.deepEqual(diagnostic.earned,without.earned);
+ assert.deepEqual(diagnostic.spent,without.spent);
+ assert.deepEqual(diagnostic.circles,without.circles);
+ assert.deepEqual(diagnostic.balances,without.balances);
+}
 // Formal replay evidence: actually complete fifty previously conquered fights
 // at least three times, bank rewards, and preserve owner cost accounting.
 // This test runs in Actions; absent or cut-off replay cycles cannot PASS.

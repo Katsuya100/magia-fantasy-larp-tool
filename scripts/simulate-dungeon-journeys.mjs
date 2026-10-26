@@ -556,7 +556,7 @@ function commit(state,pending,unused,bestLayer){
   state.replayBanked[band]+=row.attemptedFights;
  }
  observePrepared(state);
- observeReference(state);
+ if(state.collectCandidateDiagnostic)observeReference(state);
 }
 function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked){
  const foe=encounterForFight(fight);
@@ -582,7 +582,7 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
 }
 export function runJourney(seed,{style='A',route='short',alchemy=false,
  redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000,
- verifyFarming=false,farmingProof=null}={}){
+ verifyFarming=false,farmingProof=null,collectCandidateDiagnostic=true}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
@@ -605,7 +605,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   entrySnapshots:{},preparedSnapshots:{},preparedFarmingSnapshots:{},preparedReplayAt:{},
   referenceSnapshots:{},referenceLastAttempt:{},
   farmingSnapshots:{},referenceReplayAt:{},replayBanked:Object.fromEntries(Array.from({length:10},(_,i)=>[10*i+1,0])),
-  farmingProof,earnedStrengthProof:{},completedReplayLoops:{},
+  farmingProof,collectCandidateDiagnostic,earnedStrengthProof:{},completedReplayLoops:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},otherItemUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
   recoveryInitialGap:null,recoveryRemainingGap:null};
