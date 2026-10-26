@@ -64,3 +64,35 @@ export function evaluatePaidBuild(snapshot,index,seedIndex,cache=null){
  if(cache)cache.set(key,result);
  return result;
 }
+
+// Actual pre-entry owner versus the ORIGINAL fixed-deck spells, at the SAME
+// level, base, current HP/MP, rank, status, items, opponents and battle RNG.
+// This probes one authored floor (five real encounters), not a journey win-rate
+// target. Victory alone or an invented power sum never certifies readiness.
+export function evaluateRecommendedFloor(snapshot,layer,seedIndex){
+  assert.ok(Number.isInteger(layer)&&layer>=1&&layer<=100);
+  assert.ok(Number.isInteger(seedIndex)&&seedIndex>=0&&seedIndex<goals.strictSamples);
+  const index=Math.floor((layer-1)/10);
+  const baseline={...snapshot,circles:referenceSpells[index][seedIndex]};
+  assertPairedCharacters(snapshot,baseline);
+  const combatSeed=37011+13*seedIndex+layer*1009;
+  const actual=challenge(snapshot,layer,combatSeed,{route:'short',paired:true,floorCount:1});
+  const fixed=challenge(baseline,layer,combatSeed,{route:'short',paired:true,floorCount:1});
+  const common=Math.min(actual.opponents.length,fixed.opponents.length);
+  assert.deepEqual(actual.opponents.slice(0,common),fixed.opponents.slice(0,common),
+    'floor readiness requires exactly paired actual enemy encounters');
+  const margins=[actual.endHp-fixed.endHp,actual.endMp-fixed.endMp,
+    fixed.casts-actual.casts,fixed.spellMpSpent-actual.spellMpSpent,
+    actual.remainingCarry-fixed.remainingCarry];
+  const nonInferior=actual.won&&(!fixed.won||
+    margins.every(n=>Number.isFinite(n)&&n>=-1e-8));
+  return {ready:nonInferior,reference:'ORIGINAL_FIXED_DECK_SAME_CHARACTER',
+    status:nonInferior?'MEASURED_AT_LEAST_REFERENCE':
+      !actual.won?'REAL_COMBAT_LOSS_OR_CUTOFF':'REFERENCE_NOT_MET_OR_INCOMPARABLE',
+    actual:{won:actual.won,attempted:actual.fightsAttempted,hp:actual.endHp,
+      mp:actual.endMp,casts:actual.casts,spentMp:actual.spellMpSpent,
+      itemsRemaining:actual.remainingCarry},
+    fixed:{won:fixed.won,attempted:fixed.fightsAttempted,hp:fixed.endHp,
+      mp:fixed.endMp,casts:fixed.casts,spentMp:fixed.spellMpSpent,
+      itemsRemaining:fixed.remainingCarry}};
+}
