@@ -2,8 +2,8 @@
 // This is a TEST REFERENCE for the reviewed CSV; the game reads the CSV itself.
 // The input is the existing element-distribution output, including curated MAG.
 const bandFactors=Object.freeze({
-  11:[1.15,.35],21:[1.35,.85],31:[1.45,.50],41:[.95,1.08],
-  51:[1.55,.75],61:[1.30,.50],71:[1.50,.60],81:[1.35,1.75],91:[1.55,1.25]
+  11:[1.15,.35],21:[1.35,.65],31:[1.45,.50],41:[.95,.85],
+  51:[1.55,.50],61:[1.30,.50],71:[1.50,.34],81:[1.10,.90],91:[1.25,.50]
 });
 export function depthRetunedEnemies(original){
  if(original.length!==500)throw Error('Expected full authored 500-enemy roster');
