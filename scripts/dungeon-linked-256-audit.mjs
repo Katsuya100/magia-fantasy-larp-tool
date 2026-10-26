@@ -96,7 +96,8 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   xpBanked:0,xpLost:0,
   gradeBanked:0,entryHp:[],entryMp:[],exitHp:[],exitMp:[],
   upgradeCount:[],attackEfficiency:[],attackCoverage:[],heldItems:[],
-  componentFailures:{}}));
+  componentFailures:{},pairedHp:[],pairedMp:[],pairedActions:[],pairedMpSpent:[],
+  pairedItems:[],proofResults:{}}));
  let conservationChecks=0;
  for(const seed of seeds){
   const pairedCache=new Map();
@@ -253,6 +254,15 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    if(!row.cleared)f.componentFailures.actualCombat=(f.componentFailures.actualCombat||0)+1;
    if(!prep.strengthEvidence?.ready)f.componentFailures.fixedDeckBattleProof=
     (f.componentFailures.fixedDeckBattleProof||0)+1;
+   const proof=prep.strengthEvidence;
+   f.proofResults[proof.status]=(f.proofResults[proof.status]||0)+1;
+   if(proof.actual&&proof.fixed){
+    f.pairedHp.push(proof.actual.hp-proof.fixed.hp);
+    f.pairedMp.push(proof.actual.mp-proof.fixed.mp);
+    f.pairedActions.push(proof.fixed.casts-proof.actual.casts);
+    f.pairedMpSpent.push(proof.fixed.spentMp-proof.actual.spentMp);
+    f.pairedItems.push(proof.actual.itemsRemaining-proof.fixed.itemsRemaining);
+   }
    if(certifiesPreEntryReadiness(row))
     (firstSeenForSeed.has(row.layer)?f.readinessFarming:f.readinessFirst).add(seed);
    firstSeenForSeed.add(row.layer);
@@ -307,7 +317,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    totalStrength:{upgradeCount:stats(f.upgradeCount),
     attackPowerPerMp:stats(f.attackEfficiency),enemyCoverage:stats(f.attackCoverage),
     legalOwnedCarry:stats(f.heldItems),componentFailures:f.componentFailures,
-    measuredBy:'actual owned five-circle attack, defense, healing and equipment versus original fixed deck, same owner, same RNG, five real encounters'},
+    measuredBy:'actual owned five-circle attack, defense, healing and equipment versus original fixed deck, same owner, same RNG, five real encounters',
+    pairedRealCombat:{statuses:f.proofResults,hpDifference:stats(f.pairedHp),
+     mpDifference:stats(f.pairedMp),savedActions:stats(f.pairedActions),
+     savedSpellMp:stats(f.pairedMpSpent),savedItems:stats(f.pairedItems)}},
    lost:f.lost,replays:f.replays,banked:f.banked,cleansersUsed:f.cleansers,
    gradeChecks:f.gradeChecks,gradeEligible:f.gradeEligible,gradeBanked:f.gradeBanked,
    stoneDrops:f.stoneDrops,stoneBanked:f.stoneBanked,stoneLost:f.stoneLost,
