@@ -672,7 +672,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    recovering?state.best:tutorial?upcoming:
    training?trainingGoal:route==='short'?upcoming:100;
   const utilityUnlocked=state.best>=2;
-  if(recovering)state.recoverySorties++;
+  if(recovering&&auditedReplayBand===null)state.recoverySorties++;
   const firstLevel=profile.level;
   const hero=G.makeUnit(state.playerBase,firstLevel,{},equipped(state.circles),'hero');
   let pending={xp:0,loot:[]},lastClear=start-1,defeat=false;
@@ -724,7 +724,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     const fight=(layer-1)*5+slot;
     const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked);
     state.fights++;
-    if(recovering)state.recoveryFights++;
+    if(recovering&&auditedReplayBand===null)state.recoveryFights++;
     if(layer<=state.best)state.replayedFights++;
     if(layer<=state.best&&style==='B')state.farmingFights++;
     state.healCasts+=outcome.healCasts;
@@ -837,9 +837,10 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   }else state.inventory.push(...carry.filter(Boolean));
   if(style==='B'&&state.best>=30){state.recoveryRemainingGap=recoveryGap(state);
    if(state.recoveryTarget&&state.recoveryRemainingGap.every(x=>x===0))state.recoveryAchieved=true;}
-  state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,recovering,
+  state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,
+   recovering:recovering&&auditedReplayBand===null,
    auditedReplayBand,
-   tutorial,training,utilityUnlocked,
+   tutorial,training:training&&auditedReplayBand===null,utilityUnlocked,
    levelBefore:firstLevel,levelAfter:profile.level,rank:profile.adventurerRank,
    gainedPending:earnedPending,banked:!defeat,stone:state.stones,ink:state.ink,
    usedItems:usage,fights:state.fights,returned:!defeat,
