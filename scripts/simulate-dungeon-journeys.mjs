@@ -579,7 +579,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
-  forceRedraw:false,maxSorties,maxFights,verifyFarming}):null;
+  forceRedraw:false,maxSorties:Math.min(maxSorties,120),maxFights,verifyFarming:false}):null;
  const atA31=aReference?.entrySnapshots[31]??null;
  const recoveryTarget=atA31?.circles.map(c=>c.upgradeLevel)??null;
  const random=rng(seed),playerBase=G.startingBase(random),profile={level:1,xp:0,adventurerRank:0};
