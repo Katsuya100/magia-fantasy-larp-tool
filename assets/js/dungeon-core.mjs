@@ -445,7 +445,7 @@ export function recoverVictoryMp(hero,layer=1){
   // In the tutorial decade, victories replenish only a genuinely depleted
   // MP reserve. A win never removes MP and cannot refill above 55%; later
   // floors preserve their existing recovery economy without this ceiling.
-  const reserve=floor<=10?Math.max(0,Math.round(hero.maxMp*.55)-hero.mp):hero.maxMp-hero.mp;
+  const reserve=floor<=10&&hero.level>=19?Math.max(0,Math.round(hero.maxMp*.55)-hero.mp):hero.maxMp-hero.mp;
   const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,reserve,recovered));
  hero.mp+=gained;
  return gained;
