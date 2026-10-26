@@ -346,6 +346,13 @@ assert.equal(chooseAdditionalFarmingBand([1,11],{1:4,11:4},{1:true},true),11);
 assert.equal(chooseAdditionalFarmingBand([1,11],{1:7,11:4},{1:true,11:true},true),null);
 assert.equal(chooseAdditionalFarmingBand([1],{1:3},{},false),null,
  'without paired combat proof, no unearned superiority is certified');
+// The unproven fourth cycle must NOT keep novices farming F1-10 forever.
+const firstClearPriority=runJourney(20261024,{style:'A',route:'short',
+ verifyFarming:true,farmingProof:()=>false,maxSorties:45,maxFights:500});
+assert.ok(firstClearPriority.best>10,
+ 'prove first-time progression outranks adaptive stage four until real 100F completion');
+assert.equal(firstClearPriority.completedReplayLoops[1],3,
+ 'only the mandatory first three banked observations run before the campaign clear');
 // The never-approved candidate is allowed for diagnostics but cannot steer
 // return, training, combat or investment. Remove it entirely and compare.
 for(const style of ['A','B','C'])for(const route of ['short','long']){
