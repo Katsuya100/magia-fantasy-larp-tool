@@ -110,9 +110,7 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // never grant mana, suppress an enemy turn, or fake a hit.
  // MP-safe finishers are valid once the beginner F2 return is banked;
  // protect scarce 11F-20F MP without item recovery before the F20 grade.
- // Legal normal attacks can conserve the novice's scarce MP whenever the
- // real enemy would fall immediately. No free damage or additional action.
- if(layer<=10||layer>=51||(route==='long'&&layer>=11)){
+ if(layer>=51||(route==='long'&&layer>=11)){
   const relativeArmor=G.armor(enemy)/Math.max(1,enemy.stats.hp/Math.max(1,enemy.base.hp));
   const basic=Math.max(1,Math.round(num('basic_attack')*hero.stats.hp*
    G.factor(hero,'attack')*G.factor(hero,'output')*G.factor(enemy,'incoming')*
