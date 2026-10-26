@@ -52,7 +52,7 @@ export function circleDetails(circle,buffs=[],mpCost=()=>null){
  const a=circle?.analysis;
  if(!a)return {attribute:'？？？',role:'未解析',effect:'未解析',mp:'?',power:'?'};
  const at=ATTRIBUTES[a.attribute],known=isRevealed(circle);
- const mp=known?mpCost(circle.basePower??a.power,circle):null;
+ const mp=known?mpCost(circle.basePower??a.power):null;
  return {attribute:(at?.icon||'✦')+' '+(at?.label||a.attribute),role:ROLES[a.role]||a.role,
  effect:spellEffect(a,buffs),mp:known&&Number.isFinite(mp)?String(mp):'?',power:known?String(a.power):'?'};
 }
@@ -95,7 +95,7 @@ export function circleCardInfo(circle,buffs=[],mpCost=()=>null){
  const a=circle?.analysis;
  if(!a)return {symbols:'？ / ？',mp:'?',power:'?'};
  const at=ATTRIBUTES[a.attribute];
- const revealed=isRevealed(circle),mp=revealed?mpCost(circle.basePower??a.power,circle):null;
+ const revealed=isRevealed(circle),mp=revealed?mpCost(circle.basePower??a.power):null;
  return {
   symbols:(at?.icon||'✦')+' / '+(ROLE_ICONS[a.role]||'？'),
   mp:revealed&&Number.isFinite(mp)?String(mp):'?',
