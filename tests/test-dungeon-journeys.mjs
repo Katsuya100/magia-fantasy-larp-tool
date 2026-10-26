@@ -343,7 +343,10 @@ assert.ok(earnedReplay.slice(0,3).every((snap,i)=>
  snap.completedExtraLoops===i+1&&snap.additionalBankedReplayFights>=50*(i+1)&&
  snap.unbankedStone===0&&snap.unbankedXp===0&&snap.unbankedInk===0),
  'replay snapshot cannot invent resources or claim a partial/failing sortie as banked');
-assert.ok(observedFarm.trace.filter(t=>t.auditedReplayBand===1&&t.returned).length>=15,
- 'short-route repeats must contain genuinely returned exploration sorties');
+assert.ok(earnedReplay.slice(0,3).every((snap,i)=>snap.actualReturns>0&&
+ snap.actualFights>=snap.additionalBankedReplayFights&&
+ (i===0||(snap.actualFights>earnedReplay[i-1].actualFights&&
+ snap.actualReturns>earnedReplay[i-1].actualReturns))),
+ 'three observed replay checkpoints must each follow further genuine fights and banked returns');
 
 console.log('PASS manifest coverage, reproducible seeded combat, 80/80 rank, item/collection/stone/ink conservation and 6 routes '+ECONOMY_VERSION);
