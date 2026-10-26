@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {referenceSpells,evaluateRecommendedFloor} from '../scripts/dungeon-fixed-deck-pair.mjs';
 import {summarizeOfficialJourneyReadiness} from '../scripts/dungeon-test-contract.mjs';
+import {reference as unapprovedCandidate} from '../scripts/dungeon-readiness-reference.mjs';
 
 const base=G.startingBase(()=>.5);
 const circles=referenceSpells[0][0];
@@ -48,5 +49,18 @@ assert.equal(limited[2].prepared,256,'unrelated floors retain their own proof');
 const candidate=JSON.parse(readFileSync(new URL(
  '../config/dungeon-recommended-reference-candidate.v1.json',import.meta.url),'utf8'));
 candidate.spells=['changed'];candidate.bands=['changed'];
+const oldLevel=unapprovedCandidate.bands[0].startLevel;
+unapprovedCandidate.bands[0].startLevel=9999;
 assert.deepEqual(summarizeOfficialJourneyReadiness(policy,seeds),limited);
+assert.deepEqual(evaluateRecommendedFloor(original,1,0),same,
+ 'the real fixed-deck floor reference must not depend on candidate numerics');
+unapprovedCandidate.bands[0].startLevel=oldLevel;
+const reportSource=readFileSync(new URL('../scripts/dungeon-redefined-evaluation.mjs',import.meta.url),'utf8');
+const auditSource=readFileSync(new URL('../scripts/dungeon-linked-256-audit.mjs',import.meta.url),'utf8');
+assert.doesNotMatch(reportSource,/dungeon-readiness-reference|specFor\(|assess\(/,
+ 'formal verdict must not import candidate test machinery');
+assert.match(auditSource,/collectCandidateDiagnostic:false/,
+ 'formal 256-owner economy cohort must never be filtered by unapproved candidate');
+assert.doesNotMatch(auditSource,/config\/dungeon-recommended-reference-candidate\.v1\.json/,
+ 'formal owner audit must not depend on candidate file hash');
 console.log('PASS real paired floor strength, complete 100-floor coverage, candidate independence and cutoff regression');
