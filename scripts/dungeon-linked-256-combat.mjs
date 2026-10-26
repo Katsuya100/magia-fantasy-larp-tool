@@ -90,8 +90,9 @@ for(const cohort of economy.policies){
   }
   if(band.from>=51&&results.some(r=>r.ownedItems===0))
    issues.push('Some owners lack earned and carried specialist cleanser supply');
-  if(band.from<=10&&results.some(r=>r.heals||r.enemyHeals))
-   throw Error('Early no-combat-healing invariant broken');
+  // Journey recovery magic is prohibited only through F5; F6+ is legal.
+  // The shared challenge() checks the actual floor of every hero cast.
+  // The separate fixed-deck simulator enforces its own F1-10 healing ban.
   const grade=wins.filter(r=>r.gradeBeforeRecovery);
   const row={style:cohort.style,route:cohort.route,band:band.from+'-'+band.to,
    ownersAvailable:count,ownersMissing:missing.length,
