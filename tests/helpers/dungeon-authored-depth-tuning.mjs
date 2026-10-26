@@ -7,8 +7,8 @@ const bandFactors=Object.freeze({
 });
 const authoredMagIncreases=Object.freeze({
   "foe_l029_4": 0.65,
-  "boss_l040": 0.2,
-  "boss_l050": 0.4,
+  "boss_l040": 0.5,
+  "boss_l050": 1.1,
   "boss_l079": 0.5,
   "boss_l080": 1.8,
   "boss_l090": 0.6

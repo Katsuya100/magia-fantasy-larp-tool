@@ -198,7 +198,7 @@ foe_l040_1,スワンプシング,95,4,4,8,1.2,1.05,0.8,1,0.88,1,1.17,attack:aqua
 foe_l040_2,霧水スライム,102,5,5,8,1.2,1,0.8,0.95,1,1,1,attack:aqua:149|defense:aqua:119|support:storm:97|defense:aqua:112|attack:storm:134,10,72,0,slime_core|relic_137
 foe_l040_3,沼の水精,111,4,5,11,1,1,0.8,1.2,0.88,1,1.12,attack:aqua:161|defense:aqua:129|support:flame:105|debuff:aqua:121|attack:flame:145,10,72,0,relic_056|relic_112
 foe_l040_4,毒大ガマ,100,5,5,11,1.2,1,0.95,1,1,1,0.8,attack:aqua:173|defense:aqua:138|support:chaos:112|defense:aqua:130|attack:chaos:156,10,72,0,relic_007|relic_107
-boss_l040,沼底の呪王,144,5.2,6,12,1.2,1.33,0.95,1,1,1.02,0.95,attack:aqua:170|defense:aqua:136|support:chaos:111|debuff:aqua:128|attack:chaos:153,1,72,1,relic_050|relic_130|relic_boss_040
+boss_l040,沼底の呪王,144,5.5,6,12,1.2,1.33,0.95,1,1,1.02,0.95,attack:aqua:170|defense:aqua:136|support:chaos:111|debuff:aqua:128|attack:chaos:153,1,72,1,relic_050|relic_130|relic_boss_040
 foe_l041_1,サイクロプス,94,6,9,7,1,0.8,1,1,1.2,1,1,attack:bolt:143|defense:bolt:114|support:law:93|defense:bolt:107|attack:law:129,10,73,0,relic_043|relic_136|relic_157
 foe_l041_2,赤オーガ,94,8,9,8,0.8,1.2,1,1,1,1,1,attack:flame:155|defense:flame:124|support:aqua:101|defense:flame:116|attack:aqua:140,10,73,0,relic_088|relic_138
 foe_l041_3,ベルセルク,80,7,8,10,1,0.8,1,1,1.2,1,1,attack:bolt:167|defense:bolt:134|support:flame:109|debuff:bolt:125|attack:flame:150,10,73,0,relic_045|relic_139
@@ -248,7 +248,7 @@ foe_l050_1,ボーンゴーレム,84,6,9,8,0.8,1,1,1.2,0.95,1,1,attack:flame:149|
 foe_l050_2,幽霊ミイラ,72,8,5,10,1,1.05,1,1.2,1,1,0.8,attack:chaos:161|defense:chaos:129|defense:flame:105|defense:chaos:121|attack:flame:145,10,87,0,relic_001|relic_101
 foe_l050_3,スペクター,72,7,5,10,1,1,1,1.2,1,1,0.8,attack:chaos:173|defense:chaos:138|defense:flame:112|debuff:chaos:130|attack:flame:156,10,87,0,relic_086|relic_127|relic_166|sealed_eye
 foe_l050_4,黒スケルトン兵,72,9,4,12,1,1,1,1.2,1,1,0.8,attack:chaos:185|defense:chaos:148|defense:bolt:120|defense:chaos:139|attack:bolt:167,10,87,0,bone|relic_144
-boss_l050,忘却の墓守,103,9.4,10,12,1,1,1,1.2,1,0.95,1.3,attack:law:170|defense:law:136|support:bolt:111|debuff:law:128|attack:bolt:153,1,87,1,relic_091|relic_131|relic_171|relic_boss_050
+boss_l050,忘却の墓守,103,10.1,10,12,1,1,1,1.2,1,0.95,1.3,attack:law:170|defense:law:136|support:bolt:111|debuff:law:128|attack:bolt:153,1,87,1,relic_091|relic_131|relic_171|relic_boss_050
 foe_l051_1,ゴールドゴーレム,105,5,9,8,1.05,1.2,1,1,0.95,0.8,1,attack:gravity:155|defense:gravity:124|support:law:101|defense:gravity:250|attack:law:140,10,89,0,relic_079|relic_104|relic_154
 foe_l051_2,金石ゴーレム,105,6,9,8,1.05,1.2,1,1,0.95,0.8,1,attack:gravity:167|defense:gravity:134|support:law:109|defense:gravity:260|attack:law:150,10,89,0,relic_029|relic_129
 foe_l051_3,黄金の使徒,107,5,5,11,1,0.95,1,1,1.25,0.8,1,attack:law:179|defense:law:143|support:bolt:116|debuff:law:250|attack:bolt:161,10,89,0,relic_035|relic_135|relic_160|relic_173
