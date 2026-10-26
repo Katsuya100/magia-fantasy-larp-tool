@@ -158,10 +158,8 @@ assert.ok(victoryMpRate(75)>.09+introReward&&victoryMpRate(75)<.115+introReward,
 assert.ok(victoryMpRate(150)>.069+introReward&&victoryMpRate(150)<.085+introReward,'high-level heroes only receive the early-layer bonus at low depth');
 // Recovery is intentionally reduced after the first decade. The existing
 // MP-bonus still disappears at layer 20, and the deep curve remains monotone.
-for(let layer=1;layer<=10;layer++)assert.equal(G.earlyVictoryMpBonusRate(layer),
- num('victory_mp_early_layer_bonus')*G.victoryMpLayerFactor(layer));
-// F11 begins a fresh legal sortie: recovery rises again after the drained F10 boss.
-for(let layer=12;layer<20;layer++){
+for(let layer=1;layer<=10;layer++)assert.equal(G.earlyVictoryMpBonusRate(layer),num('victory_mp_early_layer_bonus'));
+for(let layer=11;layer<20;layer++){
  assert.ok(G.earlyVictoryMpBonusRate(layer)<G.earlyVictoryMpBonusRate(layer-1));
  assert.ok(G.earlyVictoryMpBonusRate(layer)>0);
 }
@@ -185,11 +183,11 @@ assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75
  'victory MP recovery decreases with level');
 
 assert.deepEqual(G.VICTORY_MP_LAYER_CURVE.map(([floor,rate])=>[floor,rate]),
- [[1,1],[5,1],[6,.25],[7,.15],[8,.08],[9,.02],[10,0],[11,.4815],[15,0.4075],[20,0.2988],[21,0.28995],[22,0.2735],[25,0.2705],[29,0.269775],[30,0.26975],[35,0.231],[40,0.203],
+ [[1,1],[10,1],[11,.4815],[15,0.4075],[20,0.2988],[21,0.28995],[22,0.2735],[25,0.2705],[29,0.269775],[30,0.26975],[35,0.231],[40,0.203],
   [41,0.1935],[45,0.169],[49,0.1585],[50,0.158],[51,0.15162],[52,0.15051],[55,0.147985],[59,0.14641],[60,0.1462],
   [65,0.114],[70,0.1122],[71,0.095325],[75,0.092735],[79,0.091355],[80,0.091],[85,0.086],[89,0.0715],
   [90,0.0644],[95,0.03755],[100,0]]);
-for(const [layer,expected] of [[1,1],[5,1],[6,.25],[7,.15],[8,.08],[9,.02],[10,0],[11,.4815],[15,0.4075],[20,0.2988],
+for(const [layer,expected] of [[1,1],[10,1],[11,.4815],[15,0.4075],[20,0.2988],
  [21,0.28995],[22,0.2735],[25,0.2705],[29,0.269775],[35,0.231],[41,0.1935],[45,0.169],[49,0.1585],[51,0.15162],[52,0.15051],[55,0.147985],[59,0.14641],
  [65,0.114],[71,0.095325],[75,0.092735],[79,0.091355],[80,0.091],[85,0.086],[89,0.0715],
  [90,0.0644],[95,0.03755],[100,0],[105,0]]){
@@ -197,7 +195,6 @@ for(const [layer,expected] of [[1,1],[5,1],[6,.25],[7,.15],[8,.08],[9,.02],[10,0
   'victory MP recovery multiplier for floor '+layer);
 }
 for(let layer=2;layer<=110;layer++){
- if(layer===11)continue; // Next legal sortie begins at 11F after the boss.
  assert.ok(G.victoryMpLayerFactor(layer)<=G.victoryMpLayerFactor(layer-1),
   'victory MP multiplier never increases with dungeon depth at '+layer+'F');
 }
