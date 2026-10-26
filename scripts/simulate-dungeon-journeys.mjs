@@ -585,7 +585,8 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
 }
 export function runJourney(seed,{style='A',route='short',alchemy=false,
  redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000,
- verifyFarming=false,farmingProof=null,collectCandidateDiagnostic=true}={}){
+ verifyFarming=false,farmingProof=null,collectCandidateDiagnostic=true,
+ floorStrengthProof=null}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
@@ -609,7 +610,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   entrySnapshots:{},preparedSnapshots:{},preparedFarmingSnapshots:{},preparedReplayAt:{},
   referenceSnapshots:{},referenceLastAttempt:{},
   farmingSnapshots:{},referenceReplayAt:{},replayBanked:Object.fromEntries(Array.from({length:10},(_,i)=>[10*i+1,0])),
-  farmingProof,collectCandidateDiagnostic,earnedStrengthProof:{},completedReplayLoops:{},
+  farmingProof,collectCandidateDiagnostic,earnedStrengthProof:{},
+   floorStrengthProof,certifiedFloorStrength:new Set(),completedReplayLoops:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},otherItemUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
   recoveryInitialGap:null,recoveryRemainingGap:null};
@@ -761,7 +763,18 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    const powerPerMp=attackCircles.reduce((n,s)=>
     n+G.basePower(s.power)/Math.max(1,G.spellMpCost(s)),0);
    const acquiredUpgrades=active.reduce((n,s)=>n+s.upgradeLevel,0);
-   const floorPreparation={layer,recommendedLevel:targetClearLevel(layer),level:firstLevel,
+   const ordinaryEligible=(layer===1||firstLevel>=targetClearLevel(layer))&&
+     completeCombatKit&&circleIntegrity&&itemIntegrity&&rankLegal&&
+     attackCoverage===5&&powerPerMp>0&&legalAttack&&
+     sustainableAttackActions>0&&hero.hp>0;
+    const strengthEvidence=ordinaryEligible&&state.floorStrengthProof&&
+     !state.certifiedFloorStrength.has(layer)?state.floorStrengthProof({
+       layer,level:firstLevel,rank:profile.adventurerRank,
+       playerBase:{...hero.base},playerHp:hero.hp,playerMp:hero.mp,
+       maxHp:hero.stats.hp,maxMp:hero.maxMp,
+       circles:active.map(s=>({...s})),carry:carry.filter(Boolean).map(x=>({...x})),
+       cooldowns:[...hero.cooldowns],statuses:hero.statuses.map(x=>({...x}))},layer):null;
+    const floorPreparation={layer,recommendedLevel:targetClearLevel(layer),level:firstLevel,
     rank:profile.adventurerRank,spells:active.length,
     attackPowers:active.filter(s=>s.role==='attack').map(s=>s.power),
     attackMpCosts:attackCosts,defensePower:defenseCircles.map(s=>s.power),
@@ -771,10 +784,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     circleIntegrity,itemIntegrity,rankLegal,
     availableAttack:legalAttack,mpPercent:entryMp,hpPercent:entryHp,
     carry:carry.filter(Boolean).map(x=>x.id),bankedBestBeforeEntry:state.best,
-    ready:(layer===1||firstLevel>=targetClearLevel(layer))&&
-     completeCombatKit&&circleIntegrity&&itemIntegrity&&rankLegal&&
-     attackCoverage===5&&powerPerMp>0&&legalAttack&&
-     sustainableAttackActions>0&&hero.hp>0};
+     strengthEvidence:strengthEvidence??{ready:false,status:state.certifiedFloorStrength.has(layer)?
+       'ALREADY_MEASURED_ON_EARLIER_CLEAR':'NO_VALID_REAL_BATTLE_PROOF'},
+     ready:ordinaryEligible&&strengthEvidence?.ready===true};
    const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
    const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
    const manaBeforeLayer=manaCount(usage);
@@ -839,8 +851,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
      (manaCount(usage)-manaBeforeLayer)-(cleanseCount(usage)-cleanseBeforeLayer),
     bossRank:state.rankAudit.findLast(x=>x.layer===layer&&x.sortie===state.sorties)??null,
     banked:false});
-   if(!allWon)break;
-   lastClear=layer;
+   if(allWon&&floorPreparation.ready)state.certifiedFloorStrength.add(layer);
+    if(!allWon)break;
+    lastClear=layer;
    if(layer%10===0){
     // Sample the boss outcome before granting the separately chosen
     // checkpoint recovery; never count full HP/MP as a boss rank award.
