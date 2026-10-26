@@ -100,7 +100,6 @@ assert.equal(chooseHero(finishingHero,nearlyDown,17,true,'short',false),1,
 // both 80F and 90F must be banked through real boss victories before
 // deliberately replaying the previous decade for paid spell preparation.
 const checkpointJourney=runJourney(17011,{style:'A',route:'long'});
-if(checkpointJourney.best<100)console.log('CHECKPOINT_JOURNEY_DIAGNOSTIC '+JSON.stringify({best:checkpointJourney.best,profile:checkpointJourney.profile,blockers:checkpointJourney.blockers,rank:checkpointJourney.rankAudit.slice(-10),lastSorties:checkpointJourney.trace.slice(-12)}));
 assert.ok(checkpointJourney.best>=100,'the deterministic checkpoint test owner must clear 100F');
 for(const depth of [80,90]){
  const first=checkpointJourney.trace.find(t=>!t.defeat&&t.cleared>=depth);
