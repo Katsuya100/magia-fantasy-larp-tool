@@ -105,10 +105,10 @@ const BANDS=[
 function cleanseLoadout(band){
  const capacity=G.capacity(band.level),frequency=new Map();
  for(let layer=band.from;layer<=band.to;layer++)for(const enemy of data.enemies.slice((layer-1)*5,layer*5)){
-  const spell=enemy.spells.split('|').find(x=>x.startsWith('debuff:'));
-  if(!spell)continue;
-  const attr=spell.split(':')[1];
-  frequency.set(attr,(frequency.get(attr)||0)+1);
+  for(const spell of enemy.spells.split('|').filter(x=>x.startsWith('debuff:'))){
+   const attr=spell.split(':')[1];
+   frequency.set(attr,(frequency.get(attr)||0)+1);
+  }
  }
  const lunaCount=band.from>=71?2:0;
  const kit=Array.from({length:lunaCount},()=>({id:'luna_stone',value:0,bonus:null}));

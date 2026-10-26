@@ -173,6 +173,8 @@ function restoreRankMp(state,hero,carry,layer,fight,usage){
 }
 const manaCount=usage=>Object.entries(usage).reduce((n,[id,count])=>
  n+(id.startsWith('mana_')?count:0),0);
+const cleanseCount=usage=>Object.entries(usage).reduce((n,[id,count])=>
+ n+(id.startsWith('clear_')||id==='luna_stone'?count:0),0);
 // Loadouts are selected only from real banked inventory, with the real
 // level-dependent carry cap. No stocked-item fixture is smuggled into economy.
 function pack(state,start,goal,rankItems=true){
@@ -687,6 +689,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
    const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
    const manaBeforeLayer=manaCount(usage);
+   const cleanseBeforeLayer=cleanseCount(usage);
    let allWon=true,bossRounds=null;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
@@ -741,9 +744,10 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     pendingInk:layerLoot.filter(x=>x.type==='ink').length,
     pendingItems:layerLoot.filter(x=>x.type==='use').length,
     pendingCollections:layerLoot.filter(x=>x.type==='collection').length,
-    usedOwnedCleansers:Object.values(usage).reduce((a,b)=>a+b,0)-usedBeforeLayer-
-     (manaCount(usage)-manaBeforeLayer),
+    usedOwnedCleansers:cleanseCount(usage)-cleanseBeforeLayer,
     usedOwnedMana:manaCount(usage)-manaBeforeLayer,
+    usedOwnedRecovery:Object.values(usage).reduce((a,b)=>a+b,0)-usedBeforeLayer-
+     (manaCount(usage)-manaBeforeLayer)-(cleanseCount(usage)-cleanseBeforeLayer),
     bossRank:state.rankAudit.findLast(x=>x.layer===layer&&x.sortie===state.sorties)??null,
     banked:false});
    if(!allWon)break;

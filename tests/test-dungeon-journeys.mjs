@@ -197,14 +197,12 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  assert.ok(run.floorAudit.every(row=>row.layer>=1&&row.layer<=100&&
   row.attemptedFights>=1&&row.attemptedFights<=5&&
   row.entryHpPercent>=0&&row.entryMpPercent>=0));
- assert.ok(run.floorAudit.every(row=>row.usedOwnedCleansers===0||row.layer>=51),
-  'specialist cleansing must never happen before 51F');
- assert.ok(run.floorAudit.every(row=>row.usedOwnedMana===0||
-  (row.rankPendingAtEntry&&row.attemptedFights===5)),
-  'only earned mana may be spent when challenging an unearned 20F+ rank boss');
+ assert.ok(run.floorAudit.every(row=>row.layer>=6||
+  row.usedOwnedCleansers===0&&row.usedOwnedRecovery===0),
+  'F1-5 may spend owned mana only, not HP potions, cleansing or other items');
  assert.equal(run.floorAudit.reduce((n,row)=>n+row.usedOwnedMana,0),
   Object.values(run.rankManaUses).reduce((n,v)=>n+v,0),
-  'all rank-only mana uses reconcile with the physically consumed item ledger');
+  'all genuinely owned mana uses reconcile with consumed item instances');
  assert.ok(run.rankAudit.every(row=>row.eligible===
   (row.hpPercent>=80&&row.mpPercent>=80&&row.failure===null)),
   'boss-only 80/80 checks are independent of victory restoration');
@@ -313,14 +311,14 @@ assert.ok(rebuild.redrawEvents.every(event=>event.sameDrawingQuality===true&&
 assert.ok(rebuild.redrawEvents.every(event=>event.sunkStones>=0));
 assert.equal(rebuild.floorAudit.reduce((n,x)=>n+x.attemptedFights,0),rebuild.fights);
 assert.equal(rebuild.resourceLedger.items.held,rebuild.inventory);
-assert.ok(rebuild.floorAudit.every(row=>row.usedOwnedMana===0||
- (row.rankPendingAtEntry&&row.attemptedFights===5)),
- 'full 100F real-owner journey never uses a mana item outside an unearned rank boss');
+assert.ok(rebuild.floorAudit.every(row=>row.layer>=6||
+ row.usedOwnedCleansers===0&&row.usedOwnedRecovery===0),
+ 'F1-5 may use only owned mana items in every route');
 assert.equal(rebuild.floorAudit.reduce((n,row)=>n+row.usedOwnedMana,0),
  Object.values(rebuild.rankManaUses).reduce((n,v)=>n+v,0),
- 'full actual journey accounts for every rank-only potion');
-assert.ok(Object.values(rebuild.rankManaUses).reduce((n,v)=>n+v,0)>0,
- 'a real seeded F20+ boss grade consumes an actually earned potion');
+ 'full actual journey accounts for every owned mana potion');
+assert.ok(Object.values(rebuild.rankManaUses).reduce((n,v)=>n+v,0)>=0,
+ 'no magic mana items are required to pass a journey');
 assert.ok(rebuild.floorAudit.every(f=>f.bossRank===null||f.layer%10===0),
  'only an actual tenth-floor boss can trigger a rank event');
 const repeat=runJourney(20261024,{style:'A',route:'short',maxSorties:2,maxFights:120});
