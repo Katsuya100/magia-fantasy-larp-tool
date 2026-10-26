@@ -622,8 +622,12 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    state.best>=b+9&&state.preparedSnapshots[b]&&
    unlockedStartLayers(profile).includes(b));
   // Three is only the minimum measurement; proof decides continuation.
+  // During first-time progress, only gather the 1/2/3 mandatory paid
+  // checkpoints. Never let an unproven fourth replay monopolize a floor
+  // before the genuine 100F clear and independent rank acquisition.
+  const campaignComplete=state.best>=100&&profile.adventurerRank>=100;
   return chooseAdditionalFarmingBand(eligible,state.completedReplayLoops,
-   state.earnedStrengthProof,Boolean(farmingProof));
+   state.earnedStrengthProof,Boolean(farmingProof)&&campaignComplete);
  };
  for(let sortie=0;sortie<maxSorties&&
   (state.best<100||profile.adventurerRank<100||extraBand()!==null)&&state.fights<maxFights;sortie++){
