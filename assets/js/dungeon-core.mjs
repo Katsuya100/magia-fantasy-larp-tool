@@ -55,7 +55,7 @@ export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_d
 // The same cost and required paid upgrade level apply to every combatant;
 // savings cannot exceed the original cost minus the minimum 1 MP cost.
 export const spellMpCost=spell=>Math.max(1,mpCost(spell.basePower??spell.power)-
- Math.floor(Math.max(0,Number(spell.upgradeLevel)||0)/10));
+ Math.min(1,Math.floor(Math.max(0,Number(spell.upgradeLevel)||0)/10)));
 const levelRow=l=>level(l);
 const growthKeys=['hp','mag','def','res'];
 export const startingBase=(r=Math.random)=>Object.fromEntries(growthKeys.map(k=>[k,roll(...range(k),r)]));
