@@ -117,6 +117,15 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
    num('def_divisor')/(num('def_divisor')+relativeArmor)));
   if(enemy.hp<=basic)return -1;
  }
+ // When several real attack circles can finish the same opponent, use the
+ // least costly guaranteed magic cast. The weak-spell path still must fight
+ // with its true damage, cooldowns and paid MP; no free basic-attack bypass.
+ if(attacks.length){
+  const finishers=attacks.filter(i=>G.damage(hero,enemy,hero.spells[i],()=>0)>=enemy.hp);
+  if(finishers.length)return finishers.sort((a,b)=>
+   G.spellMpCost(hero.spells[a])-G.spellMpCost(hero.spells[b])||
+   G.effectivePower(hero,hero.spells[b])-G.effectivePower(hero,hero.spells[a])||a-b)[0];
+ }
  if(attacks.length)return attacks.sort((a,b)=>{
   const score=i=>G.effectivePower(hero,hero.spells[i])*G.resist(enemy,hero.spells[i].attribute);
   return score(b)-score(a)||a-b;
