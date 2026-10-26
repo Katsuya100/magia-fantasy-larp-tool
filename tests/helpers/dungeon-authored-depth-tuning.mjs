@@ -2,7 +2,7 @@
 // This is a TEST REFERENCE for the reviewed CSV; the game reads the CSV itself.
 // The input is the existing element-distribution output, including curated MAG.
 const bandFactors=Object.freeze({
-  11:[1.15,.35],21:[1.35,.69],31:[1.45,.50],41:[.95,.92],
+  11:[1.15,.35],21:[1.35,.65],31:[1.45,.50],41:[.95,.92],
   51:[1.55,.57],61:[1.30,.50],71:[1.50,.42],81:[1.10,1.40],91:[1.25,1.00]
 });
 const authoredMagIncreases=Object.freeze({
