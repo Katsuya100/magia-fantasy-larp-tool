@@ -215,7 +215,7 @@ function pack(state,start,goal,rankItems=true){
  const rankTarget=Math.max(20,Math.ceil(start/10)*10);
  const seekingRank=rankItems&&rankTarget<=goal&&rankTarget<=100&&
   state.profile.adventurerRank<rankTarget;
- const mana=(seekingRank||start<=5)?state.inventory.filter(item=>
+ const mana=(seekingRank||start<=5||goal>=51)?state.inventory.filter(item=>
   data.items.find(row=>row.id===item.id)?.kind==='mana').sort((a,b)=>
   Number(b.value)-Number(a.value)).slice(0,Math.min(3,cap)):[];
  const available=state.inventory.filter(eligible);
@@ -223,7 +223,7 @@ function pack(state,start,goal,rankItems=true){
  const luna=available.filter(item=>item.id==='luna_stone');
  // A high-rank attempt is allowed two actually owned healing items before
  // duplicate cleansers. This preserves the genuine level-dependent carry cap.
- const rankedHealing=seekingRank&&goal>=20?state.inventory.filter(item=>
+ const rankedHealing=(seekingRank||goal>=51)&&goal>=20?state.inventory.filter(item=>
   ['heal','elixir'].includes(data.items.find(row=>row.id===item.id)?.kind))
   .sort((a,b)=>Number(b.value)-Number(a.value)).slice(0,Math.min(2,cap-mana.length)):[];
  const selected=[...mana,...rankedHealing,
