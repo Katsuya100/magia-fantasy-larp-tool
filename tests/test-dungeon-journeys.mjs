@@ -348,8 +348,8 @@ assert.equal(chooseAdditionalFarmingBand([1],{1:3},{},false),null,
  'without paired combat proof, no unearned superiority is certified');
 // The never-approved candidate is allowed for diagnostics but cannot steer
 // return, training, combat or investment. Remove it entirely and compare.
-for(const route of ['short','long']){
- const opts={style:'C',route,maxSorties:50,maxFights:500};
+for(const style of ['A','B','C'])for(const route of ['short','long']){
+ const opts={style,route,maxSorties:30,maxFights:350};
  const diagnostic=runJourney(20261024,{...opts,collectCandidateDiagnostic:true});
  const without=runJourney(20261024,{...opts,collectCandidateDiagnostic:false});
  assert.deepEqual(diagnostic.trace,without.trace,

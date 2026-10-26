@@ -586,7 +586,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
-  forceRedraw:false,maxSorties:Math.min(maxSorties,120),maxFights,verifyFarming:false}):null;
+  forceRedraw:false,maxSorties:Math.min(maxSorties,120),maxFights,
+  verifyFarming:false,collectCandidateDiagnostic}):null;
  const atA31=aReference?.entrySnapshots[31]??null;
  const recoveryTarget=atA31?.circles.map(c=>c.upgradeLevel)??null;
  const random=rng(seed),playerBase=G.startingBase(random),profile={level:1,xp:0,adventurerRank:0};
@@ -929,10 +930,15 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     lostUnbanked:state.lost.stone},
    ink:{banked:state.earned.ink,redrawSpent:state.spent.ink,held:state.ink,
     lostUnbanked:state.lost.ink}};
- if(verifyFarming&&extraBand()!==null)
-  state.blockers.push('Measured sortie/fight budget exhausted with unproven paid combat advantage at F'+
-   extraBand()+', completed genuine extra loops='+(state.completedReplayLoops[extraBand()]||0)+
-   '; this is an UNRESOLVED budget cutoff, not permanently unreachable');
+ const farmingUnresolved=verifyFarming&&farmingProof?
+  Array.from({length:10},(_,i)=>i*10+1)
+   .filter(b=>state.preparedSnapshots[b]&&!state.earnedStrengthProof[b]):[];
+ if(farmingUnresolved.length)
+  state.blockers.push('UNRESOLVED budget cutoff; unpaid strength proof missing for F'+
+   farmingUnresolved.join(',F')+' after '+state.fights+'/'+maxFights+
+   ' fights and '+state.sorties+'/'+maxSorties+' sorties; not permanently unreachable');
+ else if(verifyFarming&&extraBand()!==null)
+  state.blockers.push('Insufficient banked replay evidence before explicit test budget; not PASS');
  return {seed,style,route,alchemy,verifyFarming,
   offDeckStoneSpent:state.offDeckStoneSpent,
   playerBase:{...state.playerBase},alchemyCrafts:state.alchemyCrafts,
@@ -958,6 +964,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   preparedFarmingSnapshots:state.preparedFarmingSnapshots,
   completedReplayLoops:state.completedReplayLoops,
   earnedStrengthProof:state.earnedStrengthProof,
+  farmingUnresolved,trainingBudget:{maxFights,maxSorties},
   referenceSnapshots:state.referenceSnapshots,referenceLastAttempt:state.referenceLastAttempt,
   farmingSnapshots:state.farmingSnapshots,replayBanked:state.replayBanked,blockers:state.blockers};
 }

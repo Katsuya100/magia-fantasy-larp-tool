@@ -157,7 +157,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   ownerEntries.push({seed,farmingResolution:{
    completedLoops:run.completedReplayLoops,
    pairedProof:run.earnedStrengthProof,
-   budgetExhausted:run.blockers.filter(x=>x.includes('UNRESOLVED budget cutoff'))},
+   budgetExhausted:run.farmingUnresolved.map(b=>
+    'F'+b+', total fight/sortie budget '+run.trainingBudget.maxFights+'/'+
+    run.trainingBudget.maxSorties+' exhausted after genuine loops='+
+    (run.completedReplayLoops[b]??0))},
    preparedFarming:goals.bands.map(b=>
    (run.preparedFarmingSnapshots[b.from]??[]).map((snap,index)=>{
     assert.equal(snap.completedExtraLoops,index<3?index+1:snap.completedExtraLoops);
