@@ -11,6 +11,7 @@ export const reference=JSON.parse(readFileSync(new URL('../config/dungeon-recomm
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 configure({balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')});
 export function specFor(from){
+ if(!checked){checkReference();checked=true;}
  const spec=reference.bands.find(x=>x.from===from);
  assert.ok(spec,'missing frozen reference band '+from);
  return spec;
@@ -40,7 +41,7 @@ export function checkReference(){
    'candidate carry cannot exceed legal capacity');
  }
 }
-checkReference();
+let checked=false;
 export function stoneCost(s){
  return s.upgrades.reduce((sum,n)=>sum+totalUpgradeStoneCost(n),0);
 }
