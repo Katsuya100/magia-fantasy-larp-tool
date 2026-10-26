@@ -11,7 +11,15 @@ export function depthRetunedEnemies(original){
   const layer=Math.floor(i/5)+1;
   const band=Math.floor((layer-1)/10)*10+1;
   const factor=bandFactors[band];
-  if(!factor)return {...row};
+  // Early F7-F10 normals move from the one-hit tutorial into a gradually
+  // more threatening combat band. Only authored MAG changes; shared stats,
+  // spell powers, original HP and endless-layer growth are untouched.
+  const tutorialMag={7:16,8:20,9:26,10:30}[layer];
+  if(!factor){
+   if(tutorialMag!==undefined&&i%5!==4)
+    return {...row,mag:String(tutorialMag+Number(row.mag)-7)};
+   return {...row};
+  }
   // Preserve the exact integer-boundary outcome of the final two depth
   // refinements. These are authored CSV values, never runtime multipliers.
   const initialHp=Math.max(20,Math.round(Number(row.hp)*factor[0]));
