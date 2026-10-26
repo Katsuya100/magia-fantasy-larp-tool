@@ -39,20 +39,24 @@ const percentile=(values,q)=>{
  return sorted[Math.floor((sorted.length-1)*q)];
 };
 const score=(actual,fixed)=>{
+ // No arbitrary tolerance or invented composite score: a build is proven
+ // stronger only when it wins an otherwise lost sortie, or performs at least
+ // as well on all measured combat axes and strictly better on one.
  if(actual.won&&!fixed.won)return 'WIN_ADVANTAGE';
- if(!actual.won)return null;
- if(!fixed.won)return 'WIN_ADVANTAGE';
- const hp=actual.endHp-fixed.endHp,mp=actual.endMp-fixed.endMp;
- const rounds=fixed.casts-actual.casts;
- // Stable, materially positive improvement in at least one measured axis.
- // Do not buy one advantage with a serious regression elsewhere.
- if(hp>.2&&mp>=-1&&rounds>=-3)return 'HP_ADVANTAGE';
- if(mp>.2&&hp>=-1&&rounds>=-3)return 'MP_ADVANTAGE';
- if(rounds>0&&hp>=-1&&mp>=-1)return 'ROUND_ADVANTAGE';
+ if(!actual.won||!fixed.won)return null;
+ const differences=[
+  actual.endHp-fixed.endHp,
+  actual.endMp-fixed.endMp,
+  fixed.casts-actual.casts,
+  fixed.spellMpSpent-actual.spellMpSpent
+ ];
+ const tolerance=1e-8; // Floating representation only; not a gameplay threshold.
+ if(differences.every(x=>x>=-tolerance)&&differences.some(x=>x>tolerance))
+  return 'PARETO_ADVANTAGE';
  return null;
 };
 const report={schemaVersion:'dungeon-paired-build-strength-v1',
- method:'Actual banked post-replay deck against exact fixed-deck stone ledger; same owner base, level, rank, carry, full legal sortie HP/MP, same short tactical AI and same combat seed',
+ method:'All actually banked replay snapshots vs original fixed deck; identical owner base, level, rank, inventory, lawful full HP/MP, tactics, authored opponents, and per-encounter combat random seeds. Dominance requires no worsening of any measured axis.',
  candidatePromoted:false,strictSamples:goals.strictSamples,cases:[]};
 for(const p of economy.policies){
  const owners=banked.policies.find(x=>x.style===p.style&&x.route===p.route);
@@ -65,43 +69,64 @@ for(const p of economy.policies){
    assert.equal(owner.seed,17011+13*i,'paired banked owner seed');
    const original=owner.reference?.[index];
    const post=owner.farming?.[index]??[];
-   // The newest genuinely banked available replay is used; never fabricate
-   // a missing third replay or select only successful combat attempts.
-   let candidate=null,loops=0;
-   for(let k=post.length-1;k>=0;k--)if(post[k]){
-    candidate=post[k];loops=k+1;break;
+   // Search ALL genuinely banked observed replays, not just the last state:
+   // an earlier legal deck may outperform a later speculative rebuild.
+   if(!original){missing++;samples.push({seed:owner.seed,status:'REFERENCE_NOT_READY'});continue;}
+   const observations=[];
+   for(let k=0;k<post.length;k++){
+    const candidate=post[k];
+    if(!candidate)continue;
+    const loops=k+1;
+    assert.ok(candidate.additionalBankedReplayFights>=50*loops,
+     'each comparison must have real banked fights');
+    assert.equal(candidate.unbankedXp,0);
+    assert.equal(candidate.unbankedStone,0);
+    assert.equal(candidate.unbankedInk,0);
+    assert.ok(candidate.level>=goals.targetLevelCheckpoints[String(band.to)]);
+    const hero=G.makeUnit(candidate.playerBase,candidate.level,{},candidate.circles,'hero');
+    const shared={...candidate,playerHp:hero.stats.hp,playerMp:hero.maxMp,
+     maxHp:hero.stats.hp,maxMp:hero.maxMp,statuses:[],
+     cooldowns:candidate.circles.map(()=>0)};
+    // Both arms own the same carried items: fixed circles never receive
+    // simulated stones, level gains, potions, or extra returns.
+    const combatSeed=37011+13*i;
+    const actual=challenge(shared,band.from,combatSeed,{route:'short',paired:true});
+    const fixed=challenge({...shared,circles:referenceSpells[index][i]},
+     band.from,combatSeed,{route:'short',paired:true});
+    const commonLength=Math.min(actual.opponents.length,fixed.opponents.length);
+    assert.deepEqual(actual.opponents.slice(0,commonLength),
+     fixed.opponents.slice(0,commonLength),'paired arms must fight identical enemies');
+    assert.equal(actual.opponents.length,actual.fightsAttempted);
+    assert.equal(fixed.opponents.length,fixed.fightsAttempted);
+    const advantage=score(actual,fixed);
+    observations.push({loops,candidate,actual,fixed,advantage});
    }
-   if(!original||!candidate){missing++;samples.push({seed:owner.seed,status:'NO_BANKED_REPLAY',loops});continue;}
-   assert.ok(candidate.additionalBankedReplayFights>=50*loops,
-    'every extra loop must actually be fought and banked');
-   assert.equal(candidate.unbankedXp,0);
-   assert.equal(candidate.unbankedStone,0);
-   assert.equal(candidate.unbankedInk,0);
-   assert.ok(candidate.level>=goals.targetLevelCheckpoints[String(band.to)]);
-   // This is ONLY a paired battle fixture. No EXP, items or magic stones are
-   // credited to either journey from these simulated comparison fights.
-   const hero=G.makeUnit(candidate.playerBase,candidate.level,{},candidate.circles,'hero');
-   const shared={...candidate,playerHp:hero.stats.hp,playerMp:hero.maxMp,
-    maxHp:hero.stats.hp,maxMp:hero.maxMp,statuses:[],
-    cooldowns:candidate.circles.map(()=>0)};
-   const combatSeed=37011+13*i;
-   const actual=challenge(shared,band.from,combatSeed,{route:'short'});
-   const fixed=challenge({...shared,circles:referenceSpells[index][i]},band.from,
-    combatSeed,{route:'short'});
-   const advantage=score(actual,fixed);
+   if(!observations.length){missing++;samples.push({
+    seed:owner.seed,status:'NO_BANKED_REPLAY',observedLoops:0});continue;}
+   // First independently proven stronger state wins the question "can the
+   // journey create one?". If none succeeds, retain the last real observation.
+   const chosen=observations.find(x=>x.advantage)??observations.at(-1);
+   const {candidate,actual,fixed,advantage,loops}=chosen;
    if(advantage){stronger++;reasonCounts[advantage]=(reasonCounts[advantage]||0)+1;}
    observed++;actualWins+=Number(actual.won);fixedWins+=Number(fixed.won);
    deltas.push(actual.endMp-fixed.endMp);
    rounds.push(fixed.casts-actual.casts);
    sourceLoops.push(loops);
-   samples.push({seed:owner.seed,status:advantage||'NOT_STRONGER',
-    loops,level:candidate.level,ownedStones:candidate.earned.stone,
+   samples.push({seed:owner.seed,status:advantage||'NOT_YET_STRONGER',
+    loops,observedLoops:observations.length,
+    progression:observations.map(x=>({loops:x.loops,won:x.actual.won,
+     referenceWon:x.fixed.won,advantage:x.advantage,
+     hpDelta:x.actual.endHp-x.fixed.endHp,
+     mpDelta:x.actual.endMp-x.fixed.endMp,
+     roundsSaved:x.fixed.casts-x.actual.casts,
+     spellMpSaved:x.fixed.spellMpSpent-x.actual.spellMpSpent})),
+    level:candidate.level,ownedStones:candidate.earned.stone,
     investedStones:candidate.spent.stone,earnedInk:candidate.earned.ink,
     spentInk:candidate.spent.ink,ownedItems:candidate.carry.length,
     actual:{won:actual.won,hp:actual.endHp,mp:actual.endMp,rounds:actual.casts,
-     firstLoss:actual.firstLoss},
+     spentMp:actual.spellMpSpent,firstLoss:actual.firstLoss},
     fixed:{won:fixed.won,hp:fixed.endHp,mp:fixed.endMp,rounds:fixed.casts,
-     firstLoss:fixed.firstLoss}});
+     spentMp:fixed.spellMpSpent,firstLoss:fixed.firstLoss}});
   }
   const row={style:p.style,route:p.route,band:band.from+'-'+band.to,
    population:goals.strictSamples,observed,missing,stronger,
@@ -110,6 +135,7 @@ for(const p of economy.policies){
    medianMpDelta:percentile(deltas,.5),
    medianRoundsSaved:percentile(rounds,.5),
    replayLoops:{median:percentile(sourceLoops,.5),p90:percentile(sourceLoops,.9)},
+   comparison:'COMMON_ENCOUNTERS_AND_PER_FIGHT_SEEDS_PARETO',
    improvementModes:reasonCounts,passed:stronger===goals.strictSamples,
    samples};
   report.cases.push(row);
