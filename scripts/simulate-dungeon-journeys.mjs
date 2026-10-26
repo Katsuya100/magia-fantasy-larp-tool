@@ -325,14 +325,16 @@ function chooseUpgrade(state){
  return options[0]||null;
 }
 function invest(state){
- // The regular A/B/C investment curve is unchanged in successful play.
- // A player who has failed multiple long dives may rationally deploy more
- // ALREADY BANKED stones instead of losing 100+ identical attempts at F11.
- // This is the existing .75 late-investment cap, not a free upgrade.
+ // Keep A/B/C allocation choices and the same actual stone costs.
+ // After clearing 100F and banking all badges, a real replay-focused
+ // adventurer can invest the remaining genuinely earned stones instead
+ // of permanently retaining the last quarter of the treasury.
  const survivalRecovery=state.route==='long'&&state.best>=10&&
   state.losses>=2&&state.trace.at(-1)?.defeat===true;
- const budget=Math.floor(state.earned.stone*
-  (survivalRecovery?.75:investmentRate(Math.max(1,state.best+1)))+1e-8);
+ const campaignCleared=state.best>=100&&state.profile.adventurerRank>=100;
+ const budgetRate=campaignCleared?1:
+  survivalRecovery?.75:investmentRate(Math.max(1,state.best+1));
+ const budget=Math.floor(state.earned.stone*budgetRate+1e-8);
  // A sunk upgrade is still counted as spent after a redraw.
  while(state.spent.stone<budget&&state.spent.stone+5<=state.earned.stone){
   const candidate=chooseUpgrade(state);if(!candidate)break;
