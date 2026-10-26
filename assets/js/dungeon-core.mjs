@@ -410,7 +410,7 @@ export function repairInvalidMp(hero){
 // An ordinary victory at 100F and deeper restores 0 MP; existing
 // tenth-layer checkpoints still use their separate full-recovery rules.
 export const VICTORY_MP_LAYER_CURVE=Object.freeze(
- [[1,1],[5,1],[6,0.25],[7,0.15],[8,0.08],[9,0.02],[10,0],[11,0.4815],[15,0.4075],[20,0.2988],[21,0.28995],[22,0.2735],[25,0.2705],[29,0.269775],[30,0.26975],[35,0.231],[40,0.203],[41,0.1935],[45,0.169],[49,0.1585],[50,0.158],[51,0.15162],[52,0.15051],[55,0.147985],[59,0.14641],[60,0.1462],[65,0.114],[70,0.1122],[71,0.095325],[75,0.092735],[79,0.091355],[80,0.091],[85,0.086],[89,0.0715],[90,0.0644],[95,0.03755],[100,0]].map(point=>Object.freeze(point)));
+ [[1,1],[10,1],[11,0.4815],[15,0.4075],[20,0.2988],[21,0.28995],[22,0.2735],[25,0.2705],[29,0.269775],[30,0.26975],[35,0.231],[40,0.203],[41,0.1935],[45,0.169],[49,0.1585],[50,0.158],[51,0.15162],[52,0.15051],[55,0.147985],[59,0.14641],[60,0.1462],[65,0.114],[70,0.1122],[71,0.095325],[75,0.092735],[79,0.091355],[80,0.091],[85,0.086],[89,0.0715],[90,0.0644],[95,0.03755],[100,0]].map(point=>Object.freeze(point)));
 export function victoryMpLayerFactor(layer,policy=VICTORY_MP_LAYER_CURVE){
  const floor=Number(layer);
  if(!Number.isFinite(floor))return 1;
@@ -432,7 +432,7 @@ export function earlyVictoryMpBonusRate(layer){
  // Floor 1-10 keeps its beginner recovery; 11+ scales the existing
  // paid-spell economy to the 50-fight target without any extra item or MP.
  return Number.isFinite(floor)?num('victory_mp_early_layer_bonus')*
-  clamp((20-floor)/10,0,1)*(floor<=10?victoryMpLayerFactor(floor):.5):0;
+  clamp((20-floor)/10,0,1)*(floor<=10?1:.5):0;
 }
 export function recoverVictoryMp(hero,layer=1){
  const floor=Number(layer);
