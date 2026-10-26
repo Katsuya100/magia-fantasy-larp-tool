@@ -114,3 +114,11 @@ export function certifiesPreEntryReadiness(row){
   p.sustainableAttackActions>0&&p.level>=(p.layer===1?1:p.recommendedLevel)&&
   row.attemptedFights===5&&row.cleared);
 }
+
+export function chooseAdditionalFarmingBand(eligible,counts,proven,hasCombatProof){
+ const first=eligible.find(b=>(counts[b]||0)<3);
+ if(first!==undefined)return first;
+ if(!hasCombatProof)return null;
+ return eligible.filter(b=>!proven[b])
+  .sort((a,b)=>(counts[a]||0)-(counts[b]||0)||a-b)[0]??null;
+}

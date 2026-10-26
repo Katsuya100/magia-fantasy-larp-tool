@@ -33,6 +33,11 @@ for(const p of economy.policies){
    assert.equal(owner.seed,17011+13*i,'paired banked owner seed');
    const original=owner.prepared?.[index];
    const post=owner.preparedFarming?.[index]??[];
+   const trained=owner.farmingResolution??{};
+   const paidLoops=trained.completedLoops?.[band.from]??0;
+   const budgetCutoff=(trained.budgetExhausted??[]).find(x=>x.includes('F'+band.from+','))??null;
+   if(post.length)assert.ok(paidLoops>=post.at(-1).completedExtraLoops,
+    'latest checkpoint cannot exceed genuinely completed paid replays');
    // Search ALL genuinely banked observed replays, not just the last state:
    // an earlier legal deck may outperform a later speculative rebuild.
    if(!original){missing++;samples.push({seed:owner.seed,status:'NO_ACTUALLY_PREPARED_OWNER'});continue;}
@@ -51,7 +56,8 @@ for(const p of economy.policies){
     observations.push({loops,candidate,actual,fixed,advantage});
    }
    if(!observations.length){missing++;samples.push({
-    seed:owner.seed,status:'NO_BANKED_REPLAY',observedLoops:0});continue;}
+    seed:owner.seed,status:'NO_BANKED_REPLAY',observedLoops:0,
+    cutoffReason:budgetCutoff});continue;}
    // First independently proven stronger state wins the question "can the
    // journey create one?". If none succeeds, retain the last real observation.
    const chosen=observations.find(x=>x.advantage)??observations.at(-1);
@@ -61,7 +67,10 @@ for(const p of economy.policies){
    deltas.push(actual.endMp-fixed.endMp);
    rounds.push(fixed.casts-actual.casts);
    sourceLoops.push(loops);
-   samples.push({seed:owner.seed,status:advantage||'NOT_YET_STRONGER',
+   samples.push({seed:owner.seed,
+    status:advantage||(budgetCutoff?'BUDGET_EXHAUSTED_UNPROVEN':'NOT_YET_STRONGER'),
+    cutoffReason:advantage?null:budgetCutoff,
+    completedPaidLoops:paidLoops,
     loops,observedLoops:observations.length,
     progression:observations.map(x=>({loops:x.loops,won:x.actual.won,
      referenceWon:x.fixed.won,advantage:x.advantage,

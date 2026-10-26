@@ -14,7 +14,8 @@ import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../asset
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
 import {specFor,assess} from './dungeon-readiness-reference.mjs';
-import {journeySpellAllowed,journeyItemAllowed} from './dungeon-test-contract.mjs';
+import {journeySpellAllowed,journeyItemAllowed,
+ chooseAdditionalFarmingBand} from './dungeon-test-contract.mjs';
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
@@ -616,16 +617,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const eligible=Array.from({length:10},(_,i)=>i*10+1).filter(b=>
    state.best>=b+9&&state.preparedSnapshots[b]&&
    unlockedStartLayers(profile).includes(b));
-  const initial=eligible.find(b=>(state.completedReplayLoops[b]||0)<3);
-  if(initial!==undefined)return initial;
-  // Three is only the minimum *measurement* checkpoint. Continue real,
-  // paid return sorties wherever same-seed combat remains unproven.
-  // This is deliberately bound by total sortie/fight budget, NOT by a
-  // fabricated fourth-loop or per-band strength cutoff.
-  if(!farmingProof)return null; // standalone diagnostic without paired gate
-  return eligible.filter(b=>!state.earnedStrengthProof[b])
-   .sort((a,b)=>(state.completedReplayLoops[a]||0)-
-    (state.completedReplayLoops[b]||0)||a-b)[0]??null;
+  // Three is only the minimum measurement; proof decides continuation.
+  return chooseAdditionalFarmingBand(eligible,state.completedReplayLoops,
+   state.earnedStrengthProof,Boolean(farmingProof));
  };
  for(let sortie=0;sortie<maxSorties&&
   (state.best<100||profile.adventurerRank<100||extraBand()!==null)&&state.fights<maxFights;sortie++){

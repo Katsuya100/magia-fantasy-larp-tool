@@ -94,7 +94,9 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   readinessFirst:new Set(),readinessFarming:new Set(),readinessObserved:new Set(),
   collectionDrops:0,collectionBanked:0,collectionLost:0,
   xpBanked:0,xpLost:0,
-  gradeBanked:0,entryHp:[],entryMp:[],exitHp:[],exitMp:[]}));
+  gradeBanked:0,entryHp:[],entryMp:[],exitHp:[],exitMp:[],
+  upgradeCount:[],attackEfficiency:[],attackCoverage:[],heldItems:[],
+  componentFailures:{}}));
  let conservationChecks=0;
  for(const seed of seeds){
   const run=runJourney(seed,{style,route,verifyFarming:true,
@@ -152,7 +154,11 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   referenceOwners.push({seed,reference:goals.bands.map(b=>run.referenceSnapshots[b.from]??null),
    lastReadiness:goals.bands.map(b=>run.referenceLastAttempt[b.from]??null),
    farming:goals.bands.map(b=>run.farmingSnapshots[b.from]??[])});
-  ownerEntries.push({seed,preparedFarming:goals.bands.map(b=>
+  ownerEntries.push({seed,farmingResolution:{
+   completedLoops:run.completedReplayLoops,
+   pairedProof:run.earnedStrengthProof,
+   budgetExhausted:run.blockers.filter(x=>x.includes('UNRESOLVED budget cutoff'))},
+   preparedFarming:goals.bands.map(b=>
    (run.preparedFarmingSnapshots[b.from]??[]).map((snap,index)=>{
     assert.equal(snap.completedExtraLoops,index<3?index+1:snap.completedExtraLoops);
     if(index>=3)assert.ok(snap.completedExtraLoops>=4,'later paid growth cannot be relabeled third');
@@ -228,6 +234,17 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    assert.ok(row.floorPreparation&&row.floorPreparation.layer===row.layer,
     'every single floor needs an actual pre-entry readiness observation');
    f.readinessObserved.add(seed);
+   const prep=row.floorPreparation;
+   f.upgradeCount.push(prep.acquiredUpgrades);
+   f.attackEfficiency.push(prep.powerPerMp);
+   f.attackCoverage.push(prep.attackCoverage);
+   f.heldItems.push(prep.carry.length);
+   for(const key of ['completeCombatKit','circleIntegrity','itemIntegrity','rankLegal']){
+    if(!prep[key])f.componentFailures[key]=(f.componentFailures[key]||0)+1;
+   }
+   if(prep.attackCoverage!==5)f.componentFailures.attackCoverage=(f.componentFailures.attackCoverage||0)+1;
+   if(!(prep.powerPerMp>0))f.componentFailures.mpEfficiency=(f.componentFailures.mpEfficiency||0)+1;
+   if(!row.cleared)f.componentFailures.actualCombat=(f.componentFailures.actualCombat||0)+1;
    if(certifiesPreEntryReadiness(row))
     (row.replay?f.readinessFarming:f.readinessFirst).add(seed);
    f.attempted++;f.cleared+=Number(row.cleared);f.lost+=Number(row.defeated);
@@ -277,6 +294,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
     additionalFarmingReady:[...f.readinessFarming].filter(s=>!f.readinessFirst.has(s)).length,
     prepared:[...new Set([...f.readinessFirst,...f.readinessFarming])].length,
     missingSeeds:seeds.filter(s=>!f.readinessFirst.has(s)&&!f.readinessFarming.has(s))},
+   totalStrength:{upgradeCount:stats(f.upgradeCount),
+    attackPowerPerMp:stats(f.attackEfficiency),enemyCoverage:stats(f.attackCoverage),
+    legalOwnedCarry:stats(f.heldItems),componentFailures:f.componentFailures,
+    measuredBy:'actual equipped upgrade powers, MP efficiency, rank, owned items and five real battles'},
    lost:f.lost,replays:f.replays,banked:f.banked,cleansersUsed:f.cleansers,
    gradeChecks:f.gradeChecks,gradeEligible:f.gradeEligible,gradeBanked:f.gradeBanked,
    stoneDrops:f.stoneDrops,stoneBanked:f.stoneBanked,stoneLost:f.stoneLost,

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {buildManifest} from '../scripts/dungeon-balance-manifest.mjs';
 import {specFor,assess} from '../scripts/dungeon-readiness-reference.mjs';
+import {chooseAdditionalFarmingBand} from '../scripts/dungeon-test-contract.mjs';
 import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
@@ -338,6 +339,13 @@ assert.equal(alchemy.resourceLedger.items.held,alchemy.inventory);
 assert.equal(alchemy.resourceLedger.collections.held,
  Object.values(alchemy.collection).reduce((a,b)=>a+b,0));
 
+assert.equal(chooseAdditionalFarmingBand([1,11],{1:3,11:3},{},true),1,
+ 'a third replay is not a cap on fixed-deck superiority');
+assert.equal(chooseAdditionalFarmingBand([1,11],{1:4,11:3},{},true),11);
+assert.equal(chooseAdditionalFarmingBand([1,11],{1:4,11:4},{1:true},true),11);
+assert.equal(chooseAdditionalFarmingBand([1,11],{1:7,11:4},{1:true,11:true},true),null);
+assert.equal(chooseAdditionalFarmingBand([1],{1:3},{},false),null,
+ 'without paired combat proof, no unearned superiority is certified');
 // Formal replay evidence: actually complete fifty previously conquered fights
 // at least three times, bank rewards, and preserve owner cost accounting.
 // This test runs in Actions; absent or cut-off replay cycles cannot PASS.
