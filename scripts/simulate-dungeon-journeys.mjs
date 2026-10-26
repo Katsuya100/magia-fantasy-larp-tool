@@ -685,7 +685,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     attackMpCosts:active.filter(s=>s.role==='attack').map(s=>G.spellMpCost(s)),
     availableAttack:legalAttack,mpPercent:entryMp,hpPercent:entryHp,
     carry:carry.filter(Boolean).map(x=>x.id),bankedBestBeforeEntry:state.best,
-    ready:firstLevel>=targetClearLevel(layer)&&active.length===5&&legalAttack&&hero.hp>0};
+    ready:(layer===1||firstLevel>=targetClearLevel(layer))&&active.length===5&&legalAttack&&hero.hp>0};
    const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
    const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
    const manaBeforeLayer=manaCount(usage);

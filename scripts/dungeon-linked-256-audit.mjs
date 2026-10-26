@@ -33,6 +33,7 @@ const sourceHashes=Object.fromEntries([
  'scripts/dungeon-balance-encounters.mjs',
  'scripts/simulate-dungeon-journeys.mjs',
  'scripts/dungeon-coherent-battle.mjs',
+ 'scripts/dungeon-test-contract.mjs',
  'scripts/dungeon-readiness-reference.mjs',
  'config/dungeon-recommended-reference-candidate.v1.json',
  'config/dungeon-approved-goals.v1.json'
