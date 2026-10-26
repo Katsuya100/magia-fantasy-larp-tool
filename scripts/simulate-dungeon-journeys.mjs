@@ -475,6 +475,9 @@ function observeReference(state){
   if(state.best<band-1||!starts.includes(band)||p.level<s.startLevel)continue;
   const baseline=state.referenceSnapshots[band];
   const completed=state.farmingSnapshots[band]?.length||0;
+  // The old unapproved candidate collects only diagnostic 1/2/3 stages;
+  // it does NOT cap the separate approved fixed-deck growth replay.
+  if(completed>=3)continue;
   const extra=baseline&&
    state.replayBanked[band]-state.referenceReplayAt[band]>=50*(completed+1);
   if(baseline&&!extra)continue;

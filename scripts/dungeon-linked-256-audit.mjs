@@ -99,13 +99,14 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   componentFailures:{}}));
  let conservationChecks=0;
  for(const seed of seeds){
+  const pairedCache=new Map();
   const run=runJourney(seed,{style,route,verifyFarming:true,
-   // A real player may keep banking the SAME legal replay after the
-   // initial 1/2/3 observations, until genuine paired combat proves
-   // strength or the explicit total testing budget is exhausted.
+   // Continue well beyond 1/2/3 genuine banked cycles when needed.
+   // 4,000 TOTAL played fights is an explicit measurement budget (not
+   // a 3-loop or 4-loop acceptance limit). Exhaustion remains UNRESOLVED.
    farmingProof:(snap,band)=>Boolean(
-    evaluatePaidBuild(snap,(band-1)/10,(seed-17011)/13).advantage),
-   maxSorties:400,maxFights:10000});
+    evaluatePaidBuild(snap,(band-1)/10,(seed-17011)/13,pairedCache).advantage),
+   maxSorties:400,maxFights:4000});
   assert.equal(run.seed,seed);
   assert.ok(run.offDeckStoneSpent>=0&&run.offDeckStoneSpent<=run.spent.stone);
   if(style!=='B')assert.equal(run.offDeckStoneSpent,0,'only B invests in unequipped circles');

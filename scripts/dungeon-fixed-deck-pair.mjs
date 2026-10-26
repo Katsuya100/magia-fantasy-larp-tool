@@ -38,9 +38,16 @@ export function pairedAdvantage(actual,fixed){
  return differences.every(x=>x>=-tolerance)&&differences.some(x=>x>tolerance)
   ?'PARETO_ADVANTAGE':null;
 }
-export function evaluatePaidBuild(snapshot,index,seedIndex){
+export function evaluatePaidBuild(snapshot,index,seedIndex,cache=null){
  const band=goals.bands[index];
  assert.ok(band&&seedIndex>=0&&seedIndex<goals.strictSamples);
+ // Memoize only identical battle-affecting conditions. Instance IDs do not
+ // change potion effects; their real acquisition is verified by the ledger.
+ const key=cache?JSON.stringify({index,seedIndex,level:snapshot.level,
+  rank:snapshot.rank,playerBase:snapshot.playerBase,
+  circles:snapshot.circles.map(c=>[c.role,c.attribute,c.power,c.basePower,c.upgradeLevel]),
+  carry:snapshot.carry.map(x=>[x.id,x.value,x.bonus])}):null;
+ if(cache?.has(key))return cache.get(key);
  const hero=G.makeUnit(snapshot.playerBase,snapshot.level,{},snapshot.circles,'hero');
  const shared={...snapshot,playerHp:hero.stats.hp,playerMp:hero.maxMp,
   maxHp:hero.stats.hp,maxMp:hero.maxMp,statuses:[],
@@ -53,5 +60,7 @@ export function evaluatePaidBuild(snapshot,index,seedIndex){
  const common=Math.min(actual.opponents.length,fixed.opponents.length);
  assert.deepEqual(actual.opponents.slice(0,common),fixed.opponents.slice(0,common),
   'same enemy encounters are compulsory for paired build proof');
- return {actual,fixed,advantage:pairedAdvantage(actual,fixed)};
+ const result={actual,fixed,advantage:pairedAdvantage(actual,fixed)};
+ if(cache)cache.set(key,result);
+ return result;
 }
