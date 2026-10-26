@@ -97,6 +97,7 @@ export function upgradeSpells(spells,budget){
   spentStones+=upgradeStoneCost(counts[i]);
   counts[i]++;
   base[i].power=strengthenedPower(spells[i].power,counts[i]);
+  base[i].upgradeLevel=counts[i];
  }
  return {spells:base,counts,spentStones,costs:base.map(s=>G.spellMpCost(s))};
 }
@@ -246,8 +247,8 @@ console.log('MAGIC_STONE_LEDGER '+JSON.stringify({throughLayer:10,level:ledger.l
 assert.ok(scenarios.every(x=>x.fromLayer<=x.toLayer),'scenarios cover consecutive layer bands');
 assert.equal(simulate(1,{level:1,fromLayer:1,toLayer:1,spells:'beginner'}).spentStones,0);
 assert.ok(upgradeSpells(SPELLS.five,10).spells.every((s,i)=>s.power>=SPELLS.five[i].power));
-assert.ok(upgradeSpells(SPELLS.five,80).costs.every((mp,i)=>mp===G.mpCost(SPELLS.five[i].power)),
- 'permanent stone upgrades retain the original MP cost');
+assert.ok(upgradeSpells(SPELLS.five,80).costs.every((mp,i)=>mp>0&&mp<=G.mpCost(SPELLS.five[i].power)),
+ 'permanent stone upgrades never raise MP cost and may improve casting efficiency');
 assert.equal(stoneLedger(1,0).stones,0);
 assert.ok(ledger.stones>0,'stones are banked across completed checkpoints');
 assert.ok(ledger.levels.every(x=>x.to>x.from),'level ups require accumulated XP');

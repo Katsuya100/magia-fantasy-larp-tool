@@ -50,8 +50,16 @@ export function statusDuration(spell){
 }
 export const defenseDuration=statusDuration; // Compatibility for existing API consumers.
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
-export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
-export const spellMpCost=spell=>mpCost(spell.basePower??spell.power);
+// A broad low-tier MP cost avoids penalizing a stronger hand-drawn
+// attack when both spells already defeat a tiny introductory enemy.
+// Permanent stone upgrades also improve the circle's efficiency without
+// ever raising its MP cost; this same rule applies to either combatant.
+export const mpCost=p=>{
+ const cost=num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
+ return Number(p)<=540?Math.min(cost,4):cost;
+};
+export const spellMpCost=spell=>Math.max(1,mpCost(spell.basePower??spell.power)-
+ (Number(spell.upgradeLevel||0)>0?1:0));
 const levelRow=l=>level(l);
 const growthKeys=['hp','mag','def','res'];
 export const startingBase=(r=Math.random)=>Object.fromEntries(growthKeys.map(k=>[k,roll(...range(k),r)]));
