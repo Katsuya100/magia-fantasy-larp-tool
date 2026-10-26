@@ -269,7 +269,9 @@ for(const style of ['A','B','C']){
    shortLostXp:s.lostXp,longLostXp:l.lostXp,
    shortDeaths:s.deathCount,longDeaths:l.deathCount,
    shortFights:s.fights,longFights:l.fights,
-   shortBankedStone:s.stoneEarned,longBankedStone:l.stoneEarned};
+   shortBankedStone:s.stoneEarned,longBankedStone:l.stoneEarned,
+   shortStoneAtRisk:s.maxPendingStoneExposure,longStoneAtRisk:l.maxPendingStoneExposure,
+   shortInkAtRisk:s.maxPendingInkExposure,longInkAtRisk:l.maxPendingInkExposure};
  });
  report.BUILD_STRATEGY.push({strategy:'D',style,route:'short-vs-long',
   commonRealSeeds:samples,comparisonTo:'SAME_SEED_D_PATH_AXIS',
@@ -278,6 +280,8 @@ for(const style of ['A','B','C']){
    deathDelta:percentile(pairs.map(x=>x.longDeaths-x.shortDeaths)),
    fightDelta:percentile(pairs.map(x=>x.longFights-x.shortFights)),
    bankedStoneDelta:percentile(pairs.map(x=>x.longBankedStone-x.shortBankedStone)),
+   unbankedStoneExposureDelta:percentile(pairs.map(x=>x.longStoneAtRisk-x.shortStoneAtRisk)),
+   unbankedInkExposureDelta:percentile(pairs.map(x=>x.longInkAtRisk-x.shortInkAtRisk)),
    shortCompleted:pairs.filter(x=>x.shortClear).length,
    longCompleted:pairs.filter(x=>x.longClear).length},
   checkpoints:approved.bands.map((goal,index)=>({

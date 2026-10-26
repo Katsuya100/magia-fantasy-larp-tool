@@ -595,7 +595,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   entrySnapshots:{},preparedSnapshots:{},preparedFarmingSnapshots:{},preparedReplayAt:{},
   referenceSnapshots:{},referenceLastAttempt:{},
   farmingSnapshots:{},referenceReplayAt:{},replayBanked:Object.fromEntries(Array.from({length:10},(_,i)=>[10*i+1,0])),
-  healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
+  healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},otherItemUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
   recoveryInitialGap:null,recoveryRemainingGap:null};
  if(style==='B')state.circles.push(circle('attack','storm',300,false),circle('attack','aqua',290,false),circle('support','law',260,false));
@@ -804,7 +804,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
      (hero.mp/hero.maxMp<.2&&!canContinueForRankBoss)))break;
   }
   for(const [id,count] of Object.entries(usage)){
-    const sink=id.startsWith('mana_')?state.rankManaUses:state.cleanseUses;
+    const kind=data.items.find(item=>item.id===id)?.kind;
+    const sink=kind==='mana'?state.rankManaUses:
+     ['clear','clear_all'].includes(kind)?state.cleanseUses:state.otherItemUses;
     sink[id]=(sink[id]||0)+count;
     state.ledger.items.battleConsumed+=count;
    }
@@ -877,7 +879,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   inventory:state.inventory.length,collection:state.collection,circles:invested,
   sunkCircles:state.sunkCircles,replacements:state.replacements,redrawEvents:state.redrawEvents,
   healCasts:state.healCasts,enemyHealCasts:state.enemyHealCasts,
-  enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,rankManaUses:state.rankManaUses,
+  enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,
+  otherItemUses:state.otherItemUses,rankManaUses:state.rankManaUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
   floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,
   entrySnapshots:state.entrySnapshots,preparedSnapshots:state.preparedSnapshots,
