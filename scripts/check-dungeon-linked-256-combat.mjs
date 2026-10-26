@@ -2,6 +2,7 @@
 // 60 actual-owner win rates are diagnostics; the fixed-deck job exclusively
 // enforces approved 256-seed win/MP targets. Never auto-approve references.
 import assert from 'node:assert/strict';
+import {summarizeOfficialJourneyReadiness} from './dungeon-test-contract.mjs';
 import {readFileSync} from 'node:fs';
 const load=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const goals=load('config/dungeon-approved-goals.v1.json');
@@ -51,6 +52,12 @@ for(const policy of economy.policies){
  assert.equal(policy.samples,samples,'each journey requires all 256 owners');
  assert.equal(policy.floors.length,100,'every authored floor needs readiness audit');
  assert.equal(policy.rankCoverage.length,10,'every decade rank needs audit');
+ const seeds=Array.from({length:samples},(_,i)=>17011+13*i);
+ for(const expectedRow of summarizeOfficialJourneyReadiness(policy,seeds)){
+  const key=expectedRow.style+'/'+expectedRow.route+'/'+expectedRow.band;
+  assert.deepEqual(ready.get(key),expectedRow,
+   'formal JOURNEY_READINESS must be derived solely from real floor evidence');
+ }
  for(let layer=1;layer<=100;layer++){
   const row=policy.floors[layer-1],r=row.readiness;
   if(row.layer!==layer||!r||r.observed>samples||r.prepared>samples||
@@ -71,8 +78,8 @@ for(const key of expected){
  const r=ready.get(key),f=farming.get(key),b=builds.get(key),d=diagnostics.get(key);
  if(!r||!f||!b||!d)continue;
  if(r.count!==samples||r.prepared+r.unprepared!==samples||
-   r.status===undefined)
-  failures.push(key+' UNAPPROVED_REFERENCE_DIAGNOSTIC invalid coverage');
+   r.prepared!==samples||r.status!=='ALL_256_OWNERS_PROVEN_ON_EVERY_FLOOR')
+  failures.push(key+' JOURNEY_READINESS real recommended combat strength '+r.prepared+'/'+samples);
  else readyCases++;
  if(d.strictDenominator!==samples||d.ownersAvailable+d.ownersMissing!==samples||
   d.readinessGate!=='ALL_256_INDEPENDENTLY_PREPARED')
@@ -123,7 +130,7 @@ if(coverage?.cases!==60||coverage.policies!==6||
  failures.push('Real-owner diagnostic coverage ledger invalid');
 console.log('DUNGEON_JOURNEY_STRICT_GATE '+JSON.stringify({
  approvedSeeds:samples,cases:60,
- JOURNEY_READINESS:{floorPassed:floorCases,of:600,candidateObserved:readyCases},BUILD_STRENGTH:strengthCases,
+ JOURNEY_READINESS:{floorPassed:floorCases,of:600,realStrengthProven:readyCases},BUILD_STRENGTH:strengthCases,
  EXTRA_FARMING:extraCases,RANK_ACQUISITION:{ownerCheckpointsPassed:rankCases,of:60},
  BUILD_STRATEGY:{pairedRoutes:verdict.BUILD_STRATEGY.length,
   cRedrawAdvantages:redrawBetter,cKeepAdvantages:keepBetter},
