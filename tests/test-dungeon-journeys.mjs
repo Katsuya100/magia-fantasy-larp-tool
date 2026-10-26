@@ -332,4 +332,18 @@ assert.equal(alchemy.resourceLedger.items.held,alchemy.inventory);
 assert.equal(alchemy.resourceLedger.collections.held,
  Object.values(alchemy.collection).reduce((a,b)=>a+b,0));
 
+// Formal replay evidence: actually complete fifty previously conquered fights
+// at least three times, bank rewards, and preserve owner cost accounting.
+// This test runs in Actions; absent or cut-off replay cycles cannot PASS.
+const observedFarm=runJourney(20261024,{style:'A',route:'short',
+ verifyFarming:true,maxSorties:35,maxFights:350});
+const earnedReplay=observedFarm.preparedFarmingSnapshots[1]||[];
+assert.ok(earnedReplay.length>=3,'three real, banked F1-10 replay cycles must be performed');
+assert.ok(earnedReplay.slice(0,3).every((snap,i)=>
+ snap.completedExtraLoops===i+1&&snap.additionalBankedReplayFights>=50*(i+1)&&
+ snap.unbankedStone===0&&snap.unbankedXp===0&&snap.unbankedInk===0),
+ 'replay snapshot cannot invent resources or claim a partial/failing sortie as banked');
+assert.ok(observedFarm.trace.filter(t=>t.auditedReplayBand===1&&t.returned).length>=15,
+ 'short-route repeats must contain genuinely returned exploration sorties');
+
 console.log('PASS manifest coverage, reproducible seeded combat, 80/80 rank, item/collection/stone/ink conservation and 6 routes '+ECONOMY_VERSION);
