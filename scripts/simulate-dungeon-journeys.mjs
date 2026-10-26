@@ -402,7 +402,9 @@ function observePrepared(state){
  if(state.style==='B'&&state.best===30&&recoveryGap(state).some(v=>v>0))return;
  const p=state.profile;
  for(let band=1;band<=91;band+=10){
-  if(state.preparedSnapshots[band])continue;
+  const prior=state.preparedSnapshots[band];
+  const completed=state.preparedFarmingSnapshots[band]?.length||0;
+  if(prior&&state.replayBanked[band]-state.preparedReplayAt[band]<50*(completed+1))continue;
   const to=band+9,requiredLevel=targetClearLevel(to);
   if(state.best<band-1)continue;
   if(!unlockedStartLayers(p).includes(band))continue;
@@ -435,7 +437,19 @@ function observePrepared(state){
    source:'POST_RETURN_BANKED_AND_INVESTED',
    status:'PREPARED_FROM_ACTUAL_ECONOMY_NOT_FROM_BATTLE_OUTCOME'};
   if(carry.length>G.capacity(p.level))throw Error('Prepared carrying capacity exceeded');
-  state.preparedSnapshots[band]=snapshot;
+  if(!prior){
+   state.preparedSnapshots[band]=snapshot;
+   state.preparedReplayAt[band]=state.replayBanked[band];
+  }else{
+   // Only physically banked completed 50-fight replays add new observations.
+   // All snapshots are full legal owner states, never synthetic stone injections.
+   state.preparedFarmingSnapshots[band]??=[];
+   const bankedItems=snapshot.bankedInventory.length;
+   const slim={...snapshot,bankedItems,completedExtraLoops:completed+1,
+    additionalBankedReplayFights:state.replayBanked[band]-state.preparedReplayAt[band]};
+   delete slim.bankedInventory;delete slim.bankedCollections;
+   state.preparedFarmingSnapshots[band].push(slim);
+  }
  }
 }
 
@@ -575,7 +589,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
   rankAudit:[],floorAudit:[],
-  entrySnapshots:{},preparedSnapshots:{},referenceSnapshots:{},referenceLastAttempt:{},
+  entrySnapshots:{},preparedSnapshots:{},preparedFarmingSnapshots:{},preparedReplayAt:{},
+  referenceSnapshots:{},referenceLastAttempt:{},
   farmingSnapshots:{},referenceReplayAt:{},replayBanked:Object.fromEntries(Array.from({length:10},(_,i)=>[10*i+1,0])),
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
@@ -863,6 +878,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
   floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,
   entrySnapshots:state.entrySnapshots,preparedSnapshots:state.preparedSnapshots,
+  preparedFarmingSnapshots:state.preparedFarmingSnapshots,
   referenceSnapshots:state.referenceSnapshots,referenceLastAttempt:state.referenceLastAttempt,
   farmingSnapshots:state.farmingSnapshots,replayBanked:state.replayBanked,blockers:state.blockers};
 }

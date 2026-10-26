@@ -140,7 +140,8 @@ for(const cohort of economy.policies){
      c.power>=expectedPowers(s)[j]))hasPower++;
    if(closest&&Object.entries(s.requiredItems).every(([id,n])=>
      closest.carry.filter(x=>x.id===id).length>=n))hasItems++;
-   farmRows.push({seed:owner.seed,base:accepted,post:banked.farming?.[index]??[]});
+   farmRows.push({seed:owner.seed,base:owner.prepared?.[index]??null,
+    post:owner.preparedFarming?.[index]??[]});
   }
   const outcomes=Object.entries(absent.reduce((a,x)=>
    (x.reasons.forEach(reason=>a[reason]=(a[reason]||0)+1),a),{}));
@@ -175,7 +176,7 @@ for(const cohort of economy.policies){
   // Reuse SAME independently banked journey checkpoints and SAME paired RNG.
   // Never allocate earned resources in this measurement.
   const observations=farmRows.map(x=>{
-   if(!x.base)return {seed:x.seed,points:[null,null,null,null],reason:'REFERENCE_NOT_READY'};
+   if(!x.base)return {seed:x.seed,points:[null,null,null,null],reason:'NO_ACTUAL_BANKED_PREPARED_SNAPSHOT'};
    const snapshots=[x.base,...[0,1,2].map(j=>x.post[j]||null)];
    return {seed:x.seed,points:snapshots.map((snap,k)=>{
     if(!snap)return null;

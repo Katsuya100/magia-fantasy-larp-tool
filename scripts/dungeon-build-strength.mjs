@@ -12,10 +12,8 @@ import {withNeutralAttackAttributes} from '../tests/helpers/dungeon-neutral-load
 const load=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const goals=load('config/dungeon-approved-goals.v1.json');
 const economy=load('reports/dungeon-linked-256-economy-v1.json');
-const banked=load('reports/dungeon-linked-256-reference-v1.json');
 const enemyMaster=G.parseCsv(readFileSync(new URL('../assets/data/dungeon-enemies.csv',import.meta.url),'utf8'));
 assert.equal(economy.samplesPerPolicy,goals.strictSamples);
-assert.equal(banked.samplesPerPolicy,goals.strictSamples);
 const INTRO=[['attack','flame',220],['attack','bolt',260],['attack','gravity',300],
  ['support','aqua',200],['defense','law',160]];
 const NORMAL=[['attack','flame',360],['attack','bolt',420],['attack','gravity',540],
@@ -57,28 +55,28 @@ const score=(actual,fixed)=>{
  return null;
 };
 const report={schemaVersion:'dungeon-paired-build-strength-v1',
- method:'All actually banked replay snapshots vs original fixed deck; identical owner base, level, rank, inventory, lawful full HP/MP, tactics, authored opponents, and per-encounter combat random seeds. Dominance requires no worsening of any measured axis.',
+ method:'Actually earned, banked prepared and later re-farmed snapshots versus original fixed deck. No unapproved candidate reference is an entry gate. Equal owner level, base, rank, legal inventory, HP/MP, tactics, enemies and per-fight seeds.',
  candidatePromoted:false,strictSamples:goals.strictSamples,cases:[]};
 for(const p of economy.policies){
- const owners=banked.policies.find(x=>x.style===p.style&&x.route===p.route);
- assert.ok(owners&&owners.owners.length===goals.strictSamples);
+ const owners=p.ownerEntries;
+ assert.equal(owners.length,goals.strictSamples,'only independent real owner snapshots');
  for(const [index,band] of goals.bands.entries()){
   let stronger=0,observed=0,missing=0,actualWins=0,fixedWins=0;
   const deltas=[],rounds=[],sourceLoops=[],samples=[],reasonCounts={};
   for(let i=0;i<goals.strictSamples;i++){
-   const owner=owners.owners[i];
+   const owner=owners[i];
    assert.equal(owner.seed,17011+13*i,'paired banked owner seed');
-   const original=owner.reference?.[index];
-   const post=owner.farming?.[index]??[];
+   const original=owner.prepared?.[index];
+   const post=owner.preparedFarming?.[index]??[];
    // Search ALL genuinely banked observed replays, not just the last state:
    // an earlier legal deck may outperform a later speculative rebuild.
-   if(!original){missing++;samples.push({seed:owner.seed,status:'REFERENCE_NOT_READY'});continue;}
+   if(!original){missing++;samples.push({seed:owner.seed,status:'NO_ACTUALLY_PREPARED_OWNER'});continue;}
    const observations=[];
-   for(let k=0;k<post.length;k++){
-    const candidate=post[k];
+   for(let k=0;k<=post.length;k++){
+    const candidate=k===0?original:post[k-1];
     if(!candidate)continue;
-    const loops=k+1;
-    assert.ok(candidate.additionalBankedReplayFights>=50*loops,
+    const loops=k;
+    if(loops>0)assert.ok(candidate.additionalBankedReplayFights>=50*loops,
      'each comparison must have real banked fights');
     assert.equal(candidate.unbankedXp,0);
     assert.equal(candidate.unbankedStone,0);

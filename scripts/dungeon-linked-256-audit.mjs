@@ -137,7 +137,13 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   referenceOwners.push({seed,reference:goals.bands.map(b=>run.referenceSnapshots[b.from]??null),
    lastReadiness:goals.bands.map(b=>run.referenceLastAttempt[b.from]??null),
    farming:goals.bands.map(b=>run.farmingSnapshots[b.from]??[])});
-  ownerEntries.push({seed,snapshots:goals.bands.map(b=>{
+  ownerEntries.push({seed,preparedFarming:goals.bands.map(b=>
+   (run.preparedFarmingSnapshots[b.from]??[]).map((snap,index)=>{
+    assert.equal(snap.completedExtraLoops,index+1);
+    assert.ok(snap.additionalBankedReplayFights>=50*(index+1));
+    assertBankedJourneySnapshot({...snap,maxCarry:G.capacity(snap.level)});
+    return snap;
+   })),snapshots:goals.bands.map(b=>{
    const snap=run.entrySnapshots[b.from];
    return snap?{from:b.from,layer:snap.layer,sortie:snap.sortie,
     level:snap.level,rank:snap.rank,xp:snap.xp,
