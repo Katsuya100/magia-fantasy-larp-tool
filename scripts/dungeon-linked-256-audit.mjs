@@ -166,6 +166,9 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
     assert.ok(snap.carry.length<=G.capacity(snap.level));
     return {from:b.from,layer:snap.layer,to:snap.to,sortie:snap.sortie,
      level:snap.level,targetLevel:snap.targetLevel,rank:snap.rank,xp:snap.xp,
+     bankedBestLayer:snap.bankedBestLayer,
+     earned:snap.earned,spent:snap.spent,
+     repeatedFights:snap.repeatedFights,bankedExperience:snap.bankedExperience,
      playerBase:snap.playerBase,playerHp:snap.playerHp,playerMp:snap.playerMp,
      maxHp:snap.maxHp,maxMp:snap.maxMp,
      circles:snap.circles,cooldowns:snap.cooldowns,statuses:snap.statuses,
