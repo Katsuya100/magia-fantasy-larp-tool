@@ -154,7 +154,7 @@ export function consumeOwnedRecovery(hero,carry,layer,usage){
  }
 }
 function restoreRankMp(state,hero,carry,layer,fight,usage){
- if(layer<20||layer%10!==0||fight%5!==0||
+ if(layer<10||layer%10!==0||fight%5!==0||
   state.profile.adventurerRank>=layer||hero.mp>=hero.maxMp*.9)return;
  const need=hero.maxMp*.9-hero.mp;
  const choices=carry.map((item,i)=>({item,i})).filter(x=>x.item&&
