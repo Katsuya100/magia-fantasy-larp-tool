@@ -282,7 +282,7 @@ for(const style of ['A','B','C']){
   checkpoints:approved.bands.map((goal,index)=>({
    to:goal.to,shortClears:short.accounts.filter(x=>x.firstDecadeClearances[index].fights!==null).length,
    longClears:long.accounts.filter(x=>x.firstDecadeClearances[index].fights!==null).length})),
-  pairs,status:'ACTUAL_256_SEED_PATH_RISK_AND_RETURN_COSTS'};
+  pairs,status:'ACTUAL_256_SEED_PATH_RISK_AND_RETURN_COSTS'});
 }
 assert.equal(report.BUILD_STRATEGY.length,7);
 const summary={referenceApproval:reference.status,combatMet:report.COMBAT_BALANCE.filter(x=>x.passed).length,
