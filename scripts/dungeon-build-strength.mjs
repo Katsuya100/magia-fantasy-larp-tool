@@ -2,6 +2,7 @@
 // upgrades/items; fixed-deck circles are a comparator, NEVER owner resources.
 // Both arms have the same owner base, level, inventory, rank, tactics and seed.
 import assert from 'node:assert/strict';
+import {assertPairedCharacters} from './dungeon-test-contract.mjs';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {challenge} from './dungeon-coherent-battle.mjs';
@@ -90,8 +91,10 @@ for(const p of economy.policies){
     // Both arms own the same carried items: fixed circles never receive
     // simulated stones, level gains, potions, or extra returns.
     const combatSeed=37011+13*i;
+    const fixedOwner={...shared,circles:referenceSpells[index][i]};
+    assertPairedCharacters(shared,fixedOwner);
     const actual=challenge(shared,band.from,combatSeed,{route:'short',paired:true});
-    const fixed=challenge({...shared,circles:referenceSpells[index][i]},
+    const fixed=challenge(fixedOwner,
      band.from,combatSeed,{route:'short',paired:true});
     const commonLength=Math.min(actual.opponents.length,fixed.opponents.length);
     assert.deepEqual(actual.opponents.slice(0,commonLength),

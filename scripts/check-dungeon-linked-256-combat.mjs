@@ -8,6 +8,7 @@ const goals=load('config/dungeon-approved-goals.v1.json');
 const combat=load('reports/dungeon-linked-256-combat-v1.json');
 const verdict=load('reports/dungeon-redefined-verdicts-v1.json');
 const paired=load('reports/dungeon-paired-build-strength-v1.json');
+const economy=load('reports/dungeon-linked-256-economy-v1.json');
 const samples=goals.strictSamples;
 assert.equal(samples,256);
 assert.equal(combat.combatSamples,samples);
@@ -42,12 +43,34 @@ const farming=indexed(verdict.EXTRA_FARMING,'EXTRA_FARMING');
 const builds=indexed(paired.cases,'BUILD_STRENGTH');
 const diagnostics=indexed(combat.cases,'OWNER_COMBAT_DIAGNOSTIC');
 let readyCases=0,strengthCases=0,extraCases=0;
+let floorCases=0,rankCases=0;
+assert.equal(economy.policies.length,6);
+for(const policy of economy.policies){
+ assert.equal(policy.samples,samples,'each journey requires all 256 owners');
+ assert.equal(policy.floors.length,100,'every authored floor needs readiness audit');
+ assert.equal(policy.rankCoverage.length,10,'every decade rank needs audit');
+ for(let layer=1;layer<=100;layer++){
+  const row=policy.floors[layer-1],r=row.readiness;
+  if(row.layer!==layer||!r||r.observed>samples||r.prepared>samples||
+    r.firstEntryReady+r.additionalFarmingReady!==r.prepared||
+    r.missingSeeds.length!==samples-r.prepared||r.prepared!==samples)
+   failures.push(policy.style+'/'+policy.route+' F'+layer+' JOURNEY_READINESS '+(r?.prepared??0)+'/'+samples);
+  else floorCases++;
+ }
+ for(const checkpoint of policy.rankCoverage){
+  if(checkpoint.acquired!==samples||checkpoint.missingSeeds.length!==samples-checkpoint.acquired)
+   failures.push(policy.style+'/'+policy.route+' F'+checkpoint.layer+
+    ' RANK_ACQUISITION '+checkpoint.acquired+'/'+samples);
+  else rankCases++;
+ }
+}
+
 for(const key of expected){
  const r=ready.get(key),f=farming.get(key),b=builds.get(key),d=diagnostics.get(key);
  if(!r||!f||!b||!d)continue;
  if(r.count!==samples||r.prepared+r.unprepared!==samples||
-   r.prepared!==samples||r.status!=='ALL_ACCOUNTS_PREPARED')
-  failures.push(key+' JOURNEY_READINESS '+r.prepared+'/'+samples);
+   r.status===undefined)
+  failures.push(key+' UNAPPROVED_REFERENCE_DIAGNOSTIC invalid coverage');
  else readyCases++;
  if(d.strictDenominator!==samples||d.ownersAvailable+d.ownersMissing!==samples||
   d.readinessGate!=='ALL_256_INDEPENDENTLY_PREPARED')
@@ -87,8 +110,8 @@ if(coverage?.cases!==60||coverage.policies!==6||
  failures.push('Real-owner diagnostic coverage ledger invalid');
 console.log('DUNGEON_JOURNEY_STRICT_GATE '+JSON.stringify({
  approvedSeeds:samples,cases:60,
- JOURNEY_READINESS:readyCases,BUILD_STRENGTH:strengthCases,
- EXTRA_FARMING:extraCases,RANK_ACQUISITION:verdict.RANK_ACQUISITION.length,
+ JOURNEY_READINESS:{floorPassed:floorCases,of:600,candidateObserved:readyCases},BUILD_STRENGTH:strengthCases,
+ EXTRA_FARMING:extraCases,RANK_ACQUISITION:{ownerCheckpointsPassed:rankCases,of:60},
  BUILD_STRATEGY:verdict.BUILD_STRATEGY.length,
  diagnosticWinRateMatches:coverage?.diagnosticMatches,
  failures:failures.length}));

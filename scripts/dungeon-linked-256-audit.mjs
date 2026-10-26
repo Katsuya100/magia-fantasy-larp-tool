@@ -46,7 +46,7 @@ const select=x=>({seed:x.seed,level:x.profile.level,rank:x.profile.rank,
  deathCount:x.losses,sorties:x.sorties,returns:x.returns,
  redraws:x.replacements,crafts:x.alchemyCrafts,
  purposeFarmFights:x.farmingFights,recoveryFights:x.recovery.extraFights,
- rankGranted:x.rankGranted,
+ rankGranted:x.rankGranted,earnedRankLayers:[...new Set(x.rankAudit.filter(r=>r.banked).map(r=>r.layer))],
  recoveryComparison:x.recovery.comparison,
  recoveryTargetUpgrades:x.recovery.targetUpgrades,
  recoveryAchieved:x.recovery.achieved,
@@ -84,6 +84,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   stoneDrops:0,stoneBanked:0,stoneLost:0,
   inkDrops:0,inkBanked:0,inkLost:0,
   itemDrops:0,itemBanked:0,itemLost:0,
+  readinessFirst:new Set(),readinessFarming:new Set(),readinessObserved:new Set(),
   collectionDrops:0,collectionBanked:0,collectionLost:0,
   xpBanked:0,xpLost:0,
   gradeBanked:0,entryHp:[],entryMp:[],exitHp:[],exitMp:[]}));
@@ -198,6 +199,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   }
   for(const row of run.floorAudit){
    const f=floors[row.layer-1];
+   assert.ok(row.floorPreparation&&row.floorPreparation.layer===row.layer,
+    'every single floor needs an actual pre-entry readiness observation');
+   f.readinessObserved.add(seed);
+   if(row.floorPreparation.ready)(row.replay?f.readinessFarming:f.readinessFirst).add(seed);
    f.attempted++;f.cleared+=Number(row.cleared);f.lost+=Number(row.defeated);
    f.replays+=Number(row.replay);f.banked+=Number(row.cleared&&row.banked);
    for(const [kind,source] of [['stone','pendingStone'],['ink','pendingInk'],
@@ -241,6 +246,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    bankedCleanserStock:stats(e.storedCleansers),
    upgrades:[0,1,2,3,4].map(i=>stats(e.upgrades.map(x=>x[i])))})),
   floors:floors.map(f=>({layer:f.layer,attempted:f.attempted,cleared:f.cleared,
+   readiness:{observed:f.readinessObserved.size,firstEntryReady:f.readinessFirst.size,
+    additionalFarmingReady:[...f.readinessFarming].filter(s=>!f.readinessFirst.has(s)).length,
+    prepared:[...new Set([...f.readinessFirst,...f.readinessFarming])].length,
+    missingSeeds:seeds.filter(s=>!f.readinessFirst.has(s)&&!f.readinessFarming.has(s))},
    lost:f.lost,replays:f.replays,banked:f.banked,cleansersUsed:f.cleansers,
    gradeChecks:f.gradeChecks,gradeEligible:f.gradeEligible,gradeBanked:f.gradeBanked,
    stoneDrops:f.stoneDrops,stoneBanked:f.stoneBanked,stoneLost:f.stoneLost,
@@ -251,6 +260,9 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    xpBanked:f.xpBanked,xpLost:f.xpLost,
    entryHp:stats(f.entryHp),entryMp:stats(f.entryMp),
    winExitHp:stats(f.exitHp),winExitMp:stats(f.exitMp)})),
+  rankCoverage:goals.bands.map(b=>({layer:b.to,
+   acquired:accounts.filter(x=>x.earnedRankLayers.includes(b.to)).length,
+   missingSeeds:accounts.filter(x=>!x.earnedRankLayers.includes(b.to)).map(x=>x.seed)})),
   accounts,ownerEntries};
  report.policies.push(policy);
  referenceReport.policies.push({style,route,owners:referenceOwners});
