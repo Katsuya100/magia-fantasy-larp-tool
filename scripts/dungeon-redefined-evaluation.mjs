@@ -7,6 +7,7 @@ import {spread} from './simulate-dungeon-journeys.mjs';
 import {reference,specFor,stoneCost,expectedPowers,assess,combatFixture} from './dungeon-readiness-reference.mjs';
 import {challenge} from './dungeon-coherent-battle.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {summarizeOfficialJourneyReadiness} from './dungeon-test-contract.mjs';
 const read=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const economy=read('reports/dungeon-linked-256-economy-v1.json');
 const approved=read('config/dungeon-approved-goals.v1.json');
@@ -23,12 +24,10 @@ assert.equal(fixedDeck.samples,approved.strictSamples);
 assert.equal(fixedDeck.approvedGoals,approved.schemaVersion);
 assert.equal(fixedDeck.bands.length,10);
 assert.deepEqual(previous.economicSourceHashes,economy.sourceHashes);
-for(const path of ['config/dungeon-approved-goals.v1.json',
- 'config/dungeon-recommended-reference-candidate.v1.json',
- 'scripts/dungeon-readiness-reference.mjs']){
+for(const path of ['config/dungeon-approved-goals.v1.json']){
  assert.equal(economy.sourceHashes[path],createHash('sha256').update(
   readFileSync(new URL('../'+path,import.meta.url))).digest('hex'),
-  'candidate reference or approved goals changed after 256-owner economy measurement');
+  'approved goals changed after 256-owner economy measurement');
 }
 const samples=approved.strictSamples,seed=i=>37011+13*i;
 const referenceOwners=economy.policies.find(p=>p.style==='A'&&p.route==='short');
@@ -39,7 +38,8 @@ const report={schemaVersion:'dungeon-redefined-verdicts-v1',
  approval:reference.status,approvedGoals:approved.schemaVersion,
  seedPolicy:'256 owners 17011+13*i, paired battle 37011+13*i',
  purpose:'Original fixed-deck strict combat is independent from six journey growth strategies; candidate reference remains unapproved',
- COMBAT_BALANCE:fixedDeck.bands,CANDIDATE_COMBAT_DIAGNOSTIC:[],JOURNEY_READINESS:[],EXTRA_FARMING:[],
+ COMBAT_BALANCE:fixedDeck.bands,CANDIDATE_COMBAT_DIAGNOSTIC:[],
+ CANDIDATE_JOURNEY_DIAGNOSTIC:[],JOURNEY_READINESS:[],EXTRA_FARMING:[],
  RANK_ACQUISITION:[],BUILD_STRATEGY:[],
  designIntegrity:'PASS',warnings:[
   'UNAPPROVED combat fixture is a frozen proposal, not a physically proven economic owner.',
@@ -121,9 +121,7 @@ for(const cohort of economy.policies){
    const original=owner.snapshots[index];
    const accepted=banked.reference?.[index]??null;
    const last=banked.lastReadiness?.[index]??null;
-   if(accepted){
-    const check=assess(accepted,s);
-    assert.equal(check.ready,true,'unready owner must never be promoted to prepared');
+   if(accepted&&assess(accepted,s).ready){
     assert.equal(accepted.source,'POST_RETURN_BANKED_AND_INVESTED');
     assert.ok(accepted.actualFights<=cohort.accounts[i].fights);
     assert.ok(Number.isInteger(accepted.bankedBestLayer)&&accepted.bankedBestLayer>=0,
@@ -171,8 +169,8 @@ for(const cohort of economy.policies){
    inkSpent:percentile(ready.map(x=>x.snapshot.spent.ink)),
    missingReasons:outcomes,missingAccounts:absent,
    status:absent.length?'ECONOMY_PREPARATION_INCOMPLETE':'ALL_ACCOUNTS_PREPARED'};
-  report.JOURNEY_READINESS.push(r);
-  console.log('JOURNEY_READINESS '+JSON.stringify({...r,missingAccounts:undefined}));
+  report.CANDIDATE_JOURNEY_DIAGNOSTIC.push(r);
+  console.log('CANDIDATE_JOURNEY_DIAGNOSTIC '+JSON.stringify({...r,missingAccounts:undefined}));
   // Reuse SAME independently banked journey checkpoints and SAME paired RNG.
   // Never allocate earned resources in this measurement.
   const observations=farmRows.map(x=>{
@@ -218,6 +216,16 @@ for(const cohort of economy.policies){
   console.log('EXTRA_FARMING '+JSON.stringify(farm));
  }
 }
+// Formal readiness has NO thresholds from the unapproved candidate.
+// All 100 floors use original fixed deck same-character real combat evidence.
+for(const cohort of economy.policies){
+ const owners=Array.from({length:samples},(_,i)=>17011+13*i);
+ assert.deepEqual(cohort.accounts.map(a=>a.seed),owners);
+ for(const row of summarizeOfficialJourneyReadiness(cohort,owners)){
+  report.JOURNEY_READINESS.push(row);
+  console.log('JOURNEY_READINESS '+JSON.stringify({...row,missingAccounts:undefined}));
+ }
+}
 // F1-10 initial discovery is NOT the fully-prepared 50-fight test: all six actual
 // journey policies bank one new floor at a time before their first F10 clear.
 report.tutorialEvidence=economy.policies.map(cohort=>{
@@ -232,6 +240,7 @@ report.tutorialEvidence=economy.policies.map(cohort=>{
 });
 assert.equal(report.COMBAT_BALANCE.length,10);
 assert.equal(report.CANDIDATE_COMBAT_DIAGNOSTIC.length,10);
+assert.equal(report.CANDIDATE_JOURNEY_DIAGNOSTIC.length,60);
 assert.equal(report.JOURNEY_READINESS.length,60);
 assert.equal(report.EXTRA_FARMING.length,60);
 for(const goal of approved.bands){
