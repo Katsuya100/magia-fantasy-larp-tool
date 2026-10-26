@@ -53,9 +53,11 @@ export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/
 export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
 // A purchased offensive circle upgrade can eventually improve mana efficiency.
 // The same cost and required paid upgrade level apply to every combatant;
-// savings cannot exceed the original cost minus the minimum 1 MP cost.
+// savings start at the genuine 25th and 42nd paid upgrades, capped at 1 MP.
 export const spellMpCost=spell=>Math.max(1,mpCost(spell.basePower??spell.power)-
- (spell.role==='attack'?Math.min(1,Math.floor(Math.max(0,Number(spell.upgradeLevel)||0)/25)):0));
+ (spell.role==='attack'?
+  (Number(spell.upgradeLevel||0)>=25?1:0)+
+  (Number(spell.upgradeLevel||0)>=42?1:0):0));
 const levelRow=l=>level(l);
 const growthKeys=['hp','mag','def','res'];
 export const startingBase=(r=Math.random)=>Object.fromEntries(growthKeys.map(k=>[k,roll(...range(k),r)]));
