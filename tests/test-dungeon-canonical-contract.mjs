@@ -65,10 +65,26 @@ assert.throws(()=>assertNotFalsePass({passed:true,cutoff:true}),/cannot PASS/);
 console.log('PASS canonical test contract and mutation regressions');
 
 const observedFloor={layer:16,attemptedFights:5,cleared:true,
- floorPreparation:{layer:16,ready:true,completeCombatKit:true,sustainableAttackActions:3}};
+ floorPreparation:{layer:16,recommendedLevel:20,level:25,ready:true,
+  completeCombatKit:true,sustainableAttackActions:3,
+  circleIntegrity:true,itemIntegrity:true,rankLegal:true,attackCoverage:5,
+  powerPerMp:42,acquiredUpgrades:3}};
 assert.equal(certifiesPreEntryReadiness(observedFloor),true);
 assert.equal(certifiesPreEntryReadiness({...observedFloor,cleared:false}),false,
  'a failed exploration must never certify combat-ready equipment');
 assert.equal(certifiesPreEntryReadiness({...observedFloor,attemptedFights:1}),false);
 assert.equal(certifiesPreEntryReadiness({...observedFloor,
  floorPreparation:{...observedFloor.floorPreparation,completeCombatKit:false}}),false);
+for(const key of ['circleIntegrity','itemIntegrity','rankLegal']){
+ assert.equal(certifiesPreEntryReadiness({...observedFloor,
+  floorPreparation:{...observedFloor.floorPreparation,[key]:false}}),false,
+  key+' is mandatory total-strength evidence');
+}
+assert.equal(certifiesPreEntryReadiness({...observedFloor,
+ floorPreparation:{...observedFloor.floorPreparation,attackCoverage:0}}),false,
+ 'level alone without effective spells never certifies readiness');
+assert.equal(certifiesPreEntryReadiness({...observedFloor,
+ floorPreparation:{...observedFloor.floorPreparation,powerPerMp:0}}),false,
+ 'unusable MP efficiency cannot certify readiness');
+assert.equal(certifiesPreEntryReadiness({...observedFloor,
+ floorPreparation:{...observedFloor.floorPreparation,level:19}}),false);

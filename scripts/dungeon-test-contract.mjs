@@ -108,5 +108,9 @@ export function assertNotFalsePass({passed,missing=0,cutoff=false}){
 export function certifiesPreEntryReadiness(row){
  const p=row?.floorPreparation;
  return Boolean(p&&p.layer===row.layer&&p.ready&&p.completeCombatKit&&
-  p.sustainableAttackActions>0&&row.attemptedFights===5&&row.cleared);
+  p.circleIntegrity&&p.itemIntegrity&&p.rankLegal&&
+  p.attackCoverage===5&&Number.isFinite(p.powerPerMp)&&p.powerPerMp>0&&
+  Number.isInteger(p.acquiredUpgrades)&&p.acquiredUpgrades>=0&&
+  p.sustainableAttackActions>0&&p.level>=(p.layer===1?1:p.recommendedLevel)&&
+  row.attemptedFights===5&&row.cleared);
 }

@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
-import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import {allowedStartLayer,unlockedStartLayers,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
@@ -644,13 +644,11 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // spell investment and genuinely banked status cures. Every training
   // sortie fights the real enemies, risks defeat and banks actual drops.
   // Never grant levels, spells, stones, consumables or victory by fiat.
-  const nextReference=state.best>=70&&state.best<100&&state.best%10===0
-   ?specFor(state.best+1):null;
-  const gearTraining=Boolean(nextReference&&
-   !state.referenceSnapshots[nextReference.from]);
+  // An unapproved candidate reference is diagnostic only. It must never
+  // change the legal training or return route.
   const training=route==='long'&&state.best>=10&&
    (profile.level<targetClearLevel(nextBoss)||
-    profile.adventurerRank<lastBoss||failedNewDepth||gearTraining);
+    profile.adventurerRank<lastBoss||failedNewDepth);
   // Missing earlier earned rank badges must be recovered IN ORDER. A
   // player with rank 70 and deepest 90 cannot legally start from 81:
   // replay 71-80 first, bank the real 80F badge, then replay 81-90.
@@ -721,16 +719,40 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     supportCircles.length>=1&&defenseCircles.length>=1&&
     attackCircles.every(s=>Number.isFinite(s.power)&&s.power>0)&&
     attackCosts.every(cost=>Number.isFinite(cost)&&cost>0);
+   // Readiness uses the five actually equipped and paid circles, legal
+   // carried stock, rank-gated entrance and the real five enemies. Do not
+   // reduce the gate to the level or a sum of nominal spell powers.
+   const circleIntegrity=active.length===5&&active.every((s,i)=>
+    Number.isFinite(s.power)&&s.power>0&&
+    Number.isInteger(s.upgradeLevel)&&s.upgradeLevel>=0&&
+    Math.abs(s.power-strengthenedPower(s.basePower,s.upgradeLevel))<1e-7&&
+    G.spellMpCost(hero.spells[i])===G.spellMpCost(s));
+   const itemIntegrity=carry.filter(Boolean).length<=G.capacity(firstLevel)&&
+    carry.filter(Boolean).every(x=>Boolean(data.items.find(t=>t.id===x.id))&&
+     typeof x.instanceId==='string')&&
+    new Set(carry.filter(Boolean).map(x=>x.instanceId)).size===carry.filter(Boolean).length;
+   const rankLegal=unlockedStartLayers(profile).includes(start);
+   const opponents=Array.from({length:5},(_,i)=>
+    G.fromEnemy(enemyForFight(data.enemies,(layer-1)*5+i+1),
+     Number(data.floors[(layer-1)*5+i].enemy_level)));
+   const attackCoverage=opponents.filter(foe=>attackCircles.some(s=>
+    G.damage(hero,foe,hero.spells[active.indexOf(s)],()=>.5)>0)).length;
+   const powerPerMp=attackCircles.reduce((n,s)=>
+    n+G.basePower(s.power)/Math.max(1,G.spellMpCost(s)),0);
+   const acquiredUpgrades=active.reduce((n,s)=>n+s.upgradeLevel,0);
    const floorPreparation={layer,recommendedLevel:targetClearLevel(layer),level:firstLevel,
     rank:profile.adventurerRank,spells:active.length,
     attackPowers:active.filter(s=>s.role==='attack').map(s=>s.power),
     attackMpCosts:attackCosts,defensePower:defenseCircles.map(s=>s.power),
     supportPower:supportCircles.map(s=>s.power),
     sustainableAttackActions,completeCombatKit,
+    attackCoverage,powerPerMp,acquiredUpgrades,
+    circleIntegrity,itemIntegrity,rankLegal,
     availableAttack:legalAttack,mpPercent:entryMp,hpPercent:entryHp,
     carry:carry.filter(Boolean).map(x=>x.id),bankedBestBeforeEntry:state.best,
     ready:(layer===1||firstLevel>=targetClearLevel(layer))&&
-     active.length===5&&completeCombatKit&&legalAttack&&
+     completeCombatKit&&circleIntegrity&&itemIntegrity&&rankLegal&&
+     attackCoverage===5&&powerPerMp>0&&legalAttack&&
      sustainableAttackActions>0&&hero.hp>0};
    const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
    const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
