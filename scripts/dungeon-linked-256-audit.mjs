@@ -7,7 +7,7 @@ import {assertEntireFloorCoverage,assertBankedJourneySnapshot,assertPreRecoveryR
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runJourney,spread,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
-import {evaluatePaidBuild} from './dungeon-fixed-deck-pair.mjs';
+import {evaluatePaidBuild,evaluateRecommendedFloor} from './dungeon-fixed-deck-pair.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
@@ -106,6 +106,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    // a 3-loop or 4-loop acceptance limit). Exhaustion remains UNRESOLVED.
    farmingProof:(snap,band)=>Boolean(
     evaluatePaidBuild(snap,(band-1)/10,(seed-17011)/13,pairedCache).advantage),
+   floorStrengthProof:(snap,layer)=>evaluateRecommendedFloor(snap,layer,(seed-17011)/13),
    maxSorties:400,maxFights:4000});
   assert.equal(run.seed,seed);
   assert.ok(run.offDeckStoneSpent>=0&&run.offDeckStoneSpent<=run.spent.stone);
@@ -233,6 +234,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    e.carriedCleansers.push(snap.carry.length);
    e.storedCleansers.push(snap.bankedInventory.filter(x=>x.id.startsWith('clear_')||x.id==='luna_stone').length);
   }
+  const firstSeenForSeed=new Set();
   for(const row of run.floorAudit){
    const f=floors[row.layer-1];
    assert.ok(row.floorPreparation&&row.floorPreparation.layer===row.layer,
@@ -249,8 +251,11 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    if(prep.attackCoverage!==5)f.componentFailures.attackCoverage=(f.componentFailures.attackCoverage||0)+1;
    if(!(prep.powerPerMp>0))f.componentFailures.mpEfficiency=(f.componentFailures.mpEfficiency||0)+1;
    if(!row.cleared)f.componentFailures.actualCombat=(f.componentFailures.actualCombat||0)+1;
+   if(!prep.strengthEvidence?.ready)f.componentFailures.fixedDeckBattleProof=
+    (f.componentFailures.fixedDeckBattleProof||0)+1;
    if(certifiesPreEntryReadiness(row))
-    (row.replay?f.readinessFarming:f.readinessFirst).add(seed);
+    (firstSeenForSeed.has(row.layer)?f.readinessFarming:f.readinessFirst).add(seed);
+   firstSeenForSeed.add(row.layer);
    f.attempted++;f.cleared+=Number(row.cleared);f.lost+=Number(row.defeated);
    f.replays+=Number(row.replay);f.banked+=Number(row.cleared&&row.banked);
    for(const [kind,source] of [['stone','pendingStone'],['ink','pendingInk'],
@@ -295,13 +300,14 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    upgrades:[0,1,2,3,4].map(i=>stats(e.upgrades.map(x=>x[i])))})),
   floors:floors.map(f=>({layer:f.layer,attempted:f.attempted,cleared:f.cleared,
    readiness:{observed:f.readinessObserved.size,firstEntryReady:f.readinessFirst.size,
+    firstEntryReadySeeds:[...f.readinessFirst],
     additionalFarmingReady:[...f.readinessFarming].filter(s=>!f.readinessFirst.has(s)).length,
     prepared:[...new Set([...f.readinessFirst,...f.readinessFarming])].length,
     missingSeeds:seeds.filter(s=>!f.readinessFirst.has(s)&&!f.readinessFarming.has(s))},
    totalStrength:{upgradeCount:stats(f.upgradeCount),
     attackPowerPerMp:stats(f.attackEfficiency),enemyCoverage:stats(f.attackCoverage),
     legalOwnedCarry:stats(f.heldItems),componentFailures:f.componentFailures,
-    measuredBy:'actual equipped upgrade powers, MP efficiency, rank, owned items and five real battles'},
+    measuredBy:'actual owned five-circle attack, defense, healing and equipment versus original fixed deck, same owner, same RNG, five real encounters'},
    lost:f.lost,replays:f.replays,banked:f.banked,cleansersUsed:f.cleansers,
    gradeChecks:f.gradeChecks,gradeEligible:f.gradeEligible,gradeBanked:f.gradeBanked,
    stoneDrops:f.stoneDrops,stoneBanked:f.stoneBanked,stoneLost:f.stoneLost,
