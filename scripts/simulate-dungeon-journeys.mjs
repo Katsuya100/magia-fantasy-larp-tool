@@ -408,7 +408,7 @@ function observePrepared(state){
  const p=state.profile;
  for(let band=1;band<=91;band+=10){
   const prior=state.preparedSnapshots[band];
-  const completed=state.preparedFarmingSnapshots[band]?.length||0;
+  const completed=state.completedReplayLoops[band]||0;
   if(prior&&state.replayBanked[band]-state.preparedReplayAt[band]<50*(completed+1))continue;
   const to=band+9,requiredLevel=targetClearLevel(to);
   if(state.best<band-1)continue;
@@ -453,7 +453,13 @@ function observePrepared(state){
    const slim={...snapshot,bankedItems,completedExtraLoops:completed+1,
     additionalBankedReplayFights:state.replayBanked[band]-state.preparedReplayAt[band]};
    delete slim.bankedInventory;delete slim.bankedCollections;
-   state.preparedFarmingSnapshots[band].push(slim);
+   // Retain the mandatory 1/2/3 checkpoints plus the most recent
+   // beyond-third earned state; the actual counter never resets.
+   if(completed<3)state.preparedFarmingSnapshots[band].push(slim);
+   else state.preparedFarmingSnapshots[band][3]=slim;
+   state.completedReplayLoops[band]=completed+1;
+   if(state.farmingProof&&!state.earnedStrengthProof[band])
+    state.earnedStrengthProof[band]=Boolean(state.farmingProof(slim,band));
   }
  }
 }
@@ -575,7 +581,7 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
 }
 export function runJourney(seed,{style='A',route='short',alchemy=false,
  redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000,
- verifyFarming=false}={}){
+ verifyFarming=false,farmingProof=null}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
@@ -598,16 +604,29 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   entrySnapshots:{},preparedSnapshots:{},preparedFarmingSnapshots:{},preparedReplayAt:{},
   referenceSnapshots:{},referenceLastAttempt:{},
   farmingSnapshots:{},referenceReplayAt:{},replayBanked:Object.fromEntries(Array.from({length:10},(_,i)=>[10*i+1,0])),
+  farmingProof,earnedStrengthProof:{},completedReplayLoops:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},otherItemUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
   recoveryInitialGap:null,recoveryRemainingGap:null};
  if(style==='B')state.circles.push(circle('attack','storm',300,false),circle('attack','aqua',290,false),circle('support','law',260,false));
  // D is the route axis; this permits A+D, B+D and C+D without
  // inventing a mutually exclusive 'D character'.
- const extraBand=()=>verifyFarming?Array.from({length:10},(_,i)=>i*10+1).find(b=>
-  state.best>=b+9&&state.preparedSnapshots[b]&&
-  (state.preparedFarmingSnapshots[b]?.length||0)<3&&
-  unlockedStartLayers(profile).includes(b))??null:null;
+ const extraBand=()=>{
+  if(!verifyFarming)return null;
+  const eligible=Array.from({length:10},(_,i)=>i*10+1).filter(b=>
+   state.best>=b+9&&state.preparedSnapshots[b]&&
+   unlockedStartLayers(profile).includes(b));
+  const initial=eligible.find(b=>(state.completedReplayLoops[b]||0)<3);
+  if(initial!==undefined)return initial;
+  // Three is only the minimum *measurement* checkpoint. Continue real,
+  // paid return sorties wherever same-seed combat remains unproven.
+  // This is deliberately bound by total sortie/fight budget, NOT by a
+  // fabricated fourth-loop or per-band strength cutoff.
+  if(!farmingProof)return null; // standalone diagnostic without paired gate
+  return eligible.filter(b=>!state.earnedStrengthProof[b])
+   .sort((a,b)=>(state.completedReplayLoops[a]||0)-
+    (state.completedReplayLoops[b]||0)||a-b)[0]??null;
+ };
  for(let sortie=0;sortie<maxSorties&&
   (state.best<100||profile.adventurerRank<100||extraBand()!==null)&&state.fights<maxFights;sortie++){
   // The canonical evidence cohort deliberately revisits already beaten
@@ -917,7 +936,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    ink:{banked:state.earned.ink,redrawSpent:state.spent.ink,held:state.ink,
     lostUnbanked:state.lost.ink}};
  if(verifyFarming&&extraBand()!==null)
-  state.blockers.push('Real 50-fight additional farming budget exhausted before three observed rounds in F'+extraBand());
+  state.blockers.push('Measured sortie/fight budget exhausted with unproven paid combat advantage at F'+
+   extraBand()+', completed genuine extra loops='+(state.completedReplayLoops[extraBand()]||0)+
+   '; this is an UNRESOLVED budget cutoff, not permanently unreachable');
  return {seed,style,route,alchemy,verifyFarming,
   offDeckStoneSpent:state.offDeckStoneSpent,
   playerBase:{...state.playerBase},alchemyCrafts:state.alchemyCrafts,
@@ -941,6 +962,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,
   entrySnapshots:state.entrySnapshots,preparedSnapshots:state.preparedSnapshots,
   preparedFarmingSnapshots:state.preparedFarmingSnapshots,
+  completedReplayLoops:state.completedReplayLoops,
+  earnedStrengthProof:state.earnedStrengthProof,
   referenceSnapshots:state.referenceSnapshots,referenceLastAttempt:state.referenceLastAttempt,
   farmingSnapshots:state.farmingSnapshots,replayBanked:state.replayBanked,blockers:state.blockers};
 }

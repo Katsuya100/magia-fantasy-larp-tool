@@ -7,6 +7,7 @@ import {assertEntireFloorCoverage,assertBankedJourneySnapshot,assertPreRecoveryR
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runJourney,spread,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
+import {evaluatePaidBuild} from './dungeon-fixed-deck-pair.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
@@ -35,6 +36,7 @@ const sourceHashes=Object.fromEntries([
  'scripts/simulate-dungeon-journeys.mjs',
  'scripts/dungeon-coherent-battle.mjs',
  'scripts/dungeon-test-contract.mjs',
+ 'scripts/dungeon-fixed-deck-pair.mjs',
  'scripts/dungeon-readiness-reference.mjs',
  'config/dungeon-recommended-reference-candidate.v1.json',
  'config/dungeon-approved-goals.v1.json'
@@ -95,7 +97,13 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   gradeBanked:0,entryHp:[],entryMp:[],exitHp:[],exitMp:[]}));
  let conservationChecks=0;
  for(const seed of seeds){
-  const run=runJourney(seed,{style,route,verifyFarming:true,maxSorties:400,maxFights:10000});
+  const run=runJourney(seed,{style,route,verifyFarming:true,
+   // A real player may keep banking the SAME legal replay after the
+   // initial 1/2/3 observations, until genuine paired combat proves
+   // strength or the explicit total testing budget is exhausted.
+   farmingProof:(snap,band)=>Boolean(
+    evaluatePaidBuild(snap,(band-1)/10,(seed-17011)/13).advantage),
+   maxSorties:400,maxFights:10000});
   assert.equal(run.seed,seed);
   assert.ok(run.offDeckStoneSpent>=0&&run.offDeckStoneSpent<=run.spent.stone);
   if(style!=='B')assert.equal(run.offDeckStoneSpent,0,'only B invests in unequipped circles');
@@ -146,8 +154,9 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    farming:goals.bands.map(b=>run.farmingSnapshots[b.from]??[])});
   ownerEntries.push({seed,preparedFarming:goals.bands.map(b=>
    (run.preparedFarmingSnapshots[b.from]??[]).map((snap,index)=>{
-    assert.equal(snap.completedExtraLoops,index+1);
-    assert.ok(snap.additionalBankedReplayFights>=50*(index+1));
+    assert.equal(snap.completedExtraLoops,index<3?index+1:snap.completedExtraLoops);
+    if(index>=3)assert.ok(snap.completedExtraLoops>=4,'later paid growth cannot be relabeled third');
+    assert.ok(snap.additionalBankedReplayFights>=50*snap.completedExtraLoops);
     assertBankedJourneySnapshot({...snap,maxCarry:G.capacity(snap.level)});
     return snap;
    })),snapshots:goals.bands.map(b=>{

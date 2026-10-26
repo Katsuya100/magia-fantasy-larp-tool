@@ -345,6 +345,8 @@ const observedFarm=runJourney(20261024,{style:'A',route:'short',
  verifyFarming:true,maxSorties:35,maxFights:350});
 const earnedReplay=observedFarm.preparedFarmingSnapshots[1]||[];
 assert.ok(earnedReplay.length>=3,'three real, banked F1-10 replay cycles must be performed');
+assert.ok(observedFarm.completedReplayLoops[1]>=3);
+assert.deepEqual(earnedReplay.slice(0,3).map(s=>s.completedExtraLoops),[1,2,3]);
 assert.ok(earnedReplay.slice(0,3).every((snap,i)=>
  snap.completedExtraLoops===i+1&&snap.additionalBankedReplayFights>=50*(i+1)&&
  snap.unbankedStone===0&&snap.unbankedXp===0&&snap.unbankedInk===0),
