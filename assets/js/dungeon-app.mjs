@@ -33,6 +33,10 @@ import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,
 import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261023.47';
 import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261023.47';
 import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261023.47';
+// The grimoire and preparation cards show the same actual paid MP as battle.
+const circleDisplayedMp=(power,circle)=>G.spellMpCost({
+ role:circle?.analysis?.role,basePower:power,upgradeLevel:circle?.upgradeLevel??0
+});
 let cloudSyncController,drawingEditor;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -470,8 +474,8 @@ function render(){
   const circleIndexes=circleListIndexes(circles,{
    role:listView.libraryRole,attribute:listView.libraryAttribute,sort:listView.librarySort,slots
   });
-  $('libraryCards').innerHTML=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'" data-favorite="'+(profile.favoriteCircleId===c.id)+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'"><span class="circle-photo-face"><img alt="魔法陣" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'" role="button" tabindex="0" aria-label="長押しでお気に入りを切り替え" aria-pressed="'+(profile.favoriteCircleId===c.id)+'"></span>'+circleEffectBadges(c,masters.buffs,esc,G.mpCost)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<upgradeStoneCost(c.upgradeLevel??0)?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
- $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run,masters.buffs,G.mpCost);
+  $('libraryCards').innerHTML=circleIndexes.map(i=>circles[i]).map(c=>'<article class="card" data-circle-id="'+esc(c.id)+'" data-favorite="'+(profile.favoriteCircleId===c.id)+'" data-attribute="'+esc(c.analysis?.attribute||'unknown')+'"><span class="circle-photo-face"><img alt="魔法陣" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'" role="button" tabindex="0" aria-label="長押しでお気に入りを切り替え" aria-pressed="'+(profile.favoriteCircleId===c.id)+'"></span>'+circleEffectBadges(c,masters.buffs,esc,circleDisplayedMp)+'<div class="card-actions"><button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button><button type="button" class="subtle" data-remove="'+esc(c.id)+'" '+(profile.run?'disabled':'')+'>削除</button><button type="button" class="subtle upgrade-action" data-upgrade="'+esc(c.id)+'" '+(profile.run||!isRevealed(c)||profile.magicStones<upgradeStoneCost(c.upgradeLevel??0)?'disabled':'')+'>✦ 魔導石で強化</button></div></article>').join('')||'<p class="collection-empty">'+(circles.length?'条件に合う魔法陣はありません。':'魔導書はまだ白紙。')+'</p>';
+ $('slotCards').innerHTML=spellGrid(slots,circles,imageUrl,esc,!profile.run,masters.buffs,circleDisplayedMp);
  const unlocked=profile.returns>0||profile.inventory.length>0,limit=G.capacity(profile.level);
  $('gearCards').innerHTML=itemGrid(carry,profile.inventory,limit,unlocked,itemName,esc,!profile.run);
  $('gearCounter').textContent=unlocked?'携行品 '+pickedValues(carry.slice(0,limit)).length+' / '+limit+' 個':'携行品：最初の帰還後に解放';
@@ -517,9 +521,9 @@ function renderRun(){
   if(!id||!c?.image)return null;
   const s=hero.spells[i],waiting=hero.cooldowns[i]||0;
   const disabled=Boolean(s&&!G.canCast(hero,i)),sealed=G.isSpellSealed(hero,s);
-  const info=circleCardInfo(c,masters.buffs,G.mpCost);
+  const info=circleCardInfo(c,masters.buffs,circleDisplayedMp);
   return {disabled,sealed,
-   label:'魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleSummary(c,masters.buffs,G.mpCost):'未解析')+(sealed?' 封印':''),
+   label:'魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleSummary(c,masters.buffs,circleDisplayedMp):'未解析')+(sealed?' 封印':''),
    cooldown:waiting?'待機 '+waiting:'発動',mp:'MP:'+info.mp,power:'威力:'+info.power};
  });
  const layout=JSON.stringify(run.slotIds.map((id,i)=>[id,Boolean(spellStates[i])]));
@@ -537,7 +541,7 @@ function renderRun(){
     +'<span class="battle-spell-photo circle-photo-face"><img alt="" loading="lazy" decoding="async" data-circle-photo-id="'+esc(c.id)+'">'
     +(state.sealed?'<span class="battle-spell-seal" aria-hidden="true">封</span>':'')+'</span>'
     +'<span class="tile-cooldown">'+state.cooldown+'</span></button>'
-    +circleEffectBadges(c,masters.buffs,esc,G.mpCost)
+    +circleEffectBadges(c,masters.buffs,esc,circleDisplayedMp)
     +'<button type="button" class="subtle magic-expand" data-circle-detail="'+esc(c.id)+'">詳細</button></div>';
  }).join(''),spellStates);
  $('battleBasic').innerHTML='<button type="button" class="subtle basic-attack" data-cast="-1">⚔️通常攻撃</button>';
@@ -1400,7 +1404,7 @@ function openMagicDetails(id){
  $('upgradeCircle').hidden=Boolean(profile.run);
  $('upgradeCircle').disabled=Boolean(profile.run)||!isRevealed(circle)||profile.magicStones<stoneCost;
  $('upgradeHint').textContent=!isRevealed(circle)?'威力は初回使用後に強化できます。':profile.magicStones<stoneCost?'次の強化には魔導石が'+stoneCost+'個必要です。':'初期威力の10%分アップします。強化段階に応じて必要な魔導石が増えます。';
- const d=circleDetails(circle,masters.buffs,G.mpCost);
+ const d=circleDetails(circle,masters.buffs,circleDisplayedMp);
  $('magicDetailsImage').src=circleImages.get(circle.image);
  const info=circleEffectDetails(circle,masters.buffs,G.statusDuration);
  const rows=[['作成方法',circle.origin==='drawn'?'簡易（手書き）':'本格（撮影）'],['属性',d.attribute],['種別',d.role],['効果の詳細',info.effect]];
@@ -1574,7 +1578,7 @@ function renderLoadoutChoices(){
   const role=['attack','defense','support','debuff'].includes(filter)?filter:'all';
   const attribute=G.ATTRS.includes(filter)?filter:'all';
   const indexes=circleListIndexes(circles,{role,attribute,sort:pickerView.circle.sort});
-  $('loadoutOptions').innerHTML=indexes.length?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,G.mpCost,indexes,picker.index)
+  $('loadoutOptions').innerHTML=indexes.length?circleChoices(circles,slots,imageUrl,esc,null,masters.buffs,circleDisplayedMp,indexes,picker.index)
    :'<p class="collection-empty">条件に合う魔法陣はありません。</p>';
  }else{
   const indexes=itemListIndexes(profile.inventory,masters.items,{kind:pickerView.item.filter,sort:pickerView.item.sort});
