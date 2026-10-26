@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {assertFixedTrace,assertFixedInventory,journeySpellAllowed,journeyItemAllowed,
  assertPairedCharacters,assert256Seeds,assertEntireFloorCoverage,
- assertBankedJourneySnapshot,assertPreRecoveryRankGate,assertNotFalsePass} from '../scripts/dungeon-test-contract.mjs';
+ assertBankedJourneySnapshot,assertPreRecoveryRankGate,assertNotFalsePass,
+ certifiesPreEntryReadiness} from '../scripts/dungeon-test-contract.mjs';
 const good={win:true,cleared:50,maxHp:100,maxMp:100,restores:0,initialLoadout:[],
  layerStats:Array.from({length:10},(_,i)=>({layer:i+1,startHp:100-i,startMp:100-i,
  endHp:99-i,endMp:99-i,cleared:true})),
@@ -59,3 +60,12 @@ assert.throws(()=>assertNotFalsePass({passed:true,missing:1}),/cannot PASS/);
 assert.throws(()=>assertNotFalsePass({passed:true,cutoff:true}),/cannot PASS/);
 
 console.log('PASS canonical test contract and mutation regressions');
+
+const observedFloor={layer:16,attemptedFights:5,cleared:true,
+ floorPreparation:{layer:16,ready:true,completeCombatKit:true,sustainableAttackActions:3}};
+assert.equal(certifiesPreEntryReadiness(observedFloor),true);
+assert.equal(certifiesPreEntryReadiness({...observedFloor,cleared:false}),false,
+ 'a failed exploration must never certify combat-ready equipment');
+assert.equal(certifiesPreEntryReadiness({...observedFloor,attemptedFights:1}),false);
+assert.equal(certifiesPreEntryReadiness({...observedFloor,
+ floorPreparation:{...observedFloor.floorPreparation,completeCombatKit:false}}),false);

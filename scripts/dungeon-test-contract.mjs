@@ -100,3 +100,9 @@ export function assertPreRecoveryRankGate(record){
 export function assertNotFalsePass({passed,missing=0,cutoff=false}){
  assert.ok(!passed||missing===0&&!cutoff,'unready seeds and cutoffs cannot PASS');
 }
+
+export function certifiesPreEntryReadiness(row){
+ const p=row?.floorPreparation;
+ return Boolean(p&&p.layer===row.layer&&p.ready&&p.completeCombatKit&&
+  p.sustainableAttackActions>0&&row.attemptedFights===5&&row.cleared);
+}

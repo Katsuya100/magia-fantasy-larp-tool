@@ -2,7 +2,8 @@
 // This is gameplay/economy measurement, not a substitute for the separate
 // frozen, approved 256-seed ten-layer combat acceptance gates.
 import assert from 'node:assert/strict';
-import {assertEntireFloorCoverage,assertBankedJourneySnapshot,assertPreRecoveryRankGate} from './dungeon-test-contract.mjs';
+import {assertEntireFloorCoverage,assertBankedJourneySnapshot,assertPreRecoveryRankGate,
+ certifiesPreEntryReadiness} from './dungeon-test-contract.mjs';
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runJourney,spread,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
@@ -218,7 +219,8 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    assert.ok(row.floorPreparation&&row.floorPreparation.layer===row.layer,
     'every single floor needs an actual pre-entry readiness observation');
    f.readinessObserved.add(seed);
-   if(row.floorPreparation.ready)(row.replay?f.readinessFarming:f.readinessFirst).add(seed);
+   if(certifiesPreEntryReadiness(row))
+    (row.replay?f.readinessFarming:f.readinessFirst).add(seed);
    f.attempted++;f.cleared+=Number(row.cleared);f.lost+=Number(row.defeated);
    f.replays+=Number(row.replay);f.banked+=Number(row.cleared&&row.banked);
    for(const [kind,source] of [['stone','pendingStone'],['ink','pendingInk'],

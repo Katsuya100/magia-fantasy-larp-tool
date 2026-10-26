@@ -710,13 +710,28 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    const entryHp=percent(hero.hp,hero.stats.hp),entryMp=percent(hero.mp,hero.maxMp);
    const active=equipped(state.circles);
    const legalAttack=G.available(hero).some(i=>hero.spells[i].role==='attack');
+   const attackCircles=active.filter(s=>s.role==='attack');
+   const supportCircles=active.filter(s=>s.role==='support');
+   const defenseCircles=active.filter(s=>s.role==='defense');
+   const attackCosts=attackCircles.map(s=>G.spellMpCost(s));
+   const minAttackMp=Math.min(...attackCosts);
+   const sustainableAttackActions=Number.isFinite(minAttackMp)&&minAttackMp>0?
+    Math.floor(hero.maxMp/minAttackMp):0;
+   const completeCombatKit=attackCircles.length>=1&&
+    supportCircles.length>=1&&defenseCircles.length>=1&&
+    attackCircles.every(s=>Number.isFinite(s.power)&&s.power>0)&&
+    attackCosts.every(cost=>Number.isFinite(cost)&&cost>0);
    const floorPreparation={layer,recommendedLevel:targetClearLevel(layer),level:firstLevel,
     rank:profile.adventurerRank,spells:active.length,
     attackPowers:active.filter(s=>s.role==='attack').map(s=>s.power),
-    attackMpCosts:active.filter(s=>s.role==='attack').map(s=>G.spellMpCost(s)),
+    attackMpCosts:attackCosts,defensePower:defenseCircles.map(s=>s.power),
+    supportPower:supportCircles.map(s=>s.power),
+    sustainableAttackActions,completeCombatKit,
     availableAttack:legalAttack,mpPercent:entryMp,hpPercent:entryHp,
     carry:carry.filter(Boolean).map(x=>x.id),bankedBestBeforeEntry:state.best,
-    ready:(layer===1||firstLevel>=targetClearLevel(layer))&&active.length===5&&legalAttack&&hero.hp>0};
+    ready:(layer===1||firstLevel>=targetClearLevel(layer))&&
+     active.length===5&&completeCombatKit&&legalAttack&&
+     sustainableAttackActions>0&&hero.hp>0};
    const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
    const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
    const manaBeforeLayer=manaCount(usage);
