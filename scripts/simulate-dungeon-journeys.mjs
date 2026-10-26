@@ -262,11 +262,10 @@ function chooseUpgrade(state){
  // banked stones. After F30, unrelated upgrades can exhaust the legal 75%
  // investment budget and stall the recovery route for many repeat sorties.
  // Include defense if it is genuinely behind, but never invent upgrades.
- const gap=state.style==='B'&&state.best>=30?recoveryGap(state):[];
- const recovering=gap.some(required=>required>0);
- const candidates=state.circles.filter((c,i)=>recovering
-  ?c.active&&gap[i]>0
-  :['attack','support'].includes(c.role));
+ // B always keeps its dispersed investment policy, including after F30.
+ // Paid recovery is additional real farming, never a forced change to A.
+ const candidates=state.circles.filter(c=>
+  ['attack','support'].includes(c.role)&&(state.style==='B'||c.active));
  if(!candidates.length)return null;
  // Before F30 B deliberately splits stones across the inactive alternatives.
  // After F30 all banked investments go into the remaining original deficits
@@ -277,8 +276,10 @@ function chooseUpgrade(state){
  // B resumes its normal split investments once no longer stalled.
  const survivalRecovery=state.route==='long'&&state.best>=10&&
   state.losses>=2&&state.trace.at(-1)?.defeat===true;
- const eligible=state.style==='B'&&current<=30&&!survivalRecovery
-  ?candidates:candidates.filter(c=>c.active);
+ const offDeckDue=state.style==='B'&&state.spent.stone>0&&
+  state.offDeckStoneSpent*4<state.spent.stone;
+ const eligible=offDeckDue?candidates.filter(c=>!c.active):
+  candidates.filter(c=>c.active);
  const options=eligible.filter(c=>upgradeStoneCost(c.upgrades)<=state.stones);
  options.sort((a,b)=>{
   const score=c=>{
@@ -308,6 +309,7 @@ function invest(state){
   const cost=upgradeStoneCost(candidate.upgrades);
   if(cost>state.stones||state.spent.stone+cost>budget)break;
   candidate.upgrades++;state.stones-=cost;state.spent.stone+=cost;
+  if(state.style==='B'&&!candidate.active)state.offDeckStoneSpent+=cost;
  }
 }
 function recoveryGap(state){
@@ -587,7 +589,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
   circles:spells.map(([role,attribute,power])=>circle(role,attribute,power)),
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
-  bankedXp:0,
+  bankedXp:0,offDeckStoneSpent:0,
   ledger:{items:{bankedDrops:0,alchemyCreated:0,battleConsumed:0,alchemyConsumed:0,lostUnbanked:0},
    collections:{bankedDrops:0,alchemyConsumed:0,lostUnbanked:0}},
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
@@ -879,7 +881,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     lostUnbanked:state.lost.ink}};
  if(verifyFarming&&extraBand()!==null)
   state.blockers.push('Real 50-fight additional farming budget exhausted before three observed rounds in F'+extraBand());
- return {seed,style,route,alchemy,verifyFarming,playerBase:{...state.playerBase},alchemyCrafts:state.alchemyCrafts,
+ return {seed,style,route,alchemy,verifyFarming,
+  offDeckStoneSpent:state.offDeckStoneSpent,
+  playerBase:{...state.playerBase},alchemyCrafts:state.alchemyCrafts,
   alchemyByproducts:state.alchemyByproducts,profile:chestSummary(profile),best:state.best,
   sorties:state.sorties,returns:state.returns,losses:state.losses,fights:state.fights,
   replayedFights:state.replayedFights,farmingFights:state.farmingFights,

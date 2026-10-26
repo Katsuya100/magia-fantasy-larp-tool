@@ -46,7 +46,7 @@ const select=x=>({seed:x.seed,level:x.profile.level,rank:x.profile.rank,
  maxPendingStoneExposure:Math.max(0,...x.trace.map(t=>t.gainedPending.stone)),
  maxPendingInkExposure:Math.max(0,...x.trace.map(t=>t.gainedPending.ink)),
  bankedXp:x.xpLedger.banked,lostXp:x.xpLedger.lost,
- stoneSpent:x.spent.stone,inkSpent:x.spent.ink,
+ stoneSpent:x.spent.stone,inkSpent:x.spent.ink,offDeckStoneSpent:x.offDeckStoneSpent,
  deathCount:x.losses,sorties:x.sorties,returns:x.returns,
  redraws:x.replacements,redrawEvents:x.redrawEvents,crafts:x.alchemyCrafts,
  purposeFarmFights:x.farmingFights,recoveryFights:x.recovery.extraFights,
@@ -96,6 +96,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  for(const seed of seeds){
   const run=runJourney(seed,{style,route,verifyFarming:true,maxSorties:400,maxFights:10000});
   assert.equal(run.seed,seed);
+  assert.ok(run.offDeckStoneSpent>=0&&run.offDeckStoneSpent<=run.spent.stone);
+  if(style!=='B')assert.equal(run.offDeckStoneSpent,0,'only B invests in unequipped circles');
+  if(style==='B'&&run.spent.stone>=20)
+   assert.ok(run.offDeckStoneSpent>0,'B cannot become free concentrated A strategy');
   assert.equal(run.spent.ink,run.replacements*5,
    'every paid circle redraw must use exactly five genuinely banked inks');
   assert.equal(run.recovery.comparison==='REAL_SAME_SEED_A_F31',
