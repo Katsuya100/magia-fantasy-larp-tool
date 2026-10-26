@@ -109,6 +109,10 @@ export function certifiesPreEntryReadiness(row){
  const p=row?.floorPreparation;
  return Boolean(p&&p.layer===row.layer&&p.ready&&p.completeCombatKit&&
   p.circleIntegrity&&p.itemIntegrity&&p.rankLegal&&
+   p.strengthEvidence?.ready===true&&
+   p.strengthEvidence.reference==='ORIGINAL_FIXED_DECK_SAME_CHARACTER'&&
+   p.strengthEvidence.actual?.won===true&&
+   p.strengthEvidence.actual?.attempted===5&&
   p.attackCoverage===5&&Number.isFinite(p.powerPerMp)&&p.powerPerMp>0&&
   Number.isInteger(p.acquiredUpgrades)&&p.acquiredUpgrades>=0&&
   p.sustainableAttackActions>0&&p.level>=(p.layer===1?1:p.recommendedLevel)&&
@@ -121,4 +125,46 @@ export function chooseAdditionalFarmingBand(eligible,counts,proven,hasCombatProo
  if(!hasCombatProof)return null;
  return eligible.filter(b=>!proven[b])
   .sort((a,b)=>(counts[a]||0)-(counts[b]||0)||a-b)[0]??null;
+}
+
+// The ONLY formal readiness verdict: every owner must prove every one of the
+// ten pre-entry floors by paid, paired real battles. Never consult candidate
+// readiness, proposed power thresholds or journey win-rate limits.
+export function summarizeOfficialJourneyReadiness(policy,seeds){
+  assert.equal(seeds.length,256,'strict owner population');
+  assert.equal(policy.floors.length,100,'all authored floors');
+  const summaries=[];
+  for(let index=0;index<10;index++){
+    const floors=policy.floors.slice(index*10,index*10+10);
+    const preparedSeeds=seeds.filter(seed=>floors.every(f=>!f.readiness.missingSeeds.includes(seed)));
+    const firstEntrySeeds=preparedSeeds.filter(seed=>floors.every(f=>
+      f.readiness.firstEntryReadySeeds.includes(seed)));
+    const missingAccounts=seeds.filter(seed=>!preparedSeeds.includes(seed)).map(seed=>{
+      const missingFloors=floors.filter(f=>f.readiness.missingSeeds.includes(seed)).map(f=>f.layer);
+      const account=policy.accounts.find(a=>a.seed===seed);
+      return {seed,missingFloors,reasons:[
+        'REAL_FIXED_DECK_COMBAT_READINESS_NOT_PROVEN',
+        ...(account?.blockers.some(b=>/budget|cutoff|UNRESOLVED/i.test(b))?['BUDGET_CUTOFF_NOT_PASS']:[])
+      ]};
+    });
+    const band=floors[0].layer+'-'+floors.at(-1).layer;
+    summaries.push({style:policy.style,route:policy.route,band,count:seeds.length,
+      prepared:preparedSeeds.length,unprepared:missingAccounts.length,
+      preparedBeforeFirstBandClear:firstEntrySeeds.length,
+      preparedOnlyAfterBandClear:preparedSeeds.length-firstEntrySeeds.length,
+      readinessBasis:'PER_FLOOR_REAL_PAIRED_FIXED_DECK_COMBAT_NOT_CANDIDATE',
+      preparedPercent:100*preparedSeeds.length/seeds.length,
+      floors:floors.map(f=>({layer:f.layer,prepared:f.readiness.prepared,
+        firstEntryReady:f.readiness.firstEntryReady,
+        additionalFarmingReady:f.readiness.additionalFarmingReady,
+        unprepared:seeds.length-f.readiness.prepared})),
+      missingReasons:Object.entries(missingAccounts.reduce((result,item)=>{
+        for(const reason of item.reasons)result[reason]=(result[reason]||0)+1;
+        return result;
+      },{})),
+      missingAccounts,
+      status:missingAccounts.length?'RECOMMENDED_STRENGTH_UNMET_OR_UNRESOLVED':
+        'ALL_256_OWNERS_PROVEN_ON_EVERY_FLOOR'});
+  }
+  return summaries;
 }
