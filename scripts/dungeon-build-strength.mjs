@@ -2,7 +2,7 @@
 // upgrades/items; fixed-deck circles are a comparator, NEVER owner resources.
 // Both arms have the same owner base, level, inventory, rank, tactics and seed.
 import assert from 'node:assert/strict';
-import {evaluatePaidBuild} from './dungeon-fixed-deck-pair.mjs';
+import {evaluatePaidBuild,pairedAdvantage} from './dungeon-fixed-deck-pair.mjs';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {challenge} from './dungeon-coherent-battle.mjs';
@@ -140,7 +140,7 @@ for(const route of ['short','long']){
   const overlap=Math.min(drawn.opponents.length,kept.opponents.length);
   assert.deepEqual(drawn.opponents.slice(0,overlap),kept.opponents.slice(0,overlap),
    'C alternatives must face identical actual encounter sequence');
-  const gain=score(drawn,kept),cost=score(kept,drawn);
+  const gain=pairedAdvantage(drawn,kept),cost=pairedAdvantage(kept,drawn);
   assert.ok(!(gain&&cost),'same battle cannot Pareto-dominate both ways');
   cases.push({seed:owner.seed,status:gain?'REDRAW_RATIONAL':cost?'KEEP_RATIONAL':'TRADEOFF_OR_TIE',
    band:snap.layer+'-'+snap.to,inkActuallyConsumed:event.inkConsumed,
