@@ -6,10 +6,11 @@ const bandFactors=Object.freeze({
   51:[1.55,.57],61:[1.30,.50],71:[1.50,.42],81:[1.10,1.35],91:[1.25,1.23]
 });
 const authoredMagIncreases=Object.freeze({
-  "foe_l029_4": 0.4,
+  "foe_l029_4": 0.55,
   "boss_l050": 0.4,
   "boss_l079": 0.5,
-  "boss_l080": 1.8
+  "boss_l080": 1.8,
+  "boss_l090": 0.2
 });
 export function depthRetunedEnemies(original){
  if(original.length!==500)throw Error('Expected full authored 500-enemy roster');
