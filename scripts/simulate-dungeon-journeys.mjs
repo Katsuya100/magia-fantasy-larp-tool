@@ -348,7 +348,10 @@ function considerInkRedraw(state){
  const newMarginal=newBase*.1/upgradeStoneCost(0);
  if(!state.forceRedraw&&!(newMarginal>oldMarginal&&
   upgradeStoneCost(candidate.upgrades)>upgradeStoneCost(0)))return;
- state.redrawEvents.push({layer:state.best,role:candidate.role,attribute:candidate.attribute,
+ state.redrawEvents.push({layer:state.best,circleIndex:state.circles.indexOf(candidate),
+  originalCircle:{role:candidate.role,attribute:candidate.attribute,
+   basePower:candidate.basePower,upgradeLevel:candidate.upgrades,power:oldPower},
+  role:candidate.role,attribute:candidate.attribute,
   oldPower,newPower:newBase,upgradesLost:candidate.upgrades,
   sunkStones:totalUpgradeStoneCost(candidate.upgrades),inkConsumed:used,
   forcedDiagnostic:state.forceRedraw,stoneInvestmentTransferred:0,

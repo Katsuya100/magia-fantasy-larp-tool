@@ -21,6 +21,8 @@ assert.equal(verdict.RANK_ACQUISITION.length,10);
 assert.equal(verdict.BUILD_STRATEGY.length,7);
 assert.equal(combat.cases.length,60);
 assert.equal(paired.cases.length,60);
+assert.equal(paired.C_REDRAW_STRATEGY?.length,2,
+ 'both C routes must observe genuinely paid keep-versus-redraw combat');
 assert.equal(paired.candidatePromoted,false,'unapproved candidate must remain unapproved');
 const expected=new Set();
 for(const style of ['A','B','C'])
@@ -98,6 +100,16 @@ for(const rank of verdict.RANK_ACQUISITION){
    failures.push('RANK_ACQUISITION inconsistent real awards '+rank.band);
  }
 }
+let redrawBetter=0,keepBetter=0;
+for(const c of paired.C_REDRAW_STRATEGY){
+ if(!['short','long'].includes(c.route)||c.denominator!==samples||c.cases.length!==samples||
+    c.drawn+c.missing!==samples||c.redrawRational+c.keepRational+c.unresolved!==c.drawn)
+  failures.push('BUILD_STRATEGY C redraw cohort denominator or accounting is invalid');
+ redrawBetter+=c.redrawRational;keepBetter+=c.keepRational;
+}
+if(!redrawBetter||!keepBetter)
+ failures.push('BUILD_STRATEGY C requires paid, paired examples of both redraw and retention value; REDRAW '+
+  redrawBetter+'/512, KEEP '+keepBetter+'/512');
 for(const s of verdict.BUILD_STRATEGY){
  if(s.commonRealSeeds!==samples||!['B','C','D'].includes(s.strategy)||!s.costs||s.checkpoints?.length!==10||
    (s.strategy==='D'?(s.route!=='short-vs-long'||s.pairs?.length!==samples||!['A','B','C'].includes(s.style)):
@@ -113,7 +125,8 @@ console.log('DUNGEON_JOURNEY_STRICT_GATE '+JSON.stringify({
  approvedSeeds:samples,cases:60,
  JOURNEY_READINESS:{floorPassed:floorCases,of:600,candidateObserved:readyCases},BUILD_STRENGTH:strengthCases,
  EXTRA_FARMING:extraCases,RANK_ACQUISITION:{ownerCheckpointsPassed:rankCases,of:60},
- BUILD_STRATEGY:verdict.BUILD_STRATEGY.length,
+ BUILD_STRATEGY:{pairedRoutes:verdict.BUILD_STRATEGY.length,
+  cRedrawAdvantages:redrawBetter,cKeepAdvantages:keepBetter},
  diagnosticWinRateMatches:coverage?.diagnosticMatches,
  failures:failures.length}));
 assert.equal(failures.length,0,'Journey progression and paired build strength unmet:\n'+

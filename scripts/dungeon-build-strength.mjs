@@ -56,7 +56,7 @@ const score=(actual,fixed)=>{
 };
 const report={schemaVersion:'dungeon-paired-build-strength-v1',
  method:'Actually earned, banked prepared and later re-farmed snapshots versus original fixed deck. No unapproved candidate reference is an entry gate. Equal owner level, base, rank, legal inventory, HP/MP, tactics, enemies and per-fight seeds.',
- candidatePromoted:false,strictSamples:goals.strictSamples,cases:[]};
+ candidatePromoted:false,strictSamples:goals.strictSamples,cases:[],C_REDRAW_STRATEGY:[]};
 for(const p of economy.policies){
  const owners=p.ownerEntries;
  assert.equal(owners.length,goals.strictSamples,'only independent real owner snapshots');
@@ -144,6 +144,67 @@ for(const p of economy.policies){
  }
 }
 assert.equal(report.cases.length,60);
+// An actual paid C redraw is compared with the genuinely owned spell that
+// was sacrificed. No free ink, upgrade refund or higher-quality reroll.
+// These are paired, fixed-character counterfactual battles, not C owners
+// substituted by one conveniently chosen representative seed.
+for(const route of ['short','long']){
+ const cohort=economy.policies.find(x=>x.style==='C'&&x.route===route);
+ assert.ok(cohort&&cohort.ownerEntries.length===goals.strictSamples);
+ const cases=[];
+ for(let i=0;i<goals.strictSamples;i++){
+  const owner=cohort.ownerEntries[i],account=cohort.accounts[i];
+  assert.equal(owner.seed,account.seed);
+  const snapshots=[...(owner.prepared??[]),
+   ...(owner.preparedFarming??[]).flat()].filter(Boolean);
+  let matched=null;
+  for(const event of account.redrawEvents??[]){
+   if(!event.originalCircle||!Number.isInteger(event.circleIndex))throw Error('Paid C redraw has no sunk-upgrade ledger');
+   assert.equal(event.inkConsumed,5,'ink redraw is never free');
+   assert.ok(event.sunkStones>=0&&event.originalCircle.upgradeLevel>=0);
+   const snap=snapshots.find(x=>x.bankedBestLayer>=event.layer&&
+    x.circles[event.circleIndex]?.basePower===event.newPower);
+   if(snap){matched={event,snap};break;}
+  }
+  if(!matched){
+   cases.push({seed:owner.seed,status:'NO_POST_REDRAW_BANKED_COMPARISON',
+    earnedRedraws:(account.redrawEvents??[]).length});
+   continue;
+  }
+  const {event,snap}=matched;
+  const original=event.originalCircle;
+  const controlCircles=snap.circles.map((circle,j)=>
+   j===event.circleIndex?{...original}:circle);
+  const retained={...snap,circles:controlCircles};
+  assertPairedCharacters(snap,retained);
+  const combatSeed=37011+13*i;
+  const drawn=challenge(snap,snap.layer,combatSeed,{route:'short',paired:true});
+  const kept=challenge(retained,snap.layer,combatSeed,{route:'short',paired:true});
+  const overlap=Math.min(drawn.opponents.length,kept.opponents.length);
+  assert.deepEqual(drawn.opponents.slice(0,overlap),kept.opponents.slice(0,overlap),
+   'C alternatives must face identical actual encounter sequence');
+  const gain=score(drawn,kept),cost=score(kept,drawn);
+  assert.ok(!(gain&&cost),'same battle cannot Pareto-dominate both ways');
+  cases.push({seed:owner.seed,status:gain?'REDRAW_RATIONAL':cost?'KEEP_RATIONAL':'TRADEOFF_OR_TIE',
+   band:snap.layer+'-'+snap.to,inkActuallyConsumed:event.inkConsumed,
+   sunkStones:event.sunkStones,originalUpgrades:event.originalCircle.upgradeLevel,
+   newUpgrades:snap.circles[event.circleIndex].upgradeLevel,
+   sameLevel:snap.level,rank:snap.rank,carried:snap.carry.length,
+   redraw:{won:drawn.won,hp:drawn.endHp,mp:drawn.endMp,actions:drawn.casts},
+   keep:{won:kept.won,hp:kept.endHp,mp:kept.endMp,actions:kept.casts}});
+ }
+ assert.equal(cases.length,goals.strictSamples);
+ const row={route,denominator:goals.strictSamples,drawn:cases.filter(x=>x.status!=='NO_POST_REDRAW_BANKED_COMPARISON').length,
+  redrawRational:cases.filter(x=>x.status==='REDRAW_RATIONAL').length,
+  keepRational:cases.filter(x=>x.status==='KEEP_RATIONAL').length,
+  unresolved:cases.filter(x=>x.status==='TRADEOFF_OR_TIE').length,
+  missing:cases.filter(x=>x.status==='NO_POST_REDRAW_BANKED_COMPARISON').length,
+  status:'PAID_256_OWNER_DECISION_EVIDENCE',cases};
+ report.C_REDRAW_STRATEGY.push(row);
+ console.log('C_REDRAW_STRATEGY '+JSON.stringify({...row,cases:undefined}));
+}
+assert.equal(report.C_REDRAW_STRATEGY.length,2);
+
 report.summary={bands:60,proven:report.cases.filter(x=>x.passed).length,
  insufficient:report.cases.filter(x=>!x.passed).length};
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
