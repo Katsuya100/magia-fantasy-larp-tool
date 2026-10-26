@@ -2,6 +2,7 @@
 // This is gameplay/economy measurement, not a substitute for the separate
 // frozen, approved 256-seed ten-layer combat acceptance gates.
 import assert from 'node:assert/strict';
+import {assertEntireFloorCoverage,assertBankedJourneySnapshot,assertPreRecoveryRankGate} from './dungeon-test-contract.mjs';
 import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {runJourney,spread,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
@@ -129,6 +130,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   assert.ok(run.floorAudit.every(f=>!f.bossRank||f.layer%10===0));
   assert.ok(run.rankAudit.every(r=>!r.banked||r.eligible));
   assert.ok(run.rankAudit.every(r=>r.hpPercent>=80&&r.mpPercent>=80||!r.eligible));
+  for(const rank of run.rankAudit)assertPreRecoveryRankGate(rank);
   conservationChecks++;
   accounts.push(select(run));
   referenceOwners.push({seed,reference:goals.bands.map(b=>run.referenceSnapshots[b.from]??null),
@@ -162,6 +164,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
     assert.equal(snap.unbankedStone,0);
     assert.equal(snap.unbankedInk,0);
     assert.ok(snap.actualFights<=run.fights&&snap.actualSorties<=run.sorties);
+    assertBankedJourneySnapshot({...snap,maxCarry:G.capacity(snap.level)});
     const owned=[...snap.carry,...snap.bankedInventory];
     assert.equal(new Set(owned.map(x=>x.instanceId)).size,owned.length);
     assert.ok(snap.carry.length<=G.capacity(snap.level));
@@ -264,6 +267,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    acquired:accounts.filter(x=>x.earnedRankLayers.includes(b.to)).length,
    missingSeeds:accounts.filter(x=>!x.earnedRankLayers.includes(b.to)).map(x=>x.seed)})),
   accounts,ownerEntries};
+ assertEntireFloorCoverage(policy.floors);
  report.policies.push(policy);
  referenceReport.policies.push({style,route,owners:referenceOwners});
  console.log('DUNGEON_LINKED_256_POLICY '+JSON.stringify({style,route,samples:accounts.length,

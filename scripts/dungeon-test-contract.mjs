@@ -38,3 +38,34 @@ export function assert256Seeds(seeds){
  assert.equal(seeds.length,256,'no reduced seed denominator');
  assert.equal(new Set(seeds).size,256,'no duplicate or dropped seeds');
 }
+
+export function assertEntireFloorCoverage(floors,expected=100){
+ assert.equal(floors.length,expected,'must inspect every individual floor');
+ for(let i=0;i<expected;i++){
+  const floor=floors[i];assert.equal(floor.layer,i+1,'no decade-only shortcut');
+  const r=floor.readiness;
+  assert.ok(r&&r.prepared>=0&&r.prepared<=256,'readiness counts must exist');
+  assert.equal(r.missingSeeds.length,256-r.prepared,'unready seeds cannot disappear');
+  assert.equal(r.firstEntryReady+r.additionalFarmingReady,r.prepared,
+   'first-entry and extra-farming successes cannot be double counted');
+ }
+}
+export function assertBankedJourneySnapshot(s){
+ assert.ok(s&&s.source==='POST_RETURN_BANKED_AND_INVESTED','no synthetic readiness');
+ assert.equal(s.unbankedXp,0,'unbanked XP cannot prepare journey');
+ assert.equal(s.unbankedStone,0,'unbanked stones cannot prepare journey');
+ assert.equal(s.unbankedInk,0,'unbanked ink cannot prepare journey');
+ assert.equal(s.earned.stone,s.spent.stone+s.bankedStones,'no free magic stones');
+ assert.equal(s.earned.ink,s.spent.ink+s.bankedInk,'no free magic ink');
+ assert.ok(s.rank<=s.bankedBestLayer,'no unearned adventurer rank');
+ assert.ok(s.carry.length<=s.maxCarry,'real item capacity is mandatory');
+}
+export function assertPreRecoveryRankGate(record){
+ if(record.failure==='PRIOR_RANK_OR_DUPLICATE')return;
+ assert.equal(record.eligible,
+  record.hpPercent>=80&&record.mpPercent>=80,
+  'rank must be evaluated at lethal boss HP/MP before victory recovery');
+}
+export function assertNotFalsePass({passed,missing=0,cutoff=false}){
+ assert.ok(!passed||missing===0&&!cutoff,'unready seeds and cutoffs cannot PASS');
+}

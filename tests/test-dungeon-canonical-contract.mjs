@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {assertFixedTrace,assertFixedInventory,journeySpellAllowed,journeyItemAllowed,
- assertPairedCharacters,assert256Seeds} from '../scripts/dungeon-test-contract.mjs';
+ assertPairedCharacters,assert256Seeds,assertEntireFloorCoverage,
+ assertBankedJourneySnapshot,assertPreRecoveryRankGate,assertNotFalsePass} from '../scripts/dungeon-test-contract.mjs';
 const good={win:true,cleared:50,maxHp:100,maxMp:100,restores:0,initialLoadout:[],
  layerStats:Array.from({length:10},(_,i)=>({layer:i+1,startHp:100-i,startMp:100-i,
  endHp:99-i,endMp:99-i,cleared:true}))};
@@ -29,3 +30,21 @@ assert.throws(()=>assertPairedCharacters(hero,{...hero,playerBase:{...hero.playe
 assert.throws(()=>assert256Seeds(Array.from({length:256},()=>42)),/duplicate/);
 assert.throws(()=>assert256Seeds(Array.from({length:255},(_,i)=>i)),/denominator/);
 console.log('PASS canonical test contract and mutation regressions');
+
+const floors=Array.from({length:100},(_,i)=>({layer:i+1,readiness:{
+ firstEntryReady:256,additionalFarmingReady:0,prepared:256,missingSeeds:[]}}));
+assert.doesNotThrow(()=>assertEntireFloorCoverage(floors));
+assert.throws(()=>assertEntireFloorCoverage(floors.filter(f=>f.layer%10===0)),/every individual floor/);
+const missing=structuredClone(floors);missing[32].readiness.missingSeeds=[17011];
+assert.throws(()=>assertEntireFloorCoverage(missing),/unready seeds/);
+const state={source:'POST_RETURN_BANKED_AND_INVESTED',unbankedXp:0,
+ unbankedStone:0,unbankedInk:0,earned:{stone:10,ink:5},
+ spent:{stone:7,ink:5},bankedStones:3,bankedInk:0,
+ rank:10,bankedBestLayer:20,carry:[],maxCarry:10};
+assert.doesNotThrow(()=>assertBankedJourneySnapshot(state));
+assert.throws(()=>assertBankedJourneySnapshot({...state,bankedStones:9}),/free magic stones/);
+assert.throws(()=>assertBankedJourneySnapshot({...state,rank:30}),/unearned adventurer rank/);
+assert.doesNotThrow(()=>assertPreRecoveryRankGate({hpPercent:90,mpPercent:79,eligible:false,failure:'MP_BELOW_80'}));
+assert.throws(()=>assertPreRecoveryRankGate({hpPercent:90,mpPercent:79,eligible:true,failure:null}),/before victory recovery/);
+assert.throws(()=>assertNotFalsePass({passed:true,missing:1}),/cannot PASS/);
+assert.throws(()=>assertNotFalsePass({passed:true,cutoff:true}),/cannot PASS/);
