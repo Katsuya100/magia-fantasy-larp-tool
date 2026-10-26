@@ -69,7 +69,8 @@ jobs:
             dungeon-enemy-element-consistency \
             dungeon-enemy-durability \
             dungeon-enemy-flavor \
-            dungeon-normal-affinity; do
+            dungeon-normal-affinity \
+            dungeon-c-redraw-comparison; do
             echo "::group::$suite"
             node "tests/test-$suite.mjs" || failed=1
             echo "::endgroup::"
@@ -205,6 +206,8 @@ jobs:
         run: node scripts/dungeon-redefined-evaluation.mjs
       - name: Prove real replay-built decks against the fixed deck with paired combat
         run: node scripts/dungeon-build-strength.mjs
+      - name: Verify C short and long 256-owner redraw comparisons completed
+        run: node tests/test-dungeon-c-redraw-comparison.mjs --report
       - name: Pair real re-farming cost to actual 256-owner combat readiness
         if: always()
         run: node scripts/dungeon-strategy-readiness.mjs

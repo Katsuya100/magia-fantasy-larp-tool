@@ -3,6 +3,7 @@
 // Both arms have the same owner base, level, inventory, rank, tactics and seed.
 import assert from 'node:assert/strict';
 import {evaluatePaidBuild,pairedAdvantage} from './dungeon-fixed-deck-pair.mjs';
+import {assertPairedCharacters} from './dungeon-test-contract.mjs';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {challenge} from './dungeon-coherent-battle.mjs';
