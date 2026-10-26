@@ -14,6 +14,7 @@ import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../asset
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
 import {specFor,assess} from './dungeon-readiness-reference.mjs';
+import {journeySpellAllowed,journeyItemAllowed} from './dungeon-test-contract.mjs';
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
@@ -45,7 +46,7 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  const ready=G.available(hero);
  // Attack-only through the first banked F2 clear. Unlock utility only
  // after a legitimate return; do not simulate a free unlock.
- const heal=utilityUnlocked?ready.find(i=>hero.spells[i].role==='support'):undefined;
+ const heal=utilityUnlocked&&layer>=6?ready.find(i=>hero.spells[i].role==='support'):undefined;
  // A finishing blow must not be postponed for a costly heal. Both units
  // still resolve the current round, so require enough HP for a real
  // enemy attack before choosing to end the encounter immediately.
@@ -122,11 +123,11 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  return heal!==undefined&&hero.hp/hero.stats.hp<.9?heal:-1;
 }
 function cleanse(hero,carry,layer,usage){
- if(layer<51)return;
+ if(layer<6)return;
  const debuffs=hero.statuses.filter(x=>x.kind==='debuff');
  if(!debuffs.length)return;
  let i=carry.findIndex(x=>x&&x.id==='clear_'+debuffs[0].attribute&&G.canUseBattleItem(hero,x,data.items,data.buffs));
- if(i<0&&layer>=71)i=carry.findIndex(x=>x&&x.id==='luna_stone'&&G.canUseBattleItem(hero,x,data.items,data.buffs));
+ if(i<0)i=carry.findIndex(x=>x&&x.id==='luna_stone'&&G.canUseBattleItem(hero,x,data.items,data.buffs));
  if(i<0)return;
  const item=carry[i];
  G.potion(hero,item,data.items,data.buffs);
@@ -135,6 +136,22 @@ function cleanse(hero,carry,layer,usage){
 // Only consume genuinely banked mana potions against an unearned 20F+ rank
 // boss, if the hero is below the 80% MP badge threshold plus a spell buffer.
 // Consumables are paid from the original carried inventory via G.potion.
+function consumeOwnedRecovery(hero,carry,layer,usage){
+ const priority=layer<=5?['mana']:['elixir','heal','mana','revive'];
+ for(const kind of priority){
+  const needed=kind==='mana'?hero.mp/hero.maxMp<.30:
+   kind==='heal'?hero.hp/hero.stats.hp<.48:
+   kind==='elixir'?hero.hp/hero.stats.hp<.52&&hero.mp/hero.maxMp<.55:
+   kind==='revive'?hero.hp/hero.stats.hp<.3:false;
+  if(!needed)continue;
+  const i=carry.findIndex(item=>item&&data.items.find(row=>row.id===item.id)?.kind===kind&&
+   journeyItemAllowed(layer,kind)&&G.canUseBattleItem(hero,item,data.items,data.buffs));
+  if(i<0)continue;
+  const item=carry[i];G.potion(hero,item,data.items,data.buffs);
+  carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
+  break;
+ }
+}
 function restoreRankMp(state,hero,carry,layer,fight,usage){
  if(layer<20||layer%10!==0||fight%5!==0||
   state.profile.adventurerRank>=layer||hero.mp>=hero.maxMp*.9)return;
@@ -166,13 +183,13 @@ function pack(state,start,goal,rankItems=true){
   // min_layer constrains *drop eligibility*, not ownership or packing.
   // Deep divers can pack a cleanser before reaching the floor where they
   // intend to use it. Item-use policy is enforced separately in cleanse().
-  return row&&(row.kind==='clear'&&goal>=51||row.kind==='clear_all'&&goal>=71);
+  return row&&(row.kind==='clear'&&goal>=20||row.kind==='clear_all'&&goal>=70);
  };
  const cap=G.capacity(state.profile.level);
  const rankTarget=Math.max(20,Math.ceil(start/10)*10);
  const seekingRank=rankItems&&rankTarget<=goal&&rankTarget<=100&&
   state.profile.adventurerRank<rankTarget;
- const mana=seekingRank?state.inventory.filter(item=>
+ const mana=(seekingRank||start<=5)?state.inventory.filter(item=>
   data.items.find(row=>row.id===item.id)?.kind==='mana').sort((a,b)=>
   Number(b.value)-Number(a.value)).slice(0,Math.min(3,cap)):[];
  const available=state.inventory.filter(eligible);
@@ -212,6 +229,19 @@ function pack(state,start,goal,rankItems=true){
   selected.push(item);
   const attr=item.id.slice('clear_'.length);
   allocated.set(attr,(allocated.get(attr)||0)+1);
+ }
+ // Owned healing, mana, revival and escape items are available from F6.
+ // They are not restricted by the fixed 50-fight deck's cleansing-only rule.
+ if(goal>=6)for(const item of state.inventory.filter(x=>{
+  const kind=data.items.find(row=>row.id===x.id)?.kind;
+  return ['heal','mana','elixir','revive','escape'].includes(kind);
+ }).sort((a,b)=>{
+  const weight=x=>({elixir:5,heal:4,mana:3,revive:2,escape:1})[
+   data.items.find(row=>row.id===x.id)?.kind]||0;
+  return weight(b)-weight(a);
+ })){
+  if(selected.length>=cap)break;
+  if(!selected.some(x=>x.instanceId===item.instanceId))selected.push(item);
  }
  // Once all actually-owned specialist stock has been selected, extra
  // originally owned broad-spectrum stones may fill still-empty slots.
@@ -417,7 +447,7 @@ function observeReference(state){
   if(state.best<band-1||!starts.includes(band)||p.level<s.startLevel)continue;
   const baseline=state.referenceSnapshots[band];
   const completed=state.farmingSnapshots[band]?.length||0;
-  const extra=baseline&&completed<3&&
+  const extra=baseline&&
    state.replayBanked[band]-state.referenceReplayAt[band]>=50*(completed+1);
   if(baseline&&!extra)continue;
   const active=state.circles.filter(c=>c.active);
@@ -507,12 +537,13 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
  let healCasts=0,enemyHealCasts=0,rounds=0,enemyDebuffs=0;
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
+  consumeOwnedRecovery(hero,carry,layer,usage);
   restoreRankMp(state,hero,carry,layer,fight,usage);
   const pendingGrade=layer>=20&&layer%10===0&&
    state.profile.adventurerRank<layer;
   const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route,pendingGrade),theirs=G.chooseEnemySpell(enemy,random);
-  if(!utilityUnlocked&&ours>=0&&hero.spells[ours].role!=='attack')
-   throw Error('Only attack magic is permitted before the banked F2 clear');
+  if(ours>=0&&!journeySpellAllowed(layer,utilityUnlocked,hero.spells[ours].role))
+   throw Error('Invalid journey spell before F2 return or F6 healing unlock');
   if(ours>=0&&hero.spells[ours].role==='support')healCasts++;
   if(theirs>=0&&enemy.spells[theirs].role==='support')enemyHealCasts++;
   if(theirs>=0&&enemy.spells[theirs].role==='debuff')enemyDebuffs++;
@@ -644,6 +675,15 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
      status:'ACTUAL_FIRST_ENTRY_WITH_IN_EXPEDITION_RESOURCES'};
    }
    const entryHp=percent(hero.hp,hero.stats.hp),entryMp=percent(hero.mp,hero.maxMp);
+   const active=equipped(state.circles);
+   const legalAttack=G.available(hero).some(i=>hero.spells[i].role==='attack');
+   const floorPreparation={layer,recommendedLevel:targetClearLevel(layer),level:firstLevel,
+    rank:profile.adventurerRank,spells:active.length,
+    attackPowers:active.filter(s=>s.role==='attack').map(s=>s.power),
+    attackMpCosts:active.filter(s=>s.role==='attack').map(s=>G.spellMpCost(s)),
+    availableAttack:legalAttack,mpPercent:entryMp,hpPercent:entryHp,
+    carry:carry.filter(Boolean).map(x=>x.id),bankedBestBeforeEntry:state.best,
+    ready:firstLevel>=targetClearLevel(layer)&&active.length===5&&legalAttack&&hero.hp>0};
    const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
    const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
    const manaBeforeLayer=manaCount(usage);
@@ -689,6 +729,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    const layerLoot=pending.loot.slice(lootBeforeLayer);
    state.floorAudit.push({sortie:state.sorties,layer,style,route,
     rankPendingAtEntry:layer>=20&&layer%10===0&&profile.adventurerRank<layer,
+    floorPreparation,
     attemptedFights:state.fights-fightsBeforeLayer,replay:layer<=state.best,
     bossRounds,
     entryHpPercent:entryHp,entryMpPercent:entryMp,
