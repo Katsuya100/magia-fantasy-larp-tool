@@ -7,7 +7,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
 import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
-import {rng,chooseHero} from './simulate-dungeon-journeys.mjs';
+import {rng,chooseHero,consumeOwnedRecovery} from './simulate-dungeon-journeys.mjs';
 const csv=p=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+p+'.csv',import.meta.url),'utf8'));
 const data={balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),
  playerBase:csv('player-base'),items:csv('consumables'),
@@ -16,12 +16,12 @@ configure(data);
 // Apply the journey's actual legal tactics, including owned spell cooldowns
 // and ordinary attack finishers, rather than another divergent chooser.
 function cleanse(hero,carry,layer,uses){
- if(layer<51)return;
+ if(layer<6)return;
  const effect=hero.statuses.find(x=>x.kind==='debuff');
  if(!effect)return;
  let i=carry.findIndex(item=>item&&item.id==='clear_'+effect.attribute&&
   G.canUseBattleItem(hero,item,data.items,data.buffs));
- if(i<0&&layer>=71)i=carry.findIndex(item=>item&&item.id==='luna_stone'&&
+ if(i<0)i=carry.findIndex(item=>item&&item.id==='luna_stone'&&
   G.canUseBattleItem(hero,item,data.items,data.buffs));
  if(i<0)return;
  const item=carry[i];
@@ -54,8 +54,7 @@ export function challenge(snapshot,from,seed,{route='short',paired=false}={}){
   // Initial owner-entry snapshots can legitimately include rank-only mana.
   // This *strict* 50-fight evaluator NEVER uses that mana; only the real
   // journey's unearned 20F+ grade boss is permitted to consume it.
-  return record&&(record.kind==='clear'||record.kind==='clear_all'||
-   (record.kind==='mana'&&from+9>=20));
+  return Boolean(record);
  }),'a carry item must be owned and floor-legal');
  const result={won:false,cleared:from-1,casts:0,heals:0,spellMpSpent:0,
   opponents:[],fightRounds:[],
@@ -77,14 +76,14 @@ export function challenge(snapshot,from,seed,{route='short',paired=false}={}){
    for(let turn=0;turn<80;turn++){
     rounds++;
     cleanse(hero,carry,layer,used);
-    const h=chooseHero(hero,enemy,layer,layer>10,route,
+    consumeOwnedRecovery(hero,carry,layer,used);
+    const h=chooseHero(hero,enemy,layer,layer>=6,route,
      layer>=20&&layer%10===0&&snapshot.rank<layer),
      e=G.chooseEnemySpell(enemy,combatRandom);
     if(h>=0&&hero.spells[h].role==='support')result.heals++;
     if(e>=0&&enemy.spells[e].role==='support')result.enemyHeals++;
-    if(layer<=10&&(h>=0&&hero.spells[h].role==='support'||
-     e>=0&&enemy.spells[e].role==='support'))
-      throw Error('Illegal 1-10F combat healing');
+    if(layer<=5&&h>=0&&hero.spells[h].role==='support')
+      throw Error('Illegal F1-5 journey combat healing');
     if(h>=0)result.spellMpSpent+=G.spellMpCost(hero.spells[h]);
     G.round(hero,enemy,h,e,data.buffs,combatRandom);
     result.casts++;

@@ -136,7 +136,7 @@ function cleanse(hero,carry,layer,usage){
 // Only consume genuinely banked mana potions against an unearned 20F+ rank
 // boss, if the hero is below the 80% MP badge threshold plus a spell buffer.
 // Consumables are paid from the original carried inventory via G.potion.
-function consumeOwnedRecovery(hero,carry,layer,usage){
+export function consumeOwnedRecovery(hero,carry,layer,usage){
  const priority=layer<=5?['mana']:['elixir','heal','mana','revive'];
  for(const kind of priority){
   const needed=kind==='mana'?hero.mp/hero.maxMp<.30:
