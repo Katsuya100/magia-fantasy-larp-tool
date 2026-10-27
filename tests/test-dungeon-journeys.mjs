@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {buildManifest} from '../scripts/dungeon-balance-manifest.mjs';
 import {specFor,assess} from '../scripts/dungeon-readiness-reference.mjs';
 import {chooseAdditionalFarmingBand} from '../scripts/dungeon-test-contract.mjs';
-import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero} from '../scripts/simulate-dungeon-journeys.mjs';
+import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwnedRecovery} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {rankBadgeDrop,unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
@@ -13,6 +13,21 @@ import {readFileSync} from 'node:fs';
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 configure({balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')});
 const foes=csv('enemies');
+// The deep boss mana reserve spends one genuinely owned item, and ordinary
+// deep encounters cannot burn that reserve solely for being below 82%.
+const recoveryHero=G.makeUnit({hp:100,mag:10,def:7,res:7},150,{},[],'hero');
+recoveryHero.mp=Math.round(recoveryHero.maxMp*.70);
+const carriedDose={id:'mana_xl',value:800,instanceId:'earned-mana-1'};
+const ordinaryCarry=[{...carriedDose}],ordinaryUsage={};
+consumeOwnedRecovery(recoveryHero,ordinaryCarry,99,ordinaryUsage);
+assert.equal(ordinaryCarry[0].instanceId,'earned-mana-1');
+assert.equal(Object.keys(ordinaryUsage).length,0);
+assert.ok(recoveryHero.mp<recoveryHero.maxMp);
+const bossCarry=[{...carriedDose}],bossUsage={};
+consumeOwnedRecovery(recoveryHero,bossCarry,100,bossUsage);
+assert.equal(bossCarry[0],null,'the genuine mana item must be consumed once');
+assert.equal(bossUsage.mana_xl,1);
+assert.equal(recoveryHero.mp,recoveryHero.maxMp,'the legal potion caps at actual maximum MP');
 // Prevent undoing explicit user bans on game-balance escape hatches.
 // A future new balance knob requires review, not a passing test fixture.
 const forbiddenKnobs=['xp_overlevel_decay_per_10_levels',
