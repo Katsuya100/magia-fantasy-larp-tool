@@ -660,8 +660,15 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // checkpoints. Never let an unproven fourth replay monopolize a floor
   // before the genuine 100F clear and independent rank acquisition.
   const campaignComplete=state.best>=100&&profile.adventurerRank>=100;
+  // A paid 50-fight victory is not a substitute for proving all ten
+  // individual pre-entry floors. Keep training on real previously cleared
+  // encounters until both independent proofs have actually been witnessed.
+  const fullyVerified=Object.fromEntries(eligible.map(b=>[b,
+   Boolean(state.earnedStrengthProof[b])&&
+   Array.from({length:10},(_,i)=>b+i).every(f=>
+    state.certifiedFloorStrength.has(f))]));
   return chooseAdditionalFarmingBand(eligible,state.completedReplayLoops,
-   state.earnedStrengthProof,Boolean(farmingProof)&&campaignComplete);
+   fullyVerified,Boolean(farmingProof)&&campaignComplete);
  };
  for(let sortie=0;sortie<maxSorties&&
   (state.best<100||profile.adventurerRank<100||extraBand()!==null)&&state.fights<maxFights;sortie++){
