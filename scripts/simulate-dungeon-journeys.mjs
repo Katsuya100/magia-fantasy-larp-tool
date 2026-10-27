@@ -150,13 +150,16 @@ function cleanse(hero,carry,layer,usage){
 // Only consume genuinely banked mana potions against an unearned 20F+ rank
 // boss, if the hero is below the 80% MP badge threshold plus a spell buffer.
 // Consumables are paid from the original carried inventory via G.potion.
-export function consumeOwnedRecovery(hero,carry,layer,usage){
+export function consumeOwnedRecovery(hero,carry,layer,usage,fight){
+ // Only the fifth actual encounter of a decade is the rank boss. Earlier
+ // fights at F90/F100 must not spend the boss's paid MP reserve.
+ const decadeBoss=layer>=81&&layer%10===0&&fight===layer*5;
  const priority=layer<=5?['mana']:['elixir','heal','mana','revive'];
  for(const kind of priority){
   // At a deep decade boss, spend an ACTUALLY CARRIED mana dose before
   // an underfilled finish. The unchanged threshold on ordinary floors
   // conserves potions for genuine long sorties and the shared paired gate.
-  const needed=kind==='mana'?hero.mp/hero.maxMp<(layer>=81&&layer%10===0?.82:layer>=81?.45:.30):
+  const needed=kind==='mana'?hero.mp/hero.maxMp<(decadeBoss?.82:layer>=81?.45:.30):
    kind==='heal'?hero.hp/hero.stats.hp<.48:
    kind==='elixir'?hero.hp/hero.stats.hp<.52&&hero.mp/hero.maxMp<.55:
    kind==='revive'?hero.hp/hero.stats.hp<.3:false;
@@ -612,7 +615,7 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
  let healCasts=0,enemyHealCasts=0,rounds=0,enemyDebuffs=0;
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
-  consumeOwnedRecovery(hero,carry,layer,usage);
+  consumeOwnedRecovery(hero,carry,layer,usage,fight);
   restoreRankMp(state,hero,carry,layer,fight,usage);
   restoreRankHp(state,hero,carry,layer,fight,usage);
   const pendingGrade=layer>=20&&layer%10===0&&
