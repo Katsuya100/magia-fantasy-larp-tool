@@ -379,7 +379,7 @@ function considerInkRedraw(state){
  if(!state.forceRedraw&&newBase<oldPower){
   const catchupLevels=Math.max(0,Math.ceil(10*(oldPower/newBase-1)));
   if((state.best>=80&&state.best<100)||
-     totalUpgradeStoneCost(catchupLevels)>state.stones)return;
+    (state.best>=100&&totalUpgradeStoneCost(catchupLevels)>state.stones))return;
  }
  // A knowingly weaker immediate spell can have better future stone economy
  // once the original circle's tier becomes costly. C is allowed to take that
