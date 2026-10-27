@@ -35,14 +35,16 @@ const quantile=(xs,p)=>{
 };
 export const spread=xs=>({p10:quantile(xs,.1),median:quantile(xs,.5),p90:quantile(xs,.9)});
 export const investmentRate=layer=>layer<=10?.25:layer<=20?.25+(layer-10)*.05:.75;
-// First bank all three mandatory legal replays in every unlocked decade.
-// Beyond them, the highest genuinely conquered unresolved band yields the
-// most depth-scaled stones per paid fight. Farming it does not skip earlier
-// readiness: the run still continues until ALL ten bands are proven.
+// Every decade must receive its three mandatory genuine banked replays.
+// Later loops are distributed to the LEAST trained unproven decade; when
+// equally trained, prioritize the deeper one for its depth-scaled earnings.
+// Selecting only the shallowest or only the deepest band demonstrably starves
+// the other end under the measured total-fight budget.
 export function chooseEarnedReplayBand(eligible,counts,verified,canProve){
  const required=chooseAdditionalFarmingBand(eligible,counts,verified,canProve);
  if(!canProve||eligible.some(b=>(counts[b]||0)<3))return required;
- return [...eligible].reverse().find(b=>!verified[b])??null;
+ return eligible.filter(b=>!verified[b])
+  .sort((a,b)=>(counts[a]||0)-(counts[b]||0)||b-a)[0]??null;
 }
 const circle=(role,attribute,basePower,active=true)=>({role,attribute,basePower,upgrades:0,active,ink:0});
 const actualPower=c=>strengthenedPower(c.basePower,c.upgrades);
