@@ -317,7 +317,7 @@ function chooseUpgrade(state){
    // A paid heal prevents an extra enemy round on every later fight.
    // Compare that repeatable survival benefit against raw one-hit damage,
    // without changing stone costs, limits, magic strength, or enemy rules.
-   const survivalWeight=c.role==='support'?2:1;
+   const survivalWeight=c.role==='support'?.85:1;
    return survivalWeight*(gain+.15)/(c.upgrades+1)**.25/upgradeStoneCost(c.upgrades);
   };
   return score(b)-score(a)||candidates.indexOf(a)-candidates.indexOf(b);
@@ -722,7 +722,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // ACTUAL F10 boss victory. Only then do short/long routes diverge.
   const tutorial=state.best<10;
   const goal=auditedReplayBand!==null?
-   (route==='short'?Math.min(auditedReplayBand+1,auditedReplayBand+9):auditedReplayBand+9):
+   (route==='short'?Math.min(auditedReplayBand+9,
+    auditedReplayBand+1+2*(state.completedReplayLoops[auditedReplayBand]||0)):
+    auditedReplayBand+9):
    missingRankAfterClear?profile.adventurerRank+10:
    recovering?state.best:tutorial?upcoming:
    training?trainingGoal:route==='short'?upcoming:100;
