@@ -331,8 +331,11 @@ function invest(state){
  // of permanently retaining the last quarter of the treasury.
  const survivalRecovery=state.route==='long'&&state.best>=10&&
   state.losses>=2&&state.trace.at(-1)?.defeat===true;
- const campaignCleared=state.best>=100&&state.profile.adventurerRank>=100;
- const budgetRate=campaignCleared?1:
+ // Once the first two badges are earned, invest actually banked stones
+ // promptly. This is a paid owner allocation decision, not a bonus or a
+ // change to the separate fixed reference's 75% investment ledger.
+ const veteran=state.best>=20&&state.profile.adventurerRank>=20;
+ const budgetRate=veteran?1:
   survivalRecovery?.75:investmentRate(Math.max(1,state.best+1));
  const budget=Math.floor(state.earned.stone*budgetRate+1e-8);
  // A sunk upgrade is still counted as spent after a redraw.
