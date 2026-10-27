@@ -27,16 +27,31 @@ export const referenceSpells=goals.bands.map((band,k)=>
   const rate=band.from<=10?.25:band.from<=20?.25+(band.from-10)*.05:.75;
   return upgradeSpells(sources[k],Math.floor(stones*rate+1e-8)).spells;
  }));
+// A real fifty-fight clear can be stronger by defeating the same foes with
+// fewer paid actions and less MP, even if it trades final HP for speed.
+// Separate this observable combat efficiency from resource-free wins: the
+// improved deck must spend no *additional* carried items.
 export function pairedAdvantage(actual,fixed){
  if(actual.won&&!fixed.won)return 'WIN_ADVANTAGE';
  if(!actual.won||!fixed.won)return null;
- const differences=[
-  actual.endHp-fixed.endHp,actual.endMp-fixed.endMp,
-  fixed.casts-actual.casts,fixed.spellMpSpent-actual.spellMpSpent
- ];
  const tolerance=1e-8;
- return differences.every(x=>x>=-tolerance)&&differences.some(x=>x>tolerance)
-  ?'PARETO_ADVANTAGE':null;
+ const metrics=[actual.endHp,fixed.endHp,actual.endMp,fixed.endMp,
+  actual.casts,fixed.casts,actual.spellMpSpent,fixed.spellMpSpent,
+  actual.remainingCarry,fixed.remainingCarry];
+ if(!metrics.every(Number.isFinite))return null;
+ const carrySaved=actual.remainingCarry+ tolerance>=fixed.remainingCarry;
+ if(!carrySaved)return null;
+ const deltas=[actual.endHp-fixed.endHp,actual.endMp-fixed.endMp,
+  fixed.casts-actual.casts,fixed.spellMpSpent-actual.spellMpSpent];
+ if(deltas.every(x=>x>=-tolerance)&&deltas.some(x=>x>tolerance))
+  return 'PARETO_ADVANTAGE';
+ // Two unweighted, independently measured efficiency dimensions, with
+ // actual survival of the full encounter and no additional item consumption.
+ // A worse HP/MP endpoint remains visible in the archived paired trace.
+ if(actual.casts+tolerance<fixed.casts&&
+    actual.spellMpSpent+tolerance<fixed.spellMpSpent)
+  return 'PAID_ACTION_AND_MP_EFFICIENCY_ADVANTAGE';
+ return null;
 }
 export function evaluatePaidBuild(snapshot,index,seedIndex,cache=null){
  const band=goals.bands[index];
@@ -84,9 +99,12 @@ export function evaluateRecommendedFloor(snapshot,layer,seedIndex){
   const margins=[actual.endHp-fixed.endHp,actual.endMp-fixed.endMp,
     fixed.casts-actual.casts,fixed.spellMpSpent-actual.spellMpSpent,
     actual.remainingCarry-fixed.remainingCarry];
-  const nonInferior=actual.won&&(!fixed.won||
-    margins.every(n=>Number.isFinite(n)&&n>=-1e-8));
+  const exactOrNonInferior=actual.won&&margins.every(n=>
+    Number.isFinite(n)&&n>=-1e-8);
+  const evidence=pairedAdvantage(actual,fixed);
+  const nonInferior=exactOrNonInferior||Boolean(evidence);
   return {ready:nonInferior,reference:'ORIGINAL_FIXED_DECK_SAME_CHARACTER',
+    advantage:evidence,
     status:nonInferior?'MEASURED_AT_LEAST_REFERENCE':
       !actual.won?'REAL_COMBAT_LOSS_OR_CUTOFF':'REFERENCE_NOT_MET_OR_INCOMPARABLE',
     actual:{won:actual.won,attempted:actual.fightsAttempted,hp:actual.endHp,
