@@ -370,7 +370,9 @@ assert.equal(chooseAdditionalFarmingBand([1,11],{1:7,11:4},{1:true,11:true},true
 // demanding unproven floor instead of continuously replaying cheap F1s.
 assert.equal(chooseEarnedReplayBand([1,11,91],{1:2,11:3,91:3},{},true),1);
 assert.equal(chooseEarnedReplayBand([1,11,91],{1:3,11:3,91:3},{},true),91);
-assert.equal(chooseEarnedReplayBand([1,11,91],{1:4,11:5,91:6},{91:true},true),11);
+assert.equal(chooseEarnedReplayBand([1,11,91],{1:4,11:5,91:6},{91:true},true),1);
+assert.equal(chooseEarnedReplayBand([1,11,91],{1:4,11:4,91:4},{},true),91);
+assert.equal(chooseEarnedReplayBand([1,11,91],{1:4,11:4,91:5},{},true),11);
 assert.equal(chooseEarnedReplayBand([1,11,91],{1:3,11:3,91:3},
  {1:true,11:true,91:true},true),null);
 assert.equal(chooseEarnedReplayBand([1,11,91],{1:3,11:3,91:3},{},false),null);
