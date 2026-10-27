@@ -22,7 +22,10 @@ const efficientFight={...fixedFight,endHp:60,endMp:90,
  casts:51,spellMpSpent:155};
 assert.equal(pairedAdvantage(efficientFight,fixedFight),
  'PAID_ACTION_AND_MP_EFFICIENCY_ADVANTAGE');
-assert.equal(pairedAdvantage({...efficientFight,remainingCarry:3},fixedFight),null);
+assert.equal(pairedAdvantage({...efficientFight,remainingCarry:3},fixedFight),
+ 'PAID_ACTION_AND_MP_EFFICIENCY_ADVANTAGE');
+assert.equal(pairedAdvantage({...fixedFight,remainingCarry:3},fixedFight),null,
+ 'additional item use without any real efficiency improvement proves nothing');
 assert.equal(pairedAdvantage({...efficientFight,won:false},fixedFight),null);
 assert.equal(pairedAdvantage({...efficientFight,casts:75},fixedFight),null);
 assert.equal(pairedAdvantage({...fixedFight},fixedFight),null);
