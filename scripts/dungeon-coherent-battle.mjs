@@ -77,7 +77,7 @@ export function challenge(snapshot,from,seed,{route='short',paired=false,floorCo
    for(let turn=0;turn<80;turn++){
     rounds++;
     cleanse(hero,carry,layer,used);
-    consumeOwnedRecovery(hero,carry,layer,used);
+    consumeOwnedRecovery(hero,carry,layer,used,fight);
     const h=chooseHero(hero,enemy,layer,layer>=6,route,
      layer>=20&&layer%10===0&&snapshot.rank<layer),
      e=G.chooseEnemySpell(enemy,combatRandom);
