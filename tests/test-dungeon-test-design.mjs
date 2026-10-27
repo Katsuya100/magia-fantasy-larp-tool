@@ -31,6 +31,14 @@ assert.equal(pairedAdvantage({...efficientFight,casts:75},fixedFight),null);
 assert.equal(pairedAdvantage({...fixedFight},fixedFight),null);
 assert.equal(pairedAdvantage({...fixedFight,endHp:87},fixedFight),
  'PARETO_ADVANTAGE');
+const enduranceFight={...fixedFight,endHp:100,endMp:99,casts:82,
+ spellMpSpent:320};
+assert.equal(pairedAdvantage(enduranceFight,fixedFight),
+ 'PAID_ENDURANCE_AND_MP_ADVANTAGE');
+assert.equal(pairedAdvantage({...enduranceFight,remainingCarry:3},fixedFight),null);
+assert.equal(pairedAdvantage({...enduranceFight,endMp:95},fixedFight),null);
+assert.equal(pairedAdvantage({...enduranceFight,spellMpSpent:371},fixedFight),null);
+assert.equal(pairedAdvantage({...enduranceFight,won:false},fixedFight),null);
 // The candidate's carried cures must correspond to curses actually cast by
 // authored enemies in the same fifty-fight band, never phantom effects.
 const authoredEnemies=parseCsv(readFileSync(new URL('../assets/data/dungeon-enemies.csv',import.meta.url),'utf8'));
