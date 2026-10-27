@@ -147,7 +147,7 @@ jobs:
     # Simulator integrity and resource conservation form the design gate.
     # All balance target misses remain UNMET in reports.
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

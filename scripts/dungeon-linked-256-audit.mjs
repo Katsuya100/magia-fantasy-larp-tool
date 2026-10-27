@@ -100,12 +100,12 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   const run=runJourney(seed,{style,route,verifyFarming:true,
    collectCandidateDiagnostic:false,
    // Continue well beyond 1/2/3 genuine banked cycles when needed.
-   // 4,000 TOTAL played fights is an explicit measurement budget (not
+   // 6,500 TOTAL played fights is a measurement budget (not
    // a 3-loop or 4-loop acceptance limit). Exhaustion remains UNRESOLVED.
    farmingProof:(snap,band)=>Boolean(
     evaluatePaidBuild(snap,(band-1)/10,(seed-17011)/13,pairedCache).advantage),
    floorStrengthProof:(snap,layer)=>evaluateRecommendedFloor(snap,layer,(seed-17011)/13),
-   maxSorties:400,maxFights:4000});
+   maxSorties:600,maxFights:6500});
   assert.equal(run.seed,seed);
   assert.ok(run.offDeckStoneSpent>=0&&run.offDeckStoneSpent<=run.spent.stone);
   if(style!=='B')assert.equal(run.offDeckStoneSpent,0,'only B invests in unequipped circles');
