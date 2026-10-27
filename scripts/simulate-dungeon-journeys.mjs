@@ -215,9 +215,9 @@ function pack(state,start,goal,rankItems=true){
  const rankTarget=Math.max(20,Math.ceil(start/10)*10);
  const seekingRank=rankItems&&rankTarget<=goal&&rankTarget<=100&&
   state.profile.adventurerRank<rankTarget;
- const mana=(seekingRank||start<=5||goal>=51)?state.inventory.filter(item=>
+ const mana=state.inventory.filter(item=>
   data.items.find(row=>row.id===item.id)?.kind==='mana').sort((a,b)=>
-  Number(b.value)-Number(a.value)).slice(0,Math.min(goal>=81?8:goal>=51?5:3,cap)):[];
+  Number(b.value)-Number(a.value)).slice(0,Math.min(goal>=81?8:goal>=51?5:3,cap));
  const available=state.inventory.filter(eligible);
  const specific=available.filter(item=>item.id!=='luna_stone');
  const luna=available.filter(item=>item.id==='luna_stone');
