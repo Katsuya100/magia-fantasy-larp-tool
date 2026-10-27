@@ -316,8 +316,13 @@ function chooseUpgrade(state){
  // B resumes its normal split investments once no longer stalled.
  const survivalRecovery=state.route==='long'&&state.best>=10&&
   state.losses>=2&&state.trace.at(-1)?.defeat===true;
+ // B pays the initial quarter-share detour in unequipped circles. After
+ // the F30 checkpoint it deliberately recovers its equipped deck with new,
+ // ACTUALLY EARNED stones while still permanently investing at least an
+ // eighth in the off-deck spells. No past split investment is refunded.
+ const dispersionFactor=state.best>=30?8:4;
  const offDeckDue=state.style==='B'&&state.spent.stone>0&&
-  state.offDeckStoneSpent*4<state.spent.stone;
+  state.offDeckStoneSpent*dispersionFactor<state.spent.stone;
  const eligible=offDeckDue?candidates.filter(c=>!c.active):
   candidates.filter(c=>c.active);
  const options=eligible.filter(c=>upgradeStoneCost(c.upgrades)<=state.stones);
