@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {reference,specFor,assess,stoneCost,combatFixture,expectedPowers} from '../scripts/dungeon-readiness-reference.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {pairedAdvantage} from '../scripts/dungeon-fixed-deck-pair.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 const approved=JSON.parse(readFileSync(new URL('../config/dungeon-approved-goals.v1.json',import.meta.url),'utf8'));
 assert.equal(reference.status,'CANDIDATE_NOT_USER_APPROVED','candidate may not auto-approve');
@@ -11,6 +12,22 @@ assert.deepEqual(approved.bands.map(x=>x.winRate),[[99,100],[99,100],...Array.fr
 assert.deepEqual(approved.bands.map(x=>x.winSafety),[[99,100],[99,100],...Array.from({length:8},()=>[92,95])]);
 assert.deepEqual(approved.bands.map(x=>x.winnerMedianMp),[[50,60],...Array.from({length:9},()=>[0,15])]);
 assert.equal(approved.rank.bothHpMpPercentAtLeast,80);
+// Strict 50-fight battles supply these observations. A legal build that
+// survives all real fights while spending fewer turns AND MP has established
+// a different form of improvement, even when it trades some ending HP.
+// Spending additional consumables or dying cannot earn this result.
+const fixedFight={won:true,endHp:86,endMp:95,casts:75,
+ spellMpSpent:370,remainingCarry:4};
+const efficientFight={...fixedFight,endHp:60,endMp:90,
+ casts:51,spellMpSpent:155};
+assert.equal(pairedAdvantage(efficientFight,fixedFight),
+ 'PAID_ACTION_AND_MP_EFFICIENCY_ADVANTAGE');
+assert.equal(pairedAdvantage({...efficientFight,remainingCarry:3},fixedFight),null);
+assert.equal(pairedAdvantage({...efficientFight,won:false},fixedFight),null);
+assert.equal(pairedAdvantage({...efficientFight,casts:75},fixedFight),null);
+assert.equal(pairedAdvantage({...fixedFight},fixedFight),null);
+assert.equal(pairedAdvantage({...fixedFight,endHp:87},fixedFight),
+ 'PARETO_ADVANTAGE');
 // The candidate's carried cures must correspond to curses actually cast by
 // authored enemies in the same fifty-fight band, never phantom effects.
 const authoredEnemies=parseCsv(readFileSync(new URL('../assets/data/dungeon-enemies.csv',import.meta.url),'utf8'));
