@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {buildManifest} from '../scripts/dungeon-balance-manifest.mjs';
 import {specFor,assess} from '../scripts/dungeon-readiness-reference.mjs';
 import {chooseAdditionalFarmingBand} from '../scripts/dungeon-test-contract.mjs';
-import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwnedRecovery} from '../scripts/simulate-dungeon-journeys.mjs';
+import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwnedRecovery,chooseEarnedReplayBand} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {rankBadgeDrop,unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
@@ -365,6 +365,15 @@ assert.equal(chooseAdditionalFarmingBand([1,11],{1:3,11:3},{},true),1,
 assert.equal(chooseAdditionalFarmingBand([1,11],{1:4,11:3},{},true),11);
 assert.equal(chooseAdditionalFarmingBand([1,11],{1:4,11:4},{1:true},true),11);
 assert.equal(chooseAdditionalFarmingBand([1,11],{1:7,11:4},{1:true,11:true},true),null);
+// A route must still pay all three 50-fight replays before optimizing.
+// Then it can put newly earned, depth-scaled resources into the most
+// demanding unproven floor instead of continuously replaying cheap F1s.
+assert.equal(chooseEarnedReplayBand([1,11,91],{1:2,11:3,91:3},{},true),1);
+assert.equal(chooseEarnedReplayBand([1,11,91],{1:3,11:3,91:3},{},true),91);
+assert.equal(chooseEarnedReplayBand([1,11,91],{1:4,11:5,91:6},{91:true},true),11);
+assert.equal(chooseEarnedReplayBand([1,11,91],{1:3,11:3,91:3},
+ {1:true,11:true,91:true},true),null);
+assert.equal(chooseEarnedReplayBand([1,11,91],{1:3,11:3,91:3},{},false),null);
 assert.equal(chooseAdditionalFarmingBand([1],{1:3},{},false),null,
  'without paired combat proof, no unearned superiority is certified');
 // The unproven fourth cycle must NOT keep novices farming F1-10 forever.
