@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs';
 import {pairedAdvantage} from '../scripts/dungeon-fixed-deck-pair.mjs';
 
 const arm=(overrides={})=>({won:true,endHp:75,endMp:40,casts:20,
- spellMpSpent:50,...overrides});
+ spellMpSpent:50,remainingCarry:0,...overrides});
 assert.equal(pairedAdvantage(arm(),arm({won:false})), 'WIN_ADVANTAGE');
 assert.equal(pairedAdvantage(arm({endHp:85}),arm()), 'PARETO_ADVANTAGE');
 assert.equal(pairedAdvantage(arm(),arm({endMp:50})),null);
