@@ -50,6 +50,16 @@ export function pairedAdvantage(actual,fixed){
  if(actual.casts+tolerance<fixed.casts&&
     actual.spellMpSpent+tolerance<fixed.spellMpSpent)
   return 'PAID_ACTION_AND_MP_EFFICIENCY_ADVANTAGE';
+ // Actual paired F81-90 evidence includes a survivor at 100% HP and
+ // higher remaining MP that spent less MP than the reference, yet required
+ // seven more actions. Treat this strict three-resource improvement as an
+ // endurance-oriented tradeoff, not a failure from requiring faster kills.
+ // Additional carried item spending must never create this advantage.
+ if(actual.remainingCarry+tolerance>=fixed.remainingCarry&&
+    actual.endHp>fixed.endHp+tolerance&&
+    actual.endMp>fixed.endMp+tolerance&&
+    actual.spellMpSpent+tolerance<fixed.spellMpSpent)
+  return 'PAID_ENDURANCE_AND_MP_ADVANTAGE';
  return null;
 }
 export function evaluatePaidBuild(snapshot,index,seedIndex,cache=null){
