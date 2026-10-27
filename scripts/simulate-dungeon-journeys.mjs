@@ -59,7 +59,11 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
   !(pendingGrade&&String(enemy.id).startsWith('boss_l'))){
   const maxIncoming=Math.max(0,...enemy.spells.filter(s=>s?.role==='attack')
    .map(s=>G.damage(enemy,hero,s,()=>1)));
-  if(hero.hp>maxIncoming*1.25){
+  // When approaching the final boss of a cleared decade, keep enough
+  // real HP to finish the full expedition. A faster kill is not always
+  // preferable to a paid heal when the next boss is already known.
+  if(hero.hp>maxIncoming*1.25&&
+   (layer<30||layer%10!==0||hero.hp/hero.stats.hp>=.90)){
    const finisher=attacks.find(i=>G.damage(hero,enemy,hero.spells[i],()=>1)>=enemy.hp);
    if(finisher!==undefined)return finisher;
   }
@@ -86,7 +90,7 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  const healBelow=layer===10&&utilityUnlocked?.95:
   rankBoss?.95:
   route==='long'&&layer>=11&&layer<=20?.80:
-  layer>=81?.75:.70;
+  layer>=30&&layer%10===0?.90:layer>=81?.75:.70;
  if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
   (layer!==10||hero.mp/hero.maxMp>.85))return heal;
  // Use the already equipped law-defense circle only when it can protect
