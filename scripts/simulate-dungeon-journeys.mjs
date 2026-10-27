@@ -373,11 +373,14 @@ function considerInkRedraw(state){
  const used=5;
  const newBase=inkEnhancedAnalysis({power:candidate.basePower},used).power;
  const oldPower=actualPower(candidate);
- // Before the first 100F clear, an 80F+ redraw that *immediately*
- // weakens an equipped spell is reckless: no upgrade transfers, and the
- // remaining earned stone budget might not restore its power by the boss.
- // Keep ink in the bank rather than forcing a strategically bad redraw.
- if(!state.forceRedraw&&state.best>=80&&state.best<100&&newBase<oldPower)return;
+ // Redraws never refund paid upgrades. Before risking a weaker
+ // replacement, require enough already banked stones to catch its power up;
+ // 80-99F retains its conservative first-clear survival rule.
+ if(!state.forceRedraw&&newBase<oldPower){
+  const catchupLevels=Math.max(0,Math.ceil(10*(oldPower/newBase-1)));
+  if((state.best>=80&&state.best<100)||
+     totalUpgradeStoneCost(catchupLevels)>state.stones)return;
+ }
  // A knowingly weaker immediate spell can have better future stone economy
  // once the original circle's tier becomes costly. C is allowed to take that
  // investment risk, but its actual farming, losses, and power are measured.
