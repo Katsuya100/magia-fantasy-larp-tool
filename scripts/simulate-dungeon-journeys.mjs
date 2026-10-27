@@ -153,7 +153,10 @@ function cleanse(hero,carry,layer,usage){
 export function consumeOwnedRecovery(hero,carry,layer,usage){
  const priority=layer<=5?['mana']:['elixir','heal','mana','revive'];
  for(const kind of priority){
-  const needed=kind==='mana'?hero.mp/hero.maxMp<(layer>=81?.45:.30):
+  // At a deep decade boss, spend an ACTUALLY CARRIED mana dose before
+  // an underfilled finish. The unchanged threshold on ordinary floors
+  // conserves potions for genuine long sorties and the shared paired gate.
+  const needed=kind==='mana'?hero.mp/hero.maxMp<(layer>=81&&layer%10===0?.82:layer>=81?.45:.30):
    kind==='heal'?hero.hp/hero.stats.hp<.48:
    kind==='elixir'?hero.hp/hero.stats.hp<.52&&hero.mp/hero.maxMp<.55:
    kind==='revive'?hero.hp/hero.stats.hp<.3:false;
