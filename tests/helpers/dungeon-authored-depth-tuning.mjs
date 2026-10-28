@@ -10,7 +10,7 @@ const authoredMagIncreases=Object.freeze({
   "boss_l050": 0.4,
   "boss_l079": 0.5,
   "boss_l080": 1.8,
-  "boss_l090": 0.6
+  "boss_l090": 2.6
 });
 export function depthRetunedEnemies(original){
  if(original.length!==500)throw Error('Expected full authored 500-enemy roster');
@@ -26,7 +26,8 @@ export function depthRetunedEnemies(original){
    if(row.id==='boss_l010')return {...row,hp:'130',mag:'5'};
    if(layer===10)return {...row,mag:'3'};
    const hp=layer===1&&i%5!==4?Number(row.hp):
-    Math.max(20,Math.round(Number(row.hp)*introHp[layer-1]));
+    Math.max(20,Math.round(Number(row.hp)*
+     (layer===1?.50:introHp[layer-1])));
    return {...row,hp:String(hp),
     mag:String(introMag[layer-1]+(i%5===4?1:0))};
   }
