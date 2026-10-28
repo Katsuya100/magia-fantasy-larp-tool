@@ -140,7 +140,7 @@ for(const entry of manifest.entries){
 }
 const find=id=>manifest.entries.find(entry=>entry.id===id);
 assert.equal(find('csv.balance.magic_stone_drop_chance.value').defaultValue,.30);
-assert.equal(find('csv.balance.magic_stone_drop_chance_layer_150.value').defaultValue,.90);
+assert.equal(find('csv.balance.magic_stone_drop_count_layer_150.value').defaultValue,3);
 assert.equal(find('csv.balance.level_max.value').defaultValue,150);
 assert.equal(find('ink.bossDropChance').defaultValue,.20);
 assert.equal(find('upgrade.initialCostSteps').defaultValue,20);
