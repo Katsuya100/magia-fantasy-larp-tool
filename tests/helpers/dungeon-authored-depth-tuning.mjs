@@ -20,12 +20,14 @@ export function depthRetunedEnemies(original){
   const factor=bandFactors[band];
   // Author introductory durability and offense without a hidden level factor.
   // Levels 1-5 are fragile; layers 6-9 add genuine HP and attack pressure.
-  const introHp=[.50,.50,.50,.50,.50,.65,.70,.80,.90];
+  const introHp=[1,.50,.50,.50,.50,.50,.70,.80,.90];
   const introMag=[1,1,1,1,1,1,2,2,3];
   if(!factor){
-   if(row.id==='boss_l010')return {...row,hp:'130'};
+   if(row.id==='boss_l010')return {...row,hp:'130',mag:'5'};
    if(layer===10)return {...row,mag:'3'};
-   return {...row,hp:String(Math.max(20,Math.round(Number(row.hp)*introHp[layer-1]))),
+   const hp=layer===1&&i%5!==4?Number(row.hp):
+    Math.max(20,Math.round(Number(row.hp)*introHp[layer-1]));
+   return {...row,hp:String(hp),
     mag:String(introMag[layer-1]+(i%5===4?1:0))};
   }
   // Preserve the exact integer-boundary outcome of the final two depth
