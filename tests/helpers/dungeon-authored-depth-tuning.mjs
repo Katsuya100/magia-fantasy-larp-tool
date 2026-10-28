@@ -10,7 +10,7 @@ const authoredMagIncreases=Object.freeze({
   "boss_l050": 0.4,
   "boss_l079": 0.5,
   "boss_l080": 1.8,
-  "boss_l090": 2.0
+  "boss_l090": 0.6
 });
 export function depthRetunedEnemies(original){
  if(original.length!==500)throw Error('Expected full authored 500-enemy roster');
