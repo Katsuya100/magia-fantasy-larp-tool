@@ -653,7 +653,7 @@ assert.equal(($('battleItems').innerHTML.match(/class="tile-item-effect item-eff
  assert.equal($('enemyCombatant').dataset.defeated,'false','fresh opponent appears only after starting next layer');
  assert.equal(p.deepestReachedLayer,2,'descending into the next layer counts as arrival');
  assert.equal(p.deepestReturnedLayer,1,'descending into the next layer does not count as a return');
- assert.equal(p.run.enemy.level,0,'real second-layer battle uses the approved novice-only enemy level');
+ assert.equal(p.run.enemy.level,1,'real second-layer battle uses ordinary shared Lv1 growth');
  assert.equal(p.run.hero.hp,hpAtCheckpoint,'continuation carries HP');
  assert.equal(p.run.loot.length,pendingLoot,'rewards remain unconfirmed');
  // Verify the photo+analysis persists through the second attack.
