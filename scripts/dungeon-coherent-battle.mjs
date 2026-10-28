@@ -58,7 +58,7 @@ export function challenge(snapshot,from,seed,{route='short',paired=false,floorCo
   return Boolean(record);
  }),'a carry item must be owned and floor-legal');
  const result={won:false,cleared:from-1,casts:0,heals:0,spellMpSpent:0,
-  opponents:[],fightRounds:[],
+  opponents:[],fightRounds:[],damageTaken:0,hpRecovered:0,mpRecovered:0,cutoff:false,
   enemyHeals:0,used,bossPreRecovery:null,bossRankEligible:null,firstLoss:null,
   remainingCarry:null,endHp:null,endMp:null,
   startLevel:snapshot.level,endLevel:snapshot.level,fightsAttempted:0,
@@ -76,8 +76,11 @@ export function challenge(snapshot,from,seed,{route='short',paired=false,floorCo
    let victorious=false,rounds=0;
    for(let turn=0;turn<80;turn++){
     rounds++;
+    const itemHpBefore=hero.hp,itemMpBefore=hero.mp;
     cleanse(hero,carry,layer,used);
     consumeOwnedRecovery(hero,carry,layer,used,fight);
+    result.hpRecovered+=Math.max(0,hero.hp-itemHpBefore);
+    result.mpRecovered+=Math.max(0,hero.mp-itemMpBefore);
     const h=chooseHero(hero,enemy,layer,layer>=6,route,
      layer>=20&&layer%10===0&&snapshot.rank<layer),
      e=G.chooseEnemySpell(enemy,combatRandom);
@@ -85,14 +88,25 @@ export function challenge(snapshot,from,seed,{route='short',paired=false,floorCo
     if(e>=0&&enemy.spells[e].role==='support')result.enemyHeals++;
     if(layer<=5&&h>=0&&hero.spells[h].role==='support')
       throw Error('Illegal F1-5 journey combat healing');
-    if(h>=0)result.spellMpSpent+=G.spellMpCost(hero.spells[h]);
-    G.round(hero,enemy,h,e,data.buffs,combatRandom);
+    // Count the spell actually cast, including a possible Chaos redirection.
+    const spellMpBefore=hero.mp;
+    const metrics=event=>{
+     if(event.side==='enemy'&&['attack','basic'].includes(event.role)||
+        event.side==='hero'&&event.role==='burn')
+      result.damageTaken+=event.amount;
+     if(event.side==='hero'&&['support','revive'].includes(event.role))
+      result.hpRecovered+=event.amount;
+    };
+    metrics.metricsOnly=true;
+    G.round(hero,enemy,h,e,data.buffs,combatRandom,metrics);
+    result.spellMpSpent+=Math.max(0,spellMpBefore-hero.mp);
     result.casts++;
     if(hero.hp<=0)break;
     if(enemy.hp<=0){victorious=true;break;}
    }
    if(paired)result.fightRounds.push(rounds);
    if(!victorious){
+    result.cutoff=hero.hp>0&&enemy.hp>0&&rounds===80;
     result.firstLoss=layer;
     result.firstLossDetail={enemy:enemy.id,enemyLevel:enemy.level,
      enemyHp:enemy.hp,enemyMaxHp:enemy.stats.hp,
@@ -113,7 +127,7 @@ export function challenge(snapshot,from,seed,{route='short',paired=false,floorCo
      {adventurerRank:Math.min(snapshot.rank,layer-10)}));
    }
    hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
-   G.recoverVictoryMp(hero,layer);
+   result.mpRecovered+=G.recoverVictoryMp(hero,layer);
   }
   result.cleared=layer;
  }

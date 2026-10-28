@@ -329,7 +329,11 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  const actions=[{u:player,t:enemy,sp:ps,name:'自分',side:'hero'},{u:enemy,t:player,sp:es,name:'敵',side:'enemy'}],log=[];
  const snapshot=u=>({...u,statuses:u.statuses.map(x=>({...x})),cooldowns:[...u.cooldowns]});
  const publish=(a,role,attribute,message,amount=0)=>{
-  if(onStep)onStep({side:a.side,role,attribute,text:message,amount,
+  if(!onStep)return;
+  const event={side:a.side,role,attribute,text:message,amount};
+  // Combat-only accounting needs the resolved values, not copied animation frames.
+  if(onStep.metricsOnly===true){onStep(event);return;}
+  onStep({...event,
    // Visual-only: this is not used by casting, damage, or resource calculations.
    upgradeLevel:['attack','defense','support','debuff'].includes(role)?a.sp?.upgradeLevel??0:0,
    hero:snapshot(player),enemy:snapshot(enemy)});

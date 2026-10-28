@@ -37,12 +37,21 @@ export function pairedTradeoffs(actual,fixed){
   actions=fixed.casts-actual.casts,spentMp=fixed.spellMpSpent-actual.spellMpSpent;
  const carry=Number.isFinite(actual.remainingCarry)&&Number.isFinite(fixed.remainingCarry)
   ?actual.remainingCarry-fixed.remainingCarry:null;
- return {hp,mp,actions,spentMp,carry,
+ const extra=(key,reverse=false)=>Number.isFinite(actual[key])&&Number.isFinite(fixed[key])
+  ?reverse?fixed[key]-actual[key]:actual[key]-fixed[key]:null;
+ const countUsed=b=>b.used&&typeof b.used==='object'?
+  Object.values(b.used).reduce((n,v)=>n+Number(v||0),0):null;
+ const actualUsed=countUsed(actual),fixedUsed=countUsed(fixed);
+ const itemsUsed=actualUsed!==null&&fixedUsed!==null?actualUsed-fixedUsed:null;
+ return {hp,mp,actions,spentMp,carry,itemsUsed,
+  damageAvoided:extra('damageTaken',true),
+  hpRecoveryDelta:extra('hpRecovered'),mpRecoveryDelta:extra('mpRecovered'),
   fasterAndCheaper:actions>1e-8&&spentMp>1e-8,
   enduranceTradeoff:hp>1e-8&&mp>1e-8&&spentMp>1e-8&&actions<0};
 }
 export function pairedAdvantage(actual,fixed){
- if(typeof actual?.won!=='boolean'||typeof fixed?.won!=='boolean')return null;
+ if(typeof actual?.won!=='boolean'||typeof fixed?.won!=='boolean'||
+    actual.cutoff===true||fixed.cutoff===true)return null;
  const deltas=pairedTradeoffs(actual,fixed);
  if(!deltas)return null;
  if(actual.won&&!fixed.won)return 'WIN_ADVANTAGE';

@@ -71,10 +71,12 @@ for(const p of economy.policies){
     assert.equal(candidate.unbankedStone,0);
     assert.equal(candidate.unbankedInk,0);
     assert.ok(candidate.level>=goals.targetLevelCheckpoints[String(band.to)]);
-    const {actual,fixed,advantage}=evaluatePaidBuild(candidate,index,i);
+    const {actual,fixed,advantage,tradeoffs}=evaluatePaidBuild(candidate,index,i);
     const legacy=legacyPairedAdvantage(actual,fixed);
-    if(legacy!==Boolean(advantage))changedPairedRecords++;
-    observations.push({loops,candidate,actual,fixed,advantage,legacy});
+    // Historical predicate is diagnostic-only; truncated battles are never proof.
+    const legacyValid=legacy&&!actual.cutoff&&!fixed.cutoff;
+    if(legacyValid!==Boolean(advantage))changedPairedRecords++;
+    observations.push({loops,candidate,actual,fixed,advantage,legacy:legacyValid,tradeoffs});
    }
    if(!observations.length){missing++;samples.push({
     seed:owner.seed,status:'NO_BANKED_REPLAY',observedLoops:0,
@@ -100,6 +102,7 @@ for(const p of economy.policies){
     progression:observations.map(x=>({loops:x.loops,won:x.actual.won,
      referenceWon:x.fixed.won,advantage:x.advantage,
      legacyWouldPass:x.legacy,
+     tacticalTradeoffs:x.tradeoffs,
      hpDelta:x.actual.endHp-x.fixed.endHp,
      mpDelta:x.actual.endMp-x.fixed.endMp,
      roundsSaved:x.fixed.casts-x.actual.casts,
@@ -108,9 +111,13 @@ for(const p of economy.policies){
     investedStones:candidate.spent.stone,earnedInk:candidate.earned.ink,
     spentInk:candidate.spent.ink,ownedItems:candidate.carry.length,
     actual:{won:actual.won,hp:actual.endHp,mp:actual.endMp,rounds:actual.casts,
-     spentMp:actual.spellMpSpent,firstLoss:actual.firstLoss},
+     spentMp:actual.spellMpSpent,firstLoss:actual.firstLoss,
+     damageTaken:actual.damageTaken,hpRecovered:actual.hpRecovered,
+     mpRecovered:actual.mpRecovered,itemsUsed:actual.used},
     fixed:{won:fixed.won,hp:fixed.endHp,mp:fixed.endMp,rounds:fixed.casts,
-     spentMp:fixed.spellMpSpent,firstLoss:fixed.firstLoss}});
+     spentMp:fixed.spellMpSpent,firstLoss:fixed.firstLoss,
+     damageTaken:fixed.damageTaken,hpRecovered:fixed.hpRecovered,
+     mpRecovered:fixed.mpRecovered,itemsUsed:fixed.used}});
   }
   const row={style:p.style,route:p.route,band:band.from+'-'+band.to,
    population:goals.strictSamples,observed,missing,stronger,

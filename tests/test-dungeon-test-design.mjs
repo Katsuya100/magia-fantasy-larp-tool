@@ -29,6 +29,21 @@ assert.equal(pairedAdvantage({...fixedFight,remainingCarry:3},fixedFight),null);
 assert.equal(pairedAdvantage({...fixedFight,won:false},fixedFight),null);
 assert.equal(pairedAdvantage(fixedFight,{...fixedFight,won:false}),'WIN_ADVANTAGE');
 assert.equal(pairedAdvantage({...fixedFight,endHp:NaN},fixedFight),null);
+assert.equal(pairedAdvantage({...fixedFight,cutoff:true}, {...fixedFight,won:false}),null,
+ 'a combat cutoff is never an earned win advantage');
+assert.equal(pairedAdvantage(fixedFight,{...fixedFight,won:false,cutoff:true}),null,
+ 'reference cutoff must not become proof of a stronger deck');
+const richActual={...fixedFight,damageTaken:9,hpRecovered:30,mpRecovered:12,
+ used:{heal_s:2,clear_flame:1}};
+const richFixed={...fixedFight,damageTaken:20,hpRecovered:10,mpRecovered:4,
+ used:{heal_s:1}};
+const diagnosis=pairedTradeoffs(richActual,richFixed);
+assert.equal(diagnosis.damageAvoided,11);
+assert.equal(diagnosis.hpRecoveryDelta,20);
+assert.equal(diagnosis.mpRecoveryDelta,8);
+assert.equal(diagnosis.itemsUsed,2);
+assert.equal(pairedAdvantage(richActual,richFixed),null,
+ 'real recovery and damage improvements do not override the formal four metrics');
 const enduranceFight={...fixedFight,endHp:100,endMp:99,casts:82,spellMpSpent:320};
 assert.equal(pairedAdvantage(enduranceFight,fixedFight),null);
 assert.equal(pairedTradeoffs(enduranceFight,fixedFight).enduranceTradeoff,true);
