@@ -18,16 +18,13 @@ export function depthRetunedEnemies(original){
   const layer=Math.floor(i/5)+1;
   const band=Math.floor((layer-1)/10)*10+1;
   const factor=bandFactors[band];
-  // Early F7-F10 normals move from the one-hit tutorial into a gradually
-  // more threatening combat band. Only authored MAG changes; shared stats,
-  // spell powers, original HP and endless-layer growth are untouched.
-  const tutorialMag={7:16,8:20,9:26,10:30}[layer];
+  // These are authored *base MAG* values, not runtime level multipliers.
+  // A weak first five layers develops through levels 6-10; the priest boss
+  // retains its independently authored HP/MAG and multi-action encounter.
+  const introMag=[1,1,1,1,1,2,2,3,4,5];
   if(!factor){
-   // F10 priest durability is authored for a genuine fourth player action.
    if(row.id==='boss_l010')return {...row,hp:'130'};
-   if(tutorialMag!==undefined&&i%5!==4)
-    return {...row,mag:String(tutorialMag+Number(row.mag)-7)};
-   return {...row};
+   return {...row,mag:String(introMag[layer-1]+(i%5===4?1:0))};
   }
   // Preserve the exact integer-boundary outcome of the final two depth
   // refinements. These are authored CSV values, never runtime multipliers.

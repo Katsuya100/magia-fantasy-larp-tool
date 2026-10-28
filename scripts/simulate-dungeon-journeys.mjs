@@ -107,7 +107,8 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // Use the already equipped law-defense circle only when it can protect
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
- const guard=utilityUnlocked?ready.find(i=>hero.spells[i].role==='defense'):undefined;
+ const guard=journeySpellAllowed(layer,utilityUnlocked,'defense')
+  ?ready.find(i=>hero.spells[i].role==='defense'):undefined;
  // A law ward is not generic armor: it only protects against law damage
  // and law curses. Casting it merely because HP is low against flame or
  // gravity opponents wastes the paid turn and can cause preventable losses.

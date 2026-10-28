@@ -82,7 +82,7 @@ assert.equal(notYet.length,1);
 assert.equal(notYet[0].id,'mana_s','cleansers unavailable at floor 19');
 for(const layer of [100,101,150]){
  const loot=G.drops(items,collections,150,()=>0,{layer});
- assert.equal(loot.length,9);
+ assert.equal(loot.length,11,'a deep stone hit yields three real stones');
  const potions=loot.filter(x=>x.type==='use');
  assert.equal(potions.length,3);
  assert.ok(potions.every(x=>x.id==='heal_xl'&&x.value>=G.rollPotionValue(items.find(i=>i.id==='heal_xl'),layer,()=>0)),'numeric rewards scale to the target level at depth '+layer);
