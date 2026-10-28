@@ -132,8 +132,8 @@ for(const tier of CONSUMABLE_TIERS){
  assert.ok(!eligibleConsumables(items,69,tier).some(x=>x.id==='luna_stone'),'no luna stone at layer 69, tier '+tier);
  assert.ok(eligibleConsumables(items,70,tier).some(x=>x.id==='luna_stone'),'luna stone starts at layer 70, tier '+tier);
 }
-assert.equal(bonusConsumable(items,69,scriptedRoll([.999,.999,.999,.95])).id,'clear_chaos','layer 69 reward excludes luna stone');
-assert.equal(bonusConsumable(items,70,scriptedRoll([.999,.999,.999,.95])).id,'luna_stone','layer 70 reward can include luna stone');
+assert.equal(bonusConsumable(items,69,scriptedRoll([.999,.999,.999,.875])).id,'clear_chaos','layer 69 reward excludes luna stone');
+assert.equal(bonusConsumable(items,70,scriptedRoll([.999,.999,.999,.875])).id,'luna_stone','layer 70 reward can include luna stone');
 assert.equal(G.rollPotionValue(items.find(x=>x.id==='escape_scroll'),100,()=>0),0);
 assert.equal(G.rollPotionValue(items.find(x=>x.id==='life_ruby'),100,()=>0),0);
 for(const [id,tier,start,value] of [['elixir_s','small',30,35],['elixir_m','medium',55,65],['elixir_l','large',80,100]]){

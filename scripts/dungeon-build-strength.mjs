@@ -20,6 +20,23 @@ const percentile=(values,q)=>{
  const sorted=[...values].sort((a,b)=>a-b);
  return sorted[Math.floor((sorted.length-1)*q)];
 };
+// Historical classification is audit-only. Never use this to certify readiness.
+const legacyPairedAdvantage=(actual,fixed)=>{
+ if(typeof actual?.won!=='boolean'||typeof fixed?.won!=='boolean')return false;
+ if(actual.won&&!fixed.won)return true;
+ if(!actual.won||!fixed.won)return false;
+ const metrics=[actual.endHp,fixed.endHp,actual.endMp,fixed.endMp,
+  actual.casts,fixed.casts,actual.spellMpSpent,fixed.spellMpSpent,
+  actual.remainingCarry,fixed.remainingCarry];
+ if(!metrics.every(Number.isFinite))return false;
+ const tol=1e-8;
+ const deltas=[actual.endHp-fixed.endHp,actual.endMp-fixed.endMp,
+  fixed.casts-actual.casts,fixed.spellMpSpent-actual.spellMpSpent];
+ return (deltas.every(n=>n>=-tol)&&deltas.some(n=>n>tol))||
+  (actual.casts+tol<fixed.casts&&actual.spellMpSpent+tol<fixed.spellMpSpent)||
+  (actual.remainingCarry+tol>=fixed.remainingCarry&&actual.endHp>fixed.endHp+tol&&
+   actual.endMp>fixed.endMp+tol&&actual.spellMpSpent+tol<fixed.spellMpSpent);
+};
 const report={schemaVersion:'dungeon-paired-build-strength-v1',
  method:'Actually earned, banked prepared and later re-farmed snapshots versus original fixed deck. No unapproved candidate reference is an entry gate. Equal owner level, base, rank, legal inventory, HP/MP, tactics, enemies and per-fight seeds.',
  candidatePromoted:false,strictSamples:goals.strictSamples,cases:[],C_REDRAW_STRATEGY:[]};
@@ -27,7 +44,8 @@ for(const p of economy.policies){
  const owners=p.ownerEntries;
  assert.equal(owners.length,goals.strictSamples,'only independent real owner snapshots');
  for(const [index,band] of goals.bands.entries()){
-  let stronger=0,observed=0,missing=0,actualWins=0,fixedWins=0;
+  let stronger=0,legacyStronger=0,changedSeedVeridcts=0,
+   changedPairedRecords=0,observed=0,missing=0,actualWins=0,fixedWins=0;
   const deltas=[],rounds=[],sourceLoops=[],samples=[],reasonCounts={};
   for(let i=0;i<goals.strictSamples;i++){
    const owner=owners[i];
@@ -54,13 +72,19 @@ for(const p of economy.policies){
     assert.equal(candidate.unbankedInk,0);
     assert.ok(candidate.level>=goals.targetLevelCheckpoints[String(band.to)]);
     const {actual,fixed,advantage}=evaluatePaidBuild(candidate,index,i);
-    observations.push({loops,candidate,actual,fixed,advantage});
+    const legacy=legacyPairedAdvantage(actual,fixed);
+    if(legacy!==Boolean(advantage))changedPairedRecords++;
+    observations.push({loops,candidate,actual,fixed,advantage,legacy});
    }
    if(!observations.length){missing++;samples.push({
     seed:owner.seed,status:'NO_BANKED_REPLAY',observedLoops:0,
     cutoffReason:budgetCutoff});continue;}
    // First independently proven stronger state wins the question "can the
    // journey create one?". If none succeeds, retain the last real observation.
+   const legacyCertified=observations.some(x=>x.legacy);
+   const formalCertified=observations.some(x=>Boolean(x.advantage));
+   if(legacyCertified)legacyStronger++;
+   if(legacyCertified!==formalCertified)changedSeedVeridcts++;
    const chosen=observations.find(x=>x.advantage)??observations.at(-1);
    const {candidate,actual,fixed,advantage,loops}=chosen;
    if(advantage){stronger++;reasonCounts[advantage]=(reasonCounts[advantage]||0)+1;}
@@ -75,6 +99,7 @@ for(const p of economy.policies){
     loops,observedLoops:observations.length,
     progression:observations.map(x=>({loops:x.loops,won:x.actual.won,
      referenceWon:x.fixed.won,advantage:x.advantage,
+     legacyWouldPass:x.legacy,
      hpDelta:x.actual.endHp-x.fixed.endHp,
      mpDelta:x.actual.endMp-x.fixed.endMp,
      roundsSaved:x.fixed.casts-x.actual.casts,
@@ -89,6 +114,8 @@ for(const p of economy.policies){
   }
   const row={style:p.style,route:p.route,band:band.from+'-'+band.to,
    population:goals.strictSamples,observed,missing,stronger,
+   legacyStronger,changedSeedVeridcts,changedPairedRecords,
+   legacyPassed:legacyStronger===goals.strictSamples,
    actualWinRate:100*actualWins/goals.strictSamples,
    fixedPairedWinRate:100*fixedWins/goals.strictSamples,
    medianMpDelta:percentile(deltas,.5),
@@ -164,7 +191,11 @@ for(const route of ['short','long']){
 assert.equal(report.C_REDRAW_STRATEGY.length,2);
 
 report.summary={bands:60,proven:report.cases.filter(x=>x.passed).length,
- insufficient:report.cases.filter(x=>!x.passed).length};
+ insufficient:report.cases.filter(x=>!x.passed).length,
+ legacyPassingBands:report.cases.filter(x=>x.legacyPassed).length,
+ changedBandVerdicts:report.cases.filter(x=>x.legacyPassed!==x.passed).length,
+ changedSeedVerdicts:report.cases.reduce((sum,row)=>sum+row.changedSeedVeridcts,0),
+ changedPairedRecords:report.cases.reduce((sum,row)=>sum+row.changedPairedRecords,0)};
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
 writeFileSync(new URL('../reports/dungeon-paired-build-strength-v1.json',import.meta.url),
  JSON.stringify(report,null,2)+'\n');
