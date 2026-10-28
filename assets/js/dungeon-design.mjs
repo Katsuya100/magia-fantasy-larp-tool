@@ -13,6 +13,16 @@ export function rollConsumableTier(layer,r=Math.random){
  for(let i=0;i<3;i++)if(r()<depth)tier++;
  return CONSUMABLE_TIERS[tier];
 }
+// Fractions give each of seven cleansers an exact, unrounded weight share.
+const parseConsumableWeight=value=>{
+ const fraction=/^(\d+)\/(\d+)$/.exec(String(value));
+ return fraction?Number(fraction[1])/Number(fraction[2]):Number(value);
+};
+export function consumableWeight(item,layer){
+ const value=Number(layer)>=71&&item.weight_71_plus?item.weight_71_plus:
+  Number(layer)>=51&&item.weight_51_70?item.weight_51_70:item.weight;
+ return parseConsumableWeight(value);
+}
 export function eligibleConsumables(items,layer,tier){
  return items.filter(row=>Number(row.min_layer||1)<=layer &&
   (row.kind==='clear'||row.kind==='clear_all'||row.kind==='escape'||row.kind==='revive'||row.tier===tier||(row.kind==='elixir'&&tier==='extreme'&&row.tier==='large')));
@@ -115,4 +125,4 @@ export function bonusCollection(collections,layer,r=Math.random){
  for(const x of pool){v-=Number(x.weight);if(v<0)return x;}
  return pool.at(-1);
 }
-export function bonusConsumable(items,layer,r=Math.random){const pool=eligibleConsumables(items,layer,rollConsumableTier(layer,r));let v=r()*pool.reduce((n,x)=>n+Number(x.weight),0);for(const x of pool){v-=Number(x.weight);if(v<0)return x;}return pool.at(-1);}
+export function bonusConsumable(items,layer,r=Math.random){const pool=eligibleConsumables(items,layer,rollConsumableTier(layer,r));let v=r()*pool.reduce((n,x)=>n+consumableWeight(x,layer),0);for(const x of pool){v-=consumableWeight(x,layer);if(v<0)return x;}return pool.at(-1);}

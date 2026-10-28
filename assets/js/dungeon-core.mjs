@@ -1,5 +1,5 @@
 import {num,level,range} from './dungeon-tuning.mjs';
-import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,CONSUMABLE_TIERS,targetClearLevel} from './dungeon-design.mjs';
+import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,consumableWeight,CONSUMABLE_TIERS,targetClearLevel} from './dungeon-design.mjs';
 import {MAGIC_INK_ID,bossDropsMagicInk} from './dungeon-ink.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
 export const ROLES=['attack','defense','support','debuff'];
@@ -51,13 +51,8 @@ export function statusDuration(spell){
 export const defenseDuration=statusDuration; // Compatibility for existing API consumers.
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
 export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
-// A purchased offensive circle upgrade can eventually improve mana efficiency.
-// The same cost and required paid upgrade level apply to every combatant;
-// savings start at the genuine 16th and 42nd paid upgrades, capped at 1 MP.
-export const spellMpCost=spell=>Math.max(1,mpCost(spell.basePower??spell.power)-
- (spell.role==='attack'?
-  (Number(spell.upgradeLevel||0)>=16?1:0)+
-  (Number(spell.upgradeLevel||0)>=42?1:0):0));
+// Upgrades change effects, never the original circle's MP cost.
+export const spellMpCost=spell=>mpCost(spell.basePower??spell.power);
 const levelRow=l=>level(l);
 const growthKeys=['hp','mag','def','res'];
 export const startingBase=(r=Math.random)=>Object.fromEntries(growthKeys.map(k=>[k,roll(...range(k),r)]));
@@ -103,28 +98,28 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// Reward magic stones increasingly with dungeon depth, including beyond
-// the player Lv150 cap. Farming and first clears share the same probability.
-// Continuous geometric interpolation avoids sudden jumps at rank checkpoints.
-// Keep the existing (playerLevel, layer, firstClear) signature for callers.
-export function magicStoneDropChance(_playerLevel,layer=1,_firstClear=false){
- const start=num('magic_stone_drop_chance');
- const end=num('magic_stone_drop_chance_layer_150');
- const maxLayer=num('magic_stone_drop_curve_end_layer');
- if(!(start>0&&end>=start&&end<=1&&Number.isSafeInteger(maxLayer)&&maxLayer>1))
+// Chance is constant; the number of actual stones on a hit grows with depth.
+export function magicStoneDropChance(_playerLevel,_layer=1,_firstClear=false){
+ return num('magic_stone_drop_chance');
+}
+export function magicStoneCountPerHit(layer=1){
+ const maximum=num('magic_stone_drop_count_layer_150');
+ const endLayer=num('magic_stone_drop_curve_end_layer');
+ if(!(maximum>=1&&Number.isSafeInteger(endLayer)&&endLayer>1))
   throw Error('魔導石の排出カーブの設定が不正です。');
  const raw=Number(layer);
- const depth=Number.isFinite(raw)?Math.min(maxLayer,Math.max(1,Math.floor(raw))):1;
- const progress=(depth-1)/(maxLayer-1);
- return Math.min(1,Number((start*Math.pow(end/start,progress)).toFixed(12)));
+ const depth=Number.isFinite(raw)?Math.min(endLayer,Math.max(1,Math.floor(raw))):1;
+ return Math.pow(maximum,(depth-1)/(endLayer-1));
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
- const stoneChance=magicStoneDropChance(context.playerLevel,context.layer??1,context.firstClear===true);
- return {
-  collection:countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r),
-  stone:countSuccesses(num('magic_stone_drop_rolls'),stoneChance,r),
-  use:countSuccesses(num('consumable_drop_rolls'),num('consumable_drop_chance'),r)
- };
+ const collection=countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r);
+ const hits=countSuccesses(num('magic_stone_drop_rolls'),
+  magicStoneDropChance(context.playerLevel,context.layer??1,context.firstClear===true),r);
+ const expected=magicStoneCountPerHit(context.layer??1);
+ const whole=Math.floor(expected),fraction=expected-whole;
+ let stone=hits*whole;
+ for(let i=0;i<hits&&fraction>0;i++)if(r()<fraction)stone++;
+ return {collection,stone,use:countSuccesses(num('consumable_drop_rolls'),num('consumable_drop_chance'),r)};
 }
 export function dropCount(l,r=Math.random,context={}){
  return Object.values(dropCounts(l,r,context)).reduce((total,count)=>total+count,0);
@@ -133,7 +128,8 @@ export function drops(items,collections,l,r=Math.random,context={}){
  const layer=context.layer??1,{collection,stone,use}=dropCounts(l,r,context),rewards=[];
  for(let i=0;i<use;i++){
   const tier=rollConsumableTier(layer,r);
-  const x=weighted(eligibleConsumables(items,layer,tier),r);
+  const pool=eligibleConsumables(items,layer,tier);
+   const x=weighted(pool.map(row=>({...row,weight:consumableWeight(row,layer)})),r);
   rewards.push({type:'use',id:x.id,value:rollPotionValue(x,layer,r),
    bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null});
  }
@@ -448,11 +444,7 @@ export function recoverVictoryMp(hero,layer=1){
   num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12)-
   num('victory_mp_middle_taper')*middle*(1-middle);
  const recovered=Math.round(hero.maxMp*(rate*victoryMpLayerFactor(floor)+earlyVictoryMpBonusRate(floor)));
-  // In the tutorial decade, victories replenish only a genuinely depleted
-  // MP reserve. A win never removes MP and cannot refill above 55%; later
-  // floors preserve their existing recovery economy without this ceiling.
-  const reserve=floor<=10&&hero.level>=19?Math.max(0,Math.round(hero.maxMp*.55)-hero.mp):hero.maxMp-hero.mp;
-  const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,reserve,recovered));
+ const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,recovered));
  hero.mp+=gained;
  return gained;
 }
@@ -464,7 +456,7 @@ export function fromEnemy(row,level){
  return makeUnit(base,level,resists,spells,row.id);
 }
 export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items){
-  if(+i.min_value>+i.max_value||!(Number(i.weight)>0))throw Error('Bad item roll');
+  if(+i.min_value>+i.max_value||![1,50,51,70,71,100].every(layer=>consumableWeight(i,layer)>0))throw Error('Bad item roll');
   if(['clear','clear_all','escape','revive'].includes(i.kind)){
    if(+i.min_layer<(i.kind==='revive'?50:20)||i.tier||+i.min_value||+i.max_value)throw Error('Invalid special consumable '+i.id);
   }else if(i.kind==='elixir'){

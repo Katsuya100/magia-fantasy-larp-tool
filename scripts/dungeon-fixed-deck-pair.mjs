@@ -27,40 +27,29 @@ export const referenceSpells=goals.bands.map((band,k)=>
   const rate=band.from<=10?.25:band.from<=20?.25+(band.from-10)*.05:.75;
   return upgradeSpells(sources[k],Math.floor(stones*rate+1e-8)).spells;
  }));
-// A real fifty-fight clear can be stronger by defeating the same foes with
-// fewer actions and spent MP, even when it trades ending HP, ending MP or
-// LEGALLY OWNED consumables for combat efficiency. Both decks always enter
-// with exactly the same items and real consumption remains in the evidence.
-// An additional zero-consumables gate is not part of the approved benchmark.
+// Formal proof does not admit unbounded tactical tradeoffs; record them separately.
+export function pairedTradeoffs(actual,fixed){
+ if(!actual||!fixed)return null;
+ const numbers=[actual.endHp,fixed.endHp,actual.endMp,fixed.endMp,
+  actual.casts,fixed.casts,actual.spellMpSpent,fixed.spellMpSpent];
+ if(!numbers.every(Number.isFinite))return null;
+ const hp=actual.endHp-fixed.endHp,mp=actual.endMp-fixed.endMp,
+  actions=fixed.casts-actual.casts,spentMp=fixed.spellMpSpent-actual.spellMpSpent;
+ const carry=Number.isFinite(actual.remainingCarry)&&Number.isFinite(fixed.remainingCarry)
+  ?actual.remainingCarry-fixed.remainingCarry:null;
+ return {hp,mp,actions,spentMp,carry,
+  fasterAndCheaper:actions>1e-8&&spentMp>1e-8,
+  enduranceTradeoff:hp>1e-8&&mp>1e-8&&spentMp>1e-8&&actions<0};
+}
 export function pairedAdvantage(actual,fixed){
+ if(typeof actual?.won!=='boolean'||typeof fixed?.won!=='boolean')return null;
+ const deltas=pairedTradeoffs(actual,fixed);
+ if(!deltas)return null;
  if(actual.won&&!fixed.won)return 'WIN_ADVANTAGE';
  if(!actual.won||!fixed.won)return null;
- const tolerance=1e-8;
- const metrics=[actual.endHp,fixed.endHp,actual.endMp,fixed.endMp,
-  actual.casts,fixed.casts,actual.spellMpSpent,fixed.spellMpSpent,
-  actual.remainingCarry,fixed.remainingCarry];
- if(!metrics.every(Number.isFinite))return null;
- const deltas=[actual.endHp-fixed.endHp,actual.endMp-fixed.endMp,
-  fixed.casts-actual.casts,fixed.spellMpSpent-actual.spellMpSpent];
- if(deltas.every(x=>x>=-tolerance)&&deltas.some(x=>x>tolerance))
-  return 'PARETO_ADVANTAGE';
- // Two unweighted, independently measured efficiency dimensions, with
- // actual survival of the full encounter. Differences in item consumption
- // and final HP/MP remain visible in the paired battle accounting.
- if(actual.casts+tolerance<fixed.casts&&
-    actual.spellMpSpent+tolerance<fixed.spellMpSpent)
-  return 'PAID_ACTION_AND_MP_EFFICIENCY_ADVANTAGE';
- // Actual paired F81-90 evidence includes a survivor at 100% HP and
- // higher remaining MP that spent less MP than the reference, yet required
- // seven more actions. Treat this strict three-resource improvement as an
- // endurance-oriented tradeoff, not a failure from requiring faster kills.
- // Additional carried item spending must never create this advantage.
- if(actual.remainingCarry+tolerance>=fixed.remainingCarry&&
-    actual.endHp>fixed.endHp+tolerance&&
-    actual.endMp>fixed.endMp+tolerance&&
-    actual.spellMpSpent+tolerance<fixed.spellMpSpent)
-  return 'PAID_ENDURANCE_AND_MP_ADVANTAGE';
- return null;
+ const margins=[deltas.hp,deltas.mp,deltas.actions,deltas.spentMp];
+ return margins.every(n=>n>=-1e-8)&&margins.some(n=>n>1e-8)
+  ?'PARETO_ADVANTAGE':null;
 }
 export function evaluatePaidBuild(snapshot,index,seedIndex,cache=null){
  const band=goals.bands[index];
@@ -84,7 +73,7 @@ export function evaluatePaidBuild(snapshot,index,seedIndex,cache=null){
  const common=Math.min(actual.opponents.length,fixed.opponents.length);
  assert.deepEqual(actual.opponents.slice(0,common),fixed.opponents.slice(0,common),
   'same enemy encounters are compulsory for paired build proof');
- const result={actual,fixed,advantage:pairedAdvantage(actual,fixed)};
+ const result={actual,fixed,advantage:pairedAdvantage(actual,fixed),tradeoffs:pairedTradeoffs(actual,fixed)};
  if(cache)cache.set(key,result);
  return result;
 }
@@ -106,14 +95,13 @@ export function evaluateRecommendedFloor(snapshot,layer,seedIndex){
   assert.deepEqual(actual.opponents.slice(0,common),fixed.opponents.slice(0,common),
     'floor readiness requires exactly paired actual enemy encounters');
   const margins=[actual.endHp-fixed.endHp,actual.endMp-fixed.endMp,
-    fixed.casts-actual.casts,fixed.spellMpSpent-actual.spellMpSpent,
-    actual.remainingCarry-fixed.remainingCarry];
-  const exactOrNonInferior=actual.won&&margins.every(n=>
+    fixed.casts-actual.casts,fixed.spellMpSpent-actual.spellMpSpent];
+  const exactOrNonInferior=actual.won&&fixed.won&&margins.every(n=>
     Number.isFinite(n)&&n>=-1e-8);
   const evidence=pairedAdvantage(actual,fixed);
   const nonInferior=exactOrNonInferior||Boolean(evidence);
   return {ready:nonInferior,reference:'ORIGINAL_FIXED_DECK_SAME_CHARACTER',
-    advantage:evidence,
+    advantage:evidence,tradeoffs:pairedTradeoffs(actual,fixed),
     status:nonInferior?'MEASURED_AT_LEAST_REFERENCE':
       !actual.won?'REAL_COMBAT_LOSS_OR_CUTOFF':'REFERENCE_NOT_MET_OR_INCOMPARABLE',
     actual:{won:actual.won,attempted:actual.fightsAttempted,hp:actual.endHp,
