@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {magicStoneDropChance} from '../assets/js/dungeon-core.mjs';
+import {magicStoneDropChance,magicStoneCountPerHit,dropCounts} from '../assets/js/dungeon-core.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 import {totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {
@@ -15,15 +15,34 @@ assert.deepEqual(Array.from({length:4},()=>randomA()),
  Array.from({length:4},()=>randomB()),'seeded random sequence reproduces exactly');
 assert.equal(simulateProgression(7213).stones,simulateProgression(7213).stones,'identical seed, identical stone result');
 assert.equal(targetClearLevel(100),150);
-assert.equal(magicStoneDropChance(150,1),.3,'starting stone chance is preserved');
-assert.equal(magicStoneDropChance(150,150),.9,'chance grows to 90% at layer 150');
-assert.equal(magicStoneDropChance(150,151),.9,'drop chance stays at cap past layer 150');
-assert.ok(magicStoneDropChance(150,100)>.6&&magicStoneDropChance(150,100)<.7,
- 'a Lv150 player still gains better stone odds in deeper dungeons');
-assert.ok(magicStoneDropChance(150,101)>magicStoneDropChance(150,100),
- 'stone odds keep growing after the current designed 100F campaign');
-assert.ok(magicStoneDropChance(150,91)<magicStoneDropChance(150,100),
- 'replaying deeper layers is more efficient than shallow ones');
+assert.equal(magicStoneDropChance(150,1),.3);
+assert.equal(magicStoneDropChance(150,150),.3);
+assert.equal(magicStoneDropChance(150,151),.3);
+assert.equal(magicStoneCountPerHit(1),1);
+assert.equal(magicStoneCountPerHit(150),3);
+assert.equal(magicStoneCountPerHit(151),3);
+assert.ok(magicStoneCountPerHit(100)>2);
+for(let layer=1;layer<150;layer++)
+ assert.ok(magicStoneCountPerHit(layer+1)>magicStoneCountPerHit(layer));
+// Publish the actual before/after distribution at representative depths.
+const percentile=(sorted,p)=>sorted[Math.floor((sorted.length-1)*p)];
+for(const layer of [1,50,100,150]){
+ const rng=seededRandom(91000+layer),oldRng=seededRandom(92000+layer);
+ const actual=[],previous=[],samples=20000,expected=.3*magicStoneCountPerHit(layer);
+ for(let i=0;i<samples;i++){
+  actual.push(dropCounts(1,rng,{layer}).stone);
+  previous.push(oldRng()<expected?1:0);
+ }
+ actual.sort((a,b)=>a-b);previous.sort((a,b)=>a-b);
+ const mean=v=>v.reduce((sum,n)=>sum+n,0)/v.length;
+ assert.ok(Math.abs(mean(actual)-expected)<.025,'actual stone expectation '+layer);
+ assert.ok(Math.abs(mean(actual)-mean(previous))<.03,'unchanged expected stone economy '+layer);
+ assert.ok(actual.every(n=>Number.isSafeInteger(n)&&n>=0&&n<=3));
+ if(layer===150)assert.equal(actual.at(-1),3);
+ console.log('STONE_DISTRIBUTION',JSON.stringify({layer,previous:{
+  mean:mean(previous),median:percentile(previous,.5),p90:percentile(previous,.9),max:previous.at(-1)},
+  actual:{mean:mean(actual),median:percentile(actual,.5),p90:percentile(actual,.9),max:actual.at(-1)}}));
+}
 for(const level of [1,30,80,149,150])for(const layer of [1,10,50,91,100,101,150]){
  assert.equal(magicStoneDropChance(level,layer,true),magicStoneDropChance(level,layer,false),
   'farming is not penalized by its first-clear status');

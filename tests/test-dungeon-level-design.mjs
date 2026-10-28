@@ -125,10 +125,9 @@ assert.equal(Object.values(affinityCounts).reduce((sum,n)=>sum+n,0),500);
 assert.ok(Object.values(affinityCounts).every(count=>count>=10&&count<=200),
  'all seven elements remain meaningfully represented in the 500 enemy catalog');
 
-assert.equal(levels.length,151,'150 unchanged player levels plus one isolated enemy-only Lv0');
-assert.equal(levels.filter(row=>Number(row.level)>=1).length,150);
-assert.deepEqual(G.stats({hp:100,mag:10,def:7,res:7},0),{hp:20,mag:1,def:4,res:4},
- 'F1-F9 enemy-only level uses the shared stat formula without changing player base stats');
+assert.equal(levels.length,150,'authored growth rows start at Lv1');
+assert.ok(levels.every(row=>Number(row.level)>=1),'no enemy-only Lv0 row');
+assert.throws(()=>G.stats({hp:100,mag:10,def:7,res:7},0),/Missing level 0/);
 assert.equal(floors.length,500);
 assert.equal(num('level_max'),150);
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
@@ -200,15 +199,14 @@ const profile={level:1,xp:0},base={hp:100,mag:10,def:7,res:7};
 const attack={role:'attack',attribute:'flame',power:1200};
 for(let layer=1;layer<=100;layer++){
  const expected=targetClearLevel(layer);
- // Keep the player progression curve; the approved F1-F9 enemy-only
- // level-0 exception cannot bleed into F11-F100 or 101F+ scaling.
- const tutorialLevel=layer<=9?0:expected;
+ // Ordinary shared level growth applies to every early encounter.
+ const tutorialLevel=layer<=9?1:expected;
  assert.ok(layer===1||expected>=targetClearLevel(layer-1));
  const ids=[];
  for(let slot=1;slot<=5;slot++){
   const fight=(layer-1)*5+slot,foe=enemyForFight(enemies,fight,()=>.999),spec=floor(fight);
   // The F10 boss has its own level for the requested multi-turn encounter.
-  const encounterLevel=layer===10?(slot===5?8:0)
+  const encounterLevel=layer===10?(slot===5?8:1)
    :slot===5&&layer===90?140:slot===5&&layer===100?150:tutorialLevel;
   assert.equal(+spec.enemy_level,encounterLevel);
   assert.equal(+spec.boss,slot===5?1:0);
@@ -223,7 +221,7 @@ for(let layer=1;layer<=100;layer++){
  const favored=enemies.find(x=>x.id===bossId).favored_collection_ids.split('|');
  assert.ok(favored.includes(trophy.id),'boss favors its own unique trophy at layer '+layer);
  const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,favoredCollectionIds:favored});
- assert.ok(rewards.filter(x=>x.type!=='ink').length<=9,'existing rewards retain their 9-item ceiling');
+ assert.ok(rewards.filter(x=>x.type!=='ink').length<=11,'deeper stone hits can contain multiple real stones');
  assert.equal(rewards.filter(x=>x.type==='ink').length,1,'bosses have one independent ink roll');
  assert.equal(rewards.filter(x=>x.id===trophy.id).length,0,'common rolls never give epic or legendary trophies');
  const weights=rarityWeights(layer),totalWeight=weights.reduce((sum,n)=>sum+n,0);

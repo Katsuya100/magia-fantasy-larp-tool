@@ -30,29 +30,21 @@ for(const lvl of [1,20,50]){
   assert.ok(ratio>=.13&&ratio<=.27,'normal attack near 1/5 recommended normal foe HP at level '+lvl+' '+row.id+' '+ratio);
  }
 }
-// Geometric stone economy: at 150 layers, the chance triples smoothly.
-// Depth rather than hero level determines payout, including on repeated runs.
-assert.equal(G.magicStoneDropChance(1,1),.30,'first layer keeps the original 30% chance');
-assert.equal(G.magicStoneDropChance(150,1),.30,'overleveled early-floor replay retains base odds');
-assert.equal(G.magicStoneDropChance(150,150),.90,'150F reaches the configured 90% target');
-assert.equal(G.magicStoneDropChance(150,200),.90,'post-150 layers remain capped at 90%');
-assert.equal(G.magicStoneDropChance(150,0),.30,'minimum layer clamp protects the early economy');
-for(let layer=1;layer<150;layer++){
- const before=G.magicStoneDropChance(150,layer);
- const after=G.magicStoneDropChance(150,layer+1);
- assert.ok(after>before,'stone chance increases strictly between layers '+layer+' and '+(layer+1));
-}
+// Every fight keeps a 30% stone hit chance; its real count scales by depth.
 for(const layer of [1,2,10,50,91,100,101,149,150,200]){
- const chance=G.magicStoneDropChance(1,layer);
- for(const playerLevel of [1,30,80,149,150])
-  for(const firstClear of [true,false])
-   assert.equal(G.magicStoneDropChance(playerLevel,layer,firstClear),chance,'no level or replay penalty');
+ assert.equal(G.magicStoneDropChance(150,layer),.30,'constant stone hit probability');
+ assert.ok(G.magicStoneCountPerHit(layer)>=1&&G.magicStoneCountPerHit(layer)<=3);
+ for(const lv of [1,30,80,149,150])for(const cleared of [false,true])
+  assert.equal(G.magicStoneDropChance(lv,layer,cleared),.30,'no replay or overlevel penalty');
 }
-assert.ok(G.magicStoneDropChance(150,100)>.6,'100F increases the economy before the Lv150 cap');
-assert.deepEqual(G.dropCounts(1,()=>.6,{layer:1}),{collection:0,stone:0,use:0},
- 'base-layer odds stay unchanged even when the playerLevel context is omitted');
-assert.deepEqual(G.dropCounts(1,()=>.6,{layer:100}),{collection:0,stone:1,use:0},
- 'depth-based stone odds apply even when the playerLevel context is omitted');
+assert.equal(G.magicStoneCountPerHit(1),1);
+assert.equal(G.magicStoneCountPerHit(150),3);
+assert.equal(G.magicStoneCountPerHit(200),3);
+for(let layer=1;layer<150;layer++)
+ assert.ok(G.magicStoneCountPerHit(layer+1)>G.magicStoneCountPerHit(layer));
+assert.deepEqual(G.dropCounts(1,()=>.6,{layer:1}),{collection:0,stone:0,use:0});
+assert.deepEqual(G.dropCounts(1,()=>.6,{layer:100}),{collection:0,stone:0,use:0},
+ 'deep layers grow stone count, not chance');
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:1}),{collection:5,stone:1,use:3});
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2}),{collection:5,stone:1,use:3},'overlevel never reduces stones');
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2,firstClear:true}),{collection:5,stone:1,use:3},'first-clear stone reward bypasses level penalty');
@@ -76,7 +68,7 @@ assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'bo
  'boss trophies are no longer guaranteed when no item is rolled');
 const withBoss=G.drops(items,collections,19,()=>0,{layer:10,bossEnemyId:'boss_l010',favoredCollectionIds:['relic_boss_010']});
 assert.equal(withBoss.filter(x=>x.type==='use').length,3);
-assert.equal(withBoss.filter(x=>x.type==='stone').length,1);
+assert.equal(withBoss.filter(x=>x.type==='stone').length,2);
 assert.equal(withBoss.filter(x=>x.type==='collection').length,5);
 assert.equal(withBoss.filter(x=>x.id==='relic_boss_010').length,0,
  'common rarity draws cannot produce a legendary trophy');
@@ -118,6 +110,9 @@ const originalMpCost=G.mpCost(100);
 assert.ok(G.mpCost(200)>originalMpCost,'upgraded power would otherwise increase MP cost');
 assert.equal(G.spellMpCost(enhancedSpell),originalMpCost,'enhanced spell costs its original MP');
 assert.equal(G.spellMpCost(sp),G.mpCost(300),'ordinary and enemy spells retain normal costs');
+for(const role of ['attack','support','defense','debuff'])for(const upgradeLevel of [0,15,16,41,42,100])
+ assert.equal(G.spellMpCost({role,basePower:300,power:300+upgradeLevel*20,upgradeLevel}),
+  G.mpCost(300),'upgrading cannot change MP cost at '+upgradeLevel+' '+role);
 const enhancedCaster=G.makeUnit(base,1,{},[enhancedSpell]);
 enhancedCaster.mp=originalMpCost;
 assert.equal(G.canCast(enhancedCaster,0),true,'exact original MP suffices for upgraded spells');
@@ -143,6 +138,16 @@ const mpAfter=heroMp.mp;
 assert.ok(G.recoverVictoryMp(heroMp)>0&&heroMp.mp>mpAfter,'MP recovery persists across sequential wins');
 heroMp.mp=heroMp.maxMp;
 assert.equal(G.recoverVictoryMp(heroMp),0,'recovery never overflows max MP');
+const capFree=G.makeUnit(base,19);
+capFree.mp=Math.round(capFree.maxMp*.6);
+assert.ok(G.recoverVictoryMp(capFree,1)>0,'no hidden Lv19 tutorial MP cap');
+for(const level of [1,19,37,150]){
+ const actor=G.makeUnit(base,level),restored=[];
+ for(const layer of [1,5,10,11,20,50,90,100,110]){
+  actor.mp=0;restored.push(G.recoverVictoryMp(actor,layer));
+ }
+ assert.ok(restored.every((n,i)=>i===0||n<=restored[i-1]),'no deep-layer MP recovery increase at Lv'+level);
+}
 const victoryMpRate=level=>{
  const unit=G.makeUnit(base,level);
  unit.mp=0;
