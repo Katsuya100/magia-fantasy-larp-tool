@@ -239,7 +239,8 @@ for(let layer=1;layer<=11;layer++){
   }
  }
 }
-const en=G.fromEnemy(enemies[0],2);assert.equal(en.spells.length,5);assert.ok(en.stats.hp>50,'scaled enemies stay viable at low levels');
+const en=G.fromEnemy(enemies[0],2);assert.equal(en.spells.length,5);
+assert.ok(en.stats.hp>0,'weak beginner enemies retain real positive health');
 const u=G.makeUnit(base,1,{},[sp]),v=G.makeUnit(base,1,{},[sp]);
 const logs=G.round(u,v,0,0,buffs,()=>.7);assert.ok(logs.length===2);assert.ok(u.hp<100&&v.hp<100);
 const profile={level:1,xp:0};G.experience(profile,G.nextXp(1));assert.equal(profile.level,2);

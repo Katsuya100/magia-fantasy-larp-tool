@@ -18,13 +18,15 @@ export function depthRetunedEnemies(original){
   const layer=Math.floor(i/5)+1;
   const band=Math.floor((layer-1)/10)*10+1;
   const factor=bandFactors[band];
-  // These are authored *base MAG* values, not runtime level multipliers.
-  // A weak first five layers develops through levels 6-10; the priest boss
-  // retains its independently authored HP/MAG and multi-action encounter.
-  const introMag=[1,1,1,1,1,2,2,3,4,5];
+  // Author introductory durability and offense without a hidden level factor.
+  // Levels 1-5 are fragile; layers 6-9 add genuine HP and attack pressure.
+  const introHp=[.50,.50,.50,.50,.50,.65,.70,.80,.90];
+  const introMag=[1,1,1,1,1,1,2,2,3];
   if(!factor){
    if(row.id==='boss_l010')return {...row,hp:'130'};
-   return {...row,mag:String(introMag[layer-1]+(i%5===4?1:0))};
+   if(layer===10)return {...row,mag:'3'};
+   return {...row,hp:String(Math.max(20,Math.round(Number(row.hp)*introHp[layer-1]))),
+    mag:String(introMag[layer-1]+(i%5===4?1:0))};
   }
   // Preserve the exact integer-boundary outcome of the final two depth
   // refinements. These are authored CSV values, never runtime multipliers.
