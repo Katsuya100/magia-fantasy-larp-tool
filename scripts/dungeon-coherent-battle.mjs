@@ -63,6 +63,15 @@ export function challenge(snapshot,from,seed,{route='short',paired=false,floorCo
   remainingCarry:null,endHp:null,endMp:null,
   startLevel:snapshot.level,endLevel:snapshot.level,fightsAttempted:0,
   startHp:100*hero.hp/hero.stats.hp,startMp:100*hero.mp/hero.maxMp};
+ // Single lightweight event collector is reused for every resolved action.
+ const metrics=event=>{
+  if(event.side==='enemy'&&['attack','basic'].includes(event.role)||
+     event.side==='hero'&&event.role==='burn')
+   result.damageTaken+=event.amount;
+  if(event.side==='hero'&&['support','revive'].includes(event.role))
+   result.hpRecovered+=event.amount;
+ };
+ metrics.metricsOnly=true;
  for(let layer=from;layer<from+floorCount;layer++){
   for(let slot=1;slot<=5;slot++){
    assert.equal(hero.level,snapshot.level,'no intra-sortie character leveling');
@@ -90,14 +99,6 @@ export function challenge(snapshot,from,seed,{route='short',paired=false,floorCo
       throw Error('Illegal F1-5 journey combat healing');
     // Count the spell actually cast, including a possible Chaos redirection.
     const spellMpBefore=hero.mp;
-    const metrics=event=>{
-     if(event.side==='enemy'&&['attack','basic'].includes(event.role)||
-        event.side==='hero'&&event.role==='burn')
-      result.damageTaken+=event.amount;
-     if(event.side==='hero'&&['support','revive'].includes(event.role))
-      result.hpRecovered+=event.amount;
-    };
-    metrics.metricsOnly=true;
     G.round(hero,enemy,h,e,data.buffs,combatRandom,metrics);
     result.spellMpSpent+=Math.max(0,spellMpBefore-hero.mp);
     result.casts++;

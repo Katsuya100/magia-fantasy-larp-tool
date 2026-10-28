@@ -73,10 +73,10 @@ for(const p of economy.policies){
     assert.ok(candidate.level>=goals.targetLevelCheckpoints[String(band.to)]);
     const {actual,fixed,advantage,tradeoffs}=evaluatePaidBuild(candidate,index,i);
     const legacy=legacyPairedAdvantage(actual,fixed);
-    // Historical predicate is diagnostic-only; truncated battles are never proof.
-    const legacyValid=legacy&&!actual.cutoff&&!fixed.cutoff;
-    if(legacyValid!==Boolean(advantage))changedPairedRecords++;
-    observations.push({loops,candidate,actual,fixed,advantage,legacy:legacyValid,tradeoffs});
+    // Keep the historic rule intact for same-battle before/after auditing.
+    // It never contributes to official passing conditions.
+    if(legacy!==Boolean(advantage))changedPairedRecords++;
+    observations.push({loops,candidate,actual,fixed,advantage,legacy,tradeoffs});
    }
    if(!observations.length){missing++;samples.push({
     seed:owner.seed,status:'NO_BANKED_REPLAY',observedLoops:0,
