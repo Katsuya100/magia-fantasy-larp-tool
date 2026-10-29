@@ -153,6 +153,8 @@ assert.equal(chooseHero(finishingHero,nearlyDown,17,true,'short',false),1,
 // deliberately replaying the previous decade for paid spell preparation.
 const checkpointJourney=runJourney(17011,{style:'A',route:'long'});
 assert.ok(checkpointJourney.best>=100,'the deterministic checkpoint test owner must clear 100F');
+assert.ok(checkpointJourney.trace.every(step=>step.strengthTraining!==true),
+ 'without strength observation the legacy journey stops after its normal campaign');
 for(const depth of [80,90]){
  const first=checkpointJourney.trace.find(t=>!t.defeat&&t.cleared>=depth);
  assert.ok(first,'late checkpoint must be reached via a banked legal return');
@@ -350,6 +352,38 @@ const strengthObserved=runJourney(17011,{style:'A',route:'short',maxSorties:2,ma
 for(const measurement of Object.values(strengthObserved.journeyStrength))
  if(measurement.attempts>0&&measurement.status!=='REACHED')
   assert.equal(measurement.status,'ASSESSED_UNMET');
+assert.ok(strengthObserved.blockers.includes(
+ 'Recommended total strength remained unmet within the measured sortie/fight budget'),
+ 'a budget-limited assessment remains explicitly unmet');
+for(const style of ['A','B']){
+ const trained=runJourney(17011,{style,route:'long',maxSorties:60,maxFights:3000,
+  observeStrength:true});
+ const trainingSorties=trained.trace.filter(step=>step.strengthTraining);
+ assert.ok(trainingSorties.length>0,
+  'an observed unmet owner continues through real sorties after 100F and rank 100');
+ assert.ok(trainingSorties.every(step=>step.start===91&&step.goal===100),
+  'post-rank training uses the real rank-90 unlock and never starts beyond 100F');
+ assert.ok(trained.trace.every(step=>step.rank>=100||!step.strengthTraining),
+  'strength training begins only after the normal campaign and rank gates');
+ assert.equal(Math.max(...trained.floorAudit.map(row=>row.layer))<=100,true,
+  'post-rank training does not simulate enemies above the 100F cap');
+ assert.ok(trained.trace.length<60&&trained.trace.at(-1).strengthTraining,
+  'the owner stops at the first banked snapshot that reaches every band');
+ assert.ok(trained.rankAudit.every(row=>row.sortie<trainingSorties[0].sortie),
+  'post-campaign resource sorties do not inflate the independent chapter audit');
+ if(style==='A')assert.deepEqual(trained.rankAudit,checkpointJourney.rankAudit,
+  'strength-only returns preserve the original per-owner 80/80 chapter observations');
+ assert.ok(Object.values(trained.journeyStrength).every(row=>row.status==='REACHED'),
+  'real post-return investment reaches all ten strength bands before stopping');
+ assert.ok(trained.trace.some(step=>step.defeat),
+  'the extended journey keeps actual defeat risk');
+ assert.equal(trained.earned.stone,trained.spent.stone+trained.balances.stone,
+  'post-rank strength training banks and spends only genuinely earned stones');
+ assert.equal(trained.earned.ink,trained.spent.ink+trained.balances.ink,
+  'post-rank strength training preserves the real ink ledger');
+ assert.ok(trained.resourceLedger.items.held>=0&&trained.lost.stone>=0,
+  'post-rank training preserves owned inventory and unbanked loss ledgers');
+}
 const alchemy=runJourney(20261024,{style:'A',route:'short',alchemy:true,maxSorties:4,maxFights:180});
 assert.equal(alchemy.resourceLedger.items.alchemyConsumed,5*alchemy.alchemyCrafts);
 assert.equal(alchemy.resourceLedger.items.alchemyCreated,alchemy.alchemyCrafts);

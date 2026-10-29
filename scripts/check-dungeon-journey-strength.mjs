@@ -11,6 +11,11 @@ const report=JSON.parse(readFileSync(path,'utf8'));
 assert.equal(report.schemaVersion,'dungeon-journey-strength-v2');
 assert.equal(report.strengthModel,'dungeon-recommended-strength-v3');
 assert.equal(report.method,'RECOMMENDED_STRENGTH_FORMULA_LEDGER');
+assert.deepEqual(report.journeyExecution,{
+ continuationRule:'NORMAL_CAMPAIGN_THEN_REAL_SORTIES_AND_POST_RETURN_INVESTMENT_UNTIL_ALL_TEN_BANDS_REACHED',
+ postCampaignStartLayer:91,postCampaignGoalLayer:100,enemyLayerCap:100,
+ maxSorties:600,maxFights:6500,maxTurnsPerFight:80,
+ stopRule:'CAMPAIGN_AND_ALL_TEN_BANDS_REACHED_OR_EXISTING_SORTIE_FIGHT_BUDGET_EXHAUSTED'});
 assert.equal(report.samplesPerPolicy,256);
 assert.equal(report.policies.length,6);
 assert.equal(report.ranks.length,60);
@@ -20,6 +25,8 @@ assert.equal(report.legacyDisposition.oldResults,
 assert.equal(report.legacyDisposition.previousReport,'reports/dungeon-journey-strength-v1.json');
 assert.equal(report.legacyDisposition.previousMeasuredOutcome,
  '6,474 REACHED / 8,886 UNMET preserved as v1 evidence');
+assert.equal(report.legacyDisposition.preLoopFixOutcome,
+ '13,304 REACHED / 2,056 UNMET; preserved as a separate result, not reused or relabelled');
 const seeds=Array.from({length:256},(_,i)=>17011+13*i);
 assert256Seeds(seeds);
 const expectedPairs=['A/short','A/long','B/short','B/long','C/short','C/long'];

@@ -503,8 +503,11 @@ function compactStrengthAssessment(result){
 }
 
 // Observe only legal post-return, post-investment owner states. Each account
-// keeps its first reached result and latest unmet measurement; this calculator
-// never changes the economy, executes an encounter, or requires another loop.
+// keeps its first reached result and latest unmet measurement; reaching an
+// unmet target still requires real, budgeted sorties and banked investments.
+function allJourneyStrengthReached(state){
+ return approvedGoals.bands.every(band=>state.journeyStrength[band.from]?.status==='REACHED');
+}
 function observeJourneyStrength(state){
  const p=state.profile;
  for(const [index,band] of approvedGoals.bands.entries()){
@@ -674,7 +677,8 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
  // D is the route axis; this permits A+D, B+D and C+D without
  // inventing a mutually exclusive 'D character'.
  for(let sortie=0;sortie<maxSorties&&
-  (state.best<100||profile.adventurerRank<100)&&state.fights<maxFights;sortie++){
+  (state.best<100||profile.adventurerRank<100||
+   observeStrength&&!allJourneyStrengthReached(state))&&state.fights<maxFights;sortie++){
   const upcoming=state.best+1;
   // The first F100 clear is not a substitute for earned rank badges.
   // Recover missing earlier badges in order through genuine fights/returns.
@@ -710,6 +714,11 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   const training=route==='long'&&state.best>=10&&
    (profile.level<targetClearLevel(nextBoss)||
     profile.adventurerRank<lastBoss||failedNewDepth);
+  // Once the ordinary campaign and every earned rank are complete, an
+  // observed owner with unmet strength bands continues through the latest
+  // legal cleared decade. The 100F cap keeps enemies and rewards in range.
+  const strengthTraining=observeStrength&&state.best>=100&&
+   profile.adventurerRank>=100&&!allJourneyStrengthReached(state);
   // Missing earlier earned rank badges must be recovered IN ORDER. A
   // player with rank 70 and deepest 90 cannot legally start from 81:
   // replay 71-80 first, bank the real 80F badge, then replay 81-90.
@@ -717,8 +726,10 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   const rankBehind=profile.adventurerRank<lastBoss;
   const trainingStart=rankBehind?profile.adventurerRank+1:Math.max(1,lastBoss-9);
   const trainingGoal=rankBehind?profile.adventurerRank+10:lastBoss;
+  const strengthTrainingStart=Math.max(1,Math.floor((Math.min(state.best,100)-1)/10)*10+1);
   const requestedStart=missingRankAfterClear?profile.adventurerRank+1:
-   recovering?farmStart:training?trainingStart:profile.adventurerRank+1;
+   recovering?farmStart:training?trainingStart:
+    strengthTraining?strengthTrainingStart:profile.adventurerRank+1;
   const start=allowedStartLayer(profile,requestedStart);
   if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
   if(training&&start>lastBoss)throw Error('Long training must begin from a legal cleared decade');
@@ -729,6 +740,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   const tutorial=state.best<10;
   const goal=missingRankAfterClear?profile.adventurerRank+10:
    recovering?state.best:tutorial?upcoming:
+    strengthTraining?Math.min(100,state.best):
    training?trainingGoal:route==='short'?upcoming:100;
   const utilityUnlocked=state.best>=2;
   if(recovering)state.recoverySorties++;
@@ -789,7 +801,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
     const drops=G.drops(data.items,data.collections,outcome.enemyLevel,random,{
      layer,playerLevel:firstLevel,firstClear:layer>state.best,bossEnemyId:boss,
      favoredCollectionIds:outcome.foe.favored_collection_ids?.split('|')||[]});
-    if(boss&&layer%10===0&&layer<=100){
+    if(boss&&layer%10===0&&layer<=100&&!strengthTraining){
      state.rankChecks++;
      // Two independent outputs: did the ACTUAL player finish the boss
      // above the 80% reserve, and was the banked badge eventually acquired?
@@ -890,7 +902,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   if(style==='B'&&state.best>=30){state.recoveryRemainingGap=recoveryGap(state);
    if(state.recoveryTarget&&state.recoveryRemainingGap.every(x=>x===0))state.recoveryAchieved=true;}
   state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,escaped,
-   recovering,
+   recovering,strengthTraining,
    tutorial,training,utilityUnlocked,
    levelBefore:firstLevel,levelAfter:profile.level,rank:profile.adventurerRank,
    gainedPending:earnedPending,banked:!defeat,stone:state.stones,ink:state.ink,
@@ -904,9 +916,11 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
     &&state.stones<5)state.blockers.push('No effective combat progression or affordable upgrade across three sorties');
   }
  }
- if(state.best<100)state.blockers.push('Failed to clear 100F within measured sortie/fight budget (diagnostic cap, not a passing condition)');
+ if(!observeStrength&&state.best<100)state.blockers.push('Failed to clear 100F within measured sortie/fight budget (diagnostic cap, not a passing condition)');
  if(state.best>=100&&profile.adventurerRank<100)
   state.blockers.push('Reached F100 but real rank badges remain unearned within the measurement budget');
+ if(observeStrength&&!allJourneyStrengthReached(state))
+  state.blockers.push('Recommended total strength remained unmet within the measured sortie/fight budget');
  if(style==='B'&&!state.recoveryTarget)state.blockers.push('No same-seed A F31 entry; no invented stone-recovery target');
  for(const band of approvedGoals.bands){
   state.journeyStrength[band.from]??={band:band.from+'-'+band.to,attempts:0,
