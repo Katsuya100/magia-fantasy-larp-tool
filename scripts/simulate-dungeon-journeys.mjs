@@ -13,9 +13,10 @@ import {allowedStartLayer,unlockedStartLayers,rankBadgeDrop,acquireAdventurerRan
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
-import {specFor,assess} from './dungeon-readiness-reference.mjs';
 import {journeySpellAllowed,journeyItemAllowed,
- chooseAdditionalFarmingBand} from './dungeon-test-contract.mjs';
+} from './dungeon-test-contract.mjs';
+import {assessRecommendedStrength} from './dungeon-recommended-strength.mjs';
+export const approvedGoals=JSON.parse(readFileSync(new URL('../config/dungeon-approved-goals.v1.json',import.meta.url),'utf8'));
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),items:csv('consumables'),collections:csv('collections'),
@@ -35,17 +36,6 @@ const quantile=(xs,p)=>{
 };
 export const spread=xs=>({p10:quantile(xs,.1),median:quantile(xs,.5),p90:quantile(xs,.9)});
 export const investmentRate=layer=>layer<=10?.25:layer<=20?.25+(layer-10)*.05:.75;
-// Every decade must receive its three mandatory genuine banked replays.
-// Later loops are distributed to the LEAST trained unproven decade; when
-// equally trained, prioritize the deeper one for its depth-scaled earnings.
-// Selecting only the shallowest or only the deepest band demonstrably starves
-// the other end under the measured total-fight budget.
-export function chooseEarnedReplayBand(eligible,counts,verified,canProve){
- const required=chooseAdditionalFarmingBand(eligible,counts,verified,canProve);
- if(!canProve||eligible.some(b=>(counts[b]||0)<3))return required;
- return eligible.filter(b=>!verified[b])
-  .sort((a,b)=>(counts[a]||0)-(counts[b]||0)||b-a)[0]??null;
-}
 const circle=(role,attribute,basePower,active=true)=>({role,attribute,basePower,upgrades:0,active,ink:0});
 const actualPower=c=>strengthenedPower(c.basePower,c.upgrades);
 const equipped=circles=>circles.filter(c=>c.active).map(c=>({
@@ -250,6 +240,9 @@ function pack(state,start,goal,rankItems=true){
   .sort((a,b)=>Number(b.value)-Number(a.value)).slice(0,Math.min(2,cap-mana.length)):[];
  const selected=[...mana,...rankedHealing,
   ...(goal>=71?luna.slice(0,Math.min(2,cap-mana.length-rankedHealing.length)):[])];
+ const escape=goal>=20?state.inventory.find(item=>
+  data.items.find(row=>row.id===item.id)?.kind==='escape'):null;
+ if(escape&&selected.length<cap)selected.push(escape);
  const pressure=new Map();
  const end=Math.min(100,goal);
  for(let layer=Math.max(51,start);layer<=end;layer++)
@@ -461,130 +454,85 @@ function optionalAlchemy(state){
   state.alchemyByproducts.ink+=state.ink-beforeInk;
  }
 }
-// Readiness is decided only from banked real XP, level, legal rank, five
-// owned equipped drawings and paid investments. It NEVER calls combat,
-// consults win rates, or guesses a frozen economic median. Preparing a fresh
-// sortie legitimately gives full starting HP/MP as in dungeon-app.begin().
-function observePrepared(state){
- // A B-strategy return never starts an unbanked 31F attempt while its
- // same-owner, paid F31 recovery deficit remains. The earlier post-F30
- // intermediate state is not a strategy-ready new sortie.
- if(state.style==='B'&&state.best===30&&recoveryGap(state).some(v=>v>0))return;
- const p=state.profile;
- for(let band=1;band<=91;band+=10){
-  const prior=state.preparedSnapshots[band];
-  const completed=state.completedReplayLoops[band]||0;
-  if(prior&&state.replayBanked[band]-state.preparedReplayAt[band]<50*(completed+1))continue;
-  const to=band+9,requiredLevel=targetClearLevel(to);
-  if(state.best<band-1)continue;
-  if(!unlockedStartLayers(p).includes(band))continue;
-  if(p.level<requiredLevel)continue;
-  const active=state.circles.filter(c=>c.active);
-  if(active.length!==5)continue;
-  const hero=G.makeUnit(state.playerBase,p.level,{},equipped(state.circles),'hero');
-  // Select from the ACTUAL banked inventory via the ordinary packing rule,
-  // but do not remove items from the on-going economic journey.
-  const copy={...state,inventory:[...state.inventory]};
-  // Strict 50-fight readiness explicitly excludes any MP potion in the
-  // prepared combat reference. Rank-specific potion use is journey-only.
-  const carry=pack(copy,band,to,false);
-  const snapshot={layer:band,to,sortie:state.sorties,level:p.level,
-   targetLevel:requiredLevel,bankedBestLayer:state.best,rank:p.adventurerRank,xp:p.xp,
-   bankedStones:state.stones,bankedInk:state.ink,
-   earned:{...state.earned},spent:{...state.spent},
-   circles:active.map(c=>({role:c.role,attribute:c.attribute,
-    basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
-    mpCost:G.spellMpCost({role:c.role,basePower:c.basePower,upgradeLevel:c.upgrades}),ink:c.ink})),
-   carry:carry.map(item=>({...item})),
-   bankedInventory:copy.inventory.map(item=>({...item})),
-   bankedCollections:{...state.collection},playerBase:{...hero.base},
-   playerHp:hero.hp,playerMp:hero.mp,maxHp:hero.stats.hp,maxMp:hero.maxMp,
-   cooldowns:[...hero.cooldowns],statuses:hero.statuses.map(x=>({...x})),
-   unbankedXp:0,unbankedStone:0,unbankedInk:0,
-   actualFights:state.fights,actualSorties:state.sorties,
-   actualLosses:state.losses,actualReturns:state.returns,
-   repeatedFights:state.replayedFights,bankedExperience:state.bankedXp,
-   source:'POST_RETURN_BANKED_AND_INVESTED',
-   status:'PREPARED_FROM_ACTUAL_ECONOMY_NOT_FROM_BATTLE_OUTCOME'};
-  if(carry.length>G.capacity(p.level))throw Error('Prepared carrying capacity exceeded');
-  if(!prior){
-   state.preparedSnapshots[band]=snapshot;
-   state.preparedReplayAt[band]=state.replayBanked[band];
-  }else{
-   // Only physically banked completed 50-fight replays add new observations.
-   // All snapshots are full legal owner states, never synthetic stone injections.
-   state.preparedFarmingSnapshots[band]??=[];
-   const bankedItems=snapshot.bankedInventory.length;
-   const slim={...snapshot,bankedItems,completedExtraLoops:completed+1,
-    additionalBankedReplayFights:state.replayBanked[band]-state.preparedReplayAt[band]};
-   delete slim.bankedInventory;delete slim.bankedCollections;
-   // Retain the mandatory 1/2/3 checkpoints plus the most recent
-   // beyond-third earned state; the actual counter never resets.
-   if(completed<3)state.preparedFarmingSnapshots[band].push(slim);
-   else state.preparedFarmingSnapshots[band][3]=slim;
-   state.completedReplayLoops[band]=completed+1;
-   if(state.farmingProof&&!state.earnedStrengthProof[band])
-    state.earnedStrengthProof[band]=Boolean(state.farmingProof(slim,band));
-  }
- }
+function compactStrengthAssessment(result){
+ return {passed:result.passed,status:result.status,reasons:result.reasons,
+  actual:{level:result.actual.level,attackActions:result.actual.attackActions,
+   attackMp:result.actual.attackMp,survivalSupportMp:result.actual.survivalSupportMp,
+   circles:result.actual.circles,
+   damageDealt:result.actual.damageDealt,
+   damageTaken:result.actual.damageTaken,allowedDamage:result.actual.allowedDamage,
+   excessDamage:result.actual.excessDamage,itemRecovery:result.actual.itemRecovery,
+   magicRecovery:result.actual.magicRecovery,totalMpBurden:result.actual.totalMpBurden,
+   mpShortfall:result.actual.mpShortfall,mpSupply:result.actual.mpSupply,
+   damageAfterRecovery:result.actual.damageAfterRecovery,
+   floors:result.actual.floors.map(f=>({layer:f.layer,attackActions:f.attackActions,
+    attackMp:f.attackMp,damageDealt:f.damageDealt,damageTaken:f.damageTaken,
+    enemyMpSpent:f.enemyMpSpent}))},
+  reference:{level:result.reference.level,attackActions:result.reference.attackActions,
+   circles:result.reference.circles,
+   attackMp:result.reference.attackMp,supportMp:result.reference.supportMp,
+   mpBurden:result.reference.mpBurden,damageDealt:result.reference.damageDealt,
+   damageTaken:result.reference.damageTaken,damageAllowed:result.reference.damageAllowed,
+   attackFeasible:result.reference.attackFeasible},
+  decision:result.decision};
 }
 
-// Independent proposed reference readiness, never a revision of the existing
-// final-boss-level prepared snapshot, never decided using combat victories.
-function observeReference(state){
+// Observe only legal post-return, post-investment owner states. Each account
+// keeps its first reached result and latest unmet measurement; this calculator
+// never changes the economy, executes an encounter, or requires another loop.
+function observeJourneyStrength(state){
  const p=state.profile;
- const starts=unlockedStartLayers(p);
- for(let band=1;band<=91;band+=10){
-  const s=specFor(band),to=band+9;
-  if(state.best<band-1||!starts.includes(band)||p.level<s.startLevel)continue;
-  const baseline=state.referenceSnapshots[band];
-  const completed=state.farmingSnapshots[band]?.length||0;
-  // The old unapproved candidate collects only diagnostic 1/2/3 stages;
-  // it does NOT cap the separate approved fixed-deck growth replay.
-  if(completed>=3)continue;
-  const extra=baseline&&
-   state.replayBanked[band]-state.referenceReplayAt[band]>=50*(completed+1);
-  if(baseline&&!extra)continue;
+ for(const [index,band] of approvedGoals.bands.entries()){
+  const key=band.from;
+  state.journeyStrength[key]??={band:key+'-'+band.to,attempts:0,status:'UNASSESSED',
+   firstReached:null,lastAssessment:null,fingerprint:null};
+  const prior=state.journeyStrength[key];
+  if(prior?.status==='REACHED')continue;
+  if(state.best<band.from-1||!unlockedStartLayers(p).includes(band.from))continue;
   const active=state.circles.filter(c=>c.active);
   if(active.length!==5)continue;
   const hero=G.makeUnit(state.playerBase,p.level,{},equipped(state.circles),'hero');
   const copy={...state,inventory:[...state.inventory]};
-  const carry=pack(copy,band,to,false);
-  const snapshot={layer:band,to,sortie:state.sorties,level:p.level,
-   targetLevel:s.startLevel,bankedBestLayer:state.best,
-   preparedBeforeFirstBandClear:state.best<to,
-   rank:p.adventurerRank,xp:p.xp,
-   bankedStones:state.stones,bankedInk:state.ink,
-   earned:{...state.earned},spent:{...state.spent},
-   circles:active.map(c=>({role:c.role,attribute:c.attribute,
-    basePower:c.basePower,upgradeLevel:c.upgrades,power:actualPower(c),
-    mpCost:G.spellMpCost({role:c.role,basePower:c.basePower,upgradeLevel:c.upgrades}),ink:c.ink})),
-   carry:carry.map(item=>({...item})),
-   // The global owner ledger already proves all banked items; duplicating
-   // hundreds of item instances in every replay checkpoint can exhaust V8.
-   bankedItems:copy.inventory.length,
-   playerBase:{...hero.base},playerHp:hero.hp,playerMp:hero.mp,
-   maxHp:hero.stats.hp,maxMp:hero.maxMp,cooldowns:[...hero.cooldowns],
-   statuses:hero.statuses.map(x=>({...x})),
+  const carry=pack(copy,band.from,band.to);
+  const snapshot={style:state.style,route:state.route,layer:band.from,to:band.to,
+   level:p.level,bankedBestLayer:state.best,rank:p.adventurerRank,xp:p.xp,
+   bankedStones:state.stones,bankedInk:state.ink,earned:{...state.earned},
+   spent:{...state.spent},circles:active.map(c=>({role:c.role,
+    attribute:c.attribute,basePower:c.basePower,upgradeLevel:c.upgrades,
+    power:actualPower(c),mpCost:G.spellMpCost({role:c.role,
+     basePower:c.basePower,upgradeLevel:c.upgrades}),ink:c.ink})),
+   carry:carry.map(item=>({...item})),playerBase:{...hero.base},
+   playerHp:hero.hp,playerMp:hero.mp,maxHp:hero.stats.hp,maxMp:hero.maxMp,
    unbankedXp:0,unbankedStone:0,unbankedInk:0,
    actualFights:state.fights,actualSorties:state.sorties,
-   actualLosses:state.losses,actualReturns:state.returns,
+   actualReturns:state.returns,actualLosses:state.losses,
    source:'POST_RETURN_BANKED_AND_INVESTED'};
-  const check=assess(snapshot,s);
-  if(!baseline){
-   state.referenceLastAttempt[band]={level:p.level,sorties:state.sorties,
-    fights:state.fights,reasons:check.reasons};
-   if(check.ready){
-    state.referenceSnapshots[band]={...snapshot,status:'ACTUAL_OWNER_CANDIDATE_READY'};
-    state.referenceReplayAt[band]=state.replayBanked[band];
-   }
-  }else if(extra){
-   // One measured extra loop = fifty actually banked repeated encounters in
-   // this decade, not an invented free upgrade or cloned player inventory.
-   state.farmingSnapshots[band]??=[];
-   state.farmingSnapshots[band].push({...snapshot,
-    completedExtraLoops:completed+1,
-    additionalBankedReplayFights:state.replayBanked[band]-state.referenceReplayAt[band]});
+  const fingerprint=JSON.stringify({level:snapshot.level,
+   utilityUnlocked:snapshot.bankedBestLayer>=2,
+   circles:snapshot.circles.map(x=>[x.role,x.attribute,x.power,x.upgradeLevel]),
+   carry:snapshot.carry.map(x=>[x.instanceId,x.id,x.value,x.bonus])});
+  if(prior.fingerprint===fingerprint)continue;
+  const result=compactStrengthAssessment(assessRecommendedStrength(snapshot,index,
+   (state.seed-17011)/13));
+  const observation=prior;
+  observation.attempts++;
+  observation.fingerprint=fingerprint;
+  observation.lastAssessment={...result,actualFights:state.fights,
+   actualSorties:state.sorties,actualReturns:state.returns,level:p.level,
+   rank:p.adventurerRank,bankedBestLayer:state.best,
+   ownerInput:{playerBase:{...snapshot.playerBase},level:snapshot.level,
+    rank:snapshot.rank,bankedBestLayer:snapshot.bankedBestLayer,
+    circles:snapshot.circles.map(x=>({role:x.role,attribute:x.attribute,
+     basePower:x.basePower,upgradeLevel:x.upgradeLevel,power:x.power})),
+    carry:snapshot.carry.map(x=>({id:x.id,value:x.value,bonus:x.bonus,
+     instanceId:x.instanceId})),bankedStones:snapshot.bankedStones,
+    bankedInk:snapshot.bankedInk,earned:{...snapshot.earned},
+    spent:{...snapshot.spent},source:snapshot.source}};
+  if(result.passed){
+   observation.status='REACHED';
+   observation.firstReached={actualFights:state.fights,actualSorties:state.sorties,
+    actualReturns:state.returns,level:p.level,rank:p.adventurerRank,
+    bankedBestLayer:state.best,assessmentStatus:result.status};
   }
  }
 }
@@ -617,15 +565,31 @@ function commit(state,pending,unused,bestLayer){
  // stones. Do not send C into the next sortie with its sunk upgrades gone
  // while affordable replacements sit unused in the bank.
  considerInkRedraw(state);invest(state);
- for(const row of state.floorAudit){
-  if(row.sortie!==state.sorties||!row.banked||!row.replay||!row.cleared)continue;
-  const band=10*Math.floor((row.layer-1)/10)+1;
-  state.replayBanked[band]+=row.attemptedFights;
- }
- observePrepared(state);
- if(state.collectCandidateDiagnostic)observeReference(state);
+ if(state.observeStrength)observeJourneyStrength(state);
 }
-function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked){
+function basicAttackDamage(source,target,side){
+ const events=[],observer=event=>events.push(event);observer.metricsOnly=true;
+ const actorA=G.makeUnit(source.base,source.level,source.resists,source.spells,source.id);
+ const actorB=G.makeUnit(target.base,target.level,target.resists,target.spells,target.id);
+ G.round(actorA,actorB,-1,-1,data.buffs,()=>1,observer);
+ return events.find(event=>event.side===side&&event.role==='basic')?.amount??0;
+}
+export function consumeEscapeWhenLethal(hero,enemy,layer,carry,usage){
+ if(!journeyItemAllowed(layer,'escape'))return null;
+ const index=carry.findIndex(item=>item&&
+  data.items.find(row=>row.id===item.id)?.kind==='escape'&&
+  G.canUseBattleItem(hero,item,data.items,data.buffs));
+ if(index<0)return null;
+ const legalAttacks=G.available(enemy).filter(i=>enemy.spells[i]?.role==='attack')
+  .map(i=>G.damage(enemy,hero,enemy.spells[i],()=>1));
+ const threateningDamage=legalAttacks.length?Math.max(...legalAttacks):
+  basicAttackDamage(enemy,hero,'enemy');
+ if(hero.hp>threateningDamage)return null;
+ const scroll=carry[index];carry[index]=null;
+ usage[scroll.id]=(usage[scroll.id]||0)+1;
+ return {itemId:scroll.id,instanceId:scroll.instanceId,threateningDamage};
+}
+export function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked){
  const foe=encounterForFight(fight);
  const enemyLevel=Number(data.floors[fight-1]?.enemy_level??targetClearLevel(layer));
  const enemy=G.fromEnemy(foe,enemyLevel);
@@ -637,7 +601,13 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
   restoreRankHp(state,hero,carry,layer,fight,usage);
   const pendingGrade=layer>=20&&layer%10===0&&
    state.profile.adventurerRank<layer;
-  const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route,pendingGrade),theirs=G.chooseEnemySpell(enemy,random);
+  const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route,pendingGrade);
+  if(ours<0||hero.spells[ours]?.role!=='support'){
+   const escape=consumeEscapeWhenLethal(hero,enemy,layer,carry,usage);
+   if(escape)return {win:false,escaped:true,foe,enemyLevel,rounds,healCasts,
+    enemyHealCasts,enemyDebuffs,escape};
+  }
+  const theirs=G.chooseEnemySpell(enemy,random);
   if(ours>=0&&!journeySpellAllowed(layer,utilityUnlocked,hero.spells[ours].role))
    throw Error('Invalid journey spell before F2 return or F6 healing unlock');
   if(ours>=0&&hero.spells[ours].role==='support')healCasts++;
@@ -650,17 +620,16 @@ function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,util
 }
 export function runJourney(seed,{style='A',route='short',alchemy=false,
  redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000,
- verifyFarming=false,farmingProof=null,collectCandidateDiagnostic=true,
- floorStrengthProof=null}={}){
+ collectCandidateDiagnostic=true,observeStrength=false}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
   forceRedraw:false,maxSorties:Math.min(maxSorties,120),maxFights,
-  verifyFarming:false,collectCandidateDiagnostic}):null;
+  collectCandidateDiagnostic,observeStrength:false}):null;
  const atA31=aReference?.entrySnapshots[31]??null;
  const recoveryTarget=atA31?.circles.map(c=>c.upgradeLevel)??null;
  const random=rng(seed),playerBase=G.startingBase(random),profile={level:1,xp:0,adventurerRank:0};
- const state={style,route,alchemy,random,profile,playerBase,stones:0,ink:0,inventory:[],collection:{},
+const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,inventory:[],collection:{},
   redrawLimit,forceRedraw,redrawEvents:[],
   recoveryTarget,recoveryReference:atA31?'REAL_SAME_SEED_A_F31':'UNAVAILABLE',
   alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
@@ -672,43 +641,15 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
   rankAudit:[],floorAudit:[],
-  entrySnapshots:{},preparedSnapshots:{},preparedFarmingSnapshots:{},preparedReplayAt:{},
-  referenceSnapshots:{},referenceLastAttempt:{},
-  farmingSnapshots:{},referenceReplayAt:{},replayBanked:Object.fromEntries(Array.from({length:10},(_,i)=>[10*i+1,0])),
-  farmingProof,collectCandidateDiagnostic,earnedStrengthProof:{},
-   floorStrengthProof,certifiedFloorStrength:new Set(),completedReplayLoops:{},
+  entrySnapshots:{},collectCandidateDiagnostic,observeStrength,journeyStrength:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},otherItemUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
   recoveryInitialGap:null,recoveryRemainingGap:null};
  if(style==='B')state.circles.push(circle('attack','storm',300,false),circle('attack','aqua',290,false),circle('support','law',260,false));
  // D is the route axis; this permits A+D, B+D and C+D without
  // inventing a mutually exclusive 'D character'.
- const extraBand=()=>{
-  if(!verifyFarming)return null;
-  const eligible=Array.from({length:10},(_,i)=>i*10+1).filter(b=>
-   state.best>=b+9&&state.preparedSnapshots[b]&&
-   unlockedStartLayers(profile).includes(b));
-  // Three is only the minimum measurement; proof decides continuation.
-  // During first-time progress, only gather the 1/2/3 mandatory paid
-  // checkpoints. Never let an unproven fourth replay monopolize a floor
-  // before the genuine 100F clear and independent rank acquisition.
-  const campaignComplete=state.best>=100&&profile.adventurerRank>=100;
-  // A paid 50-fight victory is not a substitute for proving all ten
-  // individual pre-entry floors. Keep training on real previously cleared
-  // encounters until both independent proofs have actually been witnessed.
-  const fullyVerified=Object.fromEntries(eligible.map(b=>[b,
-   Boolean(state.earnedStrengthProof[b])&&
-   Array.from({length:10},(_,i)=>b+i).every(f=>
-    state.certifiedFloorStrength.has(f))]));
-  return chooseEarnedReplayBand(eligible,state.completedReplayLoops,
-   fullyVerified,Boolean(farmingProof)&&campaignComplete);
- };
  for(let sortie=0;sortie<maxSorties&&
-  (state.best<100||profile.adventurerRank<100||extraBand()!==null)&&state.fights<maxFights;sortie++){
-  // The canonical evidence cohort deliberately revisits already beaten
-  // floors in the REAL game, banks all gains, and pays every consumable.
-  // This is an optional journey route, never a fake 50-fight level-up.
-  const auditedReplayBand=extraBand();
+  (state.best<100||profile.adventurerRank<100)&&state.fights<maxFights;sortie++){
   const upcoming=state.best+1;
   // The first F100 clear is not a substitute for earned rank badges.
   // Recover missing earlier badges in order through genuine fights/returns.
@@ -751,9 +692,9 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const rankBehind=profile.adventurerRank<lastBoss;
   const trainingStart=rankBehind?profile.adventurerRank+1:Math.max(1,lastBoss-9);
   const trainingGoal=rankBehind?profile.adventurerRank+10:lastBoss;
-  const start=allowedStartLayer(profile,auditedReplayBand!==null?auditedReplayBand:
-   missingRankAfterClear?profile.adventurerRank+1:recovering?farmStart:
-   training?trainingStart:profile.adventurerRank+1);
+  const requestedStart=missingRankAfterClear?profile.adventurerRank+1:
+   recovering?farmStart:training?trainingStart:profile.adventurerRank+1;
+  const start=allowedStartLayer(profile,requestedStart);
   if(recovering&&start>state.best)throw Error('Recovery route cannot legally start before the target');
   if(training&&start>lastBoss)throw Error('Long training must begin from a legal cleared decade');
   if(recovering&&state.recoveryInitialGap===null)state.recoveryInitialGap=[...deficit];
@@ -761,18 +702,14 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   // Every first-time adventurer banks each newly cleared floor until an
   // ACTUAL F10 boss victory. Only then do short/long routes diverge.
   const tutorial=state.best<10;
-  const goal=auditedReplayBand!==null?
-   (route==='short'?Math.min(auditedReplayBand+9,
-    auditedReplayBand+1+2*(state.completedReplayLoops[auditedReplayBand]||0)):
-    auditedReplayBand+9):
-   missingRankAfterClear?profile.adventurerRank+10:
+  const goal=missingRankAfterClear?profile.adventurerRank+10:
    recovering?state.best:tutorial?upcoming:
    training?trainingGoal:route==='short'?upcoming:100;
   const utilityUnlocked=state.best>=2;
-  if(recovering&&auditedReplayBand===null)state.recoverySorties++;
+  if(recovering)state.recoverySorties++;
   const firstLevel=profile.level;
   const hero=G.makeUnit(state.playerBase,firstLevel,{},equipped(state.circles),'hero');
-  let pending={xp:0,loot:[]},lastClear=start-1,defeat=false;
+  let pending={xp:0,loot:[]},lastClear=start-1,defeat=false,escaped=false;
   // Long dives bank each decade, so reserve slots for only the next boss.
   const packingGoal=route==='long'?Math.min(goal,Math.ceil(start/10)*10):goal;
   const carry=pack(state,start,packingGoal);
@@ -803,74 +740,16 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
      status:'ACTUAL_FIRST_ENTRY_WITH_IN_EXPEDITION_RESOURCES'};
    }
    const entryHp=percent(hero.hp,hero.stats.hp),entryMp=percent(hero.mp,hero.maxMp);
-   const active=equipped(state.circles);
-   const legalAttack=G.available(hero).some(i=>hero.spells[i].role==='attack');
-   const attackCircles=active.filter(s=>s.role==='attack');
-   const supportCircles=active.filter(s=>s.role==='support');
-   const defenseCircles=active.filter(s=>s.role==='defense');
-   const attackCosts=attackCircles.map(s=>G.spellMpCost(s));
-   const minAttackMp=Math.min(...attackCosts);
-   const sustainableAttackActions=Number.isFinite(minAttackMp)&&minAttackMp>0?
-    Math.floor(hero.maxMp/minAttackMp):0;
-   const completeCombatKit=attackCircles.length>=1&&
-    supportCircles.length>=1&&defenseCircles.length>=1&&
-    attackCircles.every(s=>Number.isFinite(s.power)&&s.power>0)&&
-    attackCosts.every(cost=>Number.isFinite(cost)&&cost>0);
-   // Readiness uses the five actually equipped and paid circles, legal
-   // carried stock, rank-gated entrance and the real five enemies. Do not
-   // reduce the gate to the level or a sum of nominal spell powers.
-   const circleIntegrity=active.length===5&&active.every((s,i)=>
-    Number.isFinite(s.power)&&s.power>0&&
-    Number.isInteger(s.upgradeLevel)&&s.upgradeLevel>=0&&
-    Math.abs(s.power-strengthenedPower(s.basePower,s.upgradeLevel))<1e-7&&
-    G.spellMpCost(hero.spells[i])===G.spellMpCost(s));
-   const itemIntegrity=carry.filter(Boolean).length<=G.capacity(firstLevel)&&
-    carry.filter(Boolean).every(x=>Boolean(data.items.find(t=>t.id===x.id))&&
-     typeof x.instanceId==='string')&&
-    new Set(carry.filter(Boolean).map(x=>x.instanceId)).size===carry.filter(Boolean).length;
-   const rankLegal=unlockedStartLayers(profile).includes(start);
-   const opponents=Array.from({length:5},(_,i)=>
-    G.fromEnemy(enemyForFight(data.enemies,(layer-1)*5+i+1),
-     Number(data.floors[(layer-1)*5+i].enemy_level)));
-   const attackCoverage=opponents.filter(foe=>attackCircles.some(s=>
-    G.damage(hero,foe,hero.spells[active.indexOf(s)],()=>.5)>0)).length;
-   const powerPerMp=attackCircles.reduce((n,s)=>
-    n+G.basePower(s.power)/Math.max(1,G.spellMpCost(s)),0);
-   const acquiredUpgrades=active.reduce((n,s)=>n+s.upgradeLevel,0);
-   const ordinaryEligible=(layer===1||firstLevel>=targetClearLevel(layer))&&
-     completeCombatKit&&circleIntegrity&&itemIntegrity&&rankLegal&&
-     attackCoverage===5&&powerPerMp>0&&legalAttack&&
-     sustainableAttackActions>0&&hero.hp>0;
-    const strengthEvidence=ordinaryEligible&&state.floorStrengthProof&&
-     !state.certifiedFloorStrength.has(layer)?state.floorStrengthProof({
-       layer,level:firstLevel,rank:profile.adventurerRank,
-       playerBase:{...hero.base},playerHp:hero.hp,playerMp:hero.mp,
-       maxHp:hero.stats.hp,maxMp:hero.maxMp,
-       circles:active.map(s=>({...s})),carry:carry.filter(Boolean).map(x=>({...x})),
-       cooldowns:[...hero.cooldowns],statuses:hero.statuses.map(x=>({...x}))},layer):null;
-    const floorPreparation={layer,recommendedLevel:targetClearLevel(layer),level:firstLevel,
-    rank:profile.adventurerRank,spells:active.length,
-    attackPowers:active.filter(s=>s.role==='attack').map(s=>s.power),
-    attackMpCosts:attackCosts,defensePower:defenseCircles.map(s=>s.power),
-    supportPower:supportCircles.map(s=>s.power),
-    sustainableAttackActions,completeCombatKit,
-    attackCoverage,powerPerMp,acquiredUpgrades,
-    circleIntegrity,itemIntegrity,rankLegal,
-    availableAttack:legalAttack,mpPercent:entryMp,hpPercent:entryHp,
-    carry:carry.filter(Boolean).map(x=>x.id),bankedBestBeforeEntry:state.best,
-     strengthEvidence:strengthEvidence??{ready:false,status:state.certifiedFloorStrength.has(layer)?
-       'ALREADY_MEASURED_ON_EARLIER_CLEAR':'NO_VALID_REAL_BATTLE_PROOF'},
-     ready:ordinaryEligible&&strengthEvidence?.ready===true};
    const fightsBeforeLayer=state.fights,lootBeforeLayer=pending.loot.length;
    const xpBeforeLayer=pending.xp,usedBeforeLayer=Object.values(usage).reduce((a,b)=>a+b,0);
    const manaBeforeLayer=manaCount(usage);
    const cleanseBeforeLayer=cleanseCount(usage);
-   let allWon=true,bossRounds=null;
+   let allWon=true,bossRounds=null,escapedLayer=false;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
     const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked);
     state.fights++;
-    if(recovering&&auditedReplayBand===null)state.recoveryFights++;
+    if(recovering)state.recoveryFights++;
     if(layer<=state.best)state.replayedFights++;
     if(layer<=state.best&&style==='B')state.farmingFights++;
     state.healCasts+=outcome.healCasts;
@@ -878,6 +757,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     state.enemyDebuffs+=outcome.enemyDebuffs;
     if(!utilityUnlocked&&outcome.healCasts)
      throw Error('Illegal tutorial heal before the banked F2 clear');
+    if(outcome.escaped){escaped=true;escapedLayer=true;allWon=false;break;}
     if(!outcome.win){defeat=true;allWon=false;break;}
     if(slot===5)bossRounds=outcome.rounds;
     const boss=slot===5?outcome.foe.id:null;
@@ -907,13 +787,12 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
    const layerLoot=pending.loot.slice(lootBeforeLayer);
    state.floorAudit.push({sortie:state.sorties,layer,style,route,
     rankPendingAtEntry:layer>=20&&layer%10===0&&profile.adventurerRank<layer,
-    floorPreparation,
     attemptedFights:state.fights-fightsBeforeLayer,replay:layer<=state.best,
     bossRounds,
     entryHpPercent:entryHp,entryMpPercent:entryMp,
     exitHpPercent:percent(hero.hp,hero.stats.hp),
     exitMpPercent:percent(hero.mp,hero.maxMp),
-    defeated:!allWon,cleared:allWon,
+    defeated:!allWon&&!escapedLayer,escaped:escapedLayer,cleared:allWon,
     gainedXp:Math.max(0,G.normalizeXp(pending.xp-xpBeforeLayer)),
     pendingStone:layerLoot.filter(x=>x.type==='stone').length,
     pendingInk:layerLoot.filter(x=>x.type==='ink').length,
@@ -925,7 +804,6 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
      (manaCount(usage)-manaBeforeLayer)-(cleanseCount(usage)-cleanseBeforeLayer),
     bossRank:state.rankAudit.findLast(x=>x.layer===layer&&x.sortie===state.sorties)??null,
     banked:false});
-   if(allWon&&floorPreparation.ready)state.certifiedFloorStrength.add(layer);
     if(!allWon)break;
     lastClear=layer;
    if(layer%10===0){
@@ -971,7 +849,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   const earnedPending={stone:pending.loot.filter(x=>x.type==='stone').length,
    ink:pending.loot.filter(x=>x.type==='ink').length};
   for(const row of state.floorAudit.filter(x=>x.sortie===state.sorties))
-   row.banked=!defeat;
+   row.banked=!defeat&&row.cleared;
   if(defeat){
    state.losses++;state.lost.stone+=earnedPending.stone;
    state.lost.ink+=earnedPending.ink;state.lost.xp+=pending.xp;
@@ -979,15 +857,16 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     state.ledger.collections.lostUnbanked+=pending.loot.filter(x=>x.type==='collection').length;
    // The shipped game returns unused equipped items to the warehouse on defeat.
    state.inventory.push(...carry.filter(Boolean));
+  }else if(escaped){
+   commit(state,pending,carry,lastClear);
   }else if(lastClear>=start){
    commit(state,pending,carry,lastClear);
   }else state.inventory.push(...carry.filter(Boolean));
   if(style==='B'&&state.best>=30){state.recoveryRemainingGap=recoveryGap(state);
    if(state.recoveryTarget&&state.recoveryRemainingGap.every(x=>x===0))state.recoveryAchieved=true;}
-  state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,
-   recovering:recovering&&auditedReplayBand===null,
-   auditedReplayBand,
-   tutorial,training:training&&auditedReplayBand===null,utilityUnlocked,
+  state.trace.push({sortie:state.sorties,start,goal,cleared:lastClear,defeat,escaped,
+   recovering,
+   tutorial,training,utilityUnlocked,
    levelBefore:firstLevel,levelAfter:profile.level,rank:profile.adventurerRank,
    gainedPending:earnedPending,banked:!defeat,stone:state.stones,ink:state.ink,
    usedItems:usage,fights:state.fights,returned:!defeat,
@@ -1004,6 +883,14 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
  if(state.best>=100&&profile.adventurerRank<100)
   state.blockers.push('Reached F100 but real rank badges remain unearned within the measurement budget');
  if(style==='B'&&!state.recoveryTarget)state.blockers.push('No same-seed A F31 entry; no invented stone-recovery target');
+ for(const band of approvedGoals.bands){
+  state.journeyStrength[band.from]??={band:band.from+'-'+band.to,attempts:0,
+   status:'UNREACHED_NO_LEGAL_BANKED_SNAPSHOT',firstReached:null,lastAssessment:null,
+   fingerprint:null};
+  const result=state.journeyStrength[band.from];
+  if(result.status==='UNASSESSED'||result.status==='UNREACHED_NO_LEGAL_BANKED_SNAPSHOT')
+   result.status=result.attempts?'ASSESSED_UNMET':'UNREACHED_NO_LEGAL_BANKED_SNAPSHOT';
+ }
  const invested=state.circles.map(c=>({active:c.active,role:c.role,attribute:c.attribute,basePower:c.basePower,
   upgradeLevel:c.upgrades,power:actualPower(c),mpCost:G.spellMpCost({role:c.role,basePower:c.basePower,upgradeLevel:c.upgrades}),ink:c.ink}));
  const stoneReconciled=state.earned.stone-state.spent.stone-state.stones;
@@ -1024,16 +911,7 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
     lostUnbanked:state.lost.stone},
    ink:{banked:state.earned.ink,redrawSpent:state.spent.ink,held:state.ink,
     lostUnbanked:state.lost.ink}};
- const farmingUnresolved=verifyFarming&&farmingProof?
-  Array.from({length:10},(_,i)=>i*10+1)
-   .filter(b=>state.preparedSnapshots[b]&&!state.earnedStrengthProof[b]):[];
- if(farmingUnresolved.length)
-  state.blockers.push('UNRESOLVED budget cutoff; unpaid strength proof missing for F'+
-   farmingUnresolved.join(',F')+' after '+state.fights+'/'+maxFights+
-   ' fights and '+state.sorties+'/'+maxSorties+' sorties; not permanently unreachable');
- else if(verifyFarming&&extraBand()!==null)
-  state.blockers.push('Insufficient banked replay evidence before explicit test budget; not PASS');
- return {seed,style,route,alchemy,verifyFarming,
+ return {seed,style,route,alchemy,
   offDeckStoneSpent:state.offDeckStoneSpent,
   playerBase:{...state.playerBase},alchemyCrafts:state.alchemyCrafts,
   alchemyByproducts:state.alchemyByproducts,profile:chestSummary(profile),best:state.best,
@@ -1054,13 +932,8 @@ export function runJourney(seed,{style='A',route='short',alchemy=false,
   otherItemUses:state.otherItemUses,rankManaUses:state.rankManaUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
   floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,
-  entrySnapshots:state.entrySnapshots,preparedSnapshots:state.preparedSnapshots,
-  preparedFarmingSnapshots:state.preparedFarmingSnapshots,
-  completedReplayLoops:state.completedReplayLoops,
-  earnedStrengthProof:state.earnedStrengthProof,
-  farmingUnresolved,trainingBudget:{maxFights,maxSorties},
-  referenceSnapshots:state.referenceSnapshots,referenceLastAttempt:state.referenceLastAttempt,
-  farmingSnapshots:state.farmingSnapshots,replayBanked:state.replayBanked,blockers:state.blockers};
+  entrySnapshots:state.entrySnapshots,journeyStrength:state.journeyStrength,
+  blockers:state.blockers};
 }
 export function summarizeJourneys(samples=16,seed=20261024){
  if(!Number.isSafeInteger(samples)||samples<1||samples>512)throw Error('Invalid economy sample count');
@@ -1116,8 +989,7 @@ export function summarizeJourneys(samples=16,seed=20261024){
   const comparisonStates=runs.map(r=>({seed:r.seed,best:r.best,rank:r.profile.rank,
    snapshots:Object.fromEntries(Array.from({length:10},(_,i)=>i*10+1).flatMap(layer=>
     r.entrySnapshots[layer]?[[layer,r.entrySnapshots[layer]]]:[])),
-   preparedSnapshots:Object.fromEntries(Array.from({length:10},(_,i)=>i*10+1).flatMap(layer=>
-    r.preparedSnapshots[layer]?[[layer,r.preparedSnapshots[layer]]]:[]))}));
+   journeyStrength:r.journeyStrength}));
   return {style,route,samples,distributions,checkpoints,floorObservations,
     completed:runs.filter(x=>x.best>=100).length,
    blocked:runs.length-runs.filter(x=>x.best>=100).length,comparisonStates,

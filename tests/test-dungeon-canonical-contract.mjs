@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import {assertFixedTrace,assertFixedInventory,journeySpellAllowed,journeyItemAllowed,
- assertPairedCharacters,assert256Seeds,assertEntireFloorCoverage,
- assertBankedJourneySnapshot,assertPreRecoveryRankGate,assertNotFalsePass,
- certifiesPreEntryReadiness} from '../scripts/dungeon-test-contract.mjs';
+ assertPairedCharacters,assert256Seeds,assertBankedJourneySnapshot,assertPreRecoveryRankGate,assertNotFalsePass,summarizeJourneyStrength} from '../scripts/dungeon-test-contract.mjs';
 const good={win:true,cleared:50,maxHp:100,maxMp:100,hp:90,mp:90,
  restores:0,initialLoadout:[],
  layerStats:Array.from({length:10},(_,i)=>({layer:i+1,startHp:100-i,startMp:100-i,
@@ -44,12 +42,6 @@ assert.throws(()=>assertPairedCharacters(hero,{...hero,playerBase:{...hero.playe
 assert.throws(()=>assert256Seeds(Array.from({length:256},()=>42)),/duplicate/);
 assert.throws(()=>assert256Seeds(Array.from({length:255},(_,i)=>i)),/denominator/);
 
-const floors=Array.from({length:100},(_,i)=>({layer:i+1,readiness:{
- firstEntryReady:256,additionalFarmingReady:0,prepared:256,missingSeeds:[]}}));
-assert.doesNotThrow(()=>assertEntireFloorCoverage(floors));
-assert.throws(()=>assertEntireFloorCoverage(floors.filter(f=>f.layer%10===0)),/every individual floor/);
-const missing=structuredClone(floors);missing[32].readiness.missingSeeds=[17011];
-assert.throws(()=>assertEntireFloorCoverage(missing),/unready seeds/);
 const state={source:'POST_RETURN_BANKED_AND_INVESTED',unbankedXp:0,
  unbankedStone:0,unbankedInk:0,earned:{stone:10,ink:5},
  spent:{stone:7,ink:5},bankedStones:3,bankedInk:0,
@@ -62,38 +54,24 @@ assert.throws(()=>assertPreRecoveryRankGate({hpPercent:90,mpPercent:79,eligible:
 assert.throws(()=>assertNotFalsePass({passed:true,missing:1}),/cannot PASS/);
 assert.throws(()=>assertNotFalsePass({passed:true,cutoff:true}),/cannot PASS/);
 
-console.log('PASS canonical test contract and mutation regressions');
+const seeds=Array.from({length:256},(_,i)=>17011+13*i);
+const policy={style:'A',route:'short',samples:256,journeyStrength:Array.from({length:10},(_,i)=>({
+ band:(i*10+1)+'-'+(i*10+10),completion:256,
+ owners:seeds.map(seed=>({seed,status:'REACHED',lastAssessment:{reasons:[]}}))}))};
+const strength=summarizeJourneyStrength(policy,seeds);
+assert.equal(strength.length,10);
+assert.ok(strength.every(row=>row.reached===256&&row.status==='ALL_256_REACHED_RECOMMENDED_STRENGTH'));
+assert.equal(strength[0].legacyResults,'NOT_CARRIED_FORWARD_OR_RELABELLED');
+const cutoff=structuredClone(policy);
+cutoff.journeyStrength[0].owners[0]={seed:seeds[0],attempts:2,status:'ASSESSED_UNMET',
+ lastAssessment:{reasons:['MP_RESOURCE_SHORTAGE']}};
+cutoff.journeyStrength[0].owners[1]={seed:seeds[1],attempts:0,
+ status:'UNREACHED_NO_LEGAL_BANKED_SNAPSHOT',lastAssessment:null};
+const cutoffRows=summarizeJourneyStrength(cutoff,seeds);
+assert.equal(cutoffRows[0].reached,254,'unmet and unobserved owners cannot be converted into passes');
+assert.equal(cutoffRows[0].unreached,2);
+assert.deepEqual(cutoffRows[0].missingReasons,
+ [['MP_RESOURCE_SHORTAGE',1],['UNREACHED_NO_LEGAL_BANKED_SNAPSHOT',1]]);
+assert.equal(cutoffRows[0].status,'RECOMMENDED_STRENGTH_NOT_REACHED_OR_UNPROVEN');
 
-const observedFloor={layer:16,attemptedFights:5,cleared:true,
- floorPreparation:{layer:16,recommendedLevel:20,level:25,ready:true,
-  strengthEvidence:{ready:true,reference:'ORIGINAL_FIXED_DECK_SAME_CHARACTER',
-   actual:{won:true,attempted:5},fixed:{won:true,attempted:5}},
-  completeCombatKit:true,sustainableAttackActions:3,
-  circleIntegrity:true,itemIntegrity:true,rankLegal:true,attackCoverage:5,
-  powerPerMp:42,acquiredUpgrades:3}};
-assert.equal(certifiesPreEntryReadiness(observedFloor),true);
-assert.equal(certifiesPreEntryReadiness({...observedFloor,cleared:false}),false,
- 'a failed exploration must never certify combat-ready equipment');
-assert.equal(certifiesPreEntryReadiness({...observedFloor,attemptedFights:1}),false);
-assert.equal(certifiesPreEntryReadiness({...observedFloor,
- floorPreparation:{...observedFloor.floorPreparation,completeCombatKit:false}}),false);
-for(const key of ['circleIntegrity','itemIntegrity','rankLegal']){
- assert.equal(certifiesPreEntryReadiness({...observedFloor,
-  floorPreparation:{...observedFloor.floorPreparation,[key]:false}}),false,
-  key+' is mandatory total-strength evidence');
-}
-assert.equal(certifiesPreEntryReadiness({...observedFloor,
- floorPreparation:{...observedFloor.floorPreparation,attackCoverage:0}}),false,
- 'level alone without effective spells never certifies readiness');
-assert.equal(certifiesPreEntryReadiness({...observedFloor,
- floorPreparation:{...observedFloor.floorPreparation,powerPerMp:0}}),false,
- 'unusable MP efficiency cannot certify readiness');
-assert.equal(certifiesPreEntryReadiness({...observedFloor,
- floorPreparation:{...observedFloor.floorPreparation,level:19}}),false);
-
-assert.equal(certifiesPreEntryReadiness({...observedFloor,
- floorPreparation:{...observedFloor.floorPreparation,strengthEvidence:null}}),false,
- 'winning five real fights without proof against fixed deck cannot certify recommended strength');
-assert.equal(certifiesPreEntryReadiness({...observedFloor,
- floorPreparation:{...observedFloor.floorPreparation,strengthEvidence:{ready:false}}}),false,
- 'loss, incomparable combat, and unfinished measurements cannot be promoted to PASS');
+console.log('PASS canonical journey formula contracts and legacy-pass separation');

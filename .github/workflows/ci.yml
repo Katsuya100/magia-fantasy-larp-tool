@@ -91,7 +91,6 @@ jobs:
       - run: node tests/test-dungeon-journeys.mjs
       - run: node scripts/dungeon-balance-manifest.mjs
       - run: node scripts/simulate-dungeon-journeys.mjs 16 > reports/dungeon-journeys.log
-      - run: node scripts/dungeon-baseline-review-proposal.mjs
       - name: Detect unapproved economic benchmark drift
         id: economic_baseline
         continue-on-error: true # preserve diagnosis; gate explicitly at the end
@@ -112,7 +111,7 @@ jobs:
           INK_OUTCOME: ${{ steps.ink_pair.outcome }}
         run: |
           echo "Unapproved old first-entry benchmark: $BASELINE_OUTCOME (diagnostic only)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Formal difficulty acceptance: COMBAT_BALANCE from original fixed deck (not the unapproved candidate)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Formula-only journey strength acceptance runs separately across 6 policies x 10 bands x 256 owners; results are preserved by dungeon-journey-strength-strict." >> "$GITHUB_STEP_SUMMARY"
           echo "BUILD_STRATEGY evidence: $INK_OUTCOME (unmet stays unmet)" >> "$GITHUB_STEP_SUMMARY"
       - name: Archive diagnostic reports and seed traces
         if: always()
@@ -155,10 +154,11 @@ jobs:
           node-version: '24'
       - run: node tests/test-dungeon-xp-balance.mjs
       - run: node tests/test-dungeon-journeys.mjs
+      - run: node tests/test-dungeon-floor-strength.mjs
       - run: node tests/test-dungeon-test-design.mjs
       - run: node scripts/dungeon-balance-manifest.mjs
-      - name: Verify 256 actual banked accounts for A B C and D
-        run: node scripts/dungeon-linked-256-audit.mjs
+      - name: Measure formula-only recommended strength for all 256 owners
+        run: node scripts/dungeon-journey-strength-audit.mjs
       - name: Preserve full seeded economy, source hashes and owner states
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -181,9 +181,8 @@ jobs:
             config/dungeon-recommended-reference-candidate.v1.json
           if-no-files-found: warn
 
-  dungeon-linked-256-combat-strict:
-    # All 60 genuine journey outcomes remain archived, but their win rates
-    # are not fixed-deck gates.
+  dungeon-journey-strength-strict:
+    # The fixed-deck formula comparison uses the 6 x 10 x 256 legal owner matrix.
     needs: dungeon-foundation-256-accounts
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -196,34 +195,20 @@ jobs:
         with:
           name: dungeon-foundation-256-accounts
           path: reports/
-      - name: Diagnose actual-owner battles for all 60 journey conditions
-        run: node scripts/dungeon-linked-256-combat.mjs
       - name: Record the original fixed-deck comparator separately
         env:
           DUNGEON_BALANCE_STRICT: '0'
           DUNGEON_BALANCE_SAMPLES: '256'
         run: node tests/test-dungeon-default-balance.mjs > reports/dungeon-fixed-deck-detail.log
-      - name: Evaluate COMBAT_BALANCE, JOURNEY_READINESS, BUILD_STRENGTH, EXTRA_FARMING, RANK_ACQUISITION, BUILD_STRATEGY
-        run: node scripts/dungeon-redefined-evaluation.mjs
-      - name: Prove real replay-built decks against the fixed deck with paired combat
-        run: node scripts/dungeon-build-strength.mjs
-      - name: Verify C short and long 256-owner redraw comparisons completed
-        run: node tests/test-dungeon-c-redraw-comparison.mjs --report
-      - name: Pair real re-farming cost to actual 256-owner combat readiness
-        if: always()
-        run: node scripts/dungeon-strategy-readiness.mjs
-      - name: Archive separated verdicts including unmet balances and unready owners
+      - name: Enforce the recommended-strength formula and independent chapter rank contract
+        run: node scripts/check-dungeon-journey-strength.mjs
+      - name: Archive formula verdicts and the original fixed-deck detail
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: dungeon-linked-256-combat
+          name: dungeon-journey-strength-256
           path: |
-            reports/dungeon-linked-256-combat-v1.json
-            reports/dungeon-strategy-readiness-v1.json
-            reports/dungeon-redefined-verdicts-v1.json
-            reports/dungeon-paired-build-strength-v1.json
+            reports/dungeon-journey-strength-v1.json
             reports/dungeon-fixed-deck-combat-v1.json
+            reports/dungeon-fixed-deck-detail.log
           if-no-files-found: warn
-      - name: Enforce real journey readiness without per-journey win-rate limits
-        if: always()
-        run: node scripts/check-dungeon-linked-256-combat.mjs

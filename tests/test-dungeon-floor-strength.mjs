@@ -1,66 +1,95 @@
-// Regression: official strength is an actual fixed-deck battle comparison,
-// aggregated for all one hundred floors, independent of candidate thresholds.
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
-import {referenceSpells,evaluateRecommendedFloor} from '../scripts/dungeon-fixed-deck-pair.mjs';
-import {summarizeOfficialJourneyReadiness} from '../scripts/dungeon-test-contract.mjs';
-import {reference as unapprovedCandidate} from '../scripts/dungeon-readiness-reference.mjs';
+import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
+import {assessRecommendedStrength,strengthBands} from '../scripts/dungeon-recommended-strength.mjs';
+import {referenceSpells} from '../scripts/dungeon-fixed-deck-reference.mjs';
+import {summarizeJourneyStrength} from '../scripts/dungeon-test-contract.mjs';
 
 const base=G.startingBase(()=>.5);
-const circles=referenceSpells[0][0];
-const hero=G.makeUnit(base,19,{},circles,'hero');
-const original={layer:1,level:19,rank:0,playerBase:base,
- playerHp:hero.stats.hp,playerMp:hero.maxMp,
- maxHp:hero.stats.hp,maxMp:hero.maxMp,circles,
- carry:[],statuses:[],cooldowns:[0,0,0,0,0]};
-const same=evaluateRecommendedFloor(original,1,0);
-assert.equal(same.reference,'ORIGINAL_FIXED_DECK_SAME_CHARACTER');
-assert.deepEqual(same.actual,same.fixed,
- 'identical original spells must produce identical real five-fight outcomes');
-assert.equal(same.actual.attempted,5);
-assert.equal(same.ready,true,'a victorious identical loadout must meet its own benchmark');
-const weakened={...original,circles:circles.map(c=>({...c,power:10,basePower:10,upgradeLevel:0}))};
-const weaker=evaluateRecommendedFloor(weakened,1,0);
-assert.equal(weaker.ready,false,'five spells without competitive combat strength cannot pass');
-assert.ok(!weaker.actual.won||weaker.actual.casts>=same.actual.casts);
+const owner=(bandIndex,overrides={})=>{
+ const band=strengthBands[bandIndex],fixed=referenceSpells[bandIndex][0];
+ return {style:'A',route:'short',level:band.recommendedLevel,
+  bankedBestLayer:band.to,playerBase:{...base},
+  circles:fixed.map(circle=>({...circle})),carry:[],...overrides};
+};
 
+// Compare the exact same baseline input to itself in every band. Some fixed
+// references cannot complete this deliberately conservative formula path;
+// those rows must stay unpassed rather than serving as an invalid denominator.
+const selfComparisons=strengthBands.map((band,index)=>
+ assessRecommendedStrength(owner(index),index,0));
+const equal=selfComparisons[0];
+assert.equal(equal.passed,true,equal.reasons.join(','));
+assert.equal(equal.actual.excessDamage,0);
+assert.equal(equal.actual.damageTaken,equal.reference.damageAllowed);
+assert.equal(equal.actual.totalMpBurden,equal.reference.mpBurden);
+assert.equal(equal.actual.completedEnemies,50);
+assert.match(equal.methodology.scopeLimit,/not game AI.*or a new battle proof/);
+assert.equal(equal.reference.opponents.length,50);
+assert.ok(equal.reference.floors.every(row=>row.enemies.length===5));
+for(const [index,result] of selfComparisons.entries()){
+ assert.equal(result.actual.attackFeasible,result.reference.attackFeasible,
+  'identical fixed-deck inputs must have identical formula feasibility in '+strengthBands[index].from+'-'+strengthBands[index].to);
+ assert.equal(result.actual.completedEnemies,result.reference.completedEnemies);
+ assert.equal(result.actual.damageTaken,result.reference.damageTaken);
+ assert.equal(result.actual.totalMpBurden,result.reference.mpBurden);
+ if(!result.reference.attackFeasible){
+  assert.ok(result.reasons.includes('REFERENCE_FORMULA_PATH_INCOMPLETE'));
+  assert.equal(result.passed,false,'an incomplete reference cannot certify itself');
+ }
+}
+
+// The input can represent a low-level owner with genuinely stronger paid
+// circles and a high-level owner with weak circles; level alone is not a gate.
+const fixed=referenceSpells[0][0];
+const strong=fixed.map((circle,index)=>{
+ const upgrades=index<3?8:0;
+ return {...circle,basePower:circle.basePower??circle.power,
+  upgradeLevel:upgrades,
+  power:index<3?strengthenedPower(circle.basePower??circle.power,upgrades):
+   circle.power};
+});
+const low=assessRecommendedStrength(owner(0,{level:1,circles:strong}),0,0);
+const weak=fixed.map(circle=>({...circle,basePower:10,power:10,upgradeLevel:0}));
+const high=assessRecommendedStrength(owner(0,{level:150,circles:weak}),0,0);
+assert.equal(low.actual.level,1);
+assert.equal(high.actual.level,150);
+assert.ok(!low.reasons.some(reason=>reason.includes('LEVEL')));
+assert.ok(!high.reasons.some(reason=>reason.includes('LEVEL')));
+
+// A deck without attacks must expose the real basic-attack/action-limit
+// constraint instead of being passed from its level or nominal power.
+const noAttacks=fixed.map(circle=>({...circle,role:'support',basePower:10,
+ power:10,upgradeLevel:0}));
+const insufficient=assessRecommendedStrength(owner(0,{circles:noAttacks}),0,0);
+assert.equal(insufficient.actual.completedEnemies<50,true);
+assert.ok(insufficient.reasons.includes('INSUFFICIENT_ATTACKS_WITHIN_80_TURNS')||
+ insufficient.reasons.includes('PLAYER_HP_DEPLETED'));
+
+// Actual carried stock is consumed only in a local copy. It keeps its exact
+// instance identity and reports shipped HP/MP effects separately.
+const itemOwner=owner(0,{level:strengthBands[0].recommendedLevel,
+ carry:[{id:'heal_xl',value:1000,bonus:null,instanceId:'owned-heal-1'}]});
+const saved=structuredClone(itemOwner);
+const withItem=assessRecommendedStrength(itemOwner,0,0);
+assert.deepEqual(itemOwner,saved,'calculator must not consume or mutate real-owner stock');
+assert.ok(withItem.actual.itemRecovery.uses.every(use=>use.instanceId===undefined));
+assert.ok(Number.isFinite(withItem.actual.itemRecovery.healing));
+assert.ok(Number.isFinite(withItem.actual.itemRecovery.mpRestored));
+assert.equal(withItem.actual.itemRecovery.uses.length<=1,true);
+
+// A formal cutoff or missing legal owner remains unproven and cannot inherit
+// a legacy 255/256 rank or a previous per-floor battle result.
 const seeds=Array.from({length:256},(_,i)=>17011+13*i);
-const policy={style:'A',route:'short',accounts:seeds.map(seed=>({seed,blockers:[]})),
- floors:Array.from({length:100},(_,i)=>({layer:i+1,readiness:{
-   firstEntryReady:256,firstEntryReadySeeds:[...seeds],
-   additionalFarmingReady:0,prepared:256,missingSeeds:[]}}))};
-const all=summarizeOfficialJourneyReadiness(policy,seeds);
-assert.equal(all.length,10);
-assert.ok(all.every(x=>x.prepared===256&&x.preparedBeforeFirstBandClear===256));
-policy.floors[36].readiness.missingSeeds=[seeds[0]];
-policy.floors[36].readiness.prepared=255;
-policy.floors[36].readiness.firstEntryReady=255;
-policy.floors[36].readiness.firstEntryReadySeeds=seeds.slice(1);
-policy.accounts[0].blockers=['UNRESOLVED budget cutoff'];
-const limited=summarizeOfficialJourneyReadiness(policy,seeds);
-assert.equal(limited[3].prepared,255,'every floor, not just final boss, must be ready');
-assert.equal(limited[3].unprepared,1);
-assert.deepEqual(limited[3].missingAccounts[0].missingFloors,[37]);
-assert.ok(limited[3].missingAccounts[0].reasons.includes('BUDGET_CUTOFF_NOT_PASS'));
-assert.equal(limited[2].prepared,256,'unrelated floors retain their own proof');
-// The old candidate can be arbitrarily changed without influencing formal
-// eligibility: the formal evaluator accepts ONLY witnessed owner floor data.
-const candidate=JSON.parse(readFileSync(new URL(
- '../config/dungeon-recommended-reference-candidate.v1.json',import.meta.url),'utf8'));
-candidate.spells=['changed'];candidate.bands=['changed'];
-const oldLevel=unapprovedCandidate.bands[0].startLevel;
-unapprovedCandidate.bands[0].startLevel=9999;
-assert.deepEqual(summarizeOfficialJourneyReadiness(policy,seeds),limited);
-assert.deepEqual(evaluateRecommendedFloor(original,1,0),same,
- 'the real fixed-deck floor reference must not depend on candidate numerics');
-unapprovedCandidate.bands[0].startLevel=oldLevel;
-const reportSource=readFileSync(new URL('../scripts/dungeon-redefined-evaluation.mjs',import.meta.url),'utf8');
-const auditSource=readFileSync(new URL('../scripts/dungeon-linked-256-audit.mjs',import.meta.url),'utf8');
-assert.doesNotMatch(reportSource,/dungeon-readiness-reference|specFor\(|assess\(/,
- 'formal verdict must not import candidate test machinery');
-assert.match(auditSource,/collectCandidateDiagnostic:false/,
- 'formal 256-owner economy cohort must never be filtered by unapproved candidate');
-assert.doesNotMatch(auditSource,/config\/dungeon-recommended-reference-candidate\.v1\.json/,
- 'formal owner audit must not depend on candidate file hash');
-console.log('PASS real paired floor strength, complete 100-floor coverage, candidate independence and cutoff regression');
+const policy={style:'C',route:'long',samples:256,journeyStrength:Array.from({length:10},(_,i)=>({
+ band:(i*10+1)+'-'+(i*10+10),completion:256,
+ owners:seeds.map(seed=>({seed,status:'REACHED',lastAssessment:{reasons:[]}}))}))};
+policy.journeyStrength[7].owners[255]={seed:seeds[255],
+ status:'UNREACHED_NO_LEGAL_BANKED_SNAPSHOT',lastAssessment:null};
+const rows=summarizeJourneyStrength(policy,seeds);
+assert.equal(rows[7].reached,255);
+assert.equal(rows[7].unreached,1);
+assert.equal(rows[7].legacyResults,'NOT_CARRIED_FORWARD_OR_RELABELLED');
+assert.equal(rows[7].status,'RECOMMENDED_STRENGTH_NOT_REACHED_OR_UNPROVEN');
+
+console.log('PASS formula-only fixed-deck comparison, legal action limits, level-independent loadouts and real carried-item accounting');

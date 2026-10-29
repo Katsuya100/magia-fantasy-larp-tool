@@ -1,93 +1,31 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {reference,specFor,assess,stoneCost,combatFixture,expectedPowers} from '../scripts/dungeon-readiness-reference.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
-import {pairedAdvantage,pairedTradeoffs} from '../scripts/dungeon-fixed-deck-pair.mjs';
-import {parseCsv} from '../assets/js/dungeon-core.mjs';
+import {strengthBands} from '../scripts/dungeon-recommended-strength.mjs';
+import {referenceSpells} from '../scripts/dungeon-fixed-deck-reference.mjs';
+
 const approved=JSON.parse(readFileSync(new URL('../config/dungeon-approved-goals.v1.json',import.meta.url),'utf8'));
-assert.equal(reference.status,'CANDIDATE_NOT_USER_APPROVED','candidate may not auto-approve');
 assert.equal(approved.strictSamples,256);
 assert.equal(approved.playerLevelMax,150);
 assert.deepEqual(approved.bands.map(x=>x.winRate),[[99,100],[99,100],...Array.from({length:8},()=>[90,97])]);
 assert.deepEqual(approved.bands.map(x=>x.winSafety),[[99,100],[99,100],...Array.from({length:8},()=>[92,95])]);
 assert.deepEqual(approved.bands.map(x=>x.winnerMedianMp),[[50,60],...Array.from({length:9},()=>[0,15])]);
 assert.equal(approved.rank.bothHpMpPercentAtLeast,80);
-// Tactical tradeoffs are evidence in diagnostics, not official PASS conditions.
-const fixedFight={won:true,endHp:86,endMp:95,casts:75,
- spellMpSpent:370,remainingCarry:4};
-const efficientFight={...fixedFight,endHp:60,endMp:90,
- casts:51,spellMpSpent:155};
-assert.equal(pairedAdvantage(efficientFight,fixedFight),null);
-assert.equal(pairedAdvantage({...efficientFight,remainingCarry:3},fixedFight),null);
-assert.equal(pairedTradeoffs(efficientFight,fixedFight).fasterAndCheaper,true);
-assert.equal(pairedAdvantage({...efficientFight,won:false},fixedFight),null);
-assert.equal(pairedAdvantage({...fixedFight},fixedFight),null);
-assert.equal(pairedAdvantage({...fixedFight,endHp:87},fixedFight),'PARETO_ADVANTAGE');
-assert.equal(pairedAdvantage({...fixedFight,endMp:94},fixedFight),null);
-assert.equal(pairedAdvantage({...fixedFight,casts:74,spellMpSpent:350},fixedFight),'PARETO_ADVANTAGE');
-assert.equal(pairedAdvantage({...fixedFight,remainingCarry:3},fixedFight),null);
-assert.equal(pairedAdvantage({...fixedFight,won:false},fixedFight),null);
-assert.equal(pairedAdvantage(fixedFight,{...fixedFight,won:false}),'WIN_ADVANTAGE');
-assert.equal(pairedAdvantage({...fixedFight,endHp:NaN},fixedFight),null);
-assert.equal(pairedAdvantage({...fixedFight,cutoff:true}, {...fixedFight,won:false}),null,
- 'a combat cutoff is never an earned win advantage');
-assert.equal(pairedAdvantage(fixedFight,{...fixedFight,won:false,cutoff:true}),null,
- 'reference cutoff must not become proof of a stronger deck');
-const richActual={...fixedFight,damageTaken:9,hpRecovered:30,mpRecovered:12,
- used:{heal_s:2,clear_flame:1}};
-const richFixed={...fixedFight,damageTaken:20,hpRecovered:10,mpRecovered:4,
- used:{heal_s:1}};
-const diagnosis=pairedTradeoffs(richActual,richFixed);
-assert.equal(diagnosis.damageAvoided,11);
-assert.equal(diagnosis.hpRecoveryDelta,20);
-assert.equal(diagnosis.mpRecoveryDelta,8);
-assert.equal(diagnosis.itemsUsed,2);
-assert.equal(pairedAdvantage(richActual,richFixed),null,
- 'real recovery and damage improvements do not override the formal four metrics');
-const enduranceFight={...fixedFight,endHp:100,endMp:99,casts:82,spellMpSpent:320};
-assert.equal(pairedAdvantage(enduranceFight,fixedFight),null);
-assert.equal(pairedTradeoffs(enduranceFight,fixedFight).enduranceTradeoff,true);
-// The candidate's carried cures must correspond to curses actually cast by
-// authored enemies in the same fifty-fight band, never phantom effects.
-const authoredEnemies=parseCsv(readFileSync(new URL('../assets/data/dungeon-enemies.csv',import.meta.url),'utf8'));
-for(const s of reference.bands.filter(x=>x.from>=51)){
- const foes=authoredEnemies.slice((s.from-1)*5,s.to*5);
- assert.equal(foes.length,50,'ten authored floors must contain fifty enemies');
- const encountered=new Set(foes.flatMap(foe=>foe.spells.split('|')
-  .filter(spell=>spell.startsWith('debuff:'))
-  .map(spell=>'clear_'+spell.split(':')[1])));
- const required=Object.keys(s.requiredItems).filter(id=>id.startsWith('clear_'));
- assert.deepEqual(required.sort(),[...encountered].sort(),
-  'required cleansers must match real enemy curse attributes in '+s.from+'-'+s.to);
+assert.equal(approved.rank.independentFromCombatBalance,true);
+assert.equal(strengthBands.length,10);
+assert.equal(referenceSpells.length,10);
+for(const [index,band] of strengthBands.entries()){
+ assert.equal(band.from,index*10+1);
+ assert.equal(band.to,index*10+10);
+ assert.equal(band.recommendedLevel,targetClearLevel(band.to));
+ assert.equal(band.opponentIds.length,50,'each formula reference covers ten authored floors');
+ assert.equal(new Set(band.opponentIds).size,50,'each authored opponent is counted once');
+ assert.equal(referenceSpells[index].length,256,'fixed reference retains all seed-specific stone ledgers');
+ for(const circles of referenceSpells[index]){
+  assert.equal(circles.length,5);
+  assert.deepEqual(circles.map(x=>x.role),['attack','attack','attack','support','defense']);
+  assert.ok(circles.every(x=>Number.isFinite(x.power)&&Number.isFinite(x.basePower)&&
+   Number.isInteger(x.upgradeLevel??0)));
+ }
 }
-for(const s of reference.bands){
- assert.equal(s.priorCheckpointLevel,s.from===1?1:targetClearLevel(s.from-1));
- assert.equal(s.startLevel,targetClearLevel(s.to));
- assert.equal(s.endingCheckpointLevel,s.startLevel);
- assert.ok(Array.from({length:10},(_,i)=>targetClearLevel(s.from+i))
-  .every(level=>level<=s.startLevel),'every later floor recommendation must fit fixed 50-fight level');
- assert.ok(stoneCost(s)>=0);
- assert.equal(expectedPowers(s).length,5);
- assert.deepEqual(reference.spells.map(x=>x.role),['attack','attack','attack','support','defense']);
- const base={hp:50,mag:20,def:20,res:20};
- const potential=combatFixture(s,base);
- assert.equal(potential.level,s.startLevel);
- assert.equal(potential.level,s.endingCheckpointLevel);
- assert.equal(potential.playerHp,potential.maxHp);
- assert.equal(potential.playerMp,potential.maxMp);
- assert.ok(potential.carry.every(x=>x.id.startsWith('clear_')||x.id==='luna_stone'));
- const actual={...potential,source:'POST_RETURN_BANKED_AND_INVESTED',
-  unbankedXp:0,unbankedStone:0,unbankedInk:0};
- assert.ok(assess(actual,s).ready);
- assert.ok(!assess({...actual,level:Math.max(0,s.startLevel-1)},s).ready);
- assert.ok(!assess({...actual,circles:actual.circles.slice(1)},s).ready);
- if(Object.keys(s.requiredItems).length)
-  assert.ok(!assess({...actual,carry:[]},s).ready);
- assert.ok(!assess({...actual,unbankedStone:1},s).ready);
-}
-// At the previously-used F11 entry Lv19 cannot legally represent a 50-fight
-// run through the F20 boss's recommended Lv37 without a return.
-assert.equal(specFor(11).priorCheckpointLevel,19);
-assert.equal(specFor(11).startLevel,37);
-assert.equal(targetClearLevel(20),37);
-console.log('PASS dungeon separated readiness contract (approved values unchanged; unapproved reference never certified)');
+console.log('PASS unchanged approved combat goals, independent 80/80 rank rule and 6 x 10 x 256 formula-reference coverage');

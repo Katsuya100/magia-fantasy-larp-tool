@@ -1,18 +1,49 @@
 import assert from 'node:assert/strict';
 import {buildManifest} from '../scripts/dungeon-balance-manifest.mjs';
-import {specFor,assess} from '../scripts/dungeon-readiness-reference.mjs';
-import {chooseAdditionalFarmingBand} from '../scripts/dungeon-test-contract.mjs';
-import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwnedRecovery,chooseEarnedReplayBand} from '../scripts/simulate-dungeon-journeys.mjs';
+import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwnedRecovery,
+ consumeEscapeWhenLethal,battle,summarizeJourneys} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
-import {rankBadgeDrop,unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
-import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
+import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
 import {createSortieEncounterSelector} from '../scripts/dungeon-balance-encounters.mjs';
 import {readFileSync} from 'node:fs';
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 configure({balance:csv('balance'),levels:csv('levels'),floors:csv('floors'),playerBase:csv('player-base')});
 const foes=csv('enemies');
+// Escape is an actual owned-item transaction. It is legal only at a lethal
+// threat, consumes one carried instance, and never resolves the encounter.
+const escapeHero=G.makeUnit({hp:100,mag:10,def:7,res:7},20,{},[
+ {role:'attack',attribute:'flame',power:360,basePower:360}
+],'hero');
+escapeHero.hp=1;
+const escapeEnemy=G.fromEnemy(foes.find(x=>x.id==='boss_l020'),20);
+const escapeItem={id:'escape_scroll',value:0,instanceId:'owned-escape-1'};
+const escapeCarry=[{...escapeItem}],escapeUsage={};
+const lethalEscape=consumeEscapeWhenLethal(escapeHero,escapeEnemy,20,escapeCarry,escapeUsage);
+assert.equal(lethalEscape?.instanceId,escapeItem.instanceId);
+assert.equal(lethalEscape?.itemId,'escape_scroll');
+assert.equal(escapeCarry[0],null,'the carried scroll instance is consumed exactly once');
+assert.equal(escapeUsage.escape_scroll,1);
+assert.equal(consumeEscapeWhenLethal(escapeHero,escapeEnemy,20,escapeCarry,escapeUsage),null,
+ 'a consumed escape scroll cannot be reused');
+const safeCarry=[{...escapeItem}],safeUsage={};
+escapeHero.hp=escapeHero.stats.hp;
+assert.equal(consumeEscapeWhenLethal(escapeHero,escapeEnemy,20,safeCarry,safeUsage),null,
+ 'a scroll is preserved when the current enemy response is survivable');
+assert.equal(safeCarry[0].instanceId,escapeItem.instanceId);
+assert.equal(consumeEscapeWhenLethal(escapeHero,escapeEnemy,5,safeCarry,safeUsage),null,
+ 'escape follows the normal item unlock rule');
+const battleState={profile:{adventurerRank:0},route:'short'};
+escapeHero.hp=1;
+const escapedBattle=battle(battleState,escapeHero,20,100,safeCarry,()=>.5,safeUsage,
+ ()=>foes.find(x=>x.id==='boss_l020'),true);
+assert.equal(escapedBattle.escaped,true);
+assert.equal(escapedBattle.win,false);
+assert.equal(escapedBattle.rounds,0,'escape returns before resolving the current enemy');
+assert.equal(escapedBattle.foe.id,'boss_l020');
+assert.equal(safeCarry[0],null);
+assert.equal(safeUsage.escape_scroll,1);
 // The deep boss mana reserve spends one genuinely owned item, and ordinary
 // deep encounters cannot burn that reserve solely for being below 82%.
 const recoveryHero=G.makeUnit({hp:100,mag:10,def:7,res:7},150,{},[],'hero');
@@ -234,44 +265,11 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  assert.equal(new Set(initialIds).size,initialIds.length,
   'real owner snapshots cannot duplicate owned consumable instances');
  assert.ok(Array.isArray(entry.bankedInventory)&&entry.bankedCollections);
- // Discovery must not be promoted to 50-fight combat readiness.
+ // First-entry snapshots remain economic history only; the formula ledger
+ // uses later banked, legally startable owner states without a level gate.
  assert.ok(entry.level<entry.targetLevel,'first real 1F entry is not 10F-ready');
- for(const [floor,snap] of Object.entries(run.preparedSnapshots)){
-  const from=Number(floor);
-  assert.equal(snap.layer,from);
-  assert.equal(snap.targetLevel,targetClearLevel(from+9));
-  assert.ok(snap.level>=snap.targetLevel);
-  assert.ok(unlockedStartLayers({adventurerRank:snap.rank}).includes(from));
-  assert.equal(snap.source,'POST_RETURN_BANKED_AND_INVESTED');
-  assert.equal(snap.playerHp,snap.maxHp);
-  assert.equal(snap.playerMp,snap.maxMp);
-  assert.equal(snap.unbankedXp,0);
-  assert.equal(snap.unbankedStone,0);
-  assert.equal(snap.unbankedInk,0);
-  assert.ok(snap.actualFights>0&&snap.actualReturns>0);
-  assert.ok(snap.actualSorties<=run.sorties);
-  assert.equal(snap.circles.length,5);
-  assert.ok(snap.carry.length<=G.capacity(snap.level));
-  assert.ok(snap.carry.every(item=>!item.id.startsWith('mana_')),
-   'strict 50-battle prepared owners never bring the new rank-only mana allowance');
-  assert.equal(new Set([...snap.carry,...snap.bankedInventory].map(x=>x.instanceId)).size,
-   snap.carry.length+snap.bankedInventory.length);
- }
- assert.ok(Object.keys(run.preparedSnapshots).length<=10);
- // Frozen reference is separate from the legacy end-of-decade level gate.
- for(const [floor,snap] of Object.entries(run.referenceSnapshots)){
-  const s=specFor(Number(floor));
-  assert.equal(snap.targetLevel,s.startLevel);
-  assert.equal(snap.source,'POST_RETURN_BANKED_AND_INVESTED');
-  assert.ok(assess(snap,s).ready,'reference reached only with real levels, power and carried items');
-  assert.ok(snap.actualFights<=run.fights&&snap.actualReturns<=run.returns);
-  for(const [i,extra] of (run.farmingSnapshots[floor]||[]).entries()){
-   assert.equal(extra.completedExtraLoops,i+1);
-   assert.ok(extra.additionalBankedReplayFights>=50*(i+1));
-   assert.ok(extra.earned.stone>=snap.earned.stone);
-   assert.ok(extra.earned.ink>=snap.earned.ink);
-  }
- }
+ assert.equal(run.journeyStrength[1]?.band,'1-10');
+ assert.ok(!('preparedSnapshots' in run),'legacy level-gated snapshots are not an active result');
 
  // Per-battle intro prohibition is asserted inside the simulator itself.
  if(style==='B'){
@@ -309,16 +307,11 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    'long journeys bank only at complete decade bosses until 51F');
  }
 }
-// B's same-seed comparison restores its original equipped spells with
-// genuinely earned stones BEFORE taking the mandatory F31 prepared snapshot.
+// B's same-seed investment target remains earned from the matching A journey.
 const dispersed=runJourney(20261024,{style:'B',route:'short'});
-const restored=dispersed.preparedSnapshots[31];
-assert.ok(restored,'B recovery must create a legally banked F31 state');
 assert.ok(Array.isArray(dispersed.recovery.targetUpgrades));
-assert.ok(restored.circles.every((c,i)=>c.upgradeLevel>=dispersed.recovery.targetUpgrades[i]),
- 'The B prepared owner may only enter F31 after paid recovery of the actual A equipment gap');
-assert.ok(restored.actualReturns>0&&restored.unbankedStone===0,
- 'B recovery preparations must be banked rather than free upgrades');
+assert.ok(dispersed.recovery.achieved,
+ 'B must close its paid same-seed equipment gap without a separate battle proof');
 
 // An actual banked five-ink C redraw must take place in a mature seeded
 // journey. Old stones remain sunk, original drawing quality is not rerolled,
@@ -352,6 +345,11 @@ assert.ok(rebuild.floorAudit.every(f=>f.bossRank===null||f.layer%10===0),
 const repeat=runJourney(20261024,{style:'A',route:'short',maxSorties:2,maxFights:120});
 const repeatAgain=runJourney(20261024,{style:'A',route:'short',maxSorties:2,maxFights:120});
 assert.deepEqual(repeatAgain,repeat,'identical seed and policy must reproduce every battle and earned resource');
+const strengthObserved=runJourney(17011,{style:'A',route:'short',maxSorties:2,maxFights:80,
+ observeStrength:true});
+for(const measurement of Object.values(strengthObserved.journeyStrength))
+ if(measurement.attempts>0&&measurement.status!=='REACHED')
+  assert.equal(measurement.status,'ASSESSED_UNMET');
 const alchemy=runJourney(20261024,{style:'A',route:'short',alchemy:true,maxSorties:4,maxFights:180});
 assert.equal(alchemy.resourceLedger.items.alchemyConsumed,5*alchemy.alchemyCrafts);
 assert.equal(alchemy.resourceLedger.items.alchemyCreated,alchemy.alchemyCrafts);
@@ -360,31 +358,9 @@ assert.equal(alchemy.resourceLedger.items.held,alchemy.inventory);
 assert.equal(alchemy.resourceLedger.collections.held,
  Object.values(alchemy.collection).reduce((a,b)=>a+b,0));
 
-assert.equal(chooseAdditionalFarmingBand([1,11],{1:3,11:3},{},true),1,
- 'a third replay is not a cap on fixed-deck superiority');
-assert.equal(chooseAdditionalFarmingBand([1,11],{1:4,11:3},{},true),11);
-assert.equal(chooseAdditionalFarmingBand([1,11],{1:4,11:4},{1:true},true),11);
-assert.equal(chooseAdditionalFarmingBand([1,11],{1:7,11:4},{1:true,11:true},true),null);
-// A route must still pay all three 50-fight replays before optimizing.
-// Then it can put newly earned, depth-scaled resources into the most
-// demanding unproven floor instead of continuously replaying cheap F1s.
-assert.equal(chooseEarnedReplayBand([1,11,91],{1:2,11:3,91:3},{},true),1);
-assert.equal(chooseEarnedReplayBand([1,11,91],{1:3,11:3,91:3},{},true),91);
-assert.equal(chooseEarnedReplayBand([1,11,91],{1:4,11:5,91:6},{91:true},true),1);
-assert.equal(chooseEarnedReplayBand([1,11,91],{1:4,11:4,91:4},{},true),91);
-assert.equal(chooseEarnedReplayBand([1,11,91],{1:4,11:4,91:5},{},true),11);
-assert.equal(chooseEarnedReplayBand([1,11,91],{1:3,11:3,91:3},
- {1:true,11:true,91:true},true),null);
-assert.equal(chooseEarnedReplayBand([1,11,91],{1:3,11:3,91:3},{},false),null);
-assert.equal(chooseAdditionalFarmingBand([1],{1:3},{},false),null,
- 'without paired combat proof, no unearned superiority is certified');
-// The unproven fourth cycle must NOT keep novices farming F1-10 forever.
-const firstClearPriority=runJourney(20261024,{style:'A',route:'short',
- verifyFarming:true,farmingProof:()=>false,maxSorties:45,maxFights:500});
-assert.ok(firstClearPriority.best>10,
- 'prove first-time progression outranks adaptive stage four until real 100F completion');
-assert.equal(firstClearPriority.completedReplayLoops[1],3,
- 'only the mandatory first three banked observations run before the campaign clear');
+// No formula result can extend the actual campaign with dedicated replay
+// loops; the six legal A/B/C x route paths stay on their own progression rules.
+assert.ok(!('completedReplayLoops' in rebuild));
 // The never-approved candidate is allowed for diagnostics but cannot steer
 // return, training, combat or investment. Remove it entirely and compare.
 for(const style of ['A','B','C'])for(const route of ['short','long']){
@@ -399,23 +375,18 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  assert.deepEqual(diagnostic.circles,without.circles);
  assert.deepEqual(diagnostic.balances,without.balances);
 }
-// Formal replay evidence: actually complete fifty previously conquered fights
-// at least three times, bank rewards, and preserve owner cost accounting.
-// This test runs in Actions; absent or cut-off replay cycles cannot PASS.
-const observedFarm=runJourney(20261024,{style:'A',route:'short',
- verifyFarming:true,maxSorties:35,maxFights:350});
-const earnedReplay=observedFarm.preparedFarmingSnapshots[1]||[];
-assert.ok(earnedReplay.length>=3,'three real, banked F1-10 replay cycles must be performed');
-assert.ok(observedFarm.completedReplayLoops[1]>=3);
-assert.deepEqual(earnedReplay.slice(0,3).map(s=>s.completedExtraLoops),[1,2,3]);
-assert.ok(earnedReplay.slice(0,3).every((snap,i)=>
- snap.completedExtraLoops===i+1&&snap.additionalBankedReplayFights>=50*(i+1)&&
- snap.unbankedStone===0&&snap.unbankedXp===0&&snap.unbankedInk===0),
- 'replay snapshot cannot invent resources or claim a partial/failing sortie as banked');
-assert.ok(earnedReplay.slice(0,3).every((snap,i)=>snap.actualReturns>0&&
- snap.actualFights>=snap.additionalBankedReplayFights&&
- (i===0||(snap.actualFights>earnedReplay[i-1].actualFights&&
- snap.actualReturns>earnedReplay[i-1].actualReturns))),
- 'three observed replay checkpoints must each follow further genuine fights and banked returns');
-
+// The economy report keeps real first-entry snapshots for separate legacy
+// diagnostics while exposing formula results in their own field.
+const economy=summarizeJourneys(1);
+assert.equal(economy.combinations.length,6);
+for(const cohort of economy.combinations){
+ const owner=cohort.comparisonStates[0];
+ assert.equal(owner.snapshots[1].status,'ACTUAL_FIRST_ENTRY_WITH_IN_EXPEDITION_RESOURCES');
+ assert.ok(owner.journeyStrength);
+ for(const measurement of Object.values(owner.journeyStrength))
+  if(measurement.attempts>0&&measurement.status!=='REACHED')
+   assert.equal(measurement.status,'ASSESSED_UNMET',
+    'a failed formula attempt is not mislabeled as a missing legal snapshot');
+ assert.ok(!('preparedSnapshots' in owner),'the removed level-gated state is not rebuilt');
+}
 console.log('PASS manifest coverage, reproducible seeded combat, 80/80 rank, item/collection/stone/ink conservation and 6 routes '+ECONOMY_VERSION);

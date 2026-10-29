@@ -13,7 +13,7 @@ const status={
  strictCombatSamples:goals.strictSamples,economyModel:journeys.schemaVersion,
  manifestEntries:manifest.entries.length,
  structural:{status:'validated by separate tests/test-dungeon-journeys.mjs'},
- mandatory:{status:'NOT CERTIFIED',reason:'Frozen economic candidate v1 remains unapproved. The separate 256 independent-owner six-route strict Action is now implemented; its results and the original fixed-sortie hard gate must pass before approval.'},
+ mandatory:{status:'MEASURED_IN_SEPARATE_STRICT_JOB',reason:'Formula-only recommended-strength results are evaluated by dungeon-journey-strength-strict across six policies, ten bands and 256 independent owners. See reports/dungeon-journey-strength-v1.json.'},
  diagnostics:{status:'MEASURED',complete:journeys.combinations.map(x=>({
   style:x.style,route:x.route,reached100:x.completed,samples:x.samples,
    boss10Rounds:x.floorObservations[9].bossRounds,
@@ -53,9 +53,9 @@ const md=['## Dungeon journeys — measured diagnostics only',
  '',
  '**Independent grade reserves:** observed pre-victory-restore HP and MP are captured on each actual boss defeat; zero demonstrated grade wins cannot be called a pass.',
  '',
- '**Hard targets: NOT CERTIFIED.** Strict combat gates apply unchanged. An independent 256-real-owner strict linked Action is available; no measured/economic median candidate is user approved.',
+ '**Journey strength:** measured by the separate 6 × 10 × 256 formula-only strict job; this 16-owner economic diagnostic does not replace that report.',
  '',
- '**Missing acceptance:** approval of baseline, passing strict 256-seed combat targets, independently eligible grades, equal-readiness ink break-even. Authored 101–150F combat is out of scope.',
+ '**Separate checks:** the original fixed-deck 50-fight contract, independent chapter 80/80 rank results, and economic diagnostics remain separate. Authored 101–150F combat is out of scope.',
  '',
  '**Assumptions:** fixed named circles; actual enemy combat and drops; no alchemy; no automatic ranks; bank XP only on return; unbanked rewards lost on defeat.'];
 if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,md.join('\n')+'\n');

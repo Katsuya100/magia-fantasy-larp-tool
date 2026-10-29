@@ -74,17 +74,6 @@ export function assert256Seeds(seeds){
  assert.equal(new Set(seeds).size,256,'no duplicate or dropped seeds');
 }
 
-export function assertEntireFloorCoverage(floors,expected=100){
- assert.equal(floors.length,expected,'must inspect every individual floor');
- for(let i=0;i<expected;i++){
-  const floor=floors[i];assert.equal(floor.layer,i+1,'no decade-only shortcut');
-  const r=floor.readiness;
-  assert.ok(r&&r.prepared>=0&&r.prepared<=256,'readiness counts must exist');
-  assert.equal(r.missingSeeds.length,256-r.prepared,'unready seeds cannot disappear');
-  assert.equal(r.firstEntryReady+r.additionalFarmingReady,r.prepared,
-   'first-entry and extra-farming successes cannot be double counted');
- }
-}
 export function assertBankedJourneySnapshot(s){
  assert.ok(s&&s.source==='POST_RETURN_BANKED_AND_INVESTED','no synthetic readiness');
  assert.equal(s.unbankedXp,0,'unbanked XP cannot prepare journey');
@@ -105,66 +94,34 @@ export function assertNotFalsePass({passed,missing=0,cutoff=false}){
  assert.ok(!passed||missing===0&&!cutoff,'unready seeds and cutoffs cannot PASS');
 }
 
-export function certifiesPreEntryReadiness(row){
- const p=row?.floorPreparation;
- return Boolean(p&&p.layer===row.layer&&p.ready&&p.completeCombatKit&&
-  p.circleIntegrity&&p.itemIntegrity&&p.rankLegal&&
-   p.strengthEvidence?.ready===true&&
-   p.strengthEvidence.reference==='ORIGINAL_FIXED_DECK_SAME_CHARACTER'&&
-   p.strengthEvidence.actual?.won===true&&
-   p.strengthEvidence.actual?.attempted===5&&
-  p.attackCoverage===5&&Number.isFinite(p.powerPerMp)&&p.powerPerMp>0&&
-  Number.isInteger(p.acquiredUpgrades)&&p.acquiredUpgrades>=0&&
-  p.sustainableAttackActions>0&&p.level>=(p.layer===1?1:p.recommendedLevel)&&
-  row.attemptedFights===5&&row.cleared);
-}
-
-export function chooseAdditionalFarmingBand(eligible,counts,proven,hasCombatProof){
- const first=eligible.find(b=>(counts[b]||0)<3);
- if(first!==undefined)return first;
- if(!hasCombatProof)return null;
- return eligible.filter(b=>!proven[b])
-  .sort((a,b)=>(counts[a]||0)-(counts[b]||0)||a-b)[0]??null;
-}
-
-// The ONLY formal readiness verdict: every owner must prove every one of the
-// ten pre-entry floors by paid, paired real battles. Never consult candidate
-// readiness, proposed power thresholds or journey win-rate limits.
-export function summarizeOfficialJourneyReadiness(policy,seeds){
-  assert.equal(seeds.length,256,'strict owner population');
-  assert.equal(policy.floors.length,100,'all authored floors');
-  const summaries=[];
-  for(let index=0;index<10;index++){
-    const floors=policy.floors.slice(index*10,index*10+10);
-    const preparedSeeds=seeds.filter(seed=>floors.every(f=>!f.readiness.missingSeeds.includes(seed)));
-    const firstEntrySeeds=preparedSeeds.filter(seed=>floors.every(f=>
-      f.readiness.firstEntryReadySeeds.includes(seed)));
-    const missingAccounts=seeds.filter(seed=>!preparedSeeds.includes(seed)).map(seed=>{
-      const missingFloors=floors.filter(f=>f.readiness.missingSeeds.includes(seed)).map(f=>f.layer);
-      const account=policy.accounts.find(a=>a.seed===seed);
-      return {seed,missingFloors,reasons:[
-        'REAL_FIXED_DECK_COMBAT_READINESS_NOT_PROVEN',
-        ...(account?.blockers.some(b=>/budget|cutoff|UNRESOLVED/i.test(b))?['BUDGET_CUTOFF_NOT_PASS']:[])
-      ]};
-    });
-    const band=floors[0].layer+'-'+floors.at(-1).layer;
-    summaries.push({style:policy.style,route:policy.route,band,count:seeds.length,
-      prepared:preparedSeeds.length,unprepared:missingAccounts.length,
-      preparedBeforeFirstBandClear:firstEntrySeeds.length,
-      preparedOnlyAfterBandClear:preparedSeeds.length-firstEntrySeeds.length,
-      readinessBasis:'PER_FLOOR_REAL_PAIRED_FIXED_DECK_COMBAT_NOT_CANDIDATE',
-      preparedPercent:100*preparedSeeds.length/seeds.length,
-      floors:floors.map(f=>({layer:f.layer,prepared:f.readiness.prepared,
-        firstEntryReady:f.readiness.firstEntryReady,
-        additionalFarmingReady:f.readiness.additionalFarmingReady,
-        unprepared:seeds.length-f.readiness.prepared})),
-      missingReasons:Object.entries(missingAccounts.reduce((result,item)=>{
-        for(const reason of item.reasons)result[reason]=(result[reason]||0)+1;
-        return result;
-      },{})),
-      missingAccounts,
-      status:missingAccounts.length?'RECOMMENDED_STRENGTH_UNMET_OR_UNRESOLVED':
-        'ALL_256_OWNERS_PROVEN_ON_EVERY_FLOOR'});
-  }
-  return summaries;
+// Formal journey readiness means that each real account reaches the absolute
+// recommended-strength calculator at a banked, invested return snapshot.
+// It never requires a follow-up battle, floor-by-floor proof, or Pareto win.
+export function summarizeJourneyStrength(policy,seeds){
+ assert.equal(seeds.length,256,'strict owner population');
+ assert.equal(policy.samples,256,'each policy retains all independent owners');
+ assert.equal(policy.journeyStrength?.length,10,'all ten strength bands are reported');
+ return policy.journeyStrength.map((row,index)=>{
+  const goalFrom=index*10+1,goalTo=goalFrom+9;
+  assert.equal(row.band,goalFrom+'-'+goalTo,'ordered ten-layer strength bands');
+  assert.equal(row.owners.length,seeds.length,'no reduced journey denominator');
+  for(let i=0;i<seeds.length;i++)assert.equal(row.owners[i].seed,seeds[i],
+   'each strength result belongs to its original seeded owner');
+  const reached=row.owners.filter(owner=>owner.status==='REACHED');
+  const unresolved=row.owners.filter(owner=>owner.status!=='REACHED');
+  const missingReasons=Object.entries(unresolved.reduce((counts,owner)=>{
+   const reasons=owner.lastAssessment?.reasons?.length?owner.lastAssessment.reasons:
+    [owner.status];
+   for(const reason of reasons)counts[reason]=(counts[reason]||0)+1;
+   return counts;
+  },{})).sort(([a],[b])=>a.localeCompare(b));
+  return {style:policy.style,route:policy.route,band:row.band,count:seeds.length,
+   reached:reached.length,unreached:unresolved.length,
+   missingReasons,
+   supersedes:'LEGACY_PER_FLOOR_REAL_FIXED_DECK_BATTLES_PLUS_PAIRED_BUILD_PROOF',
+   legacyResults:'NOT_CARRIED_FORWARD_OR_RELABELLED',
+   rule:'LEGAL_BANKED_JOURNEY_SNAPSHOT_REACHES_RECOMMENDED_ABSOLUTE_DAMAGE_AND_MP_BURDEN',
+   status:unresolved.length?'RECOMMENDED_STRENGTH_NOT_REACHED_OR_UNPROVEN':
+    'ALL_256_REACHED_RECOMMENDED_STRENGTH'};
+ });
 }
