@@ -1,46 +1,75 @@
 import assert from 'node:assert/strict';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
-import {assessRecommendedStrength,strengthBands} from '../scripts/dungeon-recommended-strength.mjs';
+import {assessRecommendedStrength,recommendedReferenceCarry,strengthBands} from '../scripts/dungeon-recommended-strength.mjs';
 import {referenceSpells} from '../scripts/dungeon-fixed-deck-reference.mjs';
 import {summarizeJourneyStrength} from '../scripts/dungeon-test-contract.mjs';
+import {runJourney} from '../scripts/simulate-dungeon-journeys.mjs';
 
 const base=G.startingBase(()=>.5);
 const owner=(bandIndex,overrides={})=>{
  const band=strengthBands[bandIndex],fixed=referenceSpells[bandIndex][0];
  return {style:'A',route:'short',level:band.recommendedLevel,
   bankedBestLayer:band.to,playerBase:{...base},
-  circles:fixed.map(circle=>({...circle})),carry:[],...overrides};
+  circles:fixed.map(circle=>({...circle})),carry:recommendedReferenceCarry(bandIndex),...overrides};
 };
 
-// Compare the exact same baseline input to itself in every band. Some fixed
-// references cannot complete this deliberately conservative formula path;
-// those rows must stay unpassed rather than serving as an invalid denominator.
+// Equal fixed-deck inputs must reach the numeric reference threshold, even
+// when the shadow HP ledger crosses zero during the 50 authored targets.
 const selfComparisons=strengthBands.map((band,index)=>
  assessRecommendedStrength(owner(index),index,0));
 const equal=selfComparisons[0];
 assert.equal(equal.passed,true,equal.reasons.join(','));
 assert.equal(equal.actual.excessDamage,0);
-assert.equal(equal.actual.damageTaken,equal.reference.damageAllowed);
+assert.equal(equal.actual.damageTaken,equal.reference.rawDamageAllowed);
+assert.equal(equal.actual.netDamage,equal.reference.damageAllowed);
 assert.equal(equal.actual.totalMpBurden,equal.reference.mpBurden);
-assert.equal(equal.actual.completedEnemies,50);
-assert.match(equal.methodology.scopeLimit,/not game AI.*or a new battle proof/);
+assert.equal(equal.actual.targetsProcessed,50);
+assert.match(equal.methodology.scopeLimit,/not a completed battle.*new battle proof/);
 assert.equal(equal.reference.opponents.length,50);
 assert.ok(equal.reference.floors.every(row=>row.enemies.length===5));
+assert.ok(selfComparisons[1].reference.supportActions>0,
+ 'fixed player policy uses its available support circle after layer 10');
+assert.ok((selfComparisons[1].reference.enemyActionsByRole.defense||0)+
+ (selfComparisons[1].reference.enemyActionsByRole.support||0)+
+ (selfComparisons[1].reference.enemyActionsByRole.debuff||0)>0,
+ 'enemy role selection follows G.chooseEnemySpell, not a forced direct attack');
 for(const [index,result] of selfComparisons.entries()){
- assert.equal(result.actual.attackFeasible,result.reference.attackFeasible,
-  'identical fixed-deck inputs must have identical formula feasibility in '+strengthBands[index].from+'-'+strengthBands[index].to);
- assert.equal(result.actual.completedEnemies,result.reference.completedEnemies);
+ assert.equal(result.actual.numericTargetsCovered,true,
+  'the numeric ledger must cover all 50 authored targets in '+strengthBands[index].from+'-'+strengthBands[index].to);
+ assert.equal(result.reference.numericTargetsCovered,true);
+ assert.equal(result.actual.targetsProcessed,50);
+ assert.equal(result.reference.targetsProcessed,50);
  assert.equal(result.actual.damageTaken,result.reference.damageTaken);
+ assert.equal(result.actual.netDamage,result.reference.damageAllowed);
  assert.equal(result.actual.totalMpBurden,result.reference.mpBurden);
- if(!result.reference.attackFeasible){
-  assert.ok(result.reasons.includes('REFERENCE_FORMULA_PATH_INCOMPLETE'));
-  assert.equal(result.passed,false,'an incomplete reference cannot certify itself');
- }
+ assert.equal(result.actual.shadowHpDepleted,result.reference.shadowHpDepleted);
+ assert.equal(result.passed,true,'equal fixed reference reaches at the equality boundary');
 }
+// Historical boundary: seed 17011, 11–20F was 50/50 in the fixed simulator
+// but stopped at 33/50 in v1. The current G.round ledger still resolves the
+// same 50 targets; this diagnostic is not a journey pass gate.
+const fixed50Boundary=selfComparisons[1];
+assert.equal(fixed50Boundary.seed,17011);
+assert.equal(fixed50Boundary.reference.targetsProcessed,50);
+assert.equal(fixed50Boundary.reference.completedEnemies,50);
+assert.ok(fixed50Boundary.reference.attackMp>0);
+assert.equal(fixed50Boundary.actual.completedEnemies,50);
+const nonKillReference=assessRecommendedStrength(owner(1,{playerBase:{...base,hp:1}}),1,0);
+assert.ok(nonKillReference.reference.completedEnemies<50);
+assert.equal(nonKillReference.reference.numericTargetsCovered,true);
+assert.equal(nonKillReference.passed,true,
+ 'formula-kill count does not act as a battle-clear gate at the equality boundary');
+const lowHpReference=assessRecommendedStrength(owner(0,{playerBase:{...base,hp:1}}),0,0);
+assert.equal(lowHpReference.reference.shadowHpDepleted,true);
+assert.equal(lowHpReference.reference.numericTargetsCovered,true,
+ 'shadow HP depletion remains diagnostic and does not block numeric coverage');
+assert.ok(lowHpReference.reference.damageTaken>lowHpReference.reference.damageTakenToHp,
+ 'numeric incoming damage records uncapped exposure after shadow HP reaches zero');
+assert.equal(lowHpReference.passed,true,'equal low-HP baseline reaches its numeric boundary');
 
-// The input can represent a low-level owner with genuinely stronger paid
-// circles and a high-level owner with weak circles; level alone is not a gate.
+// The input can represent low-level strong circles and high-level weak circles;
+// level alone is not a gate. Full audits use only legal banked owner snapshots.
 const fixed=referenceSpells[0][0];
 const strong=fixed.map((circle,index)=>{
  const upgrades=index<3?8:0;
@@ -57,26 +86,70 @@ assert.equal(high.actual.level,150);
 assert.ok(!low.reasons.some(reason=>reason.includes('LEVEL')));
 assert.ok(!high.reasons.some(reason=>reason.includes('LEVEL')));
 
-// A deck without attacks must expose the real basic-attack/action-limit
-// constraint instead of being passed from its level or nominal power.
+// Even when current MP cannot pay for every excess-damage recovery cast, the
+// calculator reports the exact legal cast budget and leaves the shortage unmet.
+const weakBandDeck=referenceSpells[1][0].map(circle=>({...circle,basePower:10,
+ power:10,upgradeLevel:0}));
+const recoveryBudget=assessRecommendedStrength(owner(1,{circles:weakBandDeck}),1,0);
+assert.equal(recoveryBudget.actual.numericTargetsCovered,true);
+assert.ok(recoveryBudget.actual.rawExcessDamage>0);
+assert.ok(recoveryBudget.actual.magicRecovery.mp>0);
+assert.equal(recoveryBudget.actual.magicRecovery.healingPossible,true);
+assert.equal(recoveryBudget.actual.magicRecovery.funded,false);
+assert.ok(recoveryBudget.actual.magicRecovery.unfundedMp>0);
+assert.ok(recoveryBudget.reasons.includes('MP_RESOURCE_SHORTAGE'));
+assert.equal(recoveryBudget.actual.totalMpBurden,
+ recoveryBudget.actual.attackMp+recoveryBudget.actual.survivalSupportMp+
+ recoveryBudget.actual.magicRecovery.mp,
+ 'the burden includes paid attacks, survival support, and recovery casts');
+assert.ok(recoveryBudget.actual.mpShortfall>0,
+ 'a virtual healing clone cannot count unfunded recovery MP as supplied');
+
+// A deck without attacks still reports 50 target metrics. Its formula kills
+// and per-target action-limit failures remain diagnostics, not battle gates.
 const noAttacks=fixed.map(circle=>({...circle,role:'support',basePower:10,
  power:10,upgradeLevel:0}));
-const insufficient=assessRecommendedStrength(owner(0,{circles:noAttacks}),0,0);
+const insufficient=assessRecommendedStrength(owner(0,{playerBase:{...base,hp:1},
+ circles:noAttacks}),0,0);
 assert.equal(insufficient.actual.completedEnemies<50,true);
-assert.ok(insufficient.reasons.includes('INSUFFICIENT_ATTACKS_WITHIN_80_TURNS')||
- insufficient.reasons.includes('PLAYER_HP_DEPLETED'));
+assert.equal(insufficient.actual.numericTargetsCovered,true);
+assert.equal(insufficient.actual.targetsProcessed,50);
+assert.equal(insufficient.actual.attackMp,0,
+ 'basic fallback costs no MP under the existing combat rules');
+assert.ok(insufficient.actual.basicAttackActions>0,
+ 'basic fallbacks remain visible next to the paid attack-MP total');
+assert.equal(insufficient.passed,false,
+ 'unresolved targets and missing recovery resources cannot be hidden by removing a kill gate');
+assert.ok(insufficient.reasons.includes('MP_RESOURCE_SHORTAGE'));
+assert.equal(insufficient.actual.magicRecovery.healingPossible,false,
+ 'recovery can be unavailable separately from an MP shortage');
+assert.ok(!insufficient.reasons.includes('INSUFFICIENT_ATTACKS_WITHIN_80_TURNS'));
+assert.ok(insufficient.actual.floors.some(floor=>floor.infeasibleEnemies.length>0));
 
-// Actual carried stock is consumed only in a local copy. It keeps its exact
-// instance identity and reports shipped HP/MP effects separately.
-const itemOwner=owner(0,{level:strengthBands[0].recommendedLevel,
+// One legal item from the banked snapshot reduces excess damage once, keeps
+// its real instance identity, and never mutates the input.
+const itemOwner=owner(1,{circles:weakBandDeck,
  carry:[{id:'heal_xl',value:1000,bonus:null,instanceId:'owned-heal-1'}]});
 const saved=structuredClone(itemOwner);
-const withItem=assessRecommendedStrength(itemOwner,0,0);
+const withItem=assessRecommendedStrength(itemOwner,1,0);
 assert.deepEqual(itemOwner,saved,'calculator must not consume or mutate real-owner stock');
-assert.ok(withItem.actual.itemRecovery.uses.every(use=>use.instanceId===undefined));
 assert.ok(Number.isFinite(withItem.actual.itemRecovery.healing));
 assert.ok(Number.isFinite(withItem.actual.itemRecovery.mpRestored));
-assert.equal(withItem.actual.itemRecovery.uses.length<=1,true);
+assert.equal(withItem.actual.itemRecovery.uses.length,1);
+assert.equal(withItem.actual.itemRecovery.uses[0].instanceId,'owned-heal-1');
+assert.equal(withItem.actual.itemRecovery.uses[0].itemId,'heal_xl');
+assert.equal(withItem.actual.itemRecovery.uses[0].kind,'heal');
+assert.equal(withItem.actual.itemRecovery.uses[0].healing,withItem.actual.itemRecovery.healing);
+assert.equal(new Set(withItem.actual.itemRecovery.uses.map(use=>use.instanceId)).size,1);
+assert.ok(withItem.actual.magicRecovery.unfundedMp>0,
+ 'the item funds its shipped HP effect, not virtual recovery MP');
+
+// A real campaign loss is not a strength-calculation veto: this seeded owner
+// later banks a snapshot that reaches the 1–10 recommended threshold.
+const lossAndReach=runJourney(17154,{style:'A',route:'short',maxSorties:600,
+ maxFights:6500,observeStrength:true});
+assert.ok(lossAndReach.losses>0);
+assert.equal(lossAndReach.journeyStrength[1].status,'REACHED');
 
 // A formal cutoff or missing legal owner remains unproven and cannot inherit
 // a legacy 255/256 rank or a previous per-floor battle result.

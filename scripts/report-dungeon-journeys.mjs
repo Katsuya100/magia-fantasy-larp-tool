@@ -13,7 +13,7 @@ const status={
  strictCombatSamples:goals.strictSamples,economyModel:journeys.schemaVersion,
  manifestEntries:manifest.entries.length,
  structural:{status:'validated by separate tests/test-dungeon-journeys.mjs'},
- mandatory:{status:'MEASURED_IN_SEPARATE_STRICT_JOB',reason:'Formula-only recommended-strength results are evaluated by dungeon-journey-strength-strict across six policies, ten bands and 256 independent owners. See reports/dungeon-journey-strength-v1.json.'},
+ mandatory:{status:'MEASURED_IN_SEPARATE_STRICT_JOB',reason:'Seeded game-rule recommended-strength results are evaluated by dungeon-journey-strength-strict across six policies, ten bands and 256 independent owners. See reports/dungeon-journey-strength-v2.json.'},
  diagnostics:{status:'MEASURED',complete:journeys.combinations.map(x=>({
   style:x.style,route:x.route,reached100:x.completed,samples:x.samples,
    boss10Rounds:x.floorObservations[9].bossRounds,

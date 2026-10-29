@@ -25,7 +25,9 @@ const sources=[
  'assets/js/dungeon-ranks.mjs','assets/js/dungeon-alchemy.mjs',
  'scripts/dungeon-balance-encounters.mjs','scripts/simulate-dungeon-journeys.mjs',
  'scripts/dungeon-test-contract.mjs','scripts/dungeon-fixed-deck-reference.mjs',
- 'scripts/dungeon-recommended-strength.mjs','config/dungeon-approved-goals.v1.json'
+ 'scripts/dungeon-recommended-strength.mjs','scripts/dungeon-journey-strength-audit.mjs',
+ 'scripts/check-dungeon-journey-strength.mjs','tests/test-dungeon-floor-strength.mjs',
+ 'config/dungeon-approved-goals.v1.json'
 ];
 const sourceHashes=Object.fromEntries(sources.map(path=>[path,
  createHash('sha256').update(readFileSync(new URL('../'+path,import.meta.url))).digest('hex')]));
@@ -82,12 +84,15 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    status:x.status}))}));
 }
 const report={
- schemaVersion:'dungeon-journey-strength-v1',
+ schemaVersion:'dungeon-journey-strength-v2',
+ strengthModel:'dungeon-recommended-strength-v3',
  economySource:ECONOMY_VERSION,method:'RECOMMENDED_STRENGTH_FORMULA_LEDGER',
  seedRule:'17011+13*i',samplesPerPolicy:approvedGoals.strictSamples,
  policies,ranks,sourceHashes,
  legacyDisposition:{
   rule:'OLD_REAL_FIXED_DECK_FLOOR_BATTLES_PARETO_COMPARISONS_AND_THREE_PAID_REPLAY_CYCLES_ARE_NOT_THIS_GATE',
+  previousReport:'reports/dungeon-journey-strength-v1.json',
+  previousMeasuredOutcome:'6,474 REACHED / 8,886 UNMET preserved as v1 evidence',
   oldResults:'PRESERVED_AS_LEGACY_EVIDENCE_ONLY; NOT_REUSED_OR_RELABELLED_AS_FORMULA_PASSES',
   knownUnmet:{'B/short/F90':'255/256 legacy rank; not promoted',
    'C/long/F100':'255/256 legacy rank; not promoted',
@@ -95,8 +100,8 @@ const report={
   independentChapterRule:'The boss-kill 80/80 HP/MP rank acquisition check remains separate and unchanged',
   xpTaper:'NOT_IMPLEMENTED'}
 };
-const output=new URL('../reports/dungeon-journey-strength-v1.json',import.meta.url);
-const temporary=new URL('../reports/dungeon-journey-strength-v1.json.tmp',import.meta.url);
+const output=new URL('../reports/dungeon-journey-strength-v2.json',import.meta.url);
+const temporary=new URL('../reports/dungeon-journey-strength-v2.json.tmp',import.meta.url);
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
 function* jsonChunks(value,depth=0){
  if(value===null||typeof value!=='object'){

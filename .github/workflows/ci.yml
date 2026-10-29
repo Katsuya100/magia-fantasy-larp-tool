@@ -208,7 +208,7 @@ jobs:
         with:
           name: dungeon-journey-strength-256
           path: |
-            reports/dungeon-journey-strength-v1.json
+            reports/dungeon-journey-strength-v2.json
             reports/dungeon-fixed-deck-combat-v1.json
             reports/dungeon-fixed-deck-detail.log
           if-no-files-found: warn

@@ -6,9 +6,10 @@ import {approvedGoals} from './simulate-dungeon-journeys.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 
-const path=new URL('../reports/dungeon-journey-strength-v1.json',import.meta.url);
+const path=new URL('../reports/dungeon-journey-strength-v2.json',import.meta.url);
 const report=JSON.parse(readFileSync(path,'utf8'));
-assert.equal(report.schemaVersion,'dungeon-journey-strength-v1');
+assert.equal(report.schemaVersion,'dungeon-journey-strength-v2');
+assert.equal(report.strengthModel,'dungeon-recommended-strength-v3');
 assert.equal(report.method,'RECOMMENDED_STRENGTH_FORMULA_LEDGER');
 assert.equal(report.samplesPerPolicy,256);
 assert.equal(report.policies.length,6);
@@ -16,6 +17,9 @@ assert.equal(report.ranks.length,60);
 assert.equal(report.legacyDisposition.xpTaper,'NOT_IMPLEMENTED');
 assert.equal(report.legacyDisposition.oldResults,
  'PRESERVED_AS_LEGACY_EVIDENCE_ONLY; NOT_REUSED_OR_RELABELLED_AS_FORMULA_PASSES');
+assert.equal(report.legacyDisposition.previousReport,'reports/dungeon-journey-strength-v1.json');
+assert.equal(report.legacyDisposition.previousMeasuredOutcome,
+ '6,474 REACHED / 8,886 UNMET preserved as v1 evidence');
 const seeds=Array.from({length:256},(_,i)=>17011+13*i);
 assert256Seeds(seeds);
 const expectedPairs=['A/short','A/long','B/short','B/long','C/short','C/long'];
@@ -37,6 +41,12 @@ for(const policy of report.policies){
    assert.ok(owner.status!=='UNASSESSED');
    const measure=owner.lastAssessment;
    if(!measure)continue;
+   assert.equal(measure.schemaVersion,'dungeon-recommended-strength-v3');
+   assert.equal(measure.actual.numericTargetsCovered,true);
+   assert.equal(measure.decision.numericTargetsCovered,true);
+   assert.equal(measure.reference.numericTargetsCovered,true);
+   assert.equal(measure.actual.targetsProcessed,50);
+   assert.equal(measure.reference.targetsProcessed,50);
    const input=measure.ownerInput;
    assert.ok(input,'formula snapshot must be inspectable');
    assert.equal(input.circles.length,5);
