@@ -300,7 +300,7 @@ assert.match(css,/\.profile-data-actions \.backup-sync-warning\{[\s\S]*?color:#f
 
 assert.match(page,/<dialog id="imageRepairDialog"/,'recapture dialog exists');
 assert.match(app,/load\(\)\.catch\(failStartup\)/,'startup errors remain visible inside the loading overlay');
-assert.match(app,/await cloudSyncController\?\.disconnect\?\.\(\);\s*if\(await hasDungeonIntegerXpMigrationBackup\(db\)\)await restoreDungeonIntegerXpMigrationBackup\(db\);\s*else await restoreDungeonXpMigrationBackup\(db\);/,'both XP recovery paths unlink Drive before local rollback so cloud cannot silently undo recovery');
+assert.match(app,/await cloudSyncController\?\.disconnect\?\.\(\);\s*await restoreDungeonXpMigrationBackup\(db\);/,'manual XP recovery unlinks Drive before local rollback so cloud cannot silently undo recovery');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
