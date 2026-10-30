@@ -15,6 +15,7 @@ try{
  assert.equal($('startupMask').hidden,true,'startup dialog closes after all data and save loading');
  assert.equal($('dungeonApp').attributes['inert'],undefined,'game is interactive after initialization');
  assert.equal($('dungeonApp').attributes['aria-busy'],'false','loading announcement clears after initialization');
+ assert.equal($('dungeonApp').dataset.exploring,'false','full-size header remains before departure');
  assert.equal($('home').hidden,true,'profile opens only when selected');
  assert.equal($('tab-prepare').attributes['aria-current'],'page','preparation tab initially selected');
  assert.equal($('tab-prepare').hidden,false);
@@ -380,6 +381,7 @@ try{
  assert.equal($('tab-prepare').hidden,true,'preparation tab disappears during battle');
  assert.equal($('tab-library').hidden,true,'grimoire tab disappears during battle');
  assert.equal($('tab-dungeon').hidden,false,'dungeon tab replaces preparation tabs');
+ assert.equal($('dungeonApp').dataset.exploring,'true','active exploration switches to the compact header');
  assert.equal($('tab-dungeon').attributes['aria-current'],'page');
  assert.equal($('heroName').textContent,'暁の旅人','battle uses the saved adventurer name');
  assert.equal($('heroLevel').textContent,'Lv.'+p.run.hero.level,'battle shows the hero level below the name');
@@ -515,6 +517,7 @@ try{
  assert.equal(tabScrolls.length,3,'return reward navigation is unchanged');
  assert.equal($('result').hidden,true,'successful return no longer uses the old result screen');
  assert.equal($('tab-dungeon').hidden,false,'reward ceremony retains the dungeon tab');
+ assert.equal($('dungeonApp').dataset.exploring,'true','the reward ceremony keeps the compact header');
  assert.equal($('tab-prepare').hidden,true,'prepare tab stays hidden until completion');
  assert.equal($('tab-library').hidden,true,'grimoire tab stays hidden until completion');
  assert.equal($('tab-dungeon').attributes['aria-current'],'page','reward ceremony is still inside the dungeon');
@@ -554,6 +557,7 @@ try{
  assert.equal($('tab-prepare').hidden,false,'return restores preparation');
  assert.equal($('tab-library').hidden,false,'return restores the grimoire');
  assert.equal($('tab-dungeon').hidden,true,'dungeon tab disappears after returning');
+ assert.equal($('dungeonApp').dataset.exploring,'false','returning restores the full-size header');
  const collectibleCount=Object.values(p.collection).reduce((a,b)=>a+b,0);
  assert.equal(collectibleCount,collectionCount,'all collected treasure is tracked separately');
  assert.equal(p.inventory.length+collectibleCount+p.magicStones,loot);
