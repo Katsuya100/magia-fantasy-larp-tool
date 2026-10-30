@@ -417,7 +417,7 @@ export async function restoreDungeonIntegerXpMigrationBackup(db){
   throw Error('整数EXP変換前の保全データの署名または写真が一致しません。');
  if(health.status==='legacy'){await photoEvidence(snapshot.circles);await profilePhotoEvidence(snapshot.profile);}
  const current=await readDungeonSnapshot(db);
- await replaceDungeonSnapshot(db,snapshot,{expectedCurrentRecords:recordFingerprint(current)});
+ await replaceDungeonSnapshot(db,snapshot,{expectedCurrentRecords:recordFingerprint(current),preserveMigrationBackups:true});
 }
 export const hasDungeonXpMigrationBackup=db=>request(db,'settings','readonly',s=>s.getKey(XP_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
 // Rolling back also discards all play after migration; only explicit UI
@@ -473,7 +473,7 @@ export function readDungeonSnapshot(db){
   }catch(error){reject(error);}
  });
 }
-export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{expectedCurrentRecords=null}={}){
+export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{expectedCurrentRecords=null,preserveMigrationBackups=false}={}){
  validateDatabase(db);
  const prepared=await prepareProfilePhotoRefs(profile);
  const all=[...circles];
@@ -486,25 +486,34 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{exp
    tx.onerror=()=>reject(tx.error||Error('セーブ復元に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブ復元が中断されました。'));
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
+   // Only an explicit integer-XP rescue preserves migration backups across
+   // snapshot replacement. Cloud restores retain their original semantics.
+   const backupRequests=preserveMigrationBackups?
+    [XP_MIGRATION_BACKUP_KEY,XP_INTEGER_MIGRATION_BACKUP_KEY].map(key=>({key,request:settings.get(key)})):[];
    const write=()=>{
     settings.clear();items.clear();
     settings.put(prepared.profile,'profile');
     for(const circle of all)items.put(circle);
     settings.put({version:1,records,photos,profilePhotos,savedAt:Number(savedAt)||0,legacy:false},'integrity');
+    for(const {key,request} of backupRequests)if(request.result)settings.put(request.result,key);
    };
-   if(expectedCurrentRecords!==null){
-    const p=settings.get('profile'),c=items.getAll(),n=settings.get(HEIR_NAME_KEY);
-    let remaining=3;
+   const p=expectedCurrentRecords!==null?settings.get('profile'):null;
+   const c=expectedCurrentRecords!==null?items.getAll():null;
+   const n=expectedCurrentRecords!==null?settings.get(HEIR_NAME_KEY):null;
+   let remaining=backupRequests.length+(p?3:0);
+   if(!remaining)write();
+   else{
     const check=()=>{
      if(--remaining)return;
      try{
-      if(recordFingerprint({profile:applyHeirName(p.result,n.result),circles:c.result})!==expectedCurrentRecords)
+      if(p&&recordFingerprint({profile:applyHeirName(p.result,n.result),circles:c.result})!==expectedCurrentRecords)
        throw Error('保全データの復元中に別のタブがセーブを更新しました。上書きを停止しました。');
       write();
      }catch(error){try{tx.abort?.();}catch{}reject(error);}
     };
-    p.onsuccess=check;c.onsuccess=check;n.onsuccess=check;
-   }else write();
+    for(const {request} of backupRequests)request.onsuccess=check;
+    if(p){p.onsuccess=check;c.onsuccess=check;n.onsuccess=check;}
+   }
   }catch(error){reject(error);}
  });
 }
