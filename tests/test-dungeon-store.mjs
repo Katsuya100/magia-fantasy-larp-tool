@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,getDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,saveProfileWithCircles,migrateDungeonXp,getDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,getDungeonIntegerXpMigrationBackup,restoreDungeonIntegerXpMigrationBackup,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 const {parseCsv}=G;
 import {configure} from '../assets/js/dungeon-tuning.mjs';
@@ -39,11 +39,18 @@ const backupFirst=await getDungeonXpMigrationBackup(db);
 assert.equal(backupFirst.profile.xp,20000,'the original gauge is recoverable');
 assert.equal(backupFirst.profile.run.xp,45000,'the original unbanked reward is recoverable');
 assert.equal(backupFirst.profile.xpScaleVersion,undefined,'backup preserves the legacy format');
-assert.ok(converted.xp>0&&converted.xp<2000,'old XP progress converts to flatter curve');
-assert.ok(converted.run.xp>0&&converted.run.xp<1000,'unbanked XP is converted');
-assert.ok(converted.pendingReturn.gained>0&&converted.pendingReturn.gained<500,'pending reward is converted');
-assert.ok(converted.pendingReturn.before.xp>0&&converted.pendingReturn.before.xp<100,'return animation XP is converted');
-assert.equal(converted.xpScaleVersion,45);
+const intermediate45=await getDungeonIntegerXpMigrationBackup(db);
+assert.equal(intermediate45.profile.xpScaleVersion,45,'legacy XP must pass through the existing 1/45 converter');
+const originalNeed92=Math.ceil(Number(levels[91].xp_to_next)*Math.pow(2.1,91/10));
+const priorNeed92=Math.ceil(Number(levels[91].xp_to_next)*Math.pow(1.85,9.1)/45);
+assert.equal(intermediate45.profile.xp,Math.round(20000/originalNeed92*priorNeed92*1e6)/1e6,
+ 'first migration retains the precise historic 1/45 gauge formula');
+assert.equal(intermediate45.profile.run.xp>0,true,'1/45 checkpoint also preserves converted pending XP');
+assert.ok(Number.isSafeInteger(converted.xp)&&converted.xp>0&&converted.xp<G.nextXp(92),'old XP gauge converts into integer units');
+assert.ok(Number.isSafeInteger(converted.run.xp)&&converted.run.xp>0,'unbanked XP is converted to whole units');
+assert.ok(Number.isSafeInteger(converted.pendingReturn.gained)&&converted.pendingReturn.gained>0,'pending reward is converted to whole units');
+assert.ok(Number.isSafeInteger(converted.pendingReturn.before.xp)&&converted.pendingReturn.before.xp>0,'return animation XP is converted');
+assert.equal(converted.xpScaleVersion,46);
 assert.deepEqual(await migrateDungeonXp(db),converted,'repeat startup never scales twice');
 assert.equal((await getProfile(db)).xp,converted.xp,'converted signed save persists');
  
@@ -87,12 +94,12 @@ assert.equal(replayedMigration.xp,exact.xp,'the backed-up old save safely re-mig
 assert.equal(replayedMigration.run.xp,exact.run.xp,'the backed-up expedition safely re-migrates');
 assert.ok(await getDungeonXpMigrationBackup(db),'re-migration regenerates a valid rescue point');
 assert.equal(exact.level,92);
-assert.ok(Math.abs(exact.xp/G.nextXp(92)-legacyStartXp/oldNeed(92))<0.000001,
+assert.ok(Math.abs(exact.xp/G.nextXp(92)-legacyStartXp/oldNeed(92))<=1/G.nextXp(92),
  'Lv92 current-level EXP progress remains the same');
 const resumed={level:exact.level,xp:exact.xp};
 G.experience(resumed,exact.run.xp);
 assert.equal(resumed.level,oldRunEnd.level,'pending exploration XP yields the same final level');
-assert.ok(Math.abs(resumed.xp/G.nextXp(resumed.level)-oldRunEnd.xp/oldNeed(oldRunEnd.level))<0.000001,
+assert.ok(Math.abs(resumed.xp/G.nextXp(resumed.level)-oldRunEnd.xp/oldNeed(oldRunEnd.level))<=1/G.nextXp(resumed.level),
  'pending exploration XP keeps the earned post-return gauge fraction');
 assert.equal(exact.magicStones,77,'magic stone progress is untouched');
 assert.equal(exact.adventurerRank,40,'adventurer rank is untouched');
@@ -168,6 +175,35 @@ const afterFailedMigration=await readDungeonSnapshot(db);
 assert.deepEqual(afterFailedMigration.profile,beforeFailedMigration.profile,'a failed migration leaves profile intact');
 assert.deepEqual(afterFailedMigration.integrity,beforeFailedMigration.integrity,'a failed migration does not resign partial data');
 await deleteCircle(db,'xp-migration-photo');
+// Migrate an actual v45 fractional signed save without touching its
+// separate pre-v45 migration rescue point or unrelated progress.
+const historicBackup=await getDungeonXpMigrationBackup(db);
+const fractional=await getProfile(db);
+fractional.xpScaleVersion=45;
+fractional.level=2;
+fractional.xp=0.4;
+fractional.run={floor:7,loot:[],xp:1.2};
+fractional.pendingReturn={before:{level:1,xp:2.4},gained:1,steps:['xp'],step:0};
+fractional.magicStones=123;
+await saveProfile(db,fractional);
+const integer=await migrateDungeonXp(db);
+assert.equal(integer.xpScaleVersion,G.XP_SCALE);
+assert.equal(integer.xp,2,'fractional EXP gauge is expressed in whole units');
+assert.equal(integer.run.xp,6,'unbanked battle rewards are whole numbers');
+assert.equal(integer.pendingReturn.before.xp,12,'return start gauge remains exact');
+assert.equal(integer.pendingReturn.gained,5,'pending return animation remains exact');
+assert.equal(integer.magicStones,123,'conversion must not change magic stones');
+assert.deepEqual(await getDungeonXpMigrationBackup(db),historicBackup,
+ 'integer conversion never overwrites the original pre-v45 backup');
+const integerBackup=await getDungeonIntegerXpMigrationBackup(db);
+assert.equal(integerBackup.profile.xpScaleVersion,45,'v45 rescue point retains its original format');
+assert.equal(integerBackup.profile.run.xp,1.2,'v45 rescue preserves the fractional expedition');
+assert.deepEqual(await migrateDungeonXp(db),integer,'a migrated signed save is never multiplied twice');
+await restoreDungeonIntegerXpMigrationBackup(db);
+assert.equal((await getProfile(db)).xpScaleVersion,45,'integer rescue restores the exact fractional source');
+const reconverted=await migrateDungeonXp(db);
+assert.equal(reconverted.xp,integer.xp,'restored v45 source reconverts without drift');
+assert.equal(reconverted.run.xp,integer.run.xp,'restored v45 unbanked EXP reconverts without drift');
 // A stale second game tab must not roll back a successfully committed save.
 const stale=await getProfile(db),updated=await getProfile(db);
 updated.magicStones=901;
@@ -180,8 +216,31 @@ assert.equal(oldFormatBackup.profile.xp,returnEnd.xp,'regular gameplay never cha
 
 
 const clean=await getProfile(db);
-clean.level=1;clean.xp=0;clean.run={...p.run,xp:0};delete clean.pendingReturn;clean.xpScaleVersion=45;
+clean.level=1;clean.xp=0;clean.run={...p.run,xp:0};delete clean.pendingReturn;clean.xpScaleVersion=G.XP_SCALE;
 await saveProfile(db,clean);
+// An EXP regression must fail before the save writes or changes the seal.
+// Historic v45 saves can contain fractions, but v46 never can.
+const validSnapshot=await readDungeonSnapshot(db);
+const invalidProfiles=[
+ {...clean,xp:0.25},
+ {...clean,xp:NaN},
+ {...clean,xp:Number.MAX_SAFE_INTEGER+1},
+ {...clean,run:{...clean.run,xp:1.2}},
+ {...clean,pendingReturn:{before:{level:1,xp:1.2},gained:4,steps:['xp']}},
+ {...clean,pendingReturn:{before:{level:1,xp:0},gained:4.2,steps:['xp']}}
+];
+for(const invalid of invalidProfiles){
+ await assert.rejects(saveProfile(db,invalid),/整数EXP/,'invalid v46 EXP must fail before saving');
+ const after=await readDungeonSnapshot(db);
+ assert.deepEqual(after.profile,validSnapshot.profile,'a rejected fractional EXP cannot rewrite progress');
+ assert.deepEqual(after.integrity,validSnapshot.integrity,'a rejected fractional EXP cannot re-sign progress');
+}
+await assert.rejects(saveProfileWithCircles(db,{...clean,run:{...clean.run,xp:0.5}}),/整数EXP/,
+ 'equipment saves must not bypass the integer EXP guard');
+await assert.rejects(replaceDungeonSnapshot(db,{...validSnapshot,profile:{...clean,xp:0.5}}),/整数EXP/,
+ 'cloud restores must reject fractional EXP in an already-modern save');
+assert.deepEqual((await readDungeonSnapshot(db)).profile,validSnapshot.profile,
+ 'rejected cloud snapshots cannot overwrite local progress');
 const reread=await getProfile(db);
 assert.deepEqual(reread,clean);
 reread.level=99;assert.equal((await getProfile(db)).level,1);
@@ -256,7 +315,7 @@ assert.deepEqual((await readDungeonSnapshot(quotaDb)).integrity,beforeQuota.inte
 assert.equal(await getDungeonXpMigrationBackup(quotaDb),null,'seal failure leaves no orphaned backup');
 quotaFactory.failIntegrityWrites=false;
 const afterRetry=await migrateDungeonXp(quotaDb);
-assert.equal(afterRetry.xpScaleVersion,45,'migration can retry safely after quota becomes available');
+assert.equal(afterRetry.xpScaleVersion,G.XP_SCALE,'migration can retry safely after quota becomes available');
 assert.equal((await getDungeonXpMigrationBackup(quotaDb)).profile.xp,20000,'retry preserves original old EXP');
 // Tampering with the archived photo cannot be laundered into a replacement save.
 const archived=quotaFactory.databases.get('magia-dungeon-v1').get('settings').get('xpMigrationBackupV1');
