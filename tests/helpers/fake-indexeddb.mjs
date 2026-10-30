@@ -7,8 +7,10 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
  };
  const databases=new Map();
  const schema=new Map();
+ const versions=new Map();
+ const connections=new Map();
  const factory={
-  opens:0,databases,failProfileBlobWrites:false,failIntegrityWrites:false,transactions:[],
+  opens:0,databases,failProfileBlobWrites:false,failIntegrityWrites:false,failMigrationBackupWrites:false,transactions:[],
   open(name,version){
    factory.opens++;
    if(onOpen==='throw')throw Error('Storage denied');
@@ -17,10 +19,15 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
     if(onOpen==='blocked'){q.onblocked?.();return;}
     if(onOpen==='error'){q.error=Error('IndexedDB unavailable');q.onerror?.();return;}
     const maps=databases.get(name)||new Map(),keys=schema.get(name)||new Map();
+    const previousVersion=versions.get(name)||0,requestedVersion=version||Math.max(1,previousVersion);
+    if(requestedVersion<previousVersion){q.error=Error('VersionError: database version is newer');q.error.name='VersionError';q.onerror?.();return;}
+    if(requestedVersion>previousVersion){
+     for(const old of connections.get(name)||[]){old.onversionchange?.();if(!old.closed){q.onblocked?.();return;}}
+    }
     const db={
      objectStoreNames:{contains:id=>maps.has(id)},
      createObjectStore(id,options){maps.set(id,new Map());keys.set(id,options?.keyPath||null);return {};},
-     close(){db.closed=true;},
+     close(){db.closed=true;connections.get(name)?.delete(db);},
      transaction(id,mode){
       const names=Array.isArray(id)?id:[id];
       if(!names.length||names.some(name=>!maps.has(name)))throw Error('Missing object store '+id);
@@ -63,7 +70,7 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
         get:key=>request(()=>structuredClone(table.get(key))),
         getKey:key=>request(()=>table.has(key)?key:undefined),
         getAll:()=>request(()=>structuredClone([...table.values()])),
-        put:(value,key)=>request(()=>{const id=key??value[keyPath];if(id===undefined)throw Error('Missing key');trace.writes.push({store,key:id,kind:'put'});if(store==='settings'&&id==='integrity'&&factory.failIntegrityWrites)throw Error('Injected integrity write failure');if(rejectBlobRewrite&&store==='circles'&&table.has(id)&&value?.image instanceof Blob)throw Error('Error preparing Blob/File data to be stored in object store');if(store==='settings'&&id==='profile'&&(rejectProfileBlobRewrite||factory.failProfileBlobWrites)&&containsBlob(value))throw Error('Error preparing Blob/File data to be stored in object store');table.set(id,structuredClone(value));return id;}),
+        put:(value,key)=>request(()=>{const id=key??value[keyPath];if(id===undefined)throw Error('Missing key');trace.writes.push({store,key:id,kind:'put'});if(store==='settings'&&id==='integrity'&&factory.failIntegrityWrites)throw Error('Injected integrity write failure');if(store==='settings'&&id==='xpMigrationBackupV1'&&factory.failMigrationBackupWrites)throw Error('Injected migration backup quota error');if(rejectBlobRewrite&&store==='circles'&&table.has(id)&&value?.image instanceof Blob)throw Error('Error preparing Blob/File data to be stored in object store');if(store==='settings'&&id==='profile'&&(rejectProfileBlobRewrite||factory.failProfileBlobWrites)&&containsBlob(value))throw Error('Error preparing Blob/File data to be stored in object store');table.set(id,structuredClone(value));return id;}),
         delete:key=>request(()=>{trace.writes.push({store,key,kind:'delete'});table.delete(key);return undefined;}),
         clear:()=>request(()=>{trace.writes.push({store,kind:'clear'});table.clear();})
        };
@@ -73,7 +80,9 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
     };
     if(onOpen!=='undefined')q.result=db;
     if(!databases.has(name)){databases.set(name,maps);schema.set(name,keys);}
-    if(onOpen!=='undefined'&&maps.size===0)q.onupgradeneeded?.({target:q});
+    if(!connections.has(name))connections.set(name,new Set());
+    connections.get(name).add(db);
+    if(onOpen!=='undefined'&&requestedVersion>previousVersion){versions.set(name,requestedVersion);q.onupgradeneeded?.({target:q});}
     q.onsuccess?.({target:q});
    });
    return q;

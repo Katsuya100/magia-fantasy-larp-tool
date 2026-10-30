@@ -12,7 +12,12 @@ configure({balance,levels,floors,playerBase});
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
 for(const [lvl,slots] of [[1,3],[9,3],[10,4],[19,4],[20,5],[49,7],[50,8],[150,18]])
  assert.equal(G.capacity(lvl),slots,'carry slot increases each 10 levels');
-assert.equal(G.nextXp(1),108);assert.equal(floor(5).boss,'1');
+assert.equal(G.nextXp(1),3);assert.equal(floor(5).boss,'1');
+for(const layer of [1,10,50,100]){
+ assert.equal(G.fightExperience(1,30,layer),
+  G.fightExperience(1,90,layer),
+  'repeat clears must retain identical EXP regardless of player overlevel');
+}
 assert.deepEqual(G.startingBase(()=>0),{hp:90,mag:8,def:5,res:5});
 assert.deepEqual(G.startingBase(()=>.99999),{hp:110,mag:12,def:10,res:10});
 const base={hp:100,mag:10,def:7,res:7};
@@ -25,17 +30,26 @@ for(const lvl of [1,20,50]){
   assert.ok(ratio>=.13&&ratio<=.27,'normal attack near 1/5 recommended normal foe HP at level '+lvl+' '+row.id+' '+ratio);
  }
 }
-assert.equal(G.magicStoneDropChance(1,1),.30,'at recommended level, keep full stone drop rate');
-assert.equal(G.magicStoneDropChance(2,1),.30,'overlevel no longer reduces stone drops');
-assert.equal(G.magicStoneDropChance(3,1),.30,'overlevel never reduces stone drops');
-assert.equal(G.magicStoneDropChance(2,2),.30,'below recommended level, keep full stone drop rate');
-assert.equal(G.magicStoneDropChance(3,2),.30,'at another layer recommended level, keep full rate');
-assert.equal(G.magicStoneDropChance(150,100),.30,'final designed layer remains eligible');
-assert.equal(G.magicStoneDropChance(150,101),.30,'endless layers remain eligible');
-assert.equal(G.magicStoneDropChance(150,200),.30,'underleveled heroes retain full stone chance in deep layers');
-assert.equal(G.magicStoneDropChance(150,1),.30,'max-level heroes can replay the first layer');
-assert.equal(G.magicStoneDropChance(11,1,true),.30,'unreturned first-clear layers keep normal stone chance');
-assert.equal(G.magicStoneDropChance(11,1,false),.30,'repeat clears retain normal stone chance');
+// Every fight keeps a 30% stone hit chance; its real count scales by depth.
+for(const layer of [1,2,10,50,91,100,101,149,150,200]){
+ assert.equal(G.magicStoneDropChance(150,layer),.30,'constant stone hit probability');
+ assert.ok(G.magicStoneCountPerHit(layer)>=1&&G.magicStoneCountPerHit(layer)<=8);
+ for(const lv of [1,30,80,149,150])for(const cleared of [false,true])
+  assert.equal(G.magicStoneDropChance(lv,layer,cleared),.30,'no replay or overlevel penalty');
+}
+assert.equal(G.magicStoneCountPerHit(1),1);
+assert.equal(G.magicStoneCountPerHit(100),8);
+assert.equal(G.magicStoneCountPerHit(150),8);
+assert.equal(G.magicStoneCountPerHit(200),8);
+for(let layer=1;layer<=200;layer++){
+ const expected=8**((Math.min(100,layer)-1)/99);
+ assert.ok(Math.abs(G.magicStoneCountPerHit(layer)-expected)<1e-10,
+  'stone hit curve must follow the approved exponential 1-to-8 specification at '+layer);
+ if(layer>1)assert.ok(G.magicStoneCountPerHit(layer)>=G.magicStoneCountPerHit(layer-1));
+}
+assert.deepEqual(G.dropCounts(1,()=>.6,{layer:1}),{collection:0,stone:0,use:0});
+assert.deepEqual(G.dropCounts(1,()=>.6,{layer:100}),{collection:0,stone:0,use:0},
+ 'deep layers grow stone count, not chance');
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:1}),{collection:5,stone:1,use:3});
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2}),{collection:5,stone:1,use:3},'overlevel never reduces stones');
 assert.deepEqual(G.dropCounts(1,()=>.2,{layer:1,playerLevel:2,firstClear:true}),{collection:5,stone:1,use:3},'first-clear stone reward bypasses level penalty');
@@ -59,7 +73,7 @@ assert.deepEqual(G.drops(items,collections,19,()=>.999,{layer:10,bossEnemyId:'bo
  'boss trophies are no longer guaranteed when no item is rolled');
 const withBoss=G.drops(items,collections,19,()=>0,{layer:10,bossEnemyId:'boss_l010',favoredCollectionIds:['relic_boss_010']});
 assert.equal(withBoss.filter(x=>x.type==='use').length,3);
-assert.equal(withBoss.filter(x=>x.type==='stone').length,1);
+assert.equal(withBoss.filter(x=>x.type==='stone').length,2);
 assert.equal(withBoss.filter(x=>x.type==='collection').length,5);
 assert.equal(withBoss.filter(x=>x.id==='relic_boss_010').length,0,
  'common rarity draws cannot produce a legendary trophy');
@@ -96,15 +110,18 @@ assert.ok(lucky.collection>0&&lucky.stone>0&&lucky.use>0,
 assert.ok(zeroFights>0,'individual enemies can still have no rewards at all');
 assert.equal(G.basePower(300),35);assert.ok(G.mpCost(300)>0);
 const sp={role:'attack',attribute:'flame',power:300};
-const enhancedSpell={...sp,power:200,basePower:100};
+const enhancedSpell={...sp,power:1000,basePower:100};
 const originalMpCost=G.mpCost(100);
-assert.ok(G.mpCost(200)>originalMpCost,'upgraded power would otherwise increase MP cost');
+assert.ok(G.mpCost(1000)>originalMpCost,'a materially higher spell power would normally increase MP cost');
 assert.equal(G.spellMpCost(enhancedSpell),originalMpCost,'enhanced spell costs its original MP');
 assert.equal(G.spellMpCost(sp),G.mpCost(300),'ordinary and enemy spells retain normal costs');
+for(const role of ['attack','support','defense','debuff'])for(const upgradeLevel of [0,15,16,41,42,100])
+ assert.equal(G.spellMpCost({role,basePower:300,power:300+upgradeLevel*20,upgradeLevel}),
+  G.mpCost(300),'upgrading cannot change MP cost at '+upgradeLevel+' '+role);
 const enhancedCaster=G.makeUnit(base,1,{},[enhancedSpell]);
 enhancedCaster.mp=originalMpCost;
 assert.equal(G.canCast(enhancedCaster,0),true,'exact original MP suffices for upgraded spells');
-assert.equal(G.prepare(enhancedCaster,0).power,200,'upgraded effect power is preserved');
+assert.equal(G.prepare(enhancedCaster,0).power,1000,'upgraded effect power is preserved');
 assert.equal(enhancedCaster.mp,0,'casting deducts only the original MP cost');
 const a=G.makeUnit(base,1,{},[sp], 'a'),b=G.makeUnit(base,1,{},[sp], 'b');
 assert.equal(G.damage(a,b,sp),G.damage(b,a,sp));
@@ -126,21 +143,49 @@ const mpAfter=heroMp.mp;
 assert.ok(G.recoverVictoryMp(heroMp)>0&&heroMp.mp>mpAfter,'MP recovery persists across sequential wins');
 heroMp.mp=heroMp.maxMp;
 assert.equal(G.recoverVictoryMp(heroMp),0,'recovery never overflows max MP');
+const capFree=G.makeUnit(base,19);
+capFree.mp=Math.round(capFree.maxMp*.6);
+assert.ok(G.recoverVictoryMp(capFree,1)>0,'no hidden Lv19 tutorial MP cap');
+for(const level of [1,19,37,150]){
+ const actor=G.makeUnit(base,level),restored=[];
+ for(const layer of [1,5,10,11,20,50,90,100,110]){
+  actor.mp=0;restored.push(G.recoverVictoryMp(actor,layer));
+ }
+ assert.ok(restored.every((n,i)=>i===0||n<=restored[i-1]),'no deep-layer MP recovery increase at Lv'+level);
+}
+// Independently compare absolute rounded MP across the ten official
+// recommended levels, not only percentages for a fixed-level character.
+const recommendedRecovery=[[10,19],[20,37],[30,55],[40,72],[50,87],
+ [60,102],[70,115],[80,128],[90,139],[100,150]];
+let previousAbsolute=Infinity;
+for(const [floor,level] of recommendedRecovery){
+ const owner=G.makeUnit(base,level);owner.mp=0;
+ const amount=G.recoverVictoryMp(owner,floor);
+ assert.ok(Number.isSafeInteger(amount)&&amount>=0,
+  'recommended-level victory recovery must be integer MP at F'+floor);
+ assert.ok(amount<=previousAbsolute,
+  'recommended-level absolute recovery must not grow at F'+floor);
+ if(floor>=100)assert.equal(amount,0,'normal F100+ victory recovery must remain zero');
+ previousAbsolute=amount;
+}
 const victoryMpRate=level=>{
  const unit=G.makeUnit(base,level);
  unit.mp=0;
  return G.recoverVictoryMp(unit)/unit.maxMp;
 };
-assert.ok(victoryMpRate(1)>=.18&&victoryMpRate(1)<=.20,'early layers grant generous beginner MP recovery');
-assert.ok(victoryMpRate(30)>.12&&victoryMpRate(30)<.14,'early-layer victory MP recovery also helps established adventurers');
-assert.ok(victoryMpRate(75)>.09&&victoryMpRate(75)<.115,'the early-layer bonus does not erase level scaling');
-assert.ok(victoryMpRate(150)>.069&&victoryMpRate(150)<.085,'high-level heroes only receive the early-layer bonus at low depth');
-// Added recovery applies only to layers 1-19. The baseline is mathematically
-// identical at layer 20 and beyond, regardless of the adventurer's level.
+// The already existing early-layer victory reward knob controls recovery.
+// Keep the existing upper design bounds, but do not impose the superseded
+// minimum recovery rates; fixed-deck MP targets are validated separately.
+const introReward=num('victory_mp_early_layer_bonus')-.0485;
+assert.ok(victoryMpRate(1)<=.20+introReward,'early-layer beginner MP recovery stays within its existing upper bound');
+assert.ok(victoryMpRate(30)<.14+introReward,'established adventurer recovery stays within its existing upper bound');
+assert.ok(victoryMpRate(75)<.115+introReward,'the early-layer bonus does not exceed its existing level-scaling bound');
+assert.ok(victoryMpRate(150)<.085+introReward,'high-level recovery stays within its existing upper bound');
+// Recovery is intentionally reduced after the first decade. The existing
+// MP-bonus still disappears at layer 20, and the deep curve remains monotone.
 for(let layer=1;layer<=10;layer++)assert.equal(G.earlyVictoryMpBonusRate(layer),num('victory_mp_early_layer_bonus'));
 for(let layer=11;layer<20;layer++){
  assert.ok(G.earlyVictoryMpBonusRate(layer)<G.earlyVictoryMpBonusRate(layer-1));
- assert.ok(G.earlyVictoryMpBonusRate(layer)>0);
 }
 for(const layer of [20,21,30,50,100,110])assert.equal(G.earlyVictoryMpBonusRate(layer),0);
 for(const playerLevel of [1,5,19,37,55,150]){
@@ -151,27 +196,24 @@ for(const playerLevel of [1,5,19,37,55,150]){
   (num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
   num('victory_mp_beginner_bonus')*Math.max(0,(13-playerLevel)/12)-
   num('victory_mp_middle_taper')*middle*(1-middle);
- for(const layer of [20,21,30,50,100,110]){
+ for(const layer of [11,15,19,20,21,30,50,100,110]){
   actor.mp=0;
   assert.equal(G.recoverVictoryMp(actor,layer),
-   Math.round(actor.maxMp*originalRate*G.victoryMpLayerFactor(layer)),
-   'layer 20+ must retain the exact historical recovery at layer '+layer+' and Lv'+playerLevel);
+   Math.round(actor.maxMp*(originalRate*G.victoryMpLayerFactor(layer)+G.earlyVictoryMpBonusRate(layer))),
+   'layer 11+ must match the actual shared configured recovery at layer '+layer+' and Lv'+playerLevel);
  }
 }
 assert.ok(victoryMpRate(1)>victoryMpRate(30)&&victoryMpRate(30)>victoryMpRate(75)&&victoryMpRate(75)>victoryMpRate(150),
  'victory MP recovery decreases with level');
 
-assert.deepEqual(G.VICTORY_MP_LAYER_CURVE.map(([floor,rate])=>[floor,rate]),
- [[1,1],[10,1],[15,.815],[20,.5976],[21,.5799],[22,.547],[25,.541],[29,.53955],[30,.5395],[35,.462],[40,.406],
-  [41,.387],[45,.338],[49,.317],[50,.316],[51,.30324],[52,.30102],[55,.29597],[59,.29282],[60,.2924],
-  [65,.228],[70,.2244],[71,.19065],[75,.18547],[79,.18271],[80,.182],[85,.172],[89,.143],
-  [90,.1288],[95,.0751],[100,0]]);
-for(const [layer,expected] of [[1,1],[10,1],[15,.815],[20,.5976],
- [21,.5799],[22,.547],[25,.541],[29,.53955],[35,.462],[41,.387],[45,.338],[49,.317],[51,.30324],[52,.30102],[55,.29597],[59,.29282],
- [65,.228],[71,.19065],[75,.18547],[79,.18271],[80,.182],[85,.172],[89,.143],
- [90,.1288],[95,.0751],[100,0],[105,0]]){
+// Pin the 37 approved depth multipliers, independently from live interpolation.
+// This is a test-only baseline, not a change to the shared recovery equation.
+const approvedVictoryMpCurve=[[1,0.24],[5,0.22611715],[6,0.22611715],[10,0.19222357],[11,0.19197838],[15,0.15683004],[19,0.13614082],[20,0.13614082],[21,0.13102093],[22,0.1264075],[23,0.12243465],[25,0.11714856],[29,0.09565722],[30,0.09565722],[35,0.08675414],[38,0.08344589],[40,0.08032757],[41,0.07958168],[45,0.06907333],[49,0.06907333],[50,0.06907333],[51,0.06907333],[52,0.06786949],[55,0.06558636],[59,0.06335082],[60,0.06264624],[65,0.05982974],[70,0.05823141],[71,0.05761294],[75,0.05648457],[79,0.05552298],[80,0.0551468],[85,0.05315858],[89,0.05315728],[90,0.05285719],[95,0.045],[100,0]];
+assert.equal(approvedVictoryMpCurve.length,37);
+assert.deepEqual(G.VICTORY_MP_LAYER_CURVE.map(([layer,rate])=>[layer,rate]),approvedVictoryMpCurve);
+for(const [layer,expected] of [...approvedVictoryMpCurve,[105,0]]){
  assert.ok(Math.abs(G.victoryMpLayerFactor(layer)-expected)<1e-10,
-  'victory MP recovery multiplier for floor '+layer);
+  'depth MP multiplier must match the approved checkpoint at F'+layer);
 }
 for(let layer=2;layer<=110;layer++){
  assert.ok(G.victoryMpLayerFactor(layer)<=G.victoryMpLayerFactor(layer-1),
@@ -213,7 +255,8 @@ for(let layer=1;layer<=11;layer++){
   }
  }
 }
-const en=G.fromEnemy(enemies[0],2);assert.equal(en.spells.length,5);assert.ok(en.stats.hp>50,'scaled enemies stay viable at low levels');
+const en=G.fromEnemy(enemies[0],2);assert.equal(en.spells.length,5);
+assert.ok(en.stats.hp>50,'normal beginner enemies retain viable shared-level health');
 const u=G.makeUnit(base,1,{},[sp]),v=G.makeUnit(base,1,{},[sp]);
 const logs=G.round(u,v,0,0,buffs,()=>.7);assert.ok(logs.length===2);assert.ok(u.hp<100&&v.hp<100);
 const profile={level:1,xp:0};G.experience(profile,G.nextXp(1));assert.equal(profile.level,2);

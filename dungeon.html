@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261025.13">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261030.264">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -36,13 +36,13 @@
       <p id="startupDetail" class="startup-detail" role="status" aria-live="polite">冒険の記録を確かめている…</p>
       <div class="startup-bar" role="progressbar" aria-label="迷宮の起動準備"><span></span></div>
       <p class="startup-note">頁の準備が整うまで、迷宮の門は静かに閉じている。</p>
-      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261025.11" hidden>もう一度、迷宮の扉を開く</a>
+      <a id="startupRetry" class="startup-retry" href="dungeon.html?release=20261030.264" hidden>もう一度、迷宮の扉を開く</a>
       <a class="startup-exit" href="index.html">← 作品選択へ戻る</a>
     </div>
   </div>
   <div id="driveSyncActivity" class="drive-sync-activity" role="status" aria-live="polite" hidden><span class="drive-sync-spinner" aria-hidden="true"></span><span>Google Driveと同期中…</span></div>
   <div class="ambient-stars" aria-hidden="true"></div>
-  <main id="dungeonApp" class="shell" data-release="20261025.13" aria-busy="true" inert>
+  <main id="dungeonApp" class="shell" data-release="20261030.264" aria-busy="true" inert>
     <header class="hero">
       <div class="hero-top">
         <a class="back-link" href="index.html">〈 アーカイブへ戻る</a>
@@ -148,6 +148,18 @@
         </div>
       </div>
     </dialog>
+    <dialog id="restoreOriginalXpDialog" class="name-dialog" aria-labelledby="restoreOriginalXpTitle" data-dungeon-frame="fixed">
+      <div class="delete-data-dialog-inner dungeon-dialog-frame">
+        <span class="dialog-sigil" aria-hidden="true">！</span>
+        <h2 id="restoreOriginalXpTitle" class="dungeon-dialog-frame-title">EXP変換前の記録に戻しますか？</h2>
+        <p>旧セーブを端末内の保全データから復元します。<strong>EXP変換後に進めた冒険・獲得した装備・収集品など、すべての進捗が失われます。</strong></p>
+        <p>復元後は現在のEXP変換を再適用します。Google Drive上のデータには直接触れません。</p>
+        <div class="buttons">
+          <button type="button" id="cancelRestoreOriginalXp" class="subtle">キャンセル</button>
+          <button type="button" id="confirmRestoreOriginalXp" class="danger">進捗が失われることを理解して復元する</button>
+        </div>
+      </div>
+    </dialog>
     <dialog id="backupSetupDialog" class="name-dialog" aria-labelledby="backupSetupTitle" data-dungeon-frame="fixed">
       <div class="delete-data-dialog-inner dungeon-dialog-frame">
         <span class="dialog-sigil" aria-hidden="true">☁</span>
@@ -158,6 +170,7 @@
         <div class="buttons">
           <button type="button" id="setupGoogleDrive" class="primary-action" disabled>GoogleDriveに同期する</button>
           <button type="button" id="setupWithoutBackup" class="subtle">同期せず始める</button>
+          <button type="button" id="restoreOriginalXpSaveSetup" class="subtle" hidden>EXP変換前の端末セーブに戻す（以後の進捗は消えます）</button>
         </div>
       </div>
     </dialog>
@@ -242,6 +255,7 @@
             <button type="button" id="connectGoogleDrive" class="subtle" disabled>GoogleDriveに同期する</button>
             <button type="button" id="disconnectGoogleDrive" class="subtle" hidden>Google Driveの同期を解除</button>
             <button type="button" id="repairMagicCirclePhotos" class="subtle" hidden>魔法陣の写真を修復する</button>
+            <button type="button" id="restoreOriginalXpSave" class="subtle" hidden>EXP変換前のセーブを復元（以後の進捗は消えます）</button>
           </div>
           <p id="backupRollbackWarning" class="backup-sync-warning" hidden>システム上 <strong>複数ブラウザで同時プレイをすると進行が巻き戻る場合があります</strong>。</p>
         </div>
@@ -448,7 +462,7 @@
     </div>
 
     <dialog id="circleDrawingDialog" class="circle-drawing-dialog" aria-labelledby="circleDrawingStage" data-dungeon-frame="overlay">
-      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261025.11" alt="" hidden>
+      <img id="circleDrawingParchment" src="assets/images/dungeon-parchment.jpg?v=20261030.264" alt="" hidden>
       <div id="circleDrawingShell" class="circle-drawing-shell">
         <strong id="circleDrawingStage" class="circle-drawing-stage" aria-live="polite">呪文を1文字ずつ書く</strong>
         <button type="button" id="circleDrawingPowerTips" class="subtle circle-power-tips-button">強い魔法のコツ</button>
@@ -716,7 +730,7 @@
         </div>
       </div>
     </dialog>
-    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.25.13</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
+    <footer><span aria-hidden="true">✦</span> 記録はこのブラウザに保存されます <span aria-hidden="true">✦</span> <span class="release-id">v2026.10.30.264</span> · <a href="privacy.html">プライバシーポリシー</a> · <a href="terms.html">利用規約</a></footer>
   </main>
   <div id="tutorialOverlay" class="tutorial-overlay" data-dungeon-frame="paged" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" hidden>
     <div class="tutorial-sheet dungeon-dialog-frame">
@@ -739,6 +753,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261025.13"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261030.264"></script>
 </body>
 </html>

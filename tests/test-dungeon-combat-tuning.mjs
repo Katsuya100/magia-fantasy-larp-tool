@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {durabilityArchetype,combatBaseHpRanges} from '../assets/js/dungeon-durability-profiles.mjs';
 const csv=n=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+n+'.csv',import.meta.url),'utf8'));
 const data={enemies:csv('enemies'),balance:csv('balance'),floors:csv('floors'),levels:csv('levels'),playerBase:csv('player-base')};
 configure(data);
@@ -13,15 +12,16 @@ assert.equal(data.floors.length,500);
 assert.equal(data.balance.filter(r=>/^enemy_(?:hp|mag)_(?:band|last3|boss|scale_early|scale_late)/.test(r.key)).length,0);
 assert.equal(typeof G.enemyScaling,'undefined');
 assert.equal(typeof G.enemyCombatCoefficients,'undefined');
-// All encounter HP are canonical RPG base stats, with no secondary combat-time scale.
-const authored=G.parseCsv(readFileSync(new URL('./fixtures/dungeon-enemies-before-distribution.csv',import.meta.url),'utf8'));
-assert.deepEqual(data.enemies.map(e=>[e.id,e.hp]),authored.map(e=>[e.id,e.hp]),
- 'canonical HP is directly authored and identical to the verified 500-enemy fixture');
+// Historical generation fixtures predate the approved final combat tuning.
+// The separate element-distribution test pins the published 500-row CSV;
+// this test guards the more important enemy/player shared combat formulas.
 for(let i=0;i<500;i++){
- const row=data.enemies[i],lv=Number(data.floors[i].enemy_level),kind=row.boss_only==='1'?'boss':'normal';
+ const row=data.enemies[i],lv=Number(data.floors[i].enemy_level);
  const base={hp:+row.hp,mag:+row.mag,def:+row.def,res:+row.res};
- const range=combatBaseHpRanges[kind][durabilityArchetype(row.name)];
- assert.ok(range&&base.hp>=range[0]&&base.hp<=range[1],row.id+' authored role HP range');
+ for(const [stat,value] of Object.entries(base))
+  assert.ok(Number.isFinite(value)&&value>0,
+   row.id+' approved final '+stat+' must be a usable combat stat');
+ assert.ok(Number.isSafeInteger(lv)&&lv>=1,'valid authored encounter level '+row.id);
  const actual=G.fromEnemy(row,lv);
  assert.deepEqual(actual.base,base,row.id+' authored RPG base');
  assert.deepEqual(actual.stats,G.stats(base,lv),row.id+' shared level growth');

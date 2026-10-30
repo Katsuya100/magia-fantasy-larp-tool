@@ -1,15 +1,19 @@
-import {startingBase} from './dungeon-core.mjs';
+import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261030.264';
+import {level as levelRow} from './dungeon-tuning.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
-import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto} from './dungeon-cloud-integrity.mjs';
+import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto,verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs';
 import {prepareProfilePhotoRefs,restoreProfilePhotoRefs} from './dungeon-profile-photo-refs.mjs';
 const DB_NAME='magia-dungeon-v1';
-const DB_VERSION=2;
+// v3 blocks old v2 game tabs from reopening after conversion.
+const DB_VERSION=3;
 const STORES=['circles','settings'];
-const changes=new WeakMap();
+// Modules can be imported with and without cache keys; preserve one listener bus.
+const changes=globalThis[Symbol.for('magia-dungeon-save-changes')]??=new WeakMap();
 // A successor name is stored separately so naming never rewrites large Blob
 // values nested inside permadeath legacies. The signed profile is assembled
 // from the canonical profile plus this small overlay when read.
 const HEIR_NAME_KEY='heirNameOverride';
+const XP_MIGRATION_BACKUP_KEY='xpMigrationBackupV1';
 const thumbnailKey=id=>'circleThumbnail:'+id;
 function applyHeirName(profile,overlay){
  return profile&&overlay?{...profile,...overlay}:profile;
@@ -70,10 +74,10 @@ function request(db,store,mode,op,{silent=false}={}){
 }
 // Read and verify the previous seal BEFORE applying writes. A missing record
 // cannot be silently legitimized by a later (unrelated) profile update.
-function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,photoWrites=new Map()}={}){
+function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,photoWrites=new Map(),expectedRevision=null,migrationSourceRecords=null}={}){
  validateDatabase(db);
  return new Promise((resolve,reject)=>{
-  let tx;
+  let tx,committedAt;
   try{
    tx=db.transaction(STORES,'readwrite');
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
@@ -85,8 +89,21 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,
     if(++reads!==4+photoWrites.size)return;
     try{
      const p=applyHeirName(previousProfile.result,previousName.result),c=previousCircles.result,seal=previousSeal.result;
+     const sourceRecords=p?recordFingerprint({profile:p,circles:c}):null;
      if(seal?.version===1){
-      if(!p||seal.records!==recordFingerprint({profile:p,circles:c})||seal.savedAt===undefined)throw Error('保存データの整合性が一致しません。復元が必要です。');
+      if(!p||seal.records!==sourceRecords||seal.savedAt===undefined)throw Error('保存データの整合性が一致しません。復元が必要です。');
+     }
+     // Detect stale in-memory profiles within the same write transaction.
+     if(writesProfile&&expectedRevision!==null){
+      const actual=Number.isSafeInteger(p?.saveRevision)?p.saveRevision:0;
+      if(actual!==expectedRevision)throw Error('別のタブでセーブが更新されました。進捗を保護するため保存を停止しました。再読み込みしてください。');
+     }
+     if(migrationSourceRecords!==null){
+      if(sourceRecords!==migrationSourceRecords||(p?.xpScaleVersion!==undefined&&p?.xpScaleVersion!==null))
+       throw Error('EXP変換中にセーブが変更されました。上書きせずに停止しました。再読み込みしてください。');
+      // Old profile, photo blobs and signed proof survive conversion, atomically.
+      // Quota failure aborts both backup and XP update without touching the old save.
+      settings.put({version:1,profile:p,circles:c,integrity:seal,sourceRecords,createdAt:Date.now()},XP_MIGRATION_BACKUP_KEY);
      }
      perform(settings,items,c);
      // Store only newly encountered historical photos, atomically with the
@@ -109,6 +126,7 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,
        desc[circle.id]===null?null:'unknown'
       ]));
       const savedAt=Math.max(Date.now(),Number(seal?.savedAt||0)+1);
+      committedAt=savedAt;
       settings.put({version:1,records:recordFingerprint(next),photos,profilePhotos:profileHashes||seal?.profilePhotos||{},savedAt,
        legacy:Boolean(seal?.legacy||(!seal&&Boolean(p||c.length))||Object.values(photos).includes('unknown'))},'integrity');
      };
@@ -124,7 +142,7 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,
     const existing=items.getKey(id);
     existing.onsuccess=()=>{if(existing.result===undefined)missingPhotos.add(id);ready();};
    }
-   tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve();};
+   tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve(committedAt);};
    tx.onerror=()=>reject(tx.error||Error('セーブの保存に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブの整合性を確認できませんでした。'));
   }catch(error){reject(error);}
@@ -206,11 +224,16 @@ async function trustedProfileHashes(db,profile){
  }
  return hashes;
 }
-export async function saveProfile(db,p){
+export async function saveProfile(db,p,{migrationSourceRecords=null}={}){
  withPlayId(p);
+ const expectedRevision=Number.isSafeInteger(p.saveRevision)?p.saveRevision:0;
  const hashes=await trustedProfileHashes(db,p);
  const prepared=await prepareProfilePhotoRefs(p);
- return mutate(db,settings=>settings.put(prepared.profile,'profile'),{},hashes,{writesProfile:true,photoWrites:prepared.photos});
+ const nextRevision=expectedRevision+1;
+ if(!Number.isSafeInteger(nextRevision))throw Error('セーブの改訂番号が上限を超えました。');
+ await mutate(db,settings=>settings.put({...prepared.profile,saveRevision:nextRevision},'profile'),{},hashes,
+  {writesProfile:true,photoWrites:prepared.photos,expectedRevision,migrationSourceRecords});
+ p.saveRevision=nextRevision;
 }
 // One IndexedDB transaction prevents a lost/recovered photo and its owner from diverging.
 export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
@@ -223,17 +246,21 @@ export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
    profile.magicOverrides[circle.id]=metadata;
   }
  }
+ const expectedRevision=Number.isSafeInteger(profile.saveRevision)?profile.saveRevision:0;
+ const nextRevision=expectedRevision+1;
+ if(!Number.isSafeInteger(nextRevision))throw Error('セーブの改訂番号が上限を超えました。');
  const prepared=await prepareProfilePhotoRefs(profile);
  const lost=lostCircleIds(profile);
- return mutate(db,(settings,items,previousCircles)=>{
+ await mutate(db,(settings,items,previousCircles)=>{
   const present=new Set(previousCircles.map(circle=>circle.id));
   // A lost magic circle is inactive, NOT deleted from its one shared save.
   for(const id of removed)if(!lost.has(id)){items.delete(id);settings.delete(thumbnailKey(id));}
   // Upgraded/reclaimed magic is represented by metadata above; do not touch
   // existing Blob records. Only a previously unseen ID needs a first write.
   for(const circle of added)if(!present.has(circle.id))items.put(circle);
-  settings.put(prepared.profile,'profile');
- },hashes,profileHashes,{writesProfile:true,photoWrites:prepared.photos});
+  settings.put({...prepared.profile,saveRevision:nextRevision},'profile');
+ },hashes,profileHashes,{writesProfile:true,photoWrites:prepared.photos,expectedRevision});
+ profile.saveRevision=nextRevision;
 }
 // Commit a successor name and its new integrity seal in one small transaction.
 // No legacy photograph is re-serialized or copied by this path.
@@ -254,9 +281,11 @@ export function saveHeirName(db,name){
      if(!previous?.awaitingHeir)throw Error('後継者名の入力状態が変更されました。画面を再読み込みしてください。');
      if(seal?.version===1&&(!raw||seal.records!==recordFingerprint({profile:previous,circles:c.result})||seal.savedAt===undefined))
       throw Error('保存データの整合性が一致しません。復元が必要です。');
-     const next={...previous,name:trimmed,awaitingHeir:false,permadeath:true};
+     const nextRevision=(Number.isSafeInteger(previous.saveRevision)?previous.saveRevision:0)+1;
+     if(!Number.isSafeInteger(nextRevision))throw Error('セーブの改訂番号が上限を超えました。');
+     const next={...previous,name:trimmed,awaitingHeir:false,permadeath:true,saveRevision:nextRevision};
      withPlayId(next);
-     const nameOverlay={name:trimmed,awaitingHeir:false,permadeath:true};
+     const nameOverlay={name:trimmed,awaitingHeir:false,permadeath:true,saveRevision:nextRevision};
      if(!raw.playId)nameOverlay.playId=next.playId;
      const savedAt=Math.max(Date.now(),Number(seal?.savedAt||0)+1);
      settings.put(nameOverlay,HEIR_NAME_KEY);
@@ -277,6 +306,104 @@ export function saveHeirName(db,name){
  });
 }
 
+// Convert signed legacy saves once, only after startup integrity verification.
+// XP is stored in the new unit; all other player progress is unchanged.
+export async function migrateDungeonXp(db){
+ // Pin the source content; compare inside the final write transaction.
+ const source=await readDungeonSnapshot(db);
+ const p=await getProfile(db);
+ if(!p||p.xpScaleVersion===XP_SCALE)return p;
+ const migrationSourceRecords=recordFingerprint(source);
+ if(p.xpScaleVersion!==undefined&&p.xpScaleVersion!==null)
+  throw Error('このセーブは未対応のEXPバージョンです。上書きせず復旧を停止しました。');
+ const maxLevel=150;
+ const oldNext=lvl=>Math.ceil(Number(levelRow(lvl).xp_to_next)*Math.pow(2.1,(Number(lvl)-1)/10));
+ // Level and fraction of the current XP gauge are the durable progress.
+ const convert=(xp,lvl)=>{
+  const n=Number(xp);
+  if(!Number.isFinite(n)||n<0)throw Error('旧経験値の値が不正です。セーブを更新せずに停止しました。');
+  return Math.round(n/oldNext(lvl)*nextXp(lvl)*1e6)/1e6;
+ };
+ const rounded=n=>Math.max(0,Math.round(n*1e6)/1e6);
+ const span=(before,after)=>{
+  if(after.level<before.level)throw Error('旧経験値のレベル順序が不正です。');
+  let earned=-before.xp;
+  for(let level=before.level;level<after.level;level++)earned+=nextXp(level);
+  if(after.level<maxLevel)earned+=after.xp;
+  return rounded(earned);
+ };
+ const levelAfterOldAward=(level,xp,award)=>{
+  let total=xp+award;
+  while(level<maxLevel&&total>=oldNext(level)){total-=oldNext(level);level++;}
+  return {level,xp:level>=maxLevel?0:total};
+ };
+ // Recalculate unbanked XP from the old expedition's actual end state,
+ // not from the ratio at its starting level. The curves differ by level.
+ const start={level:p.level,xp:convert(p.xp,p.level)};
+ if(p.run){
+  const oldAward=Number(p.run.xp||0);
+  if(!Number.isFinite(oldAward)||oldAward<0)throw Error('探索中の旧経験値が不正です。');
+  const oldEnd=levelAfterOldAward(p.level,Number(p.xp),oldAward);
+  const newEnd={level:oldEnd.level,xp:oldEnd.level>=maxLevel?0:convert(oldEnd.xp,oldEnd.level)};
+  p.run.xp=span(start,newEnd);
+ }
+ if(p.pendingReturn){
+  const oldAward=Number(p.pendingReturn.gained||0);
+  if(!Number.isFinite(oldAward)||oldAward<0)throw Error('帰還報酬の旧経験値が不正です。');
+  // Reconstruct missing return-screen start state by reversing the exact old
+  // level thresholds. A single ratio at the final level is not reversible.
+  if(!p.pendingReturn.before){
+   if(p.level>=maxLevel&&oldAward>0)
+    throw Error('最大レベルの旧帰還報酬を安全に復元できません。旧セーブを保護して停止しました。');
+   let level=p.level,xp=Number(p.xp),remaining=oldAward;
+   while(remaining>xp&&level>1){remaining-=xp;level--;xp=oldNext(level);}
+   if(remaining>xp)throw Error('旧帰還報酬と累計EXPが一致しません。旧セーブを保護して停止しました。');
+   p.pendingReturn.before={level,xp:xp-remaining};
+  }
+  const before=p.pendingReturn.before;
+  const beforeLevel=Number(before.level),oldBeforeXp=Number(before.xp);
+  if(!Number.isSafeInteger(beforeLevel)||beforeLevel<1||beforeLevel>maxLevel||
+   !Number.isFinite(oldBeforeXp)||oldBeforeXp<0||
+   beforeLevel<maxLevel&&oldBeforeXp>=oldNext(beforeLevel))
+   throw Error('帰還前の旧レベル・経験値が不正です。旧セーブを保護して停止しました。');
+  const oldEnd=levelAfterOldAward(beforeLevel,oldBeforeXp,oldAward);
+  if(oldEnd.level!==p.level||(p.level<maxLevel&&Math.abs(oldEnd.xp-Number(p.xp))>0.001))
+   throw Error('帰還報酬とセーブ済みレベルが一致しません。旧セーブを保護して停止しました。');
+  const beforeXp=convert(oldBeforeXp,beforeLevel);
+  p.pendingReturn.gained=span({level:beforeLevel,xp:beforeXp},start);
+  before.xp=beforeXp;
+ }
+ p.xp=start.xp;
+ p.xpScaleVersion=XP_SCALE;
+ // The profile, XP-version marker and integrity seal commit in one transaction.
+ await saveProfile(db,p,{migrationSourceRecords});
+ return p;
+}
+// Read-only rescue point, unaffected by later game changes or cloud sync.
+export async function getDungeonXpMigrationBackup(db){
+ const backup=await request(db,'settings','readonly',s=>s.get(XP_MIGRATION_BACKUP_KEY));
+ if(!backup)return null;
+ if(backup.version!==1||!backup.profile||!Array.isArray(backup.circles)||
+  recordFingerprint({profile:backup.profile,circles:backup.circles})!==backup.sourceRecords)
+  throw Error('EXP変換前バックアップの整合性が一致しません。');
+ if(backup.integrity?.version===1&&backup.integrity.records!==backup.sourceRecords)
+  throw Error('EXP変換前バックアップの署名が一致しません。');
+ return backup;
+}
+export const hasDungeonXpMigrationBackup=db=>request(db,'settings','readonly',s=>s.getKey(XP_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
+// Rolling back also discards all play after migration; only explicit UI
+// confirmation may call this API. Full SHA checks guard original photos.
+export async function restoreDungeonXpMigrationBackup(db){
+ const backup=await getDungeonXpMigrationBackup(db);
+ if(!backup)throw Error('EXP変換前の保全データが見つかりません。');
+ const snapshot={profile:backup.profile,circles:backup.circles,integrity:backup.integrity,savedAt:backup.integrity?.savedAt||0};
+ const health=await verifyLocalSnapshot(snapshot);
+ if(health.status==='corrupt'||health.status==='badImages')
+  throw Error('EXP変換前の保全データの署名または写真が一致しません。復元を停止しました。');
+ if(health.status==='legacy'){await photoEvidence(snapshot.circles);await profilePhotoEvidence(snapshot.profile);}
+ const current=await readDungeonSnapshot(db);
+ await replaceDungeonSnapshot(db,snapshot,{expectedCurrentRecords:recordFingerprint(current)});
+}
 export async function getProfile(db){
   const [raw,nameOverride]=await Promise.all([
    request(db,'settings','readonly',s=>s.get('profile')),
@@ -284,7 +411,7 @@ export async function getProfile(db){
   ]);
   let p=await restoreProfilePhotoRefs(applyHeirName(raw,nameOverride),id=>request(db,'circles','readonly',s=>s.get(id)));
   if(!p){
-    p={level:1,xp:0,base:startingBase(),returns:0,attempts:0,tutorialDone:false,inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReachedLayer:0,deepestReturnedLayer:0,magicStones:0,magicInk:0,run:null};
+    p={level:1,xp:0,xpScaleVersion:XP_SCALE,base:startingBase(),returns:0,attempts:0,tutorialDone:false,inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReachedLayer:0,deepestReturnedLayer:0,magicStones:0,magicInk:0,run:null};
     const seal=await request(db,'settings','readonly',s=>s.get('integrity'));
     // A missing profile with a prior seal means corruption, not a new player.
     // Keep it missing on disk so Drive can restore the complete trusted save.
@@ -317,7 +444,7 @@ export function readDungeonSnapshot(db){
   }catch(error){reject(error);}
  });
 }
-export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0}){
+export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{expectedCurrentRecords=null}={}){
  validateDatabase(db);
  const prepared=await prepareProfilePhotoRefs(profile);
  const all=[...circles];
@@ -330,10 +457,25 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0}){
    tx.onerror=()=>reject(tx.error||Error('セーブ復元に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブ復元が中断されました。'));
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
-   settings.clear();items.clear();
-   settings.put(prepared.profile,'profile');
-   for(const circle of all)items.put(circle);
-   settings.put({version:1,records,photos,profilePhotos,savedAt:Number(savedAt)||0,legacy:false},'integrity');
+   const write=()=>{
+    settings.clear();items.clear();
+    settings.put(prepared.profile,'profile');
+    for(const circle of all)items.put(circle);
+    settings.put({version:1,records,photos,profilePhotos,savedAt:Number(savedAt)||0,legacy:false},'integrity');
+   };
+   if(expectedCurrentRecords!==null){
+    const p=settings.get('profile'),c=items.getAll(),n=settings.get(HEIR_NAME_KEY);
+    let remaining=3;
+    const check=()=>{
+     if(--remaining)return;
+     try{
+      if(recordFingerprint({profile:applyHeirName(p.result,n.result),circles:c.result})!==expectedCurrentRecords)
+       throw Error('保全データの復元中に別のタブがセーブを更新しました。上書きを停止しました。');
+      write();
+     }catch(error){try{tx.abort?.();}catch{}reject(error);}
+    };
+    p.onsuccess=check;c.onsuccess=check;n.onsuccess=check;
+   }else write();
   }catch(error){reject(error);}
  });
 }

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "dungeon-approved-goals-v1",
+  "scope": "1-100 authored layers, 5 encounters per layer; 10-layer consecutive sorties",
+  "strictSamples": 256,
+  "seedPolicy": "17011 + i * 13",
+  "winRateBasis": "observed wins / 256; confidence interval never substitutes",
+  "bands": [
+    {"from": 1, "to": 10, "winRate": [99,100], "winSafety": [99,100], "winnerMedianMp": [50,60], "noCombatHealingBothSides": true},
+    {"from": 11, "to": 20, "winRate": [99,100], "winSafety": [99,100], "winnerMedianMp": [0,15], "playerHealingAvailable": true},
+    {"from": 21, "to": 30, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15]},
+    {"from": 31, "to": 40, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15]},
+    {"from": 41, "to": 50, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15]},
+    {"from": 51, "to": 60, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15], "specialistCleansers": true},
+    {"from": 61, "to": 70, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15], "specialistCleansers": true},
+    {"from": 71, "to": 80, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15], "specialistCleansers": true, "allStatusCleansers": true},
+    {"from": 81, "to": 90, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15], "specialistCleansers": true, "allStatusCleansers": true},
+    {"from": 91, "to": 100, "winRate": [90,97], "winSafety": [92,95], "winnerMedianMp": [0,15], "specialistCleansers": true, "allStatusCleansers": true}
+  ],
+  "targetLevelCheckpoints": {"10":19,"20":37,"30":55,"40":72,"50":87,"60":102,"70":115,"80":128,"90":139,"100":150},
+  "playerLevelMax": 150,
+  "rank": {"bossOnly": true, "beforeVictoryMpOrMilestoneRecovery": true, "bothHpMpPercentAtLeast": 80, "independentFromCombatBalance": true},
+  "unapprovedLimits": ["p90 farm fights", "p90 rerolls", "allowed time budget"],
+  "changeControl": "Do not change these values without user approval."
+}

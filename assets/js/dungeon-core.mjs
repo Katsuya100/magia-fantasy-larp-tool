@@ -1,14 +1,31 @@
 import {num,level,range} from './dungeon-tuning.mjs';
-import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,CONSUMABLE_TIERS,targetClearLevel} from './dungeon-design.mjs';
+import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,consumableWeight,CONSUMABLE_TIERS,targetClearLevel} from './dungeon-design.mjs';
 import {MAGIC_INK_ID,bossDropsMagicInk} from './dungeon-ink.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
 export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
-// Required XP curve offsets non-decaying repeat fight rewards.
-export const nextXp=level=>Math.ceil(Number(levelRow(level).xp_to_next)*
- Math.pow(num('xp_growth_per_10_levels'),(Number(level)-1)/10));
+// EXP scaling and rewards are independent of replay/overlevel status.
+// Previously removed EXP falloff must not be reintroduced.
+export const XP_SCALE=45;
+// A fifth of an integer layer budget may be 0.2 EXP. Normalize each stored
+// accumulation to micro-EXP so five battles land on their exact threshold.
+export const normalizeXp=value=>Math.round(Number(value)*1e6)/1e6;
+// EXP is fractional internally so five fights sum to the exact level budget.
+// Keep the display short without changing the stored value.
+const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:1});
+export const formatXp=value=>xpDisplay.format(Number(value)||0);
+// Grow steeply until Lv100 to limit lower-floor replay, then taper so
+// the high-end required and earned EXP values remain under six figures.
+export const nextXp=level=>{
+ const steps=(Number(level)-1)/10;
+ const earlySteps=Math.min(steps,9.9);
+ const lateSteps=Math.max(0,steps-9.9);
+ return Math.ceil(Number(levelRow(level).xp_to_next)*
+  Math.pow(num('xp_growth_per_10_levels'),earlySteps)*
+  Math.pow(num('xp_growth_per_10_levels_late'),lateSteps)/XP_SCALE);
+};
 // Five fights at the intended level supply approximately the XP needed
 // to start the following layer. Replay rewards do not decay.
 export function fightExperience(enemyLevel,playerLevel,layer){
@@ -18,8 +35,9 @@ export function fightExperience(enemyLevel,playerLevel,layer){
  const budget=next>current
   ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
   :nextXp(current);
- const full=Math.max(1,Math.ceil(budget/5));
- return full;
+ // Five victories award the same designed layer budget regardless of
+ // player overlevel/repeats; never revive the deleted EXP decay mechanic.
+ return budget/5;
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
 // Same upgraded-power duration applies to defense and debuff, hero and enemy.
@@ -33,6 +51,7 @@ export function statusDuration(spell){
 export const defenseDuration=statusDuration; // Compatibility for existing API consumers.
 export const basePower=p=>Math.round(num('power_scale')*Math.sqrt(Math.max(0,p)/num('power_divisor')));
 export const mpCost=p=>num('mp_cost_base')+Math.ceil(basePower(p)/num('mp_cost_divisor'));
+// Upgrades change effects, never the original circle's MP cost.
 export const spellMpCost=spell=>mpCost(spell.basePower??spell.power);
 const levelRow=l=>level(l);
 const growthKeys=['hp','mag','def','res'];
@@ -79,20 +98,28 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// Magic stones keep one base chance on new or repeated layers at every level.
-// Retain the former signature for compatible saved expeditions.
-export function magicStoneDropChance(_playerLevel,_layer,_firstClear=false){
+// Chance is constant; the number of actual stones on a hit grows with depth.
+export function magicStoneDropChance(_playerLevel,_layer=1,_firstClear=false){
  return num('magic_stone_drop_chance');
 }
+export function magicStoneCountPerHit(layer=1){
+ const maximum=num('magic_stone_drop_count_layer_150');
+ const endLayer=num('magic_stone_drop_curve_end_layer');
+ if(!(maximum>=1&&Number.isSafeInteger(endLayer)&&endLayer>1))
+  throw Error('魔導石の排出カーブの設定が不正です。');
+ const raw=Number(layer);
+ const depth=Number.isFinite(raw)?Math.min(endLayer,Math.max(1,Math.floor(raw))):1;
+ return Math.pow(maximum,(depth-1)/(endLayer-1));
+}
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
- const stoneChance=context.playerLevel==null
-  ?num('magic_stone_drop_chance')
-  :magicStoneDropChance(context.playerLevel,context.layer??1,context.firstClear===true);
- return {
-  collection:countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r),
-  stone:countSuccesses(num('magic_stone_drop_rolls'),stoneChance,r),
-  use:countSuccesses(num('consumable_drop_rolls'),num('consumable_drop_chance'),r)
- };
+ const collection=countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r);
+ const hits=countSuccesses(num('magic_stone_drop_rolls'),
+  magicStoneDropChance(context.playerLevel,context.layer??1,context.firstClear===true),r);
+ const expected=magicStoneCountPerHit(context.layer??1);
+ const whole=Math.floor(expected),fraction=expected-whole;
+ let stone=hits*whole;
+ for(let i=0;i<hits&&fraction>0;i++)if(r()<fraction)stone++;
+ return {collection,stone,use:countSuccesses(num('consumable_drop_rolls'),num('consumable_drop_chance'),r)};
 }
 export function dropCount(l,r=Math.random,context={}){
  return Object.values(dropCounts(l,r,context)).reduce((total,count)=>total+count,0);
@@ -101,7 +128,8 @@ export function drops(items,collections,l,r=Math.random,context={}){
  const layer=context.layer??1,{collection,stone,use}=dropCounts(l,r,context),rewards=[];
  for(let i=0;i<use;i++){
   const tier=rollConsumableTier(layer,r);
-  const x=weighted(eligibleConsumables(items,layer,tier),r);
+  const pool=eligibleConsumables(items,layer,tier);
+   const x=weighted(pool.map(row=>({...row,weight:consumableWeight(row,layer)})),r);
   rewards.push({type:'use',id:x.id,value:rollPotionValue(x,layer,r),
    bonus:x.bonus_buff_id&&r()<Number(x.bonus_chance)?x.bonus_buff_id:null});
  }
@@ -111,7 +139,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
  if(bossDropsMagicInk(context.bossEnemyId,r))rewards.push({type:'ink',id:MAGIC_INK_ID});
  return rewards;
 }
-export function experience(p,xp){p.xp+=xp;while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
+export function experience(p,xp){p.xp=normalizeXp(p.xp+xp);while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp=normalizeXp(p.xp-nextXp(p.level));p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
 export const debuffPowerFactor=spell=>clamp(Math.sqrt(Math.max(0,Number(spell?.power)||0)/num('debuff_power_reference')),num('debuff_power_min'),num('debuff_power_max'));
@@ -161,8 +189,9 @@ export function chooseEnemySpell(unit,r=Math.random){
   const guards=ids.filter(i=>unit.spells[i].role==='defense');
   const attack=()=>attacks[Math.floor(r()*attacks.length)];
   if(!guards.length)return attacks.length?attack():-1;
-  // A nearly all-guard opening keeps fifty consecutive fights survivable without HP healing.
-  if(attacks.length&&r()<.01)return attack();
+  // Early enemies remain active opponents: use the existing attack
+  // preference, and tune their authored base stats instead of suppressing AI.
+  if(attacks.length&&r()<num('enemy_attack_preference'))return attack();
   const strongest=unit.id==='boss_l010';
   return guards.reduce((best,i)=>strongest
    ?unit.spells[i].power>unit.spells[best].power?i:best
@@ -300,7 +329,11 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  const actions=[{u:player,t:enemy,sp:ps,name:'自分',side:'hero'},{u:enemy,t:player,sp:es,name:'敵',side:'enemy'}],log=[];
  const snapshot=u=>({...u,statuses:u.statuses.map(x=>({...x})),cooldowns:[...u.cooldowns]});
  const publish=(a,role,attribute,message,amount=0)=>{
-  if(onStep)onStep({side:a.side,role,attribute,text:message,amount,
+  if(!onStep)return;
+  const event={side:a.side,role,attribute,text:message,amount};
+  // Combat-only accounting needs the resolved values, not copied animation frames.
+  if(onStep.metricsOnly===true){onStep(event);return;}
+  onStep({...event,
    // Visual-only: this is not used by casting, damage, or resource calculations.
    upgradeLevel:['attack','defense','support','debuff'].includes(role)?a.sp?.upgradeLevel??0:0,
    hero:snapshot(player),enemy:snapshot(enemy)});
@@ -383,10 +416,7 @@ export function repairInvalidMp(hero){
 // An ordinary victory at 100F and deeper restores 0 MP; existing
 // tenth-layer checkpoints still use their separate full-recovery rules.
 export const VICTORY_MP_LAYER_CURVE=Object.freeze(
- [[1,1],[10,1],[15,.815],[20,.5976],[21,.5799],[22,.547],[25,.541],[29,.53955],[30,.5395],[35,.462],[40,.406],
-  [41,.387],[45,.338],[49,.317],[50,.316],[51,.30324],[52,.30102],[55,.29597],[59,.29282],[60,.2924],
-  [65,.228],[70,.2244],[71,.19065],[75,.18547],[79,.18271],[80,.182],[85,.172],[89,.143],
-  [90,.1288],[95,.0751],[100,0]].map(point=>Object.freeze(point)));
+ [[1,0.24],[5,0.22611715],[6,0.22611715],[10,0.19222357],[11,0.19197838],[15,0.15683004],[19,0.13614082],[20,0.13614082],[21,0.13102093],[22,0.1264075],[23,0.12243465],[25,0.11714856],[29,0.09565722],[30,0.09565722],[35,0.08675414],[38,0.08344589],[40,0.08032757],[41,0.07958168],[45,0.06907333],[49,0.06907333],[50,0.06907333],[51,0.06907333],[52,0.06786949],[55,0.06558636],[59,0.06335082],[60,0.06264624],[65,0.05982974],[70,0.05823141],[71,0.05761294],[75,0.05648457],[79,0.05552298],[80,0.0551468],[85,0.05315858],[89,0.05315728],[90,0.05285719],[95,0.045],[100,0]].map(point=>Object.freeze(point)));
 export function victoryMpLayerFactor(layer,policy=VICTORY_MP_LAYER_CURVE){
  const floor=Number(layer);
  if(!Number.isFinite(floor))return 1;
@@ -405,7 +435,10 @@ export function victoryMpLayerFactor(layer,policy=VICTORY_MP_LAYER_CURVE){
 // From layer 20 onward the pre-existing victory recovery is unchanged.
 export function earlyVictoryMpBonusRate(layer){
  const floor=Number(layer);
- return Number.isFinite(floor)?num('victory_mp_early_layer_bonus')*clamp((20-floor)/10,0,1):0;
+ // Floor 1-10 keeps its beginner recovery; 11+ scales the existing
+ // paid-spell economy to the 50-fight target without any extra item or MP.
+ return Number.isFinite(floor)?num('victory_mp_early_layer_bonus')*
+  clamp((20-floor)/10,0,1)*(floor<=10?1:.5):0;
 }
 export function recoverVictoryMp(hero,layer=1){
  const floor=Number(layer);
@@ -414,7 +447,8 @@ export function recoverVictoryMp(hero,layer=1){
  const rate=num('victory_mp_restore_rate_early')+(num('victory_mp_restore_rate_late')-num('victory_mp_restore_rate_early'))*t+
   num('victory_mp_beginner_bonus')*Math.max(0,(13-Number(hero.level))/12)-
   num('victory_mp_middle_taper')*middle*(1-middle);
- const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,Math.round(hero.maxMp*(rate*victoryMpLayerFactor(floor)+earlyVictoryMpBonusRate(floor)))));
+ const recovered=Math.round(hero.maxMp*(rate*victoryMpLayerFactor(floor)+earlyVictoryMpBonusRate(floor)));
+ const gained=Math.max(0,Math.min(hero.maxMp-hero.mp,recovered));
  hero.mp+=gained;
  return gained;
 }
@@ -426,7 +460,7 @@ export function fromEnemy(row,level){
  return makeUnit(base,level,resists,spells,row.id);
 }
 export function validateMasters(enemies,items,collections,buffs){for(const [name,rows] of [['enemies',enemies],['items',items],['collections',collections],['buffs',buffs]]){if(!rows.length||new Set(rows.map(x=>x.id)).size!==rows.length)throw Error('Invalid '+name);}for(const e of enemies)for(const a of ATTRS)if(!Number.isFinite(Number(e['resist_'+a])))throw Error('Missing resistance '+a);for(const i of items){
-  if(+i.min_value>+i.max_value||!(Number(i.weight)>0))throw Error('Bad item roll');
+  if(+i.min_value>+i.max_value||![1,50,51,70,71,100].every(layer=>consumableWeight(i,layer)>0))throw Error('Bad item roll');
   if(['clear','clear_all','escape','revive'].includes(i.kind)){
    if(+i.min_layer<(i.kind==='revive'?50:20)||i.tier||+i.min_value||+i.max_value)throw Error('Invalid special consumable '+i.id);
   }else if(i.kind==='elixir'){

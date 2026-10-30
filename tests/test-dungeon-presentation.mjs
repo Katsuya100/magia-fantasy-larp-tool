@@ -296,6 +296,7 @@ assert.match(css,/\.profile-data-actions \.backup-sync-warning\{[\s\S]*?color:#f
 
 assert.match(page,/<dialog id="imageRepairDialog"/,'recapture dialog exists');
 assert.match(app,/load\(\)\.catch\(failStartup\)/,'startup errors remain visible inside the loading overlay');
+assert.match(app,/await cloudSyncController\?\.disconnect\?\.\(\);\s*await restoreDungeonXpMigrationBackup\(db\);/,'manual XP recovery unlinks Drive before local rollback so cloud cannot silently undo recovery');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
@@ -303,7 +304,10 @@ for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g
  assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+currentRelease,'stale entry module '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
-assert.match(store,/from '\.\/dungeon-core\.mjs'/);
+assert.ok(store.includes("from './dungeon-core.mjs?v="+currentRelease+"'"),
+ 'storage conversion uses the current, cache-busted XP core');
+assert.ok(cloudSync.includes("from './dungeon-store.mjs?v="+currentRelease+"'"),
+ 'Drive sync and gameplay share one cache-busted save module');
 assert.match(picker,/from '\.\/dungeon-loadout\.mjs'/);
 assert.match(picker,/itemEffectIcons\(value\)/,'preparation item tiles share battle/reward effect formatting');
 assert.doesNotMatch(picker,/picker-equipped|✓ 選択中/,'circle picker no longer renders a selected badge');

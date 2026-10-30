@@ -1,38 +1,38 @@
-import * as G from './dungeon-core.mjs?v=20261025.13';
-import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261025.13';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261025.13';
-import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261025.13';
-import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261025.13';
-import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261025.13';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261025.13';
-import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261025.13';
-import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from './dungeon-alchemy.mjs?v=20261025.13';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261025.13';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261025.13';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261025.13';
+import * as G from './dungeon-core.mjs?v=20261030.264';
+import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261030.264';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261030.264';
+import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261030.264';
+import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261030.264';
+import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261030.264';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261030.264';
+import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261030.264';
+import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from './dungeon-alchemy.mjs?v=20261030.264';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261030.264';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261030.264';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261030.264';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261025.13';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261025.13';
-import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261025.13';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261025.13';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261025.13';
-import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261025.13';
-import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261025.13';
-import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261025.13';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261025.13';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261025.13';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261025.13';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261025.13';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261025.13';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261025.13';
-import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261025.13';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261025.13';
-import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261025.13';
-import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261025.13';
-import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261025.13';
-import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261025.13';
-import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261025.13';
-import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261025.13';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261030.264';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261030.264';
+import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261030.264';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261030.264';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261030.264';
+import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261030.264';
+import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261030.264';
+import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261030.264';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261030.264';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261030.264';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261030.264';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261030.264';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261030.264';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261030.264';
+import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261030.264';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261030.264';
+import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261030.264';
+import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261030.264';
+import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261030.264';
+import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261030.264';
+import {initCircleDrawing,drawnPower,withDrawnPowerFloor,MIN_DUNGEON_POWER} from './dungeon-circle-draw.mjs?v=20261030.264';
+import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261030.264';
 let cloudSyncController,drawingEditor;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -249,6 +249,13 @@ async function load(){
   showDungeonDialog($('backupSetupDialog'));
   return;
  }
+
+ // Run only after checking the signed local save. Restoring from Drive
+
+ // reloads the page and applies the same one-time migration.
+
+ profile=await migrateDungeonXp(db);
+
  profile.legacies??=[];
  returnFlow=Array.isArray(profile.pendingReturn?.steps)&&profile.pendingReturn.steps.length?profile.pendingReturn:null;
  if(!Array.isArray(profile.obtainedItemIds))profile.obtainedItemIds=[...new Set([...(profile.inventory||[]),...(profile.run?.carry||[])].filter(Boolean).map(item=>item.id).filter(Boolean))];
@@ -429,7 +436,7 @@ function render(){
  const crown=hasHundredFloorCrown(profile)?'<span class="hundred-floor-crown" role="img" aria-label="100層ボス討伐の証">👑</span>':'';
  const reached=deepestReachedLayer(profile),returned=deepestReturnedLayer(profile);
  $('playerStats').innerHTML='<div class="character-name-row"><h3 class="character-name">'+name+crown+'</h3><button class="subtle" data-action="rename">名前変更</button></div>'
- +'<div class="level-line"><strong>Lv.'+profile.level+'</strong><span>'+(atLevelCap?'EXP MAX':'EXP '+profile.xp+' / '+experienceNeeded)+'</span></div><div class="xp-track" role="progressbar" aria-label="経験値" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(xpProgress)+'"><div class="xp-fill" style="width:'+xpProgress+'%"></div></div>'
+ +'<div class="level-line"><strong>Lv.'+profile.level+'</strong><span>'+(atLevelCap?'EXP MAX':'EXP '+G.formatXp(profile.xp)+' / '+G.formatXp(experienceNeeded))+'</span></div><div class="xp-track" role="progressbar" aria-label="経験値" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(xpProgress)+'"><div class="xp-fill" style="width:'+xpProgress+'%"></div></div>'
  +'<div class="stat-grid">'+['hp','mp','mag','def','res'].map(k=>'<div class="stat-cell"><small>'+k.toUpperCase()+'</small><strong>'+(k==='mp'?maxMp:s[k])+'</strong></div>').join('')+'</div>'
  +'<p class="adventure-record">携行品上限：'+G.capacity(profile.level)+'個 ｜ 帰還 '+profile.returns+'</p>'
  +'<div class="adventure-depth-record"><span>最深到達階層：<strong>'+(reached?reached+'層':'-')+'</strong></span><span>最深帰還階層：<strong>'+(returned?returned+'層':'-')+'</strong></span></div>'
@@ -480,7 +487,7 @@ function render(){
 function rewardLedgerMarkup(run){
  return '<div class="battle-stat" data-kind="xp">'
    +'<span class="battle-stat-label"><span aria-hidden="true">✧</span> 獲得EXP</span>'
-   +'<strong class="battle-stat-value">+'+run.xp+'</strong>'
+   +'<strong class="battle-stat-value">+' +G.formatXp(run.xp)+'</strong>'
    +'<small>帰還時に確定</small></div>'
   +'<div class="battle-stat" data-kind="loot">'
    +'<span class="battle-stat-label"><span aria-hidden="true">✥</span> 戦利品</span>'
@@ -686,7 +693,12 @@ function createEnemy(fight,run){
   row=masters.enemies.find(enemy=>enemy.id===run.layerEnemyOrder.ids[slot]);
   if(!row||row.boss_only==='1')throw Error('階層の敵順が不正');
  }else row=enemyForFight(masters.enemies,fight);
- if(Number(row.min_level)>level||(isLayerBoss(fight)&&row.boss_only!=='1'))throw Error('敵の設定が不正');
+ // The intro encounters use genuine shared Lv1 growth. Their authored
+ // identity minimums remain metadata; later floors keep the level guard.
+ const introductoryLevel=layer<=9&&level===1||layer===10&&
+  (isLayerBoss(fight)?level===8:level===1);
+ if((Number(row.min_level)>level&&!introductoryLevel)||
+  (isLayerBoss(fight)&&row.boss_only!=='1'))throw Error('敵の設定が不正');
  if(spec.boss_enemy_id&&row.id!==spec.boss_enemy_id)throw Error('ボスの設定が不正');
  return {unit:G.fromEnemy(row,level),name:row.name};
 }
@@ -774,7 +786,7 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
    const recovered=reclaimLegacies(profile,run.enemy.id,run);
    run.loot.push(...rewards);
    const dropCount=rewards.length+recovered.length;
-   run.xp+=G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor));
+   run.xp=G.normalizeXp(run.xp+G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor)));
    run.log.push(dropCount?'撃破！ '+dropCount+'個を入手（未確定）':'撃破！ 今回の戦利品はなし');
    await ceremony('loot',dropCount?'戦利品の発見':'戦利品なし',dropCount?dropCount+'個 · 未確定':'次の戦いへ',dropCount);
    run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero,layerForFight(run.floor));if(isLayerBoss(run.floor)){
@@ -869,7 +881,7 @@ function renderReturnStep(){
   }).join('');
  }else{
   $('returnLevel').textContent='';
-  $('returnXpGain').textContent='+'+returnFlow.gained+' EXP';
+  $('returnXpGain').textContent='+' +G.formatXp(returnFlow.gained)+' EXP';
   paintReturnXp(0);
   const reduced=typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(reduced||typeof requestAnimationFrame!=='function'){
@@ -1622,8 +1634,13 @@ async function chooseLoadout(choice){
  const revision=++loadoutSaveRevision;
  const snapshot={...profile,slots:[...profile.slots],carrySlots:[...profile.carrySlots]};
  const save=loadoutSaveQueue.then(async()=>{
-  try{await saveProfile(db,snapshot);}
-  catch(error){
+  try{
+   // Fast UI selections share the in-memory profile, but each queued
+   // snapshot must inherit the revision committed by the previous choice.
+   snapshot.saveRevision=profile.saveRevision;
+   await saveProfile(db,snapshot);
+   profile.saveRevision=snapshot.saveRevision;
+  }catch(error){
    // A later selection will save its own snapshot; never overwrite its UI.
    if(revision!==loadoutSaveRevision){note('編成の保存に失敗しました：'+String(error?.message||error));return;}
    try{
@@ -1918,6 +1935,35 @@ function wire(){
    if(saved&&firstLesson)showFirstCircleChoice();
  });
  $('closeIconGuide').addEventListener('click',()=>closeDungeonDialog($('iconGuideDialog')));
+ // The original signed save is available in both the profile and damaged-
+ // save recovery screens. Never silently roll back subsequent gameplay.
+ const originalXpButtons=[$('restoreOriginalXpSave'),$('restoreOriginalXpSaveSetup')];
+ void hasDungeonXpMigrationBackup(db).then(available=>{
+  for(const button of originalXpButtons)button.hidden=!available;
+ }).catch(error=>console.warn('EXP変換前の保全データを確認できませんでした',error));
+ for(const button of originalXpButtons)button.addEventListener('click',()=>{
+  showDungeonDialog($('restoreOriginalXpDialog'));
+ });
+ $('cancelRestoreOriginalXp').addEventListener('click',()=>closeDungeonDialog($('restoreOriginalXpDialog')));
+ $('confirmRestoreOriginalXp').addEventListener('click',()=>{
+  void exclusive(async()=>{
+   $('confirmRestoreOriginalXp').disabled=true;
+   for(const other of originalXpButtons)other.disabled=true;
+   try{
+    // Avoid the old, newer-timestamp Drive snapshot immediately restoring
+    // over the user's explicitly recovered local save on page reload.
+    // Disconnect keeps remote bytes untouched and drains any active upload.
+    await cloudSyncController?.disconnect?.();
+    await restoreDungeonXpMigrationBackup(db);
+    location.reload();
+   }catch(error){
+    $('confirmRestoreOriginalXp').disabled=false;
+    for(const other of originalXpButtons)other.disabled=false;
+    closeDungeonDialog($('restoreOriginalXpDialog'));
+    note('EXP変換前のセーブを復元できませんでした：'+String(error?.message||error));
+   }
+  });
+ });
  $('closeSaveError').addEventListener('click',()=>closeDungeonDialog($('saveErrorDialog')));
   $('cancelNameDialog').addEventListener('click',()=>closeDungeonDialog($('nameDialog')));
  $('nameDialog').addEventListener('cancel',event=>{if(!profile.name)event.preventDefault();});

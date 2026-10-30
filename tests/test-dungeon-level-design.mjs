@@ -125,7 +125,9 @@ assert.equal(Object.values(affinityCounts).reduce((sum,n)=>sum+n,0),500);
 assert.ok(Object.values(affinityCounts).every(count=>count>=10&&count<=200),
  'all seven elements remain meaningfully represented in the 500 enemy catalog');
 
-assert.equal(levels.length,150);
+assert.equal(levels.length,150,'authored growth rows start at Lv1');
+assert.ok(levels.every(row=>Number(row.level)>=1),'no enemy-only Lv0 row');
+assert.throws(()=>G.stats({hp:100,mag:10,def:7,res:7},0),/Missing level 0/);
 assert.equal(floors.length,500);
 assert.equal(num('level_max'),150);
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
@@ -197,14 +199,19 @@ const profile={level:1,xp:0},base={hp:100,mag:10,def:7,res:7};
 const attack={role:'attack',attribute:'flame',power:1200};
 for(let layer=1;layer<=100;layer++){
  const expected=targetClearLevel(layer);
+ // Ordinary shared level growth applies to every early encounter.
+ const tutorialLevel=layer<=9?1:expected;
  assert.ok(layer===1||expected>=targetClearLevel(layer-1));
  const ids=[];
  for(let slot=1;slot<=5;slot++){
   const fight=(layer-1)*5+slot,foe=enemyForFight(enemies,fight,()=>.999),spec=floor(fight);
-  assert.equal(+spec.enemy_level,expected);
+  // The F10 boss has its own level for the requested multi-turn encounter.
+  const encounterLevel=layer===10?(slot===5?8:1)
+   :slot===5&&layer===90?140:slot===5&&layer===100?150:tutorialLevel;
+  assert.equal(+spec.enemy_level,encounterLevel);
   assert.equal(+spec.boss,slot===5?1:0);
   assert.equal(foe.boss_only,slot===5?'1':'0');
-  assert.equal(+foe.min_level,expected);
+  assert.equal(+foe.min_level,expected,'original enemy identity and intended minimum level remain unchanged');
   assert.equal(spec.boss_enemy_id,slot===5?foe.id:'');
   ids.push(foe.id);
  }
@@ -214,7 +221,15 @@ for(let layer=1;layer<=100;layer++){
  const favored=enemies.find(x=>x.id===bossId).favored_collection_ids.split('|');
  assert.ok(favored.includes(trophy.id),'boss favors its own unique trophy at layer '+layer);
  const rewards=G.drops(items,collections,expected,()=>0,{layer,bossEnemyId:bossId,favoredCollectionIds:favored});
- assert.ok(rewards.filter(x=>x.type!=='ink').length<=9,'existing rewards retain their 9-item ceiling');
+ const actualStone=rewards.filter(x=>x.type==='stone').length;
+ const actualCollections=rewards.filter(x=>x.type==='collection').length;
+ const actualConsumables=rewards.filter(x=>x.type==='use').length;
+ const approvedStoneMaximum=Math.ceil(8**((Math.min(layer,100)-1)/99));
+ assert.equal(actualStone,approvedStoneMaximum,'successful stone hit uses the current depth curve at F'+layer);
+ assert.equal(actualCollections,5,'successful common treasure rolls yield five collections');
+ assert.equal(actualConsumables,3,'successful item rolls yield three consumables');
+ assert.equal(rewards.filter(x=>x.type!=='ink').length,
+  actualStone+actualCollections+actualConsumables,'all drop categories remain accounted for');
  assert.equal(rewards.filter(x=>x.type==='ink').length,1,'bosses have one independent ink roll');
  assert.equal(rewards.filter(x=>x.id===trophy.id).length,0,'common rolls never give epic or legendary trophies');
  const weights=rarityWeights(layer),totalWeight=weights.reduce((sum,n)=>sum+n,0);

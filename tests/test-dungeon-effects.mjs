@@ -379,7 +379,10 @@ for(let lv=1;lv<=150;lv++){
  assert.ok(+row.xp_to_next>0);
 }
 for(let f=1;f<=500;f++){
- const spec=floor(f);assert.ok(+spec.enemy_level>=1);
+ const spec=floor(f);
+ // Every encounter uses the same growth curve beginning with Lv1.
+ assert.ok(+spec.enemy_level>=1,'all authored enemies must be at least Lv1');
+ if(f<=49)assert.equal(+spec.enemy_level,1,'introductory enemies are Lv1');
  if(+spec.boss===1)assert.ok(enemies.some(e=>e.id===spec.boss_enemy_id));
 }
 for(const en of enemies){
