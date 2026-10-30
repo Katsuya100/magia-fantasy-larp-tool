@@ -19,14 +19,14 @@ for(let layer=1;layer<=100;layer++){
  const intended=targetClearLevel(layer);
  assert.equal(normal.level,intended,'start level for layer '+layer);
  const earned=5*G.fightExperience(intended,normal.level,layer);
- assert.ok(Number.isFinite(earned)&&earned>=1/45,'finite scaled XP '+layer);
+ assert.ok(Number.isSafeInteger(earned)&&earned>=1,'integer XP '+layer);
  G.experience(normal,earned);
  assert.equal(normal.level,targetClearLevel(layer+1),
   'player continues to gain levels past the final authored growth row');
 }
 assert.equal(normal.level,151,'a normal first-clear journey continues through level 150');
 // Actual expedition path: rewards are added five times before every return.
-// A fractional 0.2/0.4 EXP reward must not leave the hero one level short.
+// Per-battle integer XP accumulates exactly with no rounding residue.
 const incremental={level:1,xp:0};
 for(let layer=1;layer<=100;layer++){
  const expectedStart=targetClearLevel(layer);
@@ -41,9 +41,27 @@ for(let layer=1;layer<=100;layer++){
 }
 
 
+// All five encounters in every authored layer own explicit whole-number
+// rewards. The level master owns the matching whole-number thresholds.
+assert.equal(G.XP_SCALE,46);
+for(const row of levels){
+ assert.equal(G.nextXp(Number(row.level)),Number(row.xp_integer_to_next));
+ assert.ok(Number.isSafeInteger(G.nextXp(Number(row.level))));
+}
+for(const row of floors){
+ const fight=Number(row.floor),layer=Math.ceil(fight/5);
+ const reward=G.fightExperience(Number(row.enemy_level),1,layer,fight);
+ assert.equal(reward,Number(row.xp_reward),'individual encounter '+fight);
+ assert.ok(Number.isSafeInteger(reward)&&reward>0,'positive whole EXP at fight '+fight);
+}
+const singleVictory={xp:0};
+assert.equal(G.earnFightExperience(singleVictory,1,1,1,1),Number(floors[0].xp_reward));
+assert.equal(singleVictory.xp,Number(floors[0].xp_reward));
+assert.equal(G.normalizeXp(2.39999999999999),2,'stored EXP is always rounded to an integer');
+
 // Needed XP should climb sharply across level bands, without an abrupt
 // permanent advantage for collecting low-level enemy kills.
-assert.equal(G.nextXp(1),3,'scaled first-level threshold');
+assert.equal(G.nextXp(1),15,'authored integer first-level threshold');
 for(const level of [10,20,30,40,60,80,100,120,139]){
  assert.ok(G.nextXp(level+10) >=G.nextXp(level)*1.15,
   'ten levels are substantially more expensive at '+level);
@@ -127,9 +145,9 @@ const level92Replay=replayDiagnostics.find(x=>x.level===92);
 const full41Replay=5*G.fightExperience(targetClearLevel(41),targetClearLevel(41),41);
 assert.equal(level92Replay.earned,full41Replay,
  '41F five battles award equal EXP irrespective of player overlevel');
-assert.ok(G.nextXp(149)<100000,'the redesigned late-game curve keeps required XP below six digits');
-assert.equal(G.formatXp(121.40000000000002),'121.4','combat EXP display hides floating point noise');
-assert.equal(G.formatXp(12345.67),'12,345.7','EXP keeps its real units with one decimal at most');
+assert.ok(G.nextXp(149)<500000,'the five-unit integer threshold keeps the same late-game progression');
+assert.equal(G.formatXp(121.40000000000002),'121','combat EXP display is integer-only');
+assert.equal(G.formatXp(12345.67),'12,346','EXP display has no decimal digits');
 console.log('XP_REPLAY_DIAGNOSTICS '+JSON.stringify(replayDiagnostics));
 console.log('XP_BAND_BALANCE '+JSON.stringify({
  firstLayerLevel:3,levelAfter100:normal.level,lowFloorRuns:30,
