@@ -868,7 +868,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      if(badge)drops.push(badge);
     }
     pending.loot.push(...drops);
-    pending.xp=G.normalizeXp(pending.xp+G.fightExperience(outcome.enemyLevel,firstLevel,layer));
+    pending.xp=G.normalizeXp(pending.xp+G.fightExperience(outcome.enemyLevel,firstLevel,layer,slot));
     hero.statuses=[];hero.cooldowns=hero.cooldowns.map(()=>0);
     G.recoverVictoryMp(hero,layer);
    }

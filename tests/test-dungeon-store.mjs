@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,getDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,migrateDungeonIntegerXp,getDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 const {parseCsv}=G;
 import {configure} from '../assets/js/dungeon-tuning.mjs';
@@ -268,3 +268,63 @@ assert.deepEqual(afterBadPhotoRestore.profile,beforeBadPhotoRestore.profile,'tam
 assert.deepEqual(afterBadPhotoRestore.integrity,beforeBadPhotoRestore.integrity,'tampered archive cannot rewrite the trusted seal');
 quotaDb.close();
 console.log('PASS dungeon IndexedDB startup, atomic EXP backup, tab collision guard, photo persistence and failure modes');
+
+ 
+// Fractional XP from a signed v45 save is migrated once, without touching
+// the already-completed 1/45 conversion or changing its migration backup.
+const wholeFactory=fakeIndexedDB(),wholeDb=await openStore(wholeFactory);
+const fractional=await getProfile(wholeDb);
+delete fractional.xpIntegerVersion;
+fractional.level=30;fractional.xp=17.4;
+fractional.run={floor:3,xp:3.7,loot:[]};
+fractional.pendingReturn={before:{level:30,xp:14.2},gained:3.2,steps:['xp'],step:0};
+await saveProfile(wholeDb,fractional);
+const signedFractionalSnapshot=await readDungeonSnapshot(wholeDb);
+const whole=await migrateDungeonIntegerXp(wholeDb);
+assert.equal(whole.xpScaleVersion,45,'existing 1/45 scale stays unchanged');
+assert.equal(whole.xpIntegerVersion,1);
+assert.equal(whole.xp,18,'banked XP is ceiled');
+assert.equal(whole.run.xp,4,'unbanked XP is ceiled');
+assert.equal(whole.pendingReturn.before.xp,15,'return-start XP is ceiled');
+assert.equal(whole.pendingReturn.gained,3,'return gain is recomputed from rounded endpoints');
+assert.deepEqual(await migrateDungeonIntegerXp(wholeDb),whole,'repeated startup cannot ceil twice');
+const wholeReturnStart={...whole.pendingReturn.before};
+G.experience(wholeReturnStart,whole.pendingReturn.gained);
+assert.equal(wholeReturnStart.level,whole.level);
+assert.equal(wholeReturnStart.xp,whole.xp);
+const wholeSeal=await readDungeonSnapshot(wholeDb);
+assert.ok(wholeSeal.integrity?.records,'integer migration commits a signed profile');
+assert.deepEqual(await getDungeonXpMigrationBackup(wholeDb),null,'v45 integer conversion does not invent or replace the original scale backup');
+const brokenWhole={...whole,xp:1.5};
+await assert.rejects(saveProfile(wholeDb,brokenWhole),/整数EXP/);
+assert.deepEqual((await readDungeonSnapshot(wholeDb)).profile,wholeSeal.profile,'fractional writes are blocked after migration');
+// A cloud-restored signed v45 snapshot must take the identical path again.
+await replaceDungeonSnapshot(wholeDb,signedFractionalSnapshot);
+const restoredWhole=await migrateDungeonIntegerXp(wholeDb);
+assert.equal(restoredWhole.xp,18);
+assert.equal(restoredWhole.run.xp,4);
+assert.deepEqual(restoredWhole.pendingReturn,whole.pendingReturn);
+assert.deepEqual(await migrateDungeonIntegerXp(wholeDb),restoredWhole);
+// A ceil that reaches the next threshold carries over into the next level.
+const boundary={...await getProfile(wholeDb),level:1,xp:G.nextXp(1)-0.2,run:{floor:3,xp:0.2,loot:[]},pendingReturn:null};
+delete boundary.xpIntegerVersion;
+await saveProfile(wholeDb,boundary);
+const crossed=await migrateDungeonIntegerXp(wholeDb);
+assert.equal(crossed.level,2);
+assert.equal(crossed.xp,0);
+assert.equal(crossed.run.xp,1);
+// Starting with an old-scale backup, both migrations execute in order.
+const oldScale={...crossed,level:92,xp:20000,run:null,pendingReturn:null};
+delete oldScale.xpIntegerVersion;
+delete oldScale.xpScaleVersion;
+await saveProfile(wholeDb,oldScale);
+const scaled=await migrateDungeonXp(wholeDb);
+assert.equal(scaled.xpScaleVersion,45);
+assert.equal(scaled.xpIntegerVersion,undefined,'old-scale conversion requires a fresh integer migration');
+const both=await migrateDungeonIntegerXp(wholeDb);
+assert.equal(both.xpIntegerVersion,1);
+assert.ok(Number.isSafeInteger(both.xp));
+assert.equal((await getDungeonXpMigrationBackup(wholeDb)).profile.xp,20000,'original v0 data remains backed up');
+assert.deepEqual(await migrateDungeonIntegerXp(wholeDb),both);
+wholeDb.close();
+console.log('PASS integer EXP migration, v45 compatibility, saved return ledger, cloud restore and boundary levels');

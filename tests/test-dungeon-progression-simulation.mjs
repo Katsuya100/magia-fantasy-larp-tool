@@ -64,7 +64,7 @@ export function stoneLedger(seed,throughLayer){
    const drops=G.drops(data.items,data.collections,enemyLevel,r,
     {layer,playerLevel:expeditionLevel,bossEnemyId:i===4?foe.id:null,firstClear:layer===destination});
    pendingStones+=drops.filter(x=>x.type==='stone').length;
-   pendingXp+=G.fightExperience(enemyLevel,expeditionLevel,layer);
+   pendingXp+=G.fightExperience(enemyLevel,expeditionLevel,layer,i+1);
   }
   bank+=pendingStones;
   G.experience(progress,pendingXp);

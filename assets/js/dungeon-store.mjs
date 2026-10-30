@@ -1,4 +1,4 @@
-import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261030.265';
+import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261031.266';
 import {level as levelRow} from './dungeon-tuning.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
 import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto,verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs';
@@ -14,6 +14,20 @@ const changes=globalThis[Symbol.for('magia-dungeon-save-changes')]??=new WeakMap
 // from the canonical profile plus this small overlay when read.
 const HEIR_NAME_KEY='heirNameOverride';
 const XP_MIGRATION_BACKUP_KEY='xpMigrationBackupV1';
+export const XP_INTEGER_VERSION=1;
+// Reject accidental fractional writes after the one-time integer migration.
+function assertWholeXp(profile){
+ if(profile?.xpIntegerVersion!==XP_INTEGER_VERSION)return;
+ const values=[['profile.xp',profile.xp]];
+ if(profile.run)values.push(['run.xp',profile.run.xp??0]);
+ if(profile.pendingReturn){
+  values.push(['pendingReturn.gained',profile.pendingReturn.gained??0]);
+  if(profile.pendingReturn.before)values.push(['pendingReturn.before.xp',profile.pendingReturn.before.xp]);
+ }
+ for(const [label,value] of values)
+  if(!Number.isSafeInteger(value)||value<0)
+   throw Error(label+' は整数EXPで保存してください。');
+}
 const thumbnailKey=id=>'circleThumbnail:'+id;
 function applyHeirName(profile,overlay){
  return profile&&overlay?{...profile,...overlay}:profile;
@@ -225,6 +239,7 @@ async function trustedProfileHashes(db,profile){
  return hashes;
 }
 export async function saveProfile(db,p,{migrationSourceRecords=null}={}){
+ assertWholeXp(p);
  withPlayId(p);
  const expectedRevision=Number.isSafeInteger(p.saveRevision)?p.saveRevision:0;
  const hashes=await trustedProfileHashes(db,p);
@@ -237,6 +252,7 @@ export async function saveProfile(db,p,{migrationSourceRecords=null}={}){
 }
 // One IndexedDB transaction prevents a lost/recovered photo and its owner from diverging.
 export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
+ assertWholeXp(profile);
  withPlayId(profile);
  const hashes=await photoEvidence(added),profileHashes=await trustedProfileHashes(db,profile);
  if(added.length){
@@ -375,8 +391,72 @@ export async function migrateDungeonXp(db){
  }
  p.xp=start.xp;
  p.xpScaleVersion=XP_SCALE;
+ // An old-scale restoration must always run the integer migration next.
+ delete p.xpIntegerVersion;
  // The profile, XP-version marker and integrity seal commit in one transaction.
  await saveProfile(db,p,{migrationSourceRecords});
+ return p;
+}
+
+/** Migrate XP_SCALE=45 decimal saves to whole EXP after integrity verification.
+ * Signed profile/revision updates remain atomic; the original 1/45 migration
+ * and its independent signed backup are not changed.
+ */
+export async function migrateDungeonIntegerXp(db){
+ const p=await getProfile(db);
+ if(!p||p.xpIntegerVersion===XP_INTEGER_VERSION)return p;
+ if(p.xpScaleVersion!==XP_SCALE)throw Error('EXP整数化の前に1/45変換が必要です。');
+ if(p.xpIntegerVersion!==undefined&&p.xpIntegerVersion!==null)
+  throw Error('このセーブは未対応の整数EXPバージョンです。上書きせず停止しました。');
+ const ceilXp=(value,label)=>{
+  const n=Number(value);
+  if(!Number.isFinite(n)||n<0||!Number.isSafeInteger(Math.ceil(n)))
+   throw Error(label+' のEXPが不正です。');
+  return Math.ceil(n);
+ };
+ const state=(level,xp)=>{
+  if(!Number.isSafeInteger(level)||level<1)throw Error('EXPのレベルが不正です。');
+  xp=ceilXp(xp,'保存済み');
+  while(xp>=nextXp(level)){
+   xp-=nextXp(level);
+   level++;
+   if(!Number.isSafeInteger(level))throw Error('EXPのレベルが上限を超えました。');
+  }
+  return {level,xp};
+ };
+ const rewardBetween=(before,after)=>{
+  if(after.level<before.level)throw Error('帰還演出のレベル順序が不正です。');
+  let gained=after.xp-before.xp;
+  for(let level=before.level;level<after.level;level++)gained+=nextXp(level);
+  if(!Number.isSafeInteger(gained)||gained<0)
+   throw Error('帰還演出のEXPが一致しません。');
+  return gained;
+ };
+ // Recover old return-screen starts before rounding when their metadata is
+ // missing, so the animation still finishes at the exact saved end state.
+ if(p.pendingReturn){
+  const returnXp=ceilXp(p.pendingReturn.gained??0,'帰還報酬');
+  if(!p.pendingReturn.before){
+   let level=p.level,xp=Number(p.xp),remaining=Number(p.pendingReturn.gained??0);
+   if(!Number.isFinite(xp)||xp<0)throw Error('帰還後EXPが不正です。');
+   while(remaining>xp&&level>1){remaining-=xp;level--;xp=nextXp(level);}
+   if(remaining>xp)throw Error('帰還前EXPを復元できません。');
+   p.pendingReturn.before={level,xp:xp-remaining};
+  }
+  // Preserve the source reward's validity before replacing the display value.
+  if(returnXp<0)throw Error('帰還報酬のEXPが不正です。');
+ }
+ const after=state(p.level,p.xp);
+ if(p.run)p.run.xp=ceilXp(p.run.xp??0,'探索中');
+ if(p.pendingReturn){
+  const before=state(Number(p.pendingReturn.before.level),p.pendingReturn.before.xp);
+  p.pendingReturn.before= {...p.pendingReturn.before,...before};
+  p.pendingReturn.gained=rewardBetween(before,after);
+ }
+ p.level=after.level;
+ p.xp=after.xp;
+ p.xpIntegerVersion=XP_INTEGER_VERSION;
+ await saveProfile(db,p);
  return p;
 }
 // Read-only rescue point, unaffected by later game changes or cloud sync.
@@ -411,7 +491,7 @@ export async function getProfile(db){
   ]);
   let p=await restoreProfilePhotoRefs(applyHeirName(raw,nameOverride),id=>request(db,'circles','readonly',s=>s.get(id)));
   if(!p){
-    p={level:1,xp:0,xpScaleVersion:XP_SCALE,base:startingBase(),returns:0,attempts:0,tutorialDone:false,inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReachedLayer:0,deepestReturnedLayer:0,magicStones:0,magicInk:0,run:null};
+    p={level:1,xp:0,xpScaleVersion:XP_SCALE,xpIntegerVersion:XP_INTEGER_VERSION,base:startingBase(),returns:0,attempts:0,tutorialDone:false,inventory:[],obtainedItemIds:[],collection:{},defeatedBosses:{},adventurerRank:0,deepestReachedLayer:0,deepestReturnedLayer:0,magicStones:0,magicInk:0,run:null};
     const seal=await request(db,'settings','readonly',s=>s.get('integrity'));
     // A missing profile with a prior seal means corruption, not a new player.
     // Keep it missing on disk so Drive can restore the complete trusted save.

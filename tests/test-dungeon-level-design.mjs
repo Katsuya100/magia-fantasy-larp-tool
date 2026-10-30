@@ -246,7 +246,7 @@ for(let layer=1;layer<=100;layer++){
  const turnsToFall=Math.ceil(hero.hp/Math.max(1,incoming));
  assert.ok(outgoing>0&&turnsToKill<=turnsToFall*2,'approximate combat budget layer '+layer+' '+turnsToKill+'/'+turnsToFall);
  assert.equal(profile.level,expected,'level after five fights fits layer '+layer);
- if(layer<100)G.experience(profile,5*G.fightExperience(expected,profile.level,layer));
+ if(layer<100)G.experience(profile,Array.from({length:5},(_,i)=>G.fightExperience(expected,profile.level,layer,i+1)).reduce((a,b)=>a+b,0));
 }
 assert.equal(level(150).carry_limit,'18');
 assert.equal(level(151).carry_limit,'18','carry slots do not jump directly after the old cap');

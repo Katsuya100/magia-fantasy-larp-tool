@@ -12,34 +12,59 @@ assert.equal(num('xp_growth_per_10_levels_late'),1.1,'tapered late EXP growth');
 assert.ok(!balance.some(row=>row.key==='xp_overlevel_decay_per_10_levels'),
  'deleted EXP decay parameter must not be reintroduced');
 
+const fiveFightXp=(layer,playerLevel,enemyLevel=targetClearLevel(layer))=>
+ Array.from({length:5},(_,i)=>G.fightExperience(enemyLevel,playerLevel,layer,i+1)).reduce((sum,x)=>sum+x,0);
+
 // At-level adventurers should still reach the recommended level for the
 // next layer after five victories followed by a safe return.
 const normal={level:1,xp:0};
 for(let layer=1;layer<=100;layer++){
  const intended=targetClearLevel(layer);
  assert.equal(normal.level,intended,'start level for layer '+layer);
- const earned=5*G.fightExperience(intended,normal.level,layer);
- assert.ok(Number.isFinite(earned)&&earned>=1/45,'finite scaled XP '+layer);
+ const earned=fiveFightXp(layer,normal.level,intended);
+ assert.ok(Number.isSafeInteger(earned)&&earned>=1,'integer scaled XP '+layer);
  G.experience(normal,earned);
  assert.equal(normal.level,targetClearLevel(layer+1),
   'player continues to gain levels past the final authored growth row');
 }
 assert.equal(normal.level,151,'a normal first-clear journey continues through level 150');
 // Actual expedition path: rewards are added five times before every return.
-// A fractional 0.2/0.4 EXP reward must not leave the hero one level short.
+// Each individual victory must award a whole EXP amount.
 const incremental={level:1,xp:0};
 for(let layer=1;layer<=100;layer++){
  const expectedStart=targetClearLevel(layer);
  assert.equal(incremental.level,expectedStart,'exact start level after all previous fight-by-fight returns at layer '+layer);
  let pending=0;
  for(let fight=0;fight<5;fight++)
-  pending=G.normalizeXp(pending+G.fightExperience(expectedStart,incremental.level,layer));
+  pending=G.normalizeXp(pending+G.fightExperience(expectedStart,incremental.level,layer,fight+1));
  G.experience(incremental,pending);
  assert.equal(incremental.level,targetClearLevel(layer+1),
   'fight-by-fight EXP awards precisely finish layer '+layer);
- assert.equal(incremental.xp,0,'no floating XP residue at the level threshold of layer '+layer);
+ assert.equal(incremental.xp,0,'no XP residue at the level threshold of layer '+layer);
 }
 
+
+// Every designed and endless layer keeps the prior five-fight budget, but
+// awards ONLY whole EXP in every encounter. Remainders belong to the boss.
+for(let layer=1;layer<=200;layer++){
+ const current=targetClearLevel(layer),next=targetClearLevel(layer+1);
+ const oldBudget=next>current
+  ?Array.from({length:next-current},(_,i)=>G.nextXp(current+i)).reduce((a,b)=>a+b,0)
+  :G.nextXp(current);
+ const amounts=Array.from({length:5},(_,i)=>G.fightExperience(current,current,layer,i+1));
+ assert.ok(amounts.every(Number.isSafeInteger),'no fractional rewards at layer '+layer);
+ assert.ok(amounts.every(x=>x>=0),'non-negative EXP at layer '+layer);
+ assert.ok(amounts.slice(0,4).every(x=>x===Math.floor(oldBudget/5)),'ordinary fights have equal whole EXP at layer '+layer);
+ assert.equal(amounts[4],oldBudget-amounts[0]*4,'boss holds all remainder at layer '+layer);
+ assert.equal(amounts.reduce((a,b)=>a+b,0),oldBudget,'five-fight budget is unchanged at layer '+layer);
+ for(const amount of amounts){
+  assert.ok(Number.isSafeInteger(G.normalizeXp(amount)),'pending EXP remains integer');
+ }
+}
+assert.throws(()=>G.fightExperience(1,1,1,0),/Invalid EXP encounter/);
+assert.throws(()=>G.fightExperience(1,1,1,6),/Invalid EXP encounter/);
+assert.equal(G.normalizeXp(0.2),1,'legacy fractions round up');
+assert.equal(G.normalizeXp(2),2,'integer accumulation never changes');
 
 // Needed XP should climb sharply across level bands, without an abrupt
 // permanent advantage for collecting low-level enemy kills.
@@ -64,7 +89,7 @@ assert.deepEqual(uncapped,{level:151,xp:0},'EXP advances through level 150 witho
 for(const layer of [1,3,10,20,50,80,99]){
  const enemy=targetClearLevel(layer);
  const baseline=G.fightExperience(enemy,enemy,layer);
- assert.ok(baseline>0,'a layer yields positive XP');
+ assert.ok(baseline>=0,'a layer yields nonnegative XP');
  for(const playerLevel of [1,enemy,Math.min(149,enemy+1),Math.min(149,enemy+15),149])
   assert.equal(G.fightExperience(enemy,playerLevel,layer),baseline,
    'XP must not diminish for low-floor repeats at layer '+layer+' and level '+playerLevel);
@@ -79,7 +104,7 @@ let total=0;
 for(let run=0;run<30;run++){
  for(let layer=1;layer<=10;layer++){
   const enemy=targetClearLevel(layer);
-  const reward=5*G.fightExperience(enemy,farmer.level,layer);
+  const reward=fiveFightXp(layer,farmer.level,enemy);
   total+=reward;
   G.experience(farmer,reward);
  }
@@ -93,7 +118,7 @@ const nearbyFarmer={level:30,xp:0};
 for(let run=0;run<10;run++){
  for(let layer=11;layer<=15;layer++){
   const enemy=targetClearLevel(layer);
-  G.experience(nearbyFarmer,5*G.fightExperience(enemy,nearbyFarmer.level,layer));
+  G.experience(nearbyFarmer,fiveFightXp(layer,nearbyFarmer.level,enemy));
  }
 }
 assert.ok(nearbyFarmer.level>30&&nearbyFarmer.level<=150,'nearby replay remains useful');
@@ -103,7 +128,7 @@ assert.ok(G.fightExperience(targetClearLevel(15),80,15)>G.fightExperience(target
 // Higher-level dungeons keep their authored XP value without suppressing lower ones.
 const farmedLevel=farmer.level;
 const before=farmer.level;
-G.experience(farmer,5*G.fightExperience(37,farmer.level,20));
+G.experience(farmer,fiveFightXp(20,farmer.level,37));
 assert.ok(farmer.level>=before,'the correct challenge awards viable XP');
 // Explicit diagnostics for overleveled replay. These are characterization
 // tests, not approval of the high replay percentage or a new XP nerf.
@@ -117,19 +142,19 @@ const replayDiagnostics=replayCases.map(({level,from,to})=>{
  const p={level,xp:0};
  let earned=0;
  for(let layer=from;layer<=to;layer++)
-  earned+=5*G.fightExperience(targetClearLevel(layer),level,layer);
+  earned+=fiveFightXp(layer,level);
  G.experience(p,earned);
  return {level,layers:from===to?String(from):from+'-'+to,
   earned,needed:G.nextXp(level),
   gaugePercent:100*earned/G.nextXp(level),afterLevel:p.level,afterXp:p.xp};
 });
 const level92Replay=replayDiagnostics.find(x=>x.level===92);
-const full41Replay=5*G.fightExperience(targetClearLevel(41),targetClearLevel(41),41);
+const full41Replay=fiveFightXp(41,targetClearLevel(41));
 assert.equal(level92Replay.earned,full41Replay,
  '41F five battles award equal EXP irrespective of player overlevel');
 assert.ok(G.nextXp(149)<100000,'the redesigned late-game curve keeps required XP below six digits');
-assert.equal(G.formatXp(121.40000000000002),'121.4','combat EXP display hides floating point noise');
-assert.equal(G.formatXp(12345.67),'12,345.7','EXP keeps its real units with one decimal at most');
+assert.equal(G.formatXp(121.40000000000002),'122','EXP display rounds legacy fractions upward');
+assert.equal(G.formatXp(12345.67),'12,346','EXP display never shows fractions');
 console.log('XP_REPLAY_DIAGNOSTICS '+JSON.stringify(replayDiagnostics));
 console.log('XP_BAND_BALANCE '+JSON.stringify({
  firstLayerLevel:3,levelAfter100:normal.level,lowFloorRuns:30,
