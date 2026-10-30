@@ -5,6 +5,10 @@ const [page,home,css]=await Promise.all([read('dungeon.html'),read('index.html')
 assert.match(page, /<html lang="ja" style="touch-action: manipulation">/, 'double-tap zoom disabled only on dungeon page');
 assert.match(page, /<meta name="viewport" content="width=device-width,initial-scale=1">/, 'pinch zoom remains enabled');
 assert.match(page,/自分だけの魔法陣で迷宮へ/);
+assert.match(page,/<a class="back-link" href="index.html">〈 アーカイブへ戻る<\/a>/,'archive link remains in the header');
+assert.match(css,/#dungeonApp\[data-exploring="true"\] \.hero\{min-height:0;padding:/,'active exploration removes the tall hero minimum height');
+assert.match(css,/#dungeonApp\[data-exploring="true"\] \.hero-inner\{min-height:0/,'active exploration removes the inner hero minimum height');
+assert.match(css,/#dungeonApp\[data-exploring="true"\] \.hero h1 span\{display:inline/,'compact expedition title is inline');
 assert.match(page,/<button type="button" id="returnHome" class="danger">帰還する<\/button>/,'short return button');
 assert.match(css,/#returnHome\{background:linear-gradient\(#d9494f,#941f32\)/,'return button is red');
 assert.doesNotMatch(page,/FREE ACTION · 1 \/ ROUND|道具使用回数|携行品使用状況/,'obsolete labels absent');

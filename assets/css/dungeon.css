@@ -2894,3 +2894,15 @@ button.creator-congratulations-close{
 .icon-guide-table td:first-child{width:110px;white-space:nowrap;text-align:center;font-size:20px}
 .icon-guide-note{margin:8px 0 0;color:var(--soft);font-size:12px}
 @media(max-width:630px){.section-tools{gap:7px}.section-tools .section-mark{font-size:30px}.icon-guide-dialog .icon-guide-table td:first-child{width:92px}.icon-guide-table td{padding:8px 6px;font-size:12px}}
+
+/* In an active expedition, free the vertical space above the battle without removing the archive link. */
+#dungeonApp[data-exploring="true"] .hero{min-height:0;padding:9px 16px 11px}
+#dungeonApp[data-exploring="true"] .hero-inner{min-height:0;gap:0}
+#dungeonApp[data-exploring="true"] .hero-copy .eyebrow,
+#dungeonApp[data-exploring="true"] .hero-copy .tagline,
+#dungeonApp[data-exploring="true"] .hero-copy .hero-rule,
+#dungeonApp[data-exploring="true"] .hero-edition,
+#dungeonApp[data-exploring="true"] .hero-emblem{display:none}
+#dungeonApp[data-exploring="true"] .hero h1{font-size:clamp(14px,2vw,20px);line-height:1.3;margin:4px 0 0}
+#dungeonApp[data-exploring="true"] .hero h1 span{display:inline;font-size:1em;margin-left:.35em}
+@media(max-width:630px){#dungeonApp[data-exploring="true"] .hero{padding:8px 12px 10px}}

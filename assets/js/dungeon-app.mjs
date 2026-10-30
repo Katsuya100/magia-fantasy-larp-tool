@@ -329,6 +329,7 @@ function resolvedView(name){
 function applyView(name,retained=null){
  // Reward and EXP scenes still belong to the dungeon until 完了 is pressed.
  const exploring=Boolean(profile?.run||returnFlow);
+ $('dungeonApp').dataset.exploring=exploring?'true':'false';
  activeScene=name;
  if(dungeonScenes.has(name))dungeonView=name;
  for(const id of sceneIds)$(id).hidden=id!==name&&id!==retained;
