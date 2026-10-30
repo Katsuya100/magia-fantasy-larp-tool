@@ -1,5 +1,5 @@
-import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261030.265';
-import {level as levelRow} from './dungeon-tuning.mjs';
+import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261030.266';
+import {level as levelRow,num} from './dungeon-tuning.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
 import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto,verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs';
 import {prepareProfilePhotoRefs,restoreProfilePhotoRefs} from './dungeon-profile-photo-refs.mjs';
@@ -14,6 +14,7 @@ const changes=globalThis[Symbol.for('magia-dungeon-save-changes')]??=new WeakMap
 // from the canonical profile plus this small overlay when read.
 const HEIR_NAME_KEY='heirNameOverride';
 const XP_MIGRATION_BACKUP_KEY='xpMigrationBackupV1';
+const XP_INTEGER_MIGRATION_BACKUP_KEY='xpIntegerMigrationBackupV1';
 const thumbnailKey=id=>'circleThumbnail:'+id;
 function applyHeirName(profile,overlay){
  return profile&&overlay?{...profile,...overlay}:profile;
@@ -99,11 +100,12 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,
       if(actual!==expectedRevision)throw Error('別のタブでセーブが更新されました。進捗を保護するため保存を停止しました。再読み込みしてください。');
      }
      if(migrationSourceRecords!==null){
-      if(sourceRecords!==migrationSourceRecords||(p?.xpScaleVersion!==undefined&&p?.xpScaleVersion!==null))
+      if(sourceRecords!==migrationSourceRecords||!([undefined,null,45].includes(p?.xpScaleVersion)))
        throw Error('EXP変換中にセーブが変更されました。上書きせずに停止しました。再読み込みしてください。');
-      // Old profile, photo blobs and signed proof survive conversion, atomically.
-      // Quota failure aborts both backup and XP update without touching the old save.
-      settings.put({version:1,profile:p,circles:c,integrity:seal,sourceRecords,createdAt:Date.now()},XP_MIGRATION_BACKUP_KEY);
+      // Preserve both the original pre-v45 rescue point and the exact signed
+      // pre-integer save. Never overwrite one migration's historical backup.
+      const backupKey=p?.xpScaleVersion===45?XP_INTEGER_MIGRATION_BACKUP_KEY:XP_MIGRATION_BACKUP_KEY;
+      settings.put({version:1,profile:p,circles:c,integrity:seal,sourceRecords,createdAt:Date.now()},backupKey);
      }
      perform(settings,items,c);
      // Store only newly encountered historical photos, atomically with the
@@ -309,73 +311,78 @@ export function saveHeirName(db,name){
 // Convert signed legacy saves once, only after startup integrity verification.
 // XP is stored in the new unit; all other player progress is unchanged.
 export async function migrateDungeonXp(db){
- // Pin the source content; compare inside the final write transaction.
  const source=await readDungeonSnapshot(db);
  const p=await getProfile(db);
  if(!p||p.xpScaleVersion===XP_SCALE)return p;
- const migrationSourceRecords=recordFingerprint(source);
- if(p.xpScaleVersion!==undefined&&p.xpScaleVersion!==null)
+ const sourceVersion=p.xpScaleVersion;
+ if(sourceVersion!==undefined&&sourceVersion!==null&&sourceVersion!==45)
   throw Error('このセーブは未対応のEXPバージョンです。上書きせず復旧を停止しました。');
- const maxLevel=150;
+ const migrationSourceRecords=recordFingerprint(source);
+ const fromLegacy=sourceVersion===undefined||sourceVersion===null;
+ const maxLevel=fromLegacy?150:Infinity;
  const oldNext=lvl=>Math.ceil(Number(levelRow(lvl).xp_to_next)*Math.pow(2.1,(Number(lvl)-1)/10));
- // Level and fraction of the current XP gauge are the durable progress.
- const convert=(xp,lvl)=>{
-  const n=Number(xp);
-  if(!Number.isFinite(n)||n<0)throw Error('旧経験値の値が不正です。セーブを更新せずに停止しました。');
-  return Math.round(n/oldNext(lvl)*nextXp(lvl)*1e6)/1e6;
+ const priorNext=lvl=>{
+  const steps=(Number(lvl)-1)/10;
+  return Math.ceil(Number(levelRow(lvl).xp_to_next)*
+   Math.pow(num('xp_growth_per_10_levels'),Math.min(steps,9.9))*
+   Math.pow(num('xp_growth_per_10_levels_late'),Math.max(0,steps-9.9))/45);
  };
- const rounded=n=>Math.max(0,Math.round(n*1e6)/1e6);
+ const sourceNext=fromLegacy?oldNext:priorNext;
+ const validate=(value,message)=>{
+  const n=Number(value);
+  if(!Number.isFinite(n)||n<0)throw Error(message);
+  return n;
+ };
+ // Preserve gauge proportions for the original EXP format. For v45 this
+ // is simply the same progression expressed in authored whole-number units.
+ const convert=(xp,lvl)=>Math.round(validate(xp,'旧経験値の値が不正です。セーブを更新せずに停止しました。')/
+  sourceNext(lvl)*nextXp(lvl));
  const span=(before,after)=>{
   if(after.level<before.level)throw Error('旧経験値のレベル順序が不正です。');
   let earned=-before.xp;
   for(let level=before.level;level<after.level;level++)earned+=nextXp(level);
-  if(after.level<maxLevel)earned+=after.xp;
-  return rounded(earned);
+  earned+=after.xp;
+  if(earned<0)throw Error('EXP変換後の報酬が不正です。');
+  return earned;
  };
- const levelAfterOldAward=(level,xp,award)=>{
+ const afterAward=(level,xp,award)=>{
   let total=xp+award;
-  while(level<maxLevel&&total>=oldNext(level)){total-=oldNext(level);level++;}
+  while(level<maxLevel&&total>=sourceNext(level)){total-=sourceNext(level);level++;}
   return {level,xp:level>=maxLevel?0:total};
  };
- // Recalculate unbanked XP from the old expedition's actual end state,
- // not from the ratio at its starting level. The curves differ by level.
  const start={level:p.level,xp:convert(p.xp,p.level)};
  if(p.run){
-  const oldAward=Number(p.run.xp||0);
-  if(!Number.isFinite(oldAward)||oldAward<0)throw Error('探索中の旧経験値が不正です。');
-  const oldEnd=levelAfterOldAward(p.level,Number(p.xp),oldAward);
-  const newEnd={level:oldEnd.level,xp:oldEnd.level>=maxLevel?0:convert(oldEnd.xp,oldEnd.level)};
-  p.run.xp=span(start,newEnd);
+  const award=validate(p.run.xp,'探索中の旧経験値が不正です。');
+  const end=afterAward(p.level,Number(p.xp),award);
+  p.run.xp=span(start,{level:end.level,xp:convert(end.xp,end.level)});
  }
  if(p.pendingReturn){
-  const oldAward=Number(p.pendingReturn.gained||0);
-  if(!Number.isFinite(oldAward)||oldAward<0)throw Error('帰還報酬の旧経験値が不正です。');
-  // Reconstruct missing return-screen start state by reversing the exact old
-  // level thresholds. A single ratio at the final level is not reversible.
+  const award=validate(p.pendingReturn.gained,'帰還報酬の旧経験値が不正です。');
   if(!p.pendingReturn.before){
-   if(p.level>=maxLevel&&oldAward>0)
+   if(fromLegacy&&p.level>=maxLevel&&award>0)
     throw Error('最大レベルの旧帰還報酬を安全に復元できません。旧セーブを保護して停止しました。');
-   let level=p.level,xp=Number(p.xp),remaining=oldAward;
-   while(remaining>xp&&level>1){remaining-=xp;level--;xp=oldNext(level);}
+   let level=p.level,xp=Number(p.xp),remaining=award;
+   while(remaining>xp&&level>1){remaining-=xp;level--;xp=sourceNext(level);}
    if(remaining>xp)throw Error('旧帰還報酬と累計EXPが一致しません。旧セーブを保護して停止しました。');
    p.pendingReturn.before={level,xp:xp-remaining};
   }
   const before=p.pendingReturn.before;
   const beforeLevel=Number(before.level),oldBeforeXp=Number(before.xp);
-  if(!Number.isSafeInteger(beforeLevel)||beforeLevel<1||beforeLevel>maxLevel||
+  if(!Number.isSafeInteger(beforeLevel)||beforeLevel<1||
    !Number.isFinite(oldBeforeXp)||oldBeforeXp<0||
-   beforeLevel<maxLevel&&oldBeforeXp>=oldNext(beforeLevel))
+   oldBeforeXp>=sourceNext(beforeLevel))
    throw Error('帰還前の旧レベル・経験値が不正です。旧セーブを保護して停止しました。');
-  const oldEnd=levelAfterOldAward(beforeLevel,oldBeforeXp,oldAward);
-  if(oldEnd.level!==p.level||(p.level<maxLevel&&Math.abs(oldEnd.xp-Number(p.xp))>0.001))
+  const end=afterAward(beforeLevel,oldBeforeXp,award);
+  if(end.level!==p.level||Math.abs(end.xp-Number(p.xp))>0.001)
    throw Error('帰還報酬とセーブ済みレベルが一致しません。旧セーブを保護して停止しました。');
-  const beforeXp=convert(oldBeforeXp,beforeLevel);
-  p.pendingReturn.gained=span({level:beforeLevel,xp:beforeXp},start);
-  before.xp=beforeXp;
+  const integerBefore={level:beforeLevel,xp:convert(oldBeforeXp,beforeLevel)};
+  p.pendingReturn.gained=span(integerBefore,start);
+  before.xp=integerBefore.xp;
  }
  p.xp=start.xp;
  p.xpScaleVersion=XP_SCALE;
- // The profile, XP-version marker and integrity seal commit in one transaction.
+ // A single signed transaction backs up the old complete save, converts
+ // every unbanked reward, and commits the new integer version atomically.
  await saveProfile(db,p,{migrationSourceRecords});
  return p;
 }
