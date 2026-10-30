@@ -8,6 +8,16 @@ import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 const get=async name=>parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','floors','player-base'].map(get));
 configure({balance,levels,floors,playerBase});
+ // The archived 1/45 migration tests intentionally examine fractional v45
+ // data BEFORE the new integer migration; simulate those old gauges exactly.
+ const advanceLegacyGauge=(profile,earned)=>{
+  profile.xp+=earned;
+  while(profile.xp>=G.nextXp(profile.level)){
+   profile.xp-=G.nextXp(profile.level);
+   profile.level++;
+  }
+ };
+
 const factory=fakeIndexedDB();
 const db=await openStore(factory);
 assert.equal(validateDatabase(db),db);
@@ -90,7 +100,7 @@ assert.equal(exact.level,92);
 assert.ok(Math.abs(exact.xp/G.nextXp(92)-legacyStartXp/oldNeed(92))<0.000001,
  'Lv92 current-level EXP progress remains the same');
 const resumed={level:exact.level,xp:exact.xp};
-G.experience(resumed,exact.run.xp);
+advanceLegacyGauge(resumed,exact.run.xp);
 assert.equal(resumed.level,oldRunEnd.level,'pending exploration XP yields the same final level');
 assert.ok(Math.abs(resumed.xp/G.nextXp(resumed.level)-oldRunEnd.xp/oldNeed(oldRunEnd.level))<0.000001,
  'pending exploration XP keeps the earned post-return gauge fraction');
@@ -125,7 +135,7 @@ delete returning.xpScaleVersion;
 await saveProfile(db,returning);
 const migratedReturn=await migrateDungeonXp(db);
 const frameStart={level:92,xp:migratedReturn.pendingReturn.before.xp};
-G.experience(frameStart,migratedReturn.pendingReturn.gained);
+advanceLegacyGauge(frameStart,migratedReturn.pendingReturn.gained);
 assert.equal(frameStart.level,migratedReturn.level,'the full return animation ends at the real awarded level');
 assert.ok(Math.abs(frameStart.xp-migratedReturn.xp)<0.00001,'the animation ends at exactly the saved EXP');
 assert.deepEqual(await migrateDungeonXp(db),migratedReturn,'reloading the return animation cannot duplicate XP');
@@ -137,7 +147,7 @@ await saveProfile(db,missingBefore);
 const recoveredBefore=await migrateDungeonXp(db);
 assert.equal(recoveredBefore.level,returnEnd.level,'recover missing return start without losing levels');
 const recoveredStart={...recoveredBefore.pendingReturn.before};
-G.experience(recoveredStart,recoveredBefore.pendingReturn.gained);
+advanceLegacyGauge(recoveredStart,recoveredBefore.pendingReturn.gained);
 assert.equal(recoveredStart.level,recoveredBefore.level,'reconstructed pending reward ends on the actual level');
 assert.ok(Math.abs(recoveredStart.xp-recoveredBefore.xp)<0.00001,'reconstructed pending reward ends on the actual gauge');
 // Inconsistent return reward metadata must stop with the signed old save intact.
