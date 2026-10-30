@@ -116,6 +116,13 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   bands:summary.map(x=>({band:x.band,reached:x.reached,unreached:x.unreached,
    status:x.status}))}));
 }
+// Keep the entire evidence for all 15,360 owner-band cases, but shard by
+// legal policy. A monolithic report exceeds Node's maximum UTF-8 string size
+// and makes a real strict audit impossible to parse.
+const policyReferences=policies.map(({style,route,samples,completion,strengthSummary})=>({
+ style,route,samples,completion,strengthSummary,
+ file:'dungeon-journey-strength-v2-'+style+'-'+route+'.json'
+}));
 const report={
  schemaVersion:'dungeon-journey-strength-v2',
  strengthModel:'dungeon-recommended-strength-v3',
@@ -126,7 +133,7 @@ const report={
   maxSorties:600,maxFights:6500,maxTurnsPerFight:80,
   stopRule:'CAMPAIGN_AND_ALL_TEN_BANDS_REACHED_OR_EXISTING_SORTIE_FIGHT_BUDGET_EXHAUSTED'},
  seedRule:'17011+13*i',samplesPerPolicy:approvedGoals.strictSamples,
- policies,ranks,sourceHashes,
+ policies:policyReferences,ranks,sourceHashes,
  legacyDisposition:{
   rule:'OLD_REAL_FIXED_DECK_FLOOR_BATTLES_PARETO_COMPARISONS_AND_THREE_PAID_REPLAY_CYCLES_ARE_NOT_THIS_GATE',
   previousReport:'reports/dungeon-journey-strength-v1.json',
@@ -141,7 +148,6 @@ const report={
   xpTaper:'NOT_IMPLEMENTED'}
 };
 const output=new URL('../reports/dungeon-journey-strength-v2.json',import.meta.url);
-const temporary=new URL('../reports/dungeon-journey-strength-v2.json.tmp',import.meta.url);
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
 function* jsonChunks(value,depth=0){
  if(value===null||typeof value!=='object'){
@@ -164,16 +170,24 @@ function* jsonChunks(value,depth=0){
  }
  yield '  '.repeat(depth)+close;
 }
-const outputFd=openSync(temporary,'w');
-try{
- let buffer='';
- for(const chunk of jsonChunks(report)){
-  buffer+=chunk;
-  if(buffer.length>=64*1024){writeSync(outputFd,buffer);buffer='';}
- }
- writeSync(outputFd,buffer+'\n');
-}finally{closeSync(outputFd);}
-renameSync(temporary,output);
+function writeReportFile(file,value){
+ const target=new URL('../reports/'+file,import.meta.url);
+ const pending=new URL('../reports/'+file+'.tmp',import.meta.url);
+ const descriptor=openSync(pending,'w');
+ try{
+  let buffer='';
+  for(const chunk of jsonChunks(value)){
+   buffer+=chunk;
+   if(buffer.length>=64*1024){writeSync(descriptor,buffer);buffer='';}
+  }
+  writeSync(descriptor,buffer+'\n');
+ }finally{closeSync(descriptor);}
+ renameSync(pending,target);
+}
+// The index is committed only after every full-evidence policy shard exists.
+for(let i=0;i<policies.length;i++)
+ writeReportFile(policyReferences[i].file,policies[i]);
+writeReportFile('dungeon-journey-strength-v2.json',report);
 console.log('DUNGEON_JOURNEY_STRENGTH_REPORT '+output.pathname);
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))
  console.log('DUNGEON_JOURNEY_STRENGTH_SUMMARY '+JSON.stringify({
