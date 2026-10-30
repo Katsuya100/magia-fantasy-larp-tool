@@ -6,7 +6,7 @@ import {referenceSpells} from '../scripts/dungeon-fixed-deck-reference.mjs';
 
 const approved=JSON.parse(readFileSync(new URL('../config/dungeon-approved-goals.v1.json',import.meta.url),'utf8'));
 assert.equal(approved.strictSamples,256);
-assert.equal(approved.playerLevelMax,150);
+assert.equal(approved.playerLevelMax,null,'unbounded player level does not alter the fixed-deck reference');
 assert.deepEqual(approved.bands.map(x=>x.winRate),[[99,100],[99,100],...Array.from({length:8},()=>[90,97])]);
 assert.deepEqual(approved.bands.map(x=>x.winSafety),[[99,100],[99,100],...Array.from({length:8},()=>[92,95])]);
 assert.deepEqual(approved.bands.map(x=>x.winnerMedianMp),[[50,60],...Array.from({length:9},()=>[0,15])]);

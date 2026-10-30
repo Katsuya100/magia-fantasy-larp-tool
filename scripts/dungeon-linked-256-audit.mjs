@@ -16,7 +16,7 @@ const load=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
 const goals=load('config/dungeon-approved-goals.v1.json');
 assert.equal(goals.strictSamples,256,'approved strict sample count must not be lowered');
 assert.equal(goals.bands.length,10,'all ten authored bands are required');
-assert.equal(goals.playerLevelMax,150,'approved Lv150 cap must remain unchanged');
+assert.equal(goals.playerLevelMax,null,'the approved player cap is removed');
 const sourceHashes=Object.fromEntries([
  'assets/data/dungeon-balance.csv',
  'assets/data/dungeon-enemies.csv',
