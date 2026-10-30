@@ -9,19 +9,34 @@ export const capacity=level=>+levelRow(level).carry_limit;
 // v46 stores whole XP. The authored level and fight rows contain the
 // integer values; no multiplication is done during live progression.
 export const XP_SCALE=46;
-export const normalizeXp=value=>Math.round(Number(value));
+// Never conceal a fractional reward by rounding it during gameplay.
+export function normalizeXp(value){
+ if(!Number.isSafeInteger(value)||value<0)throw Error('EXPは0以上の安全な整数である必要があります。');
+ return value;
+}
+const positiveXp=value=>{
+ if(!Number.isSafeInteger(value)||value<=0)throw Error('必要EXPと戦闘EXPは正の整数である必要があります。');
+ return value;
+};
 const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:0});
-export const formatXp=value=>xpDisplay.format(normalizeXp(Number(value)||0));
-export const nextXp=level=>Number(levelRow(level).xp_integer_to_next);
+export const formatXp=value=>xpDisplay.format(normalizeXp(value));
+export const nextXp=level=>{
+ const raw=levelRow(level).xp_integer_to_next;
+ if(!/^[1-9][0-9]*$/.test(String(raw)))throw Error('必要EXPのデータが整数ではありません。');
+ return positiveXp(Number(raw));
+};
 // Resolve the actual encounter, not a pooled layer reward. Older callers
 // that provide only a layer resolve its first encounter for compatibility.
 export function fightExperience(enemyLevel,playerLevel,layer,fight=null){
  const encounter=fightRow(fight??(Number(layer)-1)*5+1);
- if(encounter.xp_reward!==undefined&&encounter.xp_reward!=='')
-  return Number(encounter.xp_reward);
+ if(Number(encounter.floor)<=500){
+  if(!/^[1-9][0-9]*$/.test(String(encounter.xp_reward)))
+   throw Error('戦闘EXPのデータが整数ではありません。');
+  return positiveXp(Number(encounter.xp_reward));
+ }
  // Endless encounters are generated, not authored in the 500-row master.
  // Keep their per-fight reward integer and nonzero.
- return Math.max(1,Math.round(nextXp(Number(encounter.enemy_level)||enemyLevel)/5));
+ return positiveXp(Math.max(1,Math.round(nextXp(Number(encounter.enemy_level)||enemyLevel)/5)));
 }
 export function earnFightExperience(run,enemyLevel,playerLevel,layer,fight){
  const earned=fightExperience(enemyLevel,playerLevel,layer,fight);
@@ -128,7 +143,13 @@ export function drops(items,collections,l,r=Math.random,context={}){
  if(bossDropsMagicInk(context.bossEnemyId,r))rewards.push({type:'ink',id:MAGIC_INK_ID});
  return rewards;
 }
-export function experience(p,xp){p.xp=normalizeXp(p.xp+xp);while(p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}return p.level;}
+export function experience(p,xp){
+ let remaining=normalizeXp(normalizeXp(p.xp)+normalizeXp(xp));
+ let level=p.level;
+ while(remaining>=nextXp(level)){remaining-=nextXp(level);level++;}
+ p.level=level;p.xp=normalizeXp(remaining);
+ return level;
+}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
 export const debuffPowerFactor=spell=>clamp(Math.sqrt(Math.max(0,Number(spell?.power)||0)/num('debuff_power_reference')),num('debuff_power_min'),num('debuff_power_max'));
