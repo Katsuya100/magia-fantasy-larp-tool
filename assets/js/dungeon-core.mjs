@@ -29,7 +29,6 @@ export const nextXp=level=>{
 // Five fights at the intended level supply approximately the XP needed
 // to start the following layer. Replay rewards do not decay.
 export function fightExperience(enemyLevel,playerLevel,layer){
- if(Number(playerLevel)>=num('level_max'))return 0;
  const current=targetClearLevel(Number(layer));
  const next=targetClearLevel(Number(layer)+1);
  const budget=next>current
@@ -139,7 +138,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
  if(bossDropsMagicInk(context.bossEnemyId,r))rewards.push({type:'ink',id:MAGIC_INK_ID});
  return rewards;
 }
-export function experience(p,xp){p.xp=normalizeXp(p.xp+xp);while(p.level<num('level_max')&&p.xp>=nextXp(p.level)){p.xp=normalizeXp(p.xp-nextXp(p.level));p.level++;}if(p.level>=num('level_max'))p.xp=0;return p.level;}
+export function experience(p,xp){p.xp=normalizeXp(p.xp+xp);while(p.xp>=nextXp(p.level)){p.xp=normalizeXp(p.xp-nextXp(p.level));p.level++;}return p.level;}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
 export const debuffPowerFactor=spell=>clamp(Math.sqrt(Math.max(0,Number(spell?.power)||0)/num('debuff_power_reference')),num('debuff_power_min'),num('debuff_power_max'));

@@ -13,8 +13,8 @@ export function level(l){
  if(row)return row;
  const cap=num('level_max');
  if(!Number.isSafeInteger(requested)||requested<=cap)throw Error('Missing level '+l);
- // Beyond the authored player cap, extrapolate the exact quadratic stat growth
- // from the final three CSV rows. Player XP and carry limits remain capped.
+ // The last authored row is a growth reference, not a player level cap.
+ // Extrapolate stats and progression beyond the CSV using the same shared rules.
  const prior2=levels.get(cap-2),prior=levels.get(cap-1),last=levels.get(cap);
  if(!prior2||!prior||!last)throw Error('Missing level growth rows');
  const n=requested-cap,result={...last,level:String(requested)};
@@ -22,6 +22,10 @@ export function level(l){
   const key=stat+'_multiplier',a=Number(prior2[key]),b=Number(prior[key]),c=Number(last[key]);
   result[key]=String(Number((c+n*(c-b)+n*(n+1)*(c-2*b+a)/2).toFixed(4)));
  }
+ // The final authored XP baseline grows by roughly 40 per level.
+ // Continue that slope without changing any level from 1 to 150.
+ result.xp_to_next=String(Number(last.xp_to_next)+40*n);
+ result.carry_limit=String(Number(last.carry_limit)+Math.floor(requested/10)-Math.floor(cap/10));
  return result;
 }
 export function floor(f){

@@ -430,13 +430,13 @@ function roleText(text){return String(text).replace(/通常攻撃|攻撃|防御|
 function render(){
  carry=prepareItems(carry,profile.inventory.length,G.capacity(profile.level));
 
- const s=G.stats(profile.base,profile.level),atLevelCap=profile.level>=num('level_max'),experienceNeeded=atLevelCap?0:G.nextXp(profile.level),xpProgress=atLevelCap?100:Math.min(100,100*profile.xp/experienceNeeded);
+ const s=G.stats(profile.base,profile.level),experienceNeeded=G.nextXp(profile.level),xpProgress=Math.min(100,100*profile.xp/experienceNeeded);
  const maxMp=num('mp_base')+num('mp_per_mag')*s.mag;
  const name=esc(profile.name||'名もなき冒険者');
  const crown=hasHundredFloorCrown(profile)?'<span class="hundred-floor-crown" role="img" aria-label="100層ボス討伐の証">👑</span>':'';
  const reached=deepestReachedLayer(profile),returned=deepestReturnedLayer(profile);
  $('playerStats').innerHTML='<div class="character-name-row"><h3 class="character-name">'+name+crown+'</h3><button class="subtle" data-action="rename">名前変更</button></div>'
- +'<div class="level-line"><strong>Lv.'+profile.level+'</strong><span>'+(atLevelCap?'EXP MAX':'EXP '+G.formatXp(profile.xp)+' / '+G.formatXp(experienceNeeded))+'</span></div><div class="xp-track" role="progressbar" aria-label="経験値" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(xpProgress)+'"><div class="xp-fill" style="width:'+xpProgress+'%"></div></div>'
+ +'<div class="level-line"><strong>Lv.'+profile.level+'</strong><span>EXP '+G.formatXp(profile.xp)+' / '+G.formatXp(experienceNeeded)+'</span></div><div class="xp-track" role="progressbar" aria-label="経験値" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(xpProgress)+'"><div class="xp-fill" style="width:'+xpProgress+'%"></div></div>'
  +'<div class="stat-grid">'+['hp','mp','mag','def','res'].map(k=>'<div class="stat-cell"><small>'+k.toUpperCase()+'</small><strong>'+(k==='mp'?maxMp:s[k])+'</strong></div>').join('')+'</div>'
  +'<p class="adventure-record">携行品上限：'+G.capacity(profile.level)+'個 ｜ 帰還 '+profile.returns+'</p>'
  +'<div class="adventure-depth-record"><span>最深到達階層：<strong>'+(reached?reached+'層':'-')+'</strong></span><span>最深帰還階層：<strong>'+(returned?returned+'層':'-')+'</strong></span></div>'
