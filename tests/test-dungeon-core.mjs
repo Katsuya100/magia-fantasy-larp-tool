@@ -33,15 +33,20 @@ for(const lvl of [1,20,50]){
 // Every fight keeps a 30% stone hit chance; its real count scales by depth.
 for(const layer of [1,2,10,50,91,100,101,149,150,200]){
  assert.equal(G.magicStoneDropChance(150,layer),.30,'constant stone hit probability');
- assert.ok(G.magicStoneCountPerHit(layer)>=1&&G.magicStoneCountPerHit(layer)<=3);
+ assert.ok(G.magicStoneCountPerHit(layer)>=1&&G.magicStoneCountPerHit(layer)<=8);
  for(const lv of [1,30,80,149,150])for(const cleared of [false,true])
   assert.equal(G.magicStoneDropChance(lv,layer,cleared),.30,'no replay or overlevel penalty');
 }
 assert.equal(G.magicStoneCountPerHit(1),1);
-assert.equal(G.magicStoneCountPerHit(150),3);
-assert.equal(G.magicStoneCountPerHit(200),3);
-for(let layer=1;layer<150;layer++)
- assert.ok(G.magicStoneCountPerHit(layer+1)>G.magicStoneCountPerHit(layer));
+assert.equal(G.magicStoneCountPerHit(100),8);
+assert.equal(G.magicStoneCountPerHit(150),8);
+assert.equal(G.magicStoneCountPerHit(200),8);
+for(let layer=1;layer<=200;layer++){
+ const expected=8**((Math.min(100,layer)-1)/99);
+ assert.ok(Math.abs(G.magicStoneCountPerHit(layer)-expected)<1e-10,
+  'stone hit curve must follow the approved exponential 1-to-8 specification at '+layer);
+ if(layer>1)assert.ok(G.magicStoneCountPerHit(layer)>=G.magicStoneCountPerHit(layer-1));
+}
 assert.deepEqual(G.dropCounts(1,()=>.6,{layer:1}),{collection:0,stone:0,use:0});
 assert.deepEqual(G.dropCounts(1,()=>.6,{layer:100}),{collection:0,stone:0,use:0},
  'deep layers grow stone count, not chance');
