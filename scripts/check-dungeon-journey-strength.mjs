@@ -108,10 +108,27 @@ export function validateFirstEntryOwner(account,record,strengthOwners,{requireCo
   assert.equal(e.maxHp,expectedHero.stats.hp);
   assert.equal(e.maxMp,expectedHero.maxMp);
   const initial=uniqueIds(e.sortieInitialCarry),current=uniqueIds(e.carry);
-  const warehouse=uniqueIds(e.warehouse);
+  assert.ok(Number.isSafeInteger(e.itemSerial)&&e.itemSerial>=0);
+  assert.ok(Number.isSafeInteger(e.warehouseCount)&&e.warehouseCount>=0);
+  const warehouse=Buffer.from(e.warehouseBits,'base64');
+  assert.equal(warehouse.length,Math.ceil(e.itemSerial/4));
+  let warehouseCount=0;
+  for(let serial=0;serial<e.itemSerial;serial++){
+   const state=(warehouse[serial>>2]>>((serial&3)*2))&3;
+   assert.notEqual(state,3,'one item serial cannot exist twice');
+   if(state)warehouseCount++;
+  }
+  assert.equal(warehouseCount,e.warehouseCount,'compressed warehouse ledger must reconcile');
   assert.ok(e.carry.length<=G.capacity(e.level),'real carry capacity');
   assert.ok(e.sortieInitialCarry.length<=G.capacity(e.level),'sortie packed within real capacity');
-  assert.ok([...initial].every(id=>!warehouse.has(id)),'packed items cannot remain in warehouse');
+  for(const item of e.sortieInitialCarry){
+   const match=/^(item|crafted)-([1-9][0-9]*)$/.exec(item.instanceId);
+   assert.ok(match,'physical carry has a tracked minted ID');
+   const serial=Number(match[2])-1;
+   assert.ok(Number.isSafeInteger(serial)&&serial>=0&&serial<e.itemSerial);
+   assert.equal((warehouse[serial>>2]>>((serial&3)*2))&3,0,
+    'equipped item instance cannot simultaneously remain in bank');
+  }
   assert.ok([...current].every(id=>initial.has(id)),
    'carried items may only come from initial owned instances');
   const usedItems=e.sortieInitialCarry.filter(item=>!current.has(item.instanceId));
@@ -121,7 +138,7 @@ export function validateFirstEntryOwner(account,record,strengthOwners,{requireCo
   const itemLedger=e.itemLedger;
   assert.equal(itemLedger.bankedDrops+itemLedger.alchemyCreated-
    itemLedger.battleConsumed-itemLedger.alchemyConsumed,
-   e.warehouse.length+e.sortieInitialCarry.length,
+   e.warehouseCount+e.sortieInitialCarry.length,
    'warehouse and original carry must reconcile to paid banked acquisitions');
   assert.ok(Number.isFinite(e.unbankedXp)&&e.unbankedXp>=0);
   assert.ok(Number.isSafeInteger(e.unbankedStone)&&e.unbankedStone>=0);
@@ -172,7 +189,9 @@ export function validateFirstEntryOwner(account,record,strengthOwners,{requireCo
     assert.deepEqual(e.earned,prev.earned);
     assert.deepEqual(e.spent,prev.spent);
     assert.deepEqual(e.sortieInitialCarry,prev.sortieInitialCarry);
-    assert.deepEqual(e.warehouse,prev.warehouse);
+    assert.equal(e.warehouseCount,prev.warehouseCount);
+    assert.equal(e.itemSerial,prev.itemSerial);
+    assert.equal(e.warehouseBits,prev.warehouseBits);
     if(prev.layer===e.layer-1){
      const last=record.receipts[i-1].floor;
      assert.ok(close(e.unbankedXp,prev.unbankedXp+last.gainedXp),

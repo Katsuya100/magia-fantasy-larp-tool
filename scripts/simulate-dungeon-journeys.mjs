@@ -42,6 +42,22 @@ const equipped=circles=>circles.filter(c=>c.active).map(c=>({
  role:c.role,attribute:c.attribute,power:actualPower(c),basePower:c.basePower,upgradeLevel:c.upgrades
 }));
 const percent=(value,max)=>max>0?100*value/max:null;
+// Two bits per minted item serial: 0=not in warehouse, 1=drop, 2=crafted.
+ // Unlike a full warehouse clone this stays bounded for 153,600 entry rows.
+function ownedItemBits(items,serial){
+ const bits=Buffer.alloc(Math.ceil(serial/4));
+ for(const item of items){
+  const match=/^(item|crafted)-([1-9][0-9]*)$/.exec(item.instanceId);
+  if(!match)throw Error('Untracked inventory instance at observed entry');
+  const at=Number(match[2])-1;
+  if(!Number.isSafeInteger(at)||at<0||at>=serial)
+   throw Error('Future inventory serial at observed entry');
+  const pos=at>>2,shift=(at&3)*2;
+  if((bits[pos]>>shift)&3)throw Error('Duplicate observed inventory serial');
+  bits[pos]|=(match[1]==='item'?1:2)<<shift;
+ }
+ return bits.toString('base64');
+}
 const chestSummary=p=>({level:p.level,rank:p.adventurerRank,xp:p.xp});
 
 export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
@@ -779,7 +795,8 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
        upgradeLevel:c.upgrades}),ink:c.ink})),
      carry:carry.filter(Boolean).map(item=>({...item})),
      sortieInitialCarry:sortieInitialCarry.map(item=>({...item})),
-     warehouse:state.inventory.map(item=>({...item})),
+     warehouseCount:state.inventory.length,itemSerial:state.itemSerial,
+     warehouseBits:ownedItemBits(state.inventory,state.itemSerial),
      usedById:{...usage},itemLedger:{...state.ledger.items},
      bankedStones:state.stones,bankedInk:state.ink,
      earned:{...state.earned},spent:{...state.spent},
