@@ -1,8 +1,9 @@
+import {normalizeXp} from './dungeon-core.mjs';
 // A single one-second timeline, including level thresholds crossed.
 export const RETURN_XP_DURATION_MS=1000;
 export function returnXpFrame(before,earned,elapsedMs,nextXp,maxLevel){
  const fraction=Math.max(0,Math.min(1,Number(elapsedMs)/RETURN_XP_DURATION_MS||0));
- let level=before.level,xp=Math.round(before.xp)+Math.round(Math.max(0,earned)*fraction);
+ let level=before.level,xp=normalizeXp(before.xp)+Math.round(normalizeXp(earned)*fraction);
  while(level<maxLevel&&xp>=nextXp(level)){
   xp-=nextXp(level);
   level++;
