@@ -146,23 +146,19 @@ assert.ok(withItem.actual.magicRecovery.unfundedMp>0,
 
 // Select a deterministic real-loss owner: no injected defeat, free restitution,
 // synthetic snapshot or relaxed reaching condition is permitted.
-const candidateSeeds=[17011,17154,20261024,17024,17037,17167,17200,17300];
-let witnessed=null;
-for(const seed of candidateSeeds){
- const run=runJourney(seed,{style:'A',route:'long',maxSorties:600,
-  maxFights:6500,observeStrength:true});
- const defeat=run.trace.find(step=>step.defeat===true);
- const recovery=defeat&&run.trace.find(step=>step.sortie>defeat.sortie&&step.returned);
- const reached=defeat&&Object.values(run.journeyStrength).find(row=>
-  row.status==='REACHED'&&row.firstReached?.actualSorties>defeat.sortie);
- if(defeat&&recovery&&reached&&run.losses>0&&
-    run.lost.xp+run.lost.stone+run.lost.ink>0){
-  witnessed={run,defeat,recovery,reached,seed};
-  break;
- }
-}
-assert.ok(witnessed,'a genuine seeded defeat with lost rewards followed by legal return/investment and strength reach is required');
-const {run:lossAndReach,defeat,recovery,reached,seed:lossSeed}=witnessed;
+// CI-established reproducible case: A/long seed 17011 loses an 81-90F
+// pending haul on sortie 33, banks a legal follow-up return, and first
+// reaches the 81-90 recommended strength on sortie 35.
+const lossSeed=17011;
+const lossAndReach=runJourney(lossSeed,{style:'A',route:'long',
+ maxSorties:600,maxFights:6500,observeStrength:true});
+const defeat=lossAndReach.trace.find(step=>step.defeat===true);
+const recovery=defeat&&lossAndReach.trace.find(step=>
+ step.sortie>defeat.sortie&&step.returned);
+const reached=defeat&&Object.values(lossAndReach.journeyStrength).find(row=>
+ row.status==='REACHED'&&row.firstReached?.actualSorties>defeat.sortie);
+assert.ok(defeat&&recovery&&reached&&lossAndReach.losses>0,
+ 'real defeat, loss, legal return and later recommended strength must all occur');
 assert.ok(lossAndReach.lost.xp+lossAndReach.lost.stone+lossAndReach.lost.ink>0);
 assert.ok(reached.firstReached.actualReturns>0,'only banked returns can establish later strength');
 assert.equal(lossAndReach.earned.stone,lossAndReach.spent.stone+lossAndReach.balances.stone);
