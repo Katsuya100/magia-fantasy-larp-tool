@@ -1,4 +1,4 @@
-import {num,level,range} from './dungeon-tuning.mjs';
+import {num,level,range,floor as fightRow} from './dungeon-tuning.mjs';
 import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,consumableWeight,CONSUMABLE_TIERS,targetClearLevel} from './dungeon-design.mjs';
 import {MAGIC_INK_ID,bossDropsMagicInk} from './dungeon-ink.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
@@ -6,34 +6,25 @@ export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
-// Integer XP units: multiply both rewards and level thresholds by five.
-// This preserves the previous five-fight progression without fractional XP.
+// v46 stores whole XP. The authored level and fight rows contain the
+// integer values; no multiplication is done during live progression.
 export const XP_SCALE=46;
-const XP_UNITS=5;
 export const normalizeXp=value=>Math.round(Number(value));
 const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:0});
 export const formatXp=value=>xpDisplay.format(normalizeXp(Number(value)||0));
-// The previous thresholds remain unchanged in real progression terms.
-export const nextXp=level=>{
- const steps=(Number(level)-1)/10;
- const earlySteps=Math.min(steps,9.9);
- const lateSteps=Math.max(0,steps-9.9);
- return XP_UNITS*Math.ceil(Number(levelRow(level).xp_to_next)*
-  Math.pow(num('xp_growth_per_10_levels'),earlySteps)*
-  Math.pow(num('xp_growth_per_10_levels_late'),lateSteps)/45);
-};
-// Each actual victory earns its own integer reward. Do not grant a
-// separate bulk reward when a layer ends or penalize repeat clears.
-export function fightExperience(enemyLevel,playerLevel,layer){
- const current=targetClearLevel(Number(layer));
- const next=targetClearLevel(Number(layer)+1);
- let earned=0;
- for(let level=current;level<Math.max(current+1,next);level++)
-  earned+=nextXp(level)/XP_UNITS;
- return earned;
+export const nextXp=level=>Number(levelRow(level).xp_integer_to_next);
+// Resolve the actual encounter, not a pooled layer reward. Older callers
+// that provide only a layer resolve its first encounter for compatibility.
+export function fightExperience(enemyLevel,playerLevel,layer,fight=null){
+ const encounter=fightRow(fight??(Number(layer)-1)*5+1);
+ if(encounter.xp_reward!==undefined&&encounter.xp_reward!=='')
+  return Number(encounter.xp_reward);
+ // Endless encounters are generated, not authored in the 500-row master.
+ // Keep their per-fight reward integer and nonzero.
+ return Math.max(1,Math.round(nextXp(Number(encounter.enemy_level)||enemyLevel)/5));
 }
-export function earnFightExperience(run,enemyLevel,playerLevel,layer){
- const earned=fightExperience(enemyLevel,playerLevel,layer);
+export function earnFightExperience(run,enemyLevel,playerLevel,layer,fight){
+ const earned=fightExperience(enemyLevel,playerLevel,layer,fight);
  run.xp=normalizeXp(run.xp+earned);
  return earned;
 }
