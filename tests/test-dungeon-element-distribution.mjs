@@ -16,7 +16,7 @@ assert.equal(plan.length,500);assert.equal(concepts.length,100);
 // Pin the independently approved final CSV blob, and verify its present rows,
 // legal spells, resistance structure and authored floor distribution directly.
 const rawMaster=readFileSync(new URL('../assets/data/dungeon-enemies.csv',import.meta.url));
-const actualBlob=createHash('sha1').update('blob '+rawMaster.length+'\\0'.replace('\\0','\0'))
+const actualBlob=createHash('sha1').update('blob '+rawMaster.length+'\0')
  .update(rawMaster).digest('hex');
 assert.equal(actualBlob,'9eed8dd1ac6c15e166ddee39ee5820d2f663d4d0',
  'reviewed final enemy roster changed without explicit data-contract approval');
