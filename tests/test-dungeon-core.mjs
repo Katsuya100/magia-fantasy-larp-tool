@@ -153,6 +153,21 @@ for(const level of [1,19,37,150]){
  }
  assert.ok(restored.every((n,i)=>i===0||n<=restored[i-1]),'no deep-layer MP recovery increase at Lv'+level);
 }
+// Independently compare absolute rounded MP across the ten official
+// recommended levels, not only percentages for a fixed-level character.
+const recommendedRecovery=[[10,19],[20,37],[30,55],[40,72],[50,87],
+ [60,102],[70,115],[80,128],[90,139],[100,150]];
+let previousAbsolute=Infinity;
+for(const [floor,level] of recommendedRecovery){
+ const owner=G.makeUnit(base,level);owner.mp=0;
+ const amount=G.recoverVictoryMp(owner,floor);
+ assert.ok(Number.isSafeInteger(amount)&&amount>=0,
+  'recommended-level victory recovery must be integer MP at F'+floor);
+ assert.ok(amount<=previousAbsolute,
+  'recommended-level absolute recovery must not grow at F'+floor);
+ if(floor>=100)assert.equal(amount,0,'normal F100+ victory recovery must remain zero');
+ previousAbsolute=amount;
+}
 const victoryMpRate=level=>{
  const unit=G.makeUnit(base,level);
  unit.mp=0;
