@@ -25,10 +25,6 @@ export function level(l){
  // The final authored XP baseline grows by roughly 40 per level.
  // Continue that slope without changing any level from 1 to 150.
  result.xp_to_next=String(Number(last.xp_to_next)+40*n);
- // Extend the already-authored integer threshold after the last CSV row.
- const baseline=Number(last.xp_to_next),current=Number(result.xp_to_next);
- result.xp_integer_to_next=String(Math.max(1,Math.round(
-  Number(last.xp_integer_to_next)*(current/baseline)*Math.pow(1.1,n/10))));
  result.carry_limit=String(Number(last.carry_limit)+Math.floor(requested/10)-Math.floor(cap/10));
  return result;
 }

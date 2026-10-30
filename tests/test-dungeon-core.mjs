@@ -12,7 +12,7 @@ configure({balance,levels,floors,playerBase});
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
 for(const [lvl,slots] of [[1,3],[9,3],[10,4],[19,4],[20,5],[49,7],[50,8],[150,18]])
  assert.equal(G.capacity(lvl),slots,'carry slot increases each 10 levels');
-assert.equal(G.nextXp(1),15);assert.equal(floor(5).boss,'1');
+assert.equal(G.nextXp(1),3);assert.equal(floor(5).boss,'1');
 for(const layer of [1,10,50,100]){
  assert.equal(G.fightExperience(1,30,layer),
   G.fightExperience(1,90,layer),
