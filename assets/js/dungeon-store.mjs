@@ -397,6 +397,28 @@ export async function getDungeonXpMigrationBackup(db){
   throw Error('EXP変換前バックアップの署名が一致しません。');
  return backup;
 }
+// The v45 fractional save is kept independently of the older legacy rescue.
+export async function getDungeonIntegerXpMigrationBackup(db){
+ const backup=await request(db,'settings','readonly',s=>s.get(XP_INTEGER_MIGRATION_BACKUP_KEY));
+ if(!backup)return null;
+ if(backup.version!==1||backup.profile?.xpScaleVersion!==45||!Array.isArray(backup.circles)||
+  recordFingerprint({profile:backup.profile,circles:backup.circles})!==backup.sourceRecords)
+  throw Error('整数EXP変換前バックアップの整合性が一致しません。');
+ if(backup.integrity?.version===1&&backup.integrity.records!==backup.sourceRecords)
+  throw Error('整数EXP変換前バックアップの署名が一致しません。');
+ return backup;
+}
+export async function restoreDungeonIntegerXpMigrationBackup(db){
+ const backup=await getDungeonIntegerXpMigrationBackup(db);
+ if(!backup)throw Error('整数EXP変換前の保全データが見つかりません。');
+ const snapshot={profile:backup.profile,circles:backup.circles,integrity:backup.integrity,savedAt:backup.integrity?.savedAt||0};
+ const health=await verifyLocalSnapshot(snapshot);
+ if(health.status==='corrupt'||health.status==='badImages')
+  throw Error('整数EXP変換前の保全データの署名または写真が一致しません。');
+ if(health.status==='legacy'){await photoEvidence(snapshot.circles);await profilePhotoEvidence(snapshot.profile);}
+ const current=await readDungeonSnapshot(db);
+ await replaceDungeonSnapshot(db,snapshot,{expectedCurrentRecords:recordFingerprint(current)});
+}
 export const hasDungeonXpMigrationBackup=db=>request(db,'settings','readonly',s=>s.getKey(XP_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
 // Rolling back also discards all play after migration; only explicit UI
 // confirmation may call this API. Full SHA checks guard original photos.
