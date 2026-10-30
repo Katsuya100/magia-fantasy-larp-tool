@@ -419,6 +419,7 @@ export async function restoreDungeonIntegerXpMigrationBackup(db){
  const current=await readDungeonSnapshot(db);
  await replaceDungeonSnapshot(db,snapshot,{expectedCurrentRecords:recordFingerprint(current),preserveMigrationBackups:true});
 }
+export const hasDungeonIntegerXpMigrationBackup=db=>request(db,'settings','readonly',s=>s.getKey(XP_INTEGER_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
 export const hasDungeonXpMigrationBackup=db=>request(db,'settings','readonly',s=>s.getKey(XP_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
 // Rolling back also discards all play after migration; only explicit UI
 // confirmation may call this API. Full SHA checks guard original photos.
