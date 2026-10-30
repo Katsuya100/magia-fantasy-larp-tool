@@ -47,9 +47,32 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   assert.equal(run.resourceLedger.items.bankedDrops+run.resourceLedger.items.alchemyCreated,
    run.resourceLedger.items.battleConsumed+run.resourceLedger.items.alchemyConsumed+run.inventory);
   for(const record of run.rankAudit)assertPreRecoveryRankGate(record);
+  // The battle trace, not the formula readiness result, proves 100F was won.
+  // A successful banked floor has five real fights and a real return.
+  const credited=new Map();
+  for(const row of run.floorAudit){
+   if(row.cleared&&row.banked&&row.attemptedFights===5&&!credited.has(row.layer))
+    credited.set(row.layer,{layer:row.layer,sortie:row.sortie,
+     attemptedFights:row.attemptedFights,cleared:row.cleared,banked:row.banked});
+  }
+  const clearedFloors=Array.from({length:100},(_,i)=>credited.get(i+1)??null);
+  const trace=run.trace.map(step=>({sortie:step.sortie,start:step.start,
+   goal:step.goal,cleared:step.cleared,returned:step.returned,
+   defeat:step.defeat,rank:step.rank}));
+  const legalStarts=trace.every((step,i)=>step.start>=1&&step.goal<=100&&
+   step.start<=step.goal&&step.start<=(i?trace[i-1].rank:0)+1&&
+   step.rank>=(i?trace[i-1].rank:0));
+  const finalClear=clearedFloors[99];
+  const finalReturn=finalClear?trace.find(step=>
+   step.sortie===finalClear.sortie&&step.returned&&step.cleared>=100):null;
+  const actualCompletion=run.best>=100&&clearedFloors.every(Boolean)&&
+   Boolean(finalReturn)&&legalStarts;
   accounts.push({seed,best:run.best,level:run.profile.level,rank:run.profile.rank,
-   completed:run.best>=100,sorties:run.sorties,returns:run.returns,losses:run.losses,
+   completed:actualCompletion,sorties:run.sorties,returns:run.returns,losses:run.losses,
    fights:run.fights,blockers:run.blockers,rankAudit:run.rankAudit,
+   completionEvidence:{clearedFloors,trace,legalStarts,
+    finalReturnSortie:finalReturn?.sortie??null},
+   firstDecadeEntries:run.entrySnapshots,
    resourceLedger:run.resourceLedger,earned:run.earned,spent:run.spent,
    balances:run.balances});
   for(const [index,band] of approvedGoals.bands.entries()){
@@ -69,9 +92,17 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   const checks=accounts.flatMap(owner=>owner.rankAudit)
    .filter(row=>row.layer===band.to);
   const eligible=checks.filter(row=>row.eligible).length;
-  const banked=checks.filter(row=>row.banked).length;
+  const banked=checks.filter(row=>row.banked&&row.eligible).length;
+  // Only real, returned, banked badge awards count; repeated boss checks
+  // are never mistaken for additional owners.
+  const acquiredOwners=accounts.filter(account=>account.rankAudit.some(row=>
+   row.layer===band.to&&row.eligible&&row.banked&&
+   row.hpPercent>=80&&row.mpPercent>=80)).length;
+  const missingSeeds=accounts.filter(account=>!account.rankAudit.some(row=>
+   row.layer===band.to&&row.eligible&&row.banked&&
+   row.hpPercent>=80&&row.mpPercent>=80)).map(account=>account.seed);
   ranks.push({style,route,chapter:band.from+'-'+band.to,rankLayer:band.to,
-   eligible,banked,checks:checks.length,
+   eligible,banked,checks:checks.length,acquiredOwners,missingSeeds,
    thresholdHp:approvedGoals.rank.bothHpMpPercentAtLeast,
    thresholdMp:approvedGoals.rank.bothHpMpPercentAtLeast,
    moment:'ACTUAL_BOSS_KILL_BEFORE_VICTORY_RECOVERY',
@@ -80,6 +111,8 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  policies.push(policy);
  console.log('DUNGEON_JOURNEY_STRENGTH_POLICY '+JSON.stringify({
   style,route,samples:accounts.length,completion:policy.completion,
+  chapterOwners:ranks.filter(rank=>rank.style===style&&rank.route===route)
+   .map(rank=>({layer:rank.rankLayer,acquired:rank.acquiredOwners,missing:rank.missingSeeds.length})),
   bands:summary.map(x=>({band:x.band,reached:x.reached,unreached:x.unreached,
    status:x.status}))}));
 }
