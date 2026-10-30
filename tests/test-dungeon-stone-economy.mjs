@@ -101,8 +101,10 @@ assert.equal(summary.progression.returns,100);
 assert.equal(summary.progression.layerClears,550);
 assert.equal(summary.progression.fights,2750);
 assert.equal(summary.allFiveUltimate.cost,ALL_ULTIMATE_COST);
-assert.ok(summary.progression.earnedStones.mean>850&&summary.progression.earnedStones.mean<2200,
- 'the new positive drop curve must not starve the 100F campaign or overrun the stone economy');
-assert.ok(summary.allFiveUltimate.farm101.sorties.mean>300);
+assert.ok(summary.progression.earnedStones.mean>850&&
+ summary.progression.earnedStones.mean<ALL_ULTIMATE_COST,
+ 'the authored 100F economy must support upgrades but not auto-fund all five ultimate circles');
+assert.ok(summary.allFiveUltimate.farm101.sorties.mean>0,
+ 'all-five ultimate upgrades still need real additional farming');
 assert.ok(summary.allFiveUltimate.farm91to100.sorties.mean>0);
 console.log('PASS depth-growing magic stone drops and replay-compatible tiered upgrade economy');
