@@ -44,6 +44,26 @@ for(let layer=1;layer<=100;layer++){
 // All five encounters in every authored layer own explicit whole-number
 // rewards. The level master owns the matching whole-number thresholds.
 assert.equal(G.XP_SCALE,46);
+// The fivefold values are authored in the CSV, never calculated at play time.
+// Reject future data drift even if all results remain technically integers.
+const priorXpRequirement=level=>{
+ const row=levels[level-1],steps=(level-1)/10;
+ return Math.ceil(Number(row.xp_to_next)*
+  Math.pow(num('xp_growth_per_10_levels'),Math.min(steps,9.9))*
+  Math.pow(num('xp_growth_per_10_levels_late'),Math.max(0,steps-9.9))/45);
+};
+for(const row of levels)assert.equal(Number(row.xp_integer_to_next),
+ 5*priorXpRequirement(Number(row.level)),
+ 'authored fivefold threshold must preserve the old level curve at Lv'+row.level);
+for(let layer=1;layer<=100;layer++){
+ const start=targetClearLevel(layer),end=targetClearLevel(layer+1);
+ let budget=0;
+ if(end>start)for(let level=start;level<end;level++)budget+=priorXpRequirement(level);
+ else budget=priorXpRequirement(start);
+ for(let index=0;index<5;index++)
+  assert.equal(Number(floors[(layer-1)*5+index].xp_reward),budget,
+   'authored individual reward must preserve historical layer budget for fight '+((layer-1)*5+index+1));
+}
 assert.equal(levels.length,150,'every authored level must be checked');
 assert.equal(floors.length,500,'every authored battle must be checked');
 for(const row of levels){
