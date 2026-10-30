@@ -484,53 +484,53 @@ export async function migrateDungeonXp(db){
  await saveProfile(db,p,{migrationSourceRecords});
  return p;
 }
-// Read-only rescue point, unaffected by later game changes or cloud sync.
-export async function getDungeonXpMigrationBackup(db){
- const backup=await request(db,'settings','readonly',s=>s.get(XP_MIGRATION_BACKUP_KEY));
+// Both historical migrations use one signed-backup reader and restorer.
+// Keep two independent checkpoints: pre-v45 and the last pre-integer v45.
+async function migrationBackup(db,key,sourceVersion=null){
+ const backup=await request(db,'settings','readonly',s=>s.get(key));
  if(!backup)return null;
  if(backup.version!==1||!backup.profile||!Array.isArray(backup.circles)||
+  sourceVersion!==null&&backup.profile.xpScaleVersion!==sourceVersion||
   recordFingerprint({profile:backup.profile,circles:backup.circles})!==backup.sourceRecords)
   throw Error('EXP変換前バックアップの整合性が一致しません。');
  if(backup.integrity?.version===1&&backup.integrity.records!==backup.sourceRecords)
   throw Error('EXP変換前バックアップの署名が一致しません。');
  return backup;
 }
-// The v45 fractional save is kept independently of the older legacy rescue.
-export async function getDungeonIntegerXpMigrationBackup(db){
- const backup=await request(db,'settings','readonly',s=>s.get(XP_INTEGER_MIGRATION_BACKUP_KEY));
- if(!backup)return null;
- if(backup.version!==1||backup.profile?.xpScaleVersion!==45||!Array.isArray(backup.circles)||
-  recordFingerprint({profile:backup.profile,circles:backup.circles})!==backup.sourceRecords)
-  throw Error('整数EXP変換前バックアップの整合性が一致しません。');
- if(backup.integrity?.version===1&&backup.integrity.records!==backup.sourceRecords)
-  throw Error('整数EXP変換前バックアップの署名が一致しません。');
- return backup;
+async function restoreMigrationBackup(db,backup,preserveBackups=false){
+ const snapshot={profile:backup.profile,circles:backup.circles,
+  integrity:backup.integrity,savedAt:backup.integrity?.savedAt||0};
+ const health=await verifyLocalSnapshot(snapshot);
+ if(health.status==='corrupt'||health.status==='badImages')
+  throw Error('EXP変換前の保全データの署名または写真が一致しません。復元を停止しました。');
+ if(health.status==='legacy'){
+  await photoEvidence(snapshot.circles);
+  await profilePhotoEvidence(snapshot.profile);
+ }
+ const current=await readDungeonSnapshot(db);
+ await replaceDungeonSnapshot(db,snapshot,{
+  expectedCurrentRecords:recordFingerprint(current),
+  preserveMigrationBackups:preserveBackups
+ });
+}
+export const getDungeonXpMigrationBackup=db=>migrationBackup(db,XP_MIGRATION_BACKUP_KEY);
+export const getDungeonIntegerXpMigrationBackup=db=>migrationBackup(db,XP_INTEGER_MIGRATION_BACKUP_KEY,45);
+export const hasDungeonXpMigrationBackup=db=>
+ request(db,'settings','readonly',s=>s.getKey(XP_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
+export const hasDungeonIntegerXpMigrationBackup=db=>
+ request(db,'settings','readonly',s=>s.getKey(XP_INTEGER_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
+// Restoring an old save explicitly discards later gameplay; the UI confirms
+// before invoking these APIs. The separate pre-integer rescue preserves both
+// checkpoint generations when the user retries the one-time migration.
+export async function restoreDungeonXpMigrationBackup(db){
+ const backup=await getDungeonXpMigrationBackup(db);
+ if(!backup)throw Error('EXP変換前の保全データが見つかりません。');
+ await restoreMigrationBackup(db,backup);
 }
 export async function restoreDungeonIntegerXpMigrationBackup(db){
  const backup=await getDungeonIntegerXpMigrationBackup(db);
  if(!backup)throw Error('整数EXP変換前の保全データが見つかりません。');
- const snapshot={profile:backup.profile,circles:backup.circles,integrity:backup.integrity,savedAt:backup.integrity?.savedAt||0};
- const health=await verifyLocalSnapshot(snapshot);
- if(health.status==='corrupt'||health.status==='badImages')
-  throw Error('整数EXP変換前の保全データの署名または写真が一致しません。');
- if(health.status==='legacy'){await photoEvidence(snapshot.circles);await profilePhotoEvidence(snapshot.profile);}
- const current=await readDungeonSnapshot(db);
- await replaceDungeonSnapshot(db,snapshot,{expectedCurrentRecords:recordFingerprint(current),preserveMigrationBackups:true});
-}
-export const hasDungeonIntegerXpMigrationBackup=db=>request(db,'settings','readonly',s=>s.getKey(XP_INTEGER_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
-export const hasDungeonXpMigrationBackup=db=>request(db,'settings','readonly',s=>s.getKey(XP_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
-// Rolling back also discards all play after migration; only explicit UI
-// confirmation may call this API. Full SHA checks guard original photos.
-export async function restoreDungeonXpMigrationBackup(db){
- const backup=await getDungeonXpMigrationBackup(db);
- if(!backup)throw Error('EXP変換前の保全データが見つかりません。');
- const snapshot={profile:backup.profile,circles:backup.circles,integrity:backup.integrity,savedAt:backup.integrity?.savedAt||0};
- const health=await verifyLocalSnapshot(snapshot);
- if(health.status==='corrupt'||health.status==='badImages')
-  throw Error('EXP変換前の保全データの署名または写真が一致しません。復元を停止しました。');
- if(health.status==='legacy'){await photoEvidence(snapshot.circles);await profilePhotoEvidence(snapshot.profile);}
- const current=await readDungeonSnapshot(db);
- await replaceDungeonSnapshot(db,snapshot,{expectedCurrentRecords:recordFingerprint(current)});
+ await restoreMigrationBackup(db,backup,true);
 }
 export async function getProfile(db){
   const [raw,nameOverride]=await Promise.all([
