@@ -9,13 +9,10 @@ export const capacity=level=>+levelRow(level).carry_limit;
 // EXP scaling and rewards are independent of replay/overlevel status.
 // Previously removed EXP falloff must not be reintroduced.
 export const XP_SCALE=45;
-// A fifth of an integer layer budget may be 0.2 EXP. Normalize each stored
-// accumulation to micro-EXP so five battles land on their exact threshold.
-export const normalizeXp=value=>Math.round(Number(value)*1e6)/1e6;
-// EXP is fractional internally so five fights sum to the exact level budget.
-// Keep the display short without changing the stored value.
-const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:1});
-export const formatXp=value=>xpDisplay.format(Number(value)||0);
+// Earned, banked and pending EXP are always whole units.
+export const normalizeXp=value=>Math.ceil(Number(value));
+const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:0});
+export const formatXp=value=>xpDisplay.format(normalizeXp(Number(value)||0));
 // Grow steeply until Lv100 to limit lower-floor replay, then taper so
 // the high-end required and earned EXP values remain under six figures.
 export const nextXp=level=>{
@@ -26,17 +23,20 @@ export const nextXp=level=>{
   Math.pow(num('xp_growth_per_10_levels'),earlySteps)*
   Math.pow(num('xp_growth_per_10_levels_late'),lateSteps)/XP_SCALE);
 };
-// Five fights at the intended level supply approximately the XP needed
-// to start the following layer. Replay rewards do not decay.
-export function fightExperience(enemyLevel,playerLevel,layer){
+// Each of a layer's five fights has its own integer EXP reward.
+// The fifth fight (boss) receives the remainder without changing the
+// designed five-fight total. Replay and overlevel rules are unchanged.
+export function fightExperience(enemyLevel,playerLevel,layer,encounter=5){
+ if(!Number.isSafeInteger(Number(layer))||Number(layer)<1||
+  !Number.isSafeInteger(encounter)||encounter<1||encounter>5)
+  throw Error('Invalid EXP encounter');
  const current=targetClearLevel(Number(layer));
  const next=targetClearLevel(Number(layer)+1);
  const budget=next>current
   ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
   :nextXp(current);
- // Five victories award the same designed layer budget regardless of
- // player overlevel/repeats; never revive the deleted EXP decay mechanic.
- return budget/5;
+ const ordinary=Math.floor(budget/5);
+ return encounter===5?budget-ordinary*4:ordinary;
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
 // Same upgraded-power duration applies to defense and debuff, hero and enemy.
