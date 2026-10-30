@@ -32,6 +32,10 @@ assert256Seeds(seeds);
 const expectedPairs=['A/short','A/long','B/short','B/long','C/short','C/long'];
 assert.deepEqual(report.policies.map(p=>p.style+'/'+p.route),expectedPairs);
 const failures=[];
+const completionFailures=[];
+const chapterFailures=[];
+const completionTotals=[];
+const chapterTotals=[];
 for(const policy of report.policies){
  assert.equal(policy.samples,256);
  assert.equal(policy.accounts.length,256);
@@ -65,12 +69,38 @@ for(const policy of report.policies){
    assert.ok(input.rank<=input.bankedBestLayer);
   }
  }
+ assert.equal(policy.completion,policy.accounts.filter(owner=>owner.completed).length,
+  'owner completion count must match evidence-backed completion flags');
+ let actualCompleted=0;
  for(const account of policy.accounts){
+  const proof=account.completionEvidence;
+  assert.ok(proof&&Array.isArray(proof.clearedFloors)&&Array.isArray(proof.trace),
+   'real per-floor and sortie evidence must be preserved for every owner');
+  assert.equal(proof.clearedFloors.length,100);
+  const allFloors=proof.clearedFloors.every((floor,index)=>floor&&
+   floor.layer===index+1&&floor.cleared===true&&floor.banked===true&&
+   floor.attemptedFights===5&&Number.isSafeInteger(floor.sortie)&&floor.sortie>0);
+  const legalStarts=proof.trace.every((step,index)=>
+   step.start>=1&&step.goal<=100&&step.start<=step.goal&&
+   step.start<=(index?proof.trace[index-1].rank:0)+1&&
+   step.rank>=(index?proof.trace[index-1].rank:0));
+  assert.equal(proof.legalStarts,legalStarts,'legal routes must agree with measured sorties');
+  const finale=proof.clearedFloors[99];
+  const finalReturn=finale&&proof.trace.some(step=>step.sortie===finale.sortie&&
+   step.returned===true&&step.cleared>=100&&step.sortie===proof.finalReturnSortie);
+  const completed=account.best>=100&&allFloors&&legalStarts&&Boolean(finalReturn);
+  assert.equal(account.completed,completed,'unbanked or unfought F100 cannot be called completed');
+  if(completed)actualCompleted++;
+  else completionFailures.push({policy:policy.style+'/'+policy.route,seed:account.seed,
+   best:account.best,allFloors:Boolean(allFloors),legalStarts,
+   finalReturn:Boolean(finalReturn),blockers:account.blockers});
   assert.equal(account.resourceLedger.items.held,
    account.resourceLedger.items.bankedDrops+account.resourceLedger.items.alchemyCreated-
     account.resourceLedger.items.battleConsumed-account.resourceLedger.items.alchemyConsumed);
   for(const rank of account.rankAudit)assertPreRecoveryRankGate(rank);
  }
+ completionTotals.push({policy:policy.style+'/'+policy.route,
+  completed:actualCompleted,required:256});
 }
 assert.equal(report.policies.reduce((sum,p)=>sum+p.journeyStrength.reduce((n,b)=>n+b.owners.length,0),0),
  6*10*256,'all independent owner-band formula observations must remain in the denominator');
@@ -78,11 +108,32 @@ for(const rank of report.ranks){
  assert.equal(rank.thresholdHp,approvedGoals.rank.bothHpMpPercentAtLeast);
  assert.equal(rank.thresholdMp,approvedGoals.rank.bothHpMpPercentAtLeast);
  assert.equal(rank.status,'INDEPENDENT_80_80_RANK_ACQUISITION');
+ const policy=report.policies.find(p=>p.style===rank.style&&p.route===rank.route);
+ assert.ok(policy,'each chapter row belongs to one formal policy');
+ const missing=policy.accounts.filter(account=>!account.rankAudit.some(event=>
+  event.layer===rank.rankLayer&&event.eligible&&event.banked&&
+  event.hpPercent>=80&&event.mpPercent>=80)).map(account=>account.seed);
+ assert.deepEqual(rank.missingSeeds,missing,'unearned chapters remain unearned');
+ assert.equal(rank.acquiredOwners,256-missing.length,
+  'chapter acquisitions count distinct banked owners');
+ const exceptional=rank.rankLayer===90&&rank.route==='short'&&
+  (rank.style==='B'||rank.style==='C');
+ const required=exceptional?255:256;
+ chapterTotals.push({policy:rank.style+'/'+rank.route,layer:rank.rankLayer,
+  acquired:rank.acquiredOwners,required,missing});
+ if(rank.acquiredOwners<required)
+  chapterFailures.push({policy:rank.style+'/'+rank.route,layer:rank.rankLayer,
+   acquired:rank.acquiredOwners,required,missing});
 }
 for(const [file,hash] of Object.entries(report.sourceHashes)){
  assert.equal(createHash('sha256').update(readFileSync(new URL('../'+file,import.meta.url))).digest('hex'),
   hash,'audited source changed after report: '+file);
 }
-if(failures.length)throw Error('RECOMMENDED_STRENGTH_NOT_REACHED_OR_UNPROVEN: '+
- JSON.stringify(failures.slice(0,30)));
-console.log('PASS 6 policies x 10 bands x 256 owners; formula-only acceptance and independent 80/80 rank audit');
+console.log('DUNGEON_STRICT_100F_COMPLETION '+JSON.stringify(completionTotals));
+console.log('DUNGEON_STRICT_CHAPTER_ACQUISITION '+JSON.stringify(chapterTotals));
+if(failures.length||completionFailures.length||chapterFailures.length)
+ throw Error('DUNGEON_STRICT_UNMET '+JSON.stringify({
+  recommendedStrength:failures.slice(0,30),
+  completion:completionFailures.slice(0,30),
+  chapters:chapterFailures}));
+console.log('PASS 60/60 strength bands, 1536/1536 actual F100 clears and 60 owner-level 80/80 chapter gates');
