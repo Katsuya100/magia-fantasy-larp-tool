@@ -19,29 +19,45 @@ assert.equal(magicStoneDropChance(150,1),.3);
 assert.equal(magicStoneDropChance(150,150),.3);
 assert.equal(magicStoneDropChance(150,151),.3);
 assert.equal(magicStoneCountPerHit(1),1);
-assert.equal(magicStoneCountPerHit(150),3);
-assert.equal(magicStoneCountPerHit(151),3);
-assert.ok(magicStoneCountPerHit(100)>2);
-for(let layer=1;layer<150;layer++)
- assert.ok(magicStoneCountPerHit(layer+1)>magicStoneCountPerHit(layer));
-// Publish the actual before/after distribution at representative depths.
+assert.equal(magicStoneCountPerHit(100),8);
+assert.equal(magicStoneCountPerHit(150),8);
+assert.equal(magicStoneCountPerHit(151),8);
+// Independently derive the approved exponential hit size: 1 at F1, 8 at F100,
+// then a plateau. The game may probabilistically round a fractional hit.
+const expectedHit=layer=>8**((Math.max(1,Math.min(100,layer))-1)/99);
+for(let layer=1;layer<=200;layer++){
+ const actual=magicStoneCountPerHit(layer);
+ assert.ok(Math.abs(actual-expectedHit(layer))<1e-10,'independent stone depth curve at F'+layer);
+ if(layer>1)assert.ok(actual>=magicStoneCountPerHit(layer-1),'stone hit size never decreases');
+ if(layer>=100)assert.equal(actual,8,'F100+ drops plateau');
+}
+// Test the current integer payout against the specification-derived expectation.
+// A Bernoulli 0/1 legacy comparison cannot model a multi-stone successful hit.
 const percentile=(sorted,p)=>sorted[Math.floor((sorted.length-1)*p)];
-for(const layer of [1,50,100,150]){
- const rng=seededRandom(91000+layer),oldRng=seededRandom(92000+layer);
- const actual=[],previous=[],samples=20000,expected=.3*magicStoneCountPerHit(layer);
- for(let i=0;i<samples;i++){
-  actual.push(dropCounts(1,rng,{layer}).stone);
-  previous.push(oldRng()<expected?1:0);
+for(const layer of [1,2,50,75,99,100,101,150]){
+ const rng=seededRandom(91000+layer),actual=[],samples=20000;
+ const expected=.30*expectedHit(layer);
+ for(let i=0;i<samples;i++)actual.push(dropCounts(1,rng,{layer}).stone);
+ actual.sort((a,b)=>a-b);
+ const mean=actual.reduce((sum,n)=>sum+n,0)/samples;
+ const possible=new Set([0,Math.floor(expectedHit(layer)),Math.ceil(expectedHit(layer))]);
+ assert.ok(actual.every(n=>Number.isSafeInteger(n)&&possible.has(n)),
+  'stone hits must be integer-sized, or zero on a missed roll at F'+layer);
+ // Four standard errors plus a small numeric margin for deterministic Monte Carlo.
+ const variance=.3*expectedHit(layer)**2-.09*expectedHit(layer)**2+
+  .3*(expectedHit(layer)%1)*(1-expectedHit(layer)%1);
+ const tolerance=4*Math.sqrt(variance/samples)+.005;
+ assert.ok(Math.abs(mean-expected)<tolerance,
+  'independent expected stone payout F'+layer+': '+mean+' vs '+expected);
+ if(layer===1)assert.equal(actual.at(-1),1);
+ if(layer>=100)assert.equal(actual.at(-1),8);
+ if(layer===50){
+  assert.ok(actual.includes(Math.floor(expectedHit(layer)))&&
+   actual.includes(Math.ceil(expectedHit(layer))),
+   'fractional hit sizes use genuine stochastic rounding');
  }
- actual.sort((a,b)=>a-b);previous.sort((a,b)=>a-b);
- const mean=v=>v.reduce((sum,n)=>sum+n,0)/v.length;
- assert.ok(Math.abs(mean(actual)-expected)<.025,'actual stone expectation '+layer);
- assert.ok(Math.abs(mean(actual)-mean(previous))<.03,'unchanged expected stone economy '+layer);
- assert.ok(actual.every(n=>Number.isSafeInteger(n)&&n>=0&&n<=3));
- if(layer===150)assert.equal(actual.at(-1),3);
- console.log('STONE_DISTRIBUTION',JSON.stringify({layer,previous:{
-  mean:mean(previous),median:percentile(previous,.5),p90:percentile(previous,.9),max:previous.at(-1)},
-  actual:{mean:mean(actual),median:percentile(actual,.5),p90:percentile(actual,.9),max:actual.at(-1)}}));
+ console.log('STONE_DISTRIBUTION',JSON.stringify({layer,expected,actual:{
+  mean,median:percentile(actual,.5),p90:percentile(actual,.9),max:actual.at(-1)}}));
 }
 for(const level of [1,30,80,149,150])for(const layer of [1,10,50,91,100,101,150]){
  assert.equal(magicStoneDropChance(level,layer,true),magicStoneDropChance(level,layer,false),
