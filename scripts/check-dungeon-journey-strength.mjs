@@ -90,7 +90,7 @@ export function validateFirstEntryOwner(account,record,strengthOwners,{requireCo
   assert.equal(e.earned.stone,e.spent.stone+e.bankedStones);
   assert.equal(e.earned.ink,e.spent.ink+e.bankedInk);
   if(previousSorties.length)assert.equal(e.level,previousSorties.at(-1).levelAfter);
-  assert.ok(Number.isSafeInteger(e.level)&&e.level>=1&&e.level<=150);
+  assert.ok(Number.isSafeInteger(e.level)&&e.level>=1,'real owner level may exceed 150');
   assert.ok(Number.isFinite(e.xp)&&e.xp>=0);
   assert.ok(e.playerHp>=0&&e.playerHp<=e.maxHp&&e.playerMp>=0&&e.playerMp<=e.maxMp);
   assert.equal(e.circles.length,5,'the active deck contains five true spells');
