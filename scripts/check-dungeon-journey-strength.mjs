@@ -36,8 +36,24 @@ const completionFailures=[];
 const chapterFailures=[];
 const completionTotals=[];
 const chapterTotals=[];
-for(const policy of report.policies){
+const rankAuditsByPolicy=new Map();
+let observedOwnerBandCount=0;
+for(const meta of report.policies){
+ assert.ok(/^[ABC]$/.test(meta.style)&&['short','long'].includes(meta.route),
+  'only the six approved policy references may be loaded');
+ assert.equal(meta.file,'dungeon-journey-strength-v2-'+meta.style+'-'+meta.route+'.json',
+  'index cannot point to a different evidence file');
+ // Load one complete 256-owner shard at a time, preserving all full 50-target
+ // ledgers without exceeding Node's maximum UTF-8 string or heap capacity.
+ const policy=JSON.parse(readFileSync(new URL('../reports/'+meta.file,import.meta.url),'utf8'));
+ assert.equal(policy.style,meta.style);
+ assert.equal(policy.route,meta.route);
+ assert.equal(policy.samples,meta.samples);
+ assert.equal(policy.completion,meta.completion);
+ assert.deepEqual(policy.strengthSummary,meta.strengthSummary,
+  'index summary must match the complete independently archived measurements');
  assert.equal(policy.samples,256);
+ observedOwnerBandCount+=policy.journeyStrength.reduce((n,b)=>n+b.owners.length,0);
  assert.equal(policy.accounts.length,256);
  assert.equal(policy.journeyStrength.length,10);
  assert.deepEqual(policy.accounts.map(x=>x.seed),seeds);
@@ -101,16 +117,18 @@ for(const policy of report.policies){
  }
  completionTotals.push({policy:policy.style+'/'+policy.route,
   completed:actualCompleted,required:256});
+ rankAuditsByPolicy.set(policy.style+'/'+policy.route,
+  policy.accounts.map(account=>({seed:account.seed,rankAudit:account.rankAudit})));
 }
-assert.equal(report.policies.reduce((sum,p)=>sum+p.journeyStrength.reduce((n,b)=>n+b.owners.length,0),0),
- 6*10*256,'all independent owner-band formula observations must remain in the denominator');
+assert.equal(observedOwnerBandCount,6*10*256,
+ 'all independent owner-band formula observations must remain in the denominator');
 for(const rank of report.ranks){
  assert.equal(rank.thresholdHp,approvedGoals.rank.bothHpMpPercentAtLeast);
  assert.equal(rank.thresholdMp,approvedGoals.rank.bothHpMpPercentAtLeast);
  assert.equal(rank.status,'INDEPENDENT_80_80_RANK_ACQUISITION');
- const policy=report.policies.find(p=>p.style===rank.style&&p.route===rank.route);
- assert.ok(policy,'each chapter row belongs to one formal policy');
- const missing=policy.accounts.filter(account=>!account.rankAudit.some(event=>
+ const accounts=rankAuditsByPolicy.get(rank.style+'/'+rank.route);
+ assert.ok(accounts&&accounts.length===256,'each chapter row belongs to a measured 256-owner policy');
+ const missing=accounts.filter(account=>!account.rankAudit.some(event=>
   event.layer===rank.rankLayer&&event.eligible&&event.banked&&
   event.hpPercent>=80&&event.mpPercent>=80)).map(account=>account.seed);
  assert.deepEqual(rank.missingSeeds,missing,'unearned chapters remain unearned');
