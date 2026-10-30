@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {alchemyRecipe,alchemyAutoSelect,craftAlchemy,alchemyByproductRates,alchemyMilestones} from '../assets/js/dungeon-alchemy.mjs';
+import {alchemyItemGrid,itemGrid} from '../assets/js/dungeon-preparation-ui.mjs';
 
 const csv=readFileSync(new URL('../assets/data/dungeon-consumables.csv',import.meta.url),'utf8').trim().split(/\r?\n/);
 const keys=csv.shift().split(',');
@@ -40,6 +41,16 @@ const inventory=[make('clear_flame',0,0),make('heal_s',2,1),make('heal_l',500,2)
 assert.deepEqual(alchemyAutoSelect(inventory,rows,'hp','value'),[2,4,1]);
 assert.deepEqual(alchemyAutoSelect(inventory,rows,'mp','value-asc'),[5,3]);
 assert.deepEqual(alchemyAutoSelect(inventory,rows,'status'),[0]);
+assert.deepEqual(alchemyAutoSelect(inventory,rows,'hp'),[1,4,2],
+ 'unspecified auto-select priority defaults to lowest effect first');
+const abundant=[make('heal_s',25,0),make('mana_s',40,1),make('heal_s',30,2),
+ make('clear_flame',0,3),make('heal_s',12,4),make('mana_s',50,5)];
+assert.deepEqual(alchemyAutoSelect(abundant,rows,'all','count'),[0,2,4,1,5],
+ 'more of the same item ID wins regardless of effect value; tied quantities preserve acquisition order');
+assert.deepEqual(alchemyAutoSelect(abundant,rows,'mp','count'),[1,5],
+ 'count-based auto-selection works together with category filtering');
+assert.deepEqual(alchemyAutoSelect(abundant,rows,'all','default'),[0,1,2,3,4],
+ 'existing acquisition-order priority is unchanged');
 
 // Crafting is immutable, consumes exactly one relic and five instances,
 // removes equipped ingredients by instance ID, and keeps other slots intact.
@@ -117,5 +128,81 @@ const legacy=award({...source,alchemyCount:undefined,magicStones:undefined,magic
 assert.equal(legacy.alchemyCount,1,'older save has no alchemy progress');
 assert.equal(legacy.magicStones,0);
 assert.equal(legacy.magicInk,0);
+
+// Alchemy mechanics stay intact, while hidden outcomes are revealed only after crafting.
+const page=readFileSync(new URL('../dungeon.html',import.meta.url),'utf8');
+const app=readFileSync(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
+const css=readFileSync(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+assert.doesNotMatch(page,/id="alchemy(?:Preview|Result|ByproductChance|MilestoneProgress)"/);
+assert.doesNotMatch(page,/副産物の確率|魔導石確定まで|魔導墨確定まで|副産物なし/);
+assert.doesNotMatch(app,/\$\('alchemy(?:Preview|Result|ByproductChance|MilestoneProgress)'\)/);
+assert.doesNotMatch(app,/錬金成功：|副産物なし/);
+assert.doesNotMatch(page+app,/所持品の順(?:番)?/,'all item-order labels use acquisition order');
+assert.match(page,/<option value="default">入手順<\/option>/);
+assert.match(page,/id="alchemyAutoPriority"[^>]*>[\s\S]*?<option value="count">数が多い順<\/option>/);
+assert.match(page,/<select id="alchemyAutoPriority"><option value="value-asc" selected>効果量が低い順<\/option>/,
+ 'new alchemy dialogs default to low-effect ingredients');
+assert.match(page,/id="alchemyPickerSort"[^>]*>[\s\S]*?<option value="count">数が多い順<\/option>/);
+assert.match(app,/\['count','数が多い順'\]/,'alchemy picker has count sorting option');
+assert.match(app,/\['default','入手順'\]/);
+assert.match(page,/<select id="alchemyPickerSort"><option value="kind">種類順<\/option>/,'alchemy defaults to kind');
+assert.match(app,/const alchemyPickerView=\{filter:'all',sort:'kind',previousSort:'default'\}/);
+assert.match(app,/alchemyPickerView\.previousSort=value/,'alchemy remembers the previously selected secondary sort');
+assert.doesNotMatch(app,/\['clear_all','全状態異常解除'\]/,'Luna Stone is included in the status recovery type');
+assert.match(page,/id="alchemyReveal"[^>]*hidden/);
+assert.match(page,/id="alchemyCreatedIcon"/);
+assert.match(page,/id="alchemyRevealDone"/);
+assert.match(app,/\$\('alchemyInputs'\)\.hidden=true;\s*\$\('alchemyReveal'\)\.hidden=false;/);
+assert.match(app,/await saveProfile\(db,next\);[\s\S]*?\$\('alchemyCreatedIcon'\)\.textContent=itemSymbol\(item\)/);
+
+assert.match(page,/id="alchemyPickerOptions" class="item-picker-list"/,'alchemy shares the accordion container');
+assert.match(app,/\$\('alchemyPickerOptions'\)\.innerHTML=indexes\.length[\s\S]*?itemChoices\(profile\.inventory,alchemy\.slots,itemName,esc,indexes,alchemyPickerSlot,'choose-alchemy-item'\)/);
+assert.match(app,/\$\('loadoutOptions'\)\.className=picker\.kind==='circle'\?'picker-grid circle-picker-grid':'item-picker-list'/);
+assert.match(css,/\.item-picker-options\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'both pickers use a two-column item grid');
+// Only alchemy splits the selectable icon square from its name/effect panel.
+const visible=alchemyItemGrid([0,1,2,null,4],five('heal_s',25),item=>item.id,x=>x);
+assert.equal((visible.match(/class="alchemy-item-frame"/g)||[]).length,5);
+assert.equal((visible.match(/data-open-alchemy-item=/g)||[]).length,5);
+assert.equal((visible.match(/class="alchemy-item-info"/g)||[]).length,4);
+assert.equal((visible.match(/class="alchemy-item-effect"/g)||[]).length,4);
+assert.equal((visible.match(/❤️\+25/g)||[]).length,4);
+assert.match(visible,/data-open-alchemy-item="3"[^>]*>[^<]*<span class="tile-index">04<\/span><span class="tile-item-icon" aria-hidden="true">＋<\/span><\/button>/);
+assert.doesNotMatch(visible,/class="tile-title"/,'names are below, not inside, icon squares');
+assert.doesNotMatch(itemGrid([0],five('heal_s',25),1,true,item=>item.id,x=>x),/alchemy-item-frame/,'other loadouts use their existing layout');
+assert.match(app,/alchemyItemGrid\(choices,profile\.inventory,itemName,esc\)/);
+assert.match(css,/#alchemySlots \.alchemy-item-frame\{[^}]*flex-direction:column/);
+assert.match(css,/#alchemySlots \.alchemy-item-frame \.loadout-tile\{[^}]*aspect-ratio:1 \/ 1/);
+assert.match(css,/#alchemySlots \.alchemy-item-info\{[^}]*min-height:54px/);
+assert.match(css,/#alchemySlots \.alchemy-item-name\{[^}]*white-space:normal/,'long item names wrap without clipping');
+assert.match(css,/#alchemySlots \.alchemy-item-name\{[^}]*overflow-wrap:anywhere/,'long names fit narrow mobile slots');
+assert.match(css,/#alchemySlots \.alchemy-item-info\{[^}]*grid-template-rows:minmax\(min-content,1fr\) auto/,'effects align below variable-height names');
+assert.match(css,/#alchemySlots \.alchemy-item-effect\{[^}]*white-space:nowrap/);
+// The base collection icon is the same SVG and .relic-art sizing as the collection grid.
+assert.match(page,/id="alchemyBaseRelic"[^>]*class="alchemy-base-relic relic-card discovered"/);
+assert.match(page,/id="alchemyBaseIcon" class="relic-art"/);
+assert.match(app,/\$\('alchemyBaseIcon'\)\.innerHTML=relicSymbolSvg\(relicIndex,true\)/);
+assert.match(css,/\.alchemy-base-relic \.relic-art\{margin:5px auto 10px\}/);
+// Every part of the craft reveal, including bonus stone/ink rewards, must settle
+// within 500ms.  Visual reward symbols remain conditional on actual drops.
+const animationSelectors=['alchemy-ring','alchemy-ring-outer','alchemy-flash',
+ 'alchemy-created-icon','alchemy-created-name','alchemy-created-effect','alchemy-rewards','alchemy-reward'];
+for(const selector of animationSelectors){
+ const styles=css.match(new RegExp('\\.'+selector+'\\{([^}]+)\\}'))?.[1]||'';
+ const animation=styles.match(/animation:([^;}]+)/)?.[1]||'';
+ assert.ok(animation,'animation is defined for '+selector);
+ const seconds=[...animation.matchAll(/(?:^|\s)(\d*\.?\d+)s(?=\s|$)/g)].map(match=>Number(match[1]));
+ assert.ok(seconds.length>=1,'animation duration is explicit for '+selector);
+ assert.ok(seconds.reduce((sum,value)=>sum+value,0)<=.5+1e-9,
+  selector+' duration including delay is within 500ms');
+}
+assert.match(css,/\.alchemy-ring-inner\{[^}]*animation-delay:\.04s/);
+assert.match(css,/\.alchemy-rewards\{[^}]*animation:alchemy-materialize \.3s \.2s/,
+ 'bonus rewards now appear at the end of the half-second animation');
+assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{[^}]*\.alchemy-reward\{animation:none\}/);
+assert.match(app,/addedStones\?'<span class="alchemy-reward"[^']+魔導石/);
+assert.match(app,/addedInk\?'<span class="alchemy-reward"[^']+魔導墨/);
+assert.match(app,/\]\.join\(''\);[\s\S]*?\$\('alchemyInputs'\)\.hidden=true/);
+assert.match(css,/@keyframes alchemy-materialize/);
+assert.match(css,/prefers-reduced-motion:reduce[^\n]*\.alchemy-ring/);
 
 console.log('PASS dungeon alchemy: recipes, rarity, slots, byproduct odds and milestones');

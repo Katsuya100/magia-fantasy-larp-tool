@@ -4,8 +4,8 @@ export const CIRCLE_TUTORIAL_STEPS=[
  {title:'準備しましょう',hint:'最初にお手元に紙とペンをご用意ください。',detail:'ペンは、できれば太めの油性ペンをお使いください。',image:null},
  {title:'外円を書きましょう',hint:'紙に大きな円を書いてください。',detail:'線をつないで閉じてください。',image:'tutorial-outer.gif'},
  {title:'内円を書きましょう',hint:'外円の内側に、小さな円を書いてください。',detail:'内円も閉じた線にしてください。',image:'tutorial-inner.gif'},
- {title:'呪文を書きましょう',hint:'内円と外円の間に英語の呪文を書いてください。',detail:'相は呪文の意味によって決まります。',attributes:'🔥炎・⚡雷・💧水・🌪風・🪨重力・⚖秩序・🌀混沌',freedom:'サンプルに合わせる必要はありません。英単語は自由に書いてください。',image:'tutorial-spell.gif'},
- {title:'紋を書きましょう',hint:'内円の中に紋を書いてください。',detail:'紋の種別は形によって決まります。',attributes:'⚔️攻撃・🛡️防御・✚回復・🕸️弱体',freedom:'サンプルに合わせる必要はありません。紋は自由に描いてください。',image:'tutorial-sigil.gif'}
+ {title:'呪文を英語で書きましょう',hint:'内円と外円の間に英語の呪文を書いてください。',note:'※ サンプルに合わせる必要はありません。自由な英文を書いてください。',detail:'相(属性)は呪文の意味によって決まります。',attributes:'🔥flame・⚡bolt・💧aqua\n🌪storm・🪨gravity\n⚖law・🌀chaos',image:'tutorial-spell.gif'},
+ {title:'紋を書きましょう',hint:'内円の中に紋を書いてください。',note:'※ サンプルに合わせる必要はありません。紋は自由に描いてください。',detail:'紋の種別は形によって決まります。',attributes:'⚔️攻撃・🛡️防御・✚回復・🕸️弱体',image:'tutorial-sigil.gif'}
 ];
 export function initCircleTutorial(doc,onFinish,onLessonClosed=()=>{}){
  const $=id=>doc.getElementById(id);
@@ -18,14 +18,24 @@ export function initCircleTutorial(doc,onFinish,onLessonClosed=()=>{}){
  function render(){
   const info=CIRCLE_TUTORIAL_STEPS[step],freedom=$('tutorialFreedom');
   $('tutorialCounter').textContent=(step+1)+' / '+CIRCLE_TUTORIAL_STEPS.length;
-  $('tutorialTitle').textContent=info.title;
+  const title=$('tutorialTitle');
+  title.textContent=info.title;
+  title.className=step===3?'dungeon-dialog-frame-title tutorial-spell-title':'dungeon-dialog-frame-title';
+  if(step===3)title.innerHTML='呪文を<strong class="tutorial-title-keyword">英語で</strong>書きましょう';
   // Keep sentences on distinct lines; attribute names are not sentences.
   const sentences=text=>String(text||'').replace(/。(?!$)/g,'。\n');
   $('tutorialHint').textContent=sentences(info.hint);
+  const note=$('tutorialNote');
+  note.textContent=info.note||'';
+  note.hidden=!info.note;
   $('tutorialDetails').textContent=sentences(info.detail);
   const attributes=$('tutorialAttributes');
   attributes.textContent=info.attributes||'';
   attributes.hidden=!info.attributes;
+  attributes.className=step>=3?'tutorial-framed-attributes':'';
+  const listLabel=$('tutorialListLabel');
+  listLabel.textContent=step===3?'相(属性)の一覧':'紋の種別の一覧';
+  listLabel.hidden=step<3;
   freedom.textContent=info.freedom||'';
   freedom.hidden=!info.freedom;
   $('tutorialFigure').hidden=!info.image;
@@ -69,10 +79,10 @@ export function initCircleTutorial(doc,onFinish,onLessonClosed=()=>{}){
   slot.appendChild(body);
   render();
   showDungeonDialog(lesson);
-  $('circleDrawingLessonClose').focus();
+  $('circleDrawingLessonStart').focus();
   return true;
  }
- $('circleDrawingLessonClose').addEventListener('click',closeLesson);
+ $('circleDrawingLessonStart').addEventListener('click',closeLesson);
  lesson.addEventListener('cancel',event=>{event.preventDefault();closeLesson();});
  lesson.addEventListener('close',restoreLessonBody);
  preview.addEventListener('error',()=>{preview.alt='GIFアニメーションを読み込めませんでした';});

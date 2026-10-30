@@ -4,7 +4,7 @@ const compareText=(a,b)=>String(a??'').localeCompare(String(b??''),'ja');
 const validNumber=v=>Number.isFinite(Number(v))?Number(v):0;
 const circlePower=c=>c?.revealed===false||!c?.analysis?null:validNumber(c.analysis.power);
 export const itemKind=(item,masterItems=[])=>masterItems.find(row=>row.id===item?.id)?.kind||(
- item?.id==='life_ruby'?'revive':item?.id?.startsWith('elixir_')?'elixir':item?.id?.startsWith('heal_')?'heal':item?.id?.startsWith('mana_')?'mana':item?.id?.startsWith('clear_')?'clear':'other');
+ item?.id==='life_ruby'?'revive':item?.id==='luna_stone'?'clear_all':item?.id==='escape_scroll'?'escape':item?.id?.startsWith('elixir_')?'elixir':item?.id?.startsWith('heal_')?'heal':item?.id?.startsWith('mana_')?'mana':item?.id?.startsWith('clear_')?'clear':'other');
 export function circleListIndexes(circles,{role='all',attribute='all',sort='newest',slots=[]}={}){
  const equipped=new Map();
  if(sort==='equipped')slots.forEach((id,index)=>{if(id&&!equipped.has(id))equipped.set(id,index);});
@@ -27,13 +27,27 @@ export function circleListIndexes(circles,{role='all',attribute='all',sort='newe
   return order||a.index-b.index;
  }).map(row=>row.index);
 }
-export function itemListIndexes(inventory,masterItems=[],{kind='all',sort='default'}={}){
- return inventory.map((item,index)=>({item,index})).filter(({item})=>kind==='all'||itemKind(item,masterItems)===kind)
+const ITEM_KIND_ORDER=['heal','mana','elixir','clear','revive','escape'];
+const itemKindGroup=kind=>kind==='clear_all'?'clear':kind;
+export function itemListIndexes(inventory,masterItems=[],{kind='all',sort='default',withinKindSort='default'}={}){
+ const previousOrder=sort==='kind'?new Map(itemListIndexes(inventory,masterItems,{
+  sort:withinKindSort==='kind'?'default':withinKindSort
+ }).map((index,position)=>[index,position])):null;
+ const counts=new Map();
+ if(sort==='count')for(const item of inventory)counts.set(item.id,(counts.get(item.id)||0)+1);
+ return inventory.map((item,index)=>({item,index})).filter(({item})=>{
+  const type=itemKind(item,masterItems);
+  return kind==='all'||type===kind||(kind==='clear'&&type==='clear_all');
+ })
  .sort((a,b)=>{
   let order=0;
+  if(sort==='count')order=(counts.get(b.item.id)||0)-(counts.get(a.item.id)||0);
   if(sort==='name')order=compareText(masterItems.find(r=>r.id===a.item.id)?.name||a.item.id,
    masterItems.find(r=>r.id===b.item.id)?.name||b.item.id);
-  if(sort==='kind')order=compareText(itemKind(a.item,masterItems),itemKind(b.item,masterItems));
+  if(sort==='kind'){
+   const rank=item=>{const i=ITEM_KIND_ORDER.indexOf(itemKindGroup(itemKind(item,masterItems)));return i<0?ITEM_KIND_ORDER.length:i;};
+   order=rank(a.item)-rank(b.item)||previousOrder.get(a.index)-previousOrder.get(b.index);
+  }
   if(sort==='value')order=validNumber(b.item.value)-validNumber(a.item.value);
    if(sort==='value-asc')order=validNumber(a.item.value)-validNumber(b.item.value);
   return order||a.index-b.index;

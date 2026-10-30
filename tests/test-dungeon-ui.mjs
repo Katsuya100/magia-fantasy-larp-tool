@@ -28,6 +28,7 @@ try{
  assert.equal($('nameDialog').open,true,'new adventurer is named in a dialog');
  assert.equal($('nameDialog').dataset.dungeonFrame,'fixed','required naming uses a no-close frame');
  assert.equal($('cancelNameDialog').hidden,true,'required naming is not dismissible');
+ assert.equal($('nameDialogHeader').hidden,true,'initial naming does not show optional X header');
  $('playerNameInput').value='　 ';
  await $('nameForm').fire('submit');
  assert.match($('nameError').textContent,/1〜20文字/);
@@ -42,9 +43,14 @@ try{
  assert.equal($('circleFirstChoiceDialog').open,false,'choice closes after saving');
  assert.equal($('circleDrawingDialog').open,true,'draw option opens the drawing editor directly');
  assert.equal($('circleDrawingLessonDialog').open,true,'first spell entry explains the handwritten spell');
- assert.equal($('tutorialTitle').textContent,'呪文を書きましょう');
- await $('circleDrawingLessonClose').fire('click');
+ assert.equal($('tutorialTitle').textContent,'呪文を英語で書きましょう');
+ await $('circleDrawingLessonStart').fire('click');
  assert.equal($('circleDrawingLessonDialog').open,false);
+  await $('circleDrawingPowerTips').fire('click');
+  assert.equal($('circlePowerTipsDialog').open,true,'tips open above drawing');
+  await $('closeCirclePowerTips').fire('click');
+  assert.equal($('circlePowerTipsDialog').open,false);
+  assert.equal($('circleDrawingDialog').open,true,'tips keep drawing open');
  assert.equal($('circleDrawingFingerGuide').hidden,false,'first handwriting opens the finger trace after the lesson closes');
  assert.equal($('circleDrawingFingerGuide').dataset.playing,'true');
  await wait(async()=>(await getProfile(await openStore(env.factory))).drawingFingerGuideSeen===true,'finger hint is saved for future launches');
@@ -74,6 +80,12 @@ try{
  assert.equal($('nameDialog').open,true);
  assert.equal($('nameDialog').dataset.dungeonFrame,'closable','rename opens a closable shared frame');
  assert.equal($('cancelNameDialog').hidden,false,'rename has a common close button');
+ assert.equal($('nameDialogHeader').hidden,false,'rename exposes fixed round X header');
+ assert.equal($('nameDialogTitle').hidden,true,'rename title is in the header, not duplicated in the body');
+ await $('cancelNameDialog').fire('click');
+ assert.equal($('nameDialog').open,false,'rename X closes without saving');
+ await doc.click(btn({action:'rename'}));
+ assert.equal($('nameDialog').open,true,'rename can reopen after using X');
  $('playerNameInput').value='暁の旅人';
  await $('nameForm').fire('submit');
  assert.equal($('nameDialog').open,false);
@@ -101,6 +113,12 @@ try{
  await wait(()=>$('circleCameraDialog').open&&!$('cameraCapture').disabled,'camera overlay opens after tutorial');
  assert.equal($('cameraPlaceholder').hidden,true);
  assert.equal(env.opened,1);
+  await $('circleCameraPowerTips').fire('click');
+  assert.equal($('circlePowerTipsDialog').open,true,'tips open above camera');
+  await $('closeCirclePowerTips').fire('click');
+  assert.equal($('circlePowerTipsDialog').open,false);
+  assert.equal($('circleCameraDialog').open,true,'camera remains open');
+  assert.equal(env.closed,0,'camera is not stopped');
  await $('openCircleCamera').fire('click');
  assert.equal(env.opened,1,'live camera is reused while the overlay is already open');
  const analysisPane=$('analyzing'),visitedAnalysis=[];
@@ -175,13 +193,15 @@ try{
  await $('closeMagicDetails').fire('click');
  const page=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
  const libraryStructureMarkup=page.split('<section id="library"')[1].split('</section>')[0];
- assert.ok(libraryStructureMarkup.indexOf('魔法陣の描き方・登録規則')<libraryStructureMarkup.indexOf('id="openCircleDrawing"'));
+ assert.doesNotMatch(libraryStructureMarkup,/魔法陣の描き方・登録規則|class="regulations"/);
  assert.doesNotMatch(libraryStructureMarkup,/useMagicInk|magicInkBalance/,'old selector is absent from grimoire');
 
  assert.ok(libraryStructureMarkup.indexOf('id="openCircleDrawing"')<libraryStructureMarkup.indexOf('id="openCircleCamera"'));
  assert.doesNotMatch(libraryStructureMarkup,/id="cameraPane"|id="tutorialReplay"/);
  assert.match(page,/id="cameraStop"[^>]*>閉じる<\/button>\s*<button[^>]*id="cameraCapture"[^>]*>撮影📷<\/button>/);
  assert.match(page,/id="tutorialReplay"[^>]*>描き方を練習<\/button>/);
+ assert.match(page,/id="circleDrawingPowerTips"[^>]*>強い魔法のコツ<\/button>/);
+ assert.match(page,/id="circleCameraPowerTips"[^>]*>強い魔法のコツ<\/button>/);
  assert.match(page,/id="repairSelectedCircleImage"[^>]*>撮り直す<\/button>/,'retake has a minimal label');
  assert.doesNotMatch(page,/id="imageRepairFile"/,'retake never exposes a file picker');
  await doc.click(btn({circleDetail:circles[0].id}));
@@ -398,6 +418,7 @@ try{
  }
  assert.ok(p.run.hero.spells[0],'preanalyzed magic is available before first cast');
  assert.match($('battleSpells').innerHTML,/data-circle-detail=/,'touch expansion is available during battle');
+ assert.doesNotMatch((await readFile(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8')),/MP不足・再使用待ち・封印のため使用できない/,'disabled spells need no persistent notice');
  assert.equal(($('battleSpells').innerHTML.match(/data-cast="/g)||[]).length,5,'five battle magic slots');
  assert.doesNotMatch($('battleSpells').innerHTML,/魔法陣\s*0[1-9]/,'battle also has no generated circle name');
  assert.equal(($('battleSpells').innerHTML.match(/<img alt=""[^>]*data-circle-photo-id=/g)||[]).length,5,'all five spells defer thumbnail loading to visible images');
