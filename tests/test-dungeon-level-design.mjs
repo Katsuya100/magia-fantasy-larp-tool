@@ -129,7 +129,7 @@ assert.equal(levels.length,150,'authored growth rows start at Lv1');
 assert.ok(levels.every(row=>Number(row.level)>=1),'no enemy-only Lv0 row');
 assert.throws(()=>G.stats({hp:100,mag:10,def:7,res:7},0),/Missing level 0/);
 assert.equal(floors.length,500);
-assert.equal(num('level_max'),150);
+assert.equal(num('level_max'),150,'final authored growth-row anchor is preserved');
 assert.ok(G.validateMasters(enemies,items,collections,buffs));
 for(const [rows,name] of [[enemies,'enemy'],[collections,'collection']]){
  assert.equal(new Set(rows.map(x=>x.id)).size,rows.length,name+' IDs unique');
@@ -249,6 +249,9 @@ for(let layer=1;layer<=100;layer++){
  if(layer<100)G.experience(profile,5*G.fightExperience(expected,profile.level,layer));
 }
 assert.equal(level(150).carry_limit,'18');
+assert.equal(level(151).carry_limit,'18','carry slots do not jump directly after the old cap');
+assert.equal(level(160).carry_limit,'19','carry slots progress past level 150');
+assert.ok(+level(151).xp_to_next>+level(150).xp_to_next,'XP threshold keeps growing');
 const endlessNormals=enemies.filter(e=>e.boss_only==='0');
 assert.equal(endlessNormals.length,400);
 for(let i=0;i<endlessNormals.length;i++)

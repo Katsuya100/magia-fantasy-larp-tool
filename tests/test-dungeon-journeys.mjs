@@ -359,17 +359,19 @@ for(const style of ['A','B']){
  const trained=runJourney(17011,{style,route:'long',maxSorties:60,maxFights:3000,
   observeStrength:true});
  const trainingSorties=trained.trace.filter(step=>step.strengthTraining);
- assert.ok(trainingSorties.length>0,
-  'an observed unmet owner continues through real sorties after 100F and rank 100');
+ const allBandsReached=Object.values(trained.journeyStrength).every(row=>row.status==='REACHED');
+ assert.ok(trainingSorties.length>0||allBandsReached,
+  'an unmet owner must continue real sorties; a naturally ready owner may stop');
  assert.ok(trainingSorties.every(step=>step.start===91&&step.goal===100),
   'post-rank training uses the real rank-90 unlock and never starts beyond 100F');
  assert.ok(trained.trace.every(step=>step.rank>=100||!step.strengthTraining),
   'strength training begins only after the normal campaign and rank gates');
  assert.equal(Math.max(...trained.floorAudit.map(row=>row.layer))<=100,true,
   'post-rank training does not simulate enemies above the 100F cap');
- assert.ok(trained.trace.length<60&&trained.trace.at(-1).strengthTraining,
-  'the owner stops at the first banked snapshot that reaches every band');
- assert.ok(trained.rankAudit.every(row=>row.sortie<trainingSorties[0].sortie),
+ assert.ok(trained.trace.length<60&&
+  (trained.trace.at(-1).strengthTraining||trainingSorties.length===0&&allBandsReached),
+  'the owner stops once all ten strength bands are reached');
+ if(trainingSorties.length)assert.ok(trained.rankAudit.every(row=>row.sortie<trainingSorties[0].sortie),
   'post-campaign resource sorties do not inflate the independent chapter audit');
  if(style==='A')assert.deepEqual(trained.rankAudit,checkpointJourney.rankAudit,
   'strength-only returns preserve the original per-owner 80/80 chapter observations');

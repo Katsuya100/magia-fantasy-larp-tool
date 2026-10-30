@@ -83,15 +83,15 @@ export function simulateAllUltimate(seed=20261019,{farming='endless'}={}){
  if(!['endless','revisit'].includes(farming))throw Error('Unknown farm route');
  const random=seededRandom(seed);
  const progression=progressTo100(random);
- if(progression.level!==150||progression.rank!==100)throw Error('100-layer baseline did not reach level 150 and rank 100');
- // After rank 100, 101F is a legal start; enemies exceed Lv150 while the player stays capped.
+ if(progression.level<150||progression.rank!==100)throw Error('100-layer baseline did not reach the intended 100F rank and level');
+ // After rank 100, 101F is a legal start; the player can continue growing.
  // Alternate route: replay unlocked 91-100F as one ten-layer expedition.
  const from=farming==='endless'?101:91,to=farming==='endless'?101:100;
  let totalStones=progression.stones,farmStones=0,farmSorties=0,farmFights=0;
  while(totalStones<ALL_ULTIMATE_COST){
   if(++farmSorties>5000)throw Error('Stone farm did not converge');
   let pending=0;
-  for(let layer=from;layer<=to;layer++)pending+=fightRewards(layer,150,random).stone;
+  for(let layer=from;layer<=to;layer++)pending+=fightRewards(layer,progression.level,random).stone;
   totalStones+=pending;
   farmStones+=pending;
   farmFights+=5*(to-from+1);

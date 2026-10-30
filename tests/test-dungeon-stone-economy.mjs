@@ -66,7 +66,7 @@ for(const level of [1,30,80,149,150])for(const layer of [1,10,50,91,100,101,150]
 
 for(const seed of [1,11,1234,20261019]){
  const p=simulateProgression(seed);
- assert.equal(p.level,150);
+ assert.ok(p.level>150,'repeated legitimate clears advance the player past level 150');
  assert.equal(p.rank,100);
  assert.equal(p.returns,100,'one banked return per newly conquered layer');
  assert.equal(p.layerClears,550,'rank-gated repeats are accounted for');
@@ -77,7 +77,7 @@ for(const seed of [1,11,1234,20261019]){
  assert.equal(p.milestones[0].start,1);
  assert.equal(p.milestones[1].start,11);
  assert.equal(p.milestones[9].start,91);
- assert.equal(p.milestones[9].level,150);
+ assert.ok(p.milestones[9].level>=150,'the F91 milestone is not forced back to level 150');
  assert.ok(p.evenFiveLevels.reduce((sum,levels)=>sum+totalUpgradeStoneCost(levels),0)<=p.stones);
  assert.equal(p.evenFiveLevels.length,5);
  assert.equal(p.possibleUltimateCircles,Math.min(5,Math.floor(p.stones/MAGIC_STONES_PER_ULTIMATE)));

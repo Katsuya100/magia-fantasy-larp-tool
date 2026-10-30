@@ -19,12 +19,12 @@ for(let layer=1;layer<=100;layer++){
  const intended=targetClearLevel(layer);
  assert.equal(normal.level,intended,'start level for layer '+layer);
  const earned=5*G.fightExperience(intended,normal.level,layer);
- assert.ok(Number.isFinite(earned)&&earned>=(intended===150?0:1/45),'finite scaled XP '+layer);
+ assert.ok(Number.isFinite(earned)&&earned>=1/45,'finite scaled XP '+layer);
  G.experience(normal,earned);
- assert.equal(normal.level,Math.min(150,targetClearLevel(layer+1)),
-  'player level caps at 150 even as post-100 enemy levels continue increasing');
+ assert.equal(normal.level,targetClearLevel(layer+1),
+  'player continues to gain levels past the final authored growth row');
 }
-assert.equal(normal.level,150,'a normal first-clear journey ends at level 150');
+assert.equal(normal.level,151,'a normal first-clear journey continues through level 150');
 // Actual expedition path: rewards are added five times before every return.
 // A fractional 0.2/0.4 EXP reward must not leave the hero one level short.
 const incremental={level:1,xp:0};
@@ -35,7 +35,7 @@ for(let layer=1;layer<=100;layer++){
  for(let fight=0;fight<5;fight++)
   pending=G.normalizeXp(pending+G.fightExperience(expectedStart,incremental.level,layer));
  G.experience(incremental,pending);
- assert.equal(incremental.level,Math.min(150,targetClearLevel(layer+1)),
+ assert.equal(incremental.level,targetClearLevel(layer+1),
   'fight-by-fight EXP awards precisely finish layer '+layer);
  assert.equal(incremental.xp,0,'no floating XP residue at the level threshold of layer '+layer);
 }
@@ -50,11 +50,13 @@ for(const level of [10,20,30,40,60,80,100,120,139]){
 }
 assert.ok(G.nextXp(100)>G.nextXp(20)*5,'late-game XP increases without runaway inflation');
 assert.ok(G.nextXp(150)<Number.MAX_SAFE_INTEGER,'level-cap XP remains safe');
-assert.equal(G.fightExperience(150,150,100),0,'max-level characters receive no wasted XP');
+assert.ok(G.fightExperience(150,150,100)>0,'level 150 can continue earning XP');
+assert.equal(G.fightExperience(150,151,100),G.fightExperience(150,150,100),
+ 'EXP never decays after crossing level 150');
 assert.ok(G.fightExperience(150,149,100)>0,'below-cap characters can still gain XP from the final boss');
-const capped={level:149,xp:0};
-G.experience(capped,2*G.nextXp(149));
-assert.deepEqual(capped,{level:150,xp:0},'level cap clears excess experience');
+const uncapped={level:149,xp:0};
+G.experience(uncapped,G.nextXp(149)+G.nextXp(150));
+assert.deepEqual(uncapped,{level:151,xp:0},'EXP advances through level 150 without loss');
 
 // Every lower-floor repeat awards the same per-battle XP at any player
 // level below the level cap.  This is a permanent regression of the
@@ -136,5 +138,6 @@ console.log('XP_BAND_BALANCE '+JSON.stringify({
  lvl30Needed:G.nextXp(30),lvl44Needed:G.nextXp(44),
  lvl100Needed:G.nextXp(100),lvl150Needed:G.nextXp(150)
 }));
-assert.match(readFileSync(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8'),/EXP MAX/,'level cap is labeled in the profile');
+assert.doesNotMatch(readFileSync(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8'),/EXP MAX/,
+ 'the profile no longer shows a level-150 EXP cap');
 console.log('PASS level-band XP growth, 100-layer targets and never-decaying replay awards');
