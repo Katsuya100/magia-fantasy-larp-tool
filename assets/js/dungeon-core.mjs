@@ -6,37 +6,36 @@ export const ROLES=['attack','defense','support','debuff'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const roll=(a,b,r=Math.random)=>a+Math.floor(r()*(b-a+1));
 export const capacity=level=>+levelRow(level).carry_limit;
-// EXP scaling and rewards are independent of replay/overlevel status.
-// Previously removed EXP falloff must not be reintroduced.
-export const XP_SCALE=45;
-// A fifth of an integer layer budget may be 0.2 EXP. Normalize each stored
-// accumulation to micro-EXP so five battles land on their exact threshold.
-export const normalizeXp=value=>Math.round(Number(value)*1e6)/1e6;
-// EXP is fractional internally so five fights sum to the exact level budget.
-// Keep the display short without changing the stored value.
-const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:1});
-export const formatXp=value=>xpDisplay.format(Number(value)||0);
-// Grow steeply until Lv100 to limit lower-floor replay, then taper so
-// the high-end required and earned EXP values remain under six figures.
+// Integer XP units: multiply both rewards and level thresholds by five.
+// This preserves the previous five-fight progression without fractional XP.
+export const XP_SCALE=46;
+const XP_UNITS=5;
+export const normalizeXp=value=>Math.round(Number(value));
+const xpDisplay=new Intl.NumberFormat('ja-JP',{maximumFractionDigits:0});
+export const formatXp=value=>xpDisplay.format(normalizeXp(Number(value)||0));
+// The previous thresholds remain unchanged in real progression terms.
 export const nextXp=level=>{
  const steps=(Number(level)-1)/10;
  const earlySteps=Math.min(steps,9.9);
  const lateSteps=Math.max(0,steps-9.9);
- return Math.ceil(Number(levelRow(level).xp_to_next)*
+ return XP_UNITS*Math.ceil(Number(levelRow(level).xp_to_next)*
   Math.pow(num('xp_growth_per_10_levels'),earlySteps)*
-  Math.pow(num('xp_growth_per_10_levels_late'),lateSteps)/XP_SCALE);
+  Math.pow(num('xp_growth_per_10_levels_late'),lateSteps)/45);
 };
-// Five fights at the intended level supply approximately the XP needed
-// to start the following layer. Replay rewards do not decay.
+// Each actual victory earns its own integer reward. Do not grant a
+// separate bulk reward when a layer ends or penalize repeat clears.
 export function fightExperience(enemyLevel,playerLevel,layer){
  const current=targetClearLevel(Number(layer));
  const next=targetClearLevel(Number(layer)+1);
- const budget=next>current
-  ?Array.from({length:next-current},(_,i)=>nextXp(current+i)).reduce((a,b)=>a+b,0)
-  :nextXp(current);
- // Five victories award the same designed layer budget regardless of
- // player overlevel/repeats; never revive the deleted EXP decay mechanic.
- return budget/5;
+ let earned=0;
+ for(let level=current;level<Math.max(current+1,next);level++)
+  earned+=nextXp(level)/XP_UNITS;
+ return earned;
+}
+export function earnFightExperience(run,enemyLevel,playerLevel,layer){
+ const earned=fightExperience(enemyLevel,playerLevel,layer);
+ run.xp=normalizeXp(run.xp+earned);
+ return earned;
 }
 // Identical rules for both sides: use raw power after UGC/stone upgrades.
 // Same upgraded-power duration applies to defense and debuff, hero and enemy.
@@ -138,7 +137,7 @@ export function drops(items,collections,l,r=Math.random,context={}){
  if(bossDropsMagicInk(context.bossEnemyId,r))rewards.push({type:'ink',id:MAGIC_INK_ID});
  return rewards;
 }
-export function experience(p,xp){p.xp=normalizeXp(p.xp+xp);while(p.xp>=nextXp(p.level)){p.xp=normalizeXp(p.xp-nextXp(p.level));p.level++;}return p.level;}
+export function experience(p,xp){p.xp=normalizeXp(p.xp+xp);while(p.xp>=nextXp(p.level)){p.xp-=nextXp(p.level);p.level++;}return p.level;}
 export const effectivePower=(actor,spell)=>basePower(spell.power)*actor.stats.mag/num('mag_reference');
 export const strength=(actor,spell)=>clamp(effectivePower(actor,spell)/num('magic_magnitude_divisor'),num('magic_magnitude_min'),num('magic_magnitude_max'));
 export const debuffPowerFactor=spell=>clamp(Math.sqrt(Math.max(0,Number(spell?.power)||0)/num('debuff_power_reference')),num('debuff_power_min'),num('debuff_power_max'));
