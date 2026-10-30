@@ -144,12 +144,34 @@ assert.equal(new Set(withItem.actual.itemRecovery.uses.map(use=>use.instanceId))
 assert.ok(withItem.actual.magicRecovery.unfundedMp>0,
  'the item funds its shipped HP effect, not virtual recovery MP');
 
-// A real campaign loss is not a strength-calculation veto: this seeded owner
-// later banks a snapshot that reaches the 1–10 recommended threshold.
-const lossAndReach=runJourney(17154,{style:'A',route:'short',maxSorties:600,
- maxFights:6500,observeStrength:true});
-assert.ok(lossAndReach.losses>0);
-assert.equal(lossAndReach.journeyStrength[1].status,'REACHED');
+// Select a deterministic real-loss owner: no injected defeat, free restitution,
+// synthetic snapshot or relaxed reaching condition is permitted.
+const candidateSeeds=[17011,17154,20261024,17024,17037,17167,17200,17300];
+let witnessed=null;
+for(const seed of candidateSeeds){
+ const run=runJourney(seed,{style:'A',route:'long',maxSorties:600,
+  maxFights:6500,observeStrength:true});
+ const defeat=run.trace.find(step=>step.defeat===true);
+ const recovery=defeat&&run.trace.find(step=>step.sortie>defeat.sortie&&step.returned);
+ const reached=defeat&&Object.values(run.journeyStrength).find(row=>
+  row.status==='REACHED'&&row.firstReached?.actualSorties>defeat.sortie);
+ if(defeat&&recovery&&reached&&run.losses>0&&
+    run.lost.xp+run.lost.stone+run.lost.ink>0){
+  witnessed={run,defeat,recovery,reached,seed};
+  break;
+ }
+}
+assert.ok(witnessed,'a genuine seeded defeat with lost rewards followed by legal return/investment and strength reach is required');
+const {run:lossAndReach,defeat,recovery,reached,seed:lossSeed}=witnessed;
+assert.ok(lossAndReach.lost.xp+lossAndReach.lost.stone+lossAndReach.lost.ink>0);
+assert.ok(reached.firstReached.actualReturns>0,'only banked returns can establish later strength');
+assert.equal(lossAndReach.earned.stone,lossAndReach.spent.stone+lossAndReach.balances.stone);
+assert.equal(lossAndReach.earned.ink,lossAndReach.spent.ink+lossAndReach.balances.ink);
+const lossProof={seed:lossSeed,style:'A',route:'long',defeat,losses:lossAndReach.losses,
+ lost:lossAndReach.lost,recovery,reach:reached.firstReached,
+ reachedBand:reached.band,earned:lossAndReach.earned,spent:lossAndReach.spent,
+ balances:lossAndReach.balances};
+console.log('DUNGEON_REAL_LOSS_RECOVERY '+JSON.stringify(lossProof));
 
 // A formal cutoff or missing legal owner remains unproven and cannot inherit
 // a legacy 255/256 rank or a previous per-floor battle result.
