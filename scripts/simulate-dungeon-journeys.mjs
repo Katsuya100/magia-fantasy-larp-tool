@@ -648,7 +648,7 @@ export function battle(state,hero,layer,fight,carry,random,usage,encounterForFig
 }
 export function runJourney(seed,{style='A',route='short',alchemy=false,
  redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000,
- collectCandidateDiagnostic=true,observeStrength=false}={}){
+ collectCandidateDiagnostic=true,observeStrength=false,observeFirstEntry=false}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
@@ -669,7 +669,8 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
   rankAudit:[],floorAudit:[],
-  entrySnapshots:{},collectCandidateDiagnostic,observeStrength,journeyStrength:{},
+  entrySnapshots:{},firstEntries:{},firstEntryEvent:0,observeFirstEntry,
+   collectCandidateDiagnostic,observeStrength,journeyStrength:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},otherItemUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
   farmingFights:0,recoveryFights:0,recoverySorties:0,recoveryAchieved:false,
   recoveryInitialGap:null,recoveryRemainingGap:null};
@@ -750,10 +751,43 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   // Long dives bank each decade, so reserve slots for only the next boss.
   const packingGoal=route==='long'?Math.min(goal,Math.ceil(start/10)*10):goal;
   const carry=pack(state,start,packingGoal);
+  // Observation only; preserve the original individual carry instances.
+  const sortieInitialCarry=observeFirstEntry?carry.filter(Boolean).map(x=>({...x})):null;
   const usage={};
   const encounterForFight=createSortieEncounterSelector(data.enemies,random);
   state.sorties++;
   for(let layer=start;layer<=goal&&state.fights<maxFights;layer++){
+   // Snapshot the first physical entry before battle(), with no extra RNG,
+   // rewards, decisions, recoveries or calculator calls.
+   if(observeFirstEntry&&!state.firstEntries[layer]){
+    state.firstEntries[layer]={
+     event:'FIRST_ENTRY',assessment:'NOT_ASSESSED_AT_FIRST_ENTRY',
+     eventNumber:++state.firstEntryEvent,seed,style,route,layer,
+     sortie:state.sorties,sortieStart:start,sortieGoal:goal,
+     firstFightNumber:(layer-1)*5+1,
+     actualFights:state.fights,actualSorties:state.sorties,
+     actualReturns:state.returns,actualLosses:state.losses,
+     level:profile.level,xp:profile.xp,playerBase:{...hero.base},
+     playerHp:hero.hp,maxHp:hero.stats.hp,playerMp:hero.mp,maxMp:hero.maxMp,
+     rank:profile.adventurerRank,bankedBestLayer:state.best,
+     legalStarts:[...unlockedStartLayers(profile)],
+     statuses:hero.statuses.map(x=>({...x})),cooldowns:[...hero.cooldowns],
+     circles:state.circles.filter(c=>c.active).map(c=>({
+      role:c.role,attribute:c.attribute,basePower:c.basePower,
+      power:actualPower(c),upgradeLevel:c.upgrades,
+      mpCost:G.spellMpCost({role:c.role,basePower:c.basePower,
+       upgradeLevel:c.upgrades}),ink:c.ink})),
+     carry:carry.filter(Boolean).map(item=>({...item})),
+     sortieInitialCarry:sortieInitialCarry.map(item=>({...item})),
+     warehouse:state.inventory.map(item=>({...item})),
+     usedById:{...usage},itemLedger:{...state.ledger.items},
+     bankedStones:state.stones,bankedInk:state.ink,
+     earned:{...state.earned},spent:{...state.spent},
+     unbankedXp:pending.xp,
+     unbankedStone:pending.loot.filter(x=>x.type==='stone').length,
+     unbankedInk:pending.loot.filter(x=>x.type==='ink').length
+    };
+   }
    if(layer%10===1&&!state.entrySnapshots[layer]){
     state.entrySnapshots[layer]={layer,sortie:state.sorties,level:firstLevel,
      targetLevel:targetClearLevel(Math.min(100,layer+9)),rank:profile.adventurerRank,
@@ -971,7 +1005,8 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   otherItemUses:state.otherItemUses,rankManaUses:state.rankManaUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
   floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,
-  entrySnapshots:state.entrySnapshots,journeyStrength:state.journeyStrength,
+  entrySnapshots:state.entrySnapshots,firstEntries:state.firstEntries,
+  journeyStrength:state.journeyStrength,
   blockers:state.blockers};
 }
 export function summarizeJourneys(samples=16,seed=20261024){

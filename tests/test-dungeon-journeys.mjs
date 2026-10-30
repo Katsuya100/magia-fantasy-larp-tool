@@ -424,3 +424,6 @@ for(const cohort of economy.combinations){
  assert.ok(!('preparedSnapshots' in owner),'the removed level-gated state is not rebuilt');
 }
 console.log('PASS manifest coverage, reproducible seeded combat, 80/80 rank, item/collection/stone/ink conservation and 6 routes '+ECONOMY_VERSION);
+
+// Mandatory GitHub Actions regression of read-only first-entry evidence.
+await import('./test-dungeon-first-entry.mjs');

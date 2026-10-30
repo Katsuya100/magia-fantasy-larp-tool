@@ -33,12 +33,50 @@ const sourceHashes=Object.fromEntries(sources.map(path=>[path,
  createHash('sha256').update(readFileSync(new URL('../'+path,import.meta.url))).digest('hex')]));
 const policies=[];
 const ranks=[];
+const firstEntryReferences=[];
+mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
+function* jsonChunks(value,depth=0){
+ if(value===null||typeof value!=='object'){
+  yield JSON.stringify(value);return;
+ }
+ const entries=Array.isArray(value)?value:Object.entries(value)
+  .filter(([,child])=>child!==undefined);
+ if(!entries.length){yield Array.isArray(value)?'[]':'{}';return;}
+ const array=Array.isArray(value),open=array?'[':'{',close=array?']':'}';
+ yield open+'\n';
+ for(let index=0;index<entries.length;index++){
+  const entry=entries[index];
+  yield '  '.repeat(depth+1);
+  if(array)yield* jsonChunks(entry,depth+1);
+  else{
+   yield JSON.stringify(entry[0])+': ';
+   yield* jsonChunks(entry[1],depth+1);
+  }
+  yield index<entries.length-1?',\n':'\n';
+ }
+ yield '  '.repeat(depth)+close;
+}
+function writeReportFile(file,value){
+ const target=new URL('../reports/'+file,import.meta.url);
+ const pending=new URL('../reports/'+file+'.tmp',import.meta.url);
+ const descriptor=openSync(pending,'w');
+ try{
+  let buffer='';
+  for(const chunk of jsonChunks(value)){
+   buffer+=chunk;
+   if(buffer.length>=64*1024){writeSync(descriptor,buffer);buffer='';}
+  }
+  writeSync(descriptor,buffer+'\n');
+ }finally{closeSync(descriptor);}
+ renameSync(pending,target);
+}
+
 for(const style of ['A','B','C'])for(const route of ['short','long']){
- const accounts=[],strengthOwners=approvedGoals.bands.map(band=>({
+ const accounts=[],entryOwners=[],strengthOwners=approvedGoals.bands.map(band=>({
   band:band.from+'-'+band.to,owners:[]}));
  for(const seed of seeds){
   const run=runJourney(seed,{style,route,maxSorties:600,maxFights:6500,
-   observeStrength:true});
+   observeStrength:true,observeFirstEntry:true});
   assert.equal(run.seed,seed);
   assert.equal(run.style,style);assert.equal(run.route,route);
   assert.equal(run.resourceLedger.items.held,run.inventory);
@@ -67,6 +105,28 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    step.sortie===finalClear.sortie&&step.returned&&step.cleared>=100):null;
   const actualCompletion=run.best>=100&&clearedFloors.every(Boolean)&&
    Boolean(finalReturn)&&legalStarts;
+  // Independent finished-floor receipts anchor the entry claims to actual
+  // fights and resulting HP/MP, including replayed floors.
+  const before=new Map(),floors=new Map();
+  let fightPrefix=0;
+  for(const floor of run.floorAudit){
+   const id=floor.sortie+'/'+floor.layer;
+   before.set(id,fightPrefix);floors.set(id,floor);
+   fightPrefix+=floor.attemptedFights;
+  }
+  assert.equal(fightPrefix,run.fights,'all observed battles have real receipts');
+  const entries=Object.values(run.firstEntries);
+  entryOwners.push({seed,entries,
+   reachedEvents:approvedGoals.bands.map(band=>({from:band.from,
+    firstReached:run.journeyStrength[band.from]?.firstReached??null})),
+   receipts:entries.map(entry=>{
+   const id=entry.sortie+'/'+entry.layer;
+   return {layer:entry.layer,sortie:entry.sortie,
+    fightsBefore:before.get(id),floor:floors.get(id),
+    previousFloor:floors.get(entry.sortie+'/'+(entry.layer-1))??null};
+  }),sorties:run.trace.map(t=>({sortie:t.sortie,start:t.start,goal:t.goal,
+   fights:t.fights,returned:t.returned,defeat:t.defeat,
+   cleared:t.cleared,rank:t.rank,stone:t.stone,ink:t.ink,levelAfter:t.levelAfter}))});
   accounts.push({seed,best:run.best,level:run.profile.level,rank:run.profile.rank,
    completed:actualCompletion,sorties:run.sorties,returns:run.returns,losses:run.losses,
    fights:run.fights,blockers:run.blockers,rankAudit:run.rankAudit,
@@ -109,6 +169,11 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    status:'INDEPENDENT_80_80_RANK_ACQUISITION'});
  }
  policies.push(policy);
+ const firstEntryFile='dungeon-first-entry-v1-'+style+'-'+route+'.json';
+ writeReportFile(firstEntryFile,{schemaVersion:'dungeon-first-entry-v1',style,route,
+  samples:seeds.length,owners:entryOwners});
+ firstEntryReferences.push({style,route,file:firstEntryFile,
+  samples:seeds.length,entries:entryOwners.reduce((n,owner)=>n+owner.entries.length,0)});
  console.log('DUNGEON_JOURNEY_STRENGTH_POLICY '+JSON.stringify({
   style,route,samples:accounts.length,completion:policy.completion,
   chapterOwners:ranks.filter(rank=>rank.style===style&&rank.route===route)
@@ -134,6 +199,10 @@ const report={
   stopRule:'CAMPAIGN_AND_ALL_TEN_BANDS_REACHED_OR_EXISTING_SORTIE_FIGHT_BUDGET_EXHAUSTED'},
  seedRule:'17011+13*i',samplesPerPolicy:approvedGoals.strictSamples,
  policies:policyReferences,ranks,sourceHashes,
+ firstEntryEvidence:{schemaVersion:'dungeon-first-entry-v1',
+  status:'FIRST_ENTRY_NOT_CALCULATOR_ASSESSED',
+  total:firstEntryReferences.reduce((n,p)=>n+p.entries,0),
+  policies:firstEntryReferences},
  legacyDisposition:{
   rule:'OLD_REAL_FIXED_DECK_FLOOR_BATTLES_PARETO_COMPARISONS_AND_THREE_PAID_REPLAY_CYCLES_ARE_NOT_THIS_GATE',
   previousReport:'reports/dungeon-journey-strength-v1.json',
@@ -149,41 +218,6 @@ const report={
 };
 const output=new URL('../reports/dungeon-journey-strength-v2.json',import.meta.url);
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
-function* jsonChunks(value,depth=0){
- if(value===null||typeof value!=='object'){
-  yield JSON.stringify(value);return;
- }
- const entries=Array.isArray(value)?value:Object.entries(value)
-  .filter(([,child])=>child!==undefined);
- if(!entries.length){yield Array.isArray(value)?'[]':'{}';return;}
- const array=Array.isArray(value),open=array?'[':'{',close=array?']':'}';
- yield open+'\n';
- for(let index=0;index<entries.length;index++){
-  const entry=entries[index];
-  yield '  '.repeat(depth+1);
-  if(array)yield* jsonChunks(entry,depth+1);
-  else{
-   yield JSON.stringify(entry[0])+': ';
-   yield* jsonChunks(entry[1],depth+1);
-  }
-  yield index<entries.length-1?',\n':'\n';
- }
- yield '  '.repeat(depth)+close;
-}
-function writeReportFile(file,value){
- const target=new URL('../reports/'+file,import.meta.url);
- const pending=new URL('../reports/'+file+'.tmp',import.meta.url);
- const descriptor=openSync(pending,'w');
- try{
-  let buffer='';
-  for(const chunk of jsonChunks(value)){
-   buffer+=chunk;
-   if(buffer.length>=64*1024){writeSync(descriptor,buffer);buffer='';}
-  }
-  writeSync(descriptor,buffer+'\n');
- }finally{closeSync(descriptor);}
- renameSync(pending,target);
-}
 // The index is committed only after every full-evidence policy shard exists.
 for(let i=0;i<policies.length;i++)
  writeReportFile(policyReferences[i].file,policies[i]);
@@ -194,4 +228,5 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))
   policies:policies.length,bands:approvedGoals.bands.length,
   ownersPerPolicy:seeds.length,formulaRows:policies.length*approvedGoals.bands.length,
   formulaOwnerRows:policies.length*approvedGoals.bands.length*seeds.length,
+  firstEntryRows:firstEntryReferences.reduce((n,p)=>n+p.entries,0),
   status:'FORMULA_RESULTS_RECORDED; NO_BATTLE_PROOF'}));
