@@ -14,7 +14,7 @@ import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261030.265';
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261030.265';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261030.265';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261030.266';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,hasDungeonIntegerXpMigrationBackup,restoreDungeonIntegerXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261030.266';
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261030.265';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261030.265';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261030.265';
@@ -1939,8 +1939,8 @@ function wire(){
  // The original signed save is available in both the profile and damaged-
  // save recovery screens. Never silently roll back subsequent gameplay.
  const originalXpButtons=[$('restoreOriginalXpSave'),$('restoreOriginalXpSaveSetup')];
- void hasDungeonXpMigrationBackup(db).then(available=>{
-  for(const button of originalXpButtons)button.hidden=!available;
+ void Promise.all([hasDungeonXpMigrationBackup(db),hasDungeonIntegerXpMigrationBackup(db)]).then(([legacy,integer])=>{
+  for(const button of originalXpButtons)button.hidden=!(legacy||integer);
  }).catch(error=>console.warn('EXP変換前の保全データを確認できませんでした',error));
  for(const button of originalXpButtons)button.addEventListener('click',()=>{
   showDungeonDialog($('restoreOriginalXpDialog'));
@@ -1955,7 +1955,8 @@ function wire(){
     // over the user's explicitly recovered local save on page reload.
     // Disconnect keeps remote bytes untouched and drains any active upload.
     await cloudSyncController?.disconnect?.();
-    await restoreDungeonXpMigrationBackup(db);
+    if(await hasDungeonIntegerXpMigrationBackup(db))await restoreDungeonIntegerXpMigrationBackup(db);
+    else await restoreDungeonXpMigrationBackup(db);
     location.reload();
    }catch(error){
     $('confirmRestoreOriginalXp').disabled=false;
