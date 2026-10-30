@@ -285,7 +285,7 @@ assert.deepEqual((await readDungeonSnapshot(quotaDb)).integrity,beforeQuota.inte
 assert.equal(await getDungeonXpMigrationBackup(quotaDb),null,'seal failure leaves no orphaned backup');
 quotaFactory.failIntegrityWrites=false;
 const afterRetry=await migrateDungeonXp(quotaDb);
-assert.equal(afterRetry.xpScaleVersion,45,'migration can retry safely after quota becomes available');
+assert.equal(afterRetry.xpScaleVersion,G.XP_SCALE,'migration can retry safely after quota becomes available');
 assert.equal((await getDungeonXpMigrationBackup(quotaDb)).profile.xp,20000,'retry preserves original old EXP');
 // Tampering with the archived photo cannot be laundered into a replacement save.
 const archived=quotaFactory.databases.get('magia-dungeon-v1').get('settings').get('xpMigrationBackupV1');
