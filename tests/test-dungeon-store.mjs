@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,migrateDungeonXp,getDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,getDungeonIntegerXpMigrationBackup,restoreDungeonIntegerXpMigrationBackup,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,saveProfileWithCircles,migrateDungeonXp,getDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,getDungeonIntegerXpMigrationBackup,restoreDungeonIntegerXpMigrationBackup,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 const {parseCsv}=G;
 import {configure} from '../assets/js/dungeon-tuning.mjs';
@@ -39,6 +39,13 @@ const backupFirst=await getDungeonXpMigrationBackup(db);
 assert.equal(backupFirst.profile.xp,20000,'the original gauge is recoverable');
 assert.equal(backupFirst.profile.run.xp,45000,'the original unbanked reward is recoverable');
 assert.equal(backupFirst.profile.xpScaleVersion,undefined,'backup preserves the legacy format');
+const intermediate45=await getDungeonIntegerXpMigrationBackup(db);
+assert.equal(intermediate45.profile.xpScaleVersion,45,'legacy XP must pass through the existing 1/45 converter');
+const originalNeed92=Math.ceil(Number(levels[91].xp_to_next)*Math.pow(2.1,91/10));
+const priorNeed92=Math.ceil(Number(levels[91].xp_to_next)*Math.pow(1.85,9.1)/45);
+assert.equal(intermediate45.profile.xp,Math.round(20000/originalNeed92*priorNeed92*1e6)/1e6,
+ 'first migration retains the precise historic 1/45 gauge formula');
+assert.equal(intermediate45.profile.run.xp>0,true,'1/45 checkpoint also preserves converted pending XP');
 assert.ok(Number.isSafeInteger(converted.xp)&&converted.xp>0&&converted.xp<G.nextXp(92),'old XP gauge converts into integer units');
 assert.ok(Number.isSafeInteger(converted.run.xp)&&converted.run.xp>0,'unbanked XP is converted to whole units');
 assert.ok(Number.isSafeInteger(converted.pendingReturn.gained)&&converted.pendingReturn.gained>0,'pending reward is converted to whole units');
@@ -211,6 +218,29 @@ assert.equal(oldFormatBackup.profile.xp,returnEnd.xp,'regular gameplay never cha
 const clean=await getProfile(db);
 clean.level=1;clean.xp=0;clean.run={...p.run,xp:0};delete clean.pendingReturn;clean.xpScaleVersion=G.XP_SCALE;
 await saveProfile(db,clean);
+// An EXP regression must fail before the save writes or changes the seal.
+// Historic v45 saves can contain fractions, but v46 never can.
+const validSnapshot=await readDungeonSnapshot(db);
+const invalidProfiles=[
+ {...clean,xp:0.25},
+ {...clean,xp:NaN},
+ {...clean,xp:Number.MAX_SAFE_INTEGER+1},
+ {...clean,run:{...clean.run,xp:1.2}},
+ {...clean,pendingReturn:{before:{level:1,xp:1.2},gained:4,steps:['xp']}},
+ {...clean,pendingReturn:{before:{level:1,xp:0},gained:4.2,steps:['xp']}}
+];
+for(const invalid of invalidProfiles){
+ await assert.rejects(saveProfile(db,invalid),/整数EXP/,'invalid v46 EXP must fail before saving');
+ const after=await readDungeonSnapshot(db);
+ assert.deepEqual(after.profile,validSnapshot.profile,'a rejected fractional EXP cannot rewrite progress');
+ assert.deepEqual(after.integrity,validSnapshot.integrity,'a rejected fractional EXP cannot re-sign progress');
+}
+await assert.rejects(saveProfileWithCircles(db,{...clean,run:{...clean.run,xp:0.5}}),/整数EXP/,
+ 'equipment saves must not bypass the integer EXP guard');
+await assert.rejects(replaceDungeonSnapshot(db,{...validSnapshot,profile:{...clean,xp:0.5}}),/整数EXP/,
+ 'cloud restores must reject fractional EXP in an already-modern save');
+assert.deepEqual((await readDungeonSnapshot(db)).profile,validSnapshot.profile,
+ 'rejected cloud snapshots cannot overwrite local progress');
 const reread=await getProfile(db);
 assert.deepEqual(reread,clean);
 reread.level=99;assert.equal((await getProfile(db)).level,1);
