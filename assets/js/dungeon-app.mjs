@@ -1,4 +1,4 @@
-import * as G from './dungeon-core.mjs?v=20261030.265';
+import * as G from './dungeon-core.mjs?v=20261030.266';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261030.265';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261030.265';
 import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261030.265';
@@ -14,7 +14,7 @@ import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261030.265';
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261030.265';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261030.265';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261030.265';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261030.266';
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261030.265';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261030.265';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261030.265';
@@ -787,7 +787,7 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
    const recovered=reclaimLegacies(profile,run.enemy.id,run);
    run.loot.push(...rewards);
    const dropCount=rewards.length+recovered.length;
-   run.xp=G.normalizeXp(run.xp+G.fightExperience(run.enemy.level,run.hero.level,layerForFight(run.floor)));
+   G.earnFightExperience(run,run.enemy.level,run.hero.level,layerForFight(run.floor),run.floor);
    run.log.push(dropCount?'撃破！ '+dropCount+'個を入手（未確定）':'撃破！ 今回の戦利品はなし');
    await ceremony('loot',dropCount?'戦利品の発見':'戦利品なし',dropCount?dropCount+'個 · 未確定':'次の戦いへ',dropCount);
    run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero,layerForFight(run.floor));if(isLayerBoss(run.floor)){
