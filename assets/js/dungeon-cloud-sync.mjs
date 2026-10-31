@@ -30,7 +30,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return {ready:false};
  }
  let client=null,drive=null,expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
- let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false;
+ let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false,initialRetryQueued=false;
  let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
  let disconnectPending=false,disconnectPromise=null,resolveDisconnect=null;
  const isCurrent=epoch=>epoch===connectionEpoch&&Boolean(drive);
@@ -89,6 +89,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  }
  function completeInitialCheck(outcome){
   if(disconnectPending||manuallyDisconnected)return;
+  // A concurrent save may require another network pass before startup
+  // can consider the backup connected.
+  if(outcome==='deferred'&&initialRetryQueued)return;
+  if(outcome!=='deferred')initialRetryQueued=false;
   if(outcome==='ready'||outcome==='start-new')onInitialReady();
   else if(outcome!=='restored'&&!initialChoiceCommitted)lockLocalOnly(false);
  }
@@ -483,8 +487,14 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     finishDisconnect();
    }else if(again&&!stopped&&!restoring&&drive){
     again=false;
+    const retryInitial=initial||initialRetryQueued;
+    if(retryInitial)initialRetryQueued=true;
     show('同期中…');
-    queueMicrotask(()=>{if(drive&&!stopped&&!restoring)void sync(false);else setSyncing(false);});
+    queueMicrotask(()=>{
+     if(drive&&!stopped&&!restoring){
+      void sync(retryInitial).then(outcome=>{if(retryInitial)completeInitialCheck(outcome);});
+     }else setSyncing(false);
+    });
    }else{
     again=false;
     setSyncing(false);
