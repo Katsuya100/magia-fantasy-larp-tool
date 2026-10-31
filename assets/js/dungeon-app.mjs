@@ -1219,7 +1219,7 @@ async function analyzeCapturedCircle(circle,inkCount=0){
   const reduced=circle.origin==='drawn'?{...result.analysis,power:drawnPower(result.analysis.power)}:successfulDungeonAnalysis(result.analysis);
   if(!Number.isSafeInteger(inkCount)||inkCount<0||inkCount>5||inkCount>profile.magicInk)throw Error('魔導墨が不足しています。');
   const enhanced=inkCount?inkEnhancedAnalysis(reduced,inkCount):reduced;
-  const analyzed={...savePreanalysis(circle,enhanced),...(inkCount?{creationInk:inkCount,basePower:enhanced.power}:{})};
+  const analyzed={...savePreanalysis(circle,enhanced),...(circle.origin==='drawn'?{powerScaleVersion:2}:{}),...(inkCount?{creationInk:inkCount,basePower:enhanced.power}:{})};
   // The new circle and ink cost share a single integrity-checked transaction.
   if(inkCount){
    await loadoutSaveQueue;
@@ -1256,7 +1256,7 @@ async function analyzeUnknown(index){
   try{
    const result=await parseDungeonMagic(circle,valid,request);
    if(!valid())return;
-   Object.assign(circle,savePreanalysis(circle,circle.origin==='drawn'?{...result.analysis,power:drawnPower(result.analysis.power)}:successfulDungeonAnalysis(result.analysis)));
+   Object.assign(circle,savePreanalysis(circle,circle.origin==='drawn'?{...result.analysis,power:drawnPower(result.analysis.power)}:successfulDungeonAnalysis(result.analysis)),circle.origin==='drawn'?{powerScaleVersion:2}:{});
    if(!valid())return;
    run.hero.spells[index]=combatSpell(circle);
    rememberCircleMetadata(circle);await persist();
