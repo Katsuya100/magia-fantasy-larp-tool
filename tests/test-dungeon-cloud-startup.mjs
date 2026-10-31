@@ -88,7 +88,7 @@ function mockGoogle(){
 }
 function remoteApi(initial=null,{tamperReadback=false}={}){
  const id='backup-1',modified=()=>new Date(Date.UTC(2026,9,19,10,0,version)).toISOString();
- let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null,putPause=null,putRequests=0;
+ let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null,putPause=null,metadataPause=null,metadataRequests=0,putRequests=0;
  const operations=[],signals=[];
  const fetchImpl=async (url,options={})=>{
   if(options.signal)signals.push(options.signal);
@@ -103,7 +103,11 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
    if(value===null)return new Response('',{status:404});
    return new Response(tamperReadback&&uploads>0?'tampered':value);
   }
-  if(u.includes('?fields=id,name,modifiedTime'))return Response.json({id,name:'magia-dungeon-save-v1.json',modifiedTime:modified()});
+  if(u.includes('?fields=id,name,modifiedTime')){
+   metadataRequests++;
+   if(metadataPause){const paused=metadataPause;metadataPause=null;await paused;}
+   return Response.json({id,name:'magia-dungeon-save-v1.json',modifiedTime:modified()});
+  }
   if(u.includes('uploadType=resumable')){
    assert.ok(method==='POST'||method==='PATCH','create vs update upload method');
    operations.push(method);
@@ -132,6 +136,7 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   get current(){return value;},
   get uploads(){return uploads;},
   get putRequests(){return putRequests;},
+  get metadataRequests(){return metadataRequests;},
   get downloads(){return downloads;},
   get operations(){return [...operations];},
   get signals(){return [...signals];},
@@ -140,6 +145,11 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
    let release;
    listPause=new Promise(resolve=>{release=resolve;});
    return ()=>{listPause=null;release();};
+  },
+  pauseNextMetadata(){
+   let release;
+   metadataPause=new Promise(resolve=>{release=resolve;});
+   return ()=>release();
   },
   pauseNextUpload(){
    let release;
@@ -667,6 +677,35 @@ try{
  assert.deepEqual(newerRemoteDrive.operations,[]);
  assert.equal(newerRemoteUi.get('googleDriveConflictDialog').open,false);
 
+ // A local save made during an in-flight Drive restore must not disappear.
+ // This exercises the IndexedDB transaction guard, not just a preflight check.
+ const inFlightDb=await newDb(),inFlightUi=fakeUi();
+ const inFlightProfile=await getProfile(inFlightDb);
+ inFlightProfile.name='復元待機中の冒険者';
+ await saveProfile(inFlightDb,inFlightProfile);
+ const inFlightOld=await readDungeonSnapshot(inFlightDb);
+ const inFlightRemote=await serializeDungeonSnapshot({...inFlightOld,
+  profile:{...inFlightOld.profile,name:'古いDriveの冒険者'},
+  savedAt:inFlightOld.savedAt+1});
+ const inFlightDrive=remoteApi(inFlightRemote);
+ const releaseMetadata=inFlightDrive.pauseNextMetadata();
+ let unsafeRestores=0;
+ start(inFlightDb,inFlightUi,inFlightDrive.fetchImpl,{onRestore:()=>unsafeRestores++});
+ await connect(inFlightUi);
+ await wait(()=>inFlightDrive.metadataRequests===1,'Drive restore is paused before the atomic local check');
+ for(let n=0;n<3;n++){
+  const latestProfile=await getProfile(inFlightDb);
+  latestProfile.name='通信中の新しい冒険者';
+  await saveProfile(inFlightDb,latestProfile);
+ }
+ assert.ok((await readDungeonSnapshot(inFlightDb)).savedAt>inFlightOld.savedAt+1);
+ releaseMetadata();
+ await wait(()=>deserializeDungeonSnapshot(inFlightDrive.current).profile.name==='通信中の新しい冒険者',
+  'new local write wins after guarded restore is rejected');
+ assert.equal(unsafeRestores,0,'stale Drive result must never replace a concurrent local edit');
+ assert.equal((await getProfile(inFlightDb)).name,'通信中の新しい冒険者');
+ assert.equal(inFlightUi.get('googleDriveConflictDialog').open,false);
+ 
  // Identical timestamps but different bytes must never silently discard a save.
  const tieDb=await newDb(),tieUi=fakeUi();
  const tieProfile=await getProfile(tieDb);
