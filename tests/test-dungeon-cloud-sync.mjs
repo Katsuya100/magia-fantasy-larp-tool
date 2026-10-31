@@ -54,7 +54,7 @@ assert.equal(await (await readDungeonSnapshot(db)).circles[0].image.type,'image/
 assert.equal(await getCloudSyncState(db),undefined,'restoring a snapshot drops device-specific metadata');
 await clearDungeonData(db);
 assert.equal(changes,4);
-assert.equal((await getCloudSyncState(db)).blocked,true,'intentional deletion cannot auto-resurrect cloud save');
+assert.equal(await getCloudSyncState(db),undefined,'deleting local data resets sync history; the next connection uses case 3');
 stop();
 
 const file={id:'1',name:'magia-dungeon-save-v1.json',modifiedTime:'t2'};
