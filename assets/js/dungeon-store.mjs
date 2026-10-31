@@ -10,6 +10,43 @@ const DB_VERSION=3;
 const STORES=['circles','settings'];
 // Modules can be imported with and without cache keys; preserve one listener bus.
 const changes=globalThis[Symbol.for('magia-dungeon-save-changes')]??=new WeakMap();
+// Keep a stale caller's DB handle usable without changing the public store API.
+const connections=globalThis[Symbol.for('magia-dungeon-connections')]??=new WeakMap();
+async function liveConnection(db){
+ const state=connections.get(db);
+ if(!state)return validateDatabase(db);
+ if(state.current)return validateDatabase(state.current);
+ if(!state.opening){
+  state.opening=openStore(state.factory,state).finally(()=>{state.opening=null;});
+ }
+ return state.opening;
+}
+function checkedTransaction(db,stores,mode){
+ try{return db.transaction(stores,mode);}
+ catch(error){
+  if(error?.name==='InvalidStateError'&&/closing|closed|connection/i.test(String(error.message||''))){
+   const retryable=new Error(error.message,{cause:error});
+   retryable.name=error.name;retryable.closedConnection=true;
+   throw retryable;
+  }
+  throw error;
+ }
+}
+async function withLiveDatabase(db,operation){
+ const state=connections.get(db);
+ const current=await liveConnection(db);
+ try{return await operation(current);}
+ catch(error){
+  // Retry only a synchronous transaction-open failure, never an in-flight
+  // write/abort whose commit status could be ambiguous.
+  if(!error?.closedConnection||!state)throw error;
+  if(state.current===current){
+   state.current=null;
+   try{current.close();}catch{}
+  }
+  return operation(await liveConnection(db));
+ }
+}
 // A successor name is stored separately so naming never rewrites large Blob
 // values nested inside permadeath legacies. The signed profile is assembled
 // from the canonical profile plus this small overlay when read.
@@ -55,7 +92,7 @@ export function validateDatabase(db){
   if(!STORES.every(name=>db.objectStoreNames?.contains(name)))throw Error('魔導書の保存領域が不完全です。ブラウザのサイトデータ設定を確認してください。');
   return db;
 }
-export function openStore(factory=globalThis.indexedDB){
+export function openStore(factory=globalThis.indexedDB,existingState=null){
   return new Promise((resolve,reject)=>{
     if(!factory?.open){reject(Error('このブラウザでは魔導書を保存できません（IndexedDB非対応）。'));return;}
     let settled=false;
@@ -67,18 +104,25 @@ export function openStore(factory=globalThis.indexedDB){
       let db;
       try{db=validateDatabase(event?.target?.result||q.result);}
       catch(e){fail(e);return;}
-      if(!settled){settled=true;db.onversionchange=()=>db.close();resolve(db);}
+      if(!settled){
+       settled=true;
+       const state=existingState||{factory,current:null,opening:null};
+       state.current=db;
+       connections.set(db,state);
+       db.onversionchange=()=>{if(state.current===db)state.current=null;db.close();};
+       db.onclose=()=>{if(state.current===db)state.current=null;};
+       resolve(db);
+      }
     };
     q.onerror=()=>fail(q.error||Error('魔導書の保存領域を開けませんでした。'));
     q.onblocked=()=>fail(Error('別のタブで魔導書を開いています。ほかのタブを閉じて再度お試しください。'));
   });
 }
 function request(db,store,mode,op,{silent=false}={}){
- validateDatabase(db);
- return new Promise((resolve,reject)=>{
+  return withLiveDatabase(db,live=>new Promise((resolve,reject)=>{
   let result,tx;
   try{
-   tx=db.transaction(store,mode);
+   tx=checkedTransaction(live,store,mode);
    tx.oncomplete=()=>{if(mode==='readwrite'&&!silent)notifyDungeonDataChange(db);resolve(result);};
    tx.onerror=()=>reject(tx.error||Error('保存に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('保存が中断されました。'));
@@ -86,16 +130,15 @@ function request(db,store,mode,op,{silent=false}={}){
    q.onsuccess=()=>{result=q.result;};
    q.onerror=()=>reject(q.error||Error('保存データにアクセスできません。'));
   }catch(error){reject(error);}
- });
+ }));
 }
 // Read and verify the previous seal BEFORE applying writes. A missing record
 // cannot be silently legitimized by a later (unrelated) profile update.
 function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,photoWrites=new Map(),expectedRevision=null,migrationSourceRecords=null,migrationSourceVersion=null}={}){
- validateDatabase(db);
- return new Promise((resolve,reject)=>{
+  return withLiveDatabase(db,live=>new Promise((resolve,reject)=>{
   let tx,committedAt;
   try{
-   tx=db.transaction(STORES,'readwrite');
+   tx=checkedTransaction(live,STORES,'readwrite');
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
    const previousProfile=settings.get('profile'),previousCircles=items.getAll(),previousSeal=settings.get('integrity');
    const previousName=settings.get(HEIR_NAME_KEY);
@@ -165,7 +208,7 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,
    tx.onerror=()=>reject(tx.error||Error('セーブの保存に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブの整合性を確認できませんでした。'));
   }catch(error){reject(error);}
- });
+ }));
 }
 // Lost magic stays in 'circles'; only its ownership changes across characters.
 function lostCircleIds(profile){
@@ -224,16 +267,15 @@ export async function getCircleThumbnail(db,circle,createThumbnail,size=192){
 // Atomically erase only this dungeon game's own IndexedDB data.
 // Keeping both stores in one transaction prevents a partially erased profile.
 export function clearDungeonData(db){
- validateDatabase(db);
- return new Promise((resolve,reject)=>{
+  return withLiveDatabase(db,live=>new Promise((resolve,reject)=>{
   try{
-   const transaction=db.transaction(STORES,'readwrite');
+   const transaction=checkedTransaction(live,STORES,'readwrite');
    transaction.oncomplete=()=>{notifyDungeonDataChange(db);resolve();};
    transaction.onerror=()=>reject(transaction.error||Error('保存データの削除に失敗しました。'));
    transaction.onabort=()=>reject(transaction.error||Error('保存データの削除が中断されました。'));
    for(const name of STORES)transaction.objectStore(name).clear();
   }catch(error){reject(error);}
- });
+ }));
 }
 async function trustedProfileHashes(db,profile){
  const hashes=await profilePhotoEvidence(profile);
@@ -292,10 +334,9 @@ export async function saveProfileWithCircles(db,profile,added=[],removed=[]){
 export function saveHeirName(db,name){
  const trimmed=typeof name==='string'?name.trim():'';
  if(!trimmed||trimmed.length>20)return Promise.reject(Error('1〜20文字の名前を入力してください。'));
- validateDatabase(db);
- return new Promise((resolve,reject)=>{
+  return withLiveDatabase(db,live=>new Promise((resolve,reject)=>{
   try{
-   const tx=db.transaction(STORES,'readwrite');
+   const tx=checkedTransaction(live,STORES,'readwrite');
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
    const p=settings.get('profile'),c=items.getAll(),sealRequest=settings.get('integrity'),overlay=settings.get(HEIR_NAME_KEY);
    let nextName=null,reads=0;
@@ -328,7 +369,7 @@ export function saveHeirName(db,name){
    tx.onerror=()=>reject(tx.error||Error('後継者名の保存に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('後継者名の保存が中断されました。'));
   }catch(error){reject(error);}
- });
+ }));
 }
 
 
@@ -592,10 +633,9 @@ export async function getProfile(db){
 
 /** Read raw magic circles and profile atomically; do not apply UI-only upgrades. */
 export function readDungeonSnapshot(db){
- validateDatabase(db);
- return new Promise((resolve,reject)=>{
+  return withLiveDatabase(db,live=>new Promise((resolve,reject)=>{
   try{
-   const tx=db.transaction(STORES,'readonly');
+   const tx=checkedTransaction(live,STORES,'readonly');
    let profile,circles,integrity,nameOverride;
    tx.oncomplete=()=>{const byId=new Map(circles.map(circle=>[circle.id,circle]));
     void restoreProfilePhotoRefs(applyHeirName(profile,nameOverride),id=>Promise.resolve(byId.get(id)))
@@ -611,17 +651,16 @@ export function readDungeonSnapshot(db){
    const n=tx.objectStore('settings').get(HEIR_NAME_KEY);
    n.onsuccess=()=>{nameOverride=n.result;};
   }catch(error){reject(error);}
- });
+ }));
 }
 export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{expectedCurrentRecords=null,expectedCurrentSavedAt=null}={}){
- validateDatabase(db);
- const prepared=await prepareProfilePhotoRefs(profile);
+  const prepared=await prepareProfilePhotoRefs(profile);
  const all=[...circles];
  for(const [id,{circle}] of prepared.photos)if(!all.some(existing=>existing.id===id))all.push(circle);
  const records=recordFingerprint({profile,circles:all}),photos=await photoEvidence(all),profilePhotos=await profilePhotoEvidence(profile);
- return new Promise((resolve,reject)=>{
+ return withLiveDatabase(db,live=>new Promise((resolve,reject)=>{
   try{
-   const tx=db.transaction(STORES,'readwrite');
+   const tx=checkedTransaction(live,STORES,'readwrite');
    tx.oncomplete=()=>{notifyDungeonDataChange(db);resolve();};
    tx.onerror=()=>reject(tx.error||Error('セーブ復元に失敗しました。'));
    tx.onabort=()=>reject(tx.error||Error('セーブ復元が中断されました。'));
@@ -649,15 +688,15 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{exp
     p.onsuccess=check;c.onsuccess=check;n.onsuccess=check;proof.onsuccess=check;
    }else write();
   }catch(error){reject(error);}
- });
+ }));
 }
 // Legacy saves have no trusted photo seal. Seal only after the caller has checked
 // that no sound Drive backup would be at risk from accepting this baseline.
 export async function establishLegacyIntegrity(db,snapshot){
  const hashes=await photoEvidence(snapshot.circles),profileHashes=await profilePhotoEvidence(snapshot.profile),records=recordFingerprint(snapshot);
- return new Promise((resolve,reject)=>{
+ return withLiveDatabase(db,live=>new Promise((resolve,reject)=>{
   try{
-   const tx=db.transaction(STORES,'readwrite');
+   const tx=checkedTransaction(live,STORES,'readwrite');
    const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
    const p=settings.get('profile'),c=items.getAll(),old=settings.get('integrity');
    let pending=3;
@@ -676,7 +715,7 @@ export async function establishLegacyIntegrity(db,snapshot){
    tx.onerror=()=>reject(tx.error||Error('検証情報を保存できませんでした。'));
    tx.onabort=()=>reject(tx.error||Error('検証が中断されました。'));
   }catch(error){reject(error);}
- });
+ }));
 }
 
 export const getCloudSyncState=db=>request(db,'settings','readonly',s=>s.get('cloudSyncState'));
