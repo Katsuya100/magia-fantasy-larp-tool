@@ -7,8 +7,7 @@ import {verifyLocalSnapshot,digestPhoto} from './dungeon-cloud-integrity.mjs';
 
 // Last-write-wins: the timestamp belongs to the game save, not Drive metadata.
 // Equal timestamps are resolved in Drive's favor. Hash equality is a no-op.
-export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remoteSavedAt=0,pristine=false,blocked=false}){
- if(blocked)return 'blocked';
+export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remoteSavedAt=0,pristine=false}){
  if(!file)return 'upload';
  if(localHash&&remoteHash&&localHash===remoteHash)return 'synced';
  if(pristine)return 'choose';
