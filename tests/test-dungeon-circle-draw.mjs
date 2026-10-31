@@ -29,8 +29,11 @@ assert.ok(GLYPH_INK_SCALE/letterViewRadius>.6&&GLYPH_INK_SCALE/letterViewRadius<
  'letter strokes remain legible with the narrow band');
 assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-OUTER_RADIUS},0,0).y+bandEdge)<1e-12);
 assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-INNER_RADIUS},0,0).y-bandEdge)<1e-12);
-assert.equal(drawnPower(500),300);
-assert.equal(drawnPower(1),250);
+assert.equal(MIN_DUNGEON_POWER,250);
+for(const [raw,expected] of [[1,251],[100,280],[200,310],[416,375],[417,375],[418,376],[500,400],[833,500],[834,500],[835,501],[1000,600]]){
+ assert.equal(drawnPower(raw),expected,'60% handwritten reduction before scaling '+raw);
+}
+assert.equal(drawnPower(500,.8),450,'custom draw rate still receives scaling');
 assert.throws(()=>drawnPower(0));
 assert.throws(()=>drawnPower(NaN));
 assert.equal(withDrawnPowerFloor({origin:'drawn',basePower:120,analysis:{power:120}}).analysis.power,250);
