@@ -3,7 +3,7 @@ import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
 import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
 import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,establishLegacyIntegrity,getProfile,saveProfile} from './dungeon-store.mjs?v=20261031.268';
-import {verifyLocalSnapshot,digestPhoto} from './dungeon-cloud-integrity.mjs';
+import {verifyLocalSnapshot,digestPhoto,recordFingerprint} from './dungeon-cloud-integrity.mjs';
 
 // Last-write-wins: the timestamp belongs to the game save, not Drive metadata.
 // Equal timestamps with different contents require selection; identical bytes are a no-op.
@@ -237,21 +237,30 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    return {valid:false,data:null,invalidImages:[],error};
   }
  }
- async function restore(remote,file,{explicit=false}={}){
+ async function restore(remote,file,{expectedLocal=null}={}){
   if(!remote.valid)throw Error('破損したDriveバックアップは復元できません。');
   ensureCurrent(activeSyncEpoch);
-  const before=await readDungeonSnapshot(db);
-  ensureCurrent(activeSyncEpoch);
-  if(before.profile?.run&&!isPristineDungeonSnapshot(before)&&!explicit){
-   show('探索中に新しいDriveデータが見つかりました。探索終了まで自動復元と上書きを停止しています。');
-   return 'deferred';
+  // The selected source was compared against this particular local snapshot.
+  // An in-flight save must not be lost while Drive metadata is being checked.
+  let expectedCurrentRecords=null;
+  if(expectedLocal?.profile){
+   try{expectedCurrentRecords=recordFingerprint(expectedLocal);}
+   catch{ /* An invalid local record can only be replaced by explicit recovery. */ }
   }
   const current=await drive.metadata(file.id);
   ensureCurrent(activeSyncEpoch);
   if(current.modifiedTime!==file.modifiedTime){again=true;return 'deferred';}
   lockLocalOnly(true);
+  try{
+   await replaceDungeonSnapshot(db,remote.data,{expectedCurrentRecords});
+  }catch(error){
+   if(/別のタブでセーブが更新されました/.test(String(error?.message||''))){
+    again=true;
+    return 'deferred';
+   }
+   throw error;
+  }
   restoring=true;
-  await replaceDungeonSnapshot(db,remote.data);
   await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
   show('Google Driveの正常なセーブを復元しました。画面を読み込み直します。');
   onRestore();
@@ -348,7 +357,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    // Drive copy can be explicitly restored without authorizing an upload.
    if(verification.status==='corrupt'){
     const choice=await chooseCloud({local,remote:remote.data,mode:'different',allowLocal:false,canStartLocal:false});
-    if(choice==='restore')return await restore(remote,file,{explicit:true});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
     return result;
    }
    const pristine=isPristineDungeonSnapshot(local);
@@ -363,7 +372,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     }
     // Case 3: a fresh device must choose when a different backup exists.
     const choice=await chooseCloud({local,remote:remote.data,mode:'fresh'});
-    if(choice==='restore')return await restore(remote,file,{explicit:true});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
     if(choice==='overwrite'){
      if(verification.status!=='valid'){
       show('端末セーブを検証できません。');return result;
@@ -386,7 +395,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     // No re-authentication or opaque blocked/freshStart state is involved.
     const choice=await chooseCloud({local,remote:remote.data,allowLocal:verification.status==='valid'||verification.status==='legacy',
      canStartLocal:verification.status!=='corrupt'});
-    if(choice==='restore')return await restore(remote,file,{explicit:true});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
     if(choice==='overwrite'){
      if(verification.status==='legacy'){
       await establishLegacyIntegrity(db,local);
@@ -405,7 +414,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    // Case 4: same play. Repair missing images before uploading, but never
    // advance the local timestamp to defeat a newer verified Drive save.
    if(verification.status==='badImages'){
-    if(Number(remote.data.savedAt)>Number(local.savedAt))return await restore(remote,file,{explicit:true});
+    if(Number(remote.data.savedAt)>Number(local.savedAt))return await restore(remote,file,{expectedLocal:local});
     const restored=[];
     for(const id of verification.badImageIds){
      const localCircle=local.circles.find(c=>c.id===id);
@@ -451,11 +460,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     syncedPresentation();
     return 'ready';
    }
-   if(decision==='download')return await restore(remote,file,{explicit:true});
+   if(decision==='download')return await restore(remote,file,{expectedLocal:local});
    if(decision==='upload')return await upload(local,file);
    // Equal timestamps with different content cannot be ordered safely.
    const choice=await chooseCloud({local,remote:remote.data});
-   if(choice==='restore')return await restore(remote,file,{explicit:true});
+   if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
    if(choice==='overwrite'){
     const outcome=await upload(local,file,{allowInitial:true});
     return outcome==='ready'?'start-new':outcome;
