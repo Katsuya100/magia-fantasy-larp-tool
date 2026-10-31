@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
-import {openStore,saveProfile,putCircle,deleteCircle,readDungeonSnapshot,getCircleThumbnail} from '../assets/js/dungeon-store.mjs';
+import {openStore,saveProfile,putCircle,deleteCircle,allCircles,readDungeonSnapshot,replaceDungeonSnapshot,getCircleThumbnail} from '../assets/js/dungeon-store.mjs';
 import {verifyLocalSnapshot,digestPhoto} from '../assets/js/dungeon-cloud-integrity.mjs';
 import {createCircleThumbnail} from '../assets/js/dungeon-thumbnails.mjs';
+import {serializeDungeonSnapshot,deserializeDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {createDungeonPhotoManager,grimoireThumbnailSize} from '../assets/js/dungeon-photo-manager.mjs';
 
 const db=await openStore(fakeIndexedDB());
@@ -57,6 +58,13 @@ try{
  assert.equal(canvasSize,192,'short-lived thumbnail decoding uses a bounded canvas');
  assert.equal(draws,1);
  assert.equal(closed,1,'temporary decoded bitmap is closed');
+ const previousImage=globalThis.Image;
+ globalThis.createImageBitmap=async()=>{throw Error('ImageBitmap decoder unavailable');};
+ globalThis.Image=class{constructor(){this.width=640;this.height=480;}async decode(){}};
+ try{
+  const domFallback=await createCircleThumbnail(original);
+  assert.equal(domFallback.size,4,'DOM decoder still creates a thumbnail when ImageBitmap fails');
+ }finally{globalThis.Image=previousImage;}
 }finally{globalThis.document=oldDocument;globalThis.createImageBitmap=oldBitmap;}
 
 const uiDb=await openStore(fakeIndexedDB());
@@ -86,7 +94,8 @@ try{
   getAttribute(name){return name==='src'?this.src:'';},
   removeAttribute(name){if(name==='src')this.src='';}};
  const library={querySelectorAll(){return [photo];}};
- const manager=createDungeonPhotoManager(()=>uiDb,id=>id===circle.id?circle:null);
+ let activeCircle=circle;
+ const manager=createDungeonPhotoManager(()=>uiDb,id=>id===circle.id?activeCircle:null);
  manager.refresh([library]);
  assert.equal(photo.src,'','offscreen photo does not load on scene entry');
  assert.equal(made.length,0,'no full or thumbnail URL is allocated before visibility');
@@ -99,10 +108,34 @@ try{
  manager.refresh([]);
  assert.equal(photo.src,'','leaving view detaches image source');
  assert.ok(revoked.includes(made[0].url),'leaving view revokes thumbnail URL');
- const detail=manager.get(original);
+ // A Drive restoration keeps original bytes but clears all device-local thumbnails.
+ const backup=deserializeDungeonSnapshot(await serializeDungeonSnapshot(await readDungeonSnapshot(uiDb)));
+ await replaceDungeonSnapshot(uiDb,backup);
+ activeCircle=(await allCircles(uiDb))[0];
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(uiDb))).status,'valid');
+ assert.deepEqual(new Uint8Array(await activeCircle.image.arrayBuffer()),new Uint8Array(await original.arrayBuffer()));
+ manager.refresh([library]);
+ observer.trigger();
+ let untilRestore=Date.now()+3000;
+ while(!photo.src&&Date.now()<untilRestore)await new Promise(r=>setTimeout(r,10));
+ assert.ok(photo.src,'restored original regenerates its missing high-density thumbnail');
+ assert.equal(made.at(-1).blob.size,4,'restored thumbnail uses reduced bytes');
+ manager.refresh([]);
+ // A decoder failure after restoration must not leave the enlarged card blank.
+ await replaceDungeonSnapshot(uiDb,backup);
+ activeCircle=(await allCircles(uiDb))[0];
+ globalThis.createImageBitmap=async()=>{throw Error('thumbnail regeneration failed');};
+ manager.refresh([library]);
+ observer.trigger();
+ untilRestore=Date.now()+3000;
+ while(!photo.src&&Date.now()<untilRestore)await new Promise(r=>setTimeout(r,10));
+ assert.ok(photo.src,'an original-photo fallback appears when thumbnail regeneration fails');
+ assert.deepEqual(new Uint8Array(await made.at(-1).blob.arrayBuffer()),new Uint8Array(await original.arrayBuffer()),'fallback URL uses the restored original bytes');
+ manager.refresh([]);
+ const detail=manager.get(activeCircle.image);
  assert.match(detail,/^blob:test-/);
  assert.equal(made.at(-1).blob.size,original.size,'details use original bytes');
- manager.release(original);
+ manager.release(activeCircle.image);
  assert.ok(revoked.includes(detail),'closing details revokes original URL');
  manager.releaseAll();
 }finally{
