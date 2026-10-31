@@ -135,6 +135,7 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   get downloads(){return downloads;},
   get operations(){return [...operations];},
   get signals(){return [...signals];},
+  erase(){value=null;},
   pauseNextList(){
    let release;
    listPause=new Promise(resolve=>{release=resolve;});
@@ -615,8 +616,8 @@ try{
  assert.equal(confirmDrive.current,confirmBefore);
  assert.deepEqual(confirmDrive.operations,[]);
 
- // 4. Reconnecting to the same initial backup should not show the chooser
- // just because a player has not entered a name yet.
+ // Case 3: when the local game has not started, even a preexisting
+ // initial Drive backup requires choosing Drive or new game.
  const seed=await readDungeonSnapshot(await newDb()),identicalDb=await newDb();
  const {replaceDungeonSnapshot}=await import('../assets/js/dungeon-store.mjs');
  await replaceDungeonSnapshot(identicalDb,seed);
@@ -624,9 +625,66 @@ try{
  let identicalReady=0;
  start(identicalDb,identicalUi,identicalDrive.fetchImpl,{onInitialReady:()=>identicalReady++});
  await connect(identicalUi);
- await wait(()=>identicalReady===1,'identical seed is already backed up');
- assert.equal(identicalUi.get('googleDriveConflictDialog').open,false,'matching initial save is not a conflict');
- assert.equal(identicalDrive.uploads,0,'same save avoids redundant writes');
+ await wait(()=>identicalUi.get('googleDriveConflictDialog').open,'local absence enters case 3 even with a prior empty Drive save');
+ assert.equal(identicalDrive.uploads,0,'no data changes before selection');
+ identicalUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ await wait(()=>identicalUi.get('googleDriveConflictDialog').open===false,'selection closes case 3');
+
+ // Case 4: same play with a newer local timestamp uploads automatically.
+ const newerLocalDb=await newDb(),newerLocalUi=fakeUi();
+ const localOldProfile=await getProfile(newerLocalDb);
+ localOldProfile.name='タイムスタンプ検証';
+ await saveProfile(newerLocalDb,localOldProfile);
+ const localOldSnapshot=await readDungeonSnapshot(newerLocalDb);
+ const newerLocalDrive=remoteApi(await serializeDungeonSnapshot(localOldSnapshot));
+ const localNewProfile=await getProfile(newerLocalDb);
+ localNewProfile.level=18;
+ await saveProfile(newerLocalDb,localNewProfile);
+ const localNewSnapshot=await readDungeonSnapshot(newerLocalDb);
+ assert.ok(localNewSnapshot.savedAt>localOldSnapshot.savedAt);
+ let newerLocalReady=0;
+ start(newerLocalDb,newerLocalUi,newerLocalDrive.fetchImpl,{onInitialReady:()=>newerLocalReady++});
+ await connect(newerLocalUi);
+ await wait(()=>newerLocalReady===1,'same play uses newer local save');
+ assert.equal(deserializeDungeonSnapshot(newerLocalDrive.current).profile.level,18);
+ assert.deepEqual(newerLocalDrive.operations,['PATCH']);
+ assert.equal(newerLocalUi.get('googleDriveConflictDialog').open,false);
+
+ // Case 4: a newer Drive snapshot takes precedence, including the same play ID.
+ const newerRemoteDb=await newDb(),newerRemoteUi=fakeUi();
+ const remoteLocalProfile=await getProfile(newerRemoteDb);
+ remoteLocalProfile.name='Drive更新前';
+ await saveProfile(newerRemoteDb,remoteLocalProfile);
+ const remoteOldSnapshot=await readDungeonSnapshot(newerRemoteDb);
+ const remoteFutureSnapshot={...remoteOldSnapshot,profile:{...remoteOldSnapshot.profile,name:'Drive更新後'},
+  savedAt:remoteOldSnapshot.savedAt+100000};
+ const newerRemoteDrive=remoteApi(await serializeDungeonSnapshot(remoteFutureSnapshot));
+ let newerRemoteRestores=0;
+ start(newerRemoteDb,newerRemoteUi,newerRemoteDrive.fetchImpl,{onRestore:()=>newerRemoteRestores++});
+ await connect(newerRemoteUi);
+ await wait(()=>newerRemoteRestores===1,'newer Drive snapshot restores automatically');
+ assert.equal((await getProfile(newerRemoteDb)).name,'Drive更新後');
+ assert.deepEqual(newerRemoteDrive.operations,[]);
+ assert.equal(newerRemoteUi.get('googleDriveConflictDialog').open,false);
+
+ // Identical timestamps but different bytes must never silently discard a save.
+ const tieDb=await newDb(),tieUi=fakeUi();
+ const tieProfile=await getProfile(tieDb);
+ tieProfile.name='同時刻のローカル';
+ await saveProfile(tieDb,tieProfile);
+ const tieLocal=await readDungeonSnapshot(tieDb);
+ const tieDrive=remoteApi(await serializeDungeonSnapshot({...tieLocal,
+  profile:{...tieLocal.profile,name:'同時刻のDrive'}}));
+ let tieReady=0;
+ start(tieDb,tieUi,tieDrive.fetchImpl,{onInitialReady:()=>tieReady++});
+ await connect(tieUi);
+ await wait(()=>tieUi.get('googleDriveConflictDialog').open,'equal timestamps with different bytes ask user');
+ assert.equal(tieDrive.uploads,0);
+ assert.equal(tieReady,0);
+ tieUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
+ await wait(()=>tieUi.doc.cookie==='','equal timestamp cancel keeps both records');
+ assert.equal((await getProfile(tieDb)).name,'同時刻のローカル');
+ assert.equal(deserializeDungeonSnapshot(tieDrive.current).profile.name,'同時刻のDrive');
 
  // Case 1: a previously synced but now empty Drive is created anew.
  // Stale file IDs, hashes, or blocked flags must not prevent creation.
@@ -930,9 +988,13 @@ try{
  assert.equal(idleUi.doc.cookie,'','expiry clears the token cookie');
  assert.equal(await idleController.syncNow(),'deferred','expired credentials never upload again');
  assert.equal(idleUi.get('googleDriveExpiredDialog').showModalCount,1,'further save attempts cannot repeat the dialog');
+ // The Drive file may vanish while OAuth is expired. Re-authentication must
+ // pass through the same five cases (case 2), never the old missing-file error.
+ idleDrive.erase();
  auth.setExpiresIn(3600);
  idleUi.get('googleDriveExpiredDialog').querySelector('[data-action="reconnect"]').click();
- await wait(()=>idleUi.status.textContent==='GoogleDrive同期済み','dialog reconnect verifies Drive again');
+ await wait(()=>idleUi.status.textContent==='GoogleDrive同期済み','dialog reconnect recreates missing Drive backup');
+ assert.deepEqual(idleDrive.operations,['POST','POST'],'reauthentication re-enters case 2');
  assert.equal(idleUi.get('googleDriveExpiredDialog').open,false);
  idleDrive.expire();
  await idleController.sync(true);
