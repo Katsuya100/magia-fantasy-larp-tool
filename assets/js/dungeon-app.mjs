@@ -731,6 +731,7 @@ async function claimBonus(choice){
  const run=profile.run;
  if(!run||run.stage!=='checkpoint'||run.bonusClaimed||!isBonusLayer(clearedLayer(run.floor)))return;
  const layer=clearedLayer(run.floor);
+ const beforeBonus=structuredClone(run);
  if(choice==='restore'){run.hero.hp=run.hero.stats.hp;run.hero.mp=run.hero.maxMp;}
  else if(choice==='collection'){const item=bonusCollection(masters.collections,layer);run.loot.push({type:'collection',id:item.id});}
  else if(choice==='item'){
@@ -739,11 +740,18 @@ async function claimBonus(choice){
   const free=run.carry.findIndex(x=>!x);
   if(free>=0)run.carry[free]={...item,returnBonus:true};else run.loot.push(item);
  }else return;
- run.bonusClaimed=true;await persist();renderCheckpoint();renderRun();show('checkpoint');
+ run.bonusClaimed=true;
+ try{await persist();}
+ catch(error){Object.assign(run,beforeBonus);renderCheckpoint();throw error;}
+ renderCheckpoint();renderRun();show('checkpoint');
 }
 async function begin(){if(profile.run||!canDepartWithCircles(slots)){note('魔法陣を3〜5個編成してください');return;}
+ const previousProfile=structuredClone(profile),previousCarry=[...carry];
  const startLayer=allowedStartLayer(profile,selectedStartLayer);
- photoAnalysisEpoch++;const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{return combatSpell(circles.find(c=>c.id===id));}),'player');profile.slots=[...slots];profile.run={floor:(startLayer-1)*FIGHTS_PER_LAYER+1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');scrollToDungeonTabs();await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
+ photoAnalysisEpoch++;const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{return combatSpell(circles.find(c=>c.id===id));}),'player');profile.slots=[...slots];profile.run={floor:(startLayer-1)*FIGHTS_PER_LAYER+1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));
+ try{await persist();}
+ catch(error){profile=previousProfile;carry=previousCarry;render();show('prepare');throw error;}
+ renderRun();show('battle');scrollToDungeonTabs();await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
 function enemyChoice(enemy){return G.chooseEnemySpell(enemy,Math.random);}
 async function takeTurn(index){
  const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;
@@ -751,7 +759,8 @@ async function takeTurn(index){
  const circle=index>=0?circles.find(c=>c.id===run.slotIds[index]):null;
  if(circle?.analysis&&!run.hero.spells[index])run.hero.spells[index]=combatSpell(circle);
  const spell=index>=0?run.hero.spells[index]:null;
- if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index))return;const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
+ if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index))return;const beforeTurn=structuredClone(run);
+ const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
  if(circle?.analysis&&!isRevealed(circle)){
   Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);await persist();
  }
@@ -771,7 +780,12 @@ if(run.hero.hp<=0){
    carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(1));
    render();show('prepare');openNameDialog(true);return;
   }
- const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;selectedStartLayer=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='探索失敗';narrativeLines('resultText',[
+ const previousProfile=structuredClone(profile),previousCarry=[...carry],previousSelectedStart=selectedStartLayer;
+ previousProfile.run=beforeTurn;
+ const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;selectedStartLayer=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
+ try{await persist();}
+ catch(error){profile=previousProfile;carry=previousCarry;selectedStartLayer=previousSelectedStart;renderRun();show('battle');throw error;}
+ $('resultTitle').textContent='探索失敗';narrativeLines('resultText',[
  '未確定報酬 '+dropped+'個と経験値を喪失。',
  '未使用の携行品 '+unusedCount+'個は倉庫へ戻った。',
  '性能が判明した魔法陣は残る。'
@@ -805,7 +819,7 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
 // Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
 // between the loot overlay and the following encounter animation.
 const nextEntrance=ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');await persist();await nextEntrance;}
-await persist();renderRun();}
+try{await persist();}finally{renderRun();}}
 async function useItem(index){
  const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;
  const item=run.carry[index];if(!item||!G.canUseBattleItem(run.hero,item,masters.items,masters.buffs))return;
@@ -826,7 +840,7 @@ async function useItem(index){
   const snapshot=u=>({...u,statuses:u.statuses.map(s=>({...s})),cooldowns:[...u.cooldowns]});
   const step=(role,amount)=>({role,side:'hero',attribute:row?.attribute||'law',amount,hero:snapshot(run.hero),enemy:snapshot(run.enemy)});
   await animateBattle([step('item',n),...(item.bonus?[step('buff',0)]:[])]);
-  await persist();renderRun();
+  try{await persist();}finally{renderRun();}
  }catch(e){note(e.message);}
 }
 function paintReturnXp(elapsed){
@@ -1023,15 +1037,18 @@ async function shareAdventurerCardImage(){
 }
 async function advanceReturnStep(){
  if(!returnFlow||$('returnNext').disabled)return;
+ const previousStep=returnFlow.step;
  if(++returnFlow.step<returnFlow.steps.length){
-  await persist();
+  try{await persist();}
+  catch(error){returnFlow.step=previousStep;throw error;}
   renderReturnStep();
   return;
  }
  ++returnAnimationToken;
  const supportPrompt=returnFlow.supportPrompt||null;
  profile.pendingReturn=null;
- await persist();
+ try{await persist();}
+ catch(error){profile.pendingReturn=returnFlow;returnFlow.step=previousStep;--returnAnimationToken;throw error;}
  returnFlow=null;
  show('home');
  showMilestoneChoice(supportPrompt);
@@ -1039,6 +1056,13 @@ async function advanceReturnStep(){
 async function leave(mode='checkpoint'){
  const run=profile.run;
  if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;
+ const previousProfile=structuredClone(profile),previousCarry=[...carry];
+ const previousFlow=returnFlow,previousStartLayer=selectedStartLayer;
+ const rollbackReturn=()=>{
+  profile=previousProfile;carry=previousCarry;returnFlow=previousFlow;selectedStartLayer=previousStartLayer;
+  if(mode==='escape'){renderRun();show('battle');}
+  else{renderCheckpoint();show('checkpoint');}
+ };
  const found=new Map(),items=new Map(),badges=[];
  const knownItems=new Set(profile.obtainedItemIds);
  let stones=0,inks=0;
@@ -1113,7 +1137,8 @@ async function leave(mode='checkpoint'){
     profile.magicOverrides[circle.id]=metadata;
    }
   }
-  await persist();
+  try{await persist();}
+  catch(error){rollbackReturn();throw error;}
   if(!restored.length)return;
   const snapshot=await readDungeonSnapshot(db);
   const recoveredIds=new Set(restored.map(circle=>circle.id));
@@ -2037,7 +2062,21 @@ function wire(){
   $('supportSaveImage').addEventListener('click',downloadAdventurerCard);
   $('supportNativeShare').addEventListener('click',shareAdventurerCardImage);
  for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)));
- $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;const previousScroll=run.checkpointBattleScrollY;delete run.checkpointBattleScrollY;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');restoreContinuedBattleScroll(previousScroll);await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
+ $('deeper').addEventListener('click',()=>exclusive(async()=>{
+  const run=profile.run;if(!run||run.stage!=='checkpoint')return;
+  const previousRun=structuredClone(run),previousDepth=profile.deepestReachedLayer;
+  const previousScroll=run.checkpointBattleScrollY;
+  delete run.checkpointBattleScrollY;
+  run.floor++;run.bonusClaimed=false;enterFight();
+  try{await persist();}
+  catch(error){
+   profile.run=previousRun;profile.deepestReachedLayer=previousDepth;
+   renderCheckpoint();show('checkpoint');
+   throw error;
+  }
+  renderRun();show('battle');restoreContinuedBattleScroll(previousScroll);
+  await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');
+ }).catch(error=>note('進行に失敗しました：'+String(error?.message||error))));
  $('cancelAnalyze').addEventListener('click',()=>{
   const request=activeAnalysis,capture=request?.type==='capture';
   const drawn=capture&&request.origin==='drawn';
