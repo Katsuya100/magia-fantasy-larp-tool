@@ -351,6 +351,9 @@ assert.match(app,/inkEnhancedAnalysis\(reduced,inkCount\)[\s\S]*?savePreanalysis
 assert.match(app,/await saveProfileWithCircles\(db,nextProfile,\[analyzed\]\)/,'ink and circle save atomically');
 assert.doesNotMatch(app,/circleTitle|魔法陣 '\+String/);
 assert.match(app,/newestCirclesFirst\(\(await allCircles\(db\)\)\.map\(withDrawnPowerFloor\)\)/,'older drawn circles load with 250 minimum');
+assert.match(app,/finish\(null,normalizeAnalysisResult\(\{/,'capture parser returns unscaled data to avoid scaling twice');
+assert.match(app,/const reduced=circle\.origin==='drawn'\?\{\.\.\.result\.analysis,power:drawnPower\(result\.analysis\.power\)\}:successfulDungeonAnalysis\(result\.analysis\)/,'capture and drawn finalization share the 500 anchor');
+assert.match(app,/Object\.assign\(circle,savePreanalysis\(circle,circle\.origin==='drawn'\?/,'battle-time first analysis applies the same scale');
 assert.match(app,/newCapturedCircle\(crypto\.randomUUID\(\),blob,lastCaptureRegistration\)/);
 assert.doesNotMatch(picker,/displayName|c\.name/);
 assert.match(app,/openGrimoireFromPicker/);
