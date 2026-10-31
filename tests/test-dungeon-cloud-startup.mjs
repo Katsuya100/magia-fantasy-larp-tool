@@ -626,8 +626,8 @@ try{
  assert.equal(confirmDrive.current,confirmBefore);
  assert.deepEqual(confirmDrive.operations,[]);
 
- // Case 3: when the local game has not started, even a preexisting
- // initial Drive backup requires choosing Drive or new game.
+ // A Drive file with no player progress is not a separate player.
+ // Both empty backups are case 1 regardless of stale file-ID metadata.
  const seed=await readDungeonSnapshot(await newDb()),identicalDb=await newDb();
  const {replaceDungeonSnapshot}=await import('../assets/js/dungeon-store.mjs');
  await replaceDungeonSnapshot(identicalDb,seed);
@@ -635,10 +635,19 @@ try{
  let identicalReady=0;
  start(identicalDb,identicalUi,identicalDrive.fetchImpl,{onInitialReady:()=>identicalReady++});
  await connect(identicalUi);
- await wait(()=>identicalUi.get('googleDriveConflictDialog').open,'local absence enters case 3 even with a prior empty Drive save');
- assert.equal(identicalDrive.uploads,0,'no data changes before selection');
- identicalUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
- await wait(()=>identicalUi.get('googleDriveConflictDialog').open===false,'selection closes case 3');
+ await wait(()=>identicalReady===1,'two byte-identical unstarted saves are already synchronized');
+ assert.equal(identicalUi.get('googleDriveConflictDialog').open,false);
+ assert.equal(identicalDrive.uploads,0,'matching empty backup never rewrites');
+
+ const blankOtherDb=await newDb(),blankOtherUi=fakeUi();
+ const blankOtherDrive=remoteApi(await serializeDungeonSnapshot(seed));
+ let blankOtherReady=0;
+ start(blankOtherDb,blankOtherUi,blankOtherDrive.fetchImpl,{onInitialReady:()=>blankOtherReady++});
+ await connect(blankOtherUi);
+ await wait(()=>blankOtherReady===1,'two different empty placeholders synchronize without prompting');
+ assert.equal(blankOtherUi.get('googleDriveConflictDialog').open,false);
+ assert.deepEqual(blankOtherDrive.operations,['PATCH'],'local unstarted save replaces empty Drive placeholder');
+ assert.equal(isPristineDungeonSnapshot(deserializeDungeonSnapshot(blankOtherDrive.current)),true);
 
  // Case 4: same play with a newer local timestamp uploads automatically.
  const newerLocalDb=await newDb(),newerLocalUi=fakeUi();
