@@ -7,10 +7,9 @@ import {verifyLocalSnapshot,digestPhoto} from './dungeon-cloud-integrity.mjs';
 
 // Last-write-wins: the timestamp belongs to the game save, not Drive metadata.
 // Equal timestamps are resolved in Drive's favor. Hash equality is a no-op.
-export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remoteSavedAt=0,pristine=false}){
+export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remoteSavedAt=0}){
  if(!file)return 'upload';
  if(localHash&&remoteHash&&localHash===remoteHash)return 'synced';
- if(pristine)return 'choose';
  if(Number(localSavedAt)===Number(remoteSavedAt))return 'choose';
  return Number(localSavedAt)>Number(remoteSavedAt)?'upload':'download';
 }
@@ -30,7 +29,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return {ready:false};
  }
  let client=null,drive=null,expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
- let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initializing=false,initialChoiceCommitted=false;
+ let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false;
  let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
  let disconnectPending=false,disconnectPromise=null,resolveDisconnect=null;
  const isCurrent=epoch=>epoch===connectionEpoch&&Boolean(drive);
