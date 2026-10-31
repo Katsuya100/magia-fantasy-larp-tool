@@ -69,8 +69,7 @@ const playOne='00000000-0000-4000-8000-000000000001',playTwo='00000000-0000-4000
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playOne}),true,'one play permits automatic backup regardless of adventurer');
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playTwo}),false,'different play IDs prevent automatic overwrite and restore regardless of timestamps');
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null}),false,'missing cloud ID cannot silently be identified');
-assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null,fileId:'file',knownFileId:'file',knownHash:'hash',remoteHash:'hash'}),true,'verified prior file hash may bridge old-format cloud backup');
-assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null,fileId:'file',knownFileId:'file',knownHash:'other',remoteHash:'hash'}),false,'changed cloud cannot be adopted by reference alone');
+assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null,identical:true}),false,'prior file matches never silently adopt a backup with no play ID');
 assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:null,identical:false}),false,'two unknown legacy plays cannot be assumed identical');
 assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:null,identical:true}),true,'exactly identical verified old bytes need no write');
 assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:playTwo}),false,'remote play cannot be restored automatically into unknown local game');
