@@ -5,7 +5,7 @@ import {parseCsv} from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {openStore,getProfile,saveProfile,putCircle,readDungeonSnapshot,saveCloudSyncState,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import {verifyLocalSnapshot} from '../assets/js/dungeon-cloud-integrity.mjs';
-import {serializeDungeonSnapshot,deserializeDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
+import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {initDungeonCloudSync} from '../assets/js/dungeon-cloud-sync.mjs';
 
 const csv=async name=>parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
