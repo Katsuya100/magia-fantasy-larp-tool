@@ -145,7 +145,7 @@ try{
  const weakSaved=await allCircles(await openStore(env.factory));
  assert.equal(weakSaved.length,1,'failed analysis creates weak magic');
  assert.equal(weakSaved[0].revealed,false);
- assert.ok(weakSaved[0].analysis.power>=200&&weakSaved[0].analysis.power<=250);
+ assert.ok(weakSaved[0].analysis.power>=200&&weakSaved[0].analysis.power<=250,'failed analysis keeps the original unscaled 200..250 power');
  assert.ok(['attack','defense','support','debuff'].includes(weakSaved[0].analysis.role));
  assert.ok(['flame','bolt','aqua','storm','gravity','law','chaos'].includes(weakSaved[0].analysis.attribute));
  assert.equal($('cameraError').hidden,true);

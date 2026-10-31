@@ -1,9 +1,10 @@
 import {showUiOverlay,hideUiOverlay,showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261023.32';
+import {MIN_DUNGEON_POWER,scaleDungeonPower} from './dungeon-magic-knowledge.mjs?v=20261031.268';
+export {MIN_DUNGEON_POWER};
 // Browser-only finger-drawn magic circle editor. Geometry/state helpers are pure and CI-testable.
 // Thirty matching 12-degree slots in the upper circle and lower revolver.
 export const DRAWN_GLYPH_LIMIT=30;
 export const DRAWN_POWER_RATE=0.6;
-export const MIN_DUNGEON_POWER=250;
 // Narrow the letter band to two-thirds by moving only the inner ring outward.
 // The outer rim keeps its 86%-diameter alignment with the camera and thumbnails.
 export const OUTER_RADIUS=.43;
@@ -24,12 +25,12 @@ const SIGIL_VIEW_RADIUS=INNER_RADIUS/GUIDE_RADIUS;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
  if(!Number.isFinite(power)||power<=0||!Number.isFinite(rate)||rate<=0||rate>1)throw Error('手書き魔法陣の威力が不正です。');
- return Math.max(MIN_DUNGEON_POWER,Math.round(power*rate));
+ return Math.round(scaleDungeonPower(power)*rate);
 }
 // Bring older hand-drawn circles into line when read, without modifying
 // the signed/backup copy of the original magic-circle image or undoing upgrades.
 export function withDrawnPowerFloor(circle){
- if(circle?.origin!=='drawn'||!circle.analysis)return circle;
+ if(circle?.origin!=='drawn'||!circle.analysis||circle.powerScaleVersion===2)return circle;
  const current=Number(circle.analysis.power);
  const base=Number(circle.basePower??current);
  if(!Number.isFinite(current)||current<=0||!Number.isFinite(base)||base<=0)return circle;

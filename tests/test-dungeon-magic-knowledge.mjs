@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {canDepartWithCircles,equippedCircleCount,circleSummary,attributeEffectGuide,circleCardInfo,circleEffectDetails,
  newCapturedCircle,savePreanalysis,isRevealed,revealOnUse,circleDetails,
- normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,spellEffect,ROLES} from '../assets/js/dungeon-magic-knowledge.mjs';
+ MIN_DUNGEON_POWER,DUNGEON_POWER_ANCHOR,scaleDungeonPower,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,spellEffect,ROLES} from '../assets/js/dungeon-magic-knowledge.mjs';
 const eq=n=>Array.from({length:5},(_,i)=>i<n?'id-'+i:null);
 for(let n=0;n<=5;n++)assert.equal(canDepartWithCircles(eq(n)),n>=3,'equipped count '+n);
 assert.equal(canDepartWithCircles(['a','b','c']),false,'five visible slots required');
@@ -66,10 +66,17 @@ assert.deepEqual(ROLES,{attack:'⚔️攻撃',defense:'🛡️防御',support:'�
 assert.throws(()=>normalizeAnalysisResult({attribute:'invalid',role:'攻撃',power:1}),/不正/);
 assert.throws(()=>normalizeAnalysisResult({attribute:'flame',role:'攻撃',power:-1}),/不正/);
 assert.deepEqual(normalizeAnalysisResult({attribute:' flame ',role:'攻撃',power:'700'}),{attribute:'flame',role:'attack',power:700});
-assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:1}).power,250);
-assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:249}).power,250);
-assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:250}).power,250);
-assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:680}).power,680);
+assert.equal(MIN_DUNGEON_POWER,250);
+assert.equal(DUNGEON_POWER_ANCHOR,500);
+for(const [raw,expected] of [[1,251],[100,300],[200,350],[249,375],[250,375],[300,400],[400,450],[499,500],[500,500],[501,501],[680,680],[1000,1000]]){
+ assert.equal(scaleDungeonPower(raw),expected,'shared power scale '+raw);
+ assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:raw}).power,expected,'photo scale '+raw);
+}
+for(const random of [0,.5,.999999]){
+ const fallback=failedDungeonAnalysis(()=>random);
+ assert.ok(fallback.power>=200&&fallback.power<=250&&Number.isInteger(fallback.power),'failed reading retains unscaled range');
+}
+assert.equal(savePreanalysis(circle,{attribute:'flame',role:'attack',power:250}).analysis.power,250,'previously stored spell is not remapped on read');
 assert.equal(normalizeAnalysisResult({attribute:'flame',role:'attack',power:200}).power,200,'existing and failed spells not changed');
 assert.deepEqual(failedDungeonAnalysis(()=>0),{attribute:'flame',role:'attack',power:200});
 assert.deepEqual(failedDungeonAnalysis(()=>.999999),{attribute:'chaos',role:'debuff',power:250});
