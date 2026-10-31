@@ -290,6 +290,13 @@ try{
  const separateController=start(separateDb,separateUi,separateDrive.fetchImpl,{onInitialReady:()=>separateReady++});
  await connect(separateUi);
  await wait(()=>separateReady===1,'play-lineage test starts with a verified backup');
+ // This must be a real previous player, not an unnamed starting placeholder:
+ // two pristine saves intentionally sync without presenting case 5.
+ const originalNamed=await getProfile(separateDb);
+ originalNamed.name='元の冒険者';
+ await saveProfile(separateDb,originalNamed);
+ await wait(()=>deserializeDungeonSnapshot(separateDrive.current).profile.name==='元の冒険者'
+  &&separateUi.status.textContent==='GoogleDrive同期済み','original player has a verified remote backup');
  const originalHistory=deserializeDungeonSnapshot(separateDrive.current);
  const separateProfile=await getProfile(separateDb);
  separateProfile.playId=globalThis.crypto.randomUUID();
