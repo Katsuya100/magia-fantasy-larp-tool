@@ -762,7 +762,7 @@ async function takeTurn(index){
  if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index))return;const beforeTurn=structuredClone(run);
  const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
  if(circle?.analysis&&!isRevealed(circle)){
-  Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);await persist();
+  Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);
  }
  await animateBattle(steps);
 if(run.hero.hp<=0){
@@ -2044,8 +2044,8 @@ function wire(){
  $('cameraStop').addEventListener('click',closeCamera);
  $('circleCameraDialog').addEventListener('cancel',event=>{event.preventDefault();closeCamera();});
  $('cameraCapture').addEventListener('click',()=>exclusive(capture));
- $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
-  $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
+ $('startAttack').addEventListener('click',()=>exclusive(begin).catch(error=>note('出発に失敗しました：'+String(error?.message||error))));$('returnHome').addEventListener('click',()=>exclusive(leave).catch(error=>note('帰還に失敗しました：'+String(error?.message||error))));
+  $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep).catch(error=>note('保存に失敗しました：'+String(error?.message||error))));
   $('openAdventurerShare').addEventListener('click',openAdventurerShare);
   $('creatorCongratulationsClose').addEventListener('click',()=>{
    const dialog=$('creatorCongratulationsDialog');
@@ -2061,7 +2061,7 @@ function wire(){
  $('supportPromptDialog').addEventListener('close',()=>{shareImageGeneration++;shareImageFile=null;});
   $('supportSaveImage').addEventListener('click',downloadAdventurerCard);
   $('supportNativeShare').addEventListener('click',shareAdventurerCardImage);
- for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)));
+ for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)).catch(error=>note('保存に失敗しました：'+String(error?.message||error))));
  $('deeper').addEventListener('click',()=>exclusive(async()=>{
   const run=profile.run;if(!run||run.stage!=='checkpoint')return;
   const previousRun=structuredClone(run),previousDepth=profile.deepestReachedLayer;
