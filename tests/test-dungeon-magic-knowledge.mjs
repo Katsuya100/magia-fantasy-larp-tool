@@ -72,9 +72,9 @@ for(const [raw,expected] of [[1,251],[100,300],[200,350],[249,375],[250,375],[30
  assert.equal(scaleDungeonPower(raw),expected,'shared power scale '+raw);
  assert.equal(successfulDungeonAnalysis({attribute:'flame',role:'攻撃',power:raw}).power,expected,'photo scale '+raw);
 }
-for(const raw of [200,225,250]){
- const fallback={...failedDungeonAnalysis(()=>raw===200?0:raw===225?.5:.999999),power:raw};
- assert.equal(successfulDungeonAnalysis(fallback).power,Math.round(250+raw/2),'failed reading scales on finalization');
+for(const random of [0,.5,.999999]){
+ const fallback=failedDungeonAnalysis(()=>random);
+ assert.ok(fallback.power>=200&&fallback.power<=250&&Number.isInteger(fallback.power),'failed reading retains unscaled range');
 }
 assert.equal(savePreanalysis(circle,{attribute:'flame',role:'attack',power:250}).analysis.power,250,'previously stored spell is not remapped on read');
 assert.equal(normalizeAnalysisResult({attribute:'flame',role:'attack',power:200}).power,200,'existing and failed spells not changed');
