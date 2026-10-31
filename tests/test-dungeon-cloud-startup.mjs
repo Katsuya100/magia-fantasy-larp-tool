@@ -674,17 +674,19 @@ try{
  await saveProfile(tieDb,tieProfile);
  const tieLocal=await readDungeonSnapshot(tieDb);
  const tieDrive=remoteApi(await serializeDungeonSnapshot({...tieLocal,
-  profile:{...tieLocal.profile,name:'同時刻のDrive'}}));
+  profile:{...tieLocal.profile,level:tieLocal.profile.level+1}}));
  let tieReady=0;
  start(tieDb,tieUi,tieDrive.fetchImpl,{onInitialReady:()=>tieReady++});
  await connect(tieUi);
  await wait(()=>tieUi.get('googleDriveConflictDialog').open,'equal timestamps with different bytes ask user');
  assert.equal(tieDrive.uploads,0);
  assert.equal(tieReady,0);
+ assert.equal(tieUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').textContent,'端末の同時刻のローカルで始める');
+ assert.equal(tieUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').textContent,'Driveの同時刻のローカルで始める');
  tieUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
  await wait(()=>tieUi.doc.cookie==='','equal timestamp cancel keeps both records');
  assert.equal((await getProfile(tieDb)).name,'同時刻のローカル');
- assert.equal(deserializeDungeonSnapshot(tieDrive.current).profile.name,'同時刻のDrive');
+ assert.equal(deserializeDungeonSnapshot(tieDrive.current).profile.level,tieLocal.profile.level+1);
 
  // Case 1: a previously synced but now empty Drive is created anew.
  // Stale file IDs, hashes, or blocked flags must not prevent creation.
