@@ -65,7 +65,7 @@ assert.equal(decideCloudSync({file,pristine:true,localHash:'same',remoteHash:'sa
 assert.equal(decideCloudSync({file,localHash:'h',remoteHash:'h'}),'synced');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:9}),'upload');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:9,remoteSavedAt:10}),'download');
-assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:10}),'download');
+assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:10}),'choose','equal timestamps with differing bytes require a player choice');
 assert.equal(decideCloudSync({file,blocked:true}),'blocked');
 const playOne='00000000-0000-4000-8000-000000000001',playTwo='00000000-0000-4000-8000-000000000002';
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playOne}),true,'one play permits automatic backup regardless of adventurer');
