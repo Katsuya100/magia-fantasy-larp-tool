@@ -656,6 +656,22 @@ try{
  assert.deepEqual(blankOtherDrive.operations,['PATCH'],'local unstarted save replaces empty Drive placeholder');
  assert.equal(isPristineDungeonSnapshot(deserializeDungeonSnapshot(blankOtherDrive.current)),true);
 
+ // Case 2 also applies when Drive has an untouched placeholder file,
+ // while the device already has a named player. Do not invent a sixth conflict.
+ const blankCloudDb=await newDb(),blankCloudUi=fakeUi();
+ const blankCloudPlayer=await getProfile(blankCloudDb);
+ blankCloudPlayer.name='端末の冒険者';
+ await saveProfile(blankCloudDb,blankCloudPlayer);
+ const blankCloudDrive=remoteApi(await serializeDungeonSnapshot(seed));
+ let blankCloudReady=0;
+ start(blankCloudDb,blankCloudUi,blankCloudDrive.fetchImpl,{onInitialReady:()=>blankCloudReady++});
+ await connect(blankCloudUi);
+ await wait(()=>blankCloudReady===1,'named local player replaces unused Drive placeholder');
+ assert.equal(blankCloudUi.get('googleDriveConflictDialog').open,false);
+ assert.deepEqual(blankCloudDrive.operations,['PATCH']);
+ assert.equal(deserializeDungeonSnapshot(blankCloudDrive.current).profile.playId,blankCloudPlayer.playId);
+ assert.equal(deserializeDungeonSnapshot(blankCloudDrive.current).profile.name,'端末の冒険者');
+
  // Case 4: same play with a newer local timestamp uploads automatically.
  const newerLocalDb=await newDb(),newerLocalUi=fakeUi();
  const localOldProfile=await getProfile(newerLocalDb);
