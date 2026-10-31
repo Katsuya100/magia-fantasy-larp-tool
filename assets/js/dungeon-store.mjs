@@ -227,7 +227,6 @@ export function clearDungeonData(db){
    transaction.onerror=()=>reject(transaction.error||Error('保存データの削除に失敗しました。'));
    transaction.onabort=()=>reject(transaction.error||Error('保存データの削除が中断されました。'));
    for(const name of STORES)transaction.objectStore(name).clear();
-   transaction.objectStore('settings').put({blocked:true},'cloudSyncState');
   }catch(error){reject(error);}
  });
 }
