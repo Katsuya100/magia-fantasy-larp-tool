@@ -698,8 +698,8 @@ try{
   savedAt:inFlightOld.savedAt+1});
  const inFlightDrive=remoteApi(inFlightRemote);
  const releaseMetadata=inFlightDrive.pauseNextMetadata();
- let unsafeRestores=0;
- start(inFlightDb,inFlightUi,inFlightDrive.fetchImpl,{onRestore:()=>unsafeRestores++});
+ let unsafeRestores=0,inFlightReady=0;
+ start(inFlightDb,inFlightUi,inFlightDrive.fetchImpl,{onRestore:()=>unsafeRestores++,onInitialReady:()=>inFlightReady++});
  await connect(inFlightUi);
  await wait(()=>inFlightDrive.metadataRequests===1,'Drive restore is paused before the atomic local check');
  for(let n=0;n<3;n++){
@@ -713,6 +713,7 @@ try{
   'new local write wins after guarded restore is rejected');
  assert.equal(unsafeRestores,0,'stale Drive result must never replace a concurrent local edit');
  assert.equal((await getProfile(inFlightDb)).name,'通信中の新しい冒険者');
+ await wait(()=>inFlightReady===1,'initial connection finishes after the safe retry');
  assert.equal(inFlightUi.get('googleDriveConflictDialog').open,false);
  
  // Identical timestamps but different bytes must never silently discard a save.
