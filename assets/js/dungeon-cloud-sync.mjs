@@ -391,6 +391,20 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return result;
    }
 
+   // A valid but untouched Drive placeholder contains no player data.
+   // Treat it as an empty backup, rather than inventing a sixth lineage conflict.
+   if(isPristineDungeonSnapshot(remote.data)){
+    if(verification.status==='legacy'){
+     await establishLegacyIntegrity(db,local);
+     local=await readDungeonSnapshot(db);
+     verification=await verifyLocalSnapshot(local);
+    }
+    if(verification.status!=='valid'){
+     show('端末セーブを検証できません。バックアップを更新できません。');
+     return result;
+    }
+    return await upload(local,file,{allowInitial:true});
+   }
    const localPlayId=local.profile?.playId,remotePlayId=remote.data?.profile?.playId;
    let identical=false;
    if(!localPlayId&&!remotePlayId&&verification.status!=='corrupt'){
