@@ -14,7 +14,7 @@ import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261031.270';
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261031.270';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261031.270';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,migrateDungeonIntegerXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261031.270';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,migrateDungeonIntegerXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261031.271';
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261031.270';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261031.270';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261031.270';
