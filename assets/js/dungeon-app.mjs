@@ -1925,8 +1925,8 @@ function wire(){
  if(b.dataset.openItem!==undefined){openLoadoutPicker('item',Number(b.dataset.openItem));return;}
  if(b.dataset.chooseCircle!==undefined){await chooseLoadout(Number(b.dataset.chooseCircle));return;}
  if(b.dataset.chooseItem!==undefined){await chooseLoadout(Number(b.dataset.chooseItem));return;}
- if(b.dataset.cast!==undefined){await battleAction('cast',Number(b.dataset.cast));return;}
- if(b.dataset.use!==undefined){await battleAction('use',Number(b.dataset.use));return;}
+ if(b.dataset.cast!==undefined){try{await battleAction('cast',Number(b.dataset.cast));}catch(error){note('戦闘操作に失敗しました：'+String(error?.message||error));}return;}
+ if(b.dataset.use!==undefined){try{await battleAction('use',Number(b.dataset.use));}catch(error){note('戦闘操作に失敗しました：'+String(error?.message||error));}return;}
  });
  $('permadeathInput').addEventListener('change',updateGameModeDescription);
  $('nameForm').addEventListener('submit',async event=>{
