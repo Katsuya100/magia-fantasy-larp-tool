@@ -185,7 +185,12 @@ export async function allCircles(db){
  ]);
  const upgrades=profile?.circleUpgrades||{},overrides=profile?.magicOverrides||{},lost=lostCircleIds(profile);
  return circles.filter(circle=>!lost.has(circle.id))
-  .map(circle=>applySavedUpgrade({...circle,...(overrides[circle.id]||{})},upgrades[circle.id]));
+  .map(circle=>{
+   // The circles store owns immutable photo bytes; legacy profile metadata
+   // must never shadow a restored original with a stale image field.
+   const {image:_ignored,...metadata}=overrides[circle.id]||{};
+   return applySavedUpgrade({...circle,...metadata},upgrades[circle.id]);
+  });
 }
 export async function putCircle(db,circle,{repairImage=false}={}){
  const proof=circle.image==null?null:await digestPhoto(circle.image);
