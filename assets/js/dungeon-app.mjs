@@ -770,7 +770,7 @@ if(run.hero.hp<=0){
    const successor=createSuccessorProfile(profile,run,circles,G.startingBase());
    const lost=successor.legacies.at(-1);
    try{await saveProfile(db,successor);}
-   catch(error){note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
+   catch(error){profile.run=beforeTurn;renderRun();note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
    profile=successor;
    for(const circle of lost.circles)circleImages.forget(circle.id,circle.image);
    const removed=new Set(lost.circles.map(circle=>circle.id));
@@ -828,7 +828,13 @@ async function useItem(index){
   if(row?.kind==='escape'){
    run.carry[index]=null;
    run.log.push(itemName(item)+'を使用して脱出');
-   await leave('escape');
+   try{await leave('escape');}
+   catch(error){
+    if(profile.run?.stage==='battle'){
+     profile.run.carry[index]=item;profile.run.log.pop();renderRun();
+    }
+    throw error;
+   }
    return;
   }
   if(row?.kind==='revive'&&(run.hero.reviveArmed||run.hero.reviveUsed)){
