@@ -65,6 +65,8 @@ assert.equal(decideCloudSync({file,localHash:'h',remoteHash:'h'}),'synced');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:9}),'upload');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:9,remoteSavedAt:10}),'download');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:10}),'choose','equal timestamps with differing bytes require a player choice');
+assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:0,remoteSavedAt:10}),'choose','unknown local timestamp cannot silently lose a player save');
+assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:0}),'choose','unknown Drive timestamp cannot silently overwrite the backup');
 const playOne='00000000-0000-4000-8000-000000000001',playTwo='00000000-0000-4000-8000-000000000002';
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playOne}),true,'one play permits automatic backup regardless of adventurer');
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playTwo}),false,'different play IDs prevent automatic overwrite and restore regardless of timestamps');
