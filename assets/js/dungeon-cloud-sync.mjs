@@ -350,7 +350,15 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    }
    const pristine=isPristineDungeonSnapshot(local);
    if(pristine){
-    // Case 3: a fresh device must choose, irrespective of any prior sync flags.
+    // A previously verified, byte-identical initial backup is already synced.
+    // This is an idempotent no-op, not a fresh device or a conflict.
+    const localHash=await snapshotHash(await serializeDungeonSnapshot(local));
+    if(localHash===remote.hash&&meta?.fileId===file.id&&meta?.hash===remote.hash){
+     await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
+     syncedPresentation();
+     return 'ready';
+    }
+    // Case 3: a fresh device must choose when a different backup exists.
     const choice=await chooseCloud({local,remote:remote.data,mode:'fresh'});
     if(choice==='restore')return await restore(remote,file,{explicit:true});
     if(choice==='overwrite'){
