@@ -10,8 +10,10 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,25,'existing dialogs plus the icon guide');
-assert.equal(new Set(dialogs).size,25);
+assert.equal(dialogs.length,24,'the redundant Drive overwrite dialog is removed; all other dialogs remain');
+assert.equal(new Set(dialogs).size,24);
+assert.ok(dialogs.includes('googleDriveConflictDialog')&&dialogs.includes('googleDriveExpiredDialog'),'one cloud chooser and the auth-expiry dialog remain');
+assert.ok(!dialogs.includes('googleDriveOverwriteDialog'),'old cloud overwrite confirmation must not return');
 assert.ok(dialogs.includes('circlePowerTipsDialog'),'magic tips use a single native dialog');
 assert.ok(dialogs.includes('alchemyDialog')&&dialogs.includes('alchemyPickerDialog'),'alchemy dialogs share the native transition manager');
 assert.ok(dialogs.includes('magicInkDialog'),'magic ink selection uses the existing dialog manager');
