@@ -25,12 +25,12 @@ const SIGIL_VIEW_RADIUS=INNER_RADIUS/GUIDE_RADIUS;
 
 export function drawnPower(power,rate=DRAWN_POWER_RATE){
  if(!Number.isFinite(power)||power<=0||!Number.isFinite(rate)||rate<=0||rate>1)throw Error('手書き魔法陣の威力が不正です。');
- return scaleDungeonPower(Math.round(power*rate));
+ return Math.round(scaleDungeonPower(power)*rate);
 }
 // Bring older hand-drawn circles into line when read, without modifying
 // the signed/backup copy of the original magic-circle image or undoing upgrades.
 export function withDrawnPowerFloor(circle){
- if(circle?.origin!=='drawn'||!circle.analysis)return circle;
+ if(circle?.origin!=='drawn'||!circle.analysis||circle.powerScaleVersion===2)return circle;
  const current=Number(circle.analysis.power);
  const base=Number(circle.basePower??current);
  if(!Number.isFinite(current)||current<=0||!Number.isFinite(base)||base<=0)return circle;
