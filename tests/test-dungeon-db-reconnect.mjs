@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import * as G from '../assets/js/dungeon-core.mjs';
+import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {
  openStore,getProfile,saveProfile,readDungeonSnapshot,replaceDungeonSnapshot,
@@ -6,6 +9,9 @@ import {
 } from '../assets/js/dungeon-store.mjs';
 import {verifyLocalSnapshot} from '../assets/js/dungeon-cloud-integrity.mjs';
 
+const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
+const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','floors','player-base'].map(csv));
+configure({balance,levels,floors,playerBase});
 const factory=fakeIndexedDB(),db=await openStore(factory);
 const profile=await getProfile(db);
 profile.name='接続復旧のテスト';
