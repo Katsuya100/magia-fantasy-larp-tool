@@ -1,4 +1,4 @@
-import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261031.268';
+import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261031.269';
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
 import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
