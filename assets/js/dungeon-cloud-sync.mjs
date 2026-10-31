@@ -254,7 +254,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   try{
    await replaceDungeonSnapshot(db,remote.data,{expectedCurrentRecords,expectedCurrentSavedAt:expectedLocal?.savedAt??null});
   }catch(error){
-   if(/別のタブ(?:で|が)セーブを更新されました|別のタブがセーブを更新しました/.test(String(error?.message||''))){
+   if(/別のタブ(?:がセーブを更新|でセーブが更新され)/.test(String(error?.message||''))){
     again=true;
     return 'deferred';
    }
