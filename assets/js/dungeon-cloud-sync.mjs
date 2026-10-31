@@ -181,8 +181,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const cancelButton=conflictDialog.querySelector('[data-action="later"]');
    const closeButton=conflictDialog.querySelector('[data-action="cancel"]');
    localButton.hidden=!allowLocal;
-   localButton.textContent=fresh?'新しく始める':localName+'で始める';
-   driveButton.textContent=remoteName+'で始める';
+   // Two distinct saves can have the same visible name (especially an equal-
+   // timestamp conflict). In that case identify the storage side on buttons.
+   const sameName=!fresh&&localName===remoteName;
+   localButton.textContent=fresh?'新しく始める':(sameName?'端末の':'')+localName+'で始める';
+   driveButton.textContent=(sameName?'Driveの':'')+remoteName+'で始める';
    cancelButton.hidden=fresh;
    cancelButton.textContent='キャンセル';
    if(closeButton)closeButton.hidden=fresh;
