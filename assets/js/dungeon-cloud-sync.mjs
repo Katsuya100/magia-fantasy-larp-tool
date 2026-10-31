@@ -6,7 +6,7 @@ import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSy
 import {verifyLocalSnapshot,digestPhoto} from './dungeon-cloud-integrity.mjs';
 
 // Last-write-wins: the timestamp belongs to the game save, not Drive metadata.
-// Equal timestamps are resolved in Drive's favor. Hash equality is a no-op.
+// Equal timestamps with different contents require selection; identical bytes are a no-op.
 export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remoteSavedAt=0}){
  if(!file)return 'upload';
  if(localHash&&remoteHash&&localHash===remoteHash)return 'synced';
@@ -14,9 +14,10 @@ export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remote
  return Number(localSavedAt)>Number(remoteSavedAt)?'upload':'download';
 }
 // Never infer game continuity from player name, level or timestamps.
-export function canAutoSyncPlay({localPlayId,remotePlayId,fileId,remoteHash,knownFileId,knownHash,identical=false}){
+export function canAutoSyncPlay({localPlayId,remotePlayId,identical=false}){
  if(localPlayId&&remotePlayId)return localPlayId===remotePlayId;
- if(localPlayId&&!remotePlayId)return Boolean(fileId&&knownFileId===fileId&&remoteHash&&knownHash===remoteHash);
+ // Missing lineage is not an existing player's permission to overwrite:
+ // only byte-identical saves with both IDs absent are automatically the same.
  return !localPlayId&&!remotePlayId&&identical;
 }
 export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=()=>{},onRepairImages=async()=>false,onImagesRestored=async()=>{},fetchImpl=globalThis.fetch,windowImpl=globalThis.window}){
@@ -379,8 +380,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     const encoded=await serializeDungeonSnapshot(local);
     identical=(await snapshotHash(encoded))===remote.hash;
    }
-   const samePlay=canAutoSyncPlay({localPlayId,remotePlayId,fileId:file.id,
-    remoteHash:remote.hash,knownFileId:meta?.fileId,knownHash:meta?.hash,identical});
+   const samePlay=canAutoSyncPlay({localPlayId,remotePlayId,identical});
    if(!samePlay){
     // Case 5: different (or unidentifiable) players always require a choice.
     // No re-authentication or opaque blocked/freshStart state is involved.
