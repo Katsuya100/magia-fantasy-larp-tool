@@ -159,8 +159,7 @@ const closable={
  circleActionDialog:'cancelCircleAction',
  magicStoneTutorialDialog:'closeMagicStoneTutorial',
  supportPromptDialog:'supportPromptClose',
- googleDriveConflictDialog:'data-action="later"',
- googleDriveOverwriteDialog:'data-action="back"',
+ googleDriveConflictDialog:'data-action="cancel"',
  googleDriveExpiredDialog:'data-action="later"',
  deleteDataDialog:'cancelDeleteData'
 };
@@ -215,7 +214,7 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
 const drawingLessons=['circleDrawingLessonDialog'];
-assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+drawingLessons.length,dialogs.length,'all 25 native dialogs accounted for');
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+drawingLessons.length,dialogs.length,'all 24 native dialogs accounted for; obsolete Drive confirmation removed');
 for(const id of drawingLessons){
  assert.match(tagOf(id),/data-dungeon-frame="fixed"/,'drawing lesson is a fixed frame without close rail');
  const content=dialogMarkup(id);
