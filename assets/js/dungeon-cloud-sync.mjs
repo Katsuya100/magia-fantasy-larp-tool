@@ -252,9 +252,9 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(current.modifiedTime!==file.modifiedTime){again=true;return 'deferred';}
   lockLocalOnly(true);
   try{
-   await replaceDungeonSnapshot(db,remote.data,{expectedCurrentRecords});
+   await replaceDungeonSnapshot(db,remote.data,{expectedCurrentRecords,expectedCurrentSavedAt:expectedLocal?.savedAt??null});
   }catch(error){
-   if(/別のタブでセーブが更新されました/.test(String(error?.message||''))){
+   if(/別のタブ(?:で|が)セーブを更新されました|別のタブがセーブを更新しました/.test(String(error?.message||''))){
     again=true;
     return 'deferred';
    }
