@@ -669,31 +669,15 @@
     </dialog>
     <dialog id="googleDriveConflictDialog" class="name-dialog" aria-labelledby="googleDriveConflictTitle" data-dungeon-frame="closable">
       <header class="dungeon-dialog-header">
-        <h2 id="googleDriveConflictTitle" class="dungeon-dialog-frame-title">バックアップが見つかりました</h2>
-        <button type="button" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" data-action="later" aria-label="あとで">✕</button>
+        <h2 id="googleDriveConflictTitle" class="dungeon-dialog-frame-title">バックアップ情報が見つかりました</h2>
+        <button type="button" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" data-action="cancel" aria-label="キャンセル">✕</button>
       </header>
       <div class="delete-data-dialog-inner dungeon-dialog-frame">
-
-        <p data-role="description">引き継ぐか、上書きするか選んでください。</p>
-        <p id="googleDriveOverwriteWarning">上書きすると以前のバックアップは失われます。</p>
+        <p data-role="description"></p>
         <div class="buttons">
-          <button type="button" class="subtle" data-action="restore">引き継ぐ</button>
-          <button type="button" class="danger" data-action="overwrite">新しいデータで上書きする</button>
-
-        </div>
-      </div>
-    </dialog>
-    <dialog id="googleDriveOverwriteDialog" class="name-dialog" aria-labelledby="googleDriveOverwriteTitle" data-dungeon-frame="closable">
-      <header class="dungeon-dialog-header">
-        <h2 id="googleDriveOverwriteTitle" class="dungeon-dialog-frame-title">バックアップを上書きしますか？</h2>
-        <button type="button" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" data-action="back" aria-label="戻る">✕</button>
-      </header>
-      <div class="delete-data-dialog-inner dungeon-dialog-frame">
-
-        <p>Driveの以前のデータは失われます。</p>
-        <div class="buttons">
-
-          <button type="button" class="danger" data-action="confirm">上書きする</button>
+          <button type="button" class="subtle" data-action="restore"></button>
+          <button type="button" class="danger" data-action="overwrite"></button>
+          <button type="button" class="subtle" data-action="later">キャンセル</button>
         </div>
       </div>
     </dialog>
