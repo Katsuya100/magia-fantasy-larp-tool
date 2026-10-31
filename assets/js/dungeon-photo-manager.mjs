@@ -1,6 +1,6 @@
 import {createCircleImageUrls} from './dungeon-image-urls.mjs';
-import {createCircleThumbnail} from './dungeon-thumbnails.mjs';
-import {getCircleThumbnail} from './dungeon-store.mjs?v=20261023.20';
+import {createCircleThumbnail} from './dungeon-thumbnails.mjs?v=20261031.270';
+import {getCircleThumbnail} from './dungeon-store.mjs?v=20261031.270';
 
 // Match the grimoire card's CSS width and device density; do not enlarge other UI.
 export function grimoireThumbnailSize(cssWidth,pixelRatio=globalThis.devicePixelRatio||1){
@@ -37,7 +37,17 @@ export function createDungeonPhotoManager(getDatabase,findCircle){
    displayed.set(circle.id,{blob,size:old?.blob===blob?Math.max(old.size,size):size});
    img.src=thumbUrls.get(blob);
   }catch(error){
-   if(visible.has(img))img.alt='縮小画像を表示できません。';
+   if(visible.has(img)&&img.isConnected!==false){
+    // Restored backups have no local thumbnail cache. If regeneration fails,
+    // show their preserved original instead of leaving the grimoire blank.
+    try{
+     if(!(circle.image instanceof Blob)||!circle.image.size)throw error;
+     const old=displayed.get(circle.id);
+     if(old?.blob&&old.blob!==circle.image)thumbUrls.release(old.blob);
+     displayed.set(circle.id,{blob:circle.image,size:0});
+     img.src=thumbUrls.get(circle.image);
+    }catch{img.alt='縮小画像を表示できません。';}
+   }
    console.warn('縮小画像を読み込めませんでした',error);
   }
  }

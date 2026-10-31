@@ -1,8 +1,8 @@
-import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261031.269';
+import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261031.270';
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
 import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
-import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,establishLegacyIntegrity,getProfile,saveProfile} from './dungeon-store.mjs?v=20261031.269';
+import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,establishLegacyIntegrity,getProfile,saveProfile} from './dungeon-store.mjs?v=20261031.270';
 import {verifyLocalSnapshot,digestPhoto,recordFingerprint} from './dungeon-cloud-integrity.mjs';
 
 // Last-write-wins: the timestamp belongs to the game save, not Drive metadata.

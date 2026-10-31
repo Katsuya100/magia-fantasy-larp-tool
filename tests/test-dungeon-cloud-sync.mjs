@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
-import {openStore,saveProfile,putCircle,readDungeonSnapshot,replaceDungeonSnapshot,saveCloudSyncState,getCloudSyncState,onDungeonDataChange,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,saveProfile,putCircle,allCircles,readDungeonSnapshot,replaceDungeonSnapshot,saveCloudSyncState,getCloudSyncState,onDungeonDataChange,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {createDungeonDrive,DRIVE_SCOPE,DriveAuthError} from '../assets/js/dungeon-cloud-drive.mjs';
 import {decideCloudSync,canAutoSyncPlay} from '../assets/js/dungeon-cloud-sync.mjs';
@@ -47,10 +47,15 @@ assert.throws(()=>deserializeDungeonSnapshot(JSON.stringify({format:'magia-dunge
 await saveCloudSyncState(db,{fileId:'abc',modifiedTime:'t0',hash:'h0'});
 assert.equal(changes,2,'sync metadata must not trigger a recursive upload');
 assert.deepEqual(await getCloudSyncState(db),{fileId:'abc',modifiedTime:'t0',hash:'h0'});
-await replaceDungeonSnapshot(db,{profile:{name:'復元',level:7},circles:decoded.circles});
+await replaceDungeonSnapshot(db,{profile:{name:'復元',level:7,
+ magicOverrides:{'sigil-1':{image:null,analysis:{power:99}}}},circles:decoded.circles});
 assert.equal(changes,3);
 assert.equal((await readDungeonSnapshot(db)).profile.name,'復元');
 assert.equal(await (await readDungeonSnapshot(db)).circles[0].image.type,'image/png');
+const restoredCircle=(await allCircles(db))[0];
+assert.equal(restoredCircle.image instanceof Blob,true,'stale profile image metadata cannot hide the restored original');
+assert.deepEqual(new Uint8Array(await restoredCircle.image.arrayBuffer()),new Uint8Array(await photo.arrayBuffer()));
+assert.equal(restoredCircle.analysis.power,99,'legacy metadata still applies without overriding photo bytes');
 assert.equal(await getCloudSyncState(db),undefined,'restoring a snapshot drops device-specific metadata');
 await clearDungeonData(db);
 assert.equal(changes,4);
