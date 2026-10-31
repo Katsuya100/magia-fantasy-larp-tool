@@ -3,8 +3,12 @@ export async function createCircleThumbnail(blob,size=192){
  if(!(blob instanceof Blob)||!blob.size)throw Error('写真がありません。');
  let image=null,url=null,canvas=null;
  try{
-  if(typeof createImageBitmap==='function')image=await createImageBitmap(blob);
-  else{
+  if(typeof createImageBitmap==='function'){
+   // Some browsers can display an image but reject its ImageBitmap decoding.
+   // A restored backup has no cached thumbnails, so try the DOM decoder too.
+   try{image=await createImageBitmap(blob);}catch{/* Try Image below. */}
+  }
+  if(!image){
    url=URL.createObjectURL(blob);
    image=new Image();
    if(typeof image.decode==='function'){image.src=url;await image.decode();}
