@@ -162,7 +162,7 @@ assert.deepEqual(afterMismatched.integrity,beforeMismatched.integrity,'invalid r
 
 // An invalid legacy reward must fail before writing either the profile or
 // its integrity seal; this is the same transaction-safety path as startup.
-const unknownVersion={...legacySave,saveRevision:(await getProfile(db)).saveRevision,xpScaleVersion:G.XP_SCALE+1};
+const unknownVersion={...legacySave,saveRevision:(await getProfile(db)).saveRevision,xpScaleVersion:G.XP_SCALE+2};
 await saveProfile(db,unknownVersion);
 const beforeUnknownVersion=await readDungeonSnapshot(db);
 await assert.rejects(migrateDungeonXp(db),/未対応のEXPバージョン/);
