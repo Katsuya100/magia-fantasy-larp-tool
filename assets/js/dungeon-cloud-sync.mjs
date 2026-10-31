@@ -10,6 +10,8 @@ import {verifyLocalSnapshot,digestPhoto,recordFingerprint} from './dungeon-cloud
 export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remoteSavedAt=0}){
  if(!file)return 'upload';
  if(localHash&&remoteHash&&localHash===remoteHash)return 'synced';
+ // A missing timestamp has no defined ordering, even for the same player.
+ if(!(Number(localSavedAt)>0)||!(Number(remoteSavedAt)>0))return 'choose';
  if(Number(localSavedAt)===Number(remoteSavedAt))return 'choose';
  return Number(localSavedAt)>Number(remoteSavedAt)?'upload':'download';
 }
