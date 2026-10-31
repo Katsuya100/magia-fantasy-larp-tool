@@ -10,7 +10,10 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
  const versions=new Map();
  const connections=new Map();
  const factory={
-  opens:0,databases,failProfileBlobWrites:false,failIntegrityWrites:false,failMigrationBackupWrites:false,transactions:[],
+  opens:0,databases,connections,failNextTransactions:0,failProfileBlobWrites:false,failIntegrityWrites:false,failMigrationBackupWrites:false,transactions:[],
+  closeConnections(name='magia-dungeon-v1'){
+   for(const db of [...(connections.get(name)||[])]){db.onclose?.();db.close();}
+  },
   open(name,version){
    factory.opens++;
    if(onOpen==='throw')throw Error('Storage denied');
@@ -29,6 +32,12 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
      createObjectStore(id,options){maps.set(id,new Map());keys.set(id,options?.keyPath||null);return {};},
      close(){db.closed=true;connections.get(name)?.delete(db);},
      transaction(id,mode){
+      if(db.closed||factory.failNextTransactions>0){
+       if(factory.failNextTransactions>0)factory.failNextTransactions--;
+       const error=new Error("Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing.");
+       error.name='InvalidStateError';
+       throw error;
+      }
       const names=Array.isArray(id)?id:[id];
       if(!names.length||names.some(name=>!maps.has(name)))throw Error('Missing object store '+id);
       // Stage writes until commit just like a real IndexedDB transaction.
