@@ -1,5 +1,11 @@
 // Analyze a photographed circle before saving. Hidden power is revealed on first successful use.
 // Legacy analyzed photos without "revealed" remain known, with their stored power visible.
+export const MIN_DUNGEON_POWER=250;
+export const DUNGEON_POWER_ANCHOR=500;
+// Preserve the original result from 500 upward; stretch weaker rolls into 250..500.
+export const scaleDungeonPower=power=>power<DUNGEON_POWER_ANCHOR
+ ? Math.round(MIN_DUNGEON_POWER+power/2)
+ : power;
 export const MIN_EQUIPPED_CIRCLES=3,MAX_EQUIPPED_CIRCLES=5;
 export const ATTRIBUTES={
  flame:{icon:'🔥',label:'flame'},bolt:{icon:'⚡',label:'bolt'},aqua:{icon:'💧',label:'aqua'},
@@ -20,7 +26,7 @@ export function normalizeAnalysisResult({attribute,role,power}){
 // Rules apply to newly analyzed dungeon magic only; old spells retain their power.
 export function successfulDungeonAnalysis(result){
  const a=normalizeAnalysisResult(result);
- return {...a,power:Math.max(250,a.power)};
+ return {...a,power:scaleDungeonPower(a.power)};
 }
 export function failedDungeonAnalysis(random=Math.random){
  const attributes=Object.keys(ATTRIBUTES),roles=Object.keys(ROLES);
