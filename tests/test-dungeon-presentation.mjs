@@ -285,12 +285,12 @@ assert.match(page,/<button type="button" id="setupWithoutBackup"[^>]*>同期せ�
 const cloudSync=await read('assets/js/dungeon-cloud-sync.mjs');
 assert.match(cloudSync,/if\(choice==='restore'\|\|choice==='overwrite'\)\{[\s\S]*?lockLocalOnly\(true\);[\s\S]*?\}\s*choicePending=false;\s*pendingChoiceCancel=null;\s*closeDungeonDialog\(conflictDialog\)/,'restore hides skip before the overlay chooser closes');
 assert.match(cloudSync,/setSyncing\(true\);\s*show\('同期中…'\)/,'background sync marks real API work busy');
-assert.match(cloudSync,/if\(again&&!stopped&&!restoring&&drive\)\{[\s\S]*?queueMicrotask\(\(\)=>\{if\(drive&&!stopped&&!restoring\)void sync\(false\)/,'at most one queued follow-up save starts immediately after active upload');
+assert.match(cloudSync,/if\(again&&!stopped&&!restoring&&drive\)\{[\s\S]*?queueMicrotask\(\(\)=>\{[\s\S]*?void sync\(retryInitial\)/,'at most one queued follow-up pass uses latest save, preserving initial checks');
 assert.match(cloudSync,/if\(busy\)\{again=true;return;\}/,'autosave edits during upload coalesce into one pending bit');
 assert.match(cloudSync,/disconnectButton\?\.addEventListener\('click',\(\)=>\{void disconnect\(\);\}\)/,'unlink action waits without blocking gameplay');
 assert.match(cloudSync,/if\(disconnectPending\)\{\s*finishDisconnect\(\)/,'unlink happens only in the active request finalizer');
 assert.match(cloudSync,/requestController=null; \/\/ No abort: all in-flight requests have settled/,'normal unlink no longer aborts Drive uploads');
-assert.match(cloudSync,/if\(await confirmOverwrite\(\)&&!disconnectPending&&conflictDialog\.open\)finish\('overwrite'\)/,'overwriting requires a second confirmed choice and active authorization');
+assert.match(cloudSync,/\[localButton,'click',\(\)=>finish\('overwrite'\)\]/,'the selected player is an explicit overwrite decision without a second obsolete dialog');
 assert.match(cloudSync,/connectionEpoch\+\+;/,'old connection callbacks are invalidated');
 assert.match(cloudSync,/if\(!isCurrent\(activeSyncEpoch\)\)return 'deferred';/,'stale network results cannot restore connected UI');
 assert.match(cloudSync,/clearAuthCookie\(\);\s*drive=null;expires=0;validatedDrive=null;/,'unlink removes token while preserving data');
