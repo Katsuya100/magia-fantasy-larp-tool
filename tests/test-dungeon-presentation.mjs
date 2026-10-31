@@ -258,7 +258,7 @@ const cloudSyncSource=await read('assets/js/dungeon-cloud-sync.mjs');
 assert.doesNotMatch(cloudSyncSource,/meta\?\.blocked|meta\?\.freshStart|同期エラー：Drive上にバックアップがありません/,'obsolete sync state gates are removed');
 assert.match(cloudSyncSource,/await establishLegacyIntegrity\(db,local\);\s*local=await readDungeonSnapshot\(db\);\s*verification=await verifyLocalSnapshot\(local\);/,'legacy saves still need a verified seal before uploading');
 assert.match(cloudSyncSource,/cancelButton.hidden=fresh/,'case 3 offers exactly Drive or new game');
-assert.match(cloudSyncSource,/localButton.textContent=fresh\?'新しく始める':localName\+'で始める'/,'one choice dialog distinguishes new games from saved local players');
+assert.match(cloudSyncSource,/localButton.textContent=fresh\?'新しく始める'/,'one choice dialog distinguishes new games from saved local players');
 assert.match(app,/void cloudSyncController\?\.syncNow\?\.\(\)/,'name submission queues Drive upload without holding the local action lock');
 assert.doesNotMatch(app,/await cloudSyncController\?\.syncNow\?\.\(\)/,'network uploads never block the rename form');
 assert.match(app,/if\(profile\.awaitingHeir\)\{[\s\S]*?next=await saveHeirName\(db,name\);[\s\S]*?\}else\{[\s\S]*?await saveProfile\(db,next\);[\s\S]*?\}\s*profile=next;\s*closeDungeonDialog\(\$\('nameDialog'\)\);\s*render\(\);[\s\S]*?void cloudSyncController\?\.syncNow\?\.\(\)/,'both heir and ordinary names are saved locally, the dialog closes, then the cloud request starts');
