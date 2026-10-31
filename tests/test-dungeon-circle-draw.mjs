@@ -30,13 +30,18 @@ assert.ok(GLYPH_INK_SCALE/letterViewRadius>.6&&GLYPH_INK_SCALE/letterViewRadius<
 assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-OUTER_RADIUS},0,0).y+bandEdge)<1e-12);
 assert.ok(Math.abs(projectCircleToPad({x:.5,y:.5-INNER_RADIUS},0,0).y-bandEdge)<1e-12);
 assert.equal(MIN_DUNGEON_POWER,250);
-for(const [raw,expected] of [[1,251],[100,280],[200,310],[416,375],[417,375],[418,376],[500,400],[833,500],[834,500],[835,501],[1000,600]]){
- assert.equal(drawnPower(raw),expected,'60% handwritten reduction before scaling '+raw);
+for(const [raw,expected] of [[1,151],[100,180],[200,210],[250,225],[400,270],[416,275],[417,275],[418,275],[500,300],[833,500],[834,500],[835,501],[1000,600]]){
+ assert.equal(drawnPower(raw),expected,'60% handwritten reduction after scaling '+raw);
 }
-assert.equal(drawnPower(500,.8),450,'custom draw rate still receives scaling');
+assert.equal(drawnPower(500,.8),400,'custom draw rate applies after scaling');
 assert.throws(()=>drawnPower(0));
 assert.throws(()=>drawnPower(NaN));
 assert.equal(withDrawnPowerFloor({origin:'drawn',basePower:120,analysis:{power:120}}).analysis.power,250);
+const scaledNew={origin:'drawn',powerScaleVersion:2,basePower:210,analysis:{power:210}};
+assert.equal(withDrawnPowerFloor(scaledNew),scaledNew,'new handwritten spells below 250 must survive reload');
+const newEnhanced={...scaledNew,creationInk:2,basePower:252,analysis:{power:252}};
+assert.equal(withDrawnPowerFloor(newEnhanced),newEnhanced,'new ink-boosted handwritten spells keep original power');
+assert.equal(withDrawnPowerFloor({origin:'drawn',basePower:120,analysis:{power:120},creationInk:2}).basePower,300,'legacy ink still gets the old minimum correction');
 assert.deepEqual(pointOnPad(110,170,{left:10,top:20,width:200,height:300}),{x:0,y:0});
 assert.ok(Math.abs(sigilPoint({x:.92,y:0}).x-(.5+INNER_RADIUS))<1e-12,
  'sigil ink expands with the larger inner circle in the upper image');
