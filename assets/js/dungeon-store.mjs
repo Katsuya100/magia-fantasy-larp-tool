@@ -1,4 +1,4 @@
-import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261031.268';
+import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261031.269';
 import {v46NextXp} from './dungeon-xp-v46.mjs';
 import {level as levelRow} from './dungeon-tuning.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
