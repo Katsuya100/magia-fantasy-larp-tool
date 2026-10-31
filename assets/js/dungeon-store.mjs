@@ -1,4 +1,4 @@
-import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261031.268';
+import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261031.269';
 import {v46NextXp} from './dungeon-xp-v46.mjs';
 import {level as levelRow} from './dungeon-tuning.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
@@ -227,7 +227,6 @@ export function clearDungeonData(db){
    transaction.onerror=()=>reject(transaction.error||Error('保存データの削除に失敗しました。'));
    transaction.onabort=()=>reject(transaction.error||Error('保存データの削除が中断されました。'));
    for(const name of STORES)transaction.objectStore(name).clear();
-   transaction.objectStore('settings').put({blocked:true},'cloudSyncState');
   }catch(error){reject(error);}
  });
 }
@@ -609,7 +608,7 @@ export function readDungeonSnapshot(db){
   }catch(error){reject(error);}
  });
 }
-export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{expectedCurrentRecords=null}={}){
+export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{expectedCurrentRecords=null,expectedCurrentSavedAt=null}={}){
  validateDatabase(db);
  const prepared=await prepareProfilePhotoRefs(profile);
  const all=[...circles];
@@ -628,18 +627,21 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{exp
     for(const circle of all)items.put(circle);
     settings.put({version:1,records,photos,profilePhotos,savedAt:Number(savedAt)||0,legacy:false},'integrity');
    };
-   if(expectedCurrentRecords!==null){
-    const p=settings.get('profile'),c=items.getAll(),n=settings.get(HEIR_NAME_KEY);
-    let remaining=3;
+   if(expectedCurrentRecords!==null||expectedCurrentSavedAt!==null){
+    const p=settings.get('profile'),c=items.getAll(),n=settings.get(HEIR_NAME_KEY),proof=settings.get('integrity');
+    let remaining=4;
     const check=()=>{
      if(--remaining)return;
      try{
-      if(recordFingerprint({profile:applyHeirName(p.result,n.result),circles:c.result})!==expectedCurrentRecords)
+      if(expectedCurrentRecords!==null&&
+         recordFingerprint({profile:applyHeirName(p.result,n.result),circles:c.result})!==expectedCurrentRecords)
        throw Error('保全データの復元中に別のタブがセーブを更新しました。上書きを停止しました。');
+      if(expectedCurrentSavedAt!==null&&Number(proof.result?.savedAt||0)!==Number(expectedCurrentSavedAt))
+       throw Error('保全データの復元中に別のタブでセーブが更新されました。上書きを停止しました。');
       write();
      }catch(error){try{tx.abort?.();}catch{}reject(error);}
     };
-    p.onsuccess=check;c.onsuccess=check;n.onsuccess=check;
+    p.onsuccess=check;c.onsuccess=check;n.onsuccess=check;proof.onsuccess=check;
    }else write();
   }catch(error){reject(error);}
  });

@@ -7,7 +7,7 @@ if(!version)throw Error('Missing current release marker');
 const assets=['assets/css/dungeon.css','assets/js/dungeon-app.mjs','assets/js/dungeon-name-filter.mjs','assets/js/dungeon-progress.mjs',
  'assets/js/dungeon-tutorial.mjs',
  'assets/js/dungeon-combat-fx.mjs','assets/js/dungeon-store.mjs','assets/js/dungeon-legacy-cache.mjs',
- 'assets/js/dungeon-photo-manager.mjs','assets/js/dungeon-thumbnails.mjs','assets/js/dungeon-battle-cards.mjs',
+ 'assets/js/dungeon-photo-manager.mjs','assets/js/dungeon-cloud-sync.mjs','assets/js/dungeon-thumbnails.mjs','assets/js/dungeon-battle-cards.mjs',
  'assets/js/dungeon-upgrades.mjs','assets/js/dungeon-share.mjs',
  'assets/js/dungeon-card-art.mjs','assets/js/dungeon-circle-ritual.mjs','assets/js/dungeon-circle-draw.mjs','assets/js/dungeon-preparation-ui.mjs','assets/js/dungeon-ui-transitions.mjs',
  'assets/js/dungeon-list-view.mjs',
