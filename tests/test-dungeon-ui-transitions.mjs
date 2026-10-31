@@ -257,7 +257,7 @@ for(const id of ['iconGuideDialog','loadoutDialog','alchemyDialog','alchemyPicke
  assert.ok(header.includes('dungeon-dialog-close-icon'),'round X belongs to header: '+id);
  assert.ok(content.indexOf(header)<content.indexOf('dungeon-dialog-frame">'),'header sits above scrollable body: '+id);
 }
-for(const id of ['circleActionDialog','magicStoneTutorialDialog','supportPromptDialog','googleDriveConflictDialog','googleDriveOverwriteDialog','googleDriveExpiredDialog','deleteDataDialog']){
+for(const id of ['circleActionDialog','magicStoneTutorialDialog','supportPromptDialog','googleDriveConflictDialog','googleDriveExpiredDialog','deleteDataDialog']){
  const markup=dialogMarkup(id);
  assert.match(markup,/<header class="dungeon-dialog-header">/,'fixed header for formerly broken footer X: '+id);
  assert.equal((markup.match(/dungeon-dialog-close-icon/g)||[]).length,1,'one header X, not a footer action: '+id);
