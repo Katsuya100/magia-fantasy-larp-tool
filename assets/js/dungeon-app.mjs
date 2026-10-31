@@ -1,38 +1,38 @@
-import * as G from './dungeon-core.mjs?v=20261031.270';
-import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261031.270';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261031.270';
-import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261031.270';
-import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261031.270';
-import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261031.270';
-import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261031.270';
-import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261031.270';
-import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from './dungeon-alchemy.mjs?v=20261031.270';
-import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261031.270';
-import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261031.270';
-import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261031.270';
+import * as G from './dungeon-core.mjs?v=20261031.271';
+import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261031.271';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261031.271';
+import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261031.271';
+import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261031.271';
+import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261031.271';
+import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261031.271';
+import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261031.271';
+import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from './dungeon-alchemy.mjs?v=20261031.271';
+import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261031.271';
+import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261031.271';
+import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261031.271';
 import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
-import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261031.270';
-import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261031.270';
-import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261031.270';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,migrateDungeonIntegerXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261031.270';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261031.270';
-import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261031.270';
-import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261031.270';
-import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261031.270';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261031.270';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261031.270';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261031.270';
-import {supportPromptForReturn} from './dungeon-support.mjs?v=20261031.270';
-import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261031.270';
-import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261031.270';
-import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261031.270';
-import {selectCardCircle} from './dungeon-card-art.mjs?v=20261031.270';
-import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261031.270';
-import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261031.270';
-import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261031.270';
-import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261031.270';
-import {initCircleDrawing,drawnPower,withDrawnPowerFloor} from './dungeon-circle-draw.mjs?v=20261031.270';
-import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261031.270';
+import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261031.271';
+import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261031.271';
+import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261031.271';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,migrateDungeonIntegerXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261031.271';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261031.271';
+import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261031.271';
+import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261031.271';
+import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261031.271';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261031.271';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261031.271';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261031.271';
+import {supportPromptForReturn} from './dungeon-support.mjs?v=20261031.271';
+import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261031.271';
+import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261031.271';
+import {initMagicStoneTutorial,shouldShowMagicStoneTutorial} from './dungeon-magic-stone-tutorial.mjs?v=20261031.271';
+import {selectCardCircle} from './dungeon-card-art.mjs?v=20261031.271';
+import {renderBattleCards} from './dungeon-battle-cards.mjs?v=20261031.271';
+import {playCircleReveal,playCircleUpgrade,CIRCLE_RITUAL_DURATION_MS} from './dungeon-circle-ritual.mjs?v=20261031.271';
+import {createSuccessorProfile,legacyContents,reclaimLegacies,markCircleCreator,circleRelicHistory,circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs?v=20261031.271';
+import {isDungeonNameBlocked} from './dungeon-name-filter.mjs?v=20261031.271';
+import {initCircleDrawing,drawnPower,withDrawnPowerFloor} from './dungeon-circle-draw.mjs?v=20261031.271';
+import {hideUiOverlay,showDungeonDialog,closeDungeonDialog,installDungeonDialogCancelTransitions} from './dungeon-ui-transitions.mjs?v=20261031.271';
 let cloudSyncController,drawingEditor;
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let db,profile,circles=[],masters={},slots=[],carry=[],stream=null,repairStream=null,repairCameraEpoch=0,activeAnalysis=null,picker=null,selectedStartLayer=null;
@@ -731,6 +731,7 @@ async function claimBonus(choice){
  const run=profile.run;
  if(!run||run.stage!=='checkpoint'||run.bonusClaimed||!isBonusLayer(clearedLayer(run.floor)))return;
  const layer=clearedLayer(run.floor);
+ const beforeBonus=structuredClone(run);
  if(choice==='restore'){run.hero.hp=run.hero.stats.hp;run.hero.mp=run.hero.maxMp;}
  else if(choice==='collection'){const item=bonusCollection(masters.collections,layer);run.loot.push({type:'collection',id:item.id});}
  else if(choice==='item'){
@@ -739,11 +740,18 @@ async function claimBonus(choice){
   const free=run.carry.findIndex(x=>!x);
   if(free>=0)run.carry[free]={...item,returnBonus:true};else run.loot.push(item);
  }else return;
- run.bonusClaimed=true;await persist();renderCheckpoint();renderRun();show('checkpoint');
+ run.bonusClaimed=true;
+ try{await persist();}
+ catch(error){Object.assign(run,beforeBonus);renderCheckpoint();throw error;}
+ renderCheckpoint();renderRun();show('checkpoint');
 }
 async function begin(){if(profile.run||!canDepartWithCircles(slots)){note('魔法陣を3〜5個編成してください');return;}
+ const previousProfile=structuredClone(profile),previousCarry=[...carry];
  const startLayer=allowedStartLayer(profile,selectedStartLayer);
- photoAnalysisEpoch++;const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{return combatSpell(circles.find(c=>c.id===id));}),'player');profile.slots=[...slots];profile.run={floor:(startLayer-1)*FIGHTS_PER_LAYER+1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));await persist();renderRun();show('battle');scrollToDungeonTabs();await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
+ photoAnalysisEpoch++;const selectedIndices=pickedValues(carry);profile.carrySlots=saveCarrySlots(carry,profile.inventory);const selected=carry.map(i=>Number.isInteger(i)?profile.inventory[i]:null);for(const i of [...selectedIndices].sort((a,b)=>b-a))profile.inventory.splice(i,1);const hero=G.makeUnit(profile.base,profile.level,{},slots.map(id=>{return combatSpell(circles.find(c=>c.id===id));}),'player');profile.slots=[...slots];profile.run={floor:(startLayer-1)*FIGHTS_PER_LAYER+1,slotIds:[...slots],hero,enemy:null,carry:selected,loot:[],xp:0,log:[],stage:'battle'};profile.attempts++;enterFight();carry=prepareItems([],profile.inventory.length,G.capacity(profile.level));
+ try{await persist();}
+ catch(error){profile=previousProfile;carry=previousCarry;render();show('prepare');throw error;}
+ renderRun();show('battle');scrollToDungeonTabs();await ceremony('encounter','ENCOUNTER',profile.run.enemyName+' が現れた');}
 function enemyChoice(enemy){return G.chooseEnemySpell(enemy,Math.random);}
 async function takeTurn(index){
  const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;
@@ -751,9 +759,10 @@ async function takeTurn(index){
  const circle=index>=0?circles.find(c=>c.id===run.slotIds[index]):null;
  if(circle?.analysis&&!run.hero.spells[index])run.hero.spells[index]=combatSpell(circle);
  const spell=index>=0?run.hero.spells[index]:null;
- if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index))return;const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
+ if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index))return;const beforeTurn={...run,hero:structuredClone(run.hero),enemy:structuredClone(run.enemy),log:[...run.log]};
+ const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
  if(circle?.analysis&&!isRevealed(circle)){
-  Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);await persist();
+  Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);
  }
  await animateBattle(steps);
 if(run.hero.hp<=0){
@@ -761,7 +770,7 @@ if(run.hero.hp<=0){
    const successor=createSuccessorProfile(profile,run,circles,G.startingBase());
    const lost=successor.legacies.at(-1);
    try{await saveProfile(db,successor);}
-   catch(error){note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
+   catch(error){profile.run=beforeTurn;renderRun();note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
    profile=successor;
    for(const circle of lost.circles)circleImages.forget(circle.id,circle.image);
    const removed=new Set(lost.circles.map(circle=>circle.id));
@@ -771,7 +780,12 @@ if(run.hero.hp<=0){
    carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(1));
    render();show('prepare');openNameDialog(true);return;
   }
- const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;selectedStartLayer=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));await persist();$('resultTitle').textContent='探索失敗';narrativeLines('resultText',[
+ const previousProfile=structuredClone(profile),previousCarry=[...carry],previousSelectedStart=selectedStartLayer;
+ previousProfile.run=beforeTurn;
+ const dropped=run.loot.length,unusedCount=run.carry.filter(Boolean).length;profile.inventory.push(...run.carry.filter(Boolean));profile.run=null;selectedStartLayer=null;ensureItemInstances(profile);profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));carry=restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
+ try{await persist();}
+ catch(error){profile=previousProfile;carry=previousCarry;selectedStartLayer=previousSelectedStart;renderRun();show('battle');throw error;}
+ $('resultTitle').textContent='探索失敗';narrativeLines('resultText',[
  '未確定報酬 '+dropped+'個と経験値を喪失。',
  '未使用の携行品 '+unusedCount+'個は倉庫へ戻った。',
  '性能が判明した魔法陣は残る。'
@@ -805,7 +819,7 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
 // Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
 // between the loot overlay and the following encounter animation.
 const nextEntrance=ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');await persist();await nextEntrance;}
-await persist();renderRun();}
+try{await persist();}finally{renderRun();}}
 async function useItem(index){
  const run=profile.run;if(playingEffects||!run||run.stage!=='battle')return;
  const item=run.carry[index];if(!item||!G.canUseBattleItem(run.hero,item,masters.items,masters.buffs))return;
@@ -814,7 +828,13 @@ async function useItem(index){
   if(row?.kind==='escape'){
    run.carry[index]=null;
    run.log.push(itemName(item)+'を使用して脱出');
-   await leave('escape');
+   try{await leave('escape');}
+   catch(error){
+    if(profile.run?.stage==='battle'){
+     profile.run.carry[index]=item;profile.run.log.pop();renderRun();
+    }
+    throw error;
+   }
    return;
   }
   if(row?.kind==='revive'&&(run.hero.reviveArmed||run.hero.reviveUsed)){
@@ -826,7 +846,7 @@ async function useItem(index){
   const snapshot=u=>({...u,statuses:u.statuses.map(s=>({...s})),cooldowns:[...u.cooldowns]});
   const step=(role,amount)=>({role,side:'hero',attribute:row?.attribute||'law',amount,hero:snapshot(run.hero),enemy:snapshot(run.enemy)});
   await animateBattle([step('item',n),...(item.bonus?[step('buff',0)]:[])]);
-  await persist();renderRun();
+  try{await persist();}finally{renderRun();}
  }catch(e){note(e.message);}
 }
 function paintReturnXp(elapsed){
@@ -1023,15 +1043,18 @@ async function shareAdventurerCardImage(){
 }
 async function advanceReturnStep(){
  if(!returnFlow||$('returnNext').disabled)return;
+ const previousStep=returnFlow.step;
  if(++returnFlow.step<returnFlow.steps.length){
-  await persist();
+  try{await persist();}
+  catch(error){returnFlow.step=previousStep;throw error;}
   renderReturnStep();
   return;
  }
  ++returnAnimationToken;
  const supportPrompt=returnFlow.supportPrompt||null;
  profile.pendingReturn=null;
- await persist();
+ try{await persist();}
+ catch(error){profile.pendingReturn=returnFlow;returnFlow.step=previousStep;--returnAnimationToken;throw error;}
  returnFlow=null;
  show('home');
  showMilestoneChoice(supportPrompt);
@@ -1039,6 +1062,13 @@ async function advanceReturnStep(){
 async function leave(mode='checkpoint'){
  const run=profile.run;
  if(!run||(mode==='escape'?run.stage!=='battle':run.stage!=='checkpoint'))return;
+ const previousProfile=structuredClone(profile),previousCarry=[...carry];
+ const previousFlow=returnFlow,previousStartLayer=selectedStartLayer;
+ const rollbackReturn=()=>{
+  profile=previousProfile;carry=previousCarry;returnFlow=previousFlow;selectedStartLayer=previousStartLayer;
+  if(mode==='escape'){renderRun();show('battle');}
+  else{renderCheckpoint();show('checkpoint');}
+ };
  const found=new Map(),items=new Map(),badges=[];
  const knownItems=new Set(profile.obtainedItemIds);
  let stones=0,inks=0;
@@ -1113,7 +1143,8 @@ async function leave(mode='checkpoint'){
     profile.magicOverrides[circle.id]=metadata;
    }
   }
-  await persist();
+  try{await persist();}
+  catch(error){rollbackReturn();throw error;}
   if(!restored.length)return;
   const snapshot=await readDungeonSnapshot(db);
   const recoveredIds=new Set(restored.map(circle=>circle.id));
@@ -1894,8 +1925,8 @@ function wire(){
  if(b.dataset.openItem!==undefined){openLoadoutPicker('item',Number(b.dataset.openItem));return;}
  if(b.dataset.chooseCircle!==undefined){await chooseLoadout(Number(b.dataset.chooseCircle));return;}
  if(b.dataset.chooseItem!==undefined){await chooseLoadout(Number(b.dataset.chooseItem));return;}
- if(b.dataset.cast!==undefined){await battleAction('cast',Number(b.dataset.cast));return;}
- if(b.dataset.use!==undefined){await battleAction('use',Number(b.dataset.use));return;}
+ if(b.dataset.cast!==undefined){try{await battleAction('cast',Number(b.dataset.cast));}catch(error){note('戦闘操作に失敗しました：'+String(error?.message||error));}return;}
+ if(b.dataset.use!==undefined){try{await battleAction('use',Number(b.dataset.use));}catch(error){note('戦闘操作に失敗しました：'+String(error?.message||error));}return;}
  });
  $('permadeathInput').addEventListener('change',updateGameModeDescription);
  $('nameForm').addEventListener('submit',async event=>{
@@ -2019,8 +2050,8 @@ function wire(){
  $('cameraStop').addEventListener('click',closeCamera);
  $('circleCameraDialog').addEventListener('cancel',event=>{event.preventDefault();closeCamera();});
  $('cameraCapture').addEventListener('click',()=>exclusive(capture));
- $('startAttack').addEventListener('click',()=>exclusive(begin));$('returnHome').addEventListener('click',()=>exclusive(leave));
-  $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep));
+ $('startAttack').addEventListener('click',()=>exclusive(begin).catch(error=>note('出発に失敗しました：'+String(error?.message||error))));$('returnHome').addEventListener('click',()=>exclusive(leave).catch(error=>note('帰還に失敗しました：'+String(error?.message||error))));
+  $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep).catch(error=>note('保存に失敗しました：'+String(error?.message||error))));
   $('openAdventurerShare').addEventListener('click',openAdventurerShare);
   $('creatorCongratulationsClose').addEventListener('click',()=>{
    const dialog=$('creatorCongratulationsDialog');
@@ -2036,8 +2067,22 @@ function wire(){
  $('supportPromptDialog').addEventListener('close',()=>{shareImageGeneration++;shareImageFile=null;});
   $('supportSaveImage').addEventListener('click',downloadAdventurerCard);
   $('supportNativeShare').addEventListener('click',shareAdventurerCardImage);
- for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)));
- $('deeper').addEventListener('click',()=>exclusive(async()=>{const run=profile.run;if(!run||run.stage!=='checkpoint')return;const previousScroll=run.checkpointBattleScrollY;delete run.checkpointBattleScrollY;run.floor++;run.bonusClaimed=false;enterFight();await persist();renderRun();show('battle');restoreContinuedBattleScroll(previousScroll);await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');}));
+ for(const choice of ['restore','collection','item'])$('bonus-'+choice)?.addEventListener('click',()=>exclusive(()=>claimBonus(choice)).catch(error=>note('保存に失敗しました：'+String(error?.message||error))));
+ $('deeper').addEventListener('click',()=>exclusive(async()=>{
+  const run=profile.run;if(!run||run.stage!=='checkpoint')return;
+  const previousRun=structuredClone(run),previousDepth=profile.deepestReachedLayer;
+  const previousScroll=run.checkpointBattleScrollY;
+  delete run.checkpointBattleScrollY;
+  run.floor++;run.bonusClaimed=false;enterFight();
+  try{await persist();}
+  catch(error){
+   profile.run=previousRun;profile.deepestReachedLayer=previousDepth;
+   renderCheckpoint();show('checkpoint');
+   throw error;
+  }
+  renderRun();show('battle');restoreContinuedBattleScroll(previousScroll);
+  await ceremony('encounter','ENCOUNTER',run.enemyName+' が現れた');
+ }).catch(error=>note('進行に失敗しました：'+String(error?.message||error))));
  $('cancelAnalyze').addEventListener('click',()=>{
   const request=activeAnalysis,capture=request?.type==='capture';
   const drawn=capture&&request.origin==='drawn';
