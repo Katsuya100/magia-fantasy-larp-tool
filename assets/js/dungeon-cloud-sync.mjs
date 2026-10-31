@@ -317,7 +317,6 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   show('同期中…');
   let result='deferred';
   try{
-   const meta=await getCloudSyncState(db);
    let local=await readDungeonSnapshot(db);
    let verification=await verifyLocalSnapshot(local);
    const files=await drive.list();
@@ -362,15 +361,18 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    }
    const pristine=isPristineDungeonSnapshot(local);
    if(pristine){
-    // A previously verified, byte-identical initial backup is already synced.
-    // This is an idempotent no-op, not a fresh device or a conflict.
-    const localHash=await snapshotHash(await serializeDungeonSnapshot(local));
-    if(localHash===remote.hash&&meta?.fileId===file.id&&meta?.hash===remote.hash){
-     await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
-     syncedPresentation();
-     return 'ready';
+    if(isPristineDungeonSnapshot(remote.data)){
+     // Both saves have no player progress. An empty placeholder file is not
+     // a separate adventurer or a reason to show a destructive choice.
+     const localHash=await snapshotHash(await serializeDungeonSnapshot(local));
+     if(localHash===remote.hash){
+      await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
+      syncedPresentation();
+      return 'ready';
+     }
+     return await upload(local,file,{allowInitial:true});
     }
-    // Case 3: a fresh device must choose when a different backup exists.
+    // Case 3: local has no player progress but Drive contains an adventurer.
     const choice=await chooseCloud({local,remote:remote.data,mode:'fresh'});
     if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
     if(choice==='overwrite'){
