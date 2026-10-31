@@ -1,6 +1,6 @@
 import {createCircleImageUrls} from './dungeon-image-urls.mjs';
 import {createCircleThumbnail} from './dungeon-thumbnails.mjs?v=20261031.270';
-import {getCircleThumbnail} from './dungeon-store.mjs?v=20261023.20';
+import {getCircleThumbnail} from './dungeon-store.mjs?v=20261031.270';
 
 // Match the grimoire card's CSS width and device density; do not enlarge other UI.
 export function grimoireThumbnailSize(cssWidth,pixelRatio=globalThis.devicePixelRatio||1){
