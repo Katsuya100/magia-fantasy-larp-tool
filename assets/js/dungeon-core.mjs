@@ -97,7 +97,8 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// Chance is constant; the number of actual stones on a hit grows with depth.
+// Keep each encounter's hit chance stable while gradually ramping the hit size.
+// A later curve curbs mid-depth farming without starving the first or 100th layer.
 export function magicStoneDropChance(_playerLevel,_layer=1,_firstClear=false){
  return num('magic_stone_drop_chance');
 }
@@ -108,7 +109,8 @@ export function magicStoneCountPerHit(layer=1){
   throw Error('魔導石の排出カーブの設定が不正です。');
  const raw=Number(layer);
  const depth=Number.isFinite(raw)?Math.min(endLayer,Math.max(1,Math.floor(raw))):1;
- return Math.pow(maximum,(depth-1)/(endLayer-1));
+ const progress=(depth-1)/(endLayer-1);
+ return Math.pow(maximum,Math.pow(progress,1.25));
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
  const collection=countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r);
