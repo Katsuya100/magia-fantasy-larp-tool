@@ -4,8 +4,8 @@ import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
 import {assessRecommendedStrength,recommendedReferenceCarry,strengthBands} from '../scripts/dungeon-recommended-strength.mjs';
 import {referenceSpells} from '../scripts/dungeon-fixed-deck-reference.mjs';
 import {summarizeJourneyStrength} from '../scripts/dungeon-test-contract.mjs';
-import {runJourney,battle} from '../scripts/simulate-dungeon-journeys.mjs';
-import {readFileSync} from 'node:fs';
+import {runJourney} from '../scripts/simulate-dungeon-journeys.mjs';
+import './test-dungeon-loss-restart.mjs';
 
 const base=G.startingBase(()=>.5);
 const owner=(bandIndex,overrides={})=>{
@@ -161,27 +161,10 @@ assert.ok(lossAndReach.trace.some(step=>step.returned),
  'strength must be earned at actual banked returns');
 assert.equal(lossAndReach.earned.stone,lossAndReach.spent.stone+lossAndReach.balances.stone);
 assert.equal(lossAndReach.earned.ink,lossAndReach.spent.ink+lossAndReach.balances.ink);
-if(lossAndReach.losses){
- const defeat=lossAndReach.trace.find(step=>step.defeat);
- const recovery=lossAndReach.trace.find(step=>step.sortie>defeat.sortie&&step.returned);
- assert.ok(recovery,'every continued actual loss must permit a later banked return');
- assert.ok(lossAndReach.lost.xp+lossAndReach.lost.stone+lossAndReach.lost.ink>0,
-  'actual defeat destroys earned but unbanked rewards');
-}
-// Separately prove the unchanged shared combat permits an ACTUAL loss;
-// requiring a now-improved healthy seed to lose would test the wrong rule.
-const actualEnemyData=G.parseCsv(readFileSync(
- new URL('../assets/data/dungeon-enemies.csv',import.meta.url),'utf8'));
-const actualDeepBoss=actualEnemyData.find(enemy=>enemy.id==='boss_l100');
-assert.ok(actualDeepBoss,'the authored 100F enemy must exist');
-const atRiskHero=G.makeUnit({...base},1,{},[],'hero');
-const legalCombat=battle({route:'long'},atRiskHero,100,500,[],()=>.001,{},()=>actualDeepBoss,true);
-assert.equal(legalCombat.win,false,'unprepared combat cannot fake a victory');
-assert.ok(atRiskHero.hp<=0,'the real enemy must be able to kill under shared combat rules');
-console.log('DUNGEON_REAL_DEFEAT_AND_BANKED_STRENGTH '+JSON.stringify({
- seed:lossSeed,journeyLosses:lossAndReach.losses,
- actualDeathEnemy:actualDeepBoss.id,actualDeathTurns:legalCombat.rounds,
- returns:lossAndReach.returns,completed:lossAndReach.best>=100,
+// The mandatory independent actual-loss/restart regression is imported above.
+// The healthy 256-owner route may correctly remain undefeated.
+console.log('DUNGEON_NORMAL_OWNER_STRENGTH '+JSON.stringify({
+ seed:lossSeed,journeyLosses:lossAndReach.losses,completed:lossAndReach.best>=100,
  reachedBands:Object.values(lossAndReach.journeyStrength).filter(row=>row.status==='REACHED').length
 }));
 
