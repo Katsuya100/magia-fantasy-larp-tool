@@ -23,7 +23,7 @@ for(const powers of decks){
   // next sortie it resumes the unchanged AI. No combat outcome is injected.
   let selectedTurns=0;
   const playerAction=({hero,fight,sortie,defaultAction})=>{
-   if(sortie!==11||fight<58)return defaultAction();
+   if(sortie!==14||fight<58)return defaultAction();
    selectedTurns++;
    const ready=hero.spells.map((spell,i)=>({spell,i})).filter(x=>x.spell&&
     hero.mp>=2&&hero.cooldowns[x.i]===0);
