@@ -9,7 +9,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
-import {allowedStartLayer,unlockedStartLayers,rankBadgeThreshold,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+import {allowedStartLayer,unlockedStartLayers,RANK_BOSS_MAX_ROUNDS,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
@@ -854,18 +854,14 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      favoredCollectionIds:outcome.foe.favored_collection_ids?.split('|')||[]});
     if(boss&&layer%10===0&&layer<=100&&!strengthTraining){
      state.rankChecks++;
-     // The badge is earned from the real pre-recovery boss reserve.
-     // Record actual boss turns for diagnosis, never as a one-shot incentive.
+     // Real boss exchanges determine the rank; HP/MP are diagnostic only.
      const hpPercent=percent(hero.hp,hero.stats.hp);
      const mpPercent=percent(hero.mp,hero.maxMp);
-     const threshold=rankBadgeThreshold(layer);
-     const badge=rankBadgeDrop(fight,hero,profile,pending.loot);
+     const badge=rankBadgeDrop(fight,hero,profile,pending.loot,outcome.rounds);
      state.rankAudit.push({layer,sortie:state.sorties,level:firstLevel,
       hpPercent,mpPercent,bossRounds:outcome.rounds,
       eligible:Boolean(badge),banked:false,
-      failure:badge?null:hpPercent<threshold.hpPercent&&mpPercent<threshold.mpPercent?'HP_AND_MP_BELOW_RANK_THRESHOLD'
-       :hpPercent<threshold.hpPercent?'HP_BELOW_RANK_THRESHOLD'
-       :mpPercent<threshold.mpPercent?'MP_BELOW_RANK_THRESHOLD'
+      failure:badge?null:outcome.rounds>RANK_BOSS_MAX_ROUNDS?'BOSS_TOO_MANY_ROUNDS'
        :'PRIOR_RANK_OR_DUPLICATE'});
      if(badge)drops.push(badge);
     }
@@ -1038,8 +1034,7 @@ export function summarizeJourneys(samples=16,seed=20261024){
   distributions.recoveryFights=spread(runs.map(x=>x.recovery.extraFights));
   distributions.recoverySorties=spread(runs.map(x=>x.recovery.sorties));
   distributions.gradeEligible=spread(runs.map(x=>x.rankAudit.filter(y=>y.eligible).length));
-  distributions.gradeFailedMp=spread(runs.map(x=>x.rankAudit.filter(y=>['MP_BELOW_RANK_THRESHOLD','HP_AND_MP_BELOW_RANK_THRESHOLD'].includes(y.failure)).length));
-  distributions.gradeFailedHp=spread(runs.map(x=>x.rankAudit.filter(y=>['HP_BELOW_RANK_THRESHOLD','HP_AND_MP_BELOW_RANK_THRESHOLD'].includes(y.failure)).length));
+  distributions.gradeFailedTurns=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure==='BOSS_TOO_MANY_ROUNDS').length));
   for(const type of ['stone','ink']){
    for(const field of ['earned','spent','lost','balances']){
     distributions[field+'.'+type]=spread(runs.map(x=>x[field][type]));
