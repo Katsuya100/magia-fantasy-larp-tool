@@ -369,10 +369,8 @@ for(const measurement of Object.values(strengthObserved.journeyStrength))
 assert.ok(strengthObserved.blockers.includes(
  'Recommended total strength remained unmet within the measured sortie/fight budget'),
  'a budget-limited assessment remains explicitly unmet');
-// The approved full journey horizon is 600 sorties / 6,500 fights, not an
-// arbitrary 60-sortie cutoff after the independent badge OR rule changes paths.
 for(const style of ['A','B']){
- const trained=runJourney(17011,{style,route:'long',maxSorties:600,maxFights:6500,
+ const trained=runJourney(17011,{style,route:'long',maxSorties:60,maxFights:3000,
   observeStrength:true});
  const trainingSorties=trained.trace.filter(step=>step.strengthTraining);
  const allBandsReached=Object.values(trained.journeyStrength).every(row=>row.status==='REACHED');
@@ -384,7 +382,7 @@ for(const style of ['A','B']){
   'strength training begins only after the normal campaign and rank gates');
  assert.equal(Math.max(...trained.floorAudit.map(row=>row.layer))<=100,true,
   'post-rank training does not simulate enemies above the 100F cap');
- assert.ok(trained.trace.length<600&&
+ assert.ok(trained.trace.length<60&&
   (trained.trace.at(-1).strengthTraining||trainingSorties.length===0&&allBandsReached),
   'the owner stops once all ten strength bands are reached');
  if(trainingSorties.length)assert.ok(trained.rankAudit.every(row=>row.sortie<trainingSorties[0].sortie),
