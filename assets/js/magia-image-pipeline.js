@@ -74,10 +74,13 @@
     return { paths, sigilScores: metrics.scores, lineStraightness: metrics.lineStraightness };
   }
 
-  function attributeInputTexts(text) {
-    const keys = Object.keys(attributeCore.attributes);
-    const descriptions = keys.flatMap(key => attributeCore.attributes[key].descriptions);
-    return [`query: ${text}`, ...descriptions.map(description => `passage: ${description}`)];
+  function attributeReferences(attribute, includeAliases) {
+    return includeAliases ? [...attribute.descriptions, ...attribute.aliases] : attribute.descriptions;
+  }
+
+  function attributeInputTexts(text, includeAliases = false) {
+    const references = Object.values(attributeCore.attributes).flatMap(attribute => attributeReferences(attribute, includeAliases));
+    return [`query: ${text}`, ...references.map(reference => `passage: ${reference}`)];
   }
 
   function cosine(left, right) {
@@ -92,18 +95,18 @@
     return dot / (Math.sqrt(leftLength) * Math.sqrt(rightLength) || 1);
   }
 
-  function scoreAttributeEmbedding(embedding) {
+  function scoreAttributeEmbedding(embedding, includeAliases = false) {
     const keys = Object.keys(attributeCore.attributes);
-    const descriptions = keys.flatMap(key => attributeCore.attributes[key].descriptions);
+    const references = keys.flatMap(key => attributeReferences(attributeCore.attributes[key], includeAliases));
     const vectorSize = embedding?.dims?.at(-1);
-    if (!Number.isInteger(vectorSize) || vectorSize < 1 || !embedding.data || embedding.data.length < vectorSize * (descriptions.length + 1)) {
+    if (!Number.isInteger(vectorSize) || vectorSize < 1 || !embedding.data || embedding.data.length < vectorSize * (references.length + 1)) {
       throw new TypeError('The attribute embedding has an invalid shape.');
     }
     const data = embedding.data;
     const query = data.subarray(0, vectorSize);
     let vectorIndex = 1;
     const similarities = keys.map(key => {
-      const values = attributeCore.attributes[key].descriptions.map(() => {
+      const values = attributeReferences(attributeCore.attributes[key], includeAliases).map(() => {
         const start = vectorIndex * vectorSize;
         vectorIndex += 1;
         return cosine(query, data.subarray(start, start + vectorSize));
@@ -202,7 +205,7 @@
     return !String(spell?.path?.text || '').trim() && !(spell?.path?.words?.length);
   }
 
-  async function run({ recognizeSpell, correctSpell, getStructureInput, getMasterImage, releaseMasterImage, analyzeStructure: analyzeStructureAdapter, embedAttributes, releaseEmbedding, releaseAttributeModel, onRecognitionRetry, reportStage = null, signal }) {
+  async function run({ recognizeSpell, correctSpell, getStructureInput, getMasterImage, releaseMasterImage, analyzeStructure: analyzeStructureAdapter, embedAttributes, releaseEmbedding, releaseAttributeModel, onRecognitionRetry, includeAttributeAliases = false, reportStage = null, signal }) {
     let embedding;
     let structureInput;
     let masterImage;
@@ -299,7 +302,7 @@
       try {
         embedding = await embedAttributes(path.text || '');
         throwIfAborted(signal);
-        attribute = scoreAttributeEmbedding(embedding);
+        attribute = scoreAttributeEmbedding(embedding, includeAttributeAliases);
         embedding?.dispose?.();
         embedding = null;
         await releaseEmbedding?.();
