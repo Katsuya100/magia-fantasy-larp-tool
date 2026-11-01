@@ -34,20 +34,15 @@ export function allowedStartLayer(profile,requested){
  const selected=Number(requested);
  return unlockedStartLayers(profile).includes(selected)?selected:1;
 }
-// Require a meaningful reserve, but let the chapter be earned before combat
-// becomes trivial. No turn-count gate: defense and recovery remain valid tactics.
-// Evaluated after the lethal exchange, before victory MP and checkpoint recovery.
-export function rankBadgeThreshold(layer){
- return rankAt(layer)?{hpPercent:70,mpPercent:layer===10?70:50}:null;
-}
-export function rankBadgeDrop(fight,hero,profile,pendingLoot=[]){
+// Two or three real boss exchanges can earn a chapter; one-hit kills are never required.
+// HP/MP reserves are no longer a separate gate.
+export const RANK_BOSS_MAX_ROUNDS=3;
+export function rankBadgeDrop(fight,hero,profile,pendingLoot=[],bossRounds){
  const layer=clearedLayer(fight);
  if(!rankAt(layer)||highestRankLayer(profile)>=layer
   ||pendingLoot.some(item=>item.type==='rank'&&Number(item.layer)>=layer))return null;
- const hpMax=Number(hero?.stats?.hp),mpMax=Number(hero?.maxMp);
- const threshold=rankBadgeThreshold(layer);
- if(!(hpMax>0&&mpMax>0&&Number(hero?.hp)>=hpMax*threshold.hpPercent/100
-  &&Number(hero?.mp)>=mpMax*threshold.mpPercent/100))return null;
+ if(!(Number.isSafeInteger(bossRounds)&&bossRounds>=1&&bossRounds<=RANK_BOSS_MAX_ROUNDS
+  &&Number(hero?.hp)>0))return null;
  return {type:'rank',layer};
 }
 export function acquireAdventurerRank(profile,layer){
