@@ -256,7 +256,7 @@ assert.doesNotMatch(page,/id="googleDriveOverwriteDialog"|id="googleDriveOverwri
 assert.match(css,/#googleDriveConflictDialog \[data-action="overwrite"\]\{background:linear-gradient\(#d9494f,#941f32\)/,'original red overwrite button styling is preserved');
 const cloudSyncSource=await read('assets/js/dungeon-cloud-sync.mjs');
 assert.doesNotMatch(cloudSyncSource,/meta\?\.blocked|meta\?\.freshStart|同期エラー：Drive上にバックアップがありません/,'obsolete sync state gates are removed');
-assert.match(cloudSyncSource,/await establishLegacyIntegrity\(db,local\);\s*local=await readDungeonSnapshot\(db\);\s*verification=await verifyLocalSnapshot\(local\);/,'legacy saves still need a verified seal before uploading');
+assert.match(cloudSyncSource,/if\(verification\.status!=='valid'\)\{\s*show\('端末セーブを検証できません。バックアップを作成できません。'\)/,'unverified saves cannot be uploaded');
 assert.match(cloudSyncSource,/cancelButton.hidden=fresh/,'case 3 offers exactly Drive or new game');
 assert.match(cloudSyncSource,/localButton.textContent=fresh\?'新しく始める'/,'one choice dialog distinguishes new games from saved local players');
 assert.match(app,/void cloudSyncController\?\.syncNow\?\.\(\)/,'name submission queues Drive upload without holding the local action lock');
@@ -300,7 +300,6 @@ assert.match(css,/\.profile-data-actions \.backup-sync-warning\{[\s\S]*?color:#f
 
 assert.match(page,/<dialog id="imageRepairDialog"/,'recapture dialog exists');
 assert.match(app,/load\(\)\.catch\(failStartup\)/,'startup errors remain visible inside the loading overlay');
-assert.match(app,/await cloudSyncController\?\.disconnect\?\.\(\);\s*await restoreDungeonXpMigrationBackup\(db\);/,'manual XP recovery unlinks Drive before local rollback so cloud cannot silently undo recovery');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
@@ -309,7 +308,7 @@ for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
 assert.ok(store.includes("from './dungeon-core.mjs?v="+currentRelease+"'"),
- 'storage conversion uses the current, cache-busted XP core');
+ 'storage uses the current, cache-busted XP core');
 assert.ok(cloudSync.includes("from './dungeon-store.mjs?v="+currentRelease+"'"),
  'Drive sync and gameplay share one cache-busted save module');
 assert.match(picker,/from '\.\/dungeon-loadout\.mjs'/);

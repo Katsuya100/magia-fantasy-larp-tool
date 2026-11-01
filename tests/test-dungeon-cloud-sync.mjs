@@ -6,7 +6,7 @@ import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSna
 import {createDungeonDrive,DRIVE_SCOPE,DriveAuthError} from '../assets/js/dungeon-cloud-drive.mjs';
 import {decideCloudSync,canAutoSyncPlay} from '../assets/js/dungeon-cloud-sync.mjs';
 import {createSuccessorProfile} from '../assets/js/dungeon-permadeath.mjs';
-import {verifyLocalSnapshot} from '../assets/js/dungeon-cloud-integrity.mjs';
+import {verifyLocalSnapshot,quickFingerprint} from '../assets/js/dungeon-cloud-integrity.mjs';
 
 const db=await openStore(fakeIndexedDB());
 let changes=0;
@@ -31,7 +31,7 @@ assert.ok(!encoded.includes('access_token'));
 const decoded=deserializeDungeonSnapshot(encoded);
 assert.deepEqual(decoded.profile,profile);
 assert.equal(decoded.savedAt,original.savedAt);
-assert.equal(decoded.legacy,false);
+assert.equal(decoded.profile.name,original.profile.name);
 assert.equal(decoded.circles[0].image.type,'image/png');
 assert.deepEqual(new Uint8Array(await decoded.circles[0].image.arrayBuffer()),new Uint8Array(await photo.arrayBuffer()));
 assert.equal(await snapshotHash(encoded,webcrypto),await snapshotHash(encoded,webcrypto));
@@ -41,8 +41,9 @@ assert.equal(isPristineDungeonSnapshot({profile:{name:'新規冒険者',tutorial
 assert.equal(isPristineDungeonSnapshot({profile:{name:'',attempts:0,returns:0,run:null},circles:[]}),true);
 await assert.rejects(serializeDungeonSnapshot({profile:null,circles:[]}),/形式/);
 assert.throws(()=>deserializeDungeonSnapshot('{"format":"unsupported","profile":{},"circles":[]}'),/未対応/);
-assert.throws(()=>deserializeDungeonSnapshot(JSON.stringify({format:'magia-dungeon-save-v1',profile:{},circles:[{id:'duplicate'},{id:'duplicate'}]})),/不正/);
-assert.throws(()=>deserializeDungeonSnapshot(JSON.stringify({format:'magia-dungeon-save-v1',profile:{},circles:[{id:'bad',image:{blob:true,type:'image/png',base64:'@'}}]})),/不正/);
+const signedPayload=payload=>JSON.stringify({...payload,checksum:quickFingerprint(payload)});
+assert.throws(()=>deserializeDungeonSnapshot(signedPayload({format:'magia-dungeon-save-v1',profile:{},circles:[{id:'duplicate'},{id:'duplicate'}]})),/不正/);
+assert.throws(()=>deserializeDungeonSnapshot(signedPayload({format:'magia-dungeon-save-v1',profile:{},circles:[{id:'bad',image:{blob:true,type:'image/png',base64:'@'}}]})),/不正/);
 
 await saveCloudSyncState(db,{fileId:'abc',modifiedTime:'t0',hash:'h0'});
 assert.equal(changes,2,'sync metadata must not trigger a recursive upload');
@@ -77,8 +78,6 @@ assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playOne}),true,'o
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playTwo}),false,'different play IDs prevent automatic overwrite and restore regardless of timestamps');
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null}),false,'missing cloud ID cannot silently be identified');
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null,identical:true}),false,'prior file matches never silently adopt a backup with no play ID');
-assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:null,identical:false}),false,'two unknown legacy plays cannot be assumed identical');
-assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:null,identical:true}),true,'exactly identical verified old bytes need no write');
 assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:playTwo}),false,'remote play cannot be restored automatically into unknown local game');
 
 // Simulate an unplanned IndexedDB record loss. The preexisting trusted seal

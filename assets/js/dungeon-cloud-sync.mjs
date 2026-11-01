@@ -2,7 +2,7 @@ import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
 import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
-import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,establishLegacyIntegrity,getProfile,saveProfile} from './dungeon-store.mjs?v=20261031.271';
+import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,getProfile,saveProfile} from './dungeon-store.mjs?v=20261101.305';
 import {verifyLocalSnapshot,digestPhoto,recordFingerprint} from './dungeon-cloud-integrity.mjs';
 
 // Last-write-wins: the timestamp belongs to the game save, not Drive metadata.
@@ -235,7 +235,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(!circle.image){invalidImages.push(circle.id);continue;}
     try{await digestPhoto(circle.image);}catch{invalidImages.push(circle.id);}
    }
-   const result={valid:invalidImages.length===0,data,invalidImages,text:remoteText,hash:await snapshotHash(remoteText),trusted:!data.legacy};
+   const result={valid:invalidImages.length===0,data,invalidImages,text:remoteText,hash:await snapshotHash(remoteText),trusted:true};
    if(result.valid)validatedDrive={id:file.id,modifiedTime:file.modifiedTime,result};
    return result;
   }catch(error){
@@ -342,11 +342,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    // A missing Drive backup always means create it, even if this device
    // previously synced another file or account. No historical file-ID gate.
    if(!file){
-    if(verification.status==='legacy'){
-     await establishLegacyIntegrity(db,local);
-     local=await readDungeonSnapshot(db);
-     verification=await verifyLocalSnapshot(local);
-    }
+
     if(verification.status!=='valid'){
      show('端末セーブを検証できません。バックアップを作成できません。');
      return result;
@@ -394,11 +390,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    // A valid but untouched Drive placeholder contains no player data.
    // Treat it as an empty backup, rather than inventing a sixth lineage conflict.
    if(isPristineDungeonSnapshot(remote.data)){
-    if(verification.status==='legacy'){
-     await establishLegacyIntegrity(db,local);
-     local=await readDungeonSnapshot(db);
-     verification=await verifyLocalSnapshot(local);
-    }
+
     if(verification.status!=='valid'){
      show('端末セーブを検証できません。バックアップを更新できません。');
      return result;
@@ -415,15 +407,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    if(!samePlay){
     // Case 5: different (or unidentifiable) players always require a choice.
     // No re-authentication or opaque blocked/freshStart state is involved.
-    const choice=await chooseCloud({local,remote:remote.data,allowLocal:verification.status==='valid'||verification.status==='legacy',
-     canStartLocal:verification.status!=='corrupt'});
+    const choice=await chooseCloud({local,remote:remote.data,allowLocal:verification.status==='valid',
+     canStartLocal:verification.status==='valid'});
     if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
     if(choice==='overwrite'){
-     if(verification.status==='legacy'){
-      await establishLegacyIntegrity(db,local);
-      local=await readDungeonSnapshot(db);
-      verification=await verifyLocalSnapshot(local);
-     }
+
      if(verification.status!=='valid'){
       show('端末セーブを検証できません。');return result;
      }
@@ -463,11 +451,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      verification=await verifyLocalSnapshot(local);
     }
    }
-   if(verification.status==='legacy'){
-    await establishLegacyIntegrity(db,local);
-    local=await readDungeonSnapshot(db);
-    verification=await verifyLocalSnapshot(local);
-   }
+
    if(verification.status!=='valid'){
     show('端末セーブを検証できません。同期を停止しました。');
     return result;

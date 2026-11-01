@@ -66,14 +66,15 @@ export function deserializeDungeonSnapshot(text){
  if(data?.format!==FORMAT)throw Error('未対応のバックアップ形式です。');
  assertShape(data);
  const {checksum,...payload}=data;
- if(checksum!==undefined&&checksum!==quickFingerprint(payload))throw Error('バックアップのチェックサムが一致しません。');
+ if(checksum===undefined)throw Error('未対応の古いバックアップ形式です。');
+ if(checksum!==quickFingerprint(payload))throw Error('バックアップのチェックサムが一致しません。');
  if(data.savedAt!==undefined&&(!Number.isFinite(data.savedAt)||data.savedAt<0))throw Error('バックアップの保存日時が不正です。');
  const circles=data.circles.map(circle=>{
   if(circle.image===null||circle.image===undefined)return {...circle,image:null};
   if(circle.image?.blob!==true||typeof circle.image.type!=='string')throw Error('画像形式が不正です。');
   return {...circle,image:new Blob([fromBase64(circle.image.base64)],{type:circle.image.type})};
  });
- return {profile:restoreProfilePhotoRefsFromCircles(decodeNested(data.profile),circles),circles,savedAt:Number(data.savedAt)||0,legacy:checksum===undefined};
+ return {profile:restoreProfilePhotoRefsFromCircles(decodeNested(data.profile),circles),circles,savedAt:Number(data.savedAt)||0};
 }
 export function isPristineDungeonSnapshot(snapshot){
  const p=snapshot.profile;

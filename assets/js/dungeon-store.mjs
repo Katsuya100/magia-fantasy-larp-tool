@@ -1,6 +1,4 @@
 import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261031.271';
-import {v46NextXp} from './dungeon-xp-v46.mjs';
-import {level as levelRow} from './dungeon-tuning.mjs';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
 import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto,verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs';
 import {prepareProfilePhotoRefs,restoreProfilePhotoRefs} from './dungeon-profile-photo-refs.mjs';
@@ -51,10 +49,8 @@ async function withLiveDatabase(db,operation){
 // values nested inside permadeath legacies. The signed profile is assembled
 // from the canonical profile plus this small overlay when read.
 const HEIR_NAME_KEY='heirNameOverride';
-const XP_MIGRATION_BACKUP_KEY='xpMigrationBackupV1';
-const XP_V46_RECOVERY_BACKUP_KEY='xpV46RecoveryBackupV1';
 export const XP_INTEGER_VERSION=1;
-// Reject accidental fractional writes after the one-time integer migration.
+// Reject fractional EXP writes in current saves.
 function assertWholeXp(profile){
  if(profile?.xpIntegerVersion!==XP_INTEGER_VERSION)return;
  const values=[['profile.xp',profile.xp]];
@@ -134,7 +130,7 @@ function request(db,store,mode,op,{silent=false}={}){
 }
 // Read and verify the previous seal BEFORE applying writes. A missing record
 // cannot be silently legitimized by a later (unrelated) profile update.
-function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,photoWrites=new Map(),expectedRevision=null,migrationSourceRecords=null,migrationSourceVersion=null}={}){
+function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,photoWrites=new Map(),expectedRevision=null}={}){
   return withLiveDatabase(db,live=>new Promise((resolve,reject)=>{
   let tx,committedAt;
   try{
@@ -156,16 +152,6 @@ function mutate(db,perform,overrides={},profileHashes=null,{writesProfile=false,
      if(writesProfile&&expectedRevision!==null){
       const actual=Number.isSafeInteger(p?.saveRevision)?p.saveRevision:0;
       if(actual!==expectedRevision)throw Error('別のタブでセーブが更新されました。進捗を保護するため保存を停止しました。再読み込みしてください。');
-     }
-     if(migrationSourceRecords!==null){
-      if(sourceRecords!==migrationSourceRecords||
-       (migrationSourceVersion===46?p?.xpScaleVersion!==46:
-        p?.xpScaleVersion!==undefined&&p?.xpScaleVersion!==null))
-       throw Error('EXP変換中にセーブが変更されました。上書きせずに停止しました。再読み込みしてください。');
-      // Back up the signed source in the same transaction. v46 conversion
-      // never overwrites the earlier 1/45 migration backup.
-      const backupKey=migrationSourceVersion===46?XP_V46_RECOVERY_BACKUP_KEY:XP_MIGRATION_BACKUP_KEY;
-      settings.put({version:1,profile:p,circles:c,integrity:seal,sourceRecords,createdAt:Date.now()},backupKey);
      }
      perform(settings,items,c);
      // Store only newly encountered historical photos, atomically with the
@@ -289,7 +275,7 @@ async function trustedProfileHashes(db,profile){
  }
  return hashes;
 }
-export async function saveProfile(db,p,{migrationSourceRecords=null,migrationSourceVersion=null}={}){
+export async function saveProfile(db,p){
  assertWholeXp(p);
  withPlayId(p);
  const expectedRevision=Number.isSafeInteger(p.saveRevision)?p.saveRevision:0;
@@ -298,7 +284,7 @@ export async function saveProfile(db,p,{migrationSourceRecords=null,migrationSou
  const nextRevision=expectedRevision+1;
  if(!Number.isSafeInteger(nextRevision))throw Error('セーブの改訂番号が上限を超えました。');
  await mutate(db,settings=>settings.put({...prepared.profile,saveRevision:nextRevision},'profile'),{},hashes,
-  {writesProfile:true,photoWrites:prepared.photos,expectedRevision,migrationSourceRecords,migrationSourceVersion});
+  {writesProfile:true,photoWrites:prepared.photos,expectedRevision});
  p.saveRevision=nextRevision;
 }
 // One IndexedDB transaction prevents a lost/recovered photo and its owner from diverging.
@@ -373,247 +359,6 @@ export function saveHeirName(db,name){
 }
 
 
-/** Restore saved v46 integer EXP to the current v45 whole-EXP system.
- * v46 used different authored thresholds. Preserve gauge percentages,
- * previously earned levels, unbanked gains and return-animation endpoints.
- */
-async function migrateDungeonXp46(db,p,source){
- const sourceRecords=recordFingerprint(source);
- const whole=(value,label)=>{
-  if(!Number.isSafeInteger(value)||value<0)
-   throw Error(label+' が不正です。元のセーブは変更していません。');
-  return value;
- };
- const validState=(level,xp)=>{
-  if(!Number.isSafeInteger(level)||level<1)throw Error('旧EXPのレベルが不正です。');
-  whole(xp,'旧EXP');
-  if(xp>=v46NextXp(level))throw Error('旧EXPとレベルが一致しません。元のセーブは変更していません。');
-  return {level,xp};
- };
- const advance=(from,award)=>{
-  let {level,xp}=from;
-  xp+=whole(award,'旧EXP報酬');
-  if(!Number.isSafeInteger(xp))throw Error('旧EXP報酬が大きすぎます。');
-  while(xp>=v46NextXp(level)){xp-=v46NextXp(level);level++;}
-  return {level,xp};
- };
- const mapGauge=({level,xp})=>{
-  let gauge=Math.ceil(xp/v46NextXp(level)*nextXp(level));
-  if(!Number.isSafeInteger(gauge))throw Error('変換後EXPが不正です。');
-  while(gauge>=nextXp(level)){gauge-=nextXp(level);level++;}
-  return {level,xp:gauge};
- };
- const difference=(before,after)=>{
-  if(after.level<before.level)throw Error('帰還報酬のレベル順序が不正です。');
-  let gain=after.xp-before.xp;
-  for(let level=before.level;level<after.level;level++)gain+=nextXp(level);
-  if(!Number.isSafeInteger(gain)||gain<0)throw Error('変換後EXP報酬が不正です。');
-  return gain;
- };
- const original=validState(p.level,p.xp);
- const current=mapGauge(original);
- if(p.run){
-  const oldGain=whole(p.run.xp??0,'探索中の旧EXP');
-  p.run.xp=difference(current,mapGauge(advance(original,oldGain)));
- }
- if(p.pendingReturn){
-  const oldGain=whole(p.pendingReturn.gained??0,'帰還中の旧EXP');
-  let before=p.pendingReturn.before;
-  if(!before){
-   let level=original.level,xp=original.xp,remaining=oldGain;
-   while(remaining>xp&&level>1){remaining-=xp;level--;xp=v46NextXp(level);}
-   if(remaining>xp)throw Error('旧帰還報酬を復元できません。元のセーブは変更していません。');
-   before={level,xp:xp-remaining};
-  }
-  const oldBefore=validState(before.level,before.xp);
-  const oldEnd=advance(oldBefore,oldGain);
-  if(oldEnd.level!==original.level||oldEnd.xp!==original.xp)
-   throw Error('旧帰還報酬と保存されたEXPが一致しません。元のセーブは変更していません。');
-  const newBefore=mapGauge(oldBefore);
-  p.pendingReturn.before={...before,...newBefore};
-  p.pendingReturn.gained=difference(newBefore,current);
- }
- p.level=current.level;p.xp=current.xp;
- p.xpScaleVersion=XP_SCALE;
- p.xpIntegerVersion=XP_INTEGER_VERSION;
- // Signed profile, original full backup and seal are written atomically.
- await saveProfile(db,p,{migrationSourceRecords:sourceRecords,migrationSourceVersion:46});
- return p;
-}
-
-// Convert signed legacy saves once, only after startup integrity verification.
-// XP is stored in the new unit; all other player progress is unchanged.
-export async function migrateDungeonXp(db){
- // Pin the source content; compare inside the final write transaction.
- const source=await readDungeonSnapshot(db);
- const p=await getProfile(db);
- if(!p||p.xpScaleVersion===XP_SCALE)return p;
- if(p.xpScaleVersion===46)return migrateDungeonXp46(db,p,source);
- const migrationSourceRecords=recordFingerprint(source);
- if(p.xpScaleVersion!==undefined&&p.xpScaleVersion!==null)
-  throw Error('このセーブは未対応のEXPバージョンです。上書きせず復旧を停止しました。');
- const maxLevel=150;
- const oldNext=lvl=>Math.ceil(Number(levelRow(lvl).xp_to_next)*Math.pow(2.1,(Number(lvl)-1)/10));
- // Level and fraction of the current XP gauge are the durable progress.
- const convert=(xp,lvl)=>{
-  const n=Number(xp);
-  if(!Number.isFinite(n)||n<0)throw Error('旧経験値の値が不正です。セーブを更新せずに停止しました。');
-  return Math.round(n/oldNext(lvl)*nextXp(lvl)*1e6)/1e6;
- };
- const rounded=n=>Math.max(0,Math.round(n*1e6)/1e6);
- const span=(before,after)=>{
-  if(after.level<before.level)throw Error('旧経験値のレベル順序が不正です。');
-  let earned=-before.xp;
-  for(let level=before.level;level<after.level;level++)earned+=nextXp(level);
-  if(after.level<maxLevel)earned+=after.xp;
-  return rounded(earned);
- };
- const levelAfterOldAward=(level,xp,award)=>{
-  let total=xp+award;
-  while(level<maxLevel&&total>=oldNext(level)){total-=oldNext(level);level++;}
-  return {level,xp:level>=maxLevel?0:total};
- };
- // Recalculate unbanked XP from the old expedition's actual end state,
- // not from the ratio at its starting level. The curves differ by level.
- const start={level:p.level,xp:convert(p.xp,p.level)};
- if(p.run){
-  const oldAward=Number(p.run.xp||0);
-  if(!Number.isFinite(oldAward)||oldAward<0)throw Error('探索中の旧経験値が不正です。');
-  const oldEnd=levelAfterOldAward(p.level,Number(p.xp),oldAward);
-  const newEnd={level:oldEnd.level,xp:oldEnd.level>=maxLevel?0:convert(oldEnd.xp,oldEnd.level)};
-  p.run.xp=span(start,newEnd);
- }
- if(p.pendingReturn){
-  const oldAward=Number(p.pendingReturn.gained||0);
-  if(!Number.isFinite(oldAward)||oldAward<0)throw Error('帰還報酬の旧経験値が不正です。');
-  // Reconstruct missing return-screen start state by reversing the exact old
-  // level thresholds. A single ratio at the final level is not reversible.
-  if(!p.pendingReturn.before){
-   if(p.level>=maxLevel&&oldAward>0)
-    throw Error('最大レベルの旧帰還報酬を安全に復元できません。旧セーブを保護して停止しました。');
-   let level=p.level,xp=Number(p.xp),remaining=oldAward;
-   while(remaining>xp&&level>1){remaining-=xp;level--;xp=oldNext(level);}
-   if(remaining>xp)throw Error('旧帰還報酬と累計EXPが一致しません。旧セーブを保護して停止しました。');
-   p.pendingReturn.before={level,xp:xp-remaining};
-  }
-  const before=p.pendingReturn.before;
-  const beforeLevel=Number(before.level),oldBeforeXp=Number(before.xp);
-  if(!Number.isSafeInteger(beforeLevel)||beforeLevel<1||beforeLevel>maxLevel||
-   !Number.isFinite(oldBeforeXp)||oldBeforeXp<0||
-   beforeLevel<maxLevel&&oldBeforeXp>=oldNext(beforeLevel))
-   throw Error('帰還前の旧レベル・経験値が不正です。旧セーブを保護して停止しました。');
-  const oldEnd=levelAfterOldAward(beforeLevel,oldBeforeXp,oldAward);
-  if(oldEnd.level!==p.level||(p.level<maxLevel&&Math.abs(oldEnd.xp-Number(p.xp))>0.001))
-   throw Error('帰還報酬とセーブ済みレベルが一致しません。旧セーブを保護して停止しました。');
-  const beforeXp=convert(oldBeforeXp,beforeLevel);
-  p.pendingReturn.gained=span({level:beforeLevel,xp:beforeXp},start);
-  before.xp=beforeXp;
- }
- p.xp=start.xp;
- p.xpScaleVersion=XP_SCALE;
- // An old-scale restoration must always run the integer migration next.
- delete p.xpIntegerVersion;
- // The profile, XP-version marker and integrity seal commit in one transaction.
- await saveProfile(db,p,{migrationSourceRecords});
- return p;
-}
-
-/** Migrate XP_SCALE=45 decimal saves to whole EXP after integrity verification.
- * Signed profile/revision updates remain atomic; the original 1/45 migration
- * and its independent signed backup are not changed.
- */
-export async function migrateDungeonIntegerXp(db){
- const p=await getProfile(db);
- if(!p||p.xpIntegerVersion===XP_INTEGER_VERSION)return p;
- if(p.xpScaleVersion!==XP_SCALE)throw Error('EXP整数化の前に1/45変換が必要です。');
- if(p.xpIntegerVersion!==undefined&&p.xpIntegerVersion!==null)
-  throw Error('このセーブは未対応の整数EXPバージョンです。上書きせず停止しました。');
- const ceilXp=(value,label)=>{
-  const n=Number(value);
-  if(!Number.isFinite(n)||n<0||!Number.isSafeInteger(Math.ceil(n)))
-   throw Error(label+' のEXPが不正です。');
-  return Math.ceil(n);
- };
- const state=(level,xp)=>{
-  if(!Number.isSafeInteger(level)||level<1)throw Error('EXPのレベルが不正です。');
-  xp=ceilXp(xp,'保存済み');
-  while(xp>=nextXp(level)){
-   xp-=nextXp(level);
-   level++;
-   if(!Number.isSafeInteger(level))throw Error('EXPのレベルが上限を超えました。');
-  }
-  return {level,xp};
- };
- const rewardBetween=(before,after)=>{
-  if(after.level<before.level)throw Error('帰還演出のレベル順序が不正です。');
-  let gained=after.xp-before.xp;
-  for(let level=before.level;level<after.level;level++)gained+=nextXp(level);
-  if(!Number.isSafeInteger(gained)||gained<0)
-   throw Error('帰還演出のEXPが一致しません。');
-  return gained;
- };
- // Recover old return-screen starts before rounding when their metadata is
- // missing, so the animation still finishes at the exact saved end state.
- if(p.pendingReturn){
-  const returnXp=ceilXp(p.pendingReturn.gained??0,'帰還報酬');
-  if(!p.pendingReturn.before){
-   let level=p.level,xp=Number(p.xp),remaining=Number(p.pendingReturn.gained??0);
-   if(!Number.isFinite(xp)||xp<0)throw Error('帰還後EXPが不正です。');
-   while(remaining>xp&&level>1){remaining-=xp;level--;xp=nextXp(level);}
-   if(remaining>xp)throw Error('帰還前EXPを復元できません。');
-   p.pendingReturn.before={level,xp:xp-remaining};
-  }
-  // Preserve the source reward's validity before replacing the display value.
-  if(returnXp<0)throw Error('帰還報酬のEXPが不正です。');
- }
- const after=state(p.level,p.xp);
- if(p.run)p.run.xp=ceilXp(p.run.xp??0,'探索中');
- if(p.pendingReturn){
-  const before=state(Number(p.pendingReturn.before.level),p.pendingReturn.before.xp);
-  p.pendingReturn.before= {...p.pendingReturn.before,...before};
-  p.pendingReturn.gained=rewardBetween(before,after);
- }
- p.level=after.level;
- p.xp=after.xp;
- p.xpIntegerVersion=XP_INTEGER_VERSION;
- await saveProfile(db,p);
- return p;
-}
-// Read-only full snapshot of the signed pre-recovery v46 save.
-export async function getDungeonXp46RecoveryBackup(db){
- const backup=await request(db,'settings','readonly',s=>s.get(XP_V46_RECOVERY_BACKUP_KEY));
- if(!backup)return null;
- if(backup.version!==1||backup.profile?.xpScaleVersion!==46||!Array.isArray(backup.circles)||
-  recordFingerprint({profile:backup.profile,circles:backup.circles})!==backup.sourceRecords||
-  backup.integrity?.version===1&&backup.integrity.records!==backup.sourceRecords)
-  throw Error('旧v46セーブの保全データが一致しません。');
- return backup;
-}
-// Read-only rescue point, unaffected by later game changes or cloud sync.
-export async function getDungeonXpMigrationBackup(db){
- const backup=await request(db,'settings','readonly',s=>s.get(XP_MIGRATION_BACKUP_KEY));
- if(!backup)return null;
- if(backup.version!==1||!backup.profile||!Array.isArray(backup.circles)||
-  recordFingerprint({profile:backup.profile,circles:backup.circles})!==backup.sourceRecords)
-  throw Error('EXP変換前バックアップの整合性が一致しません。');
- if(backup.integrity?.version===1&&backup.integrity.records!==backup.sourceRecords)
-  throw Error('EXP変換前バックアップの署名が一致しません。');
- return backup;
-}
-export const hasDungeonXpMigrationBackup=db=>request(db,'settings','readonly',s=>s.getKey(XP_MIGRATION_BACKUP_KEY)).then(key=>key!==undefined);
-// Rolling back also discards all play after migration; only explicit UI
-// confirmation may call this API. Full SHA checks guard original photos.
-export async function restoreDungeonXpMigrationBackup(db){
- const backup=await getDungeonXpMigrationBackup(db);
- if(!backup)throw Error('EXP変換前の保全データが見つかりません。');
- const snapshot={profile:backup.profile,circles:backup.circles,integrity:backup.integrity,savedAt:backup.integrity?.savedAt||0};
- const health=await verifyLocalSnapshot(snapshot);
- if(health.status==='corrupt'||health.status==='badImages')
-  throw Error('EXP変換前の保全データの署名または写真が一致しません。復元を停止しました。');
- if(health.status==='legacy'){await photoEvidence(snapshot.circles);await profilePhotoEvidence(snapshot.profile);}
- const current=await readDungeonSnapshot(db);
- await replaceDungeonSnapshot(db,snapshot,{expectedCurrentRecords:recordFingerprint(current)});
-}
 export async function getProfile(db){
   const [raw,nameOverride]=await Promise.all([
    request(db,'settings','readonly',s=>s.get('profile')),
@@ -690,33 +435,5 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{exp
   }catch(error){reject(error);}
  }));
 }
-// Legacy saves have no trusted photo seal. Seal only after the caller has checked
-// that no sound Drive backup would be at risk from accepting this baseline.
-export async function establishLegacyIntegrity(db,snapshot){
- const hashes=await photoEvidence(snapshot.circles),profileHashes=await profilePhotoEvidence(snapshot.profile),records=recordFingerprint(snapshot);
- return withLiveDatabase(db,live=>new Promise((resolve,reject)=>{
-  try{
-   const tx=checkedTransaction(live,STORES,'readwrite');
-   const settings=tx.objectStore('settings'),items=tx.objectStore('circles');
-   const p=settings.get('profile'),c=items.getAll(),old=settings.get('integrity');
-   let pending=3;
-   const done=()=>{
-    if(--pending)return;
-    if(recordFingerprint({profile:p.result,circles:c.result})!==records){reject(Error('検証中にセーブが変更されました。'));tx.abort?.();return;}
-    const prev=old.result;
-    if(prev?.version===1&&prev.records!==records){reject(Error('保存データの整合性が一致しません。'));tx.abort?.();return;}
-    // Conversion must not falsely advance the game's last-save timestamp.
-    const priorDate=Number(prev?.savedAt);
-    const savedAt=Number.isFinite(priorDate)&&priorDate>0?priorDate:0;
-    settings.put({version:1,records,photos:hashes,profilePhotos:profileHashes,savedAt,legacy:false},'integrity');
-   };
-   p.onsuccess=done;c.onsuccess=done;old.onsuccess=done;
-   tx.oncomplete=()=>resolve();
-   tx.onerror=()=>reject(tx.error||Error('検証情報を保存できませんでした。'));
-   tx.onabort=()=>reject(tx.error||Error('検証が中断されました。'));
-  }catch(error){reject(error);}
- }));
-}
-
 export const getCloudSyncState=db=>request(db,'settings','readonly',s=>s.get('cloudSyncState'));
 export const saveCloudSyncState=(db,state)=>request(db,'settings','readwrite',s=>s.put(state,'cloudSyncState'),{silent:true});
