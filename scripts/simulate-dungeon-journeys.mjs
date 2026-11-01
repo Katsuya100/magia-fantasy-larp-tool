@@ -800,6 +800,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
       hpPercent,mpPercent,bossRounds:outcome.rounds,
       earlyMobs:mastery?.earlyMobs??0,
       earlyFastWins:mastery?.earlyFastWins??0,
+      rankCombat:mastery?{...mastery}:null,
       eligible:Boolean(badge),banked:false,
       failure:badge?null:conditionReady?'PRIOR_RANK_OR_DUPLICATE':'RANK_CONDITIONS_UNMET'});
      if(badge)drops.push(badge);
