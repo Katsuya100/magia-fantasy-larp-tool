@@ -97,8 +97,8 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// Keep each encounter's hit chance stable while gradually ramping the hit size.
-// A later curve curbs mid-depth farming without starving the first or 100th layer.
+// Keep each fight's 30% stone chance. The early game retains the original
+// hit size, while F31-45 gradually provides the stones needed by paid upgrades.
 export function magicStoneDropChance(_playerLevel,_layer=1,_firstClear=false){
  return num('magic_stone_drop_chance');
 }
@@ -110,7 +110,8 @@ export function magicStoneCountPerHit(layer=1){
  const raw=Number(layer);
  const depth=Number.isFinite(raw)?Math.min(endLayer,Math.max(1,Math.floor(raw))):1;
  const progress=(depth-1)/(endLayer-1);
- return Math.pow(maximum,Math.pow(progress,1.25));
+ const bonus=Math.min(1,Math.max(0,(depth-30)/15));
+ return Math.pow(maximum/3,progress)*(1+2*bonus);
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
  const collection=countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r);
