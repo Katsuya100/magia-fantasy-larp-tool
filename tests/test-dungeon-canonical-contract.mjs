@@ -49,8 +49,9 @@ const state={source:'POST_RETURN_BANKED_AND_INVESTED',unbankedXp:0,
 assert.doesNotThrow(()=>assertBankedJourneySnapshot(state));
 assert.throws(()=>assertBankedJourneySnapshot({...state,bankedStones:9}),/free magic stones/);
 assert.throws(()=>assertBankedJourneySnapshot({...state,rank:30}),/unearned adventurer rank/);
-assert.doesNotThrow(()=>assertPreRecoveryRankGate({hpPercent:90,mpPercent:79,eligible:false,failure:'MP_BELOW_80'}));
-assert.throws(()=>assertPreRecoveryRankGate({hpPercent:90,mpPercent:79,eligible:true,failure:null}),/before victory recovery/);
+assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:10,hpPercent:90,mpPercent:69,eligible:false,failure:'MP_BELOW_RANK_THRESHOLD'}));
+assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:20,hpPercent:70,mpPercent:50,eligible:true,failure:null}));
+assert.throws(()=>assertPreRecoveryRankGate({layer:20,hpPercent:70,mpPercent:49,eligible:true,failure:null}),/before victory recovery/);
 assert.throws(()=>assertNotFalsePass({passed:true,missing:1}),/cannot PASS/);
 assert.throws(()=>assertNotFalsePass({passed:true,cutoff:true}),/cannot PASS/);
 
