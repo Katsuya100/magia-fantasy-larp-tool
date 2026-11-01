@@ -262,11 +262,30 @@ let observedOwnerBandCount=0;
 for(const meta of report.policies){
  assert.ok(/^[ABC]$/.test(meta.style)&&['short','long'].includes(meta.route),
   'only the six approved policy references may be loaded');
- assert.equal(meta.file,'dungeon-journey-strength-v2-'+meta.style+'-'+meta.route+'.json',
-  'index cannot point to a different evidence file');
- // Load one complete 256-owner shard at a time, preserving all full 50-target
- // ledgers without exceeding Node's maximum UTF-8 string or heap capacity.
- const policy=JSON.parse(readFileSync(new URL('../reports/'+meta.file,import.meta.url),'utf8'));
+ assert.equal(meta.shardSize,16,'full owner evidence must use the approved bounded shard size');
+ assert.equal(meta.files?.length,256/meta.shardSize,'all 256 owner shards must be listed');
+ const accounts=[],journeyStrength=Array.from({length:10},(_,i)=>({
+  band:(i*10+1)+'-'+(i*10+10),owners:[]
+ }));
+ for(let part=0;part<meta.files.length;part++){
+  const expected='dungeon-journey-strength-v2-'+meta.style+'-'+meta.route+
+   '-'+String(part+1).padStart(2,'0')+'.json';
+  assert.equal(meta.files[part],expected,'index cannot point to unrelated evidence');
+  const shard=JSON.parse(readFileSync(new URL('../reports/'+expected,import.meta.url),'utf8'));
+  assert.equal(shard.style,meta.style);assert.equal(shard.route,meta.route);
+  assert.equal(shard.ownerOffset,part*meta.shardSize);
+  assert.equal(shard.samples,meta.shardSize);
+  assert.equal(shard.accounts.length,meta.shardSize);
+  assert.equal(shard.journeyStrength.length,10);
+  accounts.push(...shard.accounts);
+  for(let band=0;band<10;band++){
+   assert.equal(shard.journeyStrength[band].band,journeyStrength[band].band);
+   assert.equal(shard.journeyStrength[band].owners.length,meta.shardSize);
+   journeyStrength[band].owners.push(...shard.journeyStrength[band].owners);
+  }
+ }
+ const policy={style:meta.style,route:meta.route,samples:accounts.length,
+  completion:meta.completion,strengthSummary:meta.strengthSummary,accounts,journeyStrength};
  const entryMeta=report.firstEntryEvidence.policies.find(x=>
   x.style===meta.style&&x.route===meta.route);
  assert.ok(entryMeta,'every policy has its own first-entry evidence shard');
