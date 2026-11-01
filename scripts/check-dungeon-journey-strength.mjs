@@ -7,6 +7,7 @@ import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
 import {strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {approvedGoals} from './simulate-dungeon-journeys.mjs';
+import {rankBadgeThreshold} from '../assets/js/dungeon-ranks.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 
@@ -362,14 +363,19 @@ for(const meta of report.policies){
 assert.equal(observedOwnerBandCount,6*10*256,
  'all independent owner-band formula observations must remain in the denominator');
 for(const rank of report.ranks){
- assert.equal(rank.thresholdHp,approvedGoals.rank.bothHpMpPercentAtLeast);
- assert.equal(rank.thresholdMp,approvedGoals.rank.bothHpMpPercentAtLeast);
- assert.equal(rank.status,'INDEPENDENT_80_80_RANK_ACQUISITION');
+ const threshold=rankBadgeThreshold(rank.rankLayer);
+ assert.ok(threshold);
+ assert.equal(threshold.hpPercent,approvedGoals.rank.hpPercentAtLeast);
+ assert.equal(threshold.mpPercent,rank.rankLayer===10?
+  approvedGoals.rank.firstRankMpPercentAtLeast:approvedGoals.rank.laterRankMpPercentAtLeast);
+ assert.equal(rank.thresholdHp,threshold.hpPercent);
+ assert.equal(rank.thresholdMp,threshold.mpPercent);
+ assert.equal(rank.status,'INDEPENDENT_RANK_BOSS_RESERVE');
  const accounts=rankAuditsByPolicy.get(rank.style+'/'+rank.route);
  assert.ok(accounts&&accounts.length===256,'each chapter row belongs to a measured 256-owner policy');
  const missing=accounts.filter(account=>!account.rankAudit.some(event=>
   event.layer===rank.rankLayer&&event.eligible&&event.banked&&
-  event.hpPercent>=80&&event.mpPercent>=80)).map(account=>account.seed);
+  event.hpPercent>=threshold.hpPercent&&event.mpPercent>=threshold.mpPercent)).map(account=>account.seed);
  assert.deepEqual(rank.missingSeeds,missing,'unearned chapters remain unearned');
  assert.equal(rank.acquiredOwners,256-missing.length,
   'chapter acquisitions count distinct banked owners');
@@ -394,7 +400,7 @@ if(failures.length||completionFailures.length||chapterFailures.length)
   completion:completionFailures.slice(0,30),
   chapters:chapterFailures}));
 console.log('DUNGEON_FIRST_ENTRY_STRICT 153600/153600 FIRST_ENTRY, UNASSESSED_AT_FIRST_ENTRY, full legal evidence');
-console.log('PASS 60/60 strength bands, 1536/1536 actual F100 clears and 60 owner-level 80/80 chapter gates');
+console.log('PASS 60/60 strength bands, 1536/1536 actual F100 clears and 60 owner-level chapter reserve gates');
 
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main();
