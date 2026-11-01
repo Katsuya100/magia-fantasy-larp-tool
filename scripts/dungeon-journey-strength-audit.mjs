@@ -10,7 +10,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 import {runJourney,approvedGoals,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
-import {RANK_BOSS_MAX_ROUNDS} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_FAST_WINS_REQUIRED,RANK_LATE_BOSSES_REQUIRED,RANK_MEASURED_FIGHTS} from '../assets/js/dungeon-ranks.mjs';
 
 assert.equal(approvedGoals.strictSamples,256,'fixed owner denominator');
 assert.equal(approvedGoals.bands.length,10,'all ten authored bands');
@@ -158,20 +158,23 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   // are never mistaken for additional owners.
   const acquiredOwners=accounts.filter(account=>account.rankAudit.some(row=>
    row.layer===band.to&&row.eligible&&row.banked&&
-   row.bossRounds<=RANK_BOSS_MAX_ROUNDS)).length;
+   row.measured===RANK_MEASURED_FIGHTS&&row.fastWins>=RANK_FAST_WINS_REQUIRED&&
+   row.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED)).length;
   const missingSeeds=accounts.filter(account=>!account.rankAudit.some(row=>
    row.layer===band.to&&row.eligible&&row.banked&&
-   row.bossRounds<=RANK_BOSS_MAX_ROUNDS)).map(account=>account.seed);
+   row.measured===RANK_MEASURED_FIGHTS&&row.fastWins>=RANK_FAST_WINS_REQUIRED&&
+   row.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED)).map(account=>account.seed);
   const earnedBossRounds=accounts.flatMap(account=>account.rankAudit)
    .filter(row=>row.layer===band.to&&row.eligible&&row.banked).map(row=>row.bossRounds);
   ranks.push({style,route,chapter:band.from+'-'+band.to,rankLayer:band.to,
    eligible,banked,checks:checks.length,acquiredOwners,missingSeeds,
-   maxBossRounds:RANK_BOSS_MAX_ROUNDS,
+   measuredFights:RANK_MEASURED_FIGHTS,fastWinsRequired:RANK_FAST_WINS_REQUIRED,
+   lateBossFastWinsRequired:RANK_LATE_BOSSES_REQUIRED,
    earnedBossRounds:{oneTurn:earnedBossRounds.filter(turns=>turns===1).length,
     twoToThreeTurns:earnedBossRounds.filter(turns=>turns>=2&&turns<=3).length,
     fourOrMoreTurns:earnedBossRounds.filter(turns=>turns>=4).length},
    moment:'ACTUAL_BOSS_KILL_BEFORE_VICTORY_RECOVERY',
-   status:'INDEPENDENT_RANK_BOSS_TURNS'});
+   status:'INDEPENDENT_RANK_BAND_MASTERY'});
  }
  policies.push(policy);
  const firstEntryFile='dungeon-first-entry-v1-'+style+'-'+route+'.json';
@@ -218,7 +221,7 @@ const report={
   knownUnmet:{'B/short/F90':'255/256 legacy rank; not promoted',
    'C/long/F100':'255/256 legacy rank; not promoted',
    'C/long/F91-100':'255/256 legacy farming; not promoted'},
-  independentChapterRule:'Real boss victory in three or fewer turns; independent of HP/MP reserve and recommended strength',
+  independentChapterRule:'At least 42 of 45 counted encounters cleared in one turn, including four of last five floor bosses; early five bosses excluded',
   xpTaper:'NOT_IMPLEMENTED'}
 };
 const output=new URL('../reports/dungeon-journey-strength-v2.json',import.meta.url);
