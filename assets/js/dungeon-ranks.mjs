@@ -34,14 +34,20 @@ export function allowedStartLayer(profile,requested){
  const selected=Number(requested);
  return unlockedStartLayers(profile).includes(selected)?selected:1;
 }
-// Evaluate immediately after the lethal combat exchange, before victory MP restoration
-// and before any checkpoint heal. Both HP and MP must remain at 80% or higher.
+// Require a meaningful reserve, but let the chapter be earned before combat
+// becomes trivial. No turn-count gate: defense and recovery remain valid tactics.
+// Evaluated after the lethal exchange, before victory MP and checkpoint recovery.
+export function rankBadgeThreshold(layer){
+ return rankAt(layer)?{hpPercent:70,mpPercent:layer===10?70:50}:null;
+}
 export function rankBadgeDrop(fight,hero,profile,pendingLoot=[]){
  const layer=clearedLayer(fight);
  if(!rankAt(layer)||highestRankLayer(profile)>=layer
   ||pendingLoot.some(item=>item.type==='rank'&&Number(item.layer)>=layer))return null;
  const hpMax=Number(hero?.stats?.hp),mpMax=Number(hero?.maxMp);
- if(!(hpMax>0&&mpMax>0&&Number(hero?.hp)>=hpMax*.8&&Number(hero?.mp)>=mpMax*.8))return null;
+ const threshold=rankBadgeThreshold(layer);
+ if(!(hpMax>0&&mpMax>0&&Number(hero?.hp)>=hpMax*threshold.hpPercent/100
+  &&Number(hero?.mp)>=mpMax*threshold.mpPercent/100))return null;
  return {type:'rank',layer};
 }
 export function acquireAdventurerRank(profile,layer){
