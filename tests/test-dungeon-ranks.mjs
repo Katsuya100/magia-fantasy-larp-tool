@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {ADVENTURER_RANKS,rankAt,rankTitle,rankBadgeName,highestRankLayer,
- unlockedStartLayers,allowedStartLayer,RANK_LEGACY_RESERVE_PERCENT,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+ unlockedStartLayers,allowedStartLayer,RANK_LEGACY_RESERVE_PERCENT,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeEligible,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 
 const names=['鉛','鉄','鋼','銅','銀','金','白金','ミスリル','アダマンタイト','オリハルコン'];
 assert.deepEqual(ADVENTURER_RANKS.map(r=>r.name),names);
@@ -32,6 +32,18 @@ assert.deepEqual(run.rankCombat,{end:10,nextFight:51,earlyMobs:20,earlyFastWins:
 const h={hp:1,stats:{hp:100},mp:0,maxMp:50};
 const mastery=run.rankCombat;
 const legacy={hp:80,stats:{hp:100},mp:40,maxMp:50};
+// Three mandatory independent cases use the production OR function, not a
+// separately permissive test approximation.
+const oldOnly={...mastery,earlyFastWins:17,bossRounds:4};
+assert.equal(rankBadgeEligible(50,legacy,oldOnly),true,
+ 'legacy 80/80 alone qualifies even when turn mastery fails');
+assert.equal(rankBadgeEligible(50,h,mastery),true,
+ 'complete 50-fight mastery alone qualifies despite insufficient reserves');
+assert.equal(rankBadgeEligible(50,h,oldOnly),false,
+ 'a boss may not award an unearned badge if both routes fail');
+assert.deepEqual(rankBadgeDrop(50,legacy,p,[],oldOnly),{type:'rank',layer:10});
+assert.deepEqual(rankBadgeDrop(50,h,p,[],mastery),{type:'rank',layer:10});
+assert.equal(rankBadgeDrop(50,h,p,[],oldOnly),null);
 assert.deepEqual(rankBadgeDrop(50,legacy,p),{type:'rank',layer:10},
  'old HP/MP 80/80 remains a standalone way to earn the chapter');
 assert.deepEqual(rankBadgeDrop(50,legacy,p,[],{...mastery,earlyFastWins:0,bossRounds:10}),{type:'rank',layer:10},
