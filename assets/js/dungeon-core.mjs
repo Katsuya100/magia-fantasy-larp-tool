@@ -108,17 +108,7 @@ export function magicStoneCountPerHit(layer=1){
   throw Error('魔導石の排出カーブの設定が不正です。');
  const raw=Number(layer);
  const depth=Number.isFinite(raw)?Math.min(endLayer,Math.max(1,Math.floor(raw))):1;
- const progress=(depth-1)/(endLayer-1);
- const steps=[[1,1],[10,.85],[20,.71],[30,1.55],[40,1.32],[45,1.98],[50,1.82],[60,1.51],[70,2.1],[80,1.9],[90,3.05],[100,2.75]];
- let multiplier=steps.at(-1)[1];
- for(let i=1;i<steps.length;i++){
-  const [nextFloor,nextValue]=steps[i];
-  if(depth>nextFloor)continue;
-  const [prevFloor,prevValue]=steps[i-1];
-  multiplier=prevValue+(nextValue-prevValue)*(depth-prevFloor)/(nextFloor-prevFloor);
-  break;
- }
- return Math.pow(maximum/2.75,progress)*multiplier;
+ return Math.pow(maximum,(depth-1)/(endLayer-1));
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
  const collection=countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r);

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {num} from '../assets/js/dungeon-tuning.mjs';
 import {magicStoneDropChance,magicStoneCountPerHit,dropCounts} from '../assets/js/dungeon-core.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 import {totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
@@ -15,63 +16,50 @@ assert.deepEqual(Array.from({length:4},()=>randomA()),
  Array.from({length:4},()=>randomB()),'seeded random sequence reproduces exactly');
 assert.equal(simulateProgression(7213).stones,simulateProgression(7213).stones,'identical seed, identical stone result');
 assert.equal(targetClearLevel(100),150);
-assert.equal(magicStoneDropChance(150,1),.3);
-assert.equal(magicStoneDropChance(150,150),.3);
-assert.equal(magicStoneDropChance(150,151),.3);
+// Read the live CSV-derived configuration. Shape is independently checked
+// in test-dungeon-core; this suite validates stochastic payout and variance.
+const chance=num('magic_stone_drop_chance');
+const rolls=num('magic_stone_drop_rolls');
+const maximum=num('magic_stone_drop_count_layer_150');
+const endLayer=num('magic_stone_drop_curve_end_layer');
+assert.equal(chance,.30,'the approved per-fight hit probability is 30%');
+assert.equal(rolls,1,'exactly one independent stone attempt per fight');
+assert.equal(magicStoneDropChance(150,1),chance);
+assert.equal(magicStoneDropChance(150,endLayer+50),chance);
 assert.equal(magicStoneCountPerHit(1),1);
-assert.equal(magicStoneCountPerHit(100),22);
-assert.equal(magicStoneCountPerHit(150),22);
-assert.equal(magicStoneCountPerHit(151),22);
-// Independent depth-specific expected hit size and full monotone check.
-const interpolationPoints=[[1,1],[10,.85],[20,.71],[30,1.55],[40,1.32],[45,1.98],[50,1.82],[60,1.51],[70,2.1],[80,1.9],[90,3.05],[100,2.75]];
-const expectedHit=layer=>{
- const depth=Math.max(1,Math.min(100,layer));
- let factor=interpolationPoints.at(-1)[1];
- for(let i=1;i<interpolationPoints.length;i++){
-  const [stop,value]=interpolationPoints[i];
-  if(depth>stop)continue;
-  const [start,previous]=interpolationPoints[i-1];
-  factor=previous+(value-previous)*(depth-start)/(stop-start);
-  break;
- }
- return 8**((depth-1)/99)*factor;
-};
-assert.ok(expectedHit(20)<8**(19/99),'early supply is slightly lower');
-assert.ok(expectedHit(40)>8**(39/99),'middle supply increases');
-assert.equal(expectedHit(100),22,'endgame supply plateau is preserved');
-for(let layer=1;layer<=200;layer++){
- const actual=magicStoneCountPerHit(layer);
- assert.ok(Math.abs(actual-expectedHit(layer))<1e-10,'independent stone depth curve at F'+layer);
- if(layer>1)assert.ok(actual>=magicStoneCountPerHit(layer-1),'stone hit size never decreases');
- if(layer>=100)assert.equal(actual,22,'F100+ drops plateau');
-}
-// Test the current integer payout against the specification-derived expectation.
-// A Bernoulli 0/1 legacy comparison cannot model a multi-stone successful hit.
+assert.equal(magicStoneCountPerHit(endLayer),maximum);
+assert.equal(magicStoneCountPerHit(endLayer+50),maximum);
 const percentile=(sorted,p)=>sorted[Math.floor((sorted.length-1)*p)];
-for(const layer of [1,2,50,75,99,100,101,150]){
+const sampleLayers=[1,2,Math.floor(endLayer/2),Math.floor(endLayer*.75),endLayer-1,
+ endLayer,endLayer+1,endLayer+50];
+for(const layer of [...new Set(sampleLayers)]){
  const rng=seededRandom(91000+layer),actual=[],samples=20000;
- const expected=.30*expectedHit(layer);
+ const hitSize=magicStoneCountPerHit(layer);
+ const expected=chance*hitSize;
  for(let i=0;i<samples;i++)actual.push(dropCounts(1,rng,{layer}).stone);
  actual.sort((a,b)=>a-b);
  const mean=actual.reduce((sum,n)=>sum+n,0)/samples;
- const possible=new Set([0,Math.floor(expectedHit(layer)),Math.ceil(expectedHit(layer))]);
+ const f=hitSize-Math.floor(hitSize);
+ const possible=new Set([0,Math.floor(hitSize),Math.ceil(hitSize)]);
  assert.ok(actual.every(n=>Number.isSafeInteger(n)&&possible.has(n)),
-  'stone hits must be integer-sized, or zero on a missed roll at F'+layer);
- // Four standard errors plus a small numeric margin for deterministic Monte Carlo.
- const variance=.3*expectedHit(layer)**2-.09*expectedHit(layer)**2+
-  .3*(expectedHit(layer)%1)*(1-expectedHit(layer)%1);
+  'misses pay zero, hits pay either adjacent integer at F'+layer);
+ const variance=chance*(1-chance)*hitSize**2+chance*f*(1-f);
  const tolerance=4*Math.sqrt(variance/samples)+.005;
  assert.ok(Math.abs(mean-expected)<tolerance,
-  'independent expected stone payout F'+layer+': '+mean+' vs '+expected);
+  'measured mean agrees with the actual configured chance and hit size at F'+layer);
+ const observedVariance=actual.reduce((sum,n)=>sum+(n-mean)**2,0)/samples;
+ assert.ok(Math.abs(observedVariance-variance)<Math.max(.03,variance*.09),
+  'measured variance agrees with independent Bernoulli and rounding law at F'+layer);
+ const missRate=actual.filter(n=>n===0).length/samples;
+ assert.ok(Math.abs(missRate-(1-chance))<.02,'observed hit frequency at F'+layer);
  if(layer===1)assert.equal(actual.at(-1),1);
- if(layer>=100)assert.equal(actual.at(-1),22);
- if(layer===50){
-  assert.ok(actual.includes(Math.floor(expectedHit(layer)))&&
-   actual.includes(Math.ceil(expectedHit(layer))),
-   'fractional hit sizes use genuine stochastic rounding');
+ if(layer>=endLayer)assert.equal(actual.at(-1),maximum);
+ if(layer===Math.floor(endLayer/2)&&f>.02&&f<.98){
+  assert.ok(actual.includes(Math.floor(hitSize))&&actual.includes(Math.ceil(hitSize)),
+   'fractional successful hit sizes use genuine stochastic rounding');
  }
  console.log('STONE_DISTRIBUTION',JSON.stringify({layer,expected,actual:{
-  mean,median:percentile(actual,.5),p90:percentile(actual,.9),max:actual.at(-1)}}));
+  mean,variance:observedVariance,median:percentile(actual,.5),p90:percentile(actual,.9),max:actual.at(-1)}}));
 }
 for(const level of [1,30,80,149,150])for(const layer of [1,10,50,91,100,101,150]){
  assert.equal(magicStoneDropChance(level,layer,true),magicStoneDropChance(level,layer,false),

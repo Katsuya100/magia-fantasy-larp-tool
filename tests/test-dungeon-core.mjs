@@ -30,32 +30,42 @@ for(const lvl of [1,20,50]){
   assert.ok(ratio>=.13&&ratio<=.27,'normal attack near 1/5 recommended normal foe HP at level '+lvl+' '+row.id+' '+ratio);
  }
 }
-// Every fight keeps a 30% stone hit chance; its real count scales by depth.
-for(const layer of [1,2,10,50,91,100,101,149,150,200]){
- assert.equal(G.magicStoneDropChance(150,layer),.30,'constant stone hit probability');
- assert.ok(G.magicStoneCountPerHit(layer)>=1&&G.magicStoneCountPerHit(layer)<=22);
+// Independent stone-curve contract: boundaries, plateau, monotonicity, and
+// constant geometric ratio. Do not reproduce the implementation's formula.
+const dropChance=num('magic_stone_drop_chance');
+const dropRolls=num('magic_stone_drop_rolls');
+const dropMaximum=num('magic_stone_drop_count_layer_150');
+const dropCap=num('magic_stone_drop_curve_end_layer');
+assert.equal(dropChance,.30,'one encounter retains its approved 30% hit chance');
+assert.equal(dropRolls,1,'one encounter retains one stone roll');
+assert.ok(dropMaximum>1&&Number.isSafeInteger(dropCap)&&dropCap>2);
+for(const layer of [1,2,10,50,91,dropCap,dropCap+1,150,200]){
+ assert.equal(G.magicStoneDropChance(150,layer),dropChance);
+ assert.ok(G.magicStoneCountPerHit(layer)>=1&&G.magicStoneCountPerHit(layer)<=dropMaximum);
  for(const lv of [1,30,80,149,150])for(const cleared of [false,true])
-  assert.equal(G.magicStoneDropChance(lv,layer,cleared),.30,'no replay or overlevel penalty');
+  assert.equal(G.magicStoneDropChance(lv,layer,cleared),dropChance,
+   'neither first clear nor player level changes stone chance');
 }
-assert.equal(G.magicStoneCountPerHit(1),1);
-assert.equal(G.magicStoneCountPerHit(100),22);
-assert.equal(G.magicStoneCountPerHit(150),22);
-assert.equal(G.magicStoneCountPerHit(200),22);
-for(let layer=1;layer<=200;layer++){
- const depth=Math.max(1,Math.min(100,layer));
- const points=[[1,1],[10,.85],[20,.71],[30,1.55],[40,1.32],[45,1.98],[50,1.82],[60,1.51],[70,2.1],[80,1.9],[90,3.05],[100,2.75]];
- let boost=points.at(-1)[1];
- for(let i=1;i<points.length;i++){
-  const [next,factor]=points[i];
-  if(depth>next)continue;
-  const [prev,prior]=points[i-1];
-  boost=prior+(factor-prior)*(depth-prev)/(next-prev);
-  break;
- }
- const expected=8**((depth-1)/99)*boost;
- assert.ok(Math.abs(G.magicStoneCountPerHit(layer)-expected)<1e-10,
-  'stone hit curve must preserve F1-30, ramp to F45 and cap at F100 for '+layer);
- if(layer>1)assert.ok(G.magicStoneCountPerHit(layer)>=G.magicStoneCountPerHit(layer-1));
+assert.equal(G.magicStoneCountPerHit(1),1,'exponential growth begins at one stone per hit');
+assert.equal(G.magicStoneCountPerHit(dropCap),dropMaximum,'cap comes from CSV');
+const geometricRatio=G.magicStoneCountPerHit(2)/G.magicStoneCountPerHit(1);
+assert.ok(geometricRatio>1,'stone awards must grow with depth');
+for(let layer=2;layer<dropCap;layer++){
+ const previous=G.magicStoneCountPerHit(layer-1),current=G.magicStoneCountPerHit(layer),
+  following=G.magicStoneCountPerHit(layer+1);
+ assert.ok(current>=previous,'stone hit size never decreases at F'+layer);
+ assert.ok(Math.abs(following/current-geometricRatio)<1e-9,
+  'exponential growth preserves a constant per-layer ratio at F'+layer);
+}
+for(const layer of [dropCap+1,dropCap+2,dropCap+50])
+ assert.equal(G.magicStoneCountPerHit(layer),dropMaximum,'depth cap is a plateau');
+// Integration: actual reward counts use the exported curve and configured roll,
+// not an independently copied table or approximation.
+for(const layer of [1,20,50,dropCap,dropCap+1]){
+ const hit=G.magicStoneCountPerHit(layer);
+ const actual=G.dropCounts(1,()=>0,{layer}).stone;
+ assert.equal(actual,Math.ceil(hit),'successful roll pays the rounded depth yield');
+ assert.equal(G.dropCounts(1,()=>.99999,{layer}).stone,0,'miss pays no stones');
 }
 assert.deepEqual(G.dropCounts(1,()=>.6,{layer:1}),{collection:0,stone:0,use:0});
 assert.deepEqual(G.dropCounts(1,()=>.6,{layer:100}),{collection:0,stone:0,use:0},

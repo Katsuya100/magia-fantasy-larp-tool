@@ -1,22 +1,24 @@
 import assert from 'node:assert/strict';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {mpCost} from '../assets/js/dungeon-core.mjs';
-import {upgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
+import {upgradeStoneCost,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {openStore,saveProfile,putCircle,getProfile,allCircles} from '../assets/js/dungeon-store.mjs';
 const env=fakeDungeonBrowser({storage:{rejectBlobRewrite:true}}),$=id=>env.document.getElementById(id);
 const button=dataset=>({disabled:false,dataset,closest(){return this;}});
+const initialStones=totalUpgradeStoneCost(3);
+const remainingStones=level=>initialStones-totalUpgradeStoneCost(level);
 const wait=async test=>{const end=Date.now()+5000;while(Date.now()<end){if(await test())return;await new Promise(resolve=>setTimeout(resolve,20));}throw Error('timeout');};
 try{
  const db=await openStore(env.factory);
  await saveProfile(db,{
   name:'魔術師',level:1,xp:0,base:{hp:100,mag:10,def:7,res:7},returns:0,attempts:0,
-  inventory:[],collection:{},magicStones:6,deepestReturnedLayer:0,slots:[],run:null
+  inventory:[],collection:{},magicStones:initialStones,deepestReturnedLayer:0,slots:[],run:null
  });
  await putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:100},revealed:true});
  await assert.rejects(putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:110},revealed:true}),/Error preparing Blob\/File data/,'simulate mobile IndexedDB failure on a photo rewrite');
  await import('../assets/js/dungeon-app.mjs?integration=upgrade');
  await wait(()=>$('libraryCards').innerHTML.includes('circle-1'));
- assert.match($('magicStoneBalance').textContent,/6個/);
+ assert.match($('magicStoneBalance').textContent,new RegExp(remainingStones(0)+'個'));
  await env.document.click(button({view:'library'}));
  // Panels must overlap while crossfading; no instant removal, root zoom, or black bars.
  globalThis.window.matchMedia=()=>({matches:false});
@@ -32,14 +34,14 @@ try{
  globalThis.window.matchMedia=undefined;
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,true,'upgrade requires a dialog');
- assert.match($('circleActionMessage').innerHTML,/魔導石を<strong style="color:#ff7777">1<\/strong>個消費して威力を強化します。/,'stone count alone is emphasized in red');
+ assert.match($('circleActionMessage').innerHTML,new RegExp('魔導石を<strong style="color:#ff7777">'+upgradeStoneCost(0)+'<\\/strong>個消費して威力を強化します。'),'stone count alone is emphasized in red');
  assert.doesNotMatch($('circleActionMessage').innerHTML,/初期値の10%/,'confirmation copy stays short');
  assert.equal(upgradeStoneCost(0),1,'first upgrade costs one stone');
  assert.equal(upgradeStoneCost(1),2,'second upgrade increases the actual cost');
  assert.equal(upgradeStoneCost(5),6,'after five upgrades the cost increases more slowly');
  assert.match($('circleActionMessage').innerHTML,/。\nこの強化/,'confirmation sentences display on separate lines');
  await $('cancelCircleAction').fire('click');
- assert.equal((await getProfile(db)).magicStones,6,'cancel leaves stones untouched');
+ assert.equal((await getProfile(db)).magicStones,remainingStones(0),'cancel leaves stones untouched');
  assert.equal((await allCircles(db))[0].analysis.power,100,'cancel leaves power untouched');
  await env.document.click(button({upgrade:'circle-1'}));
  await $('confirmCircleAction').fire('click');
@@ -47,11 +49,11 @@ try{
  let saved=(await allCircles(db))[0];
  assert.equal(saved.analysis.power,110,'first stone boosts by 10% of initial 100');
  assert.equal(saved.upgradeLevel,1);
- assert.equal((await getProfile(db)).magicStones,5);
+ assert.equal((await getProfile(db)).magicStones,remainingStones(1));
  assert.equal((await allCircles(db))[0].analysis.power,110,'read applies profile metadata without rewriting photo record');
  assert.equal(env.factory.databases.get('magia-dungeon-v1').get('circles').get('circle-1').analysis.power,100,'photo record stays unmodified');
  assert.equal($('magicDetailsDialog').open,true,'enhancement opens full circle feedback');
- assert.match($('magicStoneStock').textContent,/次の強化：2個/,'details display actual next upgrade cost');
+ assert.match($('magicStoneStock').textContent,new RegExp('次の強化：'+upgradeStoneCost(1)+'個'),'details display actual next upgrade cost');
  assert.equal($('magicDetailsDialog').dataset.enhancing,'true','ritual begins');
  const originalMpMarkup='<dt>MP</dt><dd>'+mpCost(100)+'</dd>';
  assert.ok($('magicDetailsStats').innerHTML.includes(originalMpMarkup),'upgraded detail still shows the original MP cost');
@@ -65,8 +67,8 @@ try{
  assert.equal(saved.analysis.power,120,'second upgrade works despite Blob rewrite failure');
  assert.equal(saved.basePower,100);
  assert.ok($('magicDetailsStats').innerHTML.includes(originalMpMarkup),'repeat upgrades do not change MP display');
- assert.equal((await getProfile(db)).magicStones,3);
- assert.match($('magicStoneBalance').textContent,/3個/);
+ assert.equal((await getProfile(db)).magicStones,remainingStones(2));
+ assert.match($('magicStoneBalance').textContent,new RegExp(remainingStones(2)+'個'));
  const reopened=await openStore(env.factory);
  assert.equal((await allCircles(reopened))[0].analysis.power,120,'power survives reopening the database');
  reopened.close();
@@ -75,8 +77,8 @@ try{
  await $('confirmCircleAction').fire('click');
  saved=(await allCircles(db))[0];
  assert.equal(saved.analysis.power,130,'third upgrade also succeeds');
- assert.equal((await getProfile(db)).magicStones,0);
- assert.match($('magicStoneBalance').textContent,/0個/);
+ assert.equal((await getProfile(db)).magicStones,remainingStones(3));
+ assert.match($('magicStoneBalance').textContent,new RegExp(remainingStones(3)+'個'));
  await $('closeMagicDetails').fire('click');
  await env.document.click(button({upgrade:'circle-1'}));
  assert.equal($('circleActionDialog').open,false,'no stones means no upgrade');

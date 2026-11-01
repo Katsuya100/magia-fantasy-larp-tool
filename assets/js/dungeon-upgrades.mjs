@@ -1,17 +1,26 @@
 import {circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs';
 // First five upgrades cost 1, 2, 3, 4, 5 stones; later costs rise every five upgrades.
 // Saved upgrade levels remain unchanged; only future purchases use this curve.
+// A single definition feeds both cost functions and the diagnostic manifest.
+export const UPGRADE_STONE_COST_POLICY=Object.freeze({initialCost:1,initialCostSteps:1,earlyRampSteps:5,extraCostStep:5});
 export function upgradeStoneCost(level=0){
  const current=Number(level);
  if(!Number.isSafeInteger(current)||current<0)throw Error('無効な強化段階です');
- return current<5?current+1:6+Math.floor((current-5)/5);
+ const {initialCost,initialCostSteps,earlyRampSteps,extraCostStep}=UPGRADE_STONE_COST_POLICY;
+ return current<earlyRampSteps?initialCost+Math.floor(current/initialCostSteps):
+  initialCost+Math.ceil(earlyRampSteps/initialCostSteps)+Math.floor((current-earlyRampSteps)/extraCostStep);
 }
 export function totalUpgradeStoneCost(level){
  const count=Number(level);
  if(!Number.isSafeInteger(count)||count<0)throw Error('無効な強化段階です');
- if(count<=5)return count*(count+1)/2;
- const afterFirstFive=count-5,fullTiers=Math.floor(afterFirstFive/5),remainder=afterFirstFive%5;
- return 15+5*(6*fullTiers+fullTiers*(fullTiers-1)/2)+remainder*(6+fullTiers);
+ const {initialCost,initialCostSteps,earlyRampSteps,extraCostStep}=UPGRADE_STONE_COST_POLICY;
+ // The first five purchases form the audited one-stone-per-level ramp.
+ const earlyCount=Math.min(count,earlyRampSteps);
+ const earlyTotal=earlyCount*initialCost+earlyCount*(earlyCount-1)/(2*initialCostSteps);
+ if(count<=earlyRampSteps)return earlyTotal;
+ const rest=count-earlyRampSteps,tiers=Math.floor(rest/extraCostStep),remainder=rest%extraCostStep;
+ const firstLateCost=initialCost+Math.ceil(earlyRampSteps/initialCostSteps);
+ return earlyTotal+extraCostStep*(firstLateCost*tiers+tiers*(tiers-1)/2)+remainder*(firstLateCost+tiers);
 }
 // Each upgrade increases power by 10% of original, never compounding.
 // Round the final effective power upward and suppress representation noise.
