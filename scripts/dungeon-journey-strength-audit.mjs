@@ -158,18 +158,18 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   // are never mistaken for additional owners.
   const acquiredOwners=accounts.filter(account=>account.rankAudit.some(row=>
    row.layer===band.to&&row.eligible&&row.banked&&
-   row.measured===RANK_MEASURED_FIGHTS&&row.fastWins>=RANK_FAST_WINS_REQUIRED&&
-   row.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED)).length;
+   row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&row.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&
+   row.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS)).length;
   const missingSeeds=accounts.filter(account=>!account.rankAudit.some(row=>
    row.layer===band.to&&row.eligible&&row.banked&&
-   row.measured===RANK_MEASURED_FIGHTS&&row.fastWins>=RANK_FAST_WINS_REQUIRED&&
-   row.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED)).map(account=>account.seed);
+   row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&row.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&
+   row.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS)).map(account=>account.seed);
   const earnedBossRounds=accounts.flatMap(account=>account.rankAudit)
    .filter(row=>row.layer===band.to&&row.eligible&&row.banked).map(row=>row.bossRounds);
   ranks.push({style,route,chapter:band.from+'-'+band.to,rankLayer:band.to,
    eligible,banked,checks:checks.length,acquiredOwners,missingSeeds,
-   measuredFights:RANK_MEASURED_FIGHTS,fastWinsRequired:RANK_FAST_WINS_REQUIRED,
-   lateBossFastWinsRequired:RANK_LATE_BOSSES_REQUIRED,
+   earlyNormalFights:RANK_EARLY_NORMAL_FIGHTS,earlyFastWinsRequired:RANK_EARLY_FAST_WINS_REQUIRED,
+   finalBossMaxRounds:RANK_FINAL_BOSS_MAX_ROUNDS,
    earnedBossRounds:{oneTurn:earnedBossRounds.filter(turns=>turns===1).length,
     twoToThreeTurns:earnedBossRounds.filter(turns=>turns>=2&&turns<=3).length,
     fourOrMoreTurns:earnedBossRounds.filter(turns=>turns>=4).length},
