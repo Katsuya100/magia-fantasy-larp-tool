@@ -9,7 +9,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
-import {allowedStartLayer,unlockedStartLayers,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+import {allowedStartLayer,unlockedStartLayers,rankBadgeThreshold,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
@@ -854,16 +854,18 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      favoredCollectionIds:outcome.foe.favored_collection_ids?.split('|')||[]});
     if(boss&&layer%10===0&&layer<=100&&!strengthTraining){
      state.rankChecks++;
-     // Two independent outputs: did the ACTUAL player finish the boss
-     // above the 80% reserve, and was the banked badge eventually acquired?
-     // Observe immediately after the lethal round, before any MP recovery.
+     // The badge is earned from the real pre-recovery boss reserve.
+     // Record actual boss turns for diagnosis, never as a one-shot incentive.
      const hpPercent=percent(hero.hp,hero.stats.hp);
      const mpPercent=percent(hero.mp,hero.maxMp);
+     const threshold=rankBadgeThreshold(layer);
      const badge=rankBadgeDrop(fight,hero,profile,pending.loot);
      state.rankAudit.push({layer,sortie:state.sorties,level:firstLevel,
-      hpPercent,mpPercent,eligible:Boolean(badge),banked:false,
-      failure:badge?null:hpPercent<80&&mpPercent<80?'HP_AND_MP_BELOW_80'
-       :hpPercent<80?'HP_BELOW_80':mpPercent<80?'MP_BELOW_80'
+      hpPercent,mpPercent,bossRounds:outcome.rounds,
+      eligible:Boolean(badge),banked:false,
+      failure:badge?null:hpPercent<threshold.hpPercent&&mpPercent<threshold.mpPercent?'HP_AND_MP_BELOW_RANK_THRESHOLD'
+       :hpPercent<threshold.hpPercent?'HP_BELOW_RANK_THRESHOLD'
+       :mpPercent<threshold.mpPercent?'MP_BELOW_RANK_THRESHOLD'
        :'PRIOR_RANK_OR_DUPLICATE'});
      if(badge)drops.push(badge);
     }
@@ -1036,8 +1038,8 @@ export function summarizeJourneys(samples=16,seed=20261024){
   distributions.recoveryFights=spread(runs.map(x=>x.recovery.extraFights));
   distributions.recoverySorties=spread(runs.map(x=>x.recovery.sorties));
   distributions.gradeEligible=spread(runs.map(x=>x.rankAudit.filter(y=>y.eligible).length));
-  distributions.gradeFailedMp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('MP_BELOW_80')).length));
-  distributions.gradeFailedHp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('HP_BELOW_80')).length));
+  distributions.gradeFailedMp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('MP_BELOW_RANK_THRESHOLD')).length));
+  distributions.gradeFailedHp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('HP_BELOW_RANK_THRESHOLD')).length));
   for(const type of ['stone','ink']){
    for(const field of ['earned','spent','lost','balances']){
     distributions[field+'.'+type]=spread(runs.map(x=>x[field][type]));
