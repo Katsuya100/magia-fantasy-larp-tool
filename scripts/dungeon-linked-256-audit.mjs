@@ -150,8 +150,14 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   // the original two 80% reserves; neither route is independently required.
   for(const r of run.rankAudit){
    const hero={hp:r.hpPercent,mp:r.mpPercent,stats:{hp:100},maxMp:100};
-   const record={end:r.layer,nextFight:r.layer*5+1,
-    earlyMobs:r.earlyMobs,earlyFastWins:r.earlyFastWins,bossRounds:r.bossRounds};
+   // Use the actual recorded 50-fight state. Reconstructing a nextFight
+   // value here would incorrectly certify skipped or reset sorties.
+   const record=r.rankCombat;
+   if(record){
+    assert.equal(record.earlyMobs,r.earlyMobs);
+    assert.equal(record.earlyFastWins,r.earlyFastWins);
+    assert.equal(record.bossRounds,r.bossRounds);
+   }
    const conditionReady=rankBadgeEligible(r.layer*5,hero,record);
    if(r.eligible)assert.ok(conditionReady,
     'a granted badge must satisfy canonical legacy 80/80 OR complete 50-fight mastery');
