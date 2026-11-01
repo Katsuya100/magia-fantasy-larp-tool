@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {upgradeCircle,savedUpgrade,applySavedUpgrade,strengthenedPower,combatSpell,upgradeStoneCost,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
-for(const [level,cost] of [[0,1],[1,1],[4,1],[5,2],[9,2],[10,3],[19,4],[20,5],[59,12],[60,13],[99,20],[100,21],[149,30],[150,31]])assert.equal(upgradeStoneCost(level),cost);
-for(const [level,cost] of [[0,0],[1,1],[5,5],[6,7],[10,15],[11,18],[20,50],[21,55],[60,390],[100,1050],[150,2325]])assert.equal(totalUpgradeStoneCost(level),cost);
+for(const [level,cost] of [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[9,6],[10,7],[19,8],[20,9],[59,16],[60,17],[99,24],[100,25],[149,34],[150,35]])assert.equal(upgradeStoneCost(level),cost);
+for(const [level,cost] of [[0,0],[1,1],[5,15],[6,21],[10,45],[11,52],[20,120],[21,129],[60,620],[100,1440],[150,2915]])assert.equal(totalUpgradeStoneCost(level),cost);
 for(let level=0;level<250;level++){
  assert.equal(totalUpgradeStoneCost(level+1)-totalUpgradeStoneCost(level),upgradeStoneCost(level),
   'cumulative purchase cost must equal each actual next upgrade at level '+level);
