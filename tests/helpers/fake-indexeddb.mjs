@@ -10,7 +10,7 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
  const versions=new Map();
  const connections=new Map();
  const factory={
-  opens:0,databases,connections,failNextTransactions:0,failProfileBlobWrites:false,failIntegrityWrites:false,failMigrationBackupWrites:false,transactions:[],
+  opens:0,databases,connections,failNextTransactions:0,failProfileBlobWrites:false,failIntegrityWrites:false,transactions:[],
   closeConnections(name='magia-dungeon-v1'){
    for(const db of [...(connections.get(name)||[])]){db.onclose?.();db.close();}
   },
@@ -79,7 +79,7 @@ export function fakeIndexedDB({onOpen='success',rejectBlobRewrite=false,rejectPr
         get:key=>request(()=>structuredClone(table.get(key))),
         getKey:key=>request(()=>table.has(key)?key:undefined),
         getAll:()=>request(()=>structuredClone([...table.values()])),
-        put:(value,key)=>request(()=>{const id=key??value[keyPath];if(id===undefined)throw Error('Missing key');trace.writes.push({store,key:id,kind:'put'});if(store==='settings'&&id==='integrity'&&factory.failIntegrityWrites)throw Error('Injected integrity write failure');if(store==='settings'&&id==='xpMigrationBackupV1'&&factory.failMigrationBackupWrites)throw Error('Injected migration backup quota error');if(rejectBlobRewrite&&store==='circles'&&table.has(id)&&value?.image instanceof Blob)throw Error('Error preparing Blob/File data to be stored in object store');if(store==='settings'&&id==='profile'&&(rejectProfileBlobRewrite||factory.failProfileBlobWrites)&&containsBlob(value))throw Error('Error preparing Blob/File data to be stored in object store');table.set(id,structuredClone(value));return id;}),
+        put:(value,key)=>request(()=>{const id=key??value[keyPath];if(id===undefined)throw Error('Missing key');trace.writes.push({store,key:id,kind:'put'});if(store==='settings'&&id==='integrity'&&factory.failIntegrityWrites)throw Error('Injected integrity write failure');if(rejectBlobRewrite&&store==='circles'&&table.has(id)&&value?.image instanceof Blob)throw Error('Error preparing Blob/File data to be stored in object store');if(store==='settings'&&id==='profile'&&(rejectProfileBlobRewrite||factory.failProfileBlobWrites)&&containsBlob(value))throw Error('Error preparing Blob/File data to be stored in object store');table.set(id,structuredClone(value));return id;}),
         delete:key=>request(()=>{trace.writes.push({store,key,kind:'delete'});table.delete(key);return undefined;}),
         clear:()=>request(()=>{trace.writes.push({store,kind:'clear'});table.clear();})
        };
