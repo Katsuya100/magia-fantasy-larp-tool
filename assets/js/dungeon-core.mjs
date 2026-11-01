@@ -110,8 +110,16 @@ export function magicStoneCountPerHit(layer=1){
  const raw=Number(layer);
  const depth=Number.isFinite(raw)?Math.min(endLayer,Math.max(1,Math.floor(raw))):1;
  const progress=(depth-1)/(endLayer-1);
- const bonus=Math.min(1,Math.max(0,(depth-30)/15));
- return Math.pow(maximum/2.25,progress)*(1+1.25*bonus);
+ const steps=[[1,1],[10,.97],[20,.93],[30,1.04],[40,1.83],[45,2.25],[50,2.08],[60,1.8],[70,1.8],[80,1.9],[90,2.8],[100,2.75]];
+ let multiplier=steps.at(-1)[1];
+ for(let i=1;i<steps.length;i++){
+  const [nextFloor,nextValue]=steps[i];
+  if(depth>nextFloor)continue;
+  const [prevFloor,prevValue]=steps[i-1];
+  multiplier=prevValue+(nextValue-prevValue)*(depth-prevFloor)/(nextFloor-prevFloor);
+  break;
+ }
+ return Math.pow(maximum/2.75,progress)*multiplier;
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
  const collection=countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r);

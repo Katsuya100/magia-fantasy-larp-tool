@@ -33,17 +33,25 @@ for(const lvl of [1,20,50]){
 // Every fight keeps a 30% stone hit chance; its real count scales by depth.
 for(const layer of [1,2,10,50,91,100,101,149,150,200]){
  assert.equal(G.magicStoneDropChance(150,layer),.30,'constant stone hit probability');
- assert.ok(G.magicStoneCountPerHit(layer)>=1&&G.magicStoneCountPerHit(layer)<=18);
+ assert.ok(G.magicStoneCountPerHit(layer)>=1&&G.magicStoneCountPerHit(layer)<=22);
  for(const lv of [1,30,80,149,150])for(const cleared of [false,true])
   assert.equal(G.magicStoneDropChance(lv,layer,cleared),.30,'no replay or overlevel penalty');
 }
 assert.equal(G.magicStoneCountPerHit(1),1);
-assert.equal(G.magicStoneCountPerHit(100),18);
-assert.equal(G.magicStoneCountPerHit(150),18);
-assert.equal(G.magicStoneCountPerHit(200),18);
+assert.equal(G.magicStoneCountPerHit(100),22);
+assert.equal(G.magicStoneCountPerHit(150),22);
+assert.equal(G.magicStoneCountPerHit(200),22);
 for(let layer=1;layer<=200;layer++){
  const depth=Math.max(1,Math.min(100,layer));
- const boost=1+1.25*Math.min(1,Math.max(0,(depth-30)/15));
+ const points=[[1,1],[10,.97],[20,.93],[30,1.04],[40,1.83],[45,2.25],[50,2.08],[60,1.8],[70,1.8],[80,1.9],[90,2.8],[100,2.75]];
+ let boost=points.at(-1)[1];
+ for(let i=1;i<points.length;i++){
+  const [next,factor]=points[i];
+  if(depth>next)continue;
+  const [prev,prior]=points[i-1];
+  boost=prior+(factor-prior)*(depth-prev)/(next-prev);
+  break;
+ }
  const expected=8**((depth-1)/99)*boost;
  assert.ok(Math.abs(G.magicStoneCountPerHit(layer)-expected)<1e-10,
   'stone hit curve must preserve F1-30, ramp to F45 and cap at F100 for '+layer);

@@ -19,23 +19,31 @@ assert.equal(magicStoneDropChance(150,1),.3);
 assert.equal(magicStoneDropChance(150,150),.3);
 assert.equal(magicStoneDropChance(150,151),.3);
 assert.equal(magicStoneCountPerHit(1),1);
-assert.equal(magicStoneCountPerHit(100),18);
-assert.equal(magicStoneCountPerHit(150),18);
-assert.equal(magicStoneCountPerHit(151),18);
-// Independently verify the 30F-45F supply ramp (1x to 3x) and 100F plateau.
+assert.equal(magicStoneCountPerHit(100),22);
+assert.equal(magicStoneCountPerHit(150),22);
+assert.equal(magicStoneCountPerHit(151),22);
+// Independent depth-specific expected hit size and full monotone check.
+const interpolationPoints=[[1,1],[10,.97],[20,.93],[30,1.04],[40,1.83],[45,2.25],[50,2.08],[60,1.8],[70,1.8],[80,1.9],[90,2.8],[100,2.75]];
 const expectedHit=layer=>{
  const depth=Math.max(1,Math.min(100,layer));
- const bonus=Math.min(1,Math.max(0,(depth-30)/15));
- return 8**((depth-1)/99)*(1+1.25*bonus);
+ let factor=interpolationPoints.at(-1)[1];
+ for(let i=1;i<interpolationPoints.length;i++){
+  const [stop,value]=interpolationPoints[i];
+  if(depth>stop)continue;
+  const [start,previous]=interpolationPoints[i-1];
+  factor=previous+(value-previous)*(depth-start)/(stop-start);
+  break;
+ }
+ return 8**((depth-1)/99)*factor;
 };
-assert.equal(expectedHit(30),8**(29/99),'up to F30 preserves the former supply');
-assert.ok(expectedHit(40)>8**(39/99),'intermediate supply strengthens by F40');
-assert.equal(expectedHit(100),18,'late supply is elevated to compensate upgrade costs');
+assert.ok(expectedHit(20)<8**(19/99),'early supply is slightly lower');
+assert.ok(expectedHit(40)>8**(39/99),'middle supply increases');
+assert.equal(expectedHit(100),22,'endgame supply plateau is preserved');
 for(let layer=1;layer<=200;layer++){
  const actual=magicStoneCountPerHit(layer);
  assert.ok(Math.abs(actual-expectedHit(layer))<1e-10,'independent stone depth curve at F'+layer);
  if(layer>1)assert.ok(actual>=magicStoneCountPerHit(layer-1),'stone hit size never decreases');
- if(layer>=100)assert.equal(actual,18,'F100+ drops plateau');
+ if(layer>=100)assert.equal(actual,22,'F100+ drops plateau');
 }
 // Test the current integer payout against the specification-derived expectation.
 // A Bernoulli 0/1 legacy comparison cannot model a multi-stone successful hit.
@@ -56,7 +64,7 @@ for(const layer of [1,2,50,75,99,100,101,150]){
  assert.ok(Math.abs(mean-expected)<tolerance,
   'independent expected stone payout F'+layer+': '+mean+' vs '+expected);
  if(layer===1)assert.equal(actual.at(-1),1);
- if(layer>=100)assert.equal(actual.at(-1),18);
+ if(layer>=100)assert.equal(actual.at(-1),22);
  if(layer===50){
   assert.ok(actual.includes(Math.floor(expectedHit(layer)))&&
    actual.includes(Math.ceil(expectedHit(layer))),
