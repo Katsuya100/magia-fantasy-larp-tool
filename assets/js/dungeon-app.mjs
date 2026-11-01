@@ -20,7 +20,7 @@ import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261101.305'
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261101.305';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261101.305';
 import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261101.305';
-import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261101.305';
+import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261101.305';
 import {statusBadges} from './dungeon-status-ui.mjs?v=20261101.305';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261101.305';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261101.305';
@@ -790,7 +790,8 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
    firstClear:layerForFight(run.floor)>deepestReturnedLayer(profile),bossEnemyId,favoredCollectionIds});
   if(bossEnemyId){profile.defeatedBosses??={};profile.defeatedBosses[bossEnemyId]=true;}
    if(firstHundredClear)renderHeroName(run.hero);
-  const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot,run.battleTurns);
+  recordRankCombat(run,run.floor,run.battleTurns);
+  const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot,run.rankCombat);
    if(badge)rewards.push(badge);
    const recovered=reclaimLegacies(profile,run.enemy.id,run);
    run.loot.push(...rewards);
