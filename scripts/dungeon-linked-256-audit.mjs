@@ -152,8 +152,14 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    const hero={hp:r.hpPercent,mp:r.mpPercent,stats:{hp:100},maxMp:100};
    const record={end:r.layer,nextFight:r.layer*5+1,
     earlyMobs:r.earlyMobs,earlyFastWins:r.earlyFastWins,bossRounds:r.bossRounds};
-   assert.equal(r.eligible,rankBadgeEligible(r.layer*5,hero,record),
-    'bankable badge must satisfy the canonical legacy OR mastery gate');
+   const conditionReady=rankBadgeEligible(r.layer*5,hero,record);
+   if(r.eligible)assert.ok(conditionReady,
+    'a granted badge must satisfy canonical legacy 80/80 OR complete 50-fight mastery');
+   else if(r.failure==='RANK_CONDITIONS_UNMET')assert.equal(conditionReady,false,
+    'neither route may be reported as a legal badge');
+   else if(r.failure==='PRIOR_RANK_OR_DUPLICATE')assert.equal(conditionReady,true,
+    'a prior or duplicate badge cannot be falsely called a condition failure');
+   else assert.fail('unrecognized rank-gate failure '+r.failure);
   }
   for(const rank of run.rankAudit)assertPreRecoveryRankGate(rank);
   conservationChecks++;
