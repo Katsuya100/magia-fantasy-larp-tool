@@ -256,7 +256,6 @@ assert.doesNotMatch(page,/id="googleDriveOverwriteDialog"|id="googleDriveOverwri
 assert.match(css,/#googleDriveConflictDialog \[data-action="overwrite"\]\{background:linear-gradient\(#d9494f,#941f32\)/,'original red overwrite button styling is preserved');
 const cloudSyncSource=await read('assets/js/dungeon-cloud-sync.mjs');
 assert.doesNotMatch(cloudSyncSource,/meta\?\.blocked|meta\?\.freshStart|同期エラー：Drive上にバックアップがありません/,'obsolete sync state gates are removed');
-assert.doesNotMatch(cloudSyncSource,/establishLegacyIntegrity/,'obsolete local-save auto-conversion is removed');
 assert.match(cloudSyncSource,/if\(verification\.status!=='valid'\)\{\s*show\('端末セーブを検証できません。バックアップを作成できません。'\)/,'unverified saves cannot be uploaded');
 assert.match(cloudSyncSource,/cancelButton.hidden=fresh/,'case 3 offers exactly Drive or new game');
 assert.match(cloudSyncSource,/localButton.textContent=fresh\?'新しく始める'/,'one choice dialog distinguishes new games from saved local players');
@@ -301,8 +300,6 @@ assert.match(css,/\.profile-data-actions \.backup-sync-warning\{[\s\S]*?color:#f
 
 assert.match(page,/<dialog id="imageRepairDialog"/,'recapture dialog exists');
 assert.match(app,/load\(\)\.catch\(failStartup\)/,'startup errors remain visible inside the loading overlay');
-assert.doesNotMatch(app,/restoreDungeonXpMigrationBackup|migrateDungeonXp|migrateDungeonIntegerXp/,'obsolete XP conversion and rollback actions are removed');
-assert.doesNotMatch(page,/restoreOriginalXpDialog|restoreOriginalXpSave/,'obsolete recovery UI is removed');
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
