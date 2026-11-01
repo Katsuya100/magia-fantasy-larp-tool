@@ -58,15 +58,27 @@ export function recordRankCombat(run,fight,rounds){
  record.nextFight++;
  return record;
 }
+// Keep the original 80% HP AND MP route, so the new turn-based route
+// adds an opportunity rather than replacing an already earned opportunity.
+export const RANK_LEGACY_RESERVE_PERCENT=80;
+export function rankBadgeEligible(fight,hero,record){
+ const layer=clearedLayer(fight);
+ if(!rankAt(layer)||!(Number(hero?.hp)>0))return false;
+ const hpMax=Number(hero?.stats?.hp),mpMax=Number(hero?.maxMp);
+ const legacy=hpMax>0&&mpMax>0&&Number(hero.hp)>=hpMax*.8&&
+  Number(hero.mp)>=mpMax*.8;
+ const mastery=record?.end===layer&&record?.nextFight===fight+1
+  &&record.earlyMobs===RANK_EARLY_NORMAL_FIGHTS
+  &&record.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED
+  &&Number.isSafeInteger(record.bossRounds)&&record.bossRounds>=1
+  &&record.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS;
+ return Boolean(legacy||mastery);
+}
 export function rankBadgeDrop(fight,hero,profile,pendingLoot=[],record){
  const layer=clearedLayer(fight);
  if(!rankAt(layer)||highestRankLayer(profile)>=layer
   ||pendingLoot.some(item=>item.type==='rank'&&Number(item.layer)>=layer))return null;
- if(!(Number(hero?.hp)>0&&record?.end===layer&&record?.nextFight===fight+1
-  &&record?.earlyMobs===RANK_EARLY_NORMAL_FIGHTS
-  &&record.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED
-  &&Number.isSafeInteger(record.bossRounds)&&record.bossRounds>=1
-  &&record.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS))return null;
+ if(!rankBadgeEligible(fight,hero,record))return null;
  return {type:'rank',layer};
 }
 export function acquireAdventurerRank(profile,layer){
