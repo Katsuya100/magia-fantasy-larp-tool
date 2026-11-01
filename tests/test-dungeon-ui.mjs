@@ -221,7 +221,7 @@ try{
  const tipsMarkup=page.split('id="circlePowerTipsDialog"')[1].split('</dialog>')[0];
  assert.match(tipsMarkup,/紙に描いた魔法陣を<strong>カメラで撮る<\/strong>/,'strength page recommends camera capture');
  assert.match(tipsMarkup,/画面で描くより<strong>強い魔法<\/strong>/);
- for(const expected of ['トゲトゲ','⚔️攻撃','カクカク','🛡️防御','マルマル','回復','閉じていない線','🕸️弱体']){
+ for(const expected of ['トゲトゲ','⚔️攻撃','カクカク','🛡️防御','マルマル','✚回復','閉じていない線','🕸️弱体']){
   assert.ok(tipsMarkup.includes(expected),'role tip: '+expected);
  }
  assert.match(tipsMarkup,/id="circlePowerTipsPage2"[^>]*hidden/,'the second tips page starts hidden');
