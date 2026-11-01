@@ -40,8 +40,9 @@ collection_drop_rolls,5,敵1体につきコレクションを抽選する回数�
 collection_drop_chance,0.36,コレクションの各抽選成功率
 magic_stone_drop_rolls,1,敵1体につき魔導石を抽選する回数（1層平均約1.5個）
 magic_stone_drop_chance,0.30,第1層での魔導石抽選確率（敵1体につき1回）
-magic_stone_drop_count_layer_150,19,100層以降の魔導石当選時個数上限（既存の指数カーブ・周回ペナルティなし）
+magic_stone_drop_count_layer_150,22,100層以降の魔導石当選時個数上限（既存の指数カーブ・周回ペナルティなし）
 magic_stone_drop_curve_end_layer,100,魔導石の当選時個数が上限に到達する層（これ以降は一定）
+magic_stone_drop_curve_multipliers,1:1|10:0.85|20:0.71|30:1.55|40:1.32|45:1.98|50:1.82|60:1.51|70:2.10|80:1.90|90:3.05|100:2.75,魔導石の指数カーブを補正する階層:倍率の設定値（階層ごとに線形補間）
 consumable_drop_rolls,3,敵1体につき携行品を抽選する回数（1層平均約4個）
 consumable_drop_chance,0.27,携行品の各抽選成功率
 xp_base,35,撃破経験値固定値

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {UPGRADE_STONE_COST_POLICY,upgradeStoneCost,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
+import {balanceText} from '../assets/js/dungeon-tuning.mjs';
 import {buildManifest} from '../scripts/dungeon-balance-manifest.mjs';
 import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwnedRecovery,
  consumeEscapeWhenLethal,battle,summarizeJourneys} from '../scripts/simulate-dungeon-journeys.mjs';
@@ -175,6 +176,8 @@ for(const entry of manifest.entries){
 const find=id=>manifest.entries.find(entry=>entry.id===id);
 assert.equal(find('csv.balance.magic_stone_drop_chance.value').defaultValue,.30);
 assert.equal(find('csv.balance.magic_stone_drop_count_layer_150.value').defaultValue,22);
+assert.equal(find('csv.balance.magic_stone_drop_curve_multipliers.value').defaultValue,
+ balanceText('magic_stone_drop_curve_multipliers'));
 assert.equal(find('csv.balance.level_max.value').defaultValue,150);
 assert.equal(find('ink.bossDropChance').defaultValue,.20);
 for(const [field,value] of Object.entries(UPGRADE_STONE_COST_POLICY))
