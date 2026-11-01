@@ -30,4 +30,4 @@ for(const [index,band] of strengthBands.entries()){
    Number.isInteger(x.upgradeLevel??0)));
  }
 }
-console.log('PASS unchanged approved combat goals, independent 42/45 chapter mastery rule and 6 x 10 x 256 formula-reference coverage');
+console.log('PASS unchanged approved combat goals, independent early normal and final boss turn chapter rule and 6 x 10 x 256 formula-reference coverage');
