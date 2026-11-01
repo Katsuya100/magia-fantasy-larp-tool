@@ -3,62 +3,31 @@
 // a following legal sortie. The approved 256-owner AI is never altered.
 import assert from 'node:assert/strict';
 import {runJourney} from '../scripts/simulate-dungeon-journeys.mjs';
+import * as G from '../assets/js/dungeon-core.mjs';
 import {allowedStartLayer} from '../assets/js/dungeon-ranks.mjs';
 
-// Fixed player-authored drawing qualities are legitimate test input, not
-// injected HP, victory, loot, level, stones, or scripted enemy behavior.
-const decks=[
- [120,140,180,140,140],
- [160,190,230,170,170],
- [200,230,280,200,200],
- [240,280,340,230,230]
-];
-const seeds=[17011,17024,20261024,20261037];
-let proven=null;
-const observations=[];
-for(const powers of decks){
- for(const seed of seeds){
-  // The one test adventurer voluntarily uses only ordinary attacks after
-  // earning genuine earlier victories in its first F11-F20 sortie. On the
-  // next sortie it resumes the unchanged AI. No combat outcome is injected.
-  let selectedTurns=0;
-  const playerAction=({hero,fight,sortie,defaultAction})=>{
-   if(sortie!==14||fight<58)return defaultAction();
-   selectedTurns++;
-   const ready=hero.spells.map((spell,i)=>({spell,i})).filter(x=>x.spell&&
-    hero.mp>=2&&hero.cooldowns[x.i]===0);
-   const ward=ready.find(x=>x.spell.role==='defense');
-   if(ward)return ward.i;
-   const attack=ready.filter(x=>x.spell.role==='attack').sort((a,b)=>a.spell.power-b.spell.power)[0];
-   return attack?.i??-1;
-  };
-  const run=runJourney(seed,{style:'A',route:'long',referencePowers:powers,
-   maxSorties:60,maxFights:2500,observeLossEvidence:true,playerAction,
-   collectCandidateDiagnostic:false});
-  const match=run.lossEvidence.find(loss=>{
-   const i=run.trace.findIndex(t=>t.sortie===loss.sortie&&t.defeat);
-   return loss.before.defeatedHeroHp<=0&&loss.before.pendingXp>0&&
-    loss.before.pendingLoot.length>0&&
-    loss.before.carried.length>0&&loss.before.unspentCarry.length>0&&
-    loss.before.earned.stone+loss.before.earned.ink>0&&
-    i>=0&&run.trace.slice(i+1).some(t=>t.returned&&t.cleared>=t.start&&
-     t.gainedPending.stone+t.gainedPending.ink>0);
-  });
-  observations.push({powers:powers[0],seed,best:run.best,selectedTurns,
-   trace:run.trace.slice(9,15).map(t=>({s:t.sortie,start:t.start,goal:t.goal,
-    cleared:t.cleared,defeat:t.defeat})),
-   losses:run.losses,returns:run.returns,
-   pendingLosses:run.lossEvidence.map(x=>({
-    hp:x.before.defeatedHeroHp,xp:x.before.pendingXp,loot:x.before.pendingLoot.length,
-    unused:x.before.unspentCarry.length,banked:x.before.earned.stone+x.before.earned.ink
-   }))});
-  if(match){proven={run,loss:match,powers,seed};break;}
- }
- if(proven)break;
-}
-assert.ok(proven,
- 'fixed real encounters must include nonempty pending XP/loot loss, unused carry return and a later paid return; '+JSON.stringify(observations));
-const {run,loss,seed,powers}=proven;
+// Fixed, reproducible owner-and-drawing input. The scenario first genuinely
+// banks F1-F10, then the player makes legal, deliberately defensive choices
+// on their first 11F-20F sortie; their next sortie uses the unchanged AI.
+const seed=17011,powers=[120,140,180,140,140];
+let selectedTurns=0;
+const playerAction=({hero,fight,sortie,defaultAction})=>{
+ if(sortie!==14||fight<58)return defaultAction();
+ selectedTurns++;
+ const ready=G.available(hero).map(i=>({spell:hero.spells[i],i}));
+ const ward=ready.find(x=>x.spell.role==='defense');
+ if(ward)return ward.i;
+ const weak=ready.filter(x=>x.spell.role==='attack').sort((a,b)=>
+  a.spell.power-b.spell.power)[0];
+ return weak?.i??-1;
+};
+const run=runJourney(seed,{style:'A',route:'long',referencePowers:powers,
+ maxSorties:60,maxFights:2500,observeLossEvidence:true,playerAction,
+ collectCandidateDiagnostic:false});
+assert.ok(selectedTurns>0,'the real test-player action path must execute');
+const loss=run.lossEvidence.find(event=>event.sortie===14);
+assert.ok(loss,'the real scripted owner must be defeated on their first long sortie');
+
 const {before,after}=loss;
 const {pendingLoot,pendingXp}=before;
 const count=type=>pendingLoot.filter(x=>x.type===type).length;
