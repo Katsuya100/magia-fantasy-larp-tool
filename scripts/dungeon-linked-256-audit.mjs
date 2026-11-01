@@ -9,7 +9,7 @@ import {createHash} from 'node:crypto';
 import {runJourney,spread,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
 import {evaluatePaidBuild,evaluateRecommendedFloor} from './dungeon-fixed-deck-pair.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
-import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
+import {unlockedStartLayers,rankBadgeEligible} from '../assets/js/dungeon-ranks.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 
 const load=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
@@ -146,7 +146,15 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    'all XP from a failed expedition must be counted as lost');
   assert.ok(run.floorAudit.every(f=>!f.bossRank||f.layer%10===0));
   assert.ok(run.rankAudit.every(r=>!r.banked||r.eligible));
-  assert.ok(run.rankAudit.every(r=>!r.eligible||(r.earlyFastWins>=18&&r.bossRounds<=3)));
+  // The exact shipped rank gate checks the full fifty-fight trace OR
+  // the original two 80% reserves; neither route is independently required.
+  for(const r of run.rankAudit){
+   const hero={hp:r.hpPercent,mp:r.mpPercent,stats:{hp:100},maxMp:100};
+   const record={end:r.layer,nextFight:r.layer*5+1,
+    earlyMobs:r.earlyMobs,earlyFastWins:r.earlyFastWins,bossRounds:r.bossRounds};
+   assert.equal(r.eligible,rankBadgeEligible(r.layer*5,hero,record),
+    'bankable badge must satisfy the canonical legacy OR mastery gate');
+  }
   for(const rank of run.rankAudit)assertPreRecoveryRankGate(rank);
   conservationChecks++;
   accounts.push(select(run));
@@ -280,7 +288,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   'bankedXp','lostXp',
   'stoneSpent','inkSpent','bankedStone','bankedInk','deathCount','sorties','returns',
   'redraws','crafts','purposeFarmFights','recoveryFights','rankGranted','gradeEligible',
-  'gradeFailedMp','gradeFailedHp','ownedItems','collections'];
+  'gradeFailedConditions','ownedItems','collections'];
  const dist=Object.fromEntries(distributionKeys.map(key=>[key,stats(accounts.map(x=>x[key]))]));
  const completion=accounts.filter(x=>x.completed).length;
  const policy={style,route,meaning:style+' + '+(route==='long'?'D long expedition':'short returns'),
