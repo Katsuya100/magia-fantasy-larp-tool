@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {ADVENTURER_RANKS,rankAt,rankTitle,rankBadgeName,highestRankLayer,
- unlockedStartLayers,allowedStartLayer,rankBadgeThreshold,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+ unlockedStartLayers,allowedStartLayer,RANK_FAST_WINS_REQUIRED,RANK_LATE_BOSSES_REQUIRED,RANK_MEASURED_FIGHTS,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 
 const names=['鉛','鉄','鋼','銅','銀','金','白金','ミスリル','アダマンタイト','オリハルコン'];
 assert.deepEqual(ADVENTURER_RANKS.map(r=>r.name),names);
@@ -18,30 +18,41 @@ assert.deepEqual(unlockedStartLayers(p),[1]);
 assert.equal(allowedStartLayer(p,11),1,'cannot jump to an unearned layer');
 assert.equal(allowedStartLayer(p,'bogus'),1);
 assert.equal(allowedStartLayer(p,0),1);
-assert.deepEqual(rankBadgeThreshold(10),{hpPercent:70,mpPercent:70});
-assert.deepEqual(rankBadgeThreshold(20),{hpPercent:70,mpPercent:50});
-assert.deepEqual(rankBadgeThreshold(100),{hpPercent:70,mpPercent:50});
-assert.equal(rankBadgeThreshold(5),null);
-const h={hp:70,stats:{hp:100},mp:35,maxMp:50};
-assert.deepEqual(rankBadgeDrop(50,h,p),{type:'rank',layer:10},'exact 70/70 is eligible');
-assert.equal(rankBadgeDrop(49,h,p),null,'not awarded for ordinary encounter');
-assert.equal(rankBadgeDrop(5,h,p),null,'not awarded for non-decade bosses');
-assert.equal(rankBadgeDrop(505,h,p),null,'endless bosses do not award new ranks');
-assert.equal(rankBadgeDrop(50,{...h,hp:69.999},p),null,'below 70% HP fails');
-assert.equal(rankBadgeDrop(50,{...h,mp:34.999},p),null,'below 70% MP fails');
-assert.deepEqual(rankBadgeDrop(100,{...h,mp:25},p),{type:'rank',layer:20},
- '20F badge can be earned at exactly 70/50');
-assert.equal(rankBadgeDrop(100,{...h,mp:24.999},p),null,'20F below 50% MP fails');
-assert.equal(rankBadgeDrop(100,{...h,hp:69.999,mp:25},p),null,'20F below 70% HP fails');
-assert.equal(rankBadgeDrop(50,{...h,maxMp:0},p),null);
-assert.equal(rankBadgeDrop(50,{...h,stats:{hp:0}},p),null);
-assert.equal(rankBadgeDrop(50,h,p,[{type:'rank',layer:10}]),null,'cannot duplicate pending badge');
-assert.equal(rankBadgeDrop(50,h,p,[{type:'rank',layer:20}]),null,'pending higher grade includes lower grades');
+assert.equal(RANK_MEASURED_FIGHTS,45);
+assert.equal(RANK_FAST_WINS_REQUIRED,42);
+assert.equal(RANK_LATE_BOSSES_REQUIRED,4);
+const run={};
+for(let fight=1;fight<=50;fight++){
+ const rounds=fight<=25&&fight%5===0?3:fight===50?2:1;
+ recordRankCombat(run,fight,rounds);
+}
+assert.deepEqual(run.rankCombat,{end:10,nextFight:51,measured:45,fastWins:44,lateBossFastWins:4});
+const h={hp:1,stats:{hp:100},mp:0,maxMp:50};
+const mastery=run.rankCombat;
+assert.deepEqual(rankBadgeDrop(50,h,p,[],mastery),{type:'rank',layer:10},
+ 'near-one-shot mastery earns the first chapter without HP/MP reserve');
+assert.equal(rankBadgeDrop(50,h,p,[],{...mastery,fastWins:41}),null,'41 fast wins fail');
+assert.equal(rankBadgeDrop(50,h,p,[],{...mastery,lateBossFastWins:3}),null,'three late boss fast wins fail');
+assert.equal(rankBadgeDrop(50,h,p,[],{...mastery,measured:44}),null,'partial expedition fails');
+assert.equal(rankBadgeDrop(50,h,p,[],{...mastery,nextFight:50}),null,'stale mastery fails');
+assert.equal(rankBadgeDrop(50,{...h,hp:0},p,[],mastery),null,'losing hero cannot earn rank');
+assert.equal(rankBadgeDrop(49,h,p,[],mastery),null,'only decade bosses award rank');
+assert.equal(rankBadgeDrop(5,h,p,[],mastery),null,'ordinary floor bosses cannot award rank');
+assert.equal(rankBadgeDrop(505,h,p,[],mastery),null,'endless bosses cannot award rank');
+assert.equal(rankBadgeDrop(50,h,p,[{type:'rank',layer:10}],mastery),null,'duplicate pending badge');
+assert.equal(rankBadgeDrop(50,h,p,[{type:'rank',layer:20}],mastery),null,'higher pending suppresses lower');
+const jumped={};
+recordRankCombat(jumped,49,1);
+assert.equal(jumped.rankCombat,null,'starting mid-band does not manufacture history');
+const second={};
+for(let fight=51;fight<=100;fight++)recordRankCombat(second,fight,1);
+assert.deepEqual(rankBadgeDrop(100,h,p,[],second.rankCombat),{type:'rank',layer:20},
+ 'every decade shares the same rule');
 assert.equal(acquireAdventurerRank(p,5),false,'invalid grade cannot be granted');
 assert.equal(acquireAdventurerRank(p,10),true);
 assert.equal(highestRankLayer(p),10);
 assert.equal(acquireAdventurerRank(p,10),false,'same grade is unique');
-assert.equal(rankBadgeDrop(50,h,p),null,'owned badge does not re-drop');
+assert.equal(rankBadgeDrop(50,h,p,[],mastery),null,'owned badge does not re-drop');
 assert.deepEqual(unlockedStartLayers(p),[1,11]);
 assert.equal(allowedStartLayer(p,'11'),11);
 assert.equal(allowedStartLayer(p,21),1);
@@ -50,11 +61,11 @@ assert.equal(highestRankLayer(p),60);
 assert.deepEqual(unlockedStartLayers(p),[1,11,21,31,41,51,61],'a higher grade automatically unlocks every lower grade');
 assert.equal(allowedStartLayer(p,31),31);
 assert.equal(allowedStartLayer(p,71),1);
-assert.equal(rankBadgeDrop(100,h,p),null,'higher grade blocks lower drops');
+assert.equal(rankBadgeDrop(100,h,p,[],second.rankCombat),null,'higher grade blocks lower drops');
 assert.deepEqual(p.collection,{},'badges are never added to the collection');
 assert.equal(acquireAdventurerRank(p,100),true);
 assert.deepEqual(unlockedStartLayers(p),[1,11,21,31,41,51,61,71,81,91,101]);
 assert.equal(allowedStartLayer(p,101),101,'orichalcum permits endless dungeon from floor 101');
 assert.equal(acquireAdventurerRank(p,20),false,'lower grade cannot downgrade an earned rank');
 assert.equal(highestRankLayer(p),100);
-console.log('PASS rank names, 70/70 and 70/50 thresholds, unique badge drops, save progression and shortcuts');
+console.log('PASS 42/45 fast wins and four late bosses, unique chapter badges, progression and shortcuts');
