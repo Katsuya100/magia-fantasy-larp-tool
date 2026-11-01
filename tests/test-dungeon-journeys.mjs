@@ -6,7 +6,7 @@ import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwned
  consumeEscapeWhenLethal,battle,summarizeJourneys} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
-import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
 import {createSortieEncounterSelector} from '../scripts/dungeon-balance-encounters.mjs';
 import {readFileSync} from 'node:fs';
 
@@ -46,27 +46,28 @@ assert.equal(escapedBattle.rounds,0,'escape returns before resolving the current
 assert.equal(escapedBattle.foe.id,'boss_l020');
 assert.equal(safeCarry[0],null);
 assert.equal(safeUsage.escape_scroll,1);
-// The deep boss mana reserve spends one genuinely owned item, and ordinary
-// deep encounters cannot burn that reserve solely for being below 82%.
+// A full 70% MP reserve must not trigger an old rank-only potion,
+// whether the encounter is the final boss or any other deep fight.
 const recoveryHero=G.makeUnit({hp:100,mag:10,def:7,res:7},150,{},[],'hero');
 recoveryHero.mp=Math.round(recoveryHero.maxMp*.70);
 const carriedDose={id:'mana_xl',value:800,instanceId:'earned-mana-1'};
-const ordinaryCarry=[{...carriedDose}],ordinaryUsage={};
-consumeOwnedRecovery(recoveryHero,ordinaryCarry,99,ordinaryUsage,495);
-assert.equal(ordinaryCarry[0].instanceId,'earned-mana-1');
-assert.equal(Object.keys(ordinaryUsage).length,0);
-assert.ok(recoveryHero.mp<recoveryHero.maxMp);
+for(const [layer,fight] of [[99,495],[100,496],[100,500]]){
+ const carry=[{...carriedDose}],usage={},before=recoveryHero.mp;
+ consumeOwnedRecovery(recoveryHero,carry,layer,usage,fight);
+ assert.equal(carry[0].instanceId,carriedDose.instanceId,
+  'HP/MP badge reserve cannot consume a mana potion at '+layer+'/'+fight);
+ assert.equal(recoveryHero.mp,before,'no MP is invented by badge logic');
+ assert.deepEqual(usage,{},'no phantom potion usage');
+}
+// Ordinary shortage still consumes a genuinely owned dose at a deep boss.
+recoveryHero.mp=Math.floor(recoveryHero.maxMp*.30);
+const mpBeforeRecovery=recoveryHero.mp;
 const bossCarry=[{...carriedDose}],bossUsage={};
-// F100's first four ordinary encounters must not use the 82% boss reserve.
-const preBossCarry=[{...carriedDose}],preBossUsage={};
-consumeOwnedRecovery(recoveryHero,preBossCarry,100,preBossUsage,496);
-assert.equal(preBossCarry[0].instanceId,'earned-mana-1');
-assert.equal(Object.keys(preBossUsage).length,0);
-assert.ok(recoveryHero.mp<recoveryHero.maxMp);
 consumeOwnedRecovery(recoveryHero,bossCarry,100,bossUsage,500);
-assert.equal(bossCarry[0],null,'the genuine mana item must be consumed once');
-assert.equal(bossUsage.mana_xl,1);
-assert.equal(recoveryHero.mp,recoveryHero.maxMp,'the legal potion caps at actual maximum MP');
+assert.equal(bossCarry[0],null,'normal low-MP combat can use an owned potion');
+assert.equal(bossUsage.mana_xl,1,'ordinary recovery is accounted exactly once');
+assert.equal(recoveryHero.mp,Math.min(recoveryHero.maxMp,mpBeforeRecovery+carriedDose.value),
+ 'actual potion restores its real amount, capped at maximum MP');
 // Prevent undoing explicit user bans on game-balance escape hatches.
 // A future new balance knob requires review, not a passing test fixture.
 const forbiddenKnobs=['xp_overlevel_decay_per_10_levels',
@@ -143,8 +144,8 @@ assert.equal(chooseHero(finishingHero,nearlyDown,20,true,'short',true),0,
  'A pending badge must not forbid a finishing blow against ordinary enemies');
 const nearlyDownBoss=G.fromEnemy(foes.find(x=>x.id==='boss_l020'),37);
 nearlyDownBoss.hp=1;
-assert.equal(chooseHero(finishingHero,nearlyDownBoss,20,true,'short',true),1,
- 'Protect the pending rank boss HP and MP reserve rather than bypassing the healing plan');
+assert.equal(chooseHero(finishingHero,nearlyDownBoss,20,true,'short',true),0,
+ 'An earnable boss is finished promptly instead of spending a turn on obsolete badge healing');
 nearlyDown.hp=nearlyDown.stats.hp;
 assert.equal(chooseHero(finishingHero,nearlyDown,17,true,'short',false),1,
  'Healing remains available against an enemy that cannot be finished immediately');
@@ -192,21 +193,32 @@ assert.equal(investmentRate(20),.75);
 assert.equal(investmentRate(50),.75);
 assert.deepEqual(spread([1,2,3,4,5]),{p10:1.4,median:3,p90:4.6});
 
-// Independent rank *rule* contract, not a claim that a normal combatant can
-// finish the ten-layer sortie at 80%. Never grant a badge after MP restoration.
+// The first five layers' normal enemies should be mostly one-shot, while
+// the final boss remains a meaningful two- or three-turn fight.
 for(let layer=10;layer<=100;layer+=10){
  const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},Math.min(150,layer+10));
- const profile={adventurerRank:0};
- const fight=layer*5;
- hero.hp=Math.ceil(hero.stats.hp*.8);
- hero.mp=Math.ceil(hero.maxMp*.8);
- assert.equal(rankBadgeDrop(fight,hero,profile)?.layer,layer);
- hero.hp=Math.max(0,Math.ceil(hero.stats.hp*.8)-1);
- assert.equal(rankBadgeDrop(fight,hero,profile),null,'HP below threshold');
- hero.hp=hero.stats.hp;
- hero.mp=Math.max(0,Math.ceil(hero.maxMp*.8)-1);
- assert.equal(rankBadgeDrop(fight,hero,profile),null,'MP below threshold');
- assert.equal(rankBadgeDrop(fight-1,hero,profile),null,'rank only after boss');
+ const profile={adventurerRank:0},record={};
+ const first=(layer-10)*5+1;
+ let normal=0;
+ for(let fight=first;fight<=layer*5;fight++){
+  const isEarlyNormal=fight<first+25&&fight%5!==0;
+  const rounds=isEarlyNormal?(++normal<=18?1:2):
+   fight===layer*5?3:5;
+  recordRankCombat(record,fight,rounds);
+ }
+ hero.hp=1;hero.mp=0;
+ assert.equal(record.rankCombat.earlyMobs,RANK_EARLY_NORMAL_FIGHTS);
+ assert.equal(record.rankCombat.earlyFastWins,RANK_EARLY_FAST_WINS_REQUIRED);
+ assert.equal(record.rankCombat.bossRounds,RANK_FINAL_BOSS_MAX_ROUNDS);
+ assert.equal(rankBadgeDrop(layer*5,hero,profile,[],record.rankCombat)?.layer,layer);
+ const legacy={...hero,hp:hero.stats.hp*.8,mp:hero.maxMp*.8};
+ assert.equal(rankBadgeDrop(layer*5,legacy,profile)?.layer,layer,
+  'old HP and MP reserve is still sufficient when no combat mastery history exists');
+ assert.equal(rankBadgeDrop(layer*5,hero,profile,[],{...record.rankCombat,
+  earlyFastWins:RANK_EARLY_FAST_WINS_REQUIRED-1}),null,'slow early normal fights fail');
+ assert.equal(rankBadgeDrop(layer*5,hero,profile,[],{...record.rankCombat,
+  bossRounds:RANK_FINAL_BOSS_MAX_ROUNDS+1}),null,'slow final boss fails');
+ assert.equal(rankBadgeDrop(layer*5-1,hero,profile,[],record.rankCombat),null,'boss only');
 }
 for(const style of ['A','B','C'])for(const route of ['short','long']){
  // Limited-action test: strictly validates mechanics, no invented success.
@@ -267,9 +279,11 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  assert.equal(run.floorAudit.reduce((n,row)=>n+row.usedOwnedMana,0),
   Object.values(run.rankManaUses).reduce((n,v)=>n+v,0),
   'all genuinely owned mana uses reconcile with consumed item instances');
- assert.ok(run.rankAudit.every(row=>row.eligible===
-  (row.hpPercent>=80&&row.mpPercent>=80&&row.failure===null)),
-  'boss-only 80/80 checks are independent of victory restoration');
+ assert.ok(run.rankAudit.every(row=>row.failure==='PRIOR_RANK_OR_DUPLICATE'||
+  row.eligible===(row.hpPercent>=80&&row.mpPercent>=80||
+   row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&
+   row.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&row.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS)),
+  'chapters require either old 80/80 reserve or turn mastery');
  assert.ok(run.rankAudit.every(row=>!row.banked||row.eligible),
   'only earned, banked badges can be marked safely acquired');
  const initialIds=[...entry.carry,...entry.bankedInventory].map(item=>item.instanceId);
@@ -364,8 +378,10 @@ for(const measurement of Object.values(strengthObserved.journeyStrength))
 assert.ok(strengthObserved.blockers.includes(
  'Recommended total strength remained unmet within the measured sortie/fight budget'),
  'a budget-limited assessment remains explicitly unmet');
+// The official strict audit allows 600 genuine sorties and 6,500 fights;
+// an improved OR chapter route need not reproduce the old 60-sortie trace.
 for(const style of ['A','B']){
- const trained=runJourney(17011,{style,route:'long',maxSorties:60,maxFights:3000,
+ const trained=runJourney(17011,{style,route:'long',maxSorties:600,maxFights:6500,
   observeStrength:true});
  const trainingSorties=trained.trace.filter(step=>step.strengthTraining);
  const allBandsReached=Object.values(trained.journeyStrength).every(row=>row.status==='REACHED');
@@ -377,17 +393,19 @@ for(const style of ['A','B']){
   'strength training begins only after the normal campaign and rank gates');
  assert.equal(Math.max(...trained.floorAudit.map(row=>row.layer))<=100,true,
   'post-rank training does not simulate enemies above the 100F cap');
- assert.ok(trained.trace.length<60&&
+ assert.ok(trained.trace.length<600&&
   (trained.trace.at(-1).strengthTraining||trainingSorties.length===0&&allBandsReached),
   'the owner stops once all ten strength bands are reached');
  if(trainingSorties.length)assert.ok(trained.rankAudit.every(row=>row.sortie<trainingSorties[0].sortie),
   'post-campaign resource sorties do not inflate the independent chapter audit');
  if(style==='A')assert.deepEqual(trained.rankAudit,checkpointJourney.rankAudit,
-  'strength-only returns preserve the original per-owner 80/80 chapter observations');
+  'strength-only returns preserve the original per-owner chapter observations');
  assert.ok(Object.values(trained.journeyStrength).every(row=>row.status==='REACHED'),
   'real post-return investment reaches all ten strength bands before stopping');
- assert.ok(trained.trace.some(step=>step.defeat),
-  'the extended journey keeps actual defeat risk');
+ assert.equal(trained.losses,trained.trace.filter(step=>step.defeat).length,
+  'an improved OR chapter route must never invent a forced defeat');
+ // Real defeat, pending loss and legal restart are proven unconditionally
+ // by test-dungeon-loss-restart.mjs, imported through first-entry below.
  assert.equal(trained.earned.stone,trained.spent.stone+trained.balances.stone,
   'post-rank strength training banks and spends only genuinely earned stones');
  assert.equal(trained.earned.ink,trained.spent.ink+trained.balances.ink,
@@ -434,7 +452,7 @@ for(const cohort of economy.combinations){
     'a failed formula attempt is not mislabeled as a missing legal snapshot');
  assert.ok(!('preparedSnapshots' in owner),'the removed level-gated state is not rebuilt');
 }
-console.log('PASS manifest coverage, reproducible seeded combat, 80/80 rank, item/collection/stone/ink conservation and 6 routes '+ECONOMY_VERSION);
+console.log('PASS manifest coverage, reproducible seeded combat, rank reserve, item/collection/stone/ink conservation and 6 routes '+ECONOMY_VERSION);
 
 // Mandatory GitHub Actions regression of read-only first-entry evidence.
 await import('./test-dungeon-first-entry.mjs');

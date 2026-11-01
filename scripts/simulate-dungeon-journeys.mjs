@@ -9,7 +9,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
-import {allowedStartLayer,unlockedStartLayers,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+import {allowedStartLayer,unlockedStartLayers,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeEligible,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
@@ -60,7 +60,7 @@ function ownedItemBits(items,serial){
 }
 const chestSummary=p=>({level:p.level,rank:p.adventurerRank,xp:p.xp});
 
-export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
+export function chooseHero(hero,enemy,layer,utilityUnlocked,route){
  const ready=G.available(hero);
  // Attack-only through the first banked F2 clear. Unlock utility only
  // after a legitimate return; do not simulate a free unlock.
@@ -69,47 +69,21 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // still resolve the current round, so require enough HP for a real
  // enemy attack before choosing to end the encounter immediately.
  const attacks=ready.filter(i=>hero.spells[i].role==='attack');
- // Evaluate an immediate magical finishing blow before buying a needless
- // heal, but only when the hero can survive the enemy's simultaneous reply.
- // Real rank bosses retain their independent pre-recovery HP/MP reserve.
- if(layer>=6&&
-  !(pendingGrade&&String(enemy.id).startsWith('boss_l'))){
+ // Prefer a safe finishing attack to unnecessary healing, including against
+ // a chapter boss. The simultaneous counterattack still applies.
+ if(layer>=6){
   const maxIncoming=Math.max(0,...enemy.spells.filter(s=>s?.role==='attack')
    .map(s=>G.damage(enemy,hero,s,()=>1)));
-  // When approaching the final boss of a cleared decade, keep enough
-  // real HP to finish the full expedition. A faster kill is not always
-  // preferable to a paid heal when the next boss is already known.
-  if(hero.hp>maxIncoming*1.25&&
-   (layer<30||layer%10!==0||hero.hp/hero.stats.hp>=.90)){
+  if(hero.hp>maxIncoming*1.25){
    const finisher=attacks.find(i=>G.damage(hero,enemy,hero.spells[i],()=>1)>=enemy.hp);
    if(finisher!==undefined)return finisher;
   }
  }
- // Novice rank at F10 checks HP and MP BEFORE the ordinary victory reward.
- // Once utility is legally unlocked, heal proactively for that real badge;
- // never mint a recovery or bypass G.available / actual MP spending.
- // For high-rank expeditions preserve real MP on ordinary encounters,
- // then heal during the actual tenth-floor boss when the HP badge demands it.
- // The same equipped support spell still pays its normal MP cost and turn.
- // The badge samples HP/MP immediately after the lethal boss round.
- // An already legally unlocked support spell should protect the *real*
- // HP reserve before the kill on an unearned 20F+ badge, with ordinary
- // spell MP costs and cooldowns (mana items are separately banked/paid).
- // In a fifty-fight sortie, conserving MP while losing most current HP
- // was empirically causing early deaths with an almost untouched MP gauge.
- // Proactive, paid healing trades that existing MP for survival. It never
- // bypasses available(), consumes no item, and shares ordinary G.round rules.
- // Frequent small heals cost MP and leave the enemy alive to act again.
- // Heal meaningfully damaged HP, preserving mana and attacks for the 50
- // successive encounters. Save the higher threshold for a real rank boss,
- // whose HP check occurs before the victory restoration.
- const rankBoss=pendingGrade&&String(enemy.id).startsWith('boss_l');
- const healBelow=layer===10&&utilityUnlocked?.95:
-  rankBoss?.95:
-  route==='long'&&layer>=11&&layer<=20?.80:
-  layer>=30&&layer%10===0?.90:layer>=81?.75:.70;
- if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
-  (layer!==10||hero.mp/hero.maxMp>.85))return heal;
+ // Ordinary healing remains available for survival over repeated battles,
+ // not for an adventurer badge HP reserve.
+ const healBelow=route==='long'&&layer>=11&&layer<=20?.80:
+  layer>=81?.75:.70;
+ if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow)return heal;
  // Use the already equipped law-defense circle only when it can protect
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
@@ -120,10 +94,9 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // gravity opponents wastes the paid turn and can cause preventable losses.
  const lawThreat=enemy.spells.some(s=>s?.attribute==='law'&&
   (s.role==='attack'||s.role==='debuff'));
- const needsGuard=(rankBoss&&lawThreat)||(layer===10&&utilityUnlocked&&enemy.id==='boss_l010')||
-  (lawThreat&&(layer>=81?hero.hp/hero.stats.hp<.25:
-   hero.hp/hero.stats.hp<.69||
-   enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law')));
+ const needsGuard=lawThreat&&(layer>=81?hero.hp/hero.stats.hp<.25:
+  hero.hp/hero.stats.hp<.69||
+  enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law'));
  if(guard!==undefined&&needsGuard&&
   !hero.statuses.some(s=>s.id==='resist_'+hero.spells[guard].attribute||
    s.id==='buff_'+hero.spells[guard].attribute))return guard;
@@ -131,7 +104,7 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // opponent with it only when the shipped damage expression predicts a KO;
  // never grant mana, suppress an enemy turn, or fake a hit.
  // MP-safe finishers are valid once the beginner F2 return is banked;
- // protect scarce 11F-20F MP without item recovery before the F20 grade.
+ // protect scarce 11F-20F MP during ordinary expeditions.
  if(layer>=51||(route==='long'&&layer>=11)){
   const relativeArmor=G.armor(enemy)/Math.max(1,enemy.stats.hp/Math.max(1,enemy.base.hp));
   const basic=Math.max(1,Math.round(num('basic_attack')*hero.stats.hp*
@@ -165,19 +138,12 @@ function cleanse(hero,carry,layer,usage){
  G.potion(hero,item,data.items,data.buffs);
  carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
 }
-// Only consume genuinely banked mana potions against an unearned 20F+ rank
-// boss, if the hero is below the 80% MP badge threshold plus a spell buffer.
-// Consumables are paid from the original carried inventory via G.potion.
+// Use genuinely banked recovery only for survival and sustained casting;
+// no decade boss receives special treatment for the obsolete HP/MP gate.
 export function consumeOwnedRecovery(hero,carry,layer,usage,fight){
- // Only the fifth actual encounter of a decade is the rank boss. Earlier
- // fights at F90/F100 must not spend the boss's paid MP reserve.
- const decadeBoss=layer>=81&&layer%10===0&&fight===layer*5;
  const priority=layer<=5?['mana']:['elixir','heal','mana','revive'];
  for(const kind of priority){
-  // At a deep decade boss, spend an ACTUALLY CARRIED mana dose before
-  // an underfilled finish. The unchanged threshold on ordinary floors
-  // conserves potions for genuine long sorties and the shared paired gate.
-  const needed=kind==='mana'?hero.mp/hero.maxMp<(decadeBoss?.82:layer>=81?.45:.30):
+  const needed=kind==='mana'?hero.mp/hero.maxMp<(layer>=81?.45:.30):
    kind==='heal'?hero.hp/hero.stats.hp<.48:
    kind==='elixir'?hero.hp/hero.stats.hp<.52&&hero.mp/hero.maxMp<.55:
    kind==='revive'?hero.hp/hero.stats.hp<.3:false;
@@ -190,46 +156,13 @@ export function consumeOwnedRecovery(hero,carry,layer,usage,fight){
   break;
  }
 }
-// For an unearned grade, pack and actually consume owned healing before the
-// lethal boss action; the post-kill grade still checks real remaining HP/MP.
-function restoreRankHp(state,hero,carry,layer,fight,usage){
- if(layer<20||layer%10!==0||fight%5!==0||
-  state.profile.adventurerRank>=layer||hero.hp>=hero.stats.hp*.99)return;
- const items=carry.map((item,i)=>({item,i,row:item&&data.items.find(x=>x.id===item.id)}))
-  .filter(x=>x.item&&['heal','elixir'].includes(x.row?.kind)&&
-   G.canUseBattleItem(hero,x.item,data.items,data.buffs));
- if(!items.length)return;
- items.sort((a,b)=>Number(b.item.value)-Number(a.item.value));
- const {item,i}=items[0];
- G.potion(hero,item,data.items,data.buffs);
- carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
-}
-function restoreRankMp(state,hero,carry,layer,fight,usage){
- if(layer<10||layer%10!==0||fight%5!==0||
-  state.profile.adventurerRank>=layer||hero.mp>=hero.maxMp*.9)return;
- const need=hero.maxMp*.9-hero.mp;
- const choices=carry.map((item,i)=>({item,i})).filter(x=>x.item&&
-  data.items.find(row=>row.id===x.item.id)?.kind==='mana'&&
-  G.canUseBattleItem(hero,x.item,data.items,data.buffs));
- if(!choices.length)return;
- // Prefer the smallest genuine dose that can meet the target, otherwise
- // the largest real dose; do not manufacture MP or items.
- choices.sort((a,b)=>{
-  const av=Number(a.item.value),bv=Number(b.item.value);
-  return (av>=need?0:1)-(bv>=need?0:1)||
-   (av>=need?av-bv:bv-av);
- });
- const {item,i}=choices[0];
- G.potion(hero,item,data.items,data.buffs);
- carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
-}
 const manaCount=usage=>Object.entries(usage).reduce((n,[id,count])=>
  n+(id.startsWith('mana_')?count:0),0);
 const cleanseCount=usage=>Object.entries(usage).reduce((n,[id,count])=>
  n+(id.startsWith('clear_')||id==='luna_stone'?count:0),0);
 // Loadouts are selected only from real banked inventory, with the real
 // level-dependent carry cap. No stocked-item fixture is smuggled into economy.
-function pack(state,start,goal,rankItems=true){
+function pack(state,start,goal){
  // The inventory has *actually dropped* item instances only. Optimise
  // counter-attributes within the legal carry capacity, without adding items.
  const eligible=item=>{
@@ -240,18 +173,15 @@ function pack(state,start,goal,rankItems=true){
   return row&&(row.kind==='clear'&&goal>=20||row.kind==='clear_all'&&goal>=70);
  };
  const cap=G.capacity(state.profile.level);
- const rankTarget=Math.max(20,Math.ceil(start/10)*10);
- const seekingRank=rankItems&&rankTarget<=goal&&rankTarget<=100&&
-  state.profile.adventurerRank<rankTarget;
  const mana=state.inventory.filter(item=>
   data.items.find(row=>row.id===item.id)?.kind==='mana').sort((a,b)=>
   Number(b.value)-Number(a.value)).slice(0,Math.min(goal>=81?8:goal>=51?5:3,cap));
  const available=state.inventory.filter(eligible);
  const specific=available.filter(item=>item.id!=='luna_stone');
  const luna=available.filter(item=>item.id==='luna_stone');
- // A high-rank attempt is allowed two actually owned healing items before
- // duplicate cleansers. This preserves the genuine level-dependent carry cap.
- const rankedHealing=(seekingRank||goal>=51)&&goal>=20?state.inventory.filter(item=>
+ // Carry genuinely owned healing from F20 onward for survival even when
+ // the chapter's alternative mastery route does not require an HP reserve.
+ const rankedHealing=goal>=20?state.inventory.filter(item=>
   ['heal','elixir'].includes(data.items.find(row=>row.id===item.id)?.kind))
   .sort((a,b)=>Number(b.value)-Number(a.value)).slice(0,Math.min(2,cap-mana.length)):[];
  const selected=[...mana,...rankedHealing,
@@ -633,7 +563,7 @@ export function consumeEscapeWhenLethal(hero,enemy,layer,carry,usage){
  usage[scroll.id]=(usage[scroll.id]||0)+1;
  return {itemId:scroll.id,instanceId:scroll.instanceId,threateningDamage};
 }
-export function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked){
+export function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked,playerAction=null){
  const foe=encounterForFight(fight);
  const enemyLevel=Number(data.floors[fight-1]?.enemy_level??targetClearLevel(layer));
  const enemy=G.fromEnemy(foe,enemyLevel);
@@ -641,11 +571,9 @@ export function battle(state,hero,layer,fight,carry,random,usage,encounterForFig
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
   consumeOwnedRecovery(hero,carry,layer,usage,fight);
-  restoreRankMp(state,hero,carry,layer,fight,usage);
-  restoreRankHp(state,hero,carry,layer,fight,usage);
-  const pendingGrade=layer>=20&&layer%10===0&&
-   state.profile.adventurerRank<layer;
-  const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route,pendingGrade);
+  const ours=playerAction?playerAction({hero,enemy,layer,fight,sortie:state.sorties,
+    utilityUnlocked,route:state.route,defaultAction:()=>chooseHero(hero,enemy,layer,utilityUnlocked,state.route)}):
+    chooseHero(hero,enemy,layer,utilityUnlocked,state.route);
   if(ours<0||hero.spells[ours]?.role!=='support'){
    const escape=consumeEscapeWhenLethal(hero,enemy,layer,carry,usage);
    if(escape)return {win:false,escaped:true,foe,enemyLevel,rounds,healCasts,
@@ -664,9 +592,13 @@ export function battle(state,hero,layer,fight,carry,random,usage,encounterForFig
 }
 export function runJourney(seed,{style='A',route='short',alchemy=false,
  redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000,
- collectCandidateDiagnostic=true,observeStrength=false,observeFirstEntry=false}={}){
+ collectCandidateDiagnostic=true,observeStrength=false,observeFirstEntry=false,
+ referencePowers=null,observeLossEvidence=false,playerAction=null}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
+ // Authored test circles are player input, not a change to combat or strategy.
+ if(referencePowers!==null&&(!Array.isArray(referencePowers)||referencePowers.length!==spells.length||
+  referencePowers.some(n=>!Number.isFinite(n)||n<=0)))throw Error('Invalid authored circle powers');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
   forceRedraw:false,maxSorties:Math.min(maxSorties,120),maxFights,
   collectCandidateDiagnostic,observeStrength:false}):null;
@@ -677,14 +609,15 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   redrawLimit,forceRedraw,redrawEvents:[],
   recoveryTarget,recoveryReference:atA31?'REAL_SAME_SEED_A_F31':'UNAVAILABLE',
   alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
-  circles:spells.map(([role,attribute,power])=>circle(role,attribute,power)),
+  circles:spells.map(([role,attribute,power],i)=>
+   circle(role,attribute,referencePowers?.[i]??power)),
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
   bankedXp:0,offDeckStoneSpent:0,
   ledger:{items:{bankedDrops:0,alchemyCreated:0,battleConsumed:0,alchemyConsumed:0,lostUnbanked:0},
    collections:{bankedDrops:0,alchemyConsumed:0,lostUnbanked:0}},
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
-  rankAudit:[],floorAudit:[],
+  rankAudit:[],floorAudit:[],lossEvidence:[],
   entrySnapshots:{},firstEntries:{},firstEntryEvent:0,observeFirstEntry,
    collectCandidateDiagnostic,observeStrength,journeyStrength:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},otherItemUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
@@ -769,8 +702,11 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   const carry=pack(state,start,packingGoal);
   // Observation only; preserve the original individual carry instances.
   const sortieInitialCarry=observeFirstEntry?carry.filter(Boolean).map(x=>({...x})):null;
+  const lossInitialCarry=observeLossEvidence?carry.filter(Boolean).map(x=>({...x})):null;
   const usage={};
   const encounterForFight=createSortieEncounterSelector(data.enemies,random);
+  // A new sortie cannot inherit turn achievements from an earlier expedition.
+  state.rankCombat=null;
   state.sorties++;
   for(let layer=start;layer<=goal&&state.fights<maxFights;layer++){
    // Snapshot the first physical entry before battle(), with no extra RNG,
@@ -835,7 +771,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
    let allWon=true,bossRounds=null,escapedLayer=false;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
-    const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked);
+    const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked,playerAction);
     state.fights++;
     if(recovering)state.recoveryFights++;
     if(layer<=state.best)state.replayedFights++;
@@ -847,6 +783,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      throw Error('Illegal tutorial heal before the banked F2 clear');
     if(outcome.escaped){escaped=true;escapedLayer=true;allWon=false;break;}
     if(!outcome.win){defeat=true;allWon=false;break;}
+    recordRankCombat(state,fight,outcome.rounds);
     if(slot===5)bossRounds=outcome.rounds;
     const boss=slot===5?outcome.foe.id:null;
     const drops=G.drops(data.items,data.collections,outcome.enemyLevel,random,{
@@ -854,17 +791,20 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      favoredCollectionIds:outcome.foe.favored_collection_ids?.split('|')||[]});
     if(boss&&layer%10===0&&layer<=100&&!strengthTraining){
      state.rankChecks++;
-     // Two independent outputs: did the ACTUAL player finish the boss
-     // above the 80% reserve, and was the banked badge eventually acquired?
-     // Observe immediately after the lethal round, before any MP recovery.
      const hpPercent=percent(hero.hp,hero.stats.hp);
      const mpPercent=percent(hero.mp,hero.maxMp);
-     const badge=rankBadgeDrop(fight,hero,profile,pending.loot);
+     const mastery=state.rankCombat;
+     const conditionReady=rankBadgeEligible(fight,hero,mastery);
+     const badge=rankBadgeDrop(fight,hero,profile,pending.loot,mastery);
      state.rankAudit.push({layer,sortie:state.sorties,level:firstLevel,
-      hpPercent,mpPercent,eligible:Boolean(badge),banked:false,
-      failure:badge?null:hpPercent<80&&mpPercent<80?'HP_AND_MP_BELOW_80'
-       :hpPercent<80?'HP_BELOW_80':mpPercent<80?'MP_BELOW_80'
-       :'PRIOR_RANK_OR_DUPLICATE'});
+      hpPercent,mpPercent,
+      rawReserve:{hp:hero.hp,maxHp:hero.stats.hp,mp:hero.mp,maxMp:hero.maxMp},
+      bossRounds:outcome.rounds,
+      earlyMobs:mastery?.earlyMobs??0,
+      earlyFastWins:mastery?.earlyFastWins??0,
+      rankCombat:mastery?{...mastery}:null,
+      eligible:Boolean(badge),banked:false,
+      failure:badge?null:conditionReady?'PRIOR_RANK_OR_DUPLICATE':'RANK_CONDITIONS_UNMET'});
      if(badge)drops.push(badge);
     }
     pending.loot.push(...drops);
@@ -896,7 +836,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
     lastClear=layer;
    if(layer%10===0){
     // Sample the boss outcome before granting the separately chosen
-    // checkpoint recovery; never count full HP/MP as a boss rank award.
+    // checkpoint recovery; rank turns were recorded in actual combat.
     state.milestones.push({layer,provisional:true,level:firstLevel,
      rank:profile.adventurerRank,stones:state.stones,ink:state.ink,
      bossExitHpPercent:percent(hero.hp,hero.stats.hp),
@@ -917,15 +857,10 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
    // A risk-aware long dive can still return at a completed layer when
    // resources become critical. These are strategy parameters, NOT new
    // acceptance thresholds for game balance.
-   // A real carried mana potion can justify one more floor for an unearned rank boss.
-   // The normal return rule still applies to low HP and every non-rank floor.
-   const canContinueForRankBoss=layer>=51&&layer%10===9&&layer+1>=20&&
-    profile.adventurerRank<layer+1&&carry.some(item=>item&&
-     data.items.find(row=>row.id===item.id)?.kind==='mana'&&Number(item.value)>0&&
-     G.canUseBattleItem(hero,item,data.items,data.buffs));
+   // Preserve the ordinary long-route safety return when real HP/MP
+   // resources are critically low, including before decade bosses.
    if(route==='long'&&layer>=51&&
-    (hero.hp/hero.stats.hp<.3||
-     (hero.mp/hero.maxMp<.2&&!canContinueForRankBoss)))break;
+    (hero.hp/hero.stats.hp<.3||hero.mp/hero.maxMp<.2))break;
   }
   for(const [id,count] of Object.entries(usage)){
     const kind=data.items.find(item=>item.id===id)?.kind;
@@ -939,12 +874,33 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   for(const row of state.floorAudit.filter(x=>x.sortie===state.sorties))
    row.banked=!defeat&&row.cleared;
   if(defeat){
+   // The opt-in proof only observes the existing settlement. No game state
+   // or RNG is modified by the observer.
+   const beforeLoss=observeLossEvidence?{
+    earned:{...state.earned},bankedXp:state.bankedXp,
+    profile:{...profile},stone:state.stones,ink:state.ink,
+    warehouse:state.inventory.map(x=>({...x})),
+    carried:lossInitialCarry,
+    unspentCarry:carry.filter(Boolean).map(x=>({...x})),
+    pendingXp:pending.xp,pendingLoot:pending.loot.map(x=>({...x})),
+    defeatedHeroHp:hero.hp,defeatedFights:state.fights,
+    itemLedger:{...state.ledger.items},
+    collectionLedger:{...state.ledger.collections}
+   }:null;
    state.losses++;state.lost.stone+=earnedPending.stone;
    state.lost.ink+=earnedPending.ink;state.lost.xp+=pending.xp;
     state.ledger.items.lostUnbanked+=pending.loot.filter(x=>x.type==='use').length;
     state.ledger.collections.lostUnbanked+=pending.loot.filter(x=>x.type==='collection').length;
    // The shipped game returns unused equipped items to the warehouse on defeat.
    state.inventory.push(...carry.filter(Boolean));
+   if(beforeLoss)state.lossEvidence.push({sortie:state.sorties,start,goal,
+    before:beforeLoss,after:{
+     earned:{...state.earned},bankedXp:state.bankedXp,
+     profile:{...profile},stone:state.stones,ink:state.ink,
+     warehouse:state.inventory.map(x=>({...x})),
+     itemLedger:{...state.ledger.items},
+     collectionLedger:{...state.ledger.collections}
+    }});
   }else if(escaped){
    commit(state,pending,carry,lastClear);
   }else if(lastClear>=start){
@@ -1021,6 +977,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,
   otherItemUses:state.otherItemUses,rankManaUses:state.rankManaUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
+   lossEvidence:state.lossEvidence,
   floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,
   entrySnapshots:state.entrySnapshots,firstEntries:state.firstEntries,
   journeyStrength:state.journeyStrength,
@@ -1036,8 +993,7 @@ export function summarizeJourneys(samples=16,seed=20261024){
   distributions.recoveryFights=spread(runs.map(x=>x.recovery.extraFights));
   distributions.recoverySorties=spread(runs.map(x=>x.recovery.sorties));
   distributions.gradeEligible=spread(runs.map(x=>x.rankAudit.filter(y=>y.eligible).length));
-  distributions.gradeFailedMp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('MP_BELOW_80')).length));
-  distributions.gradeFailedHp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('HP_BELOW_80')).length));
+  distributions.gradeFailedConditions=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure==='RANK_CONDITIONS_UNMET').length));
   for(const type of ['stone','ink']){
    for(const field of ['earned','spent','lost','balances']){
     distributions[field+'.'+type]=spread(runs.map(x=>x[field][type]));

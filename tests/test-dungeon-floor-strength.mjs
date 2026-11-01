@@ -5,6 +5,7 @@ import {assessRecommendedStrength,recommendedReferenceCarry,strengthBands} from 
 import {referenceSpells} from '../scripts/dungeon-fixed-deck-reference.mjs';
 import {summarizeJourneyStrength} from '../scripts/dungeon-test-contract.mjs';
 import {runJourney} from '../scripts/simulate-dungeon-journeys.mjs';
+import './test-dungeon-loss-restart.mjs';
 
 const base=G.startingBase(()=>.5);
 const owner=(bandIndex,overrides={})=>{
@@ -144,30 +145,28 @@ assert.equal(new Set(withItem.actual.itemRecovery.uses.map(use=>use.instanceId))
 assert.ok(withItem.actual.magicRecovery.unfundedMp>0,
  'the item funds its shipped HP effect, not virtual recovery MP');
 
-// Select a deterministic real-loss owner: no injected defeat, free restitution,
-// synthetic snapshot or relaxed reaching condition is permitted.
-// CI-established reproducible case: A/long seed 17011 loses an 81-90F
-// pending haul on sortie 33, banks a legal follow-up return, and first
-// reaches the 81-90 recommended strength on sortie 35.
+// Chapter OR is a genuine improvement: the old A/long seed 17011 may now
+// survive the complete campaign without its previous forced-loss trajectory.
+// Check actual banked recovery and all strength bands; never fabricate death.
 const lossSeed=17011;
 const lossAndReach=runJourney(lossSeed,{style:'A',route:'long',
  maxSorties:600,maxFights:6500,observeStrength:true});
-const defeat=lossAndReach.trace.find(step=>step.defeat===true);
-const recovery=defeat&&lossAndReach.trace.find(step=>
- step.sortie>defeat.sortie&&step.returned);
-const reached=defeat&&Object.values(lossAndReach.journeyStrength).find(row=>
- row.status==='REACHED'&&row.firstReached?.actualSorties>defeat.sortie);
-assert.ok(defeat&&recovery&&reached&&lossAndReach.losses>0,
- 'real defeat, loss, legal return and later recommended strength must all occur');
-assert.ok(lossAndReach.lost.xp+lossAndReach.lost.stone+lossAndReach.lost.ink>0);
-assert.ok(reached.firstReached.actualReturns>0,'only banked returns can establish later strength');
+assert.ok(lossAndReach.best>=100&&lossAndReach.profile.rank>=100,
+ 'the legal owner must still win F100 and bank the final chapter');
+assert.ok(Object.values(lossAndReach.journeyStrength).every(row=>row.status==='REACHED'),
+ 'the improved chapter OR cannot replace genuine post-return strength');
+assert.equal(lossAndReach.losses,lossAndReach.trace.filter(step=>step.defeat).length,
+ 'never insert artificial defeats into a strict owner trace');
+assert.ok(lossAndReach.trace.some(step=>step.returned),
+ 'strength must be earned at actual banked returns');
 assert.equal(lossAndReach.earned.stone,lossAndReach.spent.stone+lossAndReach.balances.stone);
 assert.equal(lossAndReach.earned.ink,lossAndReach.spent.ink+lossAndReach.balances.ink);
-const lossProof={seed:lossSeed,style:'A',route:'long',defeat,losses:lossAndReach.losses,
- lost:lossAndReach.lost,recovery,reach:reached.firstReached,
- reachedBand:reached.band,earned:lossAndReach.earned,spent:lossAndReach.spent,
- balances:lossAndReach.balances};
-console.log('DUNGEON_REAL_LOSS_RECOVERY '+JSON.stringify(lossProof));
+// The mandatory independent actual-loss/restart regression is imported above.
+// The healthy 256-owner route may correctly remain undefeated.
+console.log('DUNGEON_NORMAL_OWNER_STRENGTH '+JSON.stringify({
+ seed:lossSeed,journeyLosses:lossAndReach.losses,completed:lossAndReach.best>=100,
+ reachedBands:Object.values(lossAndReach.journeyStrength).filter(row=>row.status==='REACHED').length
+}));
 
 // A formal cutoff or missing legal owner remains unproven and cannot inherit
 // a legacy 255/256 rank or a previous per-floor battle result.

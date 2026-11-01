@@ -10,6 +10,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 import {runJourney,approvedGoals,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
+import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,RANK_LEGACY_RESERVE_PERCENT} from '../assets/js/dungeon-ranks.mjs';
 
 assert.equal(approvedGoals.strictSamples,256,'fixed owner denominator');
 assert.equal(approvedGoals.bands.length,10,'all ten authored bands');
@@ -157,16 +158,25 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   // are never mistaken for additional owners.
   const acquiredOwners=accounts.filter(account=>account.rankAudit.some(row=>
    row.layer===band.to&&row.eligible&&row.banked&&
-   row.hpPercent>=80&&row.mpPercent>=80)).length;
+   (row.hpPercent>=RANK_LEGACY_RESERVE_PERCENT&&row.mpPercent>=RANK_LEGACY_RESERVE_PERCENT||
+   row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&row.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&
+   row.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS))).length;
   const missingSeeds=accounts.filter(account=>!account.rankAudit.some(row=>
    row.layer===band.to&&row.eligible&&row.banked&&
-   row.hpPercent>=80&&row.mpPercent>=80)).map(account=>account.seed);
+   (row.hpPercent>=RANK_LEGACY_RESERVE_PERCENT&&row.mpPercent>=RANK_LEGACY_RESERVE_PERCENT||
+   row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&row.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&
+   row.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS))).map(account=>account.seed);
+  const earnedBossRounds=accounts.flatMap(account=>account.rankAudit)
+   .filter(row=>row.layer===band.to&&row.eligible&&row.banked).map(row=>row.bossRounds);
   ranks.push({style,route,chapter:band.from+'-'+band.to,rankLayer:band.to,
    eligible,banked,checks:checks.length,acquiredOwners,missingSeeds,
-   thresholdHp:approvedGoals.rank.bothHpMpPercentAtLeast,
-   thresholdMp:approvedGoals.rank.bothHpMpPercentAtLeast,
+   earlyNormalFights:RANK_EARLY_NORMAL_FIGHTS,earlyFastWinsRequired:RANK_EARLY_FAST_WINS_REQUIRED,
+   finalBossMaxRounds:RANK_FINAL_BOSS_MAX_ROUNDS,legacyBothHpMpPercentAtLeast:RANK_LEGACY_RESERVE_PERCENT,
+   earnedBossRounds:{oneTurn:earnedBossRounds.filter(turns=>turns===1).length,
+    twoToThreeTurns:earnedBossRounds.filter(turns=>turns>=2&&turns<=3).length,
+    fourOrMoreTurns:earnedBossRounds.filter(turns=>turns>=4).length},
    moment:'ACTUAL_BOSS_KILL_BEFORE_VICTORY_RECOVERY',
-   status:'INDEPENDENT_80_80_RANK_ACQUISITION'});
+   status:'INDEPENDENT_RANK_LEGACY_OR_MASTERY'});
  }
  policies.push(policy);
  const firstEntryFile='dungeon-first-entry-v1-'+style+'-'+route+'.json';
@@ -176,6 +186,8 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   samples:seeds.length,entries:entryOwners.reduce((n,owner)=>n+owner.entries.length,0)});
  console.log('DUNGEON_JOURNEY_STRENGTH_POLICY '+JSON.stringify({
   style,route,samples:accounts.length,completion:policy.completion,
+  ownersWithLoss:accounts.filter(account=>account.losses>0).length,
+  lossSeeds:accounts.filter(account=>account.losses>0).map(account=>account.seed).slice(0,12),
   chapterOwners:ranks.filter(rank=>rank.style===style&&rank.route===route)
    .map(rank=>({layer:rank.rankLayer,acquired:rank.acquiredOwners,missing:rank.missingSeeds.length})),
   bands:summary.map(x=>({band:x.band,reached:x.reached,unreached:x.unreached,
@@ -184,9 +196,12 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
 // Keep the entire evidence for all 15,360 owner-band cases, but shard by
 // legal policy. A monolithic report exceeds Node's maximum UTF-8 string size
 // and makes a real strict audit impossible to parse.
+const POLICY_SHARD_SIZE=16;
 const policyReferences=policies.map(({style,route,samples,completion,strengthSummary})=>({
  style,route,samples,completion,strengthSummary,
- file:'dungeon-journey-strength-v2-'+style+'-'+route+'.json'
+ shardSize:POLICY_SHARD_SIZE,
+ files:Array.from({length:samples/POLICY_SHARD_SIZE},(_,index)=>
+  'dungeon-journey-strength-v2-'+style+'-'+route+'-'+String(index+1).padStart(2,'0')+'.json')
 }));
 const report={
  schemaVersion:'dungeon-journey-strength-v2',
@@ -213,14 +228,28 @@ const report={
   knownUnmet:{'B/short/F90':'255/256 legacy rank; not promoted',
    'C/long/F100':'255/256 legacy rank; not promoted',
    'C/long/F91-100':'255/256 legacy farming; not promoted'},
-  independentChapterRule:'The boss-kill 80/80 HP/MP rank acquisition check remains separate and unchanged',
+  independentChapterRule:'Old 80% HP and 80% MP at boss kill OR early 20 normal fights at least 18 one-turn wins and final boss at most three turns',
   xpTaper:'NOT_IMPLEMENTED'}
 };
 const output=new URL('../reports/dungeon-journey-strength-v2.json',import.meta.url);
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
-// The index is committed only after every full-evidence policy shard exists.
-for(let i=0;i<policies.length;i++)
- writeReportFile(policyReferences[i].file,policies[i]);
+// Each policy is split into 16-owner complete-evidence files to avoid
+// Node's ~512 MB per-string limit. No owner or formula observation is dropped.
+for(let i=0;i<policies.length;i++){
+ const policy=policies[i],meta=policyReferences[i];
+ assert.equal(policy.accounts.length,meta.samples);
+ assert.equal(policy.accounts.length%meta.shardSize,0);
+ for(let part=0;part<meta.files.length;part++){
+  const start=part*meta.shardSize,end=start+meta.shardSize;
+  writeReportFile(meta.files[part],{
+   style:policy.style,route:policy.route,ownerOffset:start,samples:meta.shardSize,
+   accounts:policy.accounts.slice(start,end),
+   journeyStrength:policy.journeyStrength.map(band=>({
+    band:band.band,owners:band.owners.slice(start,end)
+   }))
+  });
+ }
+}
 writeReportFile('dungeon-journey-strength-v2.json',report);
 console.log('DUNGEON_JOURNEY_STRENGTH_REPORT '+output.pathname);
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))

@@ -10,7 +10,10 @@ assert.equal(approved.playerLevelMax,null,'unbounded player level does not alter
 assert.deepEqual(approved.bands.map(x=>x.winRate),[[99,100],[99,100],...Array.from({length:8},()=>[90,97])]);
 assert.deepEqual(approved.bands.map(x=>x.winSafety),[[99,100],[99,100],...Array.from({length:8},()=>[92,95])]);
 assert.deepEqual(approved.bands.map(x=>x.winnerMedianMp),[[50,60],...Array.from({length:9},()=>[0,15])]);
-assert.equal(approved.rank.bothHpMpPercentAtLeast,80);
+assert.equal(approved.rank.legacyBothHpMpPercentAtLeast,80);
+assert.equal(approved.rank.earlyNormalFights,20);
+assert.equal(approved.rank.earlyFastWinsRequired,18);
+assert.equal(approved.rank.finalBossMaxRounds,3);
 assert.equal(approved.rank.independentFromCombatBalance,true);
 assert.equal(strengthBands.length,10);
 assert.equal(referenceSpells.length,10);
@@ -28,4 +31,4 @@ for(const [index,band] of strengthBands.entries()){
    Number.isInteger(x.upgradeLevel??0)));
  }
 }
-console.log('PASS unchanged approved combat goals, independent 80/80 rank rule and 6 x 10 x 256 formula-reference coverage');
+console.log('PASS unchanged approved combat goals, independent early normal and final boss turn chapter rule and 6 x 10 x 256 formula-reference coverage');

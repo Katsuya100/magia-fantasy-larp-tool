@@ -1,5 +1,5 @@
 // Adventurer badges are progression achievements, never collection entries.
-import {clearedLayer} from './dungeon-progress.mjs';
+import {clearedLayer,layerOfFight,encounterOfFight} from './dungeon-progress.mjs';
 export const ADVENTURER_RANKS=Object.freeze([
  {layer:10,name:'鉛'}, {layer:20,name:'鉄'}, {layer:30,name:'鋼'},
  {layer:40,name:'銅'}, {layer:50,name:'銀'}, {layer:60,name:'金'},
@@ -34,14 +34,52 @@ export function allowedStartLayer(profile,requested){
  const selected=Number(requested);
  return unlockedStartLayers(profile).includes(selected)?selected:1;
 }
-// Evaluate immediately after the lethal combat exchange, before victory MP restoration
-// and before any checkpoint heal. Both HP and MP must remain at 80% or higher.
-export function rankBadgeDrop(fight,hero,profile,pendingLoot=[]){
+// A chapter is earned while the final boss still needs a few exchanges.
+// Only the first five layers' normal enemies are expected to be near one-shot.
+export const RANK_EARLY_NORMAL_FIGHTS=20;
+export const RANK_EARLY_FAST_WINS_REQUIRED=18;
+export const RANK_FINAL_BOSS_MAX_ROUNDS=3;
+export function recordRankCombat(run,fight,rounds){
+ const layer=layerOfFight(fight);
+ if(layer<1||layer>100||!Number.isSafeInteger(rounds)||rounds<1)return null;
+ const end=Math.ceil(layer/10)*10,start=end-9,firstFight=(start-1)*5+1;
+ if(fight===firstFight)run.rankCombat={end,nextFight:fight,earlyMobs:0,earlyFastWins:0,bossRounds:null};
+ const record=run.rankCombat;
+ if(!record||record.end!==end||record.nextFight!==fight){
+  run.rankCombat=null;
+  return null;
+ }
+ const boss=encounterOfFight(fight)===5;
+ if(!boss&&layer<start+5){
+  record.earlyMobs++;
+  if(rounds===1)record.earlyFastWins++;
+ }
+ if(fight===end*5)record.bossRounds=rounds;
+ record.nextFight++;
+ return record;
+}
+// Keep the original 80% HP AND MP route, so the new turn-based route
+// adds an opportunity rather than replacing an already earned opportunity.
+export const RANK_LEGACY_RESERVE_PERCENT=80;
+export function rankBadgeEligible(fight,hero,record){
+ const layer=clearedLayer(fight);
+ if(!rankAt(layer)||!(Number(hero?.hp)>0))return false;
+ const hpMax=Number(hero?.stats?.hp),mpMax=Number(hero?.maxMp);
+ const legacy=hpMax>0&&mpMax>0&&
+  Number(hero.hp)>=hpMax*RANK_LEGACY_RESERVE_PERCENT/100&&
+  Number(hero.mp)>=mpMax*RANK_LEGACY_RESERVE_PERCENT/100;
+ const mastery=record?.end===layer&&record?.nextFight===fight+1
+  &&record.earlyMobs===RANK_EARLY_NORMAL_FIGHTS
+  &&record.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED
+  &&Number.isSafeInteger(record.bossRounds)&&record.bossRounds>=1
+  &&record.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS;
+ return Boolean(legacy||mastery);
+}
+export function rankBadgeDrop(fight,hero,profile,pendingLoot=[],record){
  const layer=clearedLayer(fight);
  if(!rankAt(layer)||highestRankLayer(profile)>=layer
   ||pendingLoot.some(item=>item.type==='rank'&&Number(item.layer)>=layer))return null;
- const hpMax=Number(hero?.stats?.hp),mpMax=Number(hero?.maxMp);
- if(!(hpMax>0&&mpMax>0&&Number(hero?.hp)>=hpMax*.8&&Number(hero?.mp)>=mpMax*.8))return null;
+ if(!rankBadgeEligible(fight,hero,record))return null;
  return {type:'rank',layer};
 }
 export function acquireAdventurerRank(profile,layer){

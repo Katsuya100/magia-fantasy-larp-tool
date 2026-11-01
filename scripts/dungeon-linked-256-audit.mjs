@@ -9,7 +9,7 @@ import {createHash} from 'node:crypto';
 import {runJourney,spread,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
 import {evaluatePaidBuild,evaluateRecommendedFloor} from './dungeon-fixed-deck-pair.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
-import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
+import {unlockedStartLayers,rankBadgeEligible} from '../assets/js/dungeon-ranks.mjs';
 import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 
 const load=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
@@ -56,8 +56,7 @@ const select=x=>({seed:x.seed,level:x.profile.level,rank:x.profile.rank,
  recoveryTargetUpgrades:x.recovery.targetUpgrades,
  recoveryAchieved:x.recovery.achieved,
  gradeEligible:x.rankAudit.filter(r=>r.eligible).length,
- gradeFailedMp:x.rankAudit.filter(r=>r.failure?.includes('MP_BELOW_80')).length,
- gradeFailedHp:x.rankAudit.filter(r=>r.failure?.includes('HP_BELOW_80')).length,
+ gradeFailedConditions:x.rankAudit.filter(r=>r.failure==='RANK_CONDITIONS_UNMET').length,
  ownedItems:x.resourceLedger.items.held,collections:x.resourceLedger.collections.held,
  completed:x.best>=100,blockers:x.blockers,
  firstDecadeClearances:goals.bands.map(b=>{
@@ -147,7 +146,29 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    'all XP from a failed expedition must be counted as lost');
   assert.ok(run.floorAudit.every(f=>!f.bossRank||f.layer%10===0));
   assert.ok(run.rankAudit.every(r=>!r.banked||r.eligible));
-  assert.ok(run.rankAudit.every(r=>r.hpPercent>=80&&r.mpPercent>=80||!r.eligible));
+  // The exact shipped rank gate checks the full fifty-fight trace OR
+  // the original two 80% reserves; neither route is independently required.
+  for(const r of run.rankAudit){
+   assert.ok(r.rawReserve,'OR gate needs the exact pre-recovery HP/MP, not rounded percentages');
+   const hero={hp:r.rawReserve.hp,mp:r.rawReserve.mp,
+    stats:{hp:r.rawReserve.maxHp},maxMp:r.rawReserve.maxMp};
+   // Use the actual recorded 50-fight state. Reconstructing a nextFight
+   // value here would incorrectly certify skipped or reset sorties.
+   const record=r.rankCombat;
+   if(record){
+    assert.equal(record.earlyMobs,r.earlyMobs);
+    assert.equal(record.earlyFastWins,r.earlyFastWins);
+    assert.equal(record.bossRounds,r.bossRounds);
+   }
+   const conditionReady=rankBadgeEligible(r.layer*5,hero,record);
+   if(r.eligible)assert.ok(conditionReady,
+    'a granted badge must satisfy canonical legacy 80/80 OR complete 50-fight mastery');
+   else if(r.failure==='RANK_CONDITIONS_UNMET')assert.equal(conditionReady,false,
+    'neither route may be reported as a legal badge');
+   else if(r.failure==='PRIOR_RANK_OR_DUPLICATE')assert.equal(conditionReady,true,
+    'a prior or duplicate badge cannot be falsely called a condition failure');
+   else assert.fail('unrecognized rank-gate failure '+r.failure);
+  }
   for(const rank of run.rankAudit)assertPreRecoveryRankGate(rank);
   conservationChecks++;
   accounts.push(select(run));
@@ -281,7 +302,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   'bankedXp','lostXp',
   'stoneSpent','inkSpent','bankedStone','bankedInk','deathCount','sorties','returns',
   'redraws','crafts','purposeFarmFights','recoveryFights','rankGranted','gradeEligible',
-  'gradeFailedMp','gradeFailedHp','ownedItems','collections'];
+  'gradeFailedConditions','ownedItems','collections'];
  const dist=Object.fromEntries(distributionKeys.map(key=>[key,stats(accounts.map(x=>x[key]))]));
  const completion=accounts.filter(x=>x.completed).length;
  const policy={style,route,meaning:style+' + '+(route==='long'?'D long expedition':'short returns'),
