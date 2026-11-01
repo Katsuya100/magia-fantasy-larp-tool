@@ -44,27 +44,26 @@ assert.equal(escapedBattle.rounds,0,'escape returns before resolving the current
 assert.equal(escapedBattle.foe.id,'boss_l020');
 assert.equal(safeCarry[0],null);
 assert.equal(safeUsage.escape_scroll,1);
-// The deep boss mana reserve spends one genuinely owned item, and ordinary
-// deep encounters cannot burn that reserve solely for being below 82%.
+// A full 70% MP reserve must not trigger an old rank-only potion,
+// whether the encounter is the final boss or any other deep fight.
 const recoveryHero=G.makeUnit({hp:100,mag:10,def:7,res:7},150,{},[],'hero');
 recoveryHero.mp=Math.round(recoveryHero.maxMp*.70);
 const carriedDose={id:'mana_xl',value:800,instanceId:'earned-mana-1'};
-const ordinaryCarry=[{...carriedDose}],ordinaryUsage={};
-consumeOwnedRecovery(recoveryHero,ordinaryCarry,99,ordinaryUsage,495);
-assert.equal(ordinaryCarry[0].instanceId,'earned-mana-1');
-assert.equal(Object.keys(ordinaryUsage).length,0);
-assert.ok(recoveryHero.mp<recoveryHero.maxMp);
+for(const [layer,fight] of [[99,495],[100,496],[100,500]]){
+ const carry=[{...carriedDose}],usage={},before=recoveryHero.mp;
+ consumeOwnedRecovery(recoveryHero,carry,layer,usage,fight);
+ assert.equal(carry[0].instanceId,carriedDose.instanceId,
+  'HP/MP badge reserve cannot consume a mana potion at '+layer+'/'+fight);
+ assert.equal(recoveryHero.mp,before,'no MP is invented by badge logic');
+ assert.deepEqual(usage,{},'no phantom potion usage');
+}
+// Ordinary shortage still consumes a genuinely owned dose at a deep boss.
+recoveryHero.mp=Math.floor(recoveryHero.maxMp*.30);
 const bossCarry=[{...carriedDose}],bossUsage={};
-// F100's first four ordinary encounters must not use the 82% boss reserve.
-const preBossCarry=[{...carriedDose}],preBossUsage={};
-consumeOwnedRecovery(recoveryHero,preBossCarry,100,preBossUsage,496);
-assert.equal(preBossCarry[0].instanceId,'earned-mana-1');
-assert.equal(Object.keys(preBossUsage).length,0);
-assert.ok(recoveryHero.mp<recoveryHero.maxMp);
 consumeOwnedRecovery(recoveryHero,bossCarry,100,bossUsage,500);
-assert.equal(bossCarry[0],null,'the genuine mana item must be consumed once');
-assert.equal(bossUsage.mana_xl,1);
-assert.equal(recoveryHero.mp,recoveryHero.maxMp,'the legal potion caps at actual maximum MP');
+assert.equal(bossCarry[0],null,'normal low-MP combat can use an owned potion');
+assert.equal(bossUsage.mana_xl,1,'ordinary recovery is accounted exactly once');
+assert.equal(recoveryHero.mp,recoveryHero.maxMp,'actual potion cap still applies');
 // Prevent undoing explicit user bans on game-balance escape hatches.
 // A future new balance knob requires review, not a passing test fixture.
 const forbiddenKnobs=['xp_overlevel_decay_per_10_levels',
@@ -141,8 +140,8 @@ assert.equal(chooseHero(finishingHero,nearlyDown,20,true,'short',true),0,
  'A pending badge must not forbid a finishing blow against ordinary enemies');
 const nearlyDownBoss=G.fromEnemy(foes.find(x=>x.id==='boss_l020'),37);
 nearlyDownBoss.hp=1;
-assert.equal(chooseHero(finishingHero,nearlyDownBoss,20,true,'short',true),1,
- 'Protect the pending rank boss HP and MP reserve rather than bypassing the healing plan');
+assert.equal(chooseHero(finishingHero,nearlyDownBoss,20,true,'short',true),0,
+ 'An earnable boss is finished promptly instead of spending a turn on obsolete badge healing');
 nearlyDown.hp=nearlyDown.stats.hp;
 assert.equal(chooseHero(finishingHero,nearlyDown,17,true,'short',false),1,
  'Healing remains available against an enemy that cannot be finished immediately');
