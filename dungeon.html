@@ -7,7 +7,7 @@
   <meta name="description" content="自分だけの魔法陣で迷宮へ。魔法陣を描き、魔導書を編み、深淵の秘宝を探す。">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <title>マギアサークル-ダンジョンアタック</title>
-  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261101.305">
+  <link rel="stylesheet" href="assets/css/dungeon.css?v=20261101.309">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Mai&amp;display=swap">
@@ -502,13 +502,30 @@
       <header class="circle-power-tips-heading dungeon-dialog-header"><h2 id="circlePowerTipsTitle" class="dungeon-dialog-frame-title">強い魔法のコツ</h2><button type="button" id="closeCirclePowerTips" class="subtle dungeon-dialog-close dungeon-dialog-close-icon" aria-label="閉じる">✕</button></header>
 
       <div class="circle-power-tips-content dungeon-dialog-frame">
-        <ol>
-          <li><strong>線やカーブを綺麗に</strong>描く</li>
-          <li>呪文は<strong>読みやすく</strong>書く</li>
-          <li>呪文を<strong>円の線に重ねない</strong></li>
-          <li><strong>重複しない英単語</strong>を多く使う</li>
-        </ol>
-        <figure><figcaption>理想的な例</figcaption><img src="assets/images/sample.png?v=20261020.31" alt="理想の魔法陣。綺麗な二重円、重ならない英語の呪文、中央の紋" loading="lazy"></figure>
+        <section id="circlePowerTipsPage1" aria-label="強い魔法を作るコツ">
+          <p class="circle-power-tips-photo">紙に描いた魔法陣を<strong>カメラで撮る</strong>と、画面で描くより<strong>強い魔法</strong>になります。</p>
+          <ol>
+            <li><strong>線やカーブを綺麗に</strong>描く</li>
+            <li>呪文は<strong>読みやすく</strong>書く</li>
+            <li>呪文を<strong>円の線に重ねない</strong></li>
+            <li><strong>重複しない英単語</strong>を多く使う</li>
+          </ol>
+          <figure><figcaption>理想的な例</figcaption><img src="assets/images/sample.png?v=20261020.31" alt="理想の魔法陣。綺麗な二重円、重ならない英語の呪文、中央の紋" loading="lazy"></figure>
+        </section>
+        <section id="circlePowerTipsPage2" aria-label="狙った魔法種別を出すコツ" hidden>
+          <h3>狙った魔法種別を出すコツ</h3>
+          <ul class="circle-power-tips-kinds">
+            <li><strong>トゲトゲ</strong>した線 → ⚔️攻撃</li>
+            <li><strong>カクカク</strong>した線 → 🛡️防御</li>
+            <li><strong>マルマル</strong>した線 → 回復</li>
+            <li><strong>閉じていない線</strong> → 🕸️弱体</li>
+          </ul>
+        </section>
+        <nav class="circle-power-tips-nav" aria-label="ページ切り替え">
+          <button type="button" id="circlePowerTipsPrevious" class="subtle" hidden>戻る</button>
+          <span id="circlePowerTipsPageIndicator" aria-live="polite">1 / 2</span>
+          <button type="button" id="circlePowerTipsNext" class="subtle">次へ</button>
+        </nav>
       </div>
     </dialog>
     <dialog id="circleDrawingLessonDialog" class="drawing-lesson-dialog" aria-labelledby="tutorialTitle" aria-describedby="tutorialHint" data-dungeon-frame="fixed">
@@ -723,6 +740,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="assets/js/dungeon-app.mjs?v=20261101.305"></script>
+  <script type="module" src="assets/js/dungeon-app.mjs?v=20261101.309"></script>
 </body>
 </html>

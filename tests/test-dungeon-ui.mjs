@@ -49,6 +49,18 @@ try{
  assert.equal($('circleDrawingLessonDialog').open,false);
   await $('circleDrawingPowerTips').fire('click');
   assert.equal($('circlePowerTipsDialog').open,true,'tips open above drawing');
+  assert.equal($('circlePowerTipsPage1').hidden,false,'tips begin at the strength guidance');
+  assert.equal($('circlePowerTipsPage2').hidden,true,'spell role guidance starts on page two');
+  assert.equal($('circlePowerTipsPageIndicator').textContent,'1 / 2');
+  await $('circlePowerTipsNext').fire('click');
+  assert.equal($('circlePowerTipsPage1').hidden,true);
+  assert.equal($('circlePowerTipsPage2').hidden,false);
+  assert.equal($('circlePowerTipsPrevious').hidden,false);
+  assert.equal($('circlePowerTipsNext').hidden,true);
+  assert.equal($('circlePowerTipsPageIndicator').textContent,'2 / 2');
+  await $('circlePowerTipsPrevious').fire('click');
+  assert.equal($('circlePowerTipsPage1').hidden,false);
+  assert.equal($('circlePowerTipsPage2').hidden,true);
   await $('closeCirclePowerTips').fire('click');
   assert.equal($('circlePowerTipsDialog').open,false);
   assert.equal($('circleDrawingDialog').open,true,'tips keep drawing open');
@@ -116,6 +128,9 @@ try{
  assert.equal(env.opened,1);
   await $('circleCameraPowerTips').fire('click');
   assert.equal($('circlePowerTipsDialog').open,true,'tips open above camera');
+  assert.equal($('circlePowerTipsPage1').hidden,false,'tips reset to first page when opened from camera');
+  await $('circlePowerTipsNext').fire('click');
+  assert.equal($('circlePowerTipsPage2').hidden,false,'camera also exposes spell role page');
   await $('closeCirclePowerTips').fire('click');
   assert.equal($('circlePowerTipsDialog').open,false);
   assert.equal($('circleCameraDialog').open,true,'camera remains open');
@@ -203,6 +218,13 @@ try{
  assert.match(page,/id="tutorialReplay"[^>]*>描き方を練習<\/button>/);
  assert.match(page,/id="circleDrawingPowerTips"[^>]*>強い魔法のコツ<\/button>/);
  assert.match(page,/id="circleCameraPowerTips"[^>]*>強い魔法のコツ<\/button>/);
+ const tipsMarkup=page.split('id="circlePowerTipsDialog"')[1].split('</dialog>')[0];
+ assert.match(tipsMarkup,/紙に描いた魔法陣を<strong>カメラで撮る<\/strong>/,'strength page recommends camera capture');
+ assert.match(tipsMarkup,/画面で描くより<strong>強い魔法<\/strong>/);
+ for(const expected of ['トゲトゲ','⚔️攻撃','カクカク','🛡️防御','マルマル','回復','閉じていない線','🕸️弱体']){
+  assert.ok(tipsMarkup.includes(expected),'role tip: '+expected);
+ }
+ assert.match(tipsMarkup,/id="circlePowerTipsPage2"[^>]*hidden/,'the second tips page starts hidden');
  assert.match(page,/id="repairSelectedCircleImage"[^>]*>撮り直す<\/button>/,'retake has a minimal label');
  assert.doesNotMatch(page,/id="imageRepairFile"/,'retake never exposes a file picker');
  await doc.click(btn({circleDetail:circles[0].id}));
