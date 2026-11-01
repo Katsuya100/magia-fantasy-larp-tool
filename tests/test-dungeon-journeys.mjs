@@ -4,7 +4,7 @@ import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwned
  consumeEscapeWhenLethal,battle,summarizeJourneys} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
-import {RANK_FAST_WINS_REQUIRED,RANK_LATE_BOSSES_REQUIRED,RANK_MEASURED_FIGHTS,recordRankCombat,rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
 import {createSortieEncounterSelector} from '../scripts/dungeon-balance-encounters.mjs';
 import {readFileSync} from 'node:fs';
 
@@ -183,22 +183,28 @@ assert.equal(investmentRate(20),.75);
 assert.equal(investmentRate(50),.75);
 assert.deepEqual(spread([1,2,3,4,5]),{p10:1.4,median:3,p90:4.6});
 
-// Rank requires mastery of the actual 50-fight band, not one easy boss
-// kill or an unrealistically high reserve after the same 50 encounters.
+// The first five layers' normal enemies should be mostly one-shot, while
+// the final boss remains a meaningful two- or three-turn fight.
 for(let layer=10;layer<=100;layer+=10){
  const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},Math.min(150,layer+10));
  const profile={adventurerRank:0},record={};
  const first=(layer-10)*5+1;
+ let normal=0;
  for(let fight=first;fight<=layer*5;fight++){
-  const relative=Math.ceil(fight/5)-(layer-9);
-  recordRankCombat(record,fight,relative<=5&&fight%5===0?4:fight===layer*5?2:1);
+  const isEarlyNormal=fight<first+25&&fight%5!==0;
+  const rounds=isEarlyNormal?(++normal<=18?1:2):
+   fight===layer*5?3:5;
+  recordRankCombat(record,fight,rounds);
  }
  hero.hp=1;hero.mp=0;
- assert.equal(record.rankCombat.measured,RANK_MEASURED_FIGHTS);
- assert.equal(record.rankCombat.lateBossFastWins,RANK_LATE_BOSSES_REQUIRED);
+ assert.equal(record.rankCombat.earlyMobs,RANK_EARLY_NORMAL_FIGHTS);
+ assert.equal(record.rankCombat.earlyFastWins,RANK_EARLY_FAST_WINS_REQUIRED);
+ assert.equal(record.rankCombat.bossRounds,RANK_FINAL_BOSS_MAX_ROUNDS);
  assert.equal(rankBadgeDrop(layer*5,hero,profile,[],record.rankCombat)?.layer,layer);
  assert.equal(rankBadgeDrop(layer*5,hero,profile,[],{...record.rankCombat,
-  fastWins:RANK_FAST_WINS_REQUIRED-1}),null,'slow band fails');
+  earlyFastWins:RANK_EARLY_FAST_WINS_REQUIRED-1}),null,'slow early normal fights fail');
+ assert.equal(rankBadgeDrop(layer*5,hero,profile,[],{...record.rankCombat,
+  bossRounds:RANK_FINAL_BOSS_MAX_ROUNDS+1}),null,'slow final boss fails');
  assert.equal(rankBadgeDrop(layer*5-1,hero,profile,[],record.rankCombat),null,'boss only');
 }
 for(const style of ['A','B','C'])for(const route of ['short','long']){
@@ -261,9 +267,9 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   Object.values(run.rankManaUses).reduce((n,v)=>n+v,0),
   'all genuinely owned mana uses reconcile with consumed item instances');
  assert.ok(run.rankAudit.every(row=>row.failure==='PRIOR_RANK_OR_DUPLICATE'||
-  row.eligible===(row.measured===RANK_MEASURED_FIGHTS&&
-   row.fastWins>=RANK_FAST_WINS_REQUIRED&&row.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED)),
-  'chapter awards require measured single-turn band mastery');
+  row.eligible===(row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&
+   row.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&row.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS)),
+  'chapters require early normal and final boss mastery');
  assert.ok(run.rankAudit.every(row=>!row.banked||row.eligible),
   'only earned, banked badges can be marked safely acquired');
  const initialIds=[...entry.carry,...entry.bankedInventory].map(item=>item.instanceId);
