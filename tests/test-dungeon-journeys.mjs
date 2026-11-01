@@ -176,7 +176,9 @@ assert.equal(find('csv.balance.magic_stone_drop_chance.value').defaultValue,.30)
 assert.equal(find('csv.balance.magic_stone_drop_count_layer_150.value').defaultValue,8);
 assert.equal(find('csv.balance.level_max.value').defaultValue,150);
 assert.equal(find('ink.bossDropChance').defaultValue,.20);
-assert.equal(find('upgrade.initialCostSteps').defaultValue,20);
+assert.equal(find('upgrade.initialCost').defaultValue,1);
+assert.equal(find('upgrade.initialCostSteps').defaultValue,5);
+assert.equal(find('upgrade.extraCostStep').defaultValue,5);
 assert.equal(find('alchemy.guaranteedInkEvery').defaultValue,20);
 assert.equal(investmentRate(10),.25);
 assert.equal(investmentRate(20),.75);
