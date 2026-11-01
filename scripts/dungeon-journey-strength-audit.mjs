@@ -10,7 +10,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 import {runJourney,approvedGoals,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
-import {RANK_FAST_WINS_REQUIRED,RANK_LATE_BOSSES_REQUIRED,RANK_MEASURED_FIGHTS} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS} from '../assets/js/dungeon-ranks.mjs';
 
 assert.equal(approvedGoals.strictSamples,256,'fixed owner denominator');
 assert.equal(approvedGoals.bands.length,10,'all ten authored bands');
@@ -221,7 +221,7 @@ const report={
   knownUnmet:{'B/short/F90':'255/256 legacy rank; not promoted',
    'C/long/F100':'255/256 legacy rank; not promoted',
    'C/long/F91-100':'255/256 legacy farming; not promoted'},
-  independentChapterRule:'At least 42 of 45 counted encounters cleared in one turn, including four of last five floor bosses; early five bosses excluded',
+  independentChapterRule:'At least 18 of the first five layers 20 normal enemies win in one turn; final decade boss at most three turns; other enemies not gated',
   xpTaper:'NOT_IMPLEMENTED'}
 };
 const output=new URL('../reports/dungeon-journey-strength-v2.json',import.meta.url);
