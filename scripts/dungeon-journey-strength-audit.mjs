@@ -194,9 +194,12 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
 // Keep the entire evidence for all 15,360 owner-band cases, but shard by
 // legal policy. A monolithic report exceeds Node's maximum UTF-8 string size
 // and makes a real strict audit impossible to parse.
+const POLICY_SHARD_SIZE=16;
 const policyReferences=policies.map(({style,route,samples,completion,strengthSummary})=>({
  style,route,samples,completion,strengthSummary,
- file:'dungeon-journey-strength-v2-'+style+'-'+route+'.json'
+ shardSize:POLICY_SHARD_SIZE,
+ files:Array.from({length:samples/POLICY_SHARD_SIZE},(_,index)=>
+  'dungeon-journey-strength-v2-'+style+'-'+route+'-'+String(index+1).padStart(2,'0')+'.json')
 }));
 const report={
  schemaVersion:'dungeon-journey-strength-v2',
@@ -228,9 +231,23 @@ const report={
 };
 const output=new URL('../reports/dungeon-journey-strength-v2.json',import.meta.url);
 mkdirSync(new URL('../reports/',import.meta.url),{recursive:true});
-// The index is committed only after every full-evidence policy shard exists.
-for(let i=0;i<policies.length;i++)
- writeReportFile(policyReferences[i].file,policies[i]);
+// Each policy is split into 16-owner complete-evidence files to avoid
+// Node's ~512 MB per-string limit. No owner or formula observation is dropped.
+for(let i=0;i<policies.length;i++){
+ const policy=policies[i],meta=policyReferences[i];
+ assert.equal(policy.accounts.length,meta.samples);
+ assert.equal(policy.accounts.length%meta.shardSize,0);
+ for(let part=0;part<meta.files.length;part++){
+  const start=part*meta.shardSize,end=start+meta.shardSize;
+  writeReportFile(meta.files[part],{
+   style:policy.style,route:policy.route,ownerOffset:start,samples:meta.shardSize,
+   accounts:policy.accounts.slice(start,end),
+   journeyStrength:policy.journeyStrength.map(band=>({
+    band:band.band,owners:band.owners.slice(start,end)
+   }))
+  });
+ }
+}
 writeReportFile('dungeon-journey-strength-v2.json',report);
 console.log('DUNGEON_JOURNEY_STRENGTH_REPORT '+output.pathname);
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))
