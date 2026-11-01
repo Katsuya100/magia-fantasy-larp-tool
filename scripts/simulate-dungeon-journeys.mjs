@@ -166,7 +166,7 @@ function cleanse(hero,carry,layer,usage){
  carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
 }
 // Only consume genuinely banked mana potions against an unearned 20F+ rank
-// boss, if the hero is below the 80% MP badge threshold plus a spell buffer.
+// boss, if the hero is short on MP for a legitimate boss finish.
 // Consumables are paid from the original carried inventory via G.potion.
 export function consumeOwnedRecovery(hero,carry,layer,usage,fight){
  // Only the fifth actual encounter of a decade is the rank boss. Earlier
@@ -1038,8 +1038,8 @@ export function summarizeJourneys(samples=16,seed=20261024){
   distributions.recoveryFights=spread(runs.map(x=>x.recovery.extraFights));
   distributions.recoverySorties=spread(runs.map(x=>x.recovery.sorties));
   distributions.gradeEligible=spread(runs.map(x=>x.rankAudit.filter(y=>y.eligible).length));
-  distributions.gradeFailedMp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('MP_BELOW_RANK_THRESHOLD')).length));
-  distributions.gradeFailedHp=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure?.includes('HP_BELOW_RANK_THRESHOLD')).length));
+  distributions.gradeFailedMp=spread(runs.map(x=>x.rankAudit.filter(y=>['MP_BELOW_RANK_THRESHOLD','HP_AND_MP_BELOW_RANK_THRESHOLD'].includes(y.failure)).length));
+  distributions.gradeFailedHp=spread(runs.map(x=>x.rankAudit.filter(y=>['HP_BELOW_RANK_THRESHOLD','HP_AND_MP_BELOW_RANK_THRESHOLD'].includes(y.failure)).length));
   for(const type of ['stone','ink']){
    for(const field of ['earned','spent','lost','balances']){
     distributions[field+'.'+type]=spread(runs.map(x=>x[field][type]));
