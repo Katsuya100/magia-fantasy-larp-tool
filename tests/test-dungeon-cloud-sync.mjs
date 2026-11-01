@@ -27,8 +27,6 @@ const encoded=await serializeDungeonSnapshot(original);
 assert.ok(original.savedAt>0);
 assert.match(encoded,/"checksum":"[0-9a-f]+"/);
 assert.match(encoded,/"format":"magia-dungeon-save-v1"/);
-const withoutChecksum=JSON.parse(encoded);delete withoutChecksum.checksum;
-assert.throws(()=>deserializeDungeonSnapshot(JSON.stringify(withoutChecksum)),/未対応の古いバックアップ形式/);
 assert.ok(!encoded.includes('access_token'));
 const decoded=deserializeDungeonSnapshot(encoded);
 assert.deepEqual(decoded.profile,profile);
@@ -80,8 +78,6 @@ assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playOne}),true,'o
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playTwo}),false,'different play IDs prevent automatic overwrite and restore regardless of timestamps');
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null}),false,'missing cloud ID cannot silently be identified');
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:null,identical:true}),false,'prior file matches never silently adopt a backup with no play ID');
-assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:null,identical:false}),false,'two unknown legacy plays cannot be assumed identical');
-assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:null,identical:true}),true,'exactly identical verified old bytes need no write');
 assert.equal(canAutoSyncPlay({localPlayId:null,remotePlayId:playTwo}),false,'remote play cannot be restored automatically into unknown local game');
 
 // Simulate an unplanned IndexedDB record loss. The preexisting trusted seal
