@@ -395,8 +395,8 @@ for(const style of ['A','B']){
   'real post-return investment reaches all ten strength bands before stopping');
  assert.equal(trained.losses,trained.trace.filter(step=>step.defeat).length,
   'an improved OR chapter route must never invent a forced defeat');
- if(trained.losses)assert.ok(trained.lost.xp+trained.lost.stone+trained.lost.ink>0,
-  'real journey defeats must still lose genuinely unbanked rewards');
+ // Real defeat, pending loss and legal restart are proven unconditionally
+ // by test-dungeon-loss-restart.mjs, imported through first-entry below.
  assert.equal(trained.earned.stone,trained.spent.stone+trained.balances.stone,
   'post-rank strength training banks and spends only genuinely earned stones');
  assert.equal(trained.earned.ink,trained.spent.ink+trained.balances.ink,
