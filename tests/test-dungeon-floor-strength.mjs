@@ -151,7 +151,7 @@ assert.ok(withItem.actual.magicRecovery.unfundedMp>0,
 const lossSeed=17011;
 const lossAndReach=runJourney(lossSeed,{style:'A',route:'long',
  maxSorties:600,maxFights:6500,observeStrength:true});
-assert.ok(lossAndReach.best>=100&&lossAndReach.rank>=100,
+assert.ok(lossAndReach.best>=100&&lossAndReach.profile.rank>=100,
  'the legal owner must still win F100 and bank the final chapter');
 assert.ok(Object.values(lossAndReach.journeyStrength).every(row=>row.status==='REACHED'),
  'the improved chapter OR cannot replace genuine post-return strength');
