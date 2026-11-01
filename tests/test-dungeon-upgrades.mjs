@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import {upgradeCircle,savedUpgrade,applySavedUpgrade,strengthenedPower,combatSpell,upgradeStoneCost,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
-for(const [level,cost] of [[0,5],[1,5],[9,5],[19,5],[20,6],[59,6],[60,7],[99,7],[100,8],[149,9]])assert.equal(upgradeStoneCost(level),cost);
-for(const [level,cost] of [[0,0],[1,5],[10,50],[11,55],[20,100],[21,106],[60,340],[150,1030]])assert.equal(totalUpgradeStoneCost(level),cost);
+for(const [level,cost] of [[0,1],[1,1],[4,1],[5,2],[9,2],[10,3],[19,4],[20,5],[59,12],[60,13],[99,20],[100,21],[149,30],[150,31]])assert.equal(upgradeStoneCost(level),cost);
+for(const [level,cost] of [[0,0],[1,1],[5,5],[6,7],[10,15],[11,18],[20,50],[21,55],[60,390],[100,1050],[150,2325]])assert.equal(totalUpgradeStoneCost(level),cost);
+for(let level=0;level<250;level++){
+ assert.equal(totalUpgradeStoneCost(level+1)-totalUpgradeStoneCost(level),upgradeStoneCost(level),
+  'cumulative purchase cost must equal each actual next upgrade at level '+level);
+ if(level>0)assert.ok(upgradeStoneCost(level)>=upgradeStoneCost(level-1),'cost never decreases');
+}
 const original={id:'circle',analysis:{attribute:'flame',role:'attack',power:100},revealed:true};
 let upgraded=upgradeCircle(original);
 assert.equal(original.analysis.power,100,'original magic is not mutated');
