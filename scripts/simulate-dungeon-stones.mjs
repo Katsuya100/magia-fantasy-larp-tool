@@ -119,7 +119,7 @@ export function summarizeStoneEconomy(samples=SAMPLES_DEFAULT,seed=20261019){
   success:'Every battle won; rank awarded at each 10th boss (>=80% HP and MP)',
   returns:'Return after each new layer to bank XP; start at latest rank checkpoint',
   farming:'After 100F, replay 101F or 91-100F at Lv150; return every farm sortie',
-  expenditure:'Every 10 purchased upgrades increase the next upgrade stone cost by 1',
+  expenditure:'The first upgrade costs 1 stone; every 5 purchased upgrades increase the next upgrade cost by 1',
   notModeled:'Combat failures, items, death, time, and player decisions'
  },progression:{
   returns:campaigns[0].progression.returns,
