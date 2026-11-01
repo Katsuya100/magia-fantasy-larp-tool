@@ -797,7 +797,9 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      const conditionReady=rankBadgeEligible(fight,hero,mastery);
      const badge=rankBadgeDrop(fight,hero,profile,pending.loot,mastery);
      state.rankAudit.push({layer,sortie:state.sorties,level:firstLevel,
-      hpPercent,mpPercent,bossRounds:outcome.rounds,
+      hpPercent,mpPercent,
+      rawReserve:{hp:hero.hp,maxHp:hero.stats.hp,mp:hero.mp,maxMp:hero.maxMp},
+      bossRounds:outcome.rounds,
       earlyMobs:mastery?.earlyMobs??0,
       earlyFastWins:mastery?.earlyFastWins??0,
       rankCombat:mastery?{...mastery}:null,
