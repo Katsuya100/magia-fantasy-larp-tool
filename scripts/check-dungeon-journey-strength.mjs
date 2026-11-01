@@ -7,7 +7,7 @@ import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
 import {strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {approvedGoals} from './simulate-dungeon-journeys.mjs';
-import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,RANK_LEGACY_RESERVE_PERCENT} from '../assets/js/dungeon-ranks.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 
@@ -369,13 +369,16 @@ for(const rank of report.ranks){
  assert.equal(rank.earlyNormalFights,RANK_EARLY_NORMAL_FIGHTS);
  assert.equal(rank.earlyFastWinsRequired,RANK_EARLY_FAST_WINS_REQUIRED);
  assert.equal(rank.finalBossMaxRounds,RANK_FINAL_BOSS_MAX_ROUNDS);
- assert.equal(rank.status,'INDEPENDENT_RANK_BAND_MASTERY');
+ assert.equal(RANK_LEGACY_RESERVE_PERCENT,approvedGoals.rank.legacyBothHpMpPercentAtLeast);
+ assert.equal(rank.legacyBothHpMpPercentAtLeast,RANK_LEGACY_RESERVE_PERCENT);
+ assert.equal(rank.status,'INDEPENDENT_RANK_LEGACY_OR_MASTERY');
  const accounts=rankAuditsByPolicy.get(rank.style+'/'+rank.route);
  assert.ok(accounts&&accounts.length===256,'each chapter row belongs to a measured 256-owner policy');
  const missing=accounts.filter(account=>!account.rankAudit.some(event=>
   event.layer===rank.rankLayer&&event.eligible&&event.banked&&
+  (event.hpPercent>=RANK_LEGACY_RESERVE_PERCENT&&event.mpPercent>=RANK_LEGACY_RESERVE_PERCENT||
   event.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&
-  event.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&event.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS)).map(account=>account.seed);
+  event.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&event.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS))).map(account=>account.seed);
  assert.deepEqual(rank.missingSeeds,missing,'unearned chapters remain unearned');
  assert.equal(rank.acquiredOwners,256-missing.length,
   'chapter acquisitions count distinct banked owners');
