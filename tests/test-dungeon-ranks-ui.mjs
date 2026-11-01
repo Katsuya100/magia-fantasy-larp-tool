@@ -31,7 +31,7 @@ try{
  const enemy=G.fromEnemy(enemies.find(x=>x.id==='boss_l010'),19);
  enemy.hp=1;enemy.spells=[];enemy.stats.mag=0;
  p.run={floor:50,slotIds:[...p.slots],hero,enemy,enemyName:'十層ボス',
-  rankCombat:{end:10,nextFight:50,measured:44,fastWins:42,lateBossFastWins:4},battleTurns:0,
+  rankCombat:{end:10,nextFight:50,earlyMobs:20,earlyFastWins:18,bossRounds:null},battleTurns:0,
   carry:[null,null,null,null,null],loot:[],xp:15,usedItems:0,log:[],stage:'battle'};
  await saveProfile(db,p);
  const env=fakeDungeonBrowser({factory}),doc=env.document,$=id=>doc.getElementById(id);
@@ -126,7 +126,7 @@ try{
  lowHero.mp=Math.floor(lowHero.maxMp*.69);
  const boss=G.fromEnemy(enemies.find(x=>x.id==='boss_l010'),19);boss.hp=1;boss.spells=[];boss.stats.mag=0;
  p3.run={floor:50,slotIds:[...p3.slots],hero:lowHero,enemy:boss,enemyName:'十層ボス',
-  rankCombat:{end:10,nextFight:50,measured:44,fastWins:42,lateBossFastWins:4},battleTurns:0,
+  rankCombat:{end:10,nextFight:50,earlyMobs:20,earlyFastWins:18,bossRounds:null},battleTurns:0,
   carry:[null,null,null,null,null],loot:[],xp:0,usedItems:0,log:[],stage:'battle'};
  await saveProfile(db3,p3);
  const env3=fakeDungeonBrowser({factory:factory3});
