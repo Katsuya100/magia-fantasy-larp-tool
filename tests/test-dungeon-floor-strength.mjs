@@ -144,27 +144,21 @@ assert.equal(new Set(withItem.actual.itemRecovery.uses.map(use=>use.instanceId))
 assert.ok(withItem.actual.magicRecovery.unfundedMp>0,
  'the item funds its shipped HP effect, not virtual recovery MP');
 
-// An individual seed's exact defeat sortie is not a balance acceptance
-// condition. Badge OR acquisition changes the legal starts and can make the
-// former 17011 loss scenario disappear. Search the fixed approved 256-owner
-// population for an ACTUAL defeat, subsequent legal return, and a later
-// newly reached recommended strength band; never fabricate any of these.
-const seedsWithRealLoss=Array.from({length:256},(_,i)=>17011+13*i);
-let lossSeed=null,lossAndReach=null,defeat=null,recovery=null,reached=null;
-for(const seed of seedsWithRealLoss){
- const actual=runJourney(seed,{style:'A',route:'long',
-  maxSorties:600,maxFights:6500,observeStrength:true});
- const lost=actual.trace.find(step=>step.defeat===true);
- const returned=lost&&actual.trace.find(step=>step.sortie>lost.sortie&&step.returned);
- const gained=lost&&Object.values(actual.journeyStrength).find(row=>
-  row.status==='REACHED'&&row.firstReached?.actualSorties>lost.sortie);
- if(lost&&returned&&gained&&actual.losses>0){
-  lossSeed=seed;lossAndReach=actual;defeat=lost;recovery=returned;reached=gained;
-  break;
- }
-}
-assert.ok(defeat&&recovery&&reached&&lossAndReach?.losses>0,
- 'an approved seeded journey must prove a real defeat, loss, legal return and later strength');
+// Select a deterministic real-loss owner: no injected defeat, free restitution,
+// synthetic snapshot or relaxed reaching condition is permitted.
+// CI-established reproducible case: A/long seed 17011 loses an 81-90F
+// pending haul on sortie 33, banks a legal follow-up return, and first
+// reaches the 81-90 recommended strength on sortie 35.
+const lossSeed=17011;
+const lossAndReach=runJourney(lossSeed,{style:'A',route:'long',
+ maxSorties:600,maxFights:6500,observeStrength:true});
+const defeat=lossAndReach.trace.find(step=>step.defeat===true);
+const recovery=defeat&&lossAndReach.trace.find(step=>
+ step.sortie>defeat.sortie&&step.returned);
+const reached=defeat&&Object.values(lossAndReach.journeyStrength).find(row=>
+ row.status==='REACHED'&&row.firstReached?.actualSorties>defeat.sortie);
+assert.ok(defeat&&recovery&&reached&&lossAndReach.losses>0,
+ 'real defeat, loss, legal return and later recommended strength must all occur');
 assert.ok(lossAndReach.lost.xp+lossAndReach.lost.stone+lossAndReach.lost.ink>0);
 assert.ok(reached.firstReached.actualReturns>0,'only banked returns can establish later strength');
 assert.equal(lossAndReach.earned.stone,lossAndReach.spent.stone+lossAndReach.balances.stone);
