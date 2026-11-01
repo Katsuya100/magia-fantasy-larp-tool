@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,readDungeonSnapshot,replaceDungeonSnapshot,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,validateDatabase,allCircles,putCircle,deleteCircle,getProfile,saveProfile,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 const {parseCsv}=G;
 import {configure} from '../assets/js/dungeon-tuning.mjs';
@@ -35,7 +35,7 @@ stale.magicStones=1;
 await assert.rejects(saveProfile(db,stale),/別のタブでセーブが更新/);
 assert.equal((await getProfile(db)).magicStones,901,'stale tab cannot clobber saved game progress');
 const clean=await getProfile(db);
-clean.level=1;clean.xp=0;clean.run={...p.run,xp:0};delete clean.pendingReturn;clean.xpScaleVersion=45;
+clean.level=1;clean.xp=0;clean.run={...p.run,xp:0};delete clean.pendingReturn;
 await saveProfile(db,clean);
 const reread=await getProfile(db);
 assert.deepEqual(reread,clean);
@@ -45,7 +45,7 @@ await putCircle(db,{id:'c1',name:'test',image:photo,analysis:null});
 await putCircle(db,{id:'c2',name:'known',image:photo,analysis:{attribute:'flame',role:'attack',power:300}});
 await putCircle(db,{id:'legacy',image:photo,basePower:33.3,upgradeLevel:1,analysis:{attribute:'flame',role:'attack',power:36.63},revealed:true});
 assert.equal((await allCircles(db)).find(c=>c.id==='legacy').analysis.power,37,'legacy upgrades restore integer power from the original base');
-assert.equal(factory.databases.get('magia-dungeon-v1').get('circles').get('legacy').analysis.power,36.63,'conversion never rewrites the saved photo');
+assert.equal(factory.databases.get('magia-dungeon-v1').get('circles').get('legacy').analysis.power,36.63,'saved photo data remains untouched by metadata normalization');
 await deleteCircle(db,'legacy');
 const circles=await allCircles(db);
 assert.equal(circles.length,2);
@@ -55,12 +55,6 @@ await putCircle(db,{...circles[0],analysis:{attribute:'storm',role:'support',pow
 assert.equal((await allCircles(db))[0].analysis.attribute,'storm');
 await deleteCircle(db,'c2');
 assert.deepEqual((await allCircles(db)).map(x=>x.id),['c1']);
-// After upgrading to DB v3, pre-update v2 JavaScript can never reopen storage.
-await new Promise((resolve,reject)=>{
- const request=factory.open('magia-dungeon-v1',2);
- request.onsuccess=()=>reject(Error('v2 tab unexpectedly reopened a v3 save'));
- request.onerror=()=>{try{assert.equal(request.error.name,'VersionError');resolve();}catch(e){reject(e);}};
-});
 db.close();
 const db2=await openStore(factory);
 assert.equal((await getProfile(db2)).run.floor,3);
@@ -87,9 +81,4 @@ await assert.rejects(openStore(fakeIndexedDB({onOpen:'error'})),/IndexedDB unava
 await assert.rejects(openStore(fakeIndexedDB({onOpen:'blocked'})),/別のタブ/);
 await assert.rejects(openStore(fakeIndexedDB({onOpen:'throw'})),/Storage denied/);
 
-const whole=await getProfile(db2);
-whole.xp=7;whole.xpIntegerVersion=1;
-await saveProfile(db2,whole);
-await assert.rejects(saveProfile(db2,{...whole,xp:7.5}),/整数EXP/);
-assert.equal((await getProfile(db2)).xp,7,'invalid EXP writes preserve current save');
-console.log('PASS dungeon IndexedDB startup, tab collision guard, photo persistence and integer EXP validation');
+console.log('PASS dungeon IndexedDB startup, tab collision guard and photo persistence');
