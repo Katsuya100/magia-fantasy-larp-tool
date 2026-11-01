@@ -1,5 +1,5 @@
 // Adventurer badges are progression achievements, never collection entries.
-import {clearedLayer} from './dungeon-progress.mjs';
+import {clearedLayer,layerOfFight,encounterOfFight} from './dungeon-progress.mjs';
 export const ADVENTURER_RANKS=Object.freeze([
  {layer:10,name:'鉛'}, {layer:20,name:'鉄'}, {layer:30,name:'鋼'},
  {layer:40,name:'銅'}, {layer:50,name:'銀'}, {layer:60,name:'金'},
@@ -34,15 +34,41 @@ export function allowedStartLayer(profile,requested){
  const selected=Number(requested);
  return unlockedStartLayers(profile).includes(selected)?selected:1;
 }
-// Two or three real boss exchanges can earn a chapter; one-hit kills are never required.
-// HP/MP reserves are no longer a separate gate.
-export const RANK_BOSS_MAX_ROUNDS=3;
-export function rankBadgeDrop(fight,hero,profile,pendingLoot=[],bossRounds){
+// A chapter marks mastery of its whole ten-layer band. The first five
+// floor bosses are exempt; of the other 45 encounters, about 90% should be
+// single-exchange wins, including four of the final five floor bosses.
+export const RANK_FAST_WINS_REQUIRED=42;
+export const RANK_LATE_BOSSES_REQUIRED=4;
+export const RANK_MEASURED_FIGHTS=45;
+export function recordRankCombat(run,fight,rounds){
+ const layer=layerOfFight(fight);
+ if(layer<1||layer>100||!Number.isSafeInteger(rounds)||rounds<1)return null;
+ const end=Math.ceil(layer/10)*10,start=end-9,firstFight=(start-1)*5+1;
+ if(fight===firstFight)run.rankCombat={end,nextFight:fight,measured:0,fastWins:0,lateBossFastWins:0};
+ const record=run.rankCombat;
+ if(!record||record.end!==end||record.nextFight!==fight){
+  run.rankCombat=null;
+  return null;
+ }
+ const boss=encounterOfFight(fight)===5,relativeLayer=layer-start+1;
+ if(!(boss&&relativeLayer<=5)){
+  record.measured++;
+  if(rounds===1){
+   record.fastWins++;
+   if(boss)record.lateBossFastWins++;
+  }
+ }
+ record.nextFight++;
+ return record;
+}
+export function rankBadgeDrop(fight,hero,profile,pendingLoot=[],record){
  const layer=clearedLayer(fight);
  if(!rankAt(layer)||highestRankLayer(profile)>=layer
   ||pendingLoot.some(item=>item.type==='rank'&&Number(item.layer)>=layer))return null;
- if(!(Number.isSafeInteger(bossRounds)&&bossRounds>=1&&bossRounds<=RANK_BOSS_MAX_ROUNDS
-  &&Number(hero?.hp)>0))return null;
+ if(!(Number(hero?.hp)>0&&record?.end===layer&&record?.nextFight===fight+1
+  &&record?.measured===RANK_MEASURED_FIGHTS
+  &&record.fastWins>=RANK_FAST_WINS_REQUIRED
+  &&record.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED))return null;
  return {type:'rank',layer};
 }
 export function acquireAdventurerRank(profile,layer){
