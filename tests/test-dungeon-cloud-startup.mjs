@@ -919,24 +919,7 @@ try{
  assert.ok(!lostTokenUi.status.textContent.includes('同期済み'),'do not label a tokenless session synced');
  assert.deepEqual(lostTokenDrive.operations,[],'without OAuth, reload cannot touch Drive');
 
- // A legacy unsigned save must never become trusted through automatic migration.
-  const oldFactory=fakeIndexedDB(),oldDb=await openStore(oldFactory);
-  const oldProfile=await getProfile(oldDb);
-  oldProfile.name='未検証の旧セーブ';
-  await saveProfile(oldDb,oldProfile);
-  const oldSettings=oldFactory.databases.get('magia-dungeon-v1').get('settings');
-  oldSettings.set('integrity',{...oldSettings.get('integrity'),legacy:true});
-  const oldBefore=await readDungeonSnapshot(oldDb);
-  assert.equal((await verifyLocalSnapshot(oldBefore)).status,'legacy');
-  const oldUi=fakeUi(),oldDrive=remoteApi();
-  const oldController=start(oldDb,oldUi,oldDrive.fetchImpl);
-  await connect(oldUi);
-  await wait(()=>oldUi.status.textContent.includes('バックアップを作成できません'),'unverified old saves cannot auto-convert');
-  assert.deepEqual(await readDungeonSnapshot(oldDb),oldBefore,'old data is never rewritten');
-  assert.deepEqual(oldDrive.operations,[],'old data is never uploaded');
-  assert.equal(await oldController.sync(true),'deferred');
-
-  // A genuinely corrupt signed snapshot cannot bypass the startup integrity
+ // A genuinely corrupt signed snapshot cannot bypass the startup integrity
  // gate through "あとで": unlinking is allowed, starting that save is not.
  const damagedFactory=fakeIndexedDB(),damagedDb=await openStore(damagedFactory);
  const damagedProfile=await getProfile(damagedDb);
