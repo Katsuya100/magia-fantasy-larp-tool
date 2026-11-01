@@ -14,7 +14,7 @@ import {configure,num,floor as floorMaster} from './dungeon-tuning.mjs';
 import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusCollection,bonusConsumable} from './dungeon-design.mjs?v=20261031.271';
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261031.271';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261031.271';
-import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,migrateDungeonXp,migrateDungeonIntegerXp,hasDungeonXpMigrationBackup,restoreDungeonXpMigrationBackup,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261031.271';
+import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261031.271';
 import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261031.271';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261031.271';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261031.271';
@@ -249,13 +249,6 @@ async function load(){
   showDungeonDialog($('backupSetupDialog'));
   return;
  }
-
- // Run only after checking the signed local save. Restoring from Drive
-
- // reloads the page and applies the same one-time migration.
-
- profile=await migrateDungeonXp(db);
- profile=await migrateDungeonIntegerXp(db);
 
  profile.legacies??=[];
  returnFlow=Array.isArray(profile.pendingReturn?.steps)&&profile.pendingReturn.steps.length?profile.pendingReturn:null;
@@ -1968,35 +1961,6 @@ function wire(){
    if(saved&&firstLesson)showFirstCircleChoice();
  });
  $('closeIconGuide').addEventListener('click',()=>closeDungeonDialog($('iconGuideDialog')));
- // The original signed save is available in both the profile and damaged-
- // save recovery screens. Never silently roll back subsequent gameplay.
- const originalXpButtons=[$('restoreOriginalXpSave'),$('restoreOriginalXpSaveSetup')];
- void hasDungeonXpMigrationBackup(db).then(available=>{
-  for(const button of originalXpButtons)button.hidden=!available;
- }).catch(error=>console.warn('EXP変換前の保全データを確認できませんでした',error));
- for(const button of originalXpButtons)button.addEventListener('click',()=>{
-  showDungeonDialog($('restoreOriginalXpDialog'));
- });
- $('cancelRestoreOriginalXp').addEventListener('click',()=>closeDungeonDialog($('restoreOriginalXpDialog')));
- $('confirmRestoreOriginalXp').addEventListener('click',()=>{
-  void exclusive(async()=>{
-   $('confirmRestoreOriginalXp').disabled=true;
-   for(const other of originalXpButtons)other.disabled=true;
-   try{
-    // Avoid the old, newer-timestamp Drive snapshot immediately restoring
-    // over the user's explicitly recovered local save on page reload.
-    // Disconnect keeps remote bytes untouched and drains any active upload.
-    await cloudSyncController?.disconnect?.();
-    await restoreDungeonXpMigrationBackup(db);
-    location.reload();
-   }catch(error){
-    $('confirmRestoreOriginalXp').disabled=false;
-    for(const other of originalXpButtons)other.disabled=false;
-    closeDungeonDialog($('restoreOriginalXpDialog'));
-    note('EXP変換前のセーブを復元できませんでした：'+String(error?.message||error));
-   }
-  });
- });
  $('closeSaveError').addEventListener('click',()=>closeDungeonDialog($('saveErrorDialog')));
   $('cancelNameDialog').addEventListener('click',()=>closeDungeonDialog($('nameDialog')));
  $('nameDialog').addEventListener('cancel',event=>{if(!profile.name)event.preventDefault();});
