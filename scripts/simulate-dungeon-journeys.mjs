@@ -563,7 +563,7 @@ export function consumeEscapeWhenLethal(hero,enemy,layer,carry,usage){
  usage[scroll.id]=(usage[scroll.id]||0)+1;
  return {itemId:scroll.id,instanceId:scroll.instanceId,threateningDamage};
 }
-export function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked){
+export function battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked,playerAction=null){
  const foe=encounterForFight(fight);
  const enemyLevel=Number(data.floors[fight-1]?.enemy_level??targetClearLevel(layer));
  const enemy=G.fromEnemy(foe,enemyLevel);
@@ -571,7 +571,9 @@ export function battle(state,hero,layer,fight,carry,random,usage,encounterForFig
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
   consumeOwnedRecovery(hero,carry,layer,usage,fight);
-  const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route);
+  const ours=playerAction?playerAction({hero,enemy,layer,fight,sortie:state.sorties,
+    utilityUnlocked,route:state.route,defaultAction:()=>chooseHero(hero,enemy,layer,utilityUnlocked,state.route)}):
+    chooseHero(hero,enemy,layer,utilityUnlocked,state.route);
   if(ours<0||hero.spells[ours]?.role!=='support'){
    const escape=consumeEscapeWhenLethal(hero,enemy,layer,carry,usage);
    if(escape)return {win:false,escaped:true,foe,enemyLevel,rounds,healCasts,
@@ -591,7 +593,7 @@ export function battle(state,hero,layer,fight,carry,random,usage,encounterForFig
 export function runJourney(seed,{style='A',route='short',alchemy=false,
  redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000,
  collectCandidateDiagnostic=true,observeStrength=false,observeFirstEntry=false,
- referencePowers=null,observeLossEvidence=false}={}){
+ referencePowers=null,observeLossEvidence=false,playerAction=null}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
  // Authored test circles are player input, not a change to combat or strategy.
@@ -769,7 +771,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
    let allWon=true,bossRounds=null,escapedLayer=false;
    for(let slot=1;slot<=5;slot++){
     const fight=(layer-1)*5+slot;
-    const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked);
+    const outcome=battle(state,hero,layer,fight,carry,random,usage,encounterForFight,utilityUnlocked,playerAction);
     state.fights++;
     if(recovering)state.recoveryFights++;
     if(layer<=state.best)state.replayedFights++;
@@ -878,6 +880,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
     carried:lossInitialCarry,
     unspentCarry:carry.filter(Boolean).map(x=>({...x})),
     pendingXp:pending.xp,pendingLoot:pending.loot.map(x=>({...x})),
+    defeatedHeroHp:hero.hp,defeatedFights:state.fights,
     itemLedger:{...state.ledger.items},
     collectionLedger:{...state.ledger.collections}
    }:null;
