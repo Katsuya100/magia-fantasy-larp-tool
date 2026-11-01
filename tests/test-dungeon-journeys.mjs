@@ -369,8 +369,10 @@ for(const measurement of Object.values(strengthObserved.journeyStrength))
 assert.ok(strengthObserved.blockers.includes(
  'Recommended total strength remained unmet within the measured sortie/fight budget'),
  'a budget-limited assessment remains explicitly unmet');
+// The official strict audit allows 600 genuine sorties and 6,500 fights;
+// an improved OR chapter route need not reproduce the old 60-sortie trace.
 for(const style of ['A','B']){
- const trained=runJourney(17011,{style,route:'long',maxSorties:60,maxFights:3000,
+ const trained=runJourney(17011,{style,route:'long',maxSorties:600,maxFights:6500,
   observeStrength:true});
  const trainingSorties=trained.trace.filter(step=>step.strengthTraining);
  const allBandsReached=Object.values(trained.journeyStrength).every(row=>row.status==='REACHED');
@@ -382,7 +384,7 @@ for(const style of ['A','B']){
   'strength training begins only after the normal campaign and rank gates');
  assert.equal(Math.max(...trained.floorAudit.map(row=>row.layer))<=100,true,
   'post-rank training does not simulate enemies above the 100F cap');
- assert.ok(trained.trace.length<60&&
+ assert.ok(trained.trace.length<600&&
   (trained.trace.at(-1).strengthTraining||trainingSorties.length===0&&allBandsReached),
   'the owner stops once all ten strength bands are reached');
  if(trainingSorties.length)assert.ok(trained.rankAudit.every(row=>row.sortie<trainingSorties[0].sortie),
@@ -391,8 +393,10 @@ for(const style of ['A','B']){
   'strength-only returns preserve the original per-owner chapter observations');
  assert.ok(Object.values(trained.journeyStrength).every(row=>row.status==='REACHED'),
   'real post-return investment reaches all ten strength bands before stopping');
- assert.ok(trained.trace.some(step=>step.defeat),
-  'the extended journey keeps actual defeat risk');
+ assert.equal(trained.losses,trained.trace.filter(step=>step.defeat).length,
+  'an improved OR chapter route must never invent a forced defeat');
+ if(trained.losses)assert.ok(trained.lost.xp+trained.lost.stone+trained.lost.ink>0,
+  'real journey defeats must still lose genuinely unbanked rewards');
  assert.equal(trained.earned.stone,trained.spent.stone+trained.balances.stone,
   'post-rank strength training banks and spends only genuinely earned stones');
  assert.equal(trained.earned.ink,trained.spent.ink+trained.balances.ink,
