@@ -49,11 +49,13 @@ const state={source:'POST_RETURN_BANKED_AND_INVESTED',unbankedXp:0,
 assert.doesNotThrow(()=>assertBankedJourneySnapshot(state));
 assert.throws(()=>assertBankedJourneySnapshot({...state,bankedStones:9}),/free magic stones/);
 assert.throws(()=>assertBankedJourneySnapshot({...state,rank:30}),/unearned adventurer rank/);
-assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:10,measured:45,fastWins:41,lateBossFastWins:4,
+assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:10,earlyMobs:20,earlyFastWins:17,bossRounds:3,
  eligible:false,failure:'BAND_MASTERY_UNMET'}));
-assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:20,measured:45,fastWins:42,lateBossFastWins:4,
+assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:20,earlyMobs:20,earlyFastWins:18,bossRounds:3,
  eligible:true,failure:null}));
-assert.throws(()=>assertPreRecoveryRankGate({layer:20,measured:45,fastWins:41,lateBossFastWins:4,
+assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:20,earlyMobs:20,earlyFastWins:18,bossRounds:4,
+ eligible:false,failure:'BAND_MASTERY_UNMET'}));
+assert.throws(()=>assertPreRecoveryRankGate({layer:20,earlyMobs:20,earlyFastWins:17,bossRounds:3,
  eligible:true,failure:null}),/mastery/);
 assert.throws(()=>assertNotFalsePass({passed:true,missing:1}),/cannot PASS/);
 assert.throws(()=>assertNotFalsePass({passed:true,cutoff:true}),/cannot PASS/);
