@@ -10,9 +10,10 @@ assert.equal(approved.playerLevelMax,null,'unbounded player level does not alter
 assert.deepEqual(approved.bands.map(x=>x.winRate),[[99,100],[99,100],...Array.from({length:8},()=>[90,97])]);
 assert.deepEqual(approved.bands.map(x=>x.winSafety),[[99,100],[99,100],...Array.from({length:8},()=>[92,95])]);
 assert.deepEqual(approved.bands.map(x=>x.winnerMedianMp),[[50,60],...Array.from({length:9},()=>[0,15])]);
-assert.equal(approved.rank.maxBossRounds,3);
-assert.equal(approved.rank.oneTurnKillRequired,false);
-assert.equal(approved.rank.hpMpReserveRequired,false);
+assert.equal(approved.rank.measuredFights,45);
+assert.equal(approved.rank.fastWinsRequired,42);
+assert.equal(approved.rank.lateBossFastWinsRequired,4);
+assert.equal(approved.rank.firstFiveFloorBossesExempt,true);
 assert.equal(approved.rank.independentFromCombatBalance,true);
 assert.equal(strengthBands.length,10);
 assert.equal(referenceSpells.length,10);
@@ -30,4 +31,4 @@ for(const [index,band] of strengthBands.entries()){
    Number.isInteger(x.upgradeLevel??0)));
  }
 }
-console.log('PASS unchanged approved combat goals, independent three-turn boss rank rule and 6 x 10 x 256 formula-reference coverage');
+console.log('PASS unchanged approved combat goals, independent 42/45 chapter mastery rule and 6 x 10 x 256 formula-reference coverage');
