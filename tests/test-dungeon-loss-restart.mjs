@@ -18,12 +18,18 @@ let proven=null;
 const observations=[];
 for(const powers of decks){
  for(const seed of seeds){
+  // The one test adventurer voluntarily uses only ordinary attacks after
+  // earning genuine earlier victories in its first F11-F20 sortie. On the
+  // next sortie it resumes the unchanged AI. No combat outcome is injected.
+  const playerAction=({fight,sortie,defaultAction})=>
+   sortie===11&&fight>=58?-1:defaultAction();
   const run=runJourney(seed,{style:'A',route:'long',referencePowers:powers,
-   maxSorties:60,maxFights:2500,observeLossEvidence:true,
+   maxSorties:60,maxFights:2500,observeLossEvidence:true,playerAction,
    collectCandidateDiagnostic:false});
   const match=run.lossEvidence.find(loss=>{
    const i=run.trace.findIndex(t=>t.sortie===loss.sortie&&t.defeat);
-   return loss.before.pendingXp>0&&loss.before.pendingLoot.length>0&&
+   return loss.before.defeatedHeroHp<=0&&loss.before.pendingXp>0&&
+    loss.before.pendingLoot.length>0&&
     loss.before.carried.length>0&&loss.before.unspentCarry.length>0&&
     loss.before.earned.stone+loss.before.earned.ink>0&&
     i>=0&&run.trace.slice(i+1).some(t=>t.returned&&t.cleared>=t.start&&
@@ -32,7 +38,7 @@ for(const powers of decks){
   observations.push({powers:powers[0],seed,best:run.best,
    losses:run.losses,returns:run.returns,
    pendingLosses:run.lossEvidence.map(x=>({
-    xp:x.before.pendingXp,loot:x.before.pendingLoot.length,
+    hp:x.before.defeatedHeroHp,xp:x.before.pendingXp,loot:x.before.pendingLoot.length,
     unused:x.before.unspentCarry.length,banked:x.before.earned.stone+x.before.earned.ink
    }))});
   if(match){proven={run,loss:match,powers,seed};break;}
@@ -45,6 +51,7 @@ const {run,loss,seed,powers}=proven;
 const {before,after}=loss;
 const {pendingLoot,pendingXp}=before;
 const count=type=>pendingLoot.filter(x=>x.type===type).length;
+assert.ok(before.defeatedHeroHp<=0,'real combat must reduce hero HP to zero, not just time out');
 assert.ok(pendingXp>0&&pendingLoot.length>0,'no empty or invented lost reward proof');
 assert.ok(run.trace.some(t=>t.sortie===loss.sortie&&t.defeat),'actual fight must end in defeat');
 assert.equal(run.losses,run.trace.filter(t=>t.defeat).length);
