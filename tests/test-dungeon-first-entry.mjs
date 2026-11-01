@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {runJourney} from '../scripts/simulate-dungeon-journeys.mjs';
+import './test-dungeon-loss-restart.mjs';
 import {validateFirstEntryOwner} from '../scripts/check-dungeon-journey-strength.mjs';
 import {strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
 
@@ -64,17 +65,12 @@ mustReject('backdated official strength',p=>{
  row.firstReached.actualFights=0;
 });
 mustReject('unevaluated entry marked reached',p=>{p.entries[1].assessment='REACHED';});
-const defeat=run.trace.find(step=>step.defeat);
 const lateReach=record.reachedEvents.find(row=>
  row.firstReached&&row.firstReached.actualSorties>1);
 assert.ok(lateReach&&run.trace.some(t=>t.returned),
  'formula strength must be recorded after a real banked return');
-if(defeat){
- const postLossReach=record.reachedEvents.find(row=>
-  row.firstReached&&row.firstReached.actualSorties>defeat.sortie);
- if(postLossReach)assert.ok(run.trace.some(t=>t.sortie>defeat.sortie&&t.returned),
-  'real post-loss readiness must follow an actual banked return');
-}
+// The independent test performs a mandatory real loss, stock settlement,
+// and legal restart without requiring healthy first-entry owners to lose.
 assert.ok(check(record)>0,'later legally reached does not promote earlier first entry');
 const observed=runJourney(17011,{style:'A',route:'short',maxSorties:12,
  maxFights:120,observeFirstEntry:true});
