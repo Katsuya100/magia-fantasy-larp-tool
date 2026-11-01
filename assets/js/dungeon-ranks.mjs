@@ -34,30 +34,27 @@ export function allowedStartLayer(profile,requested){
  const selected=Number(requested);
  return unlockedStartLayers(profile).includes(selected)?selected:1;
 }
-// A chapter marks mastery of its whole ten-layer band. The first five
-// floor bosses are exempt; of the other 45 encounters, about 90% should be
-// single-exchange wins, including four of the final five floor bosses.
-export const RANK_FAST_WINS_REQUIRED=42;
-export const RANK_LATE_BOSSES_REQUIRED=4;
-export const RANK_MEASURED_FIGHTS=45;
+// A chapter is earned while the final boss still needs a few exchanges.
+// Only the first five layers' normal enemies are expected to be near one-shot.
+export const RANK_EARLY_NORMAL_FIGHTS=20;
+export const RANK_EARLY_FAST_WINS_REQUIRED=18;
+export const RANK_FINAL_BOSS_MAX_ROUNDS=3;
 export function recordRankCombat(run,fight,rounds){
  const layer=layerOfFight(fight);
  if(layer<1||layer>100||!Number.isSafeInteger(rounds)||rounds<1)return null;
  const end=Math.ceil(layer/10)*10,start=end-9,firstFight=(start-1)*5+1;
- if(fight===firstFight)run.rankCombat={end,nextFight:fight,measured:0,fastWins:0,lateBossFastWins:0};
+ if(fight===firstFight)run.rankCombat={end,nextFight:fight,earlyMobs:0,earlyFastWins:0,bossRounds:null};
  const record=run.rankCombat;
  if(!record||record.end!==end||record.nextFight!==fight){
   run.rankCombat=null;
   return null;
  }
- const boss=encounterOfFight(fight)===5,relativeLayer=layer-start+1;
- if(!(boss&&relativeLayer<=5)){
-  record.measured++;
-  if(rounds===1){
-   record.fastWins++;
-   if(boss)record.lateBossFastWins++;
-  }
+ const boss=encounterOfFight(fight)===5;
+ if(!boss&&layer<start+5){
+  record.earlyMobs++;
+  if(rounds===1)record.earlyFastWins++;
  }
+ if(fight===end*5)record.bossRounds=rounds;
  record.nextFight++;
  return record;
 }
@@ -66,9 +63,10 @@ export function rankBadgeDrop(fight,hero,profile,pendingLoot=[],record){
  if(!rankAt(layer)||highestRankLayer(profile)>=layer
   ||pendingLoot.some(item=>item.type==='rank'&&Number(item.layer)>=layer))return null;
  if(!(Number(hero?.hp)>0&&record?.end===layer&&record?.nextFight===fight+1
-  &&record?.measured===RANK_MEASURED_FIGHTS
-  &&record.fastWins>=RANK_FAST_WINS_REQUIRED
-  &&record.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED))return null;
+  &&record?.earlyMobs===RANK_EARLY_NORMAL_FIGHTS
+  &&record.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED
+  &&Number.isSafeInteger(record.bossRounds)&&record.bossRounds>=1
+  &&record.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS))return null;
  return {type:'rank',layer};
 }
 export function acquireAdventurerRank(profile,layer){
