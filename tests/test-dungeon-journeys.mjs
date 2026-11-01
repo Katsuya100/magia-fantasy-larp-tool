@@ -202,6 +202,9 @@ for(let layer=10;layer<=100;layer+=10){
  assert.equal(record.rankCombat.earlyFastWins,RANK_EARLY_FAST_WINS_REQUIRED);
  assert.equal(record.rankCombat.bossRounds,RANK_FINAL_BOSS_MAX_ROUNDS);
  assert.equal(rankBadgeDrop(layer*5,hero,profile,[],record.rankCombat)?.layer,layer);
+ const legacy={...hero,hp:hero.stats.hp*.8,mp:hero.maxMp*.8};
+ assert.equal(rankBadgeDrop(layer*5,legacy,profile)?.layer,layer,
+  'old HP and MP reserve is still sufficient when no combat mastery history exists');
  assert.equal(rankBadgeDrop(layer*5,hero,profile,[],{...record.rankCombat,
   earlyFastWins:RANK_EARLY_FAST_WINS_REQUIRED-1}),null,'slow early normal fights fail');
  assert.equal(rankBadgeDrop(layer*5,hero,profile,[],{...record.rankCombat,
@@ -268,9 +271,10 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   Object.values(run.rankManaUses).reduce((n,v)=>n+v,0),
   'all genuinely owned mana uses reconcile with consumed item instances');
  assert.ok(run.rankAudit.every(row=>row.failure==='PRIOR_RANK_OR_DUPLICATE'||
-  row.eligible===(row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&
+  row.eligible===(row.hpPercent>=80&&row.mpPercent>=80||
+   row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&
    row.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&row.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS)),
-  'chapters require early normal and final boss mastery');
+  'chapters require either old 80/80 reserve or turn mastery');
  assert.ok(run.rankAudit.every(row=>!row.banked||row.eligible),
   'only earned, banked badges can be marked safely acquired');
  const initialIds=[...entry.carry,...entry.bankedInventory].map(item=>item.instanceId);
