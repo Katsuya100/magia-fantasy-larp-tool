@@ -1,6 +1,6 @@
 // Canonical test-only contracts: fail on invalid measurements, never repair them.
 import assert from 'node:assert/strict';
-import {rankBadgeThreshold} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_BOSS_MAX_ROUNDS} from '../assets/js/dungeon-ranks.mjs';
 export const FIXED_CARRY={1:[0,0],11:[0,0],21:[0,0],31:[0,0],41:[0,0],51:[13,0],61:[14,0],71:[13,2],81:[14,2],91:[16,2]};
 export function assertFixedInventory(from,items){
  const expected=FIXED_CARRY[from];assert.ok(expected,'unknown fixed band');
@@ -87,11 +87,12 @@ export function assertBankedJourneySnapshot(s){
 }
 export function assertPreRecoveryRankGate(record){
  if(record.failure==='PRIOR_RANK_OR_DUPLICATE')return;
- const threshold=rankBadgeThreshold(record.layer);
- assert.ok(threshold,'rank audit must refer to a real decade boss');
- assert.equal(record.eligible,
-  record.hpPercent>=threshold.hpPercent&&record.mpPercent>=threshold.mpPercent,
-  'rank must use the chapter reserve at lethal boss HP/MP before victory recovery');
+ assert.ok(Number.isSafeInteger(record.layer)&&record.layer>=10&&record.layer<=100&&record.layer%10===0,
+  'rank audit must refer to a real decade boss');
+ assert.ok(Number.isSafeInteger(record.bossRounds)&&record.bossRounds>=1,
+  'rank audit requires real boss exchanges');
+ assert.equal(record.eligible,record.bossRounds<=RANK_BOSS_MAX_ROUNDS,
+  'rank must be awarded by real boss turn count, never by HP/MP recovery');
 }
 export function assertNotFalsePass({passed,missing=0,cutoff=false}){
  assert.ok(!passed||missing===0&&!cutoff,'unready seeds and cutoffs cannot PASS');
