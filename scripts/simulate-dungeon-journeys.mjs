@@ -60,7 +60,7 @@ function ownedItemBits(items,serial){
 }
 const chestSummary=p=>({level:p.level,rank:p.adventurerRank,xp:p.xp});
 
-export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
+export function chooseHero(hero,enemy,layer,utilityUnlocked,route){
  const ready=G.available(hero);
  // Attack-only through the first banked F2 clear. Unlock utility only
  // after a legitimate return; do not simulate a free unlock.
@@ -69,47 +69,21 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // still resolve the current round, so require enough HP for a real
  // enemy attack before choosing to end the encounter immediately.
  const attacks=ready.filter(i=>hero.spells[i].role==='attack');
- // Evaluate an immediate magical finishing blow before buying a needless
- // heal, but only when the hero can survive the enemy's simultaneous reply.
- // Real rank bosses retain their independent pre-recovery HP/MP reserve.
- if(layer>=6&&
-  !(pendingGrade&&String(enemy.id).startsWith('boss_l'))){
+ // Prefer a safe finishing attack to unnecessary healing, including against
+ // a chapter boss. The simultaneous counterattack still applies.
+ if(layer>=6){
   const maxIncoming=Math.max(0,...enemy.spells.filter(s=>s?.role==='attack')
    .map(s=>G.damage(enemy,hero,s,()=>1)));
-  // When approaching the final boss of a cleared decade, keep enough
-  // real HP to finish the full expedition. A faster kill is not always
-  // preferable to a paid heal when the next boss is already known.
-  if(hero.hp>maxIncoming*1.25&&
-   (layer<30||layer%10!==0||hero.hp/hero.stats.hp>=.90)){
+  if(hero.hp>maxIncoming*1.25){
    const finisher=attacks.find(i=>G.damage(hero,enemy,hero.spells[i],()=>1)>=enemy.hp);
    if(finisher!==undefined)return finisher;
   }
  }
- // Novice rank at F10 checks HP and MP BEFORE the ordinary victory reward.
- // Once utility is legally unlocked, heal proactively for that real badge;
- // never mint a recovery or bypass G.available / actual MP spending.
- // For high-rank expeditions preserve real MP on ordinary encounters,
- // then heal during the actual tenth-floor boss when the HP badge demands it.
- // The same equipped support spell still pays its normal MP cost and turn.
- // The badge samples HP/MP immediately after the lethal boss round.
- // An already legally unlocked support spell should protect the *real*
- // HP reserve before the kill on an unearned 20F+ badge, with ordinary
- // spell MP costs and cooldowns (mana items are separately banked/paid).
- // In a fifty-fight sortie, conserving MP while losing most current HP
- // was empirically causing early deaths with an almost untouched MP gauge.
- // Proactive, paid healing trades that existing MP for survival. It never
- // bypasses available(), consumes no item, and shares ordinary G.round rules.
- // Frequent small heals cost MP and leave the enemy alive to act again.
- // Heal meaningfully damaged HP, preserving mana and attacks for the 50
- // successive encounters. Save the higher threshold for a real rank boss,
- // whose HP check occurs before the victory restoration.
- const rankBoss=pendingGrade&&String(enemy.id).startsWith('boss_l');
- const healBelow=layer===10&&utilityUnlocked?.95:
-  rankBoss?.95:
-  route==='long'&&layer>=11&&layer<=20?.80:
-  layer>=30&&layer%10===0?.90:layer>=81?.75:.70;
- if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow&&
-  (layer!==10||hero.mp/hero.maxMp>.85))return heal;
+ // Ordinary healing remains available for survival over repeated battles,
+ // not for an adventurer badge HP reserve.
+ const healBelow=route==='long'&&layer>=11&&layer<=20?.80:
+  layer>=81?.75:.70;
+ if(heal!==undefined&&hero.hp/hero.stats.hp<healBelow)return heal;
  // Use the already equipped law-defense circle only when it can protect
  // a vulnerable hero or pre-empt an enemy law seal. Respect cooldown and MP
  // through G.available; do not change battle rules or grant free defense.
@@ -120,10 +94,9 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // gravity opponents wastes the paid turn and can cause preventable losses.
  const lawThreat=enemy.spells.some(s=>s?.attribute==='law'&&
   (s.role==='attack'||s.role==='debuff'));
- const needsGuard=(rankBoss&&lawThreat)||(layer===10&&utilityUnlocked&&enemy.id==='boss_l010')||
-  (lawThreat&&(layer>=81?hero.hp/hero.stats.hp<.25:
-   hero.hp/hero.stats.hp<.69||
-   enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law')));
+ const needsGuard=lawThreat&&(layer>=81?hero.hp/hero.stats.hp<.25:
+  hero.hp/hero.stats.hp<.69||
+  enemy.spells.some(s=>s?.role==='debuff'&&s.attribute==='law'));
  if(guard!==undefined&&needsGuard&&
   !hero.statuses.some(s=>s.id==='resist_'+hero.spells[guard].attribute||
    s.id==='buff_'+hero.spells[guard].attribute))return guard;
@@ -131,7 +104,7 @@ export function chooseHero(hero,enemy,layer,utilityUnlocked,route,pendingGrade){
  // opponent with it only when the shipped damage expression predicts a KO;
  // never grant mana, suppress an enemy turn, or fake a hit.
  // MP-safe finishers are valid once the beginner F2 return is banked;
- // protect scarce 11F-20F MP without item recovery before the F20 grade.
+ // protect scarce 11F-20F MP during ordinary expeditions.
  if(layer>=51||(route==='long'&&layer>=11)){
   const relativeArmor=G.armor(enemy)/Math.max(1,enemy.stats.hp/Math.max(1,enemy.base.hp));
   const basic=Math.max(1,Math.round(num('basic_attack')*hero.stats.hp*
@@ -165,19 +138,12 @@ function cleanse(hero,carry,layer,usage){
  G.potion(hero,item,data.items,data.buffs);
  carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
 }
-// Only consume genuinely banked mana potions against an unearned 20F+ rank
-// boss, if the hero is short on MP for a legitimate boss finish.
-// Consumables are paid from the original carried inventory via G.potion.
+// Use genuinely banked recovery only for survival and sustained casting;
+// no decade boss receives special treatment for the obsolete HP/MP gate.
 export function consumeOwnedRecovery(hero,carry,layer,usage,fight){
- // Only the fifth actual encounter of a decade is the rank boss. Earlier
- // fights at F90/F100 must not spend the boss's paid MP reserve.
- const decadeBoss=layer>=81&&layer%10===0&&fight===layer*5;
  const priority=layer<=5?['mana']:['elixir','heal','mana','revive'];
  for(const kind of priority){
-  // At a deep decade boss, spend an ACTUALLY CARRIED mana dose before
-  // an underfilled finish. The unchanged threshold on ordinary floors
-  // conserves potions for genuine long sorties and the shared paired gate.
-  const needed=kind==='mana'?hero.mp/hero.maxMp<(decadeBoss?.82:layer>=81?.45:.30):
+  const needed=kind==='mana'?hero.mp/hero.maxMp<(layer>=81?.45:.30):
    kind==='heal'?hero.hp/hero.stats.hp<.48:
    kind==='elixir'?hero.hp/hero.stats.hp<.52&&hero.mp/hero.maxMp<.55:
    kind==='revive'?hero.hp/hero.stats.hp<.3:false;
@@ -190,46 +156,13 @@ export function consumeOwnedRecovery(hero,carry,layer,usage,fight){
   break;
  }
 }
-// For an unearned grade, pack and actually consume owned healing before the
-// lethal boss action; the post-kill grade still checks real remaining HP/MP.
-function restoreRankHp(state,hero,carry,layer,fight,usage){
- if(layer<20||layer%10!==0||fight%5!==0||
-  state.profile.adventurerRank>=layer||hero.hp>=hero.stats.hp*.99)return;
- const items=carry.map((item,i)=>({item,i,row:item&&data.items.find(x=>x.id===item.id)}))
-  .filter(x=>x.item&&['heal','elixir'].includes(x.row?.kind)&&
-   G.canUseBattleItem(hero,x.item,data.items,data.buffs));
- if(!items.length)return;
- items.sort((a,b)=>Number(b.item.value)-Number(a.item.value));
- const {item,i}=items[0];
- G.potion(hero,item,data.items,data.buffs);
- carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
-}
-function restoreRankMp(state,hero,carry,layer,fight,usage){
- if(layer<10||layer%10!==0||fight%5!==0||
-  state.profile.adventurerRank>=layer||hero.mp>=hero.maxMp*.9)return;
- const need=hero.maxMp*.9-hero.mp;
- const choices=carry.map((item,i)=>({item,i})).filter(x=>x.item&&
-  data.items.find(row=>row.id===x.item.id)?.kind==='mana'&&
-  G.canUseBattleItem(hero,x.item,data.items,data.buffs));
- if(!choices.length)return;
- // Prefer the smallest genuine dose that can meet the target, otherwise
- // the largest real dose; do not manufacture MP or items.
- choices.sort((a,b)=>{
-  const av=Number(a.item.value),bv=Number(b.item.value);
-  return (av>=need?0:1)-(bv>=need?0:1)||
-   (av>=need?av-bv:bv-av);
- });
- const {item,i}=choices[0];
- G.potion(hero,item,data.items,data.buffs);
- carry[i]=null;usage[item.id]=(usage[item.id]||0)+1;
-}
 const manaCount=usage=>Object.entries(usage).reduce((n,[id,count])=>
  n+(id.startsWith('mana_')?count:0),0);
 const cleanseCount=usage=>Object.entries(usage).reduce((n,[id,count])=>
  n+(id.startsWith('clear_')||id==='luna_stone'?count:0),0);
 // Loadouts are selected only from real banked inventory, with the real
 // level-dependent carry cap. No stocked-item fixture is smuggled into economy.
-function pack(state,start,goal,rankItems=true){
+function pack(state,start,goal){
  // The inventory has *actually dropped* item instances only. Optimise
  // counter-attributes within the legal carry capacity, without adding items.
  const eligible=item=>{
@@ -240,18 +173,15 @@ function pack(state,start,goal,rankItems=true){
   return row&&(row.kind==='clear'&&goal>=20||row.kind==='clear_all'&&goal>=70);
  };
  const cap=G.capacity(state.profile.level);
- const rankTarget=Math.max(20,Math.ceil(start/10)*10);
- const seekingRank=rankItems&&rankTarget<=goal&&rankTarget<=100&&
-  state.profile.adventurerRank<rankTarget;
  const mana=state.inventory.filter(item=>
   data.items.find(row=>row.id===item.id)?.kind==='mana').sort((a,b)=>
   Number(b.value)-Number(a.value)).slice(0,Math.min(goal>=81?8:goal>=51?5:3,cap));
  const available=state.inventory.filter(eligible);
  const specific=available.filter(item=>item.id!=='luna_stone');
  const luna=available.filter(item=>item.id==='luna_stone');
- // A high-rank attempt is allowed two actually owned healing items before
- // duplicate cleansers. This preserves the genuine level-dependent carry cap.
- const rankedHealing=(seekingRank||goal>=51)&&goal>=20?state.inventory.filter(item=>
+ // Deep journeys may carry owned healing to survive successive fights.
+ // Do not prioritize items merely to satisfy a badge HP reserve.
+ const rankedHealing=goal>=51?state.inventory.filter(item=>
   ['heal','elixir'].includes(data.items.find(row=>row.id===item.id)?.kind))
   .sort((a,b)=>Number(b.value)-Number(a.value)).slice(0,Math.min(2,cap-mana.length)):[];
  const selected=[...mana,...rankedHealing,
@@ -641,11 +571,7 @@ export function battle(state,hero,layer,fight,carry,random,usage,encounterForFig
  while(hero.hp>0&&enemy.hp>0&&rounds<80){
   cleanse(hero,carry,layer,usage);
   consumeOwnedRecovery(hero,carry,layer,usage,fight);
-  restoreRankMp(state,hero,carry,layer,fight,usage);
-  restoreRankHp(state,hero,carry,layer,fight,usage);
-  const pendingGrade=layer>=20&&layer%10===0&&
-   state.profile.adventurerRank<layer;
-  const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route,pendingGrade);
+  const ours=chooseHero(hero,enemy,layer,utilityUnlocked,state.route);
   if(ours<0||hero.spells[ours]?.role!=='support'){
    const escape=consumeEscapeWhenLethal(hero,enemy,layer,carry,usage);
    if(escape)return {win:false,escaped:true,foe,enemyLevel,rounds,healCasts,
