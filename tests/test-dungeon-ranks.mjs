@@ -24,8 +24,7 @@ assert.equal(RANK_FINAL_BOSS_MAX_ROUNDS,3);
 const run={};
 for(let fight=1;fight<=50;fight++){
  const isEarlyNormal=fight<=25&&fight%5!==0;
- const rounds=isEarlyNormal&&[1,2].includes(fight)?2:
-  fight===50?3:fight%5===0?5:2;
+ const rounds=isEarlyNormal?([1,2].includes(fight)?2:1):fight===50?3:2;
  recordRankCombat(run,fight,rounds);
 }
 assert.deepEqual(run.rankCombat,{end:10,nextFight:51,earlyMobs:20,earlyFastWins:18,bossRounds:3});
