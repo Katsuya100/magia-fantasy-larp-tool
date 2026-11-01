@@ -9,7 +9,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
-import {allowedStartLayer,unlockedStartLayers,RANK_FAST_WINS_REQUIRED,RANK_LATE_BOSSES_REQUIRED,RANK_MEASURED_FIGHTS,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+import {allowedStartLayer,unlockedStartLayers,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
@@ -859,14 +859,14 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      const mpPercent=percent(hero.mp,hero.maxMp);
      const mastery=state.rankCombat;
      const masteryReady=mastery?.end===layer&&mastery?.nextFight===fight+1
-      &&mastery?.measured===RANK_MEASURED_FIGHTS
-      &&mastery?.fastWins>=RANK_FAST_WINS_REQUIRED
-      &&mastery?.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED;
+      &&mastery.earlyMobs===RANK_EARLY_NORMAL_FIGHTS
+      &&mastery.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED
+      &&mastery.bossRounds>=1&&mastery.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS;
      const badge=rankBadgeDrop(fight,hero,profile,pending.loot,mastery);
      state.rankAudit.push({layer,sortie:state.sorties,level:firstLevel,
       hpPercent,mpPercent,bossRounds:outcome.rounds,
-      measured:mastery?.measured??0,fastWins:mastery?.fastWins??0,
-      lateBossFastWins:mastery?.lateBossFastWins??0,
+      earlyMobs:mastery?.earlyMobs??0,
+      earlyFastWins:mastery?.earlyFastWins??0,
       eligible:Boolean(badge),banked:false,
       failure:badge?null:masteryReady?'PRIOR_RANK_OR_DUPLICATE':'BAND_MASTERY_UNMET'});
      if(badge)drops.push(badge);
