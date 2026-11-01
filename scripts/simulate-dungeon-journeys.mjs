@@ -9,7 +9,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
-import {allowedStartLayer,unlockedStartLayers,RANK_BOSS_MAX_ROUNDS,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+import {allowedStartLayer,unlockedStartLayers,RANK_FAST_WINS_REQUIRED,RANK_LATE_BOSSES_REQUIRED,RANK_MEASURED_FIGHTS,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
@@ -847,6 +847,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      throw Error('Illegal tutorial heal before the banked F2 clear');
     if(outcome.escaped){escaped=true;escapedLayer=true;allWon=false;break;}
     if(!outcome.win){defeat=true;allWon=false;break;}
+    recordRankCombat(state,fight,outcome.rounds);
     if(slot===5)bossRounds=outcome.rounds;
     const boss=slot===5?outcome.foe.id:null;
     const drops=G.drops(data.items,data.collections,outcome.enemyLevel,random,{
@@ -854,15 +855,20 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      favoredCollectionIds:outcome.foe.favored_collection_ids?.split('|')||[]});
     if(boss&&layer%10===0&&layer<=100&&!strengthTraining){
      state.rankChecks++;
-     // Real boss exchanges determine the rank; HP/MP are diagnostic only.
      const hpPercent=percent(hero.hp,hero.stats.hp);
      const mpPercent=percent(hero.mp,hero.maxMp);
-     const badge=rankBadgeDrop(fight,hero,profile,pending.loot,outcome.rounds);
+     const mastery=state.rankCombat;
+     const masteryReady=mastery?.end===layer&&mastery?.nextFight===fight+1
+      &&mastery?.measured===RANK_MEASURED_FIGHTS
+      &&mastery?.fastWins>=RANK_FAST_WINS_REQUIRED
+      &&mastery?.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED;
+     const badge=rankBadgeDrop(fight,hero,profile,pending.loot,mastery);
      state.rankAudit.push({layer,sortie:state.sorties,level:firstLevel,
       hpPercent,mpPercent,bossRounds:outcome.rounds,
+      measured:mastery?.measured??0,fastWins:mastery?.fastWins??0,
+      lateBossFastWins:mastery?.lateBossFastWins??0,
       eligible:Boolean(badge),banked:false,
-      failure:badge?null:outcome.rounds>RANK_BOSS_MAX_ROUNDS?'BOSS_TOO_MANY_ROUNDS'
-       :'PRIOR_RANK_OR_DUPLICATE'});
+      failure:badge?null:masteryReady?'PRIOR_RANK_OR_DUPLICATE':'BAND_MASTERY_UNMET'});
      if(badge)drops.push(badge);
     }
     pending.loot.push(...drops);
@@ -1034,7 +1040,7 @@ export function summarizeJourneys(samples=16,seed=20261024){
   distributions.recoveryFights=spread(runs.map(x=>x.recovery.extraFights));
   distributions.recoverySorties=spread(runs.map(x=>x.recovery.sorties));
   distributions.gradeEligible=spread(runs.map(x=>x.rankAudit.filter(y=>y.eligible).length));
-  distributions.gradeFailedTurns=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure==='BOSS_TOO_MANY_ROUNDS').length));
+  distributions.gradeFailedMastery=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure==='BAND_MASTERY_UNMET').length));
   for(const type of ['stone','ink']){
    for(const field of ['earned','spent','lost','balances']){
     distributions[field+'.'+type]=spread(runs.map(x=>x[field][type]));
