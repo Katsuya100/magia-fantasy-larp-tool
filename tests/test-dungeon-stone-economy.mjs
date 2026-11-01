@@ -19,23 +19,23 @@ assert.equal(magicStoneDropChance(150,1),.3);
 assert.equal(magicStoneDropChance(150,150),.3);
 assert.equal(magicStoneDropChance(150,151),.3);
 assert.equal(magicStoneCountPerHit(1),1);
-assert.equal(magicStoneCountPerHit(100),24);
-assert.equal(magicStoneCountPerHit(150),24);
-assert.equal(magicStoneCountPerHit(151),24);
+assert.equal(magicStoneCountPerHit(100),18);
+assert.equal(magicStoneCountPerHit(150),18);
+assert.equal(magicStoneCountPerHit(151),18);
 // Independently verify the 30F-45F supply ramp (1x to 3x) and 100F plateau.
 const expectedHit=layer=>{
  const depth=Math.max(1,Math.min(100,layer));
  const bonus=Math.min(1,Math.max(0,(depth-30)/15));
- return 8**((depth-1)/99)*(1+2*bonus);
+ return 8**((depth-1)/99)*(1+1.25*bonus);
 };
 assert.equal(expectedHit(30),8**(29/99),'up to F30 preserves the former supply');
 assert.ok(expectedHit(40)>8**(39/99),'intermediate supply strengthens by F40');
-assert.equal(expectedHit(100),24,'late supply is tripled to compensate upgrade costs');
+assert.equal(expectedHit(100),18,'late supply is elevated to compensate upgrade costs');
 for(let layer=1;layer<=200;layer++){
  const actual=magicStoneCountPerHit(layer);
  assert.ok(Math.abs(actual-expectedHit(layer))<1e-10,'independent stone depth curve at F'+layer);
  if(layer>1)assert.ok(actual>=magicStoneCountPerHit(layer-1),'stone hit size never decreases');
- if(layer>=100)assert.equal(actual,24,'F100+ drops plateau');
+ if(layer>=100)assert.equal(actual,18,'F100+ drops plateau');
 }
 // Test the current integer payout against the specification-derived expectation.
 // A Bernoulli 0/1 legacy comparison cannot model a multi-stone successful hit.
@@ -56,7 +56,7 @@ for(const layer of [1,2,50,75,99,100,101,150]){
  assert.ok(Math.abs(mean-expected)<tolerance,
   'independent expected stone payout F'+layer+': '+mean+' vs '+expected);
  if(layer===1)assert.equal(actual.at(-1),1);
- if(layer>=100)assert.equal(actual.at(-1),24);
+ if(layer>=100)assert.equal(actual.at(-1),18);
  if(layer===50){
   assert.ok(actual.includes(Math.floor(expectedHit(layer)))&&
    actual.includes(Math.ceil(expectedHit(layer))),
