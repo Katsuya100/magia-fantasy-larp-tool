@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {ADVENTURER_RANKS,rankAt,rankTitle,rankBadgeName,highestRankLayer,
- unlockedStartLayers,allowedStartLayer,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+ unlockedStartLayers,allowedStartLayer,RANK_LEGACY_RESERVE_PERCENT,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 
 const names=['鉛','鉄','鋼','銅','銀','金','白金','ミスリル','アダマンタイト','オリハルコン'];
 assert.deepEqual(ADVENTURER_RANKS.map(r=>r.name),names);
@@ -18,6 +18,7 @@ assert.deepEqual(unlockedStartLayers(p),[1]);
 assert.equal(allowedStartLayer(p,11),1,'cannot jump to an unearned layer');
 assert.equal(allowedStartLayer(p,'bogus'),1);
 assert.equal(allowedStartLayer(p,0),1);
+assert.equal(RANK_LEGACY_RESERVE_PERCENT,80);
 assert.equal(RANK_EARLY_NORMAL_FIGHTS,20);
 assert.equal(RANK_EARLY_FAST_WINS_REQUIRED,18);
 assert.equal(RANK_FINAL_BOSS_MAX_ROUNDS,3);
@@ -30,6 +31,14 @@ for(let fight=1;fight<=50;fight++){
 assert.deepEqual(run.rankCombat,{end:10,nextFight:51,earlyMobs:20,earlyFastWins:18,bossRounds:3});
 const h={hp:1,stats:{hp:100},mp:0,maxMp:50};
 const mastery=run.rankCombat;
+const legacy={hp:80,stats:{hp:100},mp:40,maxMp:50};
+assert.deepEqual(rankBadgeDrop(50,legacy,p),{type:'rank',layer:10},
+ 'old HP/MP 80/80 remains a standalone way to earn the chapter');
+assert.deepEqual(rankBadgeDrop(50,legacy,p,[],{...mastery,earlyFastWins:0,bossRounds:10}),{type:'rank',layer:10},
+ 'failed turn mastery must not cancel a legal old reserve award');
+assert.equal(rankBadgeDrop(50,{...legacy,hp:79.999},p),null,'below old HP limit alone does not qualify');
+assert.equal(rankBadgeDrop(50,{...legacy,mp:39.999},p),null,'below old MP limit alone does not qualify');
+assert.equal(rankBadgeDrop(50,{...legacy,hp:79.999,mp:39.999},p),null,'neither route qualifies');
 assert.deepEqual(rankBadgeDrop(50,h,p,[],mastery),{type:'rank',layer:10},
  '18 early normal one-turn wins and three-turn final boss earn chapter at low MP');
 assert.equal(rankBadgeDrop(50,h,p,[],{...mastery,earlyFastWins:17}),null,'too few fast early normal wins');
