@@ -43,7 +43,7 @@ assert.equal(G.magicStoneCountPerHit(150),22);
 assert.equal(G.magicStoneCountPerHit(200),22);
 for(let layer=1;layer<=200;layer++){
  const depth=Math.max(1,Math.min(100,layer));
- const points=[[1,1],[10,.85],[20,.71],[30,1.65],[40,1.38],[45,2],[50,1.85],[60,1.55],[70,1.95],[80,1.95],[90,3.05],[100,2.75]];
+ const points=[[1,1],[10,.85],[20,.71],[30,1.55],[40,1.32],[45,1.98],[50,1.82],[60,1.51],[70,2.1],[80,1.9],[90,3.05],[100,2.75]];
  let boost=points.at(-1)[1];
  for(let i=1;i<points.length;i++){
   const [next,factor]=points[i];
