@@ -4,7 +4,7 @@ import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwned
  consumeEscapeWhenLethal,battle,summarizeJourneys} from '../scripts/simulate-dungeon-journeys.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
-import {rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
+import {rankBadgeThreshold,rankBadgeDrop} from '../assets/js/dungeon-ranks.mjs';
 import {createSortieEncounterSelector} from '../scripts/dungeon-balance-encounters.mjs';
 import {readFileSync} from 'node:fs';
 
@@ -183,19 +183,19 @@ assert.equal(investmentRate(20),.75);
 assert.equal(investmentRate(50),.75);
 assert.deepEqual(spread([1,2,3,4,5]),{p10:1.4,median:3,p90:4.6});
 
-// Independent rank *rule* contract, not a claim that a normal combatant can
-// finish the ten-layer sortie at 80%. Never grant a badge after MP restoration.
+// Independent reserve contract: realistic chapter success still requires a
+// legal boss win and enough HP/MP before victory restoration.
 for(let layer=10;layer<=100;layer+=10){
  const hero=G.makeUnit({hp:100,mag:10,def:7,res:7},Math.min(150,layer+10));
  const profile={adventurerRank:0};
- const fight=layer*5;
- hero.hp=Math.ceil(hero.stats.hp*.8);
- hero.mp=Math.ceil(hero.maxMp*.8);
+ const fight=layer*5,threshold=rankBadgeThreshold(layer);
+ hero.hp=Math.ceil(hero.stats.hp*threshold.hpPercent/100);
+ hero.mp=Math.ceil(hero.maxMp*threshold.mpPercent/100);
  assert.equal(rankBadgeDrop(fight,hero,profile)?.layer,layer);
- hero.hp=Math.max(0,Math.ceil(hero.stats.hp*.8)-1);
+ hero.hp=Math.max(0,Math.ceil(hero.stats.hp*threshold.hpPercent/100)-1);
  assert.equal(rankBadgeDrop(fight,hero,profile),null,'HP below threshold');
  hero.hp=hero.stats.hp;
- hero.mp=Math.max(0,Math.ceil(hero.maxMp*.8)-1);
+ hero.mp=Math.max(0,Math.ceil(hero.maxMp*threshold.mpPercent/100)-1);
  assert.equal(rankBadgeDrop(fight,hero,profile),null,'MP below threshold');
  assert.equal(rankBadgeDrop(fight-1,hero,profile),null,'rank only after boss');
 }
@@ -259,8 +259,9 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   Object.values(run.rankManaUses).reduce((n,v)=>n+v,0),
   'all genuinely owned mana uses reconcile with consumed item instances');
  assert.ok(run.rankAudit.every(row=>row.eligible===
-  (row.hpPercent>=80&&row.mpPercent>=80&&row.failure===null)),
-  'boss-only 80/80 checks are independent of victory restoration');
+  (row.hpPercent>=rankBadgeThreshold(row.layer).hpPercent&&
+   row.mpPercent>=rankBadgeThreshold(row.layer).mpPercent&&row.failure===null)),
+  'boss-only chapter reserve checks are independent of victory restoration');
  assert.ok(run.rankAudit.every(row=>!row.banked||row.eligible),
   'only earned, banked badges can be marked safely acquired');
  const initialIds=[...entry.carry,...entry.bankedInventory].map(item=>item.instanceId);
