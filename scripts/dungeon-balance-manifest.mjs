@@ -4,6 +4,7 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import * as G from '../assets/js/dungeon-core.mjs';
+import {UPGRADE_STONE_COST_POLICY} from '../assets/js/dungeon-upgrades.mjs';
 import {BOSS_INK_DROP_CHANCE} from '../assets/js/dungeon-ink.mjs';
 import {DESIGNED_LAYERS,BASE_RARITY_WEIGHTS} from '../assets/js/dungeon-design.mjs';
 
@@ -23,9 +24,10 @@ const hardcoded=[
  ['ink.bossDropChance',BOSS_INK_DROP_CHANCE,'assets/js/dungeon-ink.mjs:BOSS_INK_DROP_CHANCE','probability','C,D'],
  ['ink.maxPerDraw',5,'assets/js/dungeon-ink.mjs:inkEnhancedAnalysis','ink','C'],
  ['ink.powerPerUnit',0.1,'assets/js/dungeon-ink.mjs:inkEnhancedAnalysis','fraction of initial power','C'],
- ['upgrade.initialCost',5,'assets/js/dungeon-upgrades.mjs:upgradeStoneCost','stones','A,B,C,D'],
- ['upgrade.initialCostSteps',20,'assets/js/dungeon-upgrades.mjs:upgradeStoneCost','upgrades','A,B,C,D'],
- ['upgrade.extraCostStep',40,'assets/js/dungeon-upgrades.mjs:upgradeStoneCost','upgrades','A,B,C,D'],
+ ['upgrade.initialCost',UPGRADE_STONE_COST_POLICY.initialCost,'assets/js/dungeon-upgrades.mjs:upgradeStoneCost','stones','A,B,C,D'],
+ ['upgrade.initialCostSteps',UPGRADE_STONE_COST_POLICY.initialCostSteps,'assets/js/dungeon-upgrades.mjs:upgradeStoneCost','upgrades','A,B,C,D'],
+ ['upgrade.earlyRampSteps',UPGRADE_STONE_COST_POLICY.earlyRampSteps,'assets/js/dungeon-upgrades.mjs:upgradeStoneCost','upgrades','A,B,C,D'],
+ ['upgrade.extraCostStep',UPGRADE_STONE_COST_POLICY.extraCostStep,'assets/js/dungeon-upgrades.mjs:upgradeStoneCost','upgrades','A,B,C,D'],
  ['upgrade.powerPerStep',0.1,'assets/js/dungeon-upgrades.mjs:strengthenedPower','fraction of original power','A,B,C,D'],
  ['alchemy.requiredConsumables',5,'assets/js/dungeon-alchemy.mjs:alchemyRecipe','items','C'],
  ['alchemy.requiredDuplicateCollection',2,'assets/js/dungeon-alchemy.mjs:craftAlchemy','copies','C'],

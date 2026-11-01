@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import * as G from '../assets/js/dungeon-core.mjs';
-import {configure, num, floor} from '../assets/js/dungeon-tuning.mjs';
+import {configure, num, floor, balanceText} from '../assets/js/dungeon-tuning.mjs';
 const root=new URL('../assets/data/',import.meta.url);
 const get=async path=>G.parseCsv(await readFile(new URL(path,root),'utf8'));
 const [enemies,items,collections,buffs,balance,levels,floors,playerBase]=await Promise.all([
@@ -30,22 +30,53 @@ for(const lvl of [1,20,50]){
   assert.ok(ratio>=.13&&ratio<=.27,'normal attack near 1/5 recommended normal foe HP at level '+lvl+' '+row.id+' '+ratio);
  }
 }
-// Every fight keeps a 30% stone hit chance; its real count scales by depth.
-for(const layer of [1,2,10,50,91,100,101,149,150,200]){
- assert.equal(G.magicStoneDropChance(150,layer),.30,'constant stone hit probability');
- assert.ok(G.magicStoneCountPerHit(layer)>=1&&G.magicStoneCountPerHit(layer)<=8);
- for(const lv of [1,30,80,149,150])for(const cleared of [false,true])
-  assert.equal(G.magicStoneDropChance(lv,layer,cleared),.30,'no replay or overlevel penalty');
+// Stone curve contract: authored configuration, boundaries, plateau, full
+// monotonicity, representative regions and real payout integration.
+// Deliberately do not mirror the interpolation formula here.
+const dropChance=num('magic_stone_drop_chance');
+const dropRolls=num('magic_stone_drop_rolls');
+const dropMaximum=num('magic_stone_drop_count_layer_150');
+const dropCap=num('magic_stone_drop_curve_end_layer');
+const controlPoints=balanceText('magic_stone_drop_curve_multipliers').split('|')
+ .map(point=>point.split(':').map(Number));
+assert.equal(dropChance,.30,'one encounter keeps the approved 30% hit chance');
+assert.equal(dropRolls,1,'one encounter keeps exactly one stone roll');
+assert.ok(dropMaximum>=1&&Number.isSafeInteger(dropCap)&&dropCap>2);
+assert.equal(controlPoints[0][0],1,'authored curve begins at F1');
+assert.equal(controlPoints.at(-1)[0],dropCap,'authored curve ends at configured cap');
+assert.ok(controlPoints.every(([floor,value],i)=>Number.isSafeInteger(floor)&&floor>=1&&
+ Number.isFinite(value)&&value>0&&(i===0||floor>controlPoints[i-1][0])),
+ 'control-point floors must be ordered and values finite');
+assert.equal(G.magicStoneCountPerHit(1),1,'first floor pays one on hit');
+assert.equal(G.magicStoneCountPerHit(dropCap),dropMaximum,'configured maximum is exact');
+for(let layer=1;layer<=dropCap+50;layer++){
+ const count=G.magicStoneCountPerHit(layer);
+ assert.ok(Number.isFinite(count)&&count>=1&&count<=dropMaximum,
+  'no invalid or oversized hit size at F'+layer);
+ if(layer>1)assert.ok(count>=G.magicStoneCountPerHit(layer-1),
+  'hit sizes do not drop at F'+layer);
+ if(layer>=dropCap)assert.equal(count,dropMaximum,'the capped region is flat');
 }
-assert.equal(G.magicStoneCountPerHit(1),1);
-assert.equal(G.magicStoneCountPerHit(100),8);
-assert.equal(G.magicStoneCountPerHit(150),8);
-assert.equal(G.magicStoneCountPerHit(200),8);
-for(let layer=1;layer<=200;layer++){
- const expected=8**((Math.min(100,layer)-1)/99);
- assert.ok(Math.abs(G.magicStoneCountPerHit(layer)-expected)<1e-10,
-  'stone hit curve must follow the approved exponential 1-to-8 specification at '+layer);
- if(layer>1)assert.ok(G.magicStoneCountPerHit(layer)>=G.magicStoneCountPerHit(layer-1));
+assert.ok(G.magicStoneCountPerHit(30)>G.magicStoneCountPerHit(20)*1.8,
+ 'the authored early-game slope retains its actual balance-design step');
+assert.ok(G.magicStoneCountPerHit(45)>G.magicStoneCountPerHit(40)*1.5,
+ 'the authored middle-game slope retains its actual balance-design step');
+assert.ok(G.magicStoneCountPerHit(90)>G.magicStoneCountPerHit(80)*1.8,
+ 'the authored late-game slope retains its actual balance-design step');
+for(const layer of [1,2,10,30,50,91,dropCap,dropCap+1,150,200]){
+ assert.equal(G.magicStoneDropChance(150,layer),dropChance);
+ for(const lv of [1,30,80,149,150])for(const cleared of [false,true])
+  assert.equal(G.magicStoneDropChance(lv,layer,cleared),dropChance,
+   'stone chance is independent of first clear and player level');
+}
+// Real draw integration: a successful ticket pays the stochastic-rounding ceiling;
+// a missed ticket pays zero. These are independent draw contracts.
+for(const layer of [1,20,50,dropCap,dropCap+1]){
+ const hit=G.magicStoneCountPerHit(layer);
+ assert.equal(G.dropCounts(1,()=>0,{layer}).stone,Math.ceil(hit),
+  'a certain success pays the rounded hit size');
+ assert.equal(G.dropCounts(1,()=>.99999,{layer}).stone,0,
+  'a certain miss pays nothing');
 }
 assert.deepEqual(G.dropCounts(1,()=>.6,{layer:1}),{collection:0,stone:0,use:0});
 assert.deepEqual(G.dropCounts(1,()=>.6,{layer:100}),{collection:0,stone:0,use:0},

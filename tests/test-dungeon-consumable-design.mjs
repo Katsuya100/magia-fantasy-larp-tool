@@ -82,8 +82,9 @@ assert.equal(notYet.length,1);
 assert.equal(notYet[0].id,'mana_s','cleansers unavailable at floor 19');
 for(const layer of [100,101,150]){
  const loot=G.drops(items,collections,150,()=>0,{layer});
- assert.equal(loot.length,16,'F100+ yields eight stones, five collections and three consumables');
- assert.equal(loot.filter(x=>x.type==='stone').length,8,'deep stone payout');
+ const expectedStones=Math.ceil(G.magicStoneCountPerHit(layer));
+ assert.equal(loot.length,expectedStones+8,'deep stones plus five collections and three consumables');
+ assert.equal(loot.filter(x=>x.type==='stone').length,expectedStones,'deep stone payout');
  assert.equal(loot.filter(x=>x.type==='collection').length,5,'deep collection payout');
  const potions=loot.filter(x=>x.type==='use');
  assert.equal(potions.length,3);
