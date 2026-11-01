@@ -771,6 +771,8 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   const sortieInitialCarry=observeFirstEntry?carry.filter(Boolean).map(x=>({...x})):null;
   const usage={};
   const encounterForFight=createSortieEncounterSelector(data.enemies,random);
+  // A new sortie cannot inherit turn achievements from an earlier expedition.
+  state.rankCombat=null;
   state.sorties++;
   for(let layer=start;layer<=goal&&state.fights<maxFights;layer++){
    // Snapshot the first physical entry before battle(), with no extra RNG,
