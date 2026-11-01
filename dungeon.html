@@ -148,18 +148,6 @@
         </div>
       </div>
     </dialog>
-    <dialog id="restoreOriginalXpDialog" class="name-dialog" aria-labelledby="restoreOriginalXpTitle" data-dungeon-frame="fixed">
-      <div class="delete-data-dialog-inner dungeon-dialog-frame">
-        <span class="dialog-sigil" aria-hidden="true">！</span>
-        <h2 id="restoreOriginalXpTitle" class="dungeon-dialog-frame-title">EXP変換前の記録に戻しますか？</h2>
-        <p>旧セーブを端末内の保全データから復元します。<strong>EXP変換後に進めた冒険・獲得した装備・収集品など、すべての進捗が失われます。</strong></p>
-        <p>復元後は現在のEXP変換を再適用します。Google Drive上のデータには直接触れません。</p>
-        <div class="buttons">
-          <button type="button" id="cancelRestoreOriginalXp" class="subtle">キャンセル</button>
-          <button type="button" id="confirmRestoreOriginalXp" class="danger">進捗が失われることを理解して復元する</button>
-        </div>
-      </div>
-    </dialog>
     <dialog id="backupSetupDialog" class="name-dialog" aria-labelledby="backupSetupTitle" data-dungeon-frame="fixed">
       <div class="delete-data-dialog-inner dungeon-dialog-frame">
         <span class="dialog-sigil" aria-hidden="true">☁</span>
@@ -170,7 +158,6 @@
         <div class="buttons">
           <button type="button" id="setupGoogleDrive" class="primary-action" disabled>GoogleDriveに同期する</button>
           <button type="button" id="setupWithoutBackup" class="subtle">同期せず始める</button>
-          <button type="button" id="restoreOriginalXpSaveSetup" class="subtle" hidden>EXP変換前の端末セーブに戻す（以後の進捗は消えます）</button>
         </div>
       </div>
     </dialog>
@@ -255,7 +242,6 @@
             <button type="button" id="connectGoogleDrive" class="subtle" disabled>GoogleDriveに同期する</button>
             <button type="button" id="disconnectGoogleDrive" class="subtle" hidden>Google Driveの同期を解除</button>
             <button type="button" id="repairMagicCirclePhotos" class="subtle" hidden>魔法陣の写真を修復する</button>
-            <button type="button" id="restoreOriginalXpSave" class="subtle" hidden>EXP変換前のセーブを復元（以後の進捗は消えます）</button>
           </div>
           <p id="backupRollbackWarning" class="backup-sync-warning" hidden>システム上 <strong>複数ブラウザで同時プレイをすると進行が巻き戻る場合があります</strong>。</p>
         </div>
