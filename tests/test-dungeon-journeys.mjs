@@ -59,11 +59,13 @@ for(const [layer,fight] of [[99,495],[100,496],[100,500]]){
 }
 // Ordinary shortage still consumes a genuinely owned dose at a deep boss.
 recoveryHero.mp=Math.floor(recoveryHero.maxMp*.30);
+const mpBeforeRecovery=recoveryHero.mp;
 const bossCarry=[{...carriedDose}],bossUsage={};
 consumeOwnedRecovery(recoveryHero,bossCarry,100,bossUsage,500);
 assert.equal(bossCarry[0],null,'normal low-MP combat can use an owned potion');
 assert.equal(bossUsage.mana_xl,1,'ordinary recovery is accounted exactly once');
-assert.equal(recoveryHero.mp,recoveryHero.maxMp,'actual potion cap still applies');
+assert.equal(recoveryHero.mp,Math.min(recoveryHero.maxMp,mpBeforeRecovery+carriedDose.value),
+ 'actual potion restores its real amount, capped at maximum MP');
 // Prevent undoing explicit user bans on game-balance escape hatches.
 // A future new balance knob requires review, not a passing test fixture.
 const forbiddenKnobs=['xp_overlevel_decay_per_10_levels',
