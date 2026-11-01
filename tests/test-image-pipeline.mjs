@@ -9,6 +9,38 @@ for (const name of ['runtime-dependencies.js', 'spell-ocr.js', 'image-analysis-c
 }
 
 const { MagiaImagePipeline } = context;
+
+// Dungeon-only aliases are additional embedding reference points, not exact-word rules.
+const baseAttributeTexts = MagiaImagePipeline.attributeInputTexts('The winged angel.');
+const dungeonAttributeTexts = MagiaImagePipeline.attributeInputTexts('The winged angel.', true);
+const attributes = context.AttributeScoringCore.attributes;
+const baseReferenceCount = Object.values(attributes).reduce((sum, attribute) => sum + attribute.descriptions.length, 0);
+const aliasReferenceCount = Object.values(attributes).reduce((sum, attribute) => sum + attribute.aliases.length, 0);
+assert.equal(baseAttributeTexts.length, baseReferenceCount + 1, 'standalone mode must retain the original description-only embedding inputs');
+assert.equal(dungeonAttributeTexts.length, baseReferenceCount + aliasReferenceCount + 1, 'dungeon mode embeds every alias alongside existing descriptions');
+for (const [key, aliases] of Object.entries({
+  flame: ['fire', 'heat'], bolt: ['lightning', 'voltage'], aqua: ['rain', 'ice'],
+  storm: ['wing', 'flower'], gravity: ['star', 'stone'], law: ['holy', 'angel'],
+  chaos: ['shadow', 'curse'],
+})) {
+  for (const alias of aliases) {
+    assert.ok(dungeonAttributeTexts.includes(`passage: ${alias}`), `${key} alias ${alias} must be an embedding reference`);
+    assert.ok(!baseAttributeTexts.includes(`passage: ${alias}`), 'new aliases must not affect standalone mode');
+  }
+  const vectors = new Float32Array(dungeonAttributeTexts.length * 2);
+  for (let index = 0; index < dungeonAttributeTexts.length; index += 1) {
+    const isTarget = index === 0 || aliases.some(alias => dungeonAttributeTexts[index] === `passage: ${alias}`);
+    vectors[index * 2] = isTarget ? 1 : 0;
+    vectors[index * 2 + 1] = isTarget ? 0 : 1;
+  }
+  const scored = MagiaImagePipeline.scoreAttributeEmbedding({ dims: [dungeonAttributeTexts.length, 2], data: vectors }, true);
+  assert.equal(scored.top, key, `${key} must be scoreable solely by its semantic alias vectors`);
+  assert.ok(scored.similarities[key] > 0.99, `${key} alias vectors should be compared with the spell vector`);
+}
+
+const applicationSource = await readFile(new URL('../assets/js/magia-circle-app.js', import.meta.url), 'utf8');
+assert.match(applicationSource, /attributeInputTexts\(text, dungeonMode\)/, 'only the dungeon entrypoint opts into embedding alias references');
+assert.match(applicationSource, /includeAttributeAliases: dungeonMode/, 'dungeon alias input and scoring must be enabled together');
 const corrected = context.SpellOcrCore.applyVocabularyCorrection({
   path: { text: 'fier', words: ['fier'], points: [] },
 }, {
