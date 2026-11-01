@@ -375,7 +375,7 @@ for(const style of ['A','B']){
  if(trainingSorties.length)assert.ok(trained.rankAudit.every(row=>row.sortie<trainingSorties[0].sortie),
   'post-campaign resource sorties do not inflate the independent chapter audit');
  if(style==='A')assert.deepEqual(trained.rankAudit,checkpointJourney.rankAudit,
-  'strength-only returns preserve the original per-owner 80/80 chapter observations');
+  'strength-only returns preserve the original per-owner chapter observations');
  assert.ok(Object.values(trained.journeyStrength).every(row=>row.status==='REACHED'),
   'real post-return investment reaches all ten strength bands before stopping');
  assert.ok(trained.trace.some(step=>step.defeat),
@@ -426,7 +426,7 @@ for(const cohort of economy.combinations){
     'a failed formula attempt is not mislabeled as a missing legal snapshot');
  assert.ok(!('preparedSnapshots' in owner),'the removed level-gated state is not rebuilt');
 }
-console.log('PASS manifest coverage, reproducible seeded combat, 80/80 rank, item/collection/stone/ink conservation and 6 routes '+ECONOMY_VERSION);
+console.log('PASS manifest coverage, reproducible seeded combat, rank reserve, item/collection/stone/ink conservation and 6 routes '+ECONOMY_VERSION);
 
 // Mandatory GitHub Actions regression of read-only first-entry evidence.
 await import('./test-dungeon-first-entry.mjs');
