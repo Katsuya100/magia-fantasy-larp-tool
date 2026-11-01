@@ -702,7 +702,7 @@ function enterFight(){const run=profile.run,{unit,name}=createEnemy(run.floor,ru
  run.hero.reviveArmed=false;run.hero.reviveUsed=false;
  // Keep the previous defeated opponent hidden while the next opponent is prepared.
  // The encounter ceremony reveals the replacement after renderRun().
- run.enemy=unit;run.enemyName=name;run.stage='battle';run.log.push(encounterLabel(run.floor)+(isLayerBoss(run.floor)?'・階層ボス':'')+'：'+name+'が現れた');}
+ run.enemy=unit;run.enemyName=name;run.stage='battle';run.battleTurns=0;run.log.push(encounterLabel(run.floor)+(isLayerBoss(run.floor)?'・階層ボス':'')+'：'+name+'が現れた');}
 function narrativeLines(id,lines){$(id).textContent=lines.join('\n');}
 function renderCheckpoint(){
  const run=profile.run;if(!run)return;
@@ -753,7 +753,7 @@ async function takeTurn(index){
  if(circle?.analysis&&!run.hero.spells[index])run.hero.spells[index]=combatSpell(circle);
  const spell=index>=0?run.hero.spells[index]:null;
  if(index!==-1&&!spell){await analyzeUnknown(index);return;}if(index!==-1&&!G.canCast(run.hero,index))return;const beforeTurn={...run,hero:structuredClone(run.hero),enemy:structuredClone(run.enemy),log:[...run.log]};
- const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));}catch(e){note(e.message);return;}
+ const steps=[];try{run.log.push(...G.round(run.hero,run.enemy,index,enemyChoice(run.enemy),masters.buffs,Math.random,step=>steps.push(step)));run.battleTurns=(Number.isSafeInteger(run.battleTurns)?run.battleTurns:0)+1;}catch(e){note(e.message);return;}
  if(circle?.analysis&&!isRevealed(circle)){
   Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);
  }
@@ -790,7 +790,7 @@ if(run.enemy.hp<=0){const bossEnemyId=isLayerBoss(run.floor)?run.enemy.id:null;
    firstClear:layerForFight(run.floor)>deepestReturnedLayer(profile),bossEnemyId,favoredCollectionIds});
   if(bossEnemyId){profile.defeatedBosses??={};profile.defeatedBosses[bossEnemyId]=true;}
    if(firstHundredClear)renderHeroName(run.hero);
-  const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot);
+  const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot,run.battleTurns);
    if(badge)rewards.push(badge);
    const recovered=reclaimLegacies(profile,run.enemy.id,run);
    run.loot.push(...rewards);
