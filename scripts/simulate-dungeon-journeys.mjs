@@ -828,7 +828,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
     lastClear=layer;
    if(layer%10===0){
     // Sample the boss outcome before granting the separately chosen
-    // checkpoint recovery; never count full HP/MP as a boss rank award.
+    // checkpoint recovery; rank turns were recorded in actual combat.
     state.milestones.push({layer,provisional:true,level:firstLevel,
      rank:profile.adventurerRank,stones:state.stones,ink:state.ink,
      bossExitHpPercent:percent(hero.hp,hero.stats.hp),
@@ -849,15 +849,10 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
    // A risk-aware long dive can still return at a completed layer when
    // resources become critical. These are strategy parameters, NOT new
    // acceptance thresholds for game balance.
-   // A real carried mana potion can justify one more floor for an unearned rank boss.
-   // The normal return rule still applies to low HP and every non-rank floor.
-   const canContinueForRankBoss=layer>=51&&layer%10===9&&layer+1>=20&&
-    profile.adventurerRank<layer+1&&carry.some(item=>item&&
-     data.items.find(row=>row.id===item.id)?.kind==='mana'&&Number(item.value)>0&&
-     G.canUseBattleItem(hero,item,data.items,data.buffs));
+   // Preserve the ordinary long-route safety return when real HP/MP
+   // resources are critically low, including before decade bosses.
    if(route==='long'&&layer>=51&&
-    (hero.hp/hero.stats.hp<.3||
-     (hero.mp/hero.maxMp<.2&&!canContinueForRankBoss)))break;
+    (hero.hp/hero.stats.hp<.3||hero.mp/hero.maxMp<.2))break;
   }
   for(const [id,count] of Object.entries(usage)){
     const kind=data.items.find(item=>item.id===id)?.kind;
