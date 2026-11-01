@@ -97,8 +97,7 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// Keep each fight's 30% stone chance. The early game retains the original
-// hit size, while F31-45 gradually provides the stones needed by paid upgrades.
+// Keep each fight's 30% stone chance. Tune early and late supply without changing hit chance or combat.
 export function magicStoneDropChance(_playerLevel,_layer=1,_firstClear=false){
  return num('magic_stone_drop_chance');
 }
@@ -110,7 +109,7 @@ export function magicStoneCountPerHit(layer=1){
  const raw=Number(layer);
  const depth=Number.isFinite(raw)?Math.min(endLayer,Math.max(1,Math.floor(raw))):1;
  const progress=(depth-1)/(endLayer-1);
- const steps=[[1,1],[10,.97],[20,.93],[30,1.04],[40,1.83],[45,2.25],[50,2.08],[60,1.8],[70,1.8],[80,1.9],[90,2.8],[100,2.75]];
+ const steps=[[1,1],[10,.85],[20,.8],[30,1.4],[40,1.47],[45,2.08],[50,1.97],[60,1.64],[70,1.8],[80,1.95],[90,3.05],[100,2.75]];
  let multiplier=steps.at(-1)[1];
  for(let i=1;i<steps.length;i++){
   const [nextFloor,nextValue]=steps[i];

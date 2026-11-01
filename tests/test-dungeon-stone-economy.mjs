@@ -23,7 +23,7 @@ assert.equal(magicStoneCountPerHit(100),22);
 assert.equal(magicStoneCountPerHit(150),22);
 assert.equal(magicStoneCountPerHit(151),22);
 // Independent depth-specific expected hit size and full monotone check.
-const interpolationPoints=[[1,1],[10,.97],[20,.93],[30,1.04],[40,1.83],[45,2.25],[50,2.08],[60,1.8],[70,1.8],[80,1.9],[90,2.8],[100,2.75]];
+const interpolationPoints=[[1,1],[10,.85],[20,.8],[30,1.4],[40,1.47],[45,2.08],[50,1.97],[60,1.64],[70,1.8],[80,1.95],[90,3.05],[100,2.75]];
 const expectedHit=layer=>{
  const depth=Math.max(1,Math.min(100,layer));
  let factor=interpolationPoints.at(-1)[1];

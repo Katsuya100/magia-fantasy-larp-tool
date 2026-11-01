@@ -380,7 +380,6 @@ for(const style of ['A','B']){
   'strength-only returns preserve the original per-owner 80/80 chapter observations');
  assert.ok(Object.values(trained.journeyStrength).every(row=>row.status==='REACHED'),
   'real post-return investment reaches all ten strength bands before stopping');
- if(!trained.trace.some(step=>step.defeat))console.log('STONE_BALANCE_NO_DEFEAT',JSON.stringify({style,sorties:trained.trace.length,losses:trained.losses,earned:trained.earned,spent:trained.spent,upgrades:trained.circles?.map(c=>c.upgrades),trace:trained.trace.map(step=>({sortie:step.sortie,start:step.start,goal:step.goal,defeat:step.defeat,cleared:step.cleared,rank:step.rank,stone:step.stone})).slice(-12)}));
  assert.ok(trained.trace.some(step=>step.defeat),
   'the extended journey keeps actual defeat risk');
  assert.equal(trained.earned.stone,trained.spent.stone+trained.balances.stone,
