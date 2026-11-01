@@ -56,7 +56,7 @@ const select=x=>({seed:x.seed,level:x.profile.level,rank:x.profile.rank,
  recoveryTargetUpgrades:x.recovery.targetUpgrades,
  recoveryAchieved:x.recovery.achieved,
  gradeEligible:x.rankAudit.filter(r=>r.eligible).length,
- gradeFailedTurns:x.rankAudit.filter(r=>r.failure==='BOSS_TOO_MANY_ROUNDS').length,
+ gradeFailedMastery:x.rankAudit.filter(r=>r.failure==='BAND_MASTERY_UNMET').length,
  ownedItems:x.resourceLedger.items.held,collections:x.resourceLedger.collections.held,
  completed:x.best>=100,blockers:x.blockers,
  firstDecadeClearances:goals.bands.map(b=>{
