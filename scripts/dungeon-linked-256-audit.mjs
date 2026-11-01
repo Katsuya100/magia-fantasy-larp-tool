@@ -149,7 +149,9 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   // The exact shipped rank gate checks the full fifty-fight trace OR
   // the original two 80% reserves; neither route is independently required.
   for(const r of run.rankAudit){
-   const hero={hp:r.hpPercent,mp:r.mpPercent,stats:{hp:100},maxMp:100};
+   assert.ok(r.rawReserve,'OR gate needs the exact pre-recovery HP/MP, not rounded percentages');
+   const hero={hp:r.rawReserve.hp,mp:r.rawReserve.mp,
+    stats:{hp:r.rawReserve.maxHp},maxMp:r.rawReserve.maxMp};
    // Use the actual recorded 50-fight state. Reconstructing a nextFight
    // value here would incorrectly certify skipped or reset sorties.
    const record=r.rankCombat;
