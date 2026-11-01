@@ -21,11 +21,10 @@ const status={
    boss10Clears:x.floorObservations[9].clears,
   p90ReplayFights:x.distributions.replayedFights.p90,
   p90PurposefulRecoveryFights:x.distributions.recoveryFights.p90,
-  p90PreRestoreGradeEligible:x.distributions.gradeEligible.p90,
+  p90GradeEligible:x.distributions.gradeEligible.p90,
   acquiredGradeMedian:x.distributions.rankGranted.median,
   acquiredGradeP90:x.distributions.rankGranted.p90,
-  p90GradeFailedMp:x.distributions.gradeFailedMp.p90,
-  p90GradeFailedHp:x.distributions.gradeFailedHp.p90,
+  p90GradeFailedConditions:x.distributions.gradeFailedConditions.p90,
   p90Losses:x.distributions.losses.p90,
   p90StoneEarned:x.distributions['earned.stone'].p90
  }))},
@@ -51,11 +50,11 @@ const md=['## Dungeon journeys — measured diagnostics only',
    ' | '+d.replayedFights.p90+' | '+d.losses.p90+' | '+d['earned.stone'].p90+' | '+d.rankGranted.median+' |';
  }),
  '',
- '**Independent grade reserves:** observed pre-victory-restore HP and MP are captured on each actual boss defeat; zero demonstrated grade wins cannot be called a pass.',
+ '**Independent chapter acquisition:** the legacy pre-recovery HP/MP and new combat turn mastery are both checked on actual boss kills; unearned badges never count as passes.',
  '',
  '**Journey strength:** measured by the separate 6 × 10 × 256 formula-only strict job; this 16-owner economic diagnostic does not replace that report.',
  '',
- '**Separate checks:** the original fixed-deck 50-fight contract, independent chapter 80/80 rank results, and economic diagnostics remain separate. Authored 101–150F combat is out of scope.',
+ '**Separate checks:** the original fixed-deck 50-fight contract, independent chapter legacy 80/80 OR turn mastery rank results, and economic diagnostics remain separate. Authored 101–150F combat is out of scope.',
  '',
  '**Assumptions:** fixed named circles; actual enemy combat and drops; no alchemy; no automatic ranks; bank XP only on return; unbanked rewards lost on defeat.'];
 if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,md.join('\n')+'\n');
