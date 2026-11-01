@@ -224,7 +224,7 @@ for(let layer=1;layer<=100;layer++){
  const actualStone=rewards.filter(x=>x.type==='stone').length;
  const actualCollections=rewards.filter(x=>x.type==='collection').length;
  const actualConsumables=rewards.filter(x=>x.type==='use').length;
- const approvedStoneMaximum=Math.ceil(8**((Math.min(layer,100)-1)/99));
+ const approvedStoneMaximum=Math.ceil(G.magicStoneCountPerHit(layer));
  assert.equal(actualStone,approvedStoneMaximum,'successful stone hit uses the current depth curve at F'+layer);
  assert.equal(actualCollections,5,'successful common treasure rolls yield five collections');
  assert.equal(actualConsumables,3,'successful item rolls yield three consumables');

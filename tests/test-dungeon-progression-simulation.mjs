@@ -111,7 +111,7 @@ export function simulate(seed,{level=12,fromLayer=1,toLayer=3,spells='five',ston
  const first=(fromLayer-1)*5+1,last=toLayer*5;
  const stats={win:false,clear:first-1,turns:0,normalAttacks:0,restores:0,
   startLevel:level,fromLayer,toLayer,spells,attackAttributes:chosen.attackAttributes,
-  spentStones:equipment.spentStones,stoneBudget:budget,availableStones:history.stones,
+  spentStones:equipment.spentStones,stoneBudget:budget,upgradeLevels:equipment.counts,availableStones:history.stones,
   initialHp:hero.hp,initialMp:hero.mp,minMp:hero.mp,mpRestored:0,fightStats:[],
   enemyDebuffCasts:0,enemyDebuffFights:0,fightsReached:0,earlyHeroRecoveryCasts:0,layerStats:[]};
  for(let fight=first;fight<=last;fight++){

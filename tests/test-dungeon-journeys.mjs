@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {UPGRADE_STONE_COST_POLICY,upgradeStoneCost,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
+import {balanceText} from '../assets/js/dungeon-tuning.mjs';
 import {buildManifest} from '../scripts/dungeon-balance-manifest.mjs';
 import {runJourney,spread,investmentRate,ECONOMY_VERSION,chooseHero,consumeOwnedRecovery,
  consumeEscapeWhenLethal,battle,summarizeJourneys} from '../scripts/simulate-dungeon-journeys.mjs';
@@ -174,10 +176,17 @@ for(const entry of manifest.entries){
 }
 const find=id=>manifest.entries.find(entry=>entry.id===id);
 assert.equal(find('csv.balance.magic_stone_drop_chance.value').defaultValue,.30);
-assert.equal(find('csv.balance.magic_stone_drop_count_layer_150.value').defaultValue,8);
+assert.equal(find('csv.balance.magic_stone_drop_count_layer_150.value').defaultValue,22);
+assert.equal(find('csv.balance.magic_stone_drop_curve_multipliers.value').defaultValue,
+ balanceText('magic_stone_drop_curve_multipliers'));
 assert.equal(find('csv.balance.level_max.value').defaultValue,150);
 assert.equal(find('ink.bossDropChance').defaultValue,.20);
-assert.equal(find('upgrade.initialCostSteps').defaultValue,20);
+for(const [field,value] of Object.entries(UPGRADE_STONE_COST_POLICY))
+ assert.equal(find('upgrade.'+field).defaultValue,value,
+  'manifest reports the same source policy used by the upgrade engine');
+assert.equal(upgradeStoneCost(0),1,'approved first-purchase boundary');
+assert.equal(upgradeStoneCost(5),6,'approved first five-level cost tier');
+assert.equal(totalUpgradeStoneCost(10),45,'approved accumulated cost');
 assert.equal(find('alchemy.guaranteedInkEvery').defaultValue,20);
 assert.equal(investmentRate(10),.25);
 assert.equal(investmentRate(20),.75);

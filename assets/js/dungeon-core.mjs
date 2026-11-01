@@ -1,4 +1,4 @@
-import {num,level,range} from './dungeon-tuning.mjs';
+import {num,level,range,balanceText} from './dungeon-tuning.mjs';
 import {rollCollection,bossUniqueCollection,rollConsumableTier,eligibleConsumables,consumableWeight,CONSUMABLE_TIERS,targetClearLevel} from './dungeon-design.mjs';
 import {MAGIC_INK_ID,bossDropsMagicInk} from './dungeon-ink.mjs';
 export const ATTRS=['flame','bolt','aqua','storm','gravity','law','chaos'];
@@ -97,18 +97,40 @@ const countSuccesses=(rolls,chance,r)=>{
  for(let i=0;i<rolls;i++)if(r()<chance)count++;
  return count;
 };
-// Chance is constant; the number of actual stones on a hit grows with depth.
+// Keep each fight's 30% stone chance. Tune early and late supply without changing hit chance or combat.
 export function magicStoneDropChance(_playerLevel,_layer=1,_firstClear=false){
  return num('magic_stone_drop_chance');
 }
+// Interpret the authored curve from CSV. No layer tuning constants live here.
+let cachedStoneCurveKey='',cachedStoneCurve=null;
 export function magicStoneCountPerHit(layer=1){
  const maximum=num('magic_stone_drop_count_layer_150');
  const endLayer=num('magic_stone_drop_curve_end_layer');
+ const spec=balanceText('magic_stone_drop_curve_multipliers');
  if(!(maximum>=1&&Number.isSafeInteger(endLayer)&&endLayer>1))
   throw Error('魔導石の排出カーブの設定が不正です。');
+ const key=endLayer+'|'+spec;
+ if(key!==cachedStoneCurveKey){
+  const pairs=spec.split('|').map(part=>part.split(':').map(Number));
+  if(pairs.length<2||pairs.some(([floor,multiplier],i)=>
+   !Number.isSafeInteger(floor)||floor<1||!Number.isFinite(multiplier)||multiplier<=0||
+   (i>0&&floor<=pairs[i-1][0]))||pairs[0][0]!==1||pairs[0][1]!==1||
+   pairs.at(-1)[0]!==endLayer)
+   throw Error('魔導石の排出カーブの設定が不正です。');
+  cachedStoneCurve=pairs;
+  cachedStoneCurveKey=key;
+ }
  const raw=Number(layer);
  const depth=Number.isFinite(raw)?Math.min(endLayer,Math.max(1,Math.floor(raw))):1;
- return Math.pow(maximum,(depth-1)/(endLayer-1));
+ let multiplier=cachedStoneCurve.at(-1)[1];
+ for(let i=1;i<cachedStoneCurve.length;i++){
+  const [nextFloor,nextValue]=cachedStoneCurve[i];
+  if(depth>nextFloor)continue;
+  const [prevFloor,prevValue]=cachedStoneCurve[i-1];
+  multiplier=prevValue+(nextValue-prevValue)*(depth-prevFloor)/(nextFloor-prevFloor);
+  break;
+ }
+ return Math.pow(maximum/cachedStoneCurve.at(-1)[1],(depth-1)/(endLayer-1))*multiplier;
 }
 export function dropCounts(_enemyLevel,r=Math.random,context={}){
  const collection=countSuccesses(num('collection_drop_rolls'),num('collection_drop_chance'),r);

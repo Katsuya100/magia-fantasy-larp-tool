@@ -1,18 +1,26 @@
 import {circleLegacyLevelSources,totalLegacyLevel} from './dungeon-permadeath.mjs';
-// Repeat farming yields about five times more stones than before decay removal.
-// The first 20 upgrades cost five each; costs rise every 40 upgrades thereafter.
-// Saved upgrade levels are untouched.
+// First five upgrades cost 1, 2, 3, 4, 5 stones; later costs rise every five upgrades.
+// Saved upgrade levels remain unchanged; only future purchases use this curve.
+// A single definition feeds both cost functions and the diagnostic manifest.
+export const UPGRADE_STONE_COST_POLICY=Object.freeze({initialCost:1,initialCostSteps:1,earlyRampSteps:5,extraCostStep:5});
 export function upgradeStoneCost(level=0){
  const current=Number(level);
  if(!Number.isSafeInteger(current)||current<0)throw Error('無効な強化段階です');
- return 5+(current<20?0:1+Math.floor((current-20)/40));
+ const {initialCost,initialCostSteps,earlyRampSteps,extraCostStep}=UPGRADE_STONE_COST_POLICY;
+ return current<earlyRampSteps?initialCost+Math.floor(current/initialCostSteps):
+  initialCost+Math.ceil(earlyRampSteps/initialCostSteps)+Math.floor((current-earlyRampSteps)/extraCostStep);
 }
 export function totalUpgradeStoneCost(level){
  const count=Number(level);
  if(!Number.isSafeInteger(count)||count<0)throw Error('無効な強化段階です');
- if(count<=20)return count*5;
- const restCount=count-20,tiers=Math.floor(restCount/40),rest=restCount%40;
- return 100+40*(6*tiers+tiers*(tiers-1)/2)+rest*(6+tiers);
+ const {initialCost,initialCostSteps,earlyRampSteps,extraCostStep}=UPGRADE_STONE_COST_POLICY;
+ // The first five purchases form the audited one-stone-per-level ramp.
+ const earlyCount=Math.min(count,earlyRampSteps);
+ const earlyTotal=earlyCount*initialCost+earlyCount*(earlyCount-1)/(2*initialCostSteps);
+ if(count<=earlyRampSteps)return earlyTotal;
+ const rest=count-earlyRampSteps,tiers=Math.floor(rest/extraCostStep),remainder=rest%extraCostStep;
+ const firstLateCost=initialCost+Math.ceil(earlyRampSteps/initialCostSteps);
+ return earlyTotal+extraCostStep*(firstLateCost*tiers+tiers*(tiers-1)/2)+remainder*(firstLateCost+tiers);
 }
 // Each upgrade increases power by 10% of original, never compounding.
 // Round the final effective power upward and suppress representation noise.

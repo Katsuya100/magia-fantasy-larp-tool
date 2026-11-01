@@ -83,7 +83,7 @@ function upgradeSpells(budget,original=SPELLS){
   actuallySpent+=upgradeStoneCost(counts[selected]);
   spells[selected].power=strengthenedPower(original[selected].power,++counts[selected]);
  }
- return {spells,actuallySpent};
+ return {spells,actuallySpent,counts};
 }
 function enemyChoice(unit,r){return G.chooseEnemySpell(unit,r);}
 function heroChoice(hero,enemy){
@@ -202,7 +202,7 @@ export function deepRun(seed,band,equipped,enemyMaster=data.enemies){
   }
  }
  return {win:cleared===last,cleared,hp:hero.hp,mp:hero.mp,maxHp:hero.stats.hp,maxMp:hero.maxMp,
-  stones,spent:invested.actuallySpent,stoneBudget:spent,rounds,debuffCasts,cleanseUsed,cleanseByType,attackAttributes:chosen.attackAttributes,
+  stones,spent:invested.actuallySpent,stoneBudget:spent,upgradeLevels:invested.counts,rounds,debuffCasts,cleanseUsed,cleanseByType,attackAttributes:chosen.attackAttributes,
    carryCount:carry.length,
   remaining:carry.filter(Boolean).length,initialLoadout,layerStats,fightStats};
 }

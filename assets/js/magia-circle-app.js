@@ -1008,7 +1008,7 @@
       try {
         assertActiveAnalysisJob(job);
         recordAnalysisStage(job, 'embedding-input-build-start');
-        const texts = imagePipeline.attributeInputTexts(text);
+        const texts = imagePipeline.attributeInputTexts(text, dungeonMode);
         const inputEstimatedBytes = texts.reduce((sum, value) => sum + String(value).length * 2, 0);
         recordAnalysisStage(job, 'embedding-input-build-done', { inputCount: texts.length, estimatedBytes: inputEstimatedBytes, estimateKind: 'UTF-16 string payload estimate' });
         recordAnalysisStage(job, 'embedding-input-transfer-start', { inputCount: texts.length, estimatedBytes: inputEstimatedBytes });
@@ -1294,6 +1294,7 @@
           recordAnalysisStage(job, 'embedding-output-buffer-release-start', { allocationId: 'embedding-output-float32' });
         },
         embedAttributes: async text => embedAttributes(text, job),
+        includeAttributeAliases: dungeonMode,
         reportStage: (stageName, details) => recordAnalysisStage(job, stageName, details),
         signal: job.signal,
       });

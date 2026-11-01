@@ -11,6 +11,7 @@ import {targetClearLevel} from '../assets/js/dungeon-design.mjs';
 import {simulate,upgradeSpells} from './test-dungeon-progression-simulation.mjs';
 import {deepRun} from './test-dungeon-deep-cleanse-simulation.mjs';
 import {simulateProgression} from '../scripts/simulate-dungeon-stones.mjs';
+import {upgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {withNeutralAttackAttributes} from './helpers/dungeon-neutral-loadout.mjs';
 
 const csv=name=>G.parseCsv(readFileSync(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
@@ -69,6 +70,17 @@ assert.equal(targetStoneRate(20),.75);
 assert.equal(targetStoneRate(21),.75);
 for(let floor=11;floor<=19;floor++)
  assert.ok(targetStoneRate(floor)<targetStoneRate(floor+1));
+// The former fixed 16-stone remainder only applied to cheap cost tiers.
+// For every real budget, no further attack/support spell may be affordable.
+function assertNoAffordableUpgrade(spent,budget,levels,spells){
+ assert.ok(spent>=0&&spent<=budget,'stone ledger must never overspend');
+ assert.equal(levels.length,spells.length,'one verified level per spell');
+ const nextCosts=spells.flatMap((spell,i)=>
+  ['attack','support'].includes(spell.role)?[upgradeStoneCost(levels[i])]:[]);
+ assert.ok(nextCosts.length>0,'test deck contains upgradable spells');
+ assert.ok(budget-spent<Math.min(...nextCosts),
+  'no affordable upgrade may be left in the legal stone budget');
+}
 const LEVELS=goals.targetLevelCheckpoints;
 assert.equal(goals.bands.length,10);
 const report=[];
@@ -94,7 +106,7 @@ for(let to=10;to<=100;to+=10){
    // legal carry capacity, no HP/MP potions and stocked cleansers.
    assert.equal(rate,.75);
    const yes=deepRun(randomSeed,{from,to,level},true);
-   assert.ok(yes.spent<=spending&&spending-yes.spent<16,'cost tiers never overspend');
+   assertNoAffordableUpgrade(yes.spent,spending,yes.upgradeLevels,chosen.spells);
    assert.deepEqual(yes.attackAttributes,chosen.attackAttributes);
    assert.equal(yes.stones,alreadyEarned);
    assert.ok(yes.cleanseUsed<=yes.carryCount);
@@ -109,7 +121,7 @@ for(let to=10;to<=100;to+=10){
   }else{
    const result=simulate(randomSeed,{level,fromLayer:from,toLayer:to,
     spells:from===1?'intro':'five',stones:spending});
-   assert.ok(result.spentStones<=spending&&spending-result.spentStones<16,'cost tiers never overspend');
+   assertNoAffordableUpgrade(result.spentStones,spending,result.upgradeLevels,chosen.spells);
    assert.deepEqual(result.attackAttributes,chosen.attackAttributes);
    if(from===1){
     assert.equal(result.earlyHeroRecoveryCasts,0,'1-10F is tested without HP healing');
