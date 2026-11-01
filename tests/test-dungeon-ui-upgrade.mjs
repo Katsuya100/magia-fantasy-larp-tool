@@ -47,7 +47,7 @@ try{
  let saved=(await allCircles(db))[0];
  assert.equal(saved.analysis.power,110,'first stone boosts by 10% of initial 100');
  assert.equal(saved.upgradeLevel,1);
- assert.equal((await getProfile(db)).magicStones,3);
+ assert.equal((await getProfile(db)).magicStones,5);
  assert.equal((await allCircles(db))[0].analysis.power,110,'read applies profile metadata without rewriting photo record');
  assert.equal(env.factory.databases.get('magia-dungeon-v1').get('circles').get('circle-1').analysis.power,100,'photo record stays unmodified');
  assert.equal($('magicDetailsDialog').open,true,'enhancement opens full circle feedback');
@@ -65,7 +65,7 @@ try{
  assert.equal(saved.analysis.power,120,'second upgrade works despite Blob rewrite failure');
  assert.equal(saved.basePower,100);
  assert.ok($('magicDetailsStats').innerHTML.includes(originalMpMarkup),'repeat upgrades do not change MP display');
- assert.equal((await getProfile(db)).magicStones,5);
+ assert.equal((await getProfile(db)).magicStones,3);
  assert.match($('magicStoneBalance').textContent,/3個/);
  const reopened=await openStore(env.factory);
  assert.equal((await allCircles(reopened))[0].analysis.power,120,'power survives reopening the database');
