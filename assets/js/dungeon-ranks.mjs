@@ -65,8 +65,9 @@ export function rankBadgeEligible(fight,hero,record){
  const layer=clearedLayer(fight);
  if(!rankAt(layer)||!(Number(hero?.hp)>0))return false;
  const hpMax=Number(hero?.stats?.hp),mpMax=Number(hero?.maxMp);
- const legacy=hpMax>0&&mpMax>0&&Number(hero.hp)>=hpMax*.8&&
-  Number(hero.mp)>=mpMax*.8;
+ const legacy=hpMax>0&&mpMax>0&&
+  Number(hero.hp)>=hpMax*RANK_LEGACY_RESERVE_PERCENT/100&&
+  Number(hero.mp)>=mpMax*RANK_LEGACY_RESERVE_PERCENT/100;
  const mastery=record?.end===layer&&record?.nextFight===fight+1
   &&record.earlyMobs===RANK_EARLY_NORMAL_FIGHTS
   &&record.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED
