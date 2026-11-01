@@ -21,8 +21,17 @@ for(const powers of decks){
   // The one test adventurer voluntarily uses only ordinary attacks after
   // earning genuine earlier victories in its first F11-F20 sortie. On the
   // next sortie it resumes the unchanged AI. No combat outcome is injected.
-  const playerAction=({fight,sortie,defaultAction})=>
-   sortie===11&&fight>=58?-1:defaultAction();
+  let selectedTurns=0;
+  const playerAction=({hero,fight,sortie,defaultAction})=>{
+   if(sortie!==11||fight<58)return defaultAction();
+   selectedTurns++;
+   const ready=hero.spells.map((spell,i)=>({spell,i})).filter(x=>x.spell&&
+    hero.mp>=2&&hero.cooldowns[x.i]===0);
+   const ward=ready.find(x=>x.spell.role==='defense');
+   if(ward)return ward.i;
+   const attack=ready.filter(x=>x.spell.role==='attack').sort((a,b)=>a.spell.power-b.spell.power)[0];
+   return attack?.i??-1;
+  };
   const run=runJourney(seed,{style:'A',route:'long',referencePowers:powers,
    maxSorties:60,maxFights:2500,observeLossEvidence:true,playerAction,
    collectCandidateDiagnostic:false});
@@ -35,7 +44,9 @@ for(const powers of decks){
     i>=0&&run.trace.slice(i+1).some(t=>t.returned&&t.cleared>=t.start&&
      t.gainedPending.stone+t.gainedPending.ink>0);
   });
-  observations.push({powers:powers[0],seed,best:run.best,
+  observations.push({powers:powers[0],seed,best:run.best,selectedTurns,
+   trace:run.trace.slice(9,15).map(t=>({s:t.sortie,start:t.start,goal:t.goal,
+    cleared:t.cleared,defeat:t.defeat})),
    losses:run.losses,returns:run.returns,
    pendingLosses:run.lossEvidence.map(x=>({
     hp:x.before.defeatedHeroHp,xp:x.before.pendingXp,loot:x.before.pendingLoot.length,
