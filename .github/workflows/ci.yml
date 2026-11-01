@@ -153,8 +153,14 @@ jobs:
         with:
           node-version: '24'
       - run: node tests/test-dungeon-xp-balance.mjs
-      - run: node tests/test-dungeon-journeys.mjs
-      - run: node tests/test-dungeon-floor-strength.mjs
+      - name: Validate journey unit contracts (preserve failures for final gate)
+        id: journey_unit
+        continue-on-error: true
+        run: node tests/test-dungeon-journeys.mjs
+      - name: Validate strength ledger unit contracts (preserve failures for final gate)
+        id: strength_unit
+        continue-on-error: true
+        run: node tests/test-dungeon-floor-strength.mjs
       - run: node tests/test-dungeon-test-design.mjs
       - run: node scripts/dungeon-balance-manifest.mjs
       - name: Measure formula-only recommended strength for all 256 owners
@@ -180,10 +186,20 @@ jobs:
             config/dungeon-approved-goals.v1.json
             config/dungeon-recommended-reference-candidate.v1.json
           if-no-files-found: warn
+      - name: Keep every failed foundation unit contract as a hard CI failure
+        if: always()
+        env:
+          JOURNEY_UNIT_OUTCOME: ${{ steps.journey_unit.outcome }}
+          STRENGTH_UNIT_OUTCOME: ${{ steps.strength_unit.outcome }}
+        run: |
+          test "$JOURNEY_UNIT_OUTCOME" = success
+          test "$STRENGTH_UNIT_OUTCOME" = success
 
   dungeon-journey-strength-strict:
-    # The fixed-deck formula comparison uses the 6 x 10 x 256 legal owner matrix.
+    # Run even if an independent foundation unit test fails, so that
+    # all 60 strict results are measured; failures remain hard failures.
     needs: dungeon-foundation-256-accounts
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
