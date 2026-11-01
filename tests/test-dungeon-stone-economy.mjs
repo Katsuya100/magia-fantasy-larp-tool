@@ -22,9 +22,10 @@ assert.equal(magicStoneCountPerHit(1),1);
 assert.equal(magicStoneCountPerHit(100),8);
 assert.equal(magicStoneCountPerHit(150),8);
 assert.equal(magicStoneCountPerHit(151),8);
-// Independently derive the approved exponential hit size: 1 at F1, 8 at F100,
-// then a plateau. The game may probabilistically round a fractional hit.
-const expectedHit=layer=>8**((Math.max(1,Math.min(100,layer))-1)/99);
+// Independently derive the depth-delayed exponential hit size: 1 at F1,
+// 8 at F100, then a plateau. The game stochastically rounds fractional hits.
+const expectedHit=layer=>8**(((Math.max(1,Math.min(100,layer))-1)/99)**1.25);
+assert.ok(expectedHit(50)<8**(49/99),'mid-depth drop size is below the former curve');
 for(let layer=1;layer<=200;layer++){
  const actual=magicStoneCountPerHit(layer);
  assert.ok(Math.abs(actual-expectedHit(layer))<1e-10,'independent stone depth curve at F'+layer);
