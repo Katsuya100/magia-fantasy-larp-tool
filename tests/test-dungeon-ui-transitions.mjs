@@ -10,16 +10,16 @@ const [html,css,app,tutorial,drawing]=await Promise.all([
 ]);
 assert.equal(DUNGEON_MODAL_DURATION_MS,200);
 const dialogs=[...html.matchAll(/<dialog id="([^"]+)"/g)].map(match=>match[1]);
-assert.equal(dialogs.length,24,'the redundant Drive overwrite dialog is removed; all other dialogs remain');
-assert.equal(new Set(dialogs).size,24);
+assert.equal(dialogs.length,23,'obsolete XP recovery and Drive overwrite dialogs are removed');
+assert.equal(new Set(dialogs).size,23);
 assert.ok(dialogs.includes('googleDriveConflictDialog')&&dialogs.includes('googleDriveExpiredDialog'),'one cloud chooser and the auth-expiry dialog remain');
 assert.ok(!dialogs.includes('googleDriveOverwriteDialog'),'old cloud overwrite confirmation must not return');
 assert.ok(dialogs.includes('circlePowerTipsDialog'),'magic tips use a single native dialog');
 assert.ok(dialogs.includes('alchemyDialog')&&dialogs.includes('alchemyPickerDialog'),'alchemy dialogs share the native transition manager');
 assert.ok(dialogs.includes('magicInkDialog'),'magic ink selection uses the existing dialog manager');
-assert.ok(dialogs.includes('restoreOriginalXpDialog'),'migration recovery has a guarded confirmation');
-assert.match(html,/id="confirmRestoreOriginalXp"[^>]*class="danger"/,'recovery warns of irreversible progress loss');
-assert.match(app,/restoreDungeonXpMigrationBackup\(db\)/,'user-initiated legacy restoration is wired');
+assert.ok(!dialogs.includes('restoreOriginalXpDialog'),'obsolete XP recovery dialog is removed');
+assert.doesNotMatch(html,/id="confirmRestoreOriginalXp"/,'obsolete XP restore button is removed');
+assert.doesNotMatch(app,/restoreDungeonXpMigrationBackup\(db\)/,'obsolete XP restore handler is removed');
 assert.match(css,/dialog\{[^}]*transition:opacity \.2s[^}]*display \.2s allow-discrete,overlay \.2s allow-discrete/);
 assert.match(css,/dialog\[open\]\{opacity:1;transform:none\}/);
 assert.match(css,/@starting-style\{\s*dialog\[open\]/);
@@ -163,7 +163,7 @@ const closable={
  googleDriveExpiredDialog:'data-action="later"',
  deleteDataDialog:'cancelDeleteData'
 };
-const fixed=['saveErrorDialog','backupSetupDialog','circleFirstChoiceDialog','magicInkDialog','nameDialog','restoreOriginalXpDialog'];
+const fixed=['saveErrorDialog','backupSetupDialog','circleFirstChoiceDialog','magicInkDialog','nameDialog'];
 const overlayFlows={
  circleDrawingDialog:['circleDrawingClose','閉じる'],
  circleCameraDialog:['cameraStop','閉じる'],
