@@ -1,6 +1,6 @@
 // Canonical test-only contracts: fail on invalid measurements, never repair them.
 import assert from 'node:assert/strict';
-import {RANK_FAST_WINS_REQUIRED,RANK_LATE_BOSSES_REQUIRED,RANK_MEASURED_FIGHTS} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS} from '../assets/js/dungeon-ranks.mjs';
 export const FIXED_CARRY={1:[0,0],11:[0,0],21:[0,0],31:[0,0],41:[0,0],51:[13,0],61:[14,0],71:[13,2],81:[14,2],91:[16,2]};
 export function assertFixedInventory(from,items){
  const expected=FIXED_CARRY[from];assert.ok(expected,'unknown fixed band');
@@ -89,17 +89,17 @@ export function assertPreRecoveryRankGate(record){
  if(record.failure==='PRIOR_RANK_OR_DUPLICATE')return;
  assert.ok(Number.isSafeInteger(record.layer)&&record.layer>=10&&record.layer<=100&&record.layer%10===0,
   'rank audit must refer to a real decade boss');
- assert.ok(Number.isSafeInteger(record.measured)&&record.measured>=0&&record.measured<=RANK_MEASURED_FIGHTS,
-  'mastery must count only real measured fights');
- assert.ok(Number.isSafeInteger(record.fastWins)&&record.fastWins>=0&&record.fastWins<=record.measured,
-  'single-turn wins cannot exceed measured wins');
- assert.ok(Number.isSafeInteger(record.lateBossFastWins)&&record.lateBossFastWins>=0&&record.lateBossFastWins<=5,
-  'later boss wins must remain within the five measured bosses');
- const mastery=record.measured===RANK_MEASURED_FIGHTS&&
-  record.fastWins>=RANK_FAST_WINS_REQUIRED&&
-  record.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED;
+ assert.ok(Number.isSafeInteger(record.earlyMobs)&&record.earlyMobs>=0&&record.earlyMobs<=RANK_EARLY_NORMAL_FIGHTS,
+  'mastery must count only actual early normal enemies');
+ assert.ok(Number.isSafeInteger(record.earlyFastWins)&&record.earlyFastWins>=0&&record.earlyFastWins<=record.earlyMobs,
+  'single-turn wins cannot exceed early normal enemies');
+ assert.ok(Number.isSafeInteger(record.bossRounds)&&record.bossRounds>=1,
+  'mastery requires actual final boss exchanges');
+ const mastery=record.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&
+  record.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&
+  record.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS;
  assert.equal(record.eligible,mastery,
-  'rank must follow real floor mastery, not boss HP/MP or a standalone boss turn count');
+  'rank must follow early normal and final boss turn mastery');
 }
 export function assertNotFalsePass({passed,missing=0,cutoff=false}){
  assert.ok(!passed||missing===0&&!cutoff,'unready seeds and cutoffs cannot PASS');
