@@ -7,7 +7,7 @@ import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
 import {strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {approvedGoals} from './simulate-dungeon-journeys.mjs';
-import {RANK_BOSS_MAX_ROUNDS} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_FAST_WINS_REQUIRED,RANK_LATE_BOSSES_REQUIRED,RANK_MEASURED_FIGHTS} from '../assets/js/dungeon-ranks.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 
@@ -363,14 +363,19 @@ for(const meta of report.policies){
 assert.equal(observedOwnerBandCount,6*10*256,
  'all independent owner-band formula observations must remain in the denominator');
 for(const rank of report.ranks){
- assert.equal(RANK_BOSS_MAX_ROUNDS,approvedGoals.rank.maxBossRounds);
- assert.equal(rank.maxBossRounds,RANK_BOSS_MAX_ROUNDS);
- assert.equal(rank.status,'INDEPENDENT_RANK_BOSS_TURNS');
+ assert.equal(RANK_FAST_WINS_REQUIRED,approvedGoals.rank.fastWinsRequired);
+ assert.equal(RANK_LATE_BOSSES_REQUIRED,approvedGoals.rank.lateBossFastWinsRequired);
+ assert.equal(RANK_MEASURED_FIGHTS,approvedGoals.rank.measuredFights);
+ assert.equal(rank.fastWinsRequired,RANK_FAST_WINS_REQUIRED);
+ assert.equal(rank.lateBossFastWinsRequired,RANK_LATE_BOSSES_REQUIRED);
+ assert.equal(rank.measuredFights,RANK_MEASURED_FIGHTS);
+ assert.equal(rank.status,'INDEPENDENT_RANK_BAND_MASTERY');
  const accounts=rankAuditsByPolicy.get(rank.style+'/'+rank.route);
  assert.ok(accounts&&accounts.length===256,'each chapter row belongs to a measured 256-owner policy');
  const missing=accounts.filter(account=>!account.rankAudit.some(event=>
   event.layer===rank.rankLayer&&event.eligible&&event.banked&&
-  event.bossRounds<=RANK_BOSS_MAX_ROUNDS)).map(account=>account.seed);
+  event.measured===RANK_MEASURED_FIGHTS&&
+  event.fastWins>=RANK_FAST_WINS_REQUIRED&&event.lateBossFastWins>=RANK_LATE_BOSSES_REQUIRED)).map(account=>account.seed);
  assert.deepEqual(rank.missingSeeds,missing,'unearned chapters remain unearned');
  assert.equal(rank.acquiredOwners,256-missing.length,
   'chapter acquisitions count distinct banked owners');
@@ -395,7 +400,7 @@ if(failures.length||completionFailures.length||chapterFailures.length)
   completion:completionFailures.slice(0,30),
   chapters:chapterFailures}));
 console.log('DUNGEON_FIRST_ENTRY_STRICT 153600/153600 FIRST_ENTRY, UNASSESSED_AT_FIRST_ENTRY, full legal evidence');
-console.log('PASS 60/60 strength bands, 1536/1536 actual F100 clears and 60 owner-level boss turn chapter gates');
+console.log('PASS 60/60 strength bands, 1536/1536 actual F100 clears and 60 owner-level band mastery chapter gates');
 
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main();
