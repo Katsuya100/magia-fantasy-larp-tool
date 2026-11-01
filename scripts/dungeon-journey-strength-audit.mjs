@@ -10,6 +10,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 import {runJourney,approvedGoals,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
+import {rankBadgeThreshold} from '../assets/js/dungeon-ranks.mjs';
 
 assert.equal(approvedGoals.strictSamples,256,'fixed owner denominator');
 assert.equal(approvedGoals.bands.length,10,'all ten authored bands');
@@ -155,18 +156,23 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   const banked=checks.filter(row=>row.banked&&row.eligible).length;
   // Only real, returned, banked badge awards count; repeated boss checks
   // are never mistaken for additional owners.
+  const threshold=rankBadgeThreshold(band.to);
   const acquiredOwners=accounts.filter(account=>account.rankAudit.some(row=>
    row.layer===band.to&&row.eligible&&row.banked&&
-   row.hpPercent>=80&&row.mpPercent>=80)).length;
+   row.hpPercent>=threshold.hpPercent&&row.mpPercent>=threshold.mpPercent)).length;
   const missingSeeds=accounts.filter(account=>!account.rankAudit.some(row=>
    row.layer===band.to&&row.eligible&&row.banked&&
-   row.hpPercent>=80&&row.mpPercent>=80)).map(account=>account.seed);
+   row.hpPercent>=threshold.hpPercent&&row.mpPercent>=threshold.mpPercent)).map(account=>account.seed);
+  const earnedBossRounds=accounts.flatMap(account=>account.rankAudit)
+   .filter(row=>row.layer===band.to&&row.eligible&&row.banked).map(row=>row.bossRounds);
   ranks.push({style,route,chapter:band.from+'-'+band.to,rankLayer:band.to,
    eligible,banked,checks:checks.length,acquiredOwners,missingSeeds,
-   thresholdHp:approvedGoals.rank.bothHpMpPercentAtLeast,
-   thresholdMp:approvedGoals.rank.bothHpMpPercentAtLeast,
+   thresholdHp:threshold.hpPercent,thresholdMp:threshold.mpPercent,
+   earnedBossRounds:{oneTurn:earnedBossRounds.filter(turns=>turns===1).length,
+    twoToThreeTurns:earnedBossRounds.filter(turns=>turns>=2&&turns<=3).length,
+    fourOrMoreTurns:earnedBossRounds.filter(turns=>turns>=4).length},
    moment:'ACTUAL_BOSS_KILL_BEFORE_VICTORY_RECOVERY',
-   status:'INDEPENDENT_80_80_RANK_ACQUISITION'});
+   status:'INDEPENDENT_RANK_BOSS_RESERVE'});
  }
  policies.push(policy);
  const firstEntryFile='dungeon-first-entry-v1-'+style+'-'+route+'.json';
@@ -213,7 +219,7 @@ const report={
   knownUnmet:{'B/short/F90':'255/256 legacy rank; not promoted',
    'C/long/F100':'255/256 legacy rank; not promoted',
    'C/long/F91-100':'255/256 legacy farming; not promoted'},
-  independentChapterRule:'The boss-kill 80/80 HP/MP rank acquisition check remains separate and unchanged',
+  independentChapterRule:'Pre-recovery boss-kill chapter reserve: HP 70%, MP 70% at 10F and 50% at 20-100F; separate from recommended strength',
   xpTaper:'NOT_IMPLEMENTED'}
 };
 const output=new URL('../reports/dungeon-journey-strength-v2.json',import.meta.url);
