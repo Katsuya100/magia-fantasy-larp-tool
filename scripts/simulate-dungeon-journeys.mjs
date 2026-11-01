@@ -179,9 +179,9 @@ function pack(state,start,goal){
  const available=state.inventory.filter(eligible);
  const specific=available.filter(item=>item.id!=='luna_stone');
  const luna=available.filter(item=>item.id==='luna_stone');
- // Deep journeys may carry owned healing to survive successive fights.
- // Do not prioritize items merely to satisfy a badge HP reserve.
- const rankedHealing=goal>=51?state.inventory.filter(item=>
+ // Carry genuinely owned healing from F20 onward for survival even when
+ // the chapter's alternative mastery route does not require an HP reserve.
+ const rankedHealing=goal>=20?state.inventory.filter(item=>
   ['heal','elixir'].includes(data.items.find(row=>row.id===item.id)?.kind))
   .sort((a,b)=>Number(b.value)-Number(a.value)).slice(0,Math.min(2,cap-mana.length)):[];
  const selected=[...mana,...rankedHealing,
