@@ -590,9 +590,13 @@ export function battle(state,hero,layer,fight,carry,random,usage,encounterForFig
 }
 export function runJourney(seed,{style='A',route='short',alchemy=false,
  redrawLimit=3,forceRedraw=false,maxSorties=120,maxFights=10000,
- collectCandidateDiagnostic=true,observeStrength=false,observeFirstEntry=false}={}){
+ collectCandidateDiagnostic=true,observeStrength=false,observeFirstEntry=false,
+ referencePowers=null,observeLossEvidence=false}={}){
  if(!['A','B','C'].includes(style)||!['short','long'].includes(route))throw Error('Invalid journey');
  if(!Number.isInteger(redrawLimit)||redrawLimit<1||redrawLimit>3)throw Error('Only 1-3 redraws permitted');
+ // Authored test circles are player input, not a change to combat or strategy.
+ if(referencePowers!==null&&(!Array.isArray(referencePowers)||referencePowers.length!==spells.length||
+  referencePowers.some(n=>!Number.isFinite(n)||n<=0)))throw Error('Invalid authored circle powers');
  const aReference=style==='B'?runJourney(seed,{style:'A',route,alchemy,redrawLimit,
   forceRedraw:false,maxSorties:Math.min(maxSorties,120),maxFights,
   collectCandidateDiagnostic,observeStrength:false}):null;
@@ -603,14 +607,15 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   redrawLimit,forceRedraw,redrawEvents:[],
   recoveryTarget,recoveryReference:atA31?'REAL_SAME_SEED_A_F31':'UNAVAILABLE',
   alchemyCount:0,alchemyCrafts:0,alchemyByproducts:{stone:0,ink:0},
-  circles:spells.map(([role,attribute,power])=>circle(role,attribute,power)),
+  circles:spells.map(([role,attribute,power],i)=>
+   circle(role,attribute,referencePowers?.[i]??power)),
   earned:{stone:0,ink:0},spent:{stone:0,ink:0},lost:{stone:0,ink:0,xp:0},
   bankedXp:0,offDeckStoneSpent:0,
   ledger:{items:{bankedDrops:0,alchemyCreated:0,battleConsumed:0,alchemyConsumed:0,lostUnbanked:0},
    collections:{bankedDrops:0,alchemyConsumed:0,lostUnbanked:0}},
   best:0,returns:0,losses:0,sorties:0,fights:0,replayedFights:0,
   itemSerial:0,sunkCircles:0,replacements:0,rankChecks:0,rankGranted:0,
-  rankAudit:[],floorAudit:[],
+  rankAudit:[],floorAudit:[],lossEvidence:[],
   entrySnapshots:{},firstEntries:{},firstEntryEvent:0,observeFirstEntry,
    collectCandidateDiagnostic,observeStrength,journeyStrength:{},
   healCasts:0,enemyHealCasts:0,enemyDebuffs:0,cleanseUses:{},otherItemUses:{},rankManaUses:{},trace:[],blockers:[],milestones:[],
@@ -695,6 +700,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   const carry=pack(state,start,packingGoal);
   // Observation only; preserve the original individual carry instances.
   const sortieInitialCarry=observeFirstEntry?carry.filter(Boolean).map(x=>({...x})):null;
+  const lossInitialCarry=observeLossEvidence?carry.filter(Boolean).map(x=>({...x})):null;
   const usage={};
   const encounterForFight=createSortieEncounterSelector(data.enemies,random);
   // A new sortie cannot inherit turn achievements from an earlier expedition.
@@ -863,12 +869,32 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   for(const row of state.floorAudit.filter(x=>x.sortie===state.sorties))
    row.banked=!defeat&&row.cleared;
   if(defeat){
+   // The opt-in proof only observes the existing settlement. No game state
+   // or RNG is modified by the observer.
+   const beforeLoss=observeLossEvidence?{
+    earned:{...state.earned},bankedXp:state.bankedXp,
+    profile:{...profile},stone:state.stones,ink:state.ink,
+    warehouse:state.inventory.map(x=>({...x})),
+    carried:lossInitialCarry,
+    unspentCarry:carry.filter(Boolean).map(x=>({...x})),
+    pendingXp:pending.xp,pendingLoot:pending.loot.map(x=>({...x})),
+    itemLedger:{...state.ledger.items},
+    collectionLedger:{...state.ledger.collections}
+   }:null;
    state.losses++;state.lost.stone+=earnedPending.stone;
    state.lost.ink+=earnedPending.ink;state.lost.xp+=pending.xp;
     state.ledger.items.lostUnbanked+=pending.loot.filter(x=>x.type==='use').length;
     state.ledger.collections.lostUnbanked+=pending.loot.filter(x=>x.type==='collection').length;
    // The shipped game returns unused equipped items to the warehouse on defeat.
    state.inventory.push(...carry.filter(Boolean));
+   if(beforeLoss)state.lossEvidence.push({sortie:state.sorties,start,goal,
+    before:beforeLoss,after:{
+     earned:{...state.earned},bankedXp:state.bankedXp,
+     profile:{...profile},stone:state.stones,ink:state.ink,
+     warehouse:state.inventory.map(x=>({...x})),
+     itemLedger:{...state.ledger.items},
+     collectionLedger:{...state.ledger.collections}
+    }});
   }else if(escaped){
    commit(state,pending,carry,lastClear);
   }else if(lastClear>=start){
@@ -945,6 +971,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
   enemyDebuffs:state.enemyDebuffs,cleanseUses:state.cleanseUses,
   otherItemUses:state.otherItemUses,rankManaUses:state.rankManaUses,
   rankChecks:state.rankChecks,rankGranted:state.rankGranted,rankAudit:state.rankAudit,
+   lossEvidence:state.lossEvidence,
   floorAudit:state.floorAudit,trace:state.trace,milestones:state.milestones,
   entrySnapshots:state.entrySnapshots,firstEntries:state.firstEntries,
   journeyStrength:state.journeyStrength,
