@@ -2009,7 +2009,20 @@ function wire(){
  $('loadoutDialog').addEventListener('close',()=>{if(!$('loadoutDialog').open)picker=null;refreshCirclePhotos();});
  $('openCircleDrawing').addEventListener('click',()=>requestCircleCreation('draw'));
  $('openCircleCamera').addEventListener('click',()=>requestCircleCreation('photo'));
- for(const id of ['circleDrawingPowerTips','circleCameraPowerTips'])$(id).addEventListener('click',()=>showDungeonDialog($('circlePowerTipsDialog')));
+ const showPowerTipsPage=page=>{
+  $('circlePowerTipsPage1').hidden=page!==1;
+  $('circlePowerTipsPage2').hidden=page!==2;
+  $('circlePowerTipsPrevious').hidden=page===1;
+  $('circlePowerTipsNext').hidden=page===2;
+  $('circlePowerTipsPageIndicator').textContent=page+' / 2';
+  $('circlePowerTipsDialog').scrollTop=0;
+ };
+ for(const id of ['circleDrawingPowerTips','circleCameraPowerTips'])$(id).addEventListener('click',()=>{
+  showPowerTipsPage(1);
+  showDungeonDialog($('circlePowerTipsDialog'));
+ });
+ $('circlePowerTipsNext').addEventListener('click',()=>showPowerTipsPage(2));
+ $('circlePowerTipsPrevious').addEventListener('click',()=>showPowerTipsPage(1));
  $('closeCirclePowerTips').addEventListener('click',()=>closeDungeonDialog($('circlePowerTipsDialog')));
  $('cameraStop').addEventListener('click',closeCamera);
  $('circleCameraDialog').addEventListener('cancel',event=>{event.preventDefault();closeCamera();});
