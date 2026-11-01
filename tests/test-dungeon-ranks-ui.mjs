@@ -122,7 +122,7 @@ try{
  p3.name='魔力不足';p3.returns=1;p3.level=30;p3.slots=['x1','x2','x3',null,null];
  for(let i=1;i<=3;i++)await putCircle(db3,{id:'x'+i,image:new Blob(['photo']),analysis:attack,revealed:true});
  const lowHero=G.makeUnit(p3.base,p3.level,{},[attack,attack,attack,null,null],'player');
- lowHero.mp=Math.floor(lowHero.maxMp*.79);
+ lowHero.mp=Math.floor(lowHero.maxMp*.69);
  const boss=G.fromEnemy(enemies.find(x=>x.id==='boss_l010'),19);boss.hp=1;boss.spells=[];boss.stats.mag=0;
  p3.run={floor:50,slotIds:[...p3.slots],hero:lowHero,enemy:boss,enemyName:'十層ボス',
   carry:[null,null,null,null,null],loot:[],xp:0,usedItems:0,log:[],stage:'battle'};
@@ -134,7 +134,7 @@ try{
   await env3.document.click(btn({cast:'-1'}));
   const end=await getProfile(db3);
   assert.equal(end.run.stage,'checkpoint');
-  assert.equal(end.run.loot.some(x=>x.type==='rank'),false,'MP below 80% cannot award a badge even with post-win recovery');
+  assert.equal(end.run.loot.some(x=>x.type==='rank'),false,'MP below 70% cannot award a first badge even with post-win recovery');
  }finally{env3.restore();}
  console.log('PASS milestone badge drop, return save, profile, selectable shortcuts, higher-rank inheritance and low-MP check');
 }finally{Math.random=originalRandom;}
