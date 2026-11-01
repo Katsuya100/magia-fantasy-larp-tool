@@ -9,7 +9,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure,num} from '../assets/js/dungeon-tuning.mjs';
 import {targetClearLevel,enemyForFight} from '../assets/js/dungeon-design.mjs';
 import {createSortieEncounterSelector} from './dungeon-balance-encounters.mjs';
-import {allowedStartLayer,unlockedStartLayers,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+import {allowedStartLayer,unlockedStartLayers,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeEligible,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 import {upgradeStoneCost,strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import {inkEnhancedAnalysis} from '../assets/js/dungeon-ink.mjs';
 import {craftAlchemy} from '../assets/js/dungeon-alchemy.mjs';
@@ -786,17 +786,14 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
      const hpPercent=percent(hero.hp,hero.stats.hp);
      const mpPercent=percent(hero.mp,hero.maxMp);
      const mastery=state.rankCombat;
-     const masteryReady=mastery?.end===layer&&mastery?.nextFight===fight+1
-      &&mastery.earlyMobs===RANK_EARLY_NORMAL_FIGHTS
-      &&mastery.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED
-      &&mastery.bossRounds>=1&&mastery.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS;
+     const conditionReady=rankBadgeEligible(fight,hero,mastery);
      const badge=rankBadgeDrop(fight,hero,profile,pending.loot,mastery);
      state.rankAudit.push({layer,sortie:state.sorties,level:firstLevel,
       hpPercent,mpPercent,bossRounds:outcome.rounds,
       earlyMobs:mastery?.earlyMobs??0,
       earlyFastWins:mastery?.earlyFastWins??0,
       eligible:Boolean(badge),banked:false,
-      failure:badge?null:masteryReady?'PRIOR_RANK_OR_DUPLICATE':'BAND_MASTERY_UNMET'});
+      failure:badge?null:conditionReady?'PRIOR_RANK_OR_DUPLICATE':'RANK_CONDITIONS_UNMET'});
      if(badge)drops.push(badge);
     }
     pending.loot.push(...drops);
@@ -963,7 +960,7 @@ export function summarizeJourneys(samples=16,seed=20261024){
   distributions.recoveryFights=spread(runs.map(x=>x.recovery.extraFights));
   distributions.recoverySorties=spread(runs.map(x=>x.recovery.sorties));
   distributions.gradeEligible=spread(runs.map(x=>x.rankAudit.filter(y=>y.eligible).length));
-  distributions.gradeFailedMastery=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure==='BAND_MASTERY_UNMET').length));
+  distributions.gradeFailedConditions=spread(runs.map(x=>x.rankAudit.filter(y=>y.failure==='RANK_CONDITIONS_UNMET').length));
   for(const type of ['stone','ink']){
    for(const field of ['earned','spent','lost','balances']){
     distributions[field+'.'+type]=spread(runs.map(x=>x[field][type]));
