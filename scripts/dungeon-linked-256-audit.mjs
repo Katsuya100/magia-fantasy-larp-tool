@@ -146,7 +146,7 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
    'all XP from a failed expedition must be counted as lost');
   assert.ok(run.floorAudit.every(f=>!f.bossRank||f.layer%10===0));
   assert.ok(run.rankAudit.every(r=>!r.banked||r.eligible));
-  assert.ok(run.rankAudit.every(r=>r.hpPercent>=80&&r.mpPercent>=80||!r.eligible));
+  assert.ok(run.rankAudit.every(r=>!r.eligible||(r.earlyFastWins>=18&&r.bossRounds<=3)));
   for(const rank of run.rankAudit)assertPreRecoveryRankGate(rank);
   conservationChecks++;
   accounts.push(select(run));
