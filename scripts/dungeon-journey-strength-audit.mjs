@@ -186,6 +186,8 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
   samples:seeds.length,entries:entryOwners.reduce((n,owner)=>n+owner.entries.length,0)});
  console.log('DUNGEON_JOURNEY_STRENGTH_POLICY '+JSON.stringify({
   style,route,samples:accounts.length,completion:policy.completion,
+  ownersWithLoss:accounts.filter(account=>account.losses>0).length,
+  lossSeeds:accounts.filter(account=>account.losses>0).map(account=>account.seed).slice(0,12),
   chapterOwners:ranks.filter(rank=>rank.style===style&&rank.route===route)
    .map(rank=>({layer:rank.rankLayer,acquired:rank.acquiredOwners,missing:rank.missingSeeds.length})),
   bands:summary.map(x=>({band:x.band,reached:x.reached,unreached:x.unreached,
