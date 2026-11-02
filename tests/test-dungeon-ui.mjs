@@ -25,6 +25,7 @@ try{
  assert.equal($('backupSetupDialog').open,true,'new adventurer first chooses backup or local save');
  assert.equal($('nameDialog').open,false,'backup setup must happen before name entry');
  await $('setupWithoutBackup').fire('click');
+ await wait(()=>$('nameDialog').open,'local-only choice waits for saved disconnect');
  assert.equal($('backupSetupDialog').open,false,'local-only choice closes setup');
  assert.equal($('nameDialog').open,true,'new adventurer is named in a dialog');
  assert.equal($('nameDialog').dataset.dungeonFrame,'fixed','required naming uses a no-close frame');

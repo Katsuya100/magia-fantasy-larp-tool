@@ -127,6 +127,7 @@ try{
  assert.equal($('backupSetupDialog').open,true,'reset returns to backup choice before new adventurer naming');
  assert.equal($('nameDialog').open,false,'reset waits for backup choice before naming');
  await $('setupWithoutBackup').fire('click');
+ await wait(()=>$('nameDialog').open);
  assert.equal($('nameDialog').open,true,'local-only choice opens a fresh adventurer naming dialog');
  console.log('PASS confirmed magic-stone upgrades, dialog actions and irreversible profile reset');
 }finally{env.restore();}
