@@ -10,7 +10,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 import {runJourney,approvedGoals,ECONOMY_VERSION} from './simulate-dungeon-journeys.mjs';
-import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,RANK_LEGACY_RESERVE_PERCENT} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,RANK_LEGACY_RESERVE_PERCENT,RANK_SUPERIOR_BOSS_OFFSET_LAYERS} from '../assets/js/dungeon-ranks.mjs';
 
 assert.equal(approvedGoals.strictSamples,256,'fixed owner denominator');
 assert.equal(approvedGoals.bands.length,10,'all ten authored bands');
@@ -150,33 +150,29 @@ for(const style of ['A','B','C'])for(const route of ['short','long']){
  const summary=summarizeJourneyStrength(policy,seeds);
  policy.strengthSummary=summary;
  for(const band of approvedGoals.bands){
+  // A higher rank legitimately unlocks every lower start floor. Count
+  // banked superior-boss awards only, never provisional loot after a loss.
+  const credited=account=>account.rankAudit.some(row=>row.eligible&&row.banked&&
+   Number.isSafeInteger(row.awardedRankLayer)&&row.awardedRankLayer>=band.to);
   const checks=accounts.flatMap(owner=>owner.rankAudit)
-   .filter(row=>row.layer===band.to);
-  const eligible=checks.filter(row=>row.eligible).length;
-  const banked=checks.filter(row=>row.banked&&row.eligible).length;
-  // Only real, returned, banked badge awards count; repeated boss checks
-  // are never mistaken for additional owners.
-  const acquiredOwners=accounts.filter(account=>account.rankAudit.some(row=>
-   row.layer===band.to&&row.eligible&&row.banked&&
-   (row.hpPercent>=RANK_LEGACY_RESERVE_PERCENT&&row.mpPercent>=RANK_LEGACY_RESERVE_PERCENT||
-   row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&row.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&
-   row.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS))).length;
-  const missingSeeds=accounts.filter(account=>!account.rankAudit.some(row=>
-   row.layer===band.to&&row.eligible&&row.banked&&
-   (row.hpPercent>=RANK_LEGACY_RESERVE_PERCENT&&row.mpPercent>=RANK_LEGACY_RESERVE_PERCENT||
-   row.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&row.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&
-   row.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS))).map(account=>account.seed);
+   .filter(row=>row.layer===band.to||row.layer===band.to+RANK_SUPERIOR_BOSS_OFFSET_LAYERS);
+  const eligible=checks.filter(row=>row.eligible&&row.awardedRankLayer>=band.to).length;
+  const banked=checks.filter(row=>row.banked&&row.eligible&&row.awardedRankLayer>=band.to).length;
+  const acquiredOwners=accounts.filter(credited).length;
+  const missingSeeds=accounts.filter(account=>!credited(account)).map(account=>account.seed);
   const earnedBossRounds=accounts.flatMap(account=>account.rankAudit)
-   .filter(row=>row.layer===band.to&&row.eligible&&row.banked).map(row=>row.bossRounds);
+   .filter(row=>row.awardedRankLayer>=band.to&&row.eligible&&row.banked)
+   .map(row=>row.bossRounds);
   ranks.push({style,route,chapter:band.from+'-'+band.to,rankLayer:band.to,
    eligible,banked,checks:checks.length,acquiredOwners,missingSeeds,
    earlyNormalFights:RANK_EARLY_NORMAL_FIGHTS,earlyFastWinsRequired:RANK_EARLY_FAST_WINS_REQUIRED,
    finalBossMaxRounds:RANK_FINAL_BOSS_MAX_ROUNDS,legacyBothHpMpPercentAtLeast:RANK_LEGACY_RESERVE_PERCENT,
+   higherBossReturnOffsetLayers:RANK_SUPERIOR_BOSS_OFFSET_LAYERS,
    earnedBossRounds:{oneTurn:earnedBossRounds.filter(turns=>turns===1).length,
     twoToThreeTurns:earnedBossRounds.filter(turns=>turns>=2&&turns<=3).length,
     fourOrMoreTurns:earnedBossRounds.filter(turns=>turns>=4).length},
-   moment:'ACTUAL_BOSS_KILL_BEFORE_VICTORY_RECOVERY',
-   status:'INDEPENDENT_RANK_LEGACY_OR_MASTERY'});
+   moment:'ACTUAL_BOSS_KILL_BEFORE_VICTORY_RECOVERY_THEN_RETURN',
+   status:'INDEPENDENT_RANK_LEGACY_OR_MASTERY_OR_RETURNED_SUPERIOR_BOSS'});
  }
  policies.push(policy);
  const firstEntryFile='dungeon-first-entry-v1-'+style+'-'+route+'.json';
