@@ -57,6 +57,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return {ready:false};
  }
  let client=null,drive=null,accessToken='',expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
+ let lastVerifiedLocalSavedAt=null,syncIndicatorVisible=false;
  let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false,initialRetryQueued=false;
  let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,renewalPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
  let disconnectPending=false,disconnectPromise=null,resolveDisconnect=null;
@@ -104,6 +105,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const localOnlyButton=doc?.getElementById('setupWithoutBackup');
  const syncingIcons=[doc?.getElementById('backupSetupSpinner'),doc?.getElementById('googleDriveSpinner')];
  function setSyncing(active){
+  syncIndicatorVisible=Boolean(active);
   for(const spinner of syncingIcons)if(spinner)spinner.hidden=!active;
   const activity=doc?.getElementById('driveSyncActivity');
   if(activity)activity.hidden=!active;
@@ -141,9 +143,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(rollbackWarning)rollbackWarning.hidden=true;
   if(message)show(message);
  }
- async function syncedPresentation(){
+ async function syncedPresentation(savedAt){
   await saveDriveSyncIntent(db,true);
   if(disconnectPending)return;
+  if(Number.isFinite(Number(savedAt)))lastVerifiedLocalSavedAt=Number(savedAt);
   connectedPresentation();
   show('GoogleDrive同期済み');
  }
@@ -290,6 +293,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   }
  }
  async function restore(remote,file,{expectedLocal=null}={}){
+  if(!syncIndicatorVisible){setSyncing(true);show('同期中…');}
   if(!remote.valid)throw Error('破損したDriveバックアップは復元できません。');
   ensureCurrent(activeSyncEpoch);
   // The selected source was compared against this particular local snapshot.
@@ -320,6 +324,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return 'restored';
  }
  async function upload(snapshot,file,{allowInitial=false}={}){
+  if(!syncIndicatorVisible){setSyncing(true);show('同期中…');}
   // The exact serialized, inspected bytes are uploaded; do not recompute
   // a new checksum from damaged IndexedDB data after verification.
   ensureCurrent(activeSyncEpoch);
@@ -357,7 +362,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    show('同期中…');
    return 'deferred';
   }
-  await syncedPresentation();
+  await syncedPresentation(snapshot.savedAt);
   return 'ready';
  }
  async function sync(initial=false){
@@ -366,11 +371,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(Date.now()>=expires){expireConnection();return 'deferred';}
   busy=true;
   activeSyncEpoch=connectionEpoch;
-  setSyncing(true);
-  show('同期中…');
   let result='deferred';
   try{
    let local=await readDungeonSnapshot(db);
+   // A read-only cloud recheck does not represent a new save.
+   if(initial||lastVerifiedLocalSavedAt===null||local.savedAt!==lastVerifiedLocalSavedAt){
+    setSyncing(true);show('同期中…');
+   }
    let verification=await verifyLocalSnapshot(local);
    const files=await drive.list();
    ensureCurrent(activeSyncEpoch);
@@ -416,7 +423,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      const localHash=await snapshotHash(await serializeDungeonSnapshot(local));
      if(localHash===remote.hash){
       await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
-      await syncedPresentation();
+      await syncedPresentation(local.savedAt);
       return 'ready';
      }
      return await upload(local,file,{allowInitial:true});
@@ -513,7 +520,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt});
    if(decision==='synced'){
     await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
-    await syncedPresentation();
+    await syncedPresentation(local.savedAt);
     return 'ready';
    }
    if(decision==='download')return await restore(remote,file,{expectedLocal:local});
