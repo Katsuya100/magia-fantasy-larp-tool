@@ -564,7 +564,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     again=false;
     const retryInitial=initial||initialRetryQueued;
     if(retryInitial)initialRetryQueued=true;
-    show('同期中…');
+    // A queued read-only recheck must not flash a save-in-progress label.
+    if(syncIndicatorVisible)show('同期中…');
     queueMicrotask(()=>{
      if(drive&&!stopped&&!restoring){
       void sync(retryInitial).then(outcome=>{if(retryInitial)completeInitialCheck(outcome);});
