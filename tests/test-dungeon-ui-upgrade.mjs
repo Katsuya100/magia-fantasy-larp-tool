@@ -69,6 +69,7 @@ try{
  assert.equal($('upgradeHint').textContent,'','unnecessary upgrade power/rate explanation is not displayed');
  assert.equal($('upgradeFeedback').textContent,'','empty feedback leaves no placeholder');
  assert.match(css,/\.magic-upgrade-controls p:empty\{display:none\}/,'empty hint and feedback do not occupy space');
+ assert.match(css,/\.magic-upgrade-controls\{[^}]*margin:12px 0 10px;padding-bottom:8px/,'space below the upgrade controls stays compact');
  assert.doesNotMatch(css,/#upgradeFeedback\{min-height:/,'empty feedback has no reserved height');
  assert.equal($('magicDetailsDialog').dataset.enhancing,'true','ritual begins');
  const originalMpMarkup='<dt>MP</dt><dd>'+mpCost(100)+'</dd>';
