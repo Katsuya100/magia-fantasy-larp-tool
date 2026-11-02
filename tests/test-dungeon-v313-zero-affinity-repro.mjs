@@ -64,9 +64,21 @@ try{
  assert.deepEqual(echoes,[]);
  const hit={...missed,amount:5};
  const kept=Echo.captureCombatFxEcho(arena,720);
- assert.equal(Echo.discardCombatEchoesOnMiss([hit],[kept]),false,
+ assert.equal(Echo.discardCombatEchoesOnMiss([hit],[kept],arena),false,
   'normal hits preserve their existing visual tail');
  kept.dispose();
+
+ // At the next lethal attack, a ghost created by an earlier turn is not
+ // present in activeEchoes; it still must be removed from the arena.
+ const priorFatalEcho=Echo.captureCombatFxEcho(arena,720);
+ priorFatalEcho.reveal();
+ const priorFatalNode=nodes.at(-1);
+ const thisTurnEchoes=[];
+ Echo.disposeCombatEchoes(arena,thisTurnEchoes);
+ assert.equal(priorFatalNode.removed,true,
+  'REPRO: fatal transition cannot retain prior-turn RESIST in the arena');
+ assert.match(app,/onFatal:side=>\{[\s\S]*?disposeCombatEchoes\(\$\('battleArena'\),activeEchoes\)/,
+  'real fatal path calls the same cleanup as a missed spell');
 }finally{
  globalThis.document=oldDoc;globalThis.setTimeout=oldSetTimeout;globalThis.clearTimeout=oldClearTimeout;
 }
