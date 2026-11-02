@@ -1,4 +1,4 @@
-import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261102.313';
+import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261102.320';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
 import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto,verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs';
 import {prepareProfilePhotoRefs,restoreProfilePhotoRefs} from './dungeon-profile-photo-refs.mjs';
@@ -437,3 +437,6 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{exp
 }
 export const getCloudSyncState=db=>request(db,'settings','readonly',s=>s.get('cloudSyncState'));
 export const saveCloudSyncState=(db,state)=>request(db,'settings','readwrite',s=>s.put(state,'cloudSyncState'),{silent:true});
+// Persist the user's Drive sync choice separately from the expiring OAuth cookie.
+export const getDriveSyncIntent=db=>request(db,'settings','readonly',s=>s.get('driveSyncIntent'));
+export const saveDriveSyncIntent=(db,enabled)=>request(db,'settings','readwrite',s=>s.put(Boolean(enabled),'driveSyncIntent'),{silent:true});

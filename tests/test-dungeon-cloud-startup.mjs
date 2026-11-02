@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {parseCsv} from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {openStore,getProfile,saveProfile,putCircle,readDungeonSnapshot,saveCloudSyncState,clearDungeonData} from '../assets/js/dungeon-store.mjs';
+import {openStore,getProfile,saveProfile,putCircle,readDungeonSnapshot,saveCloudSyncState,getDriveSyncIntent,saveDriveSyncIntent,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import {verifyLocalSnapshot} from '../assets/js/dungeon-cloud-integrity.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {initDungeonCloudSync} from '../assets/js/dungeon-cloud-sync.mjs';
@@ -350,6 +350,7 @@ try{
  const detachedController=start(detachedDb,detachedUi,detachedDrive.fetchImpl,{onInitialReady:()=>detachedReady++});
  await connect(detachedUi);
  await wait(()=>detachedReady===1,'disconnect test starts with a verified backup');
+ assert.equal(await getDriveSyncIntent(detachedDb),true,'verified Drive sync persists intent beyond cookie lifetime');
  assert.equal(detachedUi.get('disconnectGoogleDrive').hidden,false,'disconnect becomes available on verified connection');
  const storedBeforeDetach=await readDungeonSnapshot(detachedDb),remoteBeforeDetach=detachedDrive.current;
  const uploadedBeforeDetach=detachedDrive.uploads;
@@ -362,6 +363,7 @@ try{
  assert.equal(detachedUi.get('googleDriveSpinner').hidden,true,'disconnect hides the active spinner');
  assert.equal(detachedUi.get('driveSyncActivity').hidden,true,'disconnect hides the global spinner');
  assert.match(detachedUi.status.textContent,/同期を解除しました/);
+ await wait(async()=>await getDriveSyncIntent(detachedDb)===false,'manual unlink persists opt-out before next startup');
  assert.deepEqual(await readDungeonSnapshot(detachedDb),storedBeforeDetach,'disconnect does not delete or modify local game data');
  assert.equal(detachedDrive.current,remoteBeforeDetach,'disconnect does not delete or overwrite Drive backup');
  const detachedProfile=await getProfile(detachedDb);
@@ -375,6 +377,7 @@ try{
  await wait(()=>!refreshDetachedUi.button.disabled,'refreshed local-only view can reconnect');
  assert.equal(refreshDetachedUi.button.hidden,false,'refresh stays disconnected');
  assert.equal(refreshDetachedUi.get('disconnectGoogleDrive').hidden,true);
+ assert.equal(refreshDetachedUi.get('googleDriveExpiredDialog').open,false,'manual unlink must not trigger an expiry dialog on reload');
  assert.equal(detachedDrive.uploads,uploadedBeforeDetach,'refresh never uploads while disconnected');
  await connect(refreshDetachedUi,'connectGoogleDrive');
  await wait(()=>refreshDetachedUi.status.textContent==='GoogleDrive同期済み','manual reconnect resumes verified backup');
@@ -929,6 +932,7 @@ try{
  assert.equal(auth.requests.length,loginsBeforeRefresh,'page refresh needs no OAuth popup while the token is valid');
  assert.equal(refreshUi.status.textContent,'GoogleDrive同期済み');
  assert.equal(refreshUi.button.hidden,true);
+ assert.equal(refreshUi.get('googleDriveExpiredDialog').open,false,'valid cookie resumes without an expiry modal');
  assert.ok(firstDrive.downloads>beforeRefreshDownloads,'cookie reloading still verifies the remote backup');
  assert.deepEqual(firstDrive.operations,['POST','PATCH','PATCH'],'refresh must not create or overwrite a matching backup');
 
@@ -964,9 +968,32 @@ try{
  start(lostTokenDb,lostTokenUi,lostTokenDrive.fetchImpl);
  await wait(()=>lostTokenUi.status.textContent.includes('再接続'),'last-sync metadata should prompt reconnect');
  assert.equal(lostTokenUi.button.hidden,false,'the connection button remains available after reload');
+ await wait(()=>lostTokenUi.get('googleDriveExpiredDialog').open,'legacy verified backup with browser-expired cookie prompts reconnect');
+ assert.equal(lostTokenUi.get('googleDriveExpiredDialog').showModalCount,1,'missing cookie opens expiry modal once per startup');
  assert.notEqual(lostTokenUi.status.textContent,'GoogleDrive同期済み');
  assert.ok(!lostTokenUi.status.textContent.includes('同期済み'),'do not label a tokenless session synced');
  assert.deepEqual(lostTokenDrive.operations,[],'without OAuth, reload cannot touch Drive');
+
+ // A persisted opt-out takes precedence over historical backup metadata.
+ await saveDriveSyncIntent(lostTokenDb,false);
+ const optedOutUi=fakeUi(),optedOutDrive=remoteApi(firstDrive.current);
+ start(lostTokenDb,optedOutUi,optedOutDrive.fetchImpl);
+ await wait(()=>!optedOutUi.get('setupGoogleDrive').disabled,'manual opt-out startup is ready');
+ assert.equal(optedOutUi.get('googleDriveExpiredDialog').open,false,'opt-out does not show expiry, even with old sync metadata');
+ assert.deepEqual(optedOutDrive.operations,[]);
+
+ // An actively connected account must prompt again on a new page when the
+ // browser has deleted its expired cookie, not merely display "not connected".
+ const noCookieUi=fakeUi(),noCookieDrive=remoteApi(firstDrive.current);
+ start(firstDb,noCookieUi,noCookieDrive.fetchImpl);
+ await wait(()=>noCookieUi.get('googleDriveExpiredDialog').open,'verified account with missing cookie opens the dialog on startup');
+ assert.match(noCookieUi.status.textContent,/認証が切れました/);
+ assert.equal(noCookieUi.get('googleDriveExpiredDialog').showModalCount,1);
+ assert.deepEqual(noCookieDrive.operations,[],'no expired token is used for network calls');
+ noCookieUi.get('googleDriveExpiredDialog').querySelector('[data-action="reconnect"]').click();
+ await wait(()=>noCookieUi.status.textContent==='GoogleDrive同期済み','startup expiry dialog reconnects and validates Drive');
+ assert.equal(noCookieUi.get('googleDriveExpiredDialog').open,false);
+ assert.equal(await getDriveSyncIntent(firstDb),true,'reconnecting restores the persisted sync intent');
 
  // A genuinely corrupt signed snapshot cannot bypass the startup integrity
  // gate through "あとで": unlinking is allowed, starting that save is not.
