@@ -493,19 +493,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const losesRelics=preferred==='download'
     ?losesDiscovered(local.profile,remote.data.profile)
     :preferred==='upload'&&losesDiscovered(remote.data.profile,local.profile);
-   if(losesRelics){
-    const choice=await chooseCloud({local,remote:remote.data,
-     allowLocal:verification.status==='valid',canStartLocal:verification.status==='valid'});
-    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
-    if(choice==='overwrite'&&verification.status==='valid')return await upload(local,file,{allowInitial:true});
-    return result;
-   }
-
    // Case 4: same play. Resolve actual progress before image repair;
    // a newer timestamp must never beat a more advanced adventurer.
    if(verification.status==='badImages'){
-    if(decideCloudSync({file,localProfile:local.profile,remoteProfile:remote.data.profile,
-     localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt})==='download')
+    // Preserve local unique discoveries; repair photos before offering a source choice.
+    if(!losesRelics&&preferred==='download')
      return await restore(remote,file,{expectedLocal:local});
     const restored=[];
     for(const id of verification.badImageIds){
@@ -538,6 +530,15 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     show('端末セーブを検証できません。同期を停止しました。');
     return result;
    }
+   // A photo-repairable local save must retain the keep-local option.
+   if(losesRelics){
+    const choice=await chooseCloud({local,remote:remote.data,
+     allowLocal:verification.status==='valid',canStartLocal:verification.status==='valid'});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
+    if(choice==='overwrite'&&verification.status==='valid')return await upload(local,file,{allowInitial:true});
+    return result;
+   }
+
    const localText=await serializeDungeonSnapshot(local);
    const localHash=await snapshotHash(localText);
    ensureCurrent(activeSyncEpoch);

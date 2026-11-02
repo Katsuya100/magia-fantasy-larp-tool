@@ -919,6 +919,43 @@ try{
  const restoredDiscoveries=(await getProfile(reverseDb)).collection;
  assert.equal(relicIds.filter(id=>Number(restoredDiscoveries[id])>0).length,220);
 
+ // Muse #14: a corrupt local photo must be repaired before the conflict
+ // chooser, so the player can still preserve all locally found species.
+ const photoFactory=fakeIndexedDB(),photoDb=await openStore(photoFactory);
+ const photoProfile=await getProfile(photoDb);
+ photoProfile.name='写真修復と図鑑保持';photoProfile.level=30;
+ photoProfile.collection=Object.fromEntries(relicIds.map(id=>[id,1]));
+ await saveProfile(photoDb,photoProfile);
+ await putCircle(photoDb,{id:'muse-discovery-photo',name:'再現写真',
+  image:new Blob(['original-photo'],{type:'image/png'}),registeredAt:1,
+  basePower:500,analysis:{role:'attack',attribute:'flame',power:500},revealed:true});
+ const photoBefore=await readDungeonSnapshot(photoDb);
+ const photoDrive=remoteApi(await serializeDungeonSnapshot({...photoBefore,
+  profile:{...photoBefore.profile,level:31,
+   collection:Object.fromEntries(relicIds.slice(0,216).map(id=>[id,1]))},
+  savedAt:photoBefore.savedAt+1000}));
+ const storedCircles=photoFactory.databases.get('magia-dungeon-v1').get('circles');
+ storedCircles.set('muse-discovery-photo',{...storedCircles.get('muse-discovery-photo'),
+  image:new Blob(['damaged-photo'],{type:'image/png'})});
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(photoDb))).status,'badImages',
+  'only the local photo proof is damaged, not the collection');
+ const photoUi=fakeUi();
+ let photoRestores=0;
+ start(photoDb,photoUi,photoDrive.fetchImpl,{onRestore:()=>photoRestores++});
+ await connect(photoUi);
+ await wait(()=>photoUi.get('googleDriveConflictDialog').open||photoRestores>0,
+  'repairable local discoveries prompt a source choice');
+ assert.equal(photoRestores,0,'no automatic restore loses four locally discovered species');
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(photoDb))).status,'valid',
+  'remote image repairs the local photo before the collection chooser');
+ const keepLocal=photoUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]');
+ assert.equal(keepLocal.disabled,false,'the repaired local source remains selectable');
+ keepLocal.click();
+ await wait(()=>photoDrive.uploads===1,'keeping the local discovered species updates Drive');
+ const afterPhotoRepair=deserializeDungeonSnapshot(photoDrive.current).profile.collection;
+ assert.equal(relicIds.filter(id=>Number(afterPhotoRepair[id])>0).length,220,
+  'the chosen repaired source retains all 220 discovered species');
+
  // Perfectly tied progression and timestamp may use either record.
  // The implementation picks local and never asks for a redundant choice.
  const equalDb=await newDb(),equalUi=fakeUi();
