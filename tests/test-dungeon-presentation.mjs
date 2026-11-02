@@ -293,7 +293,7 @@ assert.match(cloudSync,/requestController=null; \/\/ No abort: all in-flight req
 assert.match(cloudSync,/\[localButton,'click',\(\)=>finish\('overwrite'\)\]/,'the selected player is an explicit overwrite decision without a second obsolete dialog');
 assert.match(cloudSync,/connectionEpoch\+\+;/,'old connection callbacks are invalidated');
 assert.match(cloudSync,/if\(!isCurrent\(activeSyncEpoch\)\)return 'deferred';/,'stale network results cannot restore connected UI');
-assert.match(cloudSync,/clearAuthCookie\(\);\s*drive=null;expires=0;validatedDrive=null;/,'unlink removes token while preserving data');
+assert.match(cloudSync,/clearAuthCookie\(\);\s*accessToken='';drive=null;expires=0;validatedDrive=null;/,'unlink removes in-memory credentials while preserving data');
 assert.match(cloudSync,/setSyncing\(false\);\s*\}\s*\}\s*\}/,'busy spinner is cleared once the pending queue is drained');
 assert.doesNotMatch(page,/起動・再接続時は保存日時で後勝ち判定/,'implementation jargon is not shown to users');
 assert.match(css,/\.profile-data-actions \.backup-sync-warning\{[\s\S]*?color:#ff7777/,'backup loss and rollback text remains visibly red');
@@ -303,14 +303,17 @@ assert.match(app,/load\(\)\.catch\(failStartup\)/,'startup errors remain visible
 const store=await read('assets/js/dungeon-store.mjs');
 const core=await read('assets/js/dungeon-core.mjs');
 const picker=await read('assets/js/dungeon-preparation-ui.mjs');
+const sharedModuleVersion=app.match(/from '\.\/dungeon-core\.mjs\?v=(\d{8}\.\d+)'/)?.[1];
+assert.ok(sharedModuleVersion,'gameplay has one stable shared core version');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- assert.equal(specifier[2],specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+currentRelease,'stale entry module '+specifier[1]);
+ const expected=specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+(specifier[1]==='dungeon-cloud-sync.mjs'?currentRelease:sharedModuleVersion);
+ assert.equal(specifier[2],expected,'OAuth module cache bust must preserve shared gameplay module identity: '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
-assert.ok(store.includes("from './dungeon-core.mjs?v="+currentRelease+"'"),
- 'storage uses the current, cache-busted XP core');
-assert.ok(cloudSync.includes("from './dungeon-store.mjs?v="+currentRelease+"'"),
- 'Drive sync and gameplay share one cache-busted save module');
+assert.ok(store.includes("from './dungeon-core.mjs?v="+sharedModuleVersion+"'"),
+ 'storage and gameplay must share the same XP core');
+assert.ok(cloudSync.includes("from './dungeon-store.mjs?v="+sharedModuleVersion+"'"),
+ 'Drive sync and gameplay must share one save module');
 assert.match(picker,/from '\.\/dungeon-loadout\.mjs'/);
 assert.match(picker,/itemEffectIcons\(value\)/,'preparation item tiles share battle/reward effect formatting');
 assert.doesNotMatch(picker,/picker-equipped|✓ 選択中/,'circle picker no longer renders a selected badge');
