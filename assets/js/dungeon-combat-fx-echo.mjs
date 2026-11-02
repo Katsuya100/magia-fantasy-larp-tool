@@ -15,7 +15,9 @@ export function captureCombatFxEcho(arena,visualDuration){
   copy.style.cssText='left:'+actor.offsetLeft+'px;top:'+actor.offsetTop+'px;width:'+actor.offsetWidth+'px;height:'+actor.offsetHeight+'px';
   const fx=actor.querySelector('.combatant-fx')?.cloneNode(true);
   if(fx){
-   for(const node of fx.querySelectorAll('[id]'))node.removeAttribute('id');
+   // Preserve the outgoing particles, not the obsolete healing/damage text.
+   // Its old caption would otherwise overlap the next resolved HP snapshot.
+   for(const node of fx.querySelectorAll('[id]')){node.removeAttribute('id');node.textContent='';}
    copy.append(fx);
   }
   echo.append(copy);
