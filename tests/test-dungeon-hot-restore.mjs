@@ -17,7 +17,9 @@ const csv=async name=>parseCsv(await readFile(new URL('../assets/data/dungeon-'+
 const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','floors','player-base'].map(csv));
 configure({balance,levels,floors,playerBase});
 const localFactory=fakeIndexedDB(),localDb=await openStore(localFactory);
-await getProfile(localDb);
+const formerProfile=await getProfile(localDb);
+formerProfile.magicStones=15;
+await saveProfile(localDb,formerProfile);
 // A stale local circle must disappear when a different owned backup is restored.
 await putCircle(localDb,{id:'obsolete-local-circle',name:'古い端末の魔法陣',image:new Blob(['old-local'],{type:'image/png'}),registeredAt:0,
  analysis:{attribute:'flame',role:'attack',power:681},revealed:true});
@@ -27,8 +29,8 @@ try{
  const get=id=>browser.document.getElementById(id);
  await wait(()=>get('startupMask').hidden===true,'game starts with a local-only blank save');
  assert.equal(get('backupSetupDialog').open,true,'backup setup is visible before an initial Drive restore');
- await browser.document.click({dataset:{remove:'obsolete-local-circle'},closest(){return this;}});
- assert.equal(get('circleActionDialog').open,true,'an old circle action is pending before restore');
+ await browser.document.click({dataset:{upgrade:'obsolete-local-circle'},closest(){return this;}});
+ assert.equal(get('circleActionDialog').open,true,'stale pending upgrade is visible before Drive restoration');
 
  const driveDb=await openStore(fakeIndexedDB());
  const remoteProfile=await getProfile(driveDb);
@@ -46,9 +48,15 @@ try{
 
  assert.equal(get('backupSetupDialog').open,false,'backup setup closes without a page reload');
  assert.equal(get('circleActionDialog').open,false,'restoring ownership closes the old circle action dialog');
+ const restoredBefore=await getProfile(localDb);
  await get('confirmCircleAction').fire('click');
+ const restoredAfter=await getProfile(localDb);
+ assert.equal(restoredAfter.magicStones,restoredBefore.magicStones,
+  'stale pending upgrade cannot spend stones of the restored account');
+ assert.deepEqual(restoredAfter.circleUpgrades||{},restoredBefore.circleUpgrades||{},
+  'stale pending upgrade cannot create an unowned spell upgrade');
  assert.deepEqual((await allCircles(localDb)).map(circle=>circle.id),['drive-magic'],
-  'confirming a stale pre-restore deletion cannot remove a newly owned spell');
+  'stale upgrade must not restore a previous account circle');
 
  await browser.document.click({dataset:{upgrade:'obsolete-local-circle'},closest(){return this;}});
  assert.equal(get('circleActionDialog').open,false,'stale upgrade click cannot target an unowned circle');
