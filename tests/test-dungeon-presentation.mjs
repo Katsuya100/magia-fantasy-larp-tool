@@ -306,7 +306,9 @@ const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 const sharedModuleVersion=app.match(/from '\.\/dungeon-core\.mjs\?v=(\d{8}\.\d+)'/)?.[1];
 assert.ok(sharedModuleVersion,'gameplay has one stable shared core version');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- const expected=specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+(specifier[1]==='dungeon-cloud-sync.mjs'?currentRelease:sharedModuleVersion);
+ // Only stateless, independently refreshed visual/sync modules use this release.
+ const refreshedModules=new Set(['dungeon-cloud-sync.mjs','dungeon-combat-fx-echo.mjs']);
+ const expected=specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+(refreshedModules.has(specifier[1])?currentRelease:sharedModuleVersion);
  assert.equal(specifier[2],expected,'OAuth module cache bust must preserve shared gameplay module identity: '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);

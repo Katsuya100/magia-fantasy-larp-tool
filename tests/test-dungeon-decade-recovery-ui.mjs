@@ -68,6 +68,41 @@ try{
   assert.ok(saved.run.log.some(line=>line.startsWith('自分：ダメージ ')),'spell executes successfully despite normal post-victory MP recovery');
  }finally{env.restore();}
 
+ // Muse unverified: the checkpoint "collection" choice must award a real
+ // identified relic, keep it pending until return, and then persist its discovery.
+ const {factory:collectionFactory,db:collectionDb,profile:collectionProfile}=await createFixture('祭壇のコレクション');
+ collectionProfile.run={
+  floor:50,slotIds:[...collectionProfile.slots],
+  hero:G.makeUnit(collectionProfile.base,collectionProfile.level,{},spells,'player'),
+  enemy:G.fromEnemy(enemies.find(x=>x.id==='boss_l010'),19),enemyName:'十層ボス',
+  carry:[null,null,null,null,null],loot:[],xp:0,usedItems:0,
+  bonusClaimed:false,log:[],stage:'checkpoint'
+ };
+ await saveProfile(collectionDb,collectionProfile);
+ const collectionEnv=fakeDungeonBrowser({factory:collectionFactory}),c=id=>collectionEnv.document.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=decade-collection-muse');
+  await wait(()=>c('checkpoint').hidden===false,'collection choice checkpoint loaded');
+  await c('bonus-collection').fire('click');
+  const pending=await getProfile(collectionDb);
+  assert.equal(pending.run.bonusClaimed,true,'collection benefit can only be claimed once');
+  const bonus=pending.run.loot.find(item=>item.type==='collection');
+  assert.ok(bonus?.id,'the selected reward has a real collection ID');
+  assert.equal(Number(pending.collection[bonus.id]||0),0,
+   'a collection bonus is not banked before returning');
+  assert.match(c('checkpointInfo').textContent,/コレクション.*発見/);
+  await c('returnHome').fire('click');
+  await wait(async()=>!(await getProfile(collectionDb)).run,'return banks the collection reward');
+  const returned=await getProfile(collectionDb);
+  assert.equal(returned.collection[bonus.id],1,'the actual collection item is saved on return');
+  assert.match(c('collectionProgress').innerHTML,/<strong>1 \/ \d+<\/strong>/,
+   'the collection progress header counts the returned reward immediately');
+  assert.equal((c('collectionGrid').innerHTML.match(/relic-card discovered/g)||[]).length,1,
+   'the discovery grid and summary use the same current collection after return');
+  assert.equal(c('returnSceneTitle').textContent,'コレクション報酬',
+   'the player sees the earned collection on the return screen');
+ }finally{collectionEnv.restore();}
+
  // Existing players may already have a saved undefined/NaN MP from the faulty choice.
  // On app startup, restore only invalid MP; never overwrite a legitimate zero.
  const {factory:oldFactory,db:oldDb,profile:oldProfile}=await createFixture('既存探索の修復');
