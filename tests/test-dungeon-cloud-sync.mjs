@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {parseCsv,nextXp} from '../assets/js/dungeon-core.mjs';
+import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,saveProfile,putCircle,allCircles,readDungeonSnapshot,replaceDungeonSnapshot,saveCloudSyncState,getCloudSyncState,onDungeonDataChange,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {createDungeonDrive,DRIVE_SCOPE,DriveAuthError} from '../assets/js/dungeon-cloud-drive.mjs';
-import {decideCloudSync,canAutoSyncPlay} from '../assets/js/dungeon-cloud-sync.mjs';
+import {decideCloudSync,compareDungeonProgress,cumulativeDungeonXp,canAutoSyncPlay} from '../assets/js/dungeon-cloud-sync.mjs';
 import {createSuccessorProfile} from '../assets/js/dungeon-permadeath.mjs';
 import {verifyLocalSnapshot,quickFingerprint} from '../assets/js/dungeon-cloud-integrity.mjs';
+
+const csv=async name=>parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
+const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','floors','player-base'].map(csv));
+configure({balance,levels,floors,playerBase});
 
 const db=await openStore(fakeIndexedDB());
 let changes=0;
@@ -70,9 +77,42 @@ assert.equal(decideCloudSync({file,localHash:'same',remoteHash:'same'}),'synced'
 assert.equal(decideCloudSync({file,localHash:'h',remoteHash:'h'}),'synced');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:9}),'upload');
 assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:9,remoteSavedAt:10}),'download');
-assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:10}),'choose','equal timestamps with differing bytes require a player choice');
-assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:0,remoteSavedAt:10}),'choose','unknown local timestamp cannot silently lose a player save');
-assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:0}),'choose','unknown Drive timestamp cannot silently overwrite the backup');
+assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:10}),'upload','exactly tied progress and timestamps prefer local without a chooser');
+assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:0,remoteSavedAt:10}),'upload','unknown timestamp only breaks a full progress tie, local fallback');
+assert.equal(decideCloudSync({file,localHash:'a',remoteHash:'b',localSavedAt:10,remoteSavedAt:0}),'upload','unknown timestamp never beats known progress');
+// EXP is banked as the remainder after each level; derive actual lifetime
+// earned EXP for this character from the game's level thresholds.
+assert.equal(cumulativeDungeonXp({level:1,xp:7}),7);
+assert.equal(cumulativeDungeonXp({level:2,xp:7}),nextXp(1)+7);
+assert.equal(cumulativeDungeonXp({level:3,xp:12}),nextXp(1)+nextXp(2)+12);
+const score=(localProfile,remoteProfile,localSavedAt=1,remoteSavedAt=999)=>
+ decideCloudSync({file,localHash:'local',remoteHash:'remote',
+  localProfile,remoteProfile,localSavedAt,remoteSavedAt});
+const rankHigh={adventurerRank:50,level:1,xp:0,deepestReturnedLayer:0,deepestReachedLayer:0};
+const rankLow={adventurerRank:40,level:120,xp:900000,deepestReturnedLayer:100,deepestReachedLayer:120};
+assert.equal(score(rankHigh,rankLow),'upload','higher adventurer badge wins even when every other field and timestamp is lower');
+assert.equal(score(rankLow,rankHigh),'download','the badge takes precedence in either direction');
+const xpHigh={adventurerRank:30,level:25,xp:3,deepestReturnedLayer:10,deepestReachedLayer:12};
+const xpLow={adventurerRank:30,level:24,xp:0,deepestReturnedLayer:100,deepestReachedLayer:120};
+assert.ok(cumulativeDungeonXp(xpHigh)>cumulativeDungeonXp(xpLow));
+assert.equal(score(xpHigh,xpLow),'upload','cumulative level-earned EXP outranks floor progression and timestamp');
+assert.equal(score(xpLow,xpHigh),'download','higher cumulative EXP on Drive wins despite an older timestamp');
+const returnedHigh={...xpHigh,deepestReturnedLayer:30,deepestReachedLayer:31};
+const returnedLow={...xpHigh,deepestReturnedLayer:20,deepestReachedLayer:100};
+assert.equal(score(returnedHigh,returnedLow),'upload','returned layer outranks reached layer and save time');
+assert.equal(score(returnedLow,returnedHigh),'download');
+const reachedHigh={...xpHigh,deepestReturnedLayer:20,deepestReachedLayer:51};
+const reachedLow={...xpHigh,deepestReturnedLayer:20,deepestReachedLayer:50};
+assert.equal(score(reachedHigh,reachedLow),'upload','reached layer outranks savedAt');
+assert.equal(score(reachedLow,reachedHigh),'download');
+assert.equal(score(reachedLow,reachedLow,10,11),'download','timestamp is the final discriminator');
+assert.equal(score(reachedLow,reachedLow,11,10),'upload');
+assert.equal(compareDungeonProgress(reachedLow,reachedLow),0,'matching ranks, cumulative EXP and depths are tied');
+assert.equal(score(reachedLow,reachedLow,10,10),'upload','fully identical progress and timestamp use deterministic local copy');
+assert.equal(score(reachedLow,reachedLow,0,0),'upload','unknown time cannot block a complete progress tie');
+assert.equal(decideCloudSync({file,localHash:'identical',remoteHash:'identical',
+ localProfile:rankLow,remoteProfile:rankHigh}),'synced','byte identical saves never rewrite either side');
+
 const playOne='00000000-0000-4000-8000-000000000001',playTwo='00000000-0000-4000-8000-000000000002';
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playOne}),true,'one play permits automatic backup regardless of adventurer');
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playTwo}),false,'different play IDs prevent automatic overwrite and restore regardless of timestamps');
