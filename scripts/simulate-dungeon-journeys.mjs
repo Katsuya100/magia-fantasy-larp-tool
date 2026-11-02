@@ -803,6 +803,7 @@ const state={seed,style,route,alchemy,random,profile,playerBase,stones:0,ink:0,i
       earlyMobs:mastery?.earlyMobs??0,
       earlyFastWins:mastery?.earlyFastWins??0,
       rankCombat:mastery?{...mastery}:null,
+      awardedRankLayer:badge?.layer??null,
       eligible:Boolean(badge),banked:false,
       failure:badge?null:conditionReady?'PRIOR_RANK_OR_DUPLICATE':'RANK_CONDITIONS_UNMET'});
      if(badge)drops.push(badge);
