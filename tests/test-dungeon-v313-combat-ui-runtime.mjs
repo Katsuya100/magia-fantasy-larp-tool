@@ -56,13 +56,34 @@ try{
  assert.equal(afterDouble.run.stage,'battle');
  assert.equal(afterDouble.run.battleTurns,2,'one buffered tap results in exactly one extra turn');
  assert.ok(afterDouble.run.hero.cooldowns.length>=3);
+ // #12a: a final-turn dizziness makes a real flame attack deal zero; the
+ // resolved status disappears, but the visible hit must still say why.
+ G.addStatus(afterDouble.run.hero,{id:'debuff_storm',kind:'debuff',attribute:'storm',effect:'dizzy',value:.45,turns:1});
+ afterDouble.run.hero.cooldowns[2]=0;
+ const enemyHpBeforeMiss=afterDouble.run.enemy.hp;
+ await saveProfile(db,afterDouble);
+ await app.refreshDungeonViewFromBackup();
+ const randomBeforeMiss=Math.random;
+ Math.random=()=>0;
+ try{
+  const missClick=doc.click(button({cast:'2'}));
+  await wait(()=>get('heroFxText').textContent.includes('🌪目眩'),
+   'a zero-damage flame strike displays the dizziness active during the attack');
+  await missClick;
+ }finally{Math.random=randomBeforeMiss;}
+ const afterMiss=await getProfile(db);
+ assert.equal(afterMiss.run.enemy.hp,enemyHpBeforeMiss,
+  'the 0-hit remains a genuine miss, not hidden damage');
+ assert.ok(!afterMiss.run.hero.statuses.some(s=>s.effect==='dizzy'),
+  'the last-turn dizziness is removed only after combat resolution');
+ assert.ok(afterMiss.run.hero.cooldowns[2]>0,'the missed cast still spends its proper cooldown');
  // An ordinary attack against a weak foe should briefly show WEAK, and the
  // death ceremony must start with all fighter affinity state reset.
- afterDouble.run.enemy.hp=1;
- afterDouble.run.enemy.resists.flame=1.5;
- afterDouble.run.enemy.cooldowns=[0];
- afterDouble.run.hero.cooldowns[2]=0;
- await saveProfile(db,afterDouble);
+ afterMiss.run.enemy.hp=1;
+ afterMiss.run.enemy.resists.flame=1.5;
+ afterMiss.run.enemy.cooldowns=[0];
+ afterMiss.run.hero.cooldowns[2]=0;
+ await saveProfile(db,afterMiss);
  await app.refreshDungeonViewFromBackup();
  const finishing=doc.click(button({cast:'2'}));
  await wait(()=>get('battleCeremony').dataset.event==='enemy-death',
