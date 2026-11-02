@@ -84,7 +84,8 @@ check('First-phase combat input is retained for the last-phase window',()=>{
  assert.equal(LAST_PHASE_OVERLAP_RATIO,.7);
  assert.equal(buffer.offer({kind:'cast',index:0}),false,'no tap before combat');
  // The live game begins animating its first combat phase now.
- // Before the fix, begin() is called only at the final phase.
+ // The original buffer has no start() and cannot accept this early input.
+ buffer.start?.();
  const early={kind:'cast',index:1,floor:49};
  assert.equal(buffer.offer(early),true,'REPRO: first animation phase drops the click');
  const release=buffer.begin(440);
