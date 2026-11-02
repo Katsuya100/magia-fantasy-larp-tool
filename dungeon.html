@@ -565,13 +565,13 @@
         <div id="magicDetailsLegacyTitle" class="legacy-provenance" hidden></div>
         <div class="magic-details-art"><img id="magicDetailsImage" alt="選択した魔法陣の画像"><div id="magicUpgradeEffect" aria-hidden="true"></div></div>
         <button type="button" id="repairSelectedCircleImage" class="subtle" hidden>撮り直す</button>
-        <dl id="magicDetailsStats" class="magic-details-stats"></dl>
         <div class="magic-upgrade-controls">
+          <button type="button" id="upgradeCircle" class="primary-action" disabled>✦ 魔導石で強化する</button>
           <p id="magicStoneStock"></p>
           <p id="upgradeHint"></p>
-          <button type="button" id="upgradeCircle" class="primary-action" disabled>✦ 魔導石で強化する</button>
           <p id="upgradeFeedback" role="status" aria-live="polite"></p>
         </div>
+        <dl id="magicDetailsStats" class="magic-details-stats"></dl>
       </div>
     </dialog>
     <dialog id="circleActionDialog" class="name-dialog circle-action-dialog" aria-labelledby="circleActionTitle" data-dungeon-frame="closable">
