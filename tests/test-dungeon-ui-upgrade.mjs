@@ -67,7 +67,7 @@ try{
  assert.match($('magicDetailsStats').innerHTML,/<div class="magic-details-stat magic-details-stat--full"><dt>追加効果の詳細<\/dt>/,'status description spans both columns');
  assert.match($('magicStoneStock').textContent,new RegExp('次の強化：'+upgradeStoneCost(1)+'個'),'details display actual next upgrade cost');
  assert.equal($('upgradeHint').textContent,'','unnecessary upgrade power/rate explanation is not displayed');
- assert.equal($('upgradeFeedback').textContent,'','empty feedback leaves no placeholder');
+ assert.match(detailsMarkup,/<p id="upgradeFeedback" role="status" aria-live="polite"><\/p>/,'feedback starts empty without a reserved line');
  assert.match(css,/\.magic-upgrade-controls p:empty\{display:none\}/,'empty hint and feedback do not occupy space');
  assert.match(css,/\.magic-upgrade-controls\{[^}]*margin:12px 0 10px;padding-bottom:8px/,'space below the upgrade controls stays compact');
  assert.doesNotMatch(css,/#upgradeFeedback\{min-height:/,'empty feedback has no reserved height');
