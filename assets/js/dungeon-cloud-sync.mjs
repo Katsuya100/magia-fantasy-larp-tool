@@ -56,10 +56,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   button.disabled=true;
   return {ready:false};
  }
- let client=null,drive=null,expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
+ let client=null,drive=null,accessToken='',expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
  let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false,initialRetryQueued=false;
- let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
+ let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,renewalPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
  let disconnectPending=false,disconnectPromise=null,resolveDisconnect=null;
+ let renewalAttemptedExpiry=0,tokenIssuedAt=0;
  const isCurrent=epoch=>epoch===connectionEpoch&&Boolean(drive);
  const ensureCurrent=epoch=>{if(!isCurrent(epoch))throw Error('Drive同期は解除されました。');};
  // A short-lived access token is kept only in an HTTPS, path-scoped cookie so
@@ -150,7 +151,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   clearTimeout(expiryTimer);
   expiryTimer=null;
   clearAuthCookie();
-  drive=null;expires=0;validatedDrive=null;
+  oauthPending=false;renewalPending=false;
+  accessToken='';drive=null;expires=0;validatedDrive=null;
   requestController?.abort();requestController=null;
   connectionEpoch++;
   reconnectPresentation('認証が切れました。再接続してください。');
@@ -160,20 +162,34 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    if(dialog&&!dialog.open)showDungeonDialog(dialog);
   }
  }
- // Expiry is an event; do not wait until the next save to discover it.
- // Only the one-time notification flag is kept in memory.
+ // The GIS token model may require a user gesture; renewal is best-effort.
+ // A failed attempt keeps the original token usable until it expires.
+ const RENEW_BEFORE_MS=5*60*1000;
+ function tryRenewToken(){
+  if(!drive||!client||stopped||disconnectPending||manuallyDisconnected||oauthPending||renewalAttemptedExpiry===expires)return;
+  if(Date.now()>=expires)return;
+  renewalAttemptedExpiry=expires;
+  oauthPending=true;
+  renewalPending=true;
+  try{client.requestAccessToken({prompt:''});}
+  catch{
+   oauthPending=false;
+   renewalPending=false;
+  }
+ }
  function watchTokenExpiry(){
   clearTimeout(expiryTimer);
   expiryTimer=null;
-  if(!drive||!expires||stopped)return;
+  if(!drive||!expires||stopped||disconnectPending)return;
   const remaining=expires-Date.now();
   if(remaining<=0){expireConnection();return;}
-  expiryTimer=setTimeout(()=>{
-   expiryTimer=null;
-   if(!drive||stopped)return;
-   if(Date.now()>=expires)expireConnection();
-   else watchTokenExpiry();
-  },Math.min(remaining,2147483647));
+  // Use a fraction of short token lifetimes to avoid immediate reentry.
+  const lead=Math.min(RENEW_BEFORE_MS,Math.max(0,Math.floor((expires-tokenIssuedAt)/5)));
+  const renewalDue=expires-lead;
+  if(client&&!oauthPending&&renewalAttemptedExpiry!==expires&&Date.now()>=renewalDue)tryRenewToken();
+  const delay=client&&renewalAttemptedExpiry!==expires
+   ?Math.max(1,renewalDue-Date.now()):Math.max(1,expires-Date.now());
+  expiryTimer=setTimeout(()=>watchTokenExpiry(),Math.min(delay,2147483647));
   expiryTimer?.unref?.();
  }
  function schedule(){
@@ -525,16 +541,28 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  }
  async function acceptGoogleToken(result){
   if(!oauthPending)return; // Ignore an authorization response after disconnect.
-  oauthPending=false;
-  if(result.error||!result.access_token){show('Google連携が完了しませんでした。');return;}
+  const renewing=renewalPending&&Boolean(drive);
+  oauthPending=false;renewalPending=false;
+  if(result.error||!result.access_token){
+   if(!renewing)show('Google連携が完了しませんでした。');
+   return;
+  }
+  tokenIssuedAt=Date.now();
+  expires=tokenIssuedAt+Math.max(0,Number(result.expires_in||3600)-60)*1000;
+  accessToken=result.access_token;
+  saveAuthCookie(accessToken,expires);
+  if(renewing){
+   // Retain the Drive instance/connection epoch through in-flight transfers.
+   // Each subsequent API request reads the newly issued access token.
+   watchTokenExpiry();
+   return;
+  }
   expiryNoticeShown=false;
   doc?.getElementById('googleDriveExpiredDialog')?.close?.();
-  expires=Date.now()+Math.max(0,Number(result.expires_in||3600)-60)*1000;
-  saveAuthCookie(result.access_token,expires);
   connectionEpoch++;
   requestController?.abort();
   requestController=new AbortController();
-  drive=createDungeonDrive(result.access_token,fetchImpl,{signal:requestController.signal});
+  drive=createDungeonDrive(()=>accessToken,fetchImpl,{signal:requestController.signal});
   manuallyDisconnected=false;
   validatedDrive=null;
   if(disconnectButton)disconnectButton.hidden=false;
@@ -564,11 +592,16 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   client=globalThis.google.accounts.oauth2.initTokenClient({
    client_id:GOOGLE_CLIENT_ID,scope:DRIVE_SCOPE,
    callback:result=>{void acceptGoogleToken(result);},
-   error_callback:()=>show('Googleログインが中断されました。再度お試しください。')
+   error_callback:()=>{
+    if(renewalPending){oauthPending=false;renewalPending=false;return;}
+    oauthPending=false;
+    show('Googleログインが中断されました。再度お試しください。');
+   }
   });
   button.disabled=false;
   if(setupButton)setupButton.disabled=false;
   if(!drive&&!expiryNoticeShown&&!manuallyDisconnected)show('未接続');
+  if(drive)watchTokenExpiry();
   void getCloudSyncState(db).then(meta=>{
    if(!drive&&!expiryNoticeShown&&!manuallyDisconnected&&meta?.fileId&&meta?.hash)show('未接続。再接続してください。');
   }).catch(()=>{});
@@ -578,6 +611,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const expiredDialog=doc?.getElementById('googleDriveExpiredDialog');
  expiredDialog?.querySelector('[data-action="reconnect"]')?.addEventListener('click',()=>{
   closeDungeonDialog(expiredDialog);
+  renewalPending=false;
   oauthPending=Boolean(client);
   client?.requestAccessToken({prompt:'consent'});
  });
@@ -590,6 +624,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     if(outcome==='ready'||outcome==='start-new')onInitialReady();
    });
   }else{
+   renewalPending=false;
    oauthPending=Boolean(client);
    client?.requestAccessToken({prompt:'consent'});
   }
@@ -602,14 +637,14 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(!disconnectPending)return;
   disconnectPending=false;
   manuallyDisconnected=true;
-  oauthPending=false;
+  oauthPending=false;renewalPending=false;
   connectionEpoch++;
   requestController=null; // No abort: all in-flight requests have settled.
   again=false;
   clearTimeout(expiryTimer);expiryTimer=null;
   clearTimeout(timer);timer=null;
   clearAuthCookie();
-  drive=null;expires=0;validatedDrive=null;
+  accessToken='';drive=null;expires=0;validatedDrive=null;
   setSyncing(false);
   if(!initialChoiceCommitted)lockLocalOnly(false);
   if(disconnectButton)disconnectButton.disabled=false;
@@ -642,15 +677,17 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  }
  disconnectButton?.addEventListener('click',()=>{void disconnect();});
  const unsubscribe=onDungeonDataChange(db,schedule);
- windowImpl?.addEventListener?.('online',schedule);
- doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden)schedule();});
+ windowImpl?.addEventListener?.('online',()=>{watchTokenExpiry();schedule();});
+ doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden){watchTokenExpiry();schedule();}});
  const savedAuth=readAuthCookie();
  if(savedAuth){
   lockLocalOnly(true);
   // On reload, verify Drive's actual bytes before displaying "同期済み".
+  accessToken=savedAuth.token;
   expires=savedAuth.expires;
+  tokenIssuedAt=Date.now();
   requestController=new AbortController();
-  drive=createDungeonDrive(savedAuth.token,fetchImpl,{signal:requestController.signal});
+  drive=createDungeonDrive(()=>accessToken,fetchImpl,{signal:requestController.signal});
   if(disconnectButton)disconnectButton.hidden=false;
   watchTokenExpiry();
   button.hidden=true;
