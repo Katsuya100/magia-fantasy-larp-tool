@@ -7,7 +7,7 @@ import {unlockedStartLayers} from '../assets/js/dungeon-ranks.mjs';
 import {strengthenedPower,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {approvedGoals} from './simulate-dungeon-journeys.mjs';
-import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,RANK_LEGACY_RESERVE_PERCENT} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,RANK_LEGACY_RESERVE_PERCENT,RANK_SUPERIOR_BOSS_OFFSET_LAYERS} from '../assets/js/dungeon-ranks.mjs';
 import {assert256Seeds,assertPreRecoveryRankGate,summarizeJourneyStrength}
  from './dungeon-test-contract.mjs';
 
@@ -372,7 +372,12 @@ for(const meta of report.policies){
   assert.equal(account.resourceLedger.items.held,
    account.resourceLedger.items.bankedDrops+account.resourceLedger.items.alchemyCreated-
     account.resourceLedger.items.battleConsumed-account.resourceLedger.items.alchemyConsumed);
-  for(const rank of account.rankAudit)assertPreRecoveryRankGate(rank);
+  for(const rank of account.rankAudit){
+   assertPreRecoveryRankGate(rank);
+   const returned=proof.trace.some(step=>step.sortie===rank.sortie&&step.returned===true);
+   assert.equal(rank.banked,rank.eligible&&returned,
+    'only an actual successful return can bank a provisional adventurer badge');
+  }
  }
  completionTotals.push({policy:policy.style+'/'+policy.route,
   completed:actualCompleted,required:256});
@@ -390,14 +395,17 @@ for(const rank of report.ranks){
  assert.equal(rank.finalBossMaxRounds,RANK_FINAL_BOSS_MAX_ROUNDS);
  assert.equal(RANK_LEGACY_RESERVE_PERCENT,approvedGoals.rank.legacyBothHpMpPercentAtLeast);
  assert.equal(rank.legacyBothHpMpPercentAtLeast,RANK_LEGACY_RESERVE_PERCENT);
- assert.equal(rank.status,'INDEPENDENT_RANK_LEGACY_OR_MASTERY');
+ assert.equal(RANK_SUPERIOR_BOSS_OFFSET_LAYERS,approvedGoals.rank.higherBossReturnOffsetLayers);
+ assert.equal(rank.higherBossReturnOffsetLayers,RANK_SUPERIOR_BOSS_OFFSET_LAYERS);
+ assert.equal(rank.status,'INDEPENDENT_RANK_LEGACY_OR_MASTERY_OR_RETURNED_SUPERIOR_BOSS');
  const accounts=rankAuditsByPolicy.get(rank.style+'/'+rank.route);
  assert.ok(accounts&&accounts.length===256,'each chapter row belongs to a measured 256-owner policy');
  const missing=accounts.filter(account=>!account.rankAudit.some(event=>
-  event.layer===rank.rankLayer&&event.eligible&&event.banked&&
-  (event.hpPercent>=RANK_LEGACY_RESERVE_PERCENT&&event.mpPercent>=RANK_LEGACY_RESERVE_PERCENT||
-  event.earlyMobs===RANK_EARLY_NORMAL_FIGHTS&&
-  event.earlyFastWins>=RANK_EARLY_FAST_WINS_REQUIRED&&event.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS))).map(account=>account.seed);
+  event.eligible&&event.banked&&event.awardedRankLayer>=rank.rankLayer)).map(account=>account.seed);
+ assert.ok(accounts.every(account=>
+  (account.rankAudit.some(event=>event.eligible&&event.banked&&
+   event.awardedRankLayer>=rank.rankLayer))===(account.rank>=rank.rankLayer)),
+  'banked chapter proof must agree with actually owned chapter rank');
  assert.deepEqual(rank.missingSeeds,missing,'unearned chapters remain unearned');
  assert.equal(rank.acquiredOwners,256-missing.length,
   'chapter acquisitions count distinct banked owners');
