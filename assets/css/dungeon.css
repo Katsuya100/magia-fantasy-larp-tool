@@ -409,11 +409,12 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 /* Magic stones, confirmation and ritual feedback. */
 .magic-stone-balance{margin:18px 0 4px;color:var(--gold);font-weight:700;font-size:14px}
 .circle-grid .card-actions .upgrade-action{grid-column:1/-1}
-.magic-upgrade-controls{border-bottom:1px solid var(--border);margin:12px 0 16px;padding-bottom:14px;text-align:center}
-.magic-upgrade-controls p{color:var(--gold);font-size:13px;line-height:1.5}
+.magic-upgrade-controls{border-bottom:1px solid var(--border);margin:12px 0 10px;padding-bottom:8px;text-align:center}
+.magic-upgrade-controls p{margin:6px 0 0;color:var(--gold);font-size:13px;line-height:1.5}
+.magic-upgrade-controls p:empty{display:none}
 .magic-upgrade-controls button{width:100%;max-width:350px}
 .magic-upgrade-controls button:disabled,.circle-grid .upgrade-action:disabled{opacity:.5;cursor:not-allowed}
-#upgradeFeedback{min-height:1.5em;font-weight:700}
+#upgradeFeedback{font-weight:700}
 .circle-action-dialog{width:min(92vw,440px);color:var(--pale)}
 .circle-action-inner{padding:clamp(20px,5vw,35px);text-align:center}
 .circle-action-inner h2{color:var(--gold);font-size:22px}

@@ -15,7 +15,7 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261102.320';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261102.320';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261102.320';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261102.321';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261102.322';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261102.320';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261102.320';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261102.320';
@@ -1456,7 +1456,7 @@ function openMagicDetails(id){
  $('magicStoneStock').textContent='所持魔導石：'+profile.magicStones+'個 / 次の強化：'+stoneCost+'個';
  $('upgradeCircle').hidden=Boolean(profile.run);
  $('upgradeCircle').disabled=Boolean(profile.run)||!isRevealed(circle)||profile.magicStones<stoneCost;
- $('upgradeHint').textContent=!isRevealed(circle)?'威力は初回使用後に強化できます。':profile.magicStones<stoneCost?'次の強化には魔導石が'+stoneCost+'個必要です。':'初期威力の10%分アップします。強化段階に応じて必要な魔導石が増えます。';
+ $('upgradeHint').textContent=!isRevealed(circle)?'威力は初回使用後に強化できます。':profile.magicStones<stoneCost?'次の強化には魔導石が'+stoneCost+'個必要です。':'';
  const d=circleDetails(circle,masters.buffs,G.mpCost);
  const info=circleEffectDetails(circle,masters.buffs,G.statusDuration);
  const groups=[
