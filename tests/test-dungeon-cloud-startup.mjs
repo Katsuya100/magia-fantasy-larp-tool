@@ -823,6 +823,33 @@ try{
  assert.equal(tieUi.get('googleDriveConflictDialog').open,false);
  assert.equal((await getProfile(tieDb)).level,tieLocal.profile.level+1);
 
+
+ // Muse #14: two saves from the same play can carry different discoveries.
+ // Progress precedence must not silently replace 220 locally discovered types
+ // with a Drive copy holding only 216, even if the Drive character is higher Lv.
+ const allRelics=parseCsv(await readFile(new URL('../assets/data/dungeon-collections.csv',import.meta.url),'utf8'));
+ const relicIds=allRelics.slice(0,220).map(item=>item.id);
+ assert.equal(relicIds.length,220);
+ const discoveryDb=await newDb(),discoveryUi=fakeUi();
+ const discoveryProfile=await getProfile(discoveryDb);
+ discoveryProfile.name='図鑑件数の再現';discoveryProfile.level=30;
+ discoveryProfile.collection=Object.fromEntries(relicIds.map(id=>[id,1]));
+ await saveProfile(discoveryDb,discoveryProfile);
+ const richerLocal=await readDungeonSnapshot(discoveryDb);
+ const poorerDrive=remoteApi(await serializeDungeonSnapshot({...richerLocal,
+  profile:{...richerLocal.profile,level:31,collection:Object.fromEntries(relicIds.slice(0,216).map(id=>[id,1]))},
+  savedAt:richerLocal.savedAt+1000}));
+ let discoveryRestores=0;
+ start(discoveryDb,discoveryUi,poorerDrive.fetchImpl,{onRestore:()=>discoveryRestores++});
+ await connect(discoveryUi);
+ await wait(()=>discoveryUi.get('googleDriveConflictDialog').open||discoveryRestores>0,
+  'a cross-progress collection conflict is noticed');
+ assert.equal(discoveryRestores,0,
+  'REPRO Muse #14: higher level on Drive must not silently discard four locally discovered relics');
+ const retainedDiscoveries=(await getProfile(discoveryDb)).collection;
+ assert.equal(relicIds.filter(id=>Number(retainedDiscoveries[id])>0).length,220,
+  'all 220 locally discovered relics are preserved until a conflict decision');
+ 
  // Perfectly tied progression and timestamp may use either record.
  // The implementation picks local and never asks for a redundant choice.
  const equalDb=await newDb(),equalUi=fakeUi();
