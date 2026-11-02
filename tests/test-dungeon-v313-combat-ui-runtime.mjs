@@ -27,9 +27,10 @@ try{
  profile.name='戦闘UI再現';
  profile.level=120;profile.returns=1;profile.slots=[...ids,null,null];
  const enemy=G.fromEnemy(enemies.find(row=>row.id==='boss_l049'),86);
- // Keep real enemy growth and affinities; a deterministic guard action avoids
- // random injury and isolates UI event timing from enemy spell selection.
- enemy.spells=[{role:'defense',attribute:'law',power:120}];
+ // The player's defense is the FIRST priority phase; a very weak enemy
+ // attack is a SECOND phase. The next tap must be accepted before that last
+ // phase opens, which the pre-fix buffer could not do.
+ enemy.spells=[{role:'attack',attribute:'law',power:1}];
  enemy.cooldowns=[0];
  const hero=G.makeUnit(profile.base,profile.level,{},[...spellData,null,null],'player');
  hero.hp=Math.max(1,Math.round(hero.hp*.8));
