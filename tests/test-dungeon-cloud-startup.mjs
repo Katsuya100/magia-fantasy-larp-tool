@@ -103,13 +103,14 @@ function mockGoogle(){
 }
 function remoteApi(initial=null,{tamperReadback=false}={}){
  const id='backup-1',modified=()=>new Date(Date.UTC(2026,9,19,10,0,version)).toISOString();
- let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null,putPause=null,metadataPause=null,metadataRequests=0,putRequests=0;
+ let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null,putPause=null,metadataPause=null,metadataRequests=0,putRequests=0,listRequests=0;
  const operations=[],signals=[];
  const fetchImpl=async (url,options={})=>{
   if(options.signal)signals.push(options.signal);
   if(expired)return new Response('',{status:401});
   const u=String(url),method=options.method||'GET';
   if(u.includes('spaces=appDataFolder')){
+   listRequests++;
    if(listPause)await listPause;
    return Response.json({files:value===null?[]:[{id,name:'magia-dungeon-save-v1.json',modifiedTime:modified()}]});
   }
@@ -152,6 +153,7 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   get uploads(){return uploads;},
   get putRequests(){return putRequests;},
   get metadataRequests(){return metadataRequests;},
+  get listRequests(){return listRequests;},
   get downloads(){return downloads;},
   get operations(){return [...operations];},
   get signals(){return [...signals];},
@@ -252,8 +254,9 @@ try{
 
  // Muse #10: rechecking an unchanged cloud save should not flash "saving".
  const releaseUnchangedList=firstDrive.pauseNextList();
+ const previousUnchangedLists=firstDrive.listRequests;
  const unchangedPass=firstController.syncNow();
- await wait(()=>firstUi.status.textContent==='同期中…','unchanged recheck reached Drive');
+ await wait(()=>firstDrive.listRequests>previousUnchangedLists,'unchanged recheck reached Drive');
  try{
   assert.equal(firstUi.get('googleDriveSpinner').hidden,true,
    'REPRO Muse #10: no new local save must not display the saving spinner during Drive recheck');
