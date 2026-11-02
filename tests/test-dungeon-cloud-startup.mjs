@@ -854,6 +854,13 @@ try{
  const retainedDiscoveries=(await getProfile(discoveryDb)).collection;
  assert.equal(relicIds.filter(id=>Number(retainedDiscoveries[id])>0).length,220,
   'all 220 locally discovered relics are preserved until a conflict decision');
+ assert.equal(discoveryUi.get('googleDriveConflictDialog').open,true,'relic mismatch requires an explicit source choice');
+ discoveryUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').click();
+ await wait(()=>poorerDrive.uploads===1,'choosing the local copy uploads the 220 discoveries');
+ const chosenDiscoveries=deserializeDungeonSnapshot(poorerDrive.current).profile.collection;
+ assert.equal(relicIds.filter(id=>Number(chosenDiscoveries[id])>0).length,220,
+  'the user-selected full collection remains intact on Drive');
+
  
  // Perfectly tied progression and timestamp may use either record.
  // The implementation picks local and never asks for a redundant choice.
