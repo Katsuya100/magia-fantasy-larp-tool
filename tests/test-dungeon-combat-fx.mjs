@@ -183,7 +183,9 @@ assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?tier
 const appSource=await readFile(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
 const liveRelease=cinematicPage.match(/data-release="(\d{8}\.\d+)"/)?.[1];
 assert.ok(liveRelease,'the release marker exists in HTML');
-assert.ok(appSource.includes('dungeon-combat-fx.mjs?v='+liveRelease),'FX JavaScript import matches the release');
+const sharedRelease=appSource.match(/dungeon-core\\.mjs\\?v=(\\d{8}\\.\\d+)/)?.[1];
+assert.ok(sharedRelease,'the unchanged dungeon modules retain a shared cache version');
+assert.ok(appSource.includes('dungeon-combat-fx.mjs?v='+sharedRelease),'FX JavaScript import matches the unchanged dungeon modules');
 assert.match(appSource,/projectile\.dataset\.tier=actor\.dataset\.tier/,'attack projectiles use caster investment');
 assert.match(appSource,/target\.dataset\.affinity='none'/,'affinity resets');
 assert.match(appSource,/victim\.dataset\.affinity=attackHitAffinity\(step\)/,'attack uses true resistance');
