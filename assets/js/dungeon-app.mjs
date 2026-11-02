@@ -527,7 +527,7 @@ function renderBattleActions(){
   const c=circles.find(x=>x.id===id);
   if(!id||!c?.image)return null;
   const s=hero.spells[i],waiting=hero.cooldowns[i]||0;
-  const disabled=Boolean(s&&!G.canCast(hero,i)),sealed=G.isSpellSealed(hero,s);
+  const disabled=run.stage!=='battle'||Boolean(s&&!G.canCast(hero,i)),sealed=G.isSpellSealed(hero,s);
   const info=circleCardInfo(c,masters.buffs,G.mpCost);
   return {disabled,sealed,
    label:'魔法陣の編成枠 '+(i+1)+' '+(c.analysis?circleSummary(c,masters.buffs,G.mpCost):'未解析')+(sealed?' 封印':''),

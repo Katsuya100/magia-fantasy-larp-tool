@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const app=await readFile(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
+const actions=app.slice(app.indexOf('function renderBattleActions('),app.indexOf('function refreshBattleRecord('));
+const turn=app.slice(app.indexOf('async function takeTurn('),app.indexOf('async function useItem('));
+assert.match(turn,/run\.stage!=='battle'/,'post-victory casting must be rejected by combat logic');
+assert.match(actions,/disabled=run\.stage!=='battle'\|\|Boolean\(s&&!G\.canCast\(hero,i\)\)/,'post-victory spell UI must be disabled');
+assert.match(turn,/run\.stage='checkpoint'/,'boss victory enters checkpoint');
+assert.match(turn,/run\.floor\+\+;enterFight\(\)/,'ordinary victory immediately enters next fight');
+console.log('Post-victory spell state guard verified');
