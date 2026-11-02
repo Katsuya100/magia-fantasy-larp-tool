@@ -475,6 +475,23 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return result;
    }
 
+   // Same play does not mean interchangeable discovery histories: a higher
+   // level on another device must not silently erase locally found relics.
+   const preferred=decideCloudSync({file,localProfile:local.profile,remoteProfile:remote.data.profile,
+    localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt});
+   const losesDiscovered=(discarded,winner)=>Object.entries(discarded?.collection||{}).some(
+    ([id,count])=>Number(count)>0&&!(Number(winner?.collection?.[id])>0));
+   const losesRelics=preferred==='download'
+    ?losesDiscovered(local.profile,remote.data.profile)
+    :preferred==='upload'&&losesDiscovered(remote.data.profile,local.profile);
+   if(losesRelics){
+    const choice=await chooseCloud({local,remote:remote.data,
+     allowLocal:verification.status==='valid',canStartLocal:verification.status==='valid'});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
+    if(choice==='overwrite'&&verification.status==='valid')return await upload(local,file,{allowInitial:true});
+    return result;
+   }
+
    // Case 4: same play. Resolve actual progress before image repair;
    // a newer timestamp must never beat a more advanced adventurer.
    if(verification.status==='badImages'){
