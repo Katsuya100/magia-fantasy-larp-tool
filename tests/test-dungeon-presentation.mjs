@@ -288,7 +288,7 @@ assert.match(cloudSync,/setSyncing\(true\);\s*show\('同期中…'\)/,'backgroun
 assert.match(cloudSync,/if\(again&&!stopped&&!restoring&&drive\)\{[\s\S]*?queueMicrotask\(\(\)=>\{[\s\S]*?void sync\(retryInitial\)/,'at most one queued follow-up pass uses latest save, preserving initial checks');
 assert.match(cloudSync,/if\(busy\)\{again=true;return;\}/,'autosave edits during upload coalesce into one pending bit');
 assert.match(cloudSync,/disconnectButton\?\.addEventListener\('click',\(\)=>\{void disconnect\(\);\}\)/,'unlink action waits without blocking gameplay');
-assert.match(cloudSync,/if\(disconnectPending\)\{\s*finishDisconnect\(\)/,'unlink happens only in the active request finalizer');
+assert.match(cloudSync,/if\(disconnectPending\)\{\s*(?:void\s+)?finishDisconnect\(\)/,'unlink happens only in the active request finalizer');
 assert.match(cloudSync,/requestController=null; \/\/ No abort: all in-flight requests have settled/,'normal unlink no longer aborts Drive uploads');
 assert.match(cloudSync,/\[localButton,'click',\(\)=>finish\('overwrite'\)\]/,'the selected player is an explicit overwrite decision without a second obsolete dialog');
 assert.match(cloudSync,/connectionEpoch\+\+;/,'old connection callbacks are invalidated');
