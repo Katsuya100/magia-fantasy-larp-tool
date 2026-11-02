@@ -382,7 +382,7 @@ for(const meta of report.policies){
  completionTotals.push({policy:policy.style+'/'+policy.route,
   completed:actualCompleted,required:256});
  rankAuditsByPolicy.set(policy.style+'/'+policy.route,
-  policy.accounts.map(account=>({seed:account.seed,rankAudit:account.rankAudit})));
+  policy.accounts.map(account=>({seed:account.seed,rank:account.rank,rankAudit:account.rankAudit})));
 }
 assert.equal(observedOwnerBandCount,6*10*256,
  'all independent owner-band formula observations must remain in the denominator');
