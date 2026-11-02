@@ -60,13 +60,20 @@ function createCookieJar(){
  };
 }
 function fakeUi(cookies=createCookieJar()){
- const elements=new Map();
+ const elements=new Map(),listeners=new Map();
  const doc={
   getElementById(id){
    if(!elements.has(id))elements.set(id,new Element(id));
    return elements.get(id);
   },
-  addEventListener(){},
+  addEventListener(type,handler){
+   if(!listeners.has(type))listeners.set(type,new Set());
+   listeners.get(type).add(handler);
+  },
+  userClick(){
+   const event={isTrusted:true,target:{closest(selector){return selector==='button'?get('battleAction'):null;}}};
+   for(const handler of listeners.get('click')||[])handler(event);
+  },
   get cookie(){return cookies.cookie;},
   set cookie(value){cookies.cookie=value;},
   head:{append(){throw Error('Unexpected Google script injection');}}
@@ -76,15 +83,23 @@ function fakeUi(cookies=createCookieJar()){
 }
 function mockGoogle(){
  const requests=[];
- let tokenLifetime=3600;
+ let tokenLifetime=3600,renewalLifetime=null,renewalError=false;
  const original=globalThis.google;
  globalThis.google={accounts:{oauth2:{initTokenClient(config){
   return {requestAccessToken(args){
    requests.push(args);
-   queueMicrotask(()=>config.callback({access_token:'test-token',expires_in:tokenLifetime}));
+   queueMicrotask(()=>{
+    if(args.prompt===''){
+     if(renewalError){config.error_callback({type:'popup_failed_to_open'});return;}
+     config.callback({access_token:'test-token-renewed',expires_in:renewalLifetime??tokenLifetime});
+    }else config.callback({access_token:'test-token',expires_in:tokenLifetime});
+   });
   }};
  }}}};
- return {requests,setExpiresIn(seconds){tokenLifetime=seconds;},restore(){globalThis.google=original;}};
+ return {requests,setExpiresIn(seconds){tokenLifetime=seconds;},
+  setRenewalExpiresIn(seconds){renewalLifetime=seconds;},
+  setRenewalError(value){renewalError=value;},
+  restore(){globalThis.google=original;}};
 }
 function remoteApi(initial=null,{tamperReadback=false}={}){
  const id='backup-1',modified=()=>new Date(Date.UTC(2026,9,19,10,0,version)).toISOString();
@@ -1016,6 +1031,73 @@ try{
  assert.deepEqual(await readDungeonSnapshot(damagedDb),damagedBefore,'corrupt local stays unmodified');
  assert.deepEqual(damagedDrive.operations,[],'corrupt later never writes Drive');
 
+ // 15. An active session should refresh its token before the old one expires.
+ auth.setExpiresIn(61.5);
+ auth.setRenewalExpiresIn(3600);
+ const requestsBeforeRenewal=auth.requests.length;
+ const renewalDb=await newDb(),renewalUi=fakeUi(),renewalDrive=remoteApi(),renewalHeaders=[];
+ let renewalReady=0;
+ const renewalController=start(renewalDb,renewalUi,(url,options)=>{
+  renewalHeaders.push(options.headers.Authorization);
+  return renewalDrive.fetchImpl(url,options);
+ },{onInitialReady:()=>renewalReady++});
+ await connect(renewalUi);
+ await wait(()=>renewalReady===1,'renewal test has a verified backup');
+ await wait(()=>auth.requests.slice(requestsBeforeRenewal).some(request=>request.prompt===''),'renewal does not require new consent');
+ await wait(()=>renewalUi.doc.cookie.includes('test-token-renewed'),'renewed token replaces the secure cookie');
+ assert.equal(renewalUi.get('googleDriveExpiredDialog').open,false,'renewal succeeds without expiry dialog');
+ await new Promise(resolve=>setTimeout(resolve,1750));
+ assert.equal(renewalUi.get('googleDriveExpiredDialog').open,false,'old expiry does not disconnect a refreshed session');
+ assert.equal(await renewalController.syncNow(),'ready');
+ assert.equal(renewalHeaders.at(-1),'Bearer test-token-renewed','Drive calls use the refreshed token');
+ await renewalController.disconnect();
+ await wait(()=>renewalUi.doc.cookie==='','disconnect clears refreshed credentials');
+ const requestsAfterDisconnect=auth.requests.length;
+ await new Promise(resolve=>setTimeout(resolve,200));
+ assert.equal(auth.requests.length,requestsAfterDisconnect,'disconnect stops renewing');
+
+ // A renewal during a resumable PUT must not abort the transfer.
+ const transferDb=await newDb(),transferUi=fakeUi(),transferDrive=remoteApi(),transferHeaders=[];
+ const releaseUpload=transferDrive.pauseNextUpload();
+ let transferReady=0;
+ const transferController=start(transferDb,transferUi,(url,options)=>{
+  transferHeaders.push(options.headers.Authorization);
+  return transferDrive.fetchImpl(url,options);
+ },{onInitialReady:()=>transferReady++});
+ await connect(transferUi);
+ await wait(()=>transferDrive.putRequests===1,'resumable upload is in flight');
+ await wait(()=>transferUi.doc.cookie.includes('test-token-renewed'),'in-flight upload overlaps renewal');
+ assert.ok(transferDrive.signals.every(signal=>!signal.aborted),'renewal does not cancel the active upload');
+ releaseUpload();
+ await wait(()=>transferReady===1,'upload and Drive readback finish after renewal');
+ assert.ok(transferDrive.signals.every(signal=>!signal.aborted),'renewal never aborts Drive requests');
+ assert.equal(transferHeaders.at(-1),'Bearer test-token-renewed','readback uses refreshed credentials');
+ await transferController.disconnect();
+
+ // A blocked timer can retry from the player's next real button click.
+ auth.setRenewalError(true);
+ auth.setExpiresIn(62.5);
+ const gestureDb=await newDb(),gestureUi=fakeUi(),gestureDrive=remoteApi();
+ let gestureReady=0;
+ const gestureController=start(gestureDb,gestureUi,gestureDrive.fetchImpl,{onInitialReady:()=>gestureReady++});
+ const gestureStart=auth.requests.length;
+ await connect(gestureUi);
+ await wait(()=>gestureReady===1,'gesture retry starts from a verified backup');
+ await wait(()=>auth.requests.slice(gestureStart).some(request=>request.prompt===''),'the timed renewal was attempted');
+ assert.ok(!gestureUi.doc.cookie.includes('test-token-renewed'),'blocked timer keeps the old token');
+ auth.setRenewalError(false);
+ const requestsBeforeGesture=auth.requests.length;
+ gestureUi.doc.userClick();
+ await wait(()=>gestureUi.doc.cookie.includes('test-token-renewed'),'game click retries renewal after popup blocking');
+ assert.equal(auth.requests.length,requestsBeforeGesture+1,'one gesture triggers one additional token request');
+ gestureUi.doc.userClick();
+ assert.equal(auth.requests.length,requestsBeforeGesture+1,'repeated clicks never spam the token flow');
+ await new Promise(resolve=>setTimeout(resolve,2750));
+ assert.equal(gestureUi.get('googleDriveExpiredDialog').open,false,'game-click renewal survives the old expiry');
+ await gestureController.disconnect();
+
+ // 16. If both automatic and gesture renewal fail, expiry still prompts reconnect.
+ auth.setRenewalError(true);
  // 15. An idle tab proactively notifies at token expiry without waiting
  // for another save. The dialog is one-shot until a fresh token is authorized.
  auth.setExpiresIn(61.5); // 1.5 seconds beyond the standard 60s expiry safety margin.
@@ -1035,6 +1117,7 @@ try{
  // The Drive file may vanish while OAuth is expired. Re-authentication must
  // pass through the same five cases (case 2), never the old missing-file error.
  idleDrive.erase();
+ auth.setRenewalError(false);
  auth.setExpiresIn(3600);
  idleUi.get('googleDriveExpiredDialog').querySelector('[data-action="reconnect"]').click();
  await wait(()=>idleUi.status.textContent==='GoogleDrive同期済み','dialog reconnect recreates missing Drive backup');

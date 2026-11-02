@@ -6,7 +6,8 @@ const FILE_NAME='magia-dungeon-save-v1.json';
 export class DriveAuthError extends Error{}
 export function createDungeonDrive(token,fetchImpl=globalThis.fetch,{signal,timeoutMs=90000}={}){
  if(!token)throw Error('Google認証が必要です。');
- const headers={Authorization:'Bearer '+token};
+ // Use a fresh access token for each API call without interrupting uploads.
+ const getToken=typeof token==='function'?token:()=>token;
  async function request(url,options={},format='headers'){
   // A stalled upload, download or response body must not keep 「保存中…」
   // forever. Preserve explicit user disconnects as separate aborts.
@@ -16,7 +17,7 @@ export function createDungeonDrive(token,fetchImpl=globalThis.fetch,{signal,time
   let timedOut=false;
   const timer=setTimeout(()=>{timedOut=true;controller.abort();},timeoutMs);
   try{
-   const response=await fetchImpl(url,{...options,signal:controller.signal,headers:{...headers,...options.headers}});
+   const response=await fetchImpl(url,{...options,signal:controller.signal,headers:{Authorization:'Bearer '+getToken(),...options.headers}});
    if(response.status===401)throw new DriveAuthError('Google認証の期限が切れました。再接続してください。');
    if(!response.ok)throw Error('Google Driveへの通信に失敗しました (HTTP '+response.status+')');
    if(format==='json')return await response.json();
