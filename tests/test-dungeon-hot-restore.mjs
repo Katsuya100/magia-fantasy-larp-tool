@@ -18,12 +18,17 @@ const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','
 configure({balance,levels,floors,playerBase});
 const localFactory=fakeIndexedDB(),localDb=await openStore(localFactory);
 await getProfile(localDb);
+// A stale local circle must disappear when a different owned backup is restored.
+await putCircle(localDb,{id:'obsolete-local-circle',name:'古い端末の魔法陣',image:new Blob(['old-local'],{type:'image/png'}),registeredAt:0,
+ analysis:{attribute:'flame',role:'attack',power:681},revealed:true});
 const browser=fakeDungeonBrowser({factory:localFactory});
 try{
  const app=await import('../assets/js/dungeon-app.mjs?integration=drive-hot-restore');
  const get=id=>browser.document.getElementById(id);
  await wait(()=>get('startupMask').hidden===true,'game starts with a local-only blank save');
  assert.equal(get('backupSetupDialog').open,true,'backup setup is visible before an initial Drive restore');
+ await browser.document.click({dataset:{remove:'obsolete-local-circle'},closest(){return this;}});
+ assert.equal(get('circleActionDialog').open,true,'an old circle action is pending before restore');
 
  const driveDb=await openStore(fakeIndexedDB());
  const remoteProfile=await getProfile(driveDb);
@@ -40,10 +45,24 @@ try{
  await app.refreshDungeonViewFromBackup();
 
  assert.equal(get('backupSetupDialog').open,false,'backup setup closes without a page reload');
+ assert.equal(get('circleActionDialog').open,false,'restoring ownership closes the old circle action dialog');
+ await browser.document.click({dataset:{upgrade:'obsolete-local-circle'},closest(){return this;}});
+ assert.equal(get('circleActionDialog').open,false,'stale upgrade click cannot target an unowned circle');
  assert.match(get('libraryCards').innerHTML,/drive-magic/,'the restored grimoire is rendered immediately');
  assert.match(get('libraryCards').innerHTML,/data-circle-photo-id="drive-magic"/);
+ assert.doesNotMatch(get('libraryCards').innerHTML,/obsolete-local-circle/,'restoration must not display circles from the prior save');
+ assert.deepEqual((await allCircles(localDb)).map(x=>x.id),['drive-magic'],'only the restored circle remains owned');
+ await browser.document.click({dataset:{circleDetail:'obsolete-local-circle'},closest(){return this;}});
+ assert.equal(get('magicDetailsDialog').open,false,'a stale click cannot open or upgrade an unowned circle');
  assert.equal(get('prepare').hidden,false,'the player can immediately continue in the restored game');
  assert.equal((await allCircles(localDb))[0].image instanceof Blob,true);
+ await browser.document.click({dataset:{openSlot:'0'},closest(){return this;}});
+ assert.equal(get('loadoutDialog').open,true,'first loadout click after hot restore is accepted');
+ await app.refreshDungeonViewFromBackup();
+ assert.equal(get('loadoutDialog').open,false,'a second restoration closes the stale picker');
+ await get('clearLoadoutSlot').fire('click');
+ assert.equal((await getProfile(localDb)).slots[0],'drive-magic',
+  'a click from a closed pre-restore picker must never remove an owned circle');
  await browser.document.click({dataset:{circleDetail:'drive-magic'},closest(){return this;}});
  assert.match(get('magicDetailsImage').src,/^blob:mock-/,'restored original photo displays without reloading');
  assert.equal(await digestPhoto(browser.createdImageUrls.at(-1).blob),await digestPhoto(photo));

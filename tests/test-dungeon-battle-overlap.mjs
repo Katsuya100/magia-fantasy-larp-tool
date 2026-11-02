@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {playCombatSequence,fatalSide,simultaneousPhases} from '../assets/js/dungeon-combat-fx.mjs';
-import {LAST_PHASE_OVERLAP_RATIO,createBattleInputBuffer} from '../assets/js/dungeon-battle-input.mjs';
+import {LAST_PHASE_OVERLAP_RATIO,createBattleInputBuffer,canReplayBufferedBattleCommand} from '../assets/js/dungeon-battle-input.mjs';
 import {captureCombatFxEcho} from '../assets/js/dungeon-combat-fx-echo.mjs';
 const step=(role,side,h=60,e=0)=>({role,side,hero:{hp:h},enemy:{hp:e}});
 assert.equal(fatalSide([step('attack','hero')]),'enemy');
@@ -50,6 +50,45 @@ assert.deepEqual(input.take(),{kind:'use',index:0,floor:2});
 input.begin(440);
 input.close();
 assert.equal(timers[2].cancelled,true,'completed combat cancels the pending release timer');
+
+// #12/#17: an early tap on an enabled card was silently lost while FX was busy.
+const earlyTimers=[];
+const earlyInput=createBattleInputBuffer({
+ setTimer:(fn,ms)=>{const timer={fn,ms};earlyTimers.push(timer);return timer;},
+ clearTimer:()=>{}
+});
+assert.equal(earlyInput.offer({kind:'cast',index:0,floor:49}),false,'no buffering before combat begins');
+earlyInput.start();
+const earlyTap={kind:'cast',index:1,floor:49};
+assert.equal(earlyInput.offer(earlyTap),true,'one tap during the FIRST combat phase is retained');
+assert.equal(earlyInput.offer({kind:'cast',index:2,floor:49}),false,'extra taps do not stack turns');
+const releaseEarly=earlyInput.begin(440);
+assert.equal(earlyTimers[0].ms,308,'early tap still waits for the last-phase 70% boundary');
+let earlyReleased=false;
+releaseEarly.then(()=>{earlyReleased=true;});
+await Promise.resolve();
+assert.equal(earlyReleased,false,'early tap must never accelerate a combat turn');
+earlyTimers[0].fn();
+await releaseEarly;
+earlyInput.close();
+assert.deepEqual(earlyInput.take(),earlyTap,'the earlier input survives until the round completes');
+earlyInput.start();
+assert.equal(earlyInput.take(),null,'the next battle does not inherit stale input');
+earlyInput.close();
+
+// A save restored at the same depth is a different combat and must reject stale taps.
+const liveRun={stage:'battle',floor:49,hero:{hp:10},enemy:{hp:10}};
+const queuedForLive={run:liveRun,floor:49,kind:'cast',index:0};
+assert.equal(canReplayBufferedBattleCommand(queuedForLive,liveRun),true);
+assert.equal(canReplayBufferedBattleCommand(queuedForLive,{...liveRun}),false,
+ 'same floor is insufficient to authorize a click from an earlier Drive save');
+assert.equal(canReplayBufferedBattleCommand(queuedForLive,{...liveRun,stage:'checkpoint'}),false);
+liveRun.floor=50;
+assert.equal(canReplayBufferedBattleCommand(queuedForLive,liveRun),false,
+ 'a buffered command cannot cross the encounter boundary');
+liveRun.floor=49;liveRun.enemy.hp=0;
+assert.equal(canReplayBufferedBattleCommand(queuedForLive,liveRun),false,
+ 'a defeated foe cannot consume a buffered cast');
 
 // The playback callback opens only after all preceding roles/phases are painted.
 const staged=[step('support','hero',60,30),step('defense','enemy',60,30),step('debuff','hero',60,30),step('attack','enemy',60,30)];
