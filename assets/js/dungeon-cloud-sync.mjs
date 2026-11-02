@@ -60,7 +60,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false,initialRetryQueued=false;
  let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,renewalPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
  let disconnectPending=false,disconnectPromise=null,resolveDisconnect=null;
- let renewalAttemptedExpiry=0,tokenIssuedAt=0;
+ let renewalAttemptedExpiry=0,renewalGestureAttemptedExpiry=0,tokenIssuedAt=0;
  const isCurrent=epoch=>epoch===connectionEpoch&&Boolean(drive);
  const ensureCurrent=epoch=>{if(!isCurrent(epoch))throw Error('Drive同期は解除されました。');};
  // A short-lived access token is kept only in an HTTPS, path-scoped cookie so
@@ -165,9 +165,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  // The GIS token model may require a user gesture; renewal is best-effort.
  // A failed attempt keeps the original token usable until it expires.
  const RENEW_BEFORE_MS=5*60*1000;
- function tryRenewToken(){
-  if(!drive||!client||stopped||disconnectPending||manuallyDisconnected||oauthPending||renewalAttemptedExpiry===expires)return;
-  if(Date.now()>=expires)return;
+ function tryRenewToken(fromUserGesture=false){
+  if(!drive||!client||stopped||disconnectPending||manuallyDisconnected||oauthPending)return;
+  if(!fromUserGesture&&renewalAttemptedExpiry===expires)return;
+  if(fromUserGesture&&renewalGestureAttemptedExpiry===expires)return;
+  const lead=Math.min(RENEW_BEFORE_MS,Math.max(0,Math.floor((expires-tokenIssuedAt)/5)));
+  if(Date.now()<expires-lead||Date.now()>=expires)return;
+  if(fromUserGesture)renewalGestureAttemptedExpiry=expires;
   renewalAttemptedExpiry=expires;
   oauthPending=true;
   renewalPending=true;
@@ -679,6 +683,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const unsubscribe=onDungeonDataChange(db,schedule);
  windowImpl?.addEventListener?.('online',()=>{watchTokenExpiry();schedule();});
  doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden){watchTokenExpiry();schedule();}});
+ // GIS recommends token acquisition from a user gesture. If a timed attempt
+ // was blocked, the next actual game-button click offers one more chance.
+ doc?.addEventListener?.('click',event=>{
+  if(event.isTrusted&&event.target?.closest?.('button'))tryRenewToken(true);
+ });
  const savedAuth=readAuthCookie();
  if(savedAuth){
   lockLocalOnly(true);
