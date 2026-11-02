@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {mpCost} from '../assets/js/dungeon-core.mjs';
 import {upgradeStoneCost,totalUpgradeStoneCost} from '../assets/js/dungeon-upgrades.mjs';
@@ -14,7 +15,7 @@ try{
   name:'魔術師',level:1,xp:0,base:{hp:100,mag:10,def:7,res:7},returns:0,attempts:0,
   inventory:[],collection:{},magicStones:initialStones,deepestReturnedLayer:0,slots:[],run:null
  });
- await putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:100},revealed:true});
+ await putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'debuff',power:100},revealed:true});
  await assert.rejects(putCircle(db,{id:'circle-1',image:new Blob(['circle']),analysis:{attribute:'flame',role:'attack',power:110},revealed:true}),/Error preparing Blob\/File data/,'simulate mobile IndexedDB failure on a photo rewrite');
  await import('../assets/js/dungeon-app.mjs?integration=upgrade');
  await wait(()=>$('libraryCards').innerHTML.includes('circle-1'));
@@ -53,6 +54,17 @@ try{
  assert.equal((await allCircles(db))[0].analysis.power,110,'read applies profile metadata without rewriting photo record');
  assert.equal(env.factory.databases.get('magia-dungeon-v1').get('circles').get('circle-1').analysis.power,100,'photo record stays unmodified');
  assert.equal($('magicDetailsDialog').open,true,'enhancement opens full circle feedback');
+ const page=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
+ const detailsMarkup=page.split('id="magicDetailsDialog"')[1].split('</dialog>')[0];
+ assert.ok(detailsMarkup.indexOf('id="magicDetailsImage"')<detailsMarkup.indexOf('id="upgradeCircle"'),'enhancement button follows the photo');
+ assert.ok(detailsMarkup.indexOf('id="upgradeCircle"')<detailsMarkup.indexOf('id="magicDetailsStats"'),'stats follow the enhancement button');
+ const css=await readFile(new URL('../assets/css/dungeon.css',import.meta.url),'utf8');
+ assert.match(css,/\.magic-details-stats\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'attribute/role and MP/power share two-column rows');
+ assert.deepEqual([...$('magicDetailsStats').innerHTML.matchAll(/<dt[^>]*>([^<]*)<\/dt>/g)].map(match=>match[1]),
+  ['属性','種別','MP','威力','強化','効果の詳細','追加効果名','追加効果の詳細','持続時間','作成方法'],
+  'visible effect labels follow the requested layout without losing status or source fields');
+ assert.equal(($('magicDetailsStats').innerHTML.match(/class="magic-details-stat">/g)||[]).length,4,'two paired rows contain four half-width stats');
+ assert.match($('magicDetailsStats').innerHTML,/<div class="magic-details-stat magic-details-stat--full"><dt>追加効果の詳細<\/dt>/,'status description spans both columns');
  assert.match($('magicStoneStock').textContent,new RegExp('次の強化：'+upgradeStoneCost(1)+'個'),'details display actual next upgrade cost');
  assert.equal($('magicDetailsDialog').dataset.enhancing,'true','ritual begins');
  const originalMpMarkup='<dt>MP</dt><dd>'+mpCost(100)+'</dd>';
