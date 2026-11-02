@@ -437,3 +437,6 @@ export async function replaceDungeonSnapshot(db,{profile,circles,savedAt=0},{exp
 }
 export const getCloudSyncState=db=>request(db,'settings','readonly',s=>s.get('cloudSyncState'));
 export const saveCloudSyncState=(db,state)=>request(db,'settings','readwrite',s=>s.put(state,'cloudSyncState'),{silent:true});
+// Persist the user's Drive sync choice separately from the expiring OAuth cookie.
+export const getDriveSyncIntent=db=>request(db,'settings','readonly',s=>s.get('driveSyncIntent'));
+export const saveDriveSyncIntent=(db,enabled)=>request(db,'settings','readwrite',s=>s.put(Boolean(enabled),'driveSyncIntent'),{silent:true});
