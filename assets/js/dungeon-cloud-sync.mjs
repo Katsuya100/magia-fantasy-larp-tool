@@ -530,6 +530,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     }
    }
 
+   // A legacy local seal cannot be uploaded, but an explicitly selected
+   // verified Drive restore must remain possible. Photo repair runs above.
+   if(losesRelics&&verification.status!=='valid'){
+    const choice=await chooseCloud({local,remote:remote.data,allowLocal:false,canStartLocal:false});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
+    return result;
+   }
    if(verification.status!=='valid'){
     show('端末セーブを検証できません。同期を停止しました。');
     return result;

@@ -925,6 +925,34 @@ try{
  const restoredDiscoveries=(await getProfile(reverseDb)).collection;
  assert.equal(relicIds.filter(id=>Number(restoredDiscoveries[id])>0).length,220);
 
+ // A legacy local integrity seal cannot be uploaded, but a valid Drive
+ // snapshot must still be recoverable by explicit choice.
+ const legacyFactory=fakeIndexedDB(),legacyDb=await openStore(legacyFactory);
+ const legacyProfile=await getProfile(legacyDb);
+ legacyProfile.name='旧版図鑑の復旧';legacyProfile.level=30;
+ legacyProfile.collection=Object.fromEntries(relicIds.map(id=>[id,1]));
+ await saveProfile(legacyDb,legacyProfile);
+ const legacyBefore=await readDungeonSnapshot(legacyDb);
+ const legacyRemote=remoteApi(await serializeDungeonSnapshot({...legacyBefore,
+  profile:{...legacyBefore.profile,level:31,
+   collection:Object.fromEntries(relicIds.slice(0,216).map(id=>[id,1]))},
+  savedAt:legacyBefore.savedAt+1000}));
+ const legacySettings=legacyFactory.databases.get('magia-dungeon-v1').get('settings');
+ legacySettings.set('integrity',{...legacySettings.get('integrity'),legacy:true});
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(legacyDb))).status,'legacy');
+ const legacyUi=fakeUi();
+ let legacyRestores=0;
+ start(legacyDb,legacyUi,legacyRemote.fetchImpl,{onRestore:()=>legacyRestores++});
+ await connect(legacyUi);
+ await wait(()=>legacyUi.get('googleDriveConflictDialog').open||legacyRestores>0,
+  'legacy integrity still permits selecting an intact Drive backup');
+ assert.equal(legacyRestores,0,'no auto restore across conflicting discoveries');
+ assert.equal(legacyUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').hidden,true,
+  'unverified local data cannot overwrite Drive');
+ legacyUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ await wait(()=>legacyRestores===1,'explicit Drive recovery is possible');
+ assert.equal((await getProfile(legacyDb)).level,31,'chosen verified Drive save restores safely');
+
  // Muse #14: a corrupt local photo must be repaired before the conflict
  // chooser, so the player can still preserve all locally found species.
  const photoFactory=fakeIndexedDB(),photoDb=await openStore(photoFactory);
