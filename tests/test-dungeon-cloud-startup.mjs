@@ -262,6 +262,8 @@ try{
    'REPRO Muse #10: no new local save must not display the saving spinner during Drive recheck');
   assert.equal(firstUi.get('driveSyncActivity').hidden,true,
    'REPRO Muse #10: no upload means no global saving activity');
+  assert.equal(firstUi.status.textContent,'GoogleDrive同期済み',
+   'REPRO Muse #10: read-only verification must not flicker the synced label');
  }finally{releaseUnchangedList();}
  await unchangedPass;
 
