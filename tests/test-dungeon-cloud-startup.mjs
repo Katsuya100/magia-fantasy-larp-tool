@@ -709,6 +709,42 @@ try{
  assert.deepEqual(newerRemoteDrive.operations,[]);
  assert.equal(newerRemoteUi.get('googleDriveConflictDialog').open,false);
 
+ // Both sides of case 4 keep the same playId. Check the actual Drive
+ // upload/restore path, not only the pure decision helper.
+ for(const spec of [
+  {label:'rank beats a newer timestamp',local:{adventurerRank:30,level:4,xp:0,deepestReturnedLayer:10,deepestReachedLayer:10},
+   remote:{adventurerRank:20,level:50,xp:0,deepestReturnedLayer:50,deepestReachedLayer:50},remoteTime:100000,win:'upload'},
+  {label:'higher Drive rank wins despite an older timestamp',local:{adventurerRank:20,level:50,xp:0},
+   remote:{adventurerRank:40,level:2,xp:0},remoteTime:-100000,win:'restore'},
+  {label:'cumulative EXP beats return, reach and time',local:{adventurerRank:20,level:15,xp:0},
+   remote:{adventurerRank:20,level:14,xp:0,deepestReturnedLayer:100,deepestReachedLayer:100},remoteTime:100000,win:'upload'},
+  {label:'higher successful return beats reach and time',local:{adventurerRank:20,level:15,xp:0,deepestReturnedLayer:30,deepestReachedLayer:31},
+   remote:{adventurerRank:20,level:15,xp:0,deepestReturnedLayer:20,deepestReachedLayer:100},remoteTime:100000,win:'upload'},
+  {label:'higher deepest reach beats newer timestamp',local:{adventurerRank:20,level:15,xp:0,deepestReturnedLayer:20,deepestReachedLayer:50},
+   remote:{adventurerRank:20,level:15,xp:0,deepestReturnedLayer:20,deepestReachedLayer:60},remoteTime:-100000,win:'restore'}
+ ]){
+  const compareDb=await newDb(),compareUi=fakeUi();
+  const initial=await getProfile(compareDb);
+  await saveProfile(compareDb,{...initial,name:'進行度比較',...spec.local});
+  const onDevice=await readDungeonSnapshot(compareDb);
+  const onDrive={...onDevice,profile:{...onDevice.profile,...spec.remote},
+   savedAt:onDevice.savedAt+spec.remoteTime};
+  const drive=remoteApi(await serializeDungeonSnapshot(onDrive));
+  let restored=0,ready=0;
+  start(compareDb,compareUi,drive.fetchImpl,{onRestore:()=>restored++,onInitialReady:()=>ready++});
+  await connect(compareUi);
+  if(spec.win==='upload'){
+   await wait(()=>ready===1,spec.label+' uploads automatically');
+   assert.equal(drive.uploads,1,spec.label);
+   assert.deepEqual(deserializeDungeonSnapshot(drive.current).profile,onDevice.profile,spec.label);
+  }else{
+   await wait(()=>restored===1,spec.label+' restores automatically');
+   assert.equal(drive.uploads,0,spec.label);
+   assert.deepEqual((await getProfile(compareDb)),onDrive.profile,spec.label);
+  }
+  assert.equal(compareUi.get('googleDriveConflictDialog').open,false,spec.label+' never opens a player chooser');
+ }
+
  // A local save made during an in-flight Drive restore must not disappear.
  // This exercises the IndexedDB transaction guard, not just a preflight check.
  const inFlightDb=await newDb(),inFlightUi=fakeUi();
@@ -739,7 +775,9 @@ try{
  await wait(()=>inFlightReady===1,'initial connection finishes after the safe retry');
  assert.equal(inFlightUi.get('googleDriveConflictDialog').open,false);
  
- // Identical timestamps but different bytes must never silently discard a save.
+ // Equal timestamps are only consulted after rank, EXP and depth.
+ // The remote's extra level means higher cumulative EXP and must win even
+ // though timestamps tie. No choice modal is allowed for the same playId.
  const tieDb=await newDb(),tieUi=fakeUi();
  const tieProfile=await getProfile(tieDb);
  tieProfile.name='同時刻のローカル';
@@ -747,18 +785,29 @@ try{
  const tieLocal=await readDungeonSnapshot(tieDb);
  const tieDrive=remoteApi(await serializeDungeonSnapshot({...tieLocal,
   profile:{...tieLocal.profile,level:tieLocal.profile.level+1}}));
- let tieReady=0;
- start(tieDb,tieUi,tieDrive.fetchImpl,{onInitialReady:()=>tieReady++});
+ let tieRestored=0;
+ start(tieDb,tieUi,tieDrive.fetchImpl,{onRestore:()=>tieRestored++});
  await connect(tieUi);
- await wait(()=>tieUi.get('googleDriveConflictDialog').open,'equal timestamps with different bytes ask user');
- assert.equal(tieDrive.uploads,0);
- assert.equal(tieReady,0);
- assert.equal(tieUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').textContent,'端末の同時刻のローカルで始める');
- assert.equal(tieUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').textContent,'Driveの同時刻のローカルで始める');
- tieUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
- await wait(()=>tieUi.doc.cookie==='','equal timestamp cancel keeps both records');
- assert.equal((await getProfile(tieDb)).name,'同時刻のローカル');
- assert.equal(deserializeDungeonSnapshot(tieDrive.current).profile.level,tieLocal.profile.level+1);
+ await wait(()=>tieRestored===1,'higher EXP wins over identical timestamps');
+ assert.equal(tieDrive.uploads,0,'the higher EXP Drive copy is preserved');
+ assert.equal(tieUi.get('googleDriveConflictDialog').open,false);
+ assert.equal((await getProfile(tieDb)).level,tieLocal.profile.level+1);
+
+ // Perfectly tied progression and timestamp may use either record.
+ // The implementation picks local and never asks for a redundant choice.
+ const equalDb=await newDb(),equalUi=fakeUi();
+ const equalProfile=await getProfile(equalDb);
+ equalProfile.name='進行度同点';
+ await saveProfile(equalDb,equalProfile);
+ const equalLocal=await readDungeonSnapshot(equalDb);
+ const equalDrive=remoteApi(await serializeDungeonSnapshot({...equalLocal,
+  profile:{...equalLocal.profile,name:'内容だけ異なる'}}));
+ let equalReady=0;
+ start(equalDb,equalUi,equalDrive.fetchImpl,{onInitialReady:()=>equalReady++});
+ await connect(equalUi);
+ await wait(()=>equalReady===1,'equal progress and time synchronize without choosing');
+ assert.equal(equalUi.get('googleDriveConflictDialog').open,false);
+ assert.equal(deserializeDungeonSnapshot(equalDrive.current).profile.name,'進行度同点');
 
  // Case 1: a previously synced but now empty Drive is created anew.
  // Stale file IDs, hashes, or blocked flags must not prevent creation.
