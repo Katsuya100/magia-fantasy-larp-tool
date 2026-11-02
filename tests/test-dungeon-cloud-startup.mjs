@@ -60,13 +60,20 @@ function createCookieJar(){
  };
 }
 function fakeUi(cookies=createCookieJar()){
- const elements=new Map();
+ const elements=new Map(),listeners=new Map();
  const doc={
   getElementById(id){
    if(!elements.has(id))elements.set(id,new Element(id));
    return elements.get(id);
   },
-  addEventListener(){},
+  addEventListener(type,handler){
+   if(!listeners.has(type))listeners.set(type,new Set());
+   listeners.get(type).add(handler);
+  },
+  userClick(){
+   const event={isTrusted:true,target:{closest(selector){return selector==='button'?get('battleAction'):null;}}};
+   for(const handler of listeners.get('click')||[])handler(event);
+  },
   get cookie(){return cookies.cookie;},
   set cookie(value){cookies.cookie=value;},
   head:{append(){throw Error('Unexpected Google script injection');}}
@@ -1067,7 +1074,29 @@ try{
  assert.equal(transferHeaders.at(-1),'Bearer test-token-renewed','readback uses refreshed credentials');
  await transferController.disconnect();
 
- // 16. If the browser blocks automatic renewal, fallback to expiry notification.
+ // A blocked timer can retry from the player's next real button click.
+ auth.setRenewalError(true);
+ auth.setExpiresIn(62.5);
+ const gestureDb=await newDb(),gestureUi=fakeUi(),gestureDrive=remoteApi();
+ let gestureReady=0;
+ const gestureController=start(gestureDb,gestureUi,gestureDrive.fetchImpl,{onInitialReady:()=>gestureReady++});
+ const gestureStart=auth.requests.length;
+ await connect(gestureUi);
+ await wait(()=>gestureReady===1,'gesture retry starts from a verified backup');
+ await wait(()=>auth.requests.slice(gestureStart).some(request=>request.prompt===''),'the timed renewal was attempted');
+ assert.ok(!gestureUi.doc.cookie.includes('test-token-renewed'),'blocked timer keeps the old token');
+ auth.setRenewalError(false);
+ const requestsBeforeGesture=auth.requests.length;
+ gestureUi.doc.userClick();
+ await wait(()=>gestureUi.doc.cookie.includes('test-token-renewed'),'game click retries renewal after popup blocking');
+ assert.equal(auth.requests.length,requestsBeforeGesture+1,'one gesture triggers one additional token request');
+ gestureUi.doc.userClick();
+ assert.equal(auth.requests.length,requestsBeforeGesture+1,'repeated clicks never spam the token flow');
+ await new Promise(resolve=>setTimeout(resolve,2750));
+ assert.equal(gestureUi.get('googleDriveExpiredDialog').open,false,'game-click renewal survives the old expiry');
+ await gestureController.disconnect();
+
+ // 16. If both automatic and gesture renewal fail, expiry still prompts reconnect.
  auth.setRenewalError(true);
  // 15. An idle tab proactively notifies at token expiry without waiting
  // for another save. The dialog is one-shot until a fresh token is authorized.
