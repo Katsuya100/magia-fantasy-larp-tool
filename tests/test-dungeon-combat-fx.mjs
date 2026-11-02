@@ -3,6 +3,40 @@ import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {magicEffectTier,effectCaption,attackHitAffinity,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,combatPhaseDuration,combatPhaseAdvanceDuration,COMBAT_EFFECT_MS,AFFINITY_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS} from '../assets/js/dungeon-combat-fx.mjs';
+import {captureCombatFxEcho} from '../assets/js/dungeon-combat-fx-echo.mjs';
+
+// Muse #8: an old "+118" healing caption must not linger as a visible echo
+// while the new combat phase already displays a different HP value.
+function mockFxNode(id='',text=''){
+ const node={id,textContent:text,children:[],style:{},dataset:{},
+  setAttribute(){},removeAttribute(key){if(key==='id')this.id='';},remove(){this.removed=true;},
+  append(...children){this.children.push(...children);},
+  cloneNode(deep){const copy=mockFxNode(this.id,this.textContent);if(deep)copy.children=this.children.map(x=>x.cloneNode(true));return copy;},
+  querySelectorAll(selector){const matching=[];const visit=x=>{for(const child of x.children){if(selector==='[id]'&&child.id||selector==='strong'&&child.tag==='strong')matching.push(child);visit(child);}};visit(this);return matching;}
+ };
+ return node;
+}
+const oldDocument=globalThis.document;
+try{
+ globalThis.document={createElement:()=>mockFxNode()};
+ const makeActor=(message)=>{
+  const caption=mockFxNode('heroFxText',message);caption.tag='strong';
+  const fx=mockFxNode();fx.children.push(caption);
+  return {offsetLeft:0,offsetTop:0,offsetWidth:100,offsetHeight:100,
+   cloneNode:()=>mockFxNode(),querySelector:query=>query==='.combatant-fx'?fx:null};
+ };
+ const actors={'#heroCombatant':makeActor('💧 ✚回復 +118'),'#enemyCombatant':makeActor('')};
+ const arena={children:[],querySelector:query=>actors[query]||null,append(node){this.children.push(node);}};
+ const oldEcho=captureCombatFxEcho(arena,440);
+ assert.ok(oldEcho,'real combat FX captures a visual echo');
+ oldEcho.reveal();
+ const echoedCaptions=arena.children[0].children.flatMap(actor=>actor.children.flatMap(fx=>fx.children));
+ assert.ok(echoedCaptions.length,'the echo contains the captured healing FX node');
+ assert.equal(echoedCaptions[1].textContent,'',
+  'REPRO Muse #8: obsolete +118 healing caption must not overlay the next HP snapshot');
+ oldEcho.dispose();
+}finally{globalThis.document=oldDocument;}
+
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase,buffs]=await Promise.all(['balance','levels','floors','player-base','buffs'].map(csv));
 configure({balance,levels,floors,playerBase});
