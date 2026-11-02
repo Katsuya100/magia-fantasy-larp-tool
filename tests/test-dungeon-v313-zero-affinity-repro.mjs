@@ -43,7 +43,8 @@ try{
  echo.reveal();
  assert.equal(oldResistNode.dataset.active,'true',
   'REPRO: blindly revealing old FX makes previous RESIST visible during a 0-damage attack');
- assert.match(app,/lastEcho\?\.reveal\(\)/,'existing arena plays prior echoes before painting the next phase');
+ assert.match(app,/if\(discardCombatEchoesOnMiss\(phase,activeEchoes\)\)lastEcho=null/,
+  'arena discards prior affinity echoes before showing a missed new attack');
 
  // Required behavior: a zero-hit phase discards the prior affinity echo,
  // but an ordinary hit must still retain its independent 720ms visual tail.

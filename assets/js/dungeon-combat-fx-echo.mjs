@@ -29,3 +29,12 @@ export function captureCombatFxEcho(arena,visualDuration){
  const timer=setTimeout(()=>echo.remove(),visualDuration);
  return {reveal(){echo.dataset.active='true';},dispose(){clearTimeout(timer);echo.remove();}};
 }
+
+// Do not let a prior successful RESIST/WEAK hit masquerade as feedback for
+// the next, genuinely zero-damage magic attack. Other hits retain full FX.
+export function discardCombatEchoesOnMiss(phase,echoes){
+ if(!phase.some(step=>step.role==='attack'&&step.amount===0))return false;
+ for(const echo of echoes)echo.dispose();
+ echoes.length=0;
+ return true;
+}

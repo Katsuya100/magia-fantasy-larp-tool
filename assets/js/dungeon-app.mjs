@@ -2,7 +2,7 @@ import * as G from './dungeon-core.mjs?v=20261102.320';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261102.320';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261102.320';
 import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261103.324';
-import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261102.320';
+import {captureCombatFxEcho,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261103.324';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261102.320';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261102.320';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261102.320';
@@ -621,7 +621,8 @@ async function animateBattle(steps){
  $('battleItems').setAttribute('aria-busy','true');
  try{
   await playCombatSequence(steps,phase=>{
-   lastEcho?.reveal();
+   if(discardCombatEchoesOnMiss(phase,activeEchoes))lastEcho=null;
+   else lastEcho?.reveal();
    clearCombatEffects();
    // Force a new CSS animation cycle even after consecutive turns with the same role.
    void $('battleArena').offsetWidth;
