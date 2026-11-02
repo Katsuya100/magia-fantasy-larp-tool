@@ -50,15 +50,17 @@ assert.doesNotThrow(()=>assertBankedJourneySnapshot(state));
 assert.throws(()=>assertBankedJourneySnapshot({...state,bankedStones:9}),/free magic stones/);
 assert.throws(()=>assertBankedJourneySnapshot({...state,rank:30}),/unearned adventurer rank/);
 assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:10,earlyMobs:20,earlyFastWins:17,bossRounds:3,
- hpPercent:79,mpPercent:80,eligible:false,failure:'RANK_CONDITIONS_UNMET'}));
+ hpPercent:79,mpPercent:80,eligible:false,awardedRankLayer:null,failure:'RANK_CONDITIONS_UNMET'}));
 assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:20,earlyMobs:20,earlyFastWins:18,bossRounds:3,
- hpPercent:1,mpPercent:0,eligible:true,failure:null}));
+ hpPercent:1,mpPercent:0,eligible:true,awardedRankLayer:20,failure:null}));
 assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:20,earlyMobs:20,earlyFastWins:17,bossRounds:4,
- hpPercent:80,mpPercent:80,eligible:true,failure:null}));
+ hpPercent:80,mpPercent:80,eligible:true,awardedRankLayer:20,failure:null}));
 assert.doesNotThrow(()=>assertPreRecoveryRankGate({layer:20,earlyMobs:20,earlyFastWins:18,bossRounds:4,
- hpPercent:79,mpPercent:80,eligible:false,failure:'RANK_CONDITIONS_UNMET'}));
+ hpPercent:79,mpPercent:80,eligible:true,awardedRankLayer:10,failure:null}));
 assert.throws(()=>assertPreRecoveryRankGate({layer:20,earlyMobs:20,earlyFastWins:17,bossRounds:3,
- hpPercent:79,mpPercent:79,eligible:true,failure:null}),/OR/);
+ hpPercent:79,mpPercent:79,eligible:true,awardedRankLayer:20,failure:null}),/previous one/);
+assert.throws(()=>assertPreRecoveryRankGate({layer:10,earlyMobs:20,earlyFastWins:17,bossRounds:4,
+ hpPercent:79,mpPercent:79,eligible:true,awardedRankLayer:10,failure:null}),/previous one/);
 assert.throws(()=>assertNotFalsePass({passed:true,missing:1}),/cannot PASS/);
 assert.throws(()=>assertNotFalsePass({passed:true,cutoff:true}),/cannot PASS/);
 

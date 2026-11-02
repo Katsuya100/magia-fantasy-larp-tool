@@ -1,6 +1,6 @@
 // Canonical test-only contracts: fail on invalid measurements, never repair them.
 import assert from 'node:assert/strict';
-import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,RANK_LEGACY_RESERVE_PERCENT} from '../assets/js/dungeon-ranks.mjs';
+import {RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,RANK_LEGACY_RESERVE_PERCENT,RANK_SUPERIOR_BOSS_OFFSET_LAYERS} from '../assets/js/dungeon-ranks.mjs';
 export const FIXED_CARRY={1:[0,0],11:[0,0],21:[0,0],31:[0,0],41:[0,0],51:[13,0],61:[14,0],71:[13,2],81:[14,2],91:[16,2]};
 export function assertFixedInventory(from,items){
  const expected=FIXED_CARRY[from];assert.ok(expected,'unknown fixed band');
@@ -100,8 +100,14 @@ export function assertPreRecoveryRankGate(record){
   record.bossRounds<=RANK_FINAL_BOSS_MAX_ROUNDS;
  const legacy=record.hpPercent>=RANK_LEGACY_RESERVE_PERCENT&&
   record.mpPercent>=RANK_LEGACY_RESERVE_PERCENT;
- assert.equal(record.eligible,legacy||mastery,
-  'rank must follow legacy 80/80 reserve OR early normal/final boss mastery');
+ const expectedLayer=legacy||mastery?record.layer:
+  record.layer>=20?record.layer-RANK_SUPERIOR_BOSS_OFFSET_LAYERS:null;
+ assert.equal(record.eligible,record.awardedRankLayer!==null,
+  'provisional rank requires a real badge in unbanked loot');
+ if(record.eligible)assert.equal(record.awardedRankLayer,expectedLayer,
+  'award is the direct boss rank or the immediately previous one');
+ else assert.equal(record.awardedRankLayer,null,
+  'no badge means no rank credit');
 }
 export function assertNotFalsePass({passed,missing=0,cutoff=false}){
  assert.ok(!passed||missing===0&&!cutoff,'unready seeds and cutoffs cannot PASS');

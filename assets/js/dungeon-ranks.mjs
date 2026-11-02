@@ -61,6 +61,8 @@ export function recordRankCombat(run,fight,rounds){
 // Keep the original 80% HP AND MP route, so the new turn-based route
 // adds an opportunity rather than replacing an already earned opportunity.
 export const RANK_LEGACY_RESERVE_PERCENT=80;
+// Superior-boss rewards stay unbanked until a successful return.
+export const RANK_SUPERIOR_BOSS_OFFSET_LAYERS=10;
 export function rankBadgeEligible(fight,hero,record){
  const layer=clearedLayer(fight);
  if(!rankAt(layer)||!(Number(hero?.hp)>0))return false;
@@ -77,10 +79,14 @@ export function rankBadgeEligible(fight,hero,record){
 }
 export function rankBadgeDrop(fight,hero,profile,pendingLoot=[],record){
  const layer=clearedLayer(fight);
- if(!rankAt(layer)||highestRankLayer(profile)>=layer
-  ||pendingLoot.some(item=>item.type==='rank'&&Number(item.layer)>=layer))return null;
- if(!rankBadgeEligible(fight,hero,record))return null;
- return {type:'rank',layer};
+ if(!rankAt(layer)||!(Number(hero?.hp)>0))return null;
+ // Direct reserve/mastery qualifies for this rank; a stronger boss instead
+ // provisionally proves the immediately preceding rank.
+ const awardLayer=rankBadgeEligible(fight,hero,record)
+  ?layer:layer-RANK_SUPERIOR_BOSS_OFFSET_LAYERS;
+ if(!rankAt(awardLayer)||highestRankLayer(profile)>=awardLayer
+  ||pendingLoot.some(item=>item.type==='rank'&&Number(item.layer)>=awardLayer))return null;
+ return {type:'rank',layer:awardLayer};
 }
 export function acquireAdventurerRank(profile,layer){
  const rank=rankAt(layer);
