@@ -32,9 +32,15 @@ export function captureCombatFxEcho(arena,visualDuration){
 
 // Do not let a prior successful RESIST/WEAK hit masquerade as feedback for
 // the next, genuinely zero-damage magic attack. Other hits retain full FX.
-export function discardCombatEchoesOnMiss(phase,echoes){
- if(!phase.some(step=>step.role==='attack'&&step.amount===0))return false;
+export function disposeCombatEchoes(arena,echoes){
  for(const echo of echoes)echo.dispose();
  echoes.length=0;
+ // Previous-turn FX echoes outlive their original animateBattle handles
+ // when an input starts at the 70% overlap point.
+ for(const node of arena?.querySelectorAll?.('.combat-fx-echo')||[])node.remove();
+}
+export function discardCombatEchoesOnMiss(phase,echoes,arena){
+ if(!phase.some(step=>step.role==='attack'&&step.amount===0))return false;
+ disposeCombatEchoes(arena,echoes);
  return true;
 }

@@ -2,7 +2,7 @@ import * as G from './dungeon-core.mjs?v=20261102.320';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261102.320';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261102.320';
 import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261103.324';
-import {captureCombatFxEcho,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261103.324';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261103.324';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261102.320';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261102.320';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261102.320';
@@ -621,7 +621,7 @@ async function animateBattle(steps){
  $('battleItems').setAttribute('aria-busy','true');
  try{
   await playCombatSequence(steps,phase=>{
-   if(discardCombatEchoesOnMiss(phase,activeEchoes))lastEcho=null;
+   if(discardCombatEchoesOnMiss(phase,activeEchoes,$('battleArena')))lastEcho=null;
    else lastEcho?.reveal();
    clearCombatEffects();
    // Force a new CSS animation cycle even after consecutive turns with the same role.
@@ -665,8 +665,7 @@ async function animateBattle(steps){
   },{overlap:125,onLastPhase:(_phase,duration)=>battleInput.begin(duration),onFatal:side=>{
    // Prior combat phases may still have live WEAK/RESIST echo layers.
    // Discard every one before the death ceremony, not just the last phase.
-   for(const echo of activeEchoes)echo.dispose();
-   activeEchoes.length=0;
+   disposeCombatEchoes($('battleArena'),activeEchoes);
    lastEcho=null;
    clearCombatEffects();
    return ceremony(side==='hero'?'hero-death':'enemy-death',
