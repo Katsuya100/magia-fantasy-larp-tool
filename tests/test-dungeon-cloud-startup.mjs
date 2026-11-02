@@ -252,20 +252,43 @@ try{
  assert.equal(firstUi.get('googleDriveConflictDialog').open,false,'naming never reopens the restore/new chooser');
  assert.ok(firstDrive.downloads>=2,'both uploads were verified with Drive downloads');
 
- // Muse #10: rechecking an unchanged cloud save should not flash "saving".
- const releaseUnchangedList=firstDrive.pauseNextList();
+ // Muse #10: an unchanged cloud recheck must never show a saving indicator.
+ // Record every temporary transition, not only the final synced state.
+ const unchangedSpinner=firstUi.get('googleDriveSpinner');
+ let spinnerHidden=unchangedSpinner.hidden;
+ const transientSaves=[];
+ Object.defineProperty(unchangedSpinner,'hidden',{
+  configurable:true,get(){return spinnerHidden;},
+  set(value){spinnerHidden=value;if(!value)transientSaves.push('spinner');}
+ });
+ const unchangedActivity=firstUi.get('driveSyncActivity');
+ let activityHidden=unchangedActivity.hidden;
+ Object.defineProperty(unchangedActivity,'hidden',{
+  configurable:true,get(){return activityHidden;},
+  set(value){activityHidden=value;if(!value)transientSaves.push('activity');}
+ });
+ const oldStatus=firstUi.status.textContent;
+ const statusTransitions=[];
+ let syncStatus=oldStatus;
+ Object.defineProperty(firstUi.status,'textContent',{
+  configurable:true,get(){return syncStatus;},
+  set(value){syncStatus=String(value);statusTransitions.push(syncStatus);}
+ });
  const previousUnchangedLists=firstDrive.listRequests;
- const unchangedPass=firstController.syncNow();
- await wait(()=>firstDrive.listRequests>previousUnchangedLists,'unchanged recheck reached Drive');
- try{
-  assert.equal(firstUi.get('googleDriveSpinner').hidden,true,
-   'REPRO Muse #10: no new local save must not display the saving spinner during Drive recheck');
-  assert.equal(firstUi.get('driveSyncActivity').hidden,true,
-   'REPRO Muse #10: no upload means no global saving activity');
-  assert.equal(firstUi.status.textContent,'GoogleDrive同期済み',
-   'REPRO Muse #10: read-only verification must not flicker the synced label');
- }finally{releaseUnchangedList();}
- await unchangedPass;
+ let unchangedOutcome='deferred';
+ for(let attempt=0;attempt<8;attempt++){
+  unchangedOutcome=await firstController.syncNow();
+  if(unchangedOutcome==='ready')break;
+  await new Promise(resolve=>setTimeout(resolve,30));
+ }
+ assert.equal(unchangedOutcome,'ready','unchanged snapshot revalidation eventually finishes');
+ assert.ok(firstDrive.listRequests>previousUnchangedLists,
+  'the unchanged snapshot was verified with an actual Drive request');
+ assert.deepEqual(transientSaves,[],
+  'REPRO Muse #10: no upload should flash a saving spinner during verification');
+ assert.ok(statusTransitions.every(value=>value!=='同期中…'),
+  'REPRO Muse #10: read-only verification must not flicker the synced label');
+ assert.equal(firstUi.status.textContent,'GoogleDrive同期済み');
 
  // Real autosave, not just an explicit syncNow(): a local edit schedules
  // a nonblocking backup after the 1.8s debounce and the spinner stays visible.
