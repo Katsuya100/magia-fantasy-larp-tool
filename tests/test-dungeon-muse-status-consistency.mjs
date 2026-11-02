@@ -53,7 +53,9 @@ try{
  profile.collection=Object.fromEntries(collections.slice(0,220).map(x=>[x.id,1]));
  const hero=G.makeUnit(profile.base,102,{},[spell,null,null,null,null],'player');
  hero.statuses=[{id:'debuff_flame',kind:'debuff',attribute:'flame',effect:'burn',value:.03,turns:1}];
- const enemy=G.fromEnemy(enemies.find(row=>row.id==='foe_l042_1'),80);
+ // An expiring burn cannot be tested against a foe that may randomly reapply flame debuff.
+ const enemy=G.fromEnemy(enemies.find(row=>row.id==='foe_l042_2'),80);
+ assert.ok(enemy.spells.every(s=>s?.role!=='debuff'||s.attribute!=='flame'),'the test enemy cannot renew the expiring burn');
  profile.run={floor:207,slotIds:[circle.id,null,null,null,null],hero,enemy,enemyName:enemy.name,
   carry:[{type:'use',id:'clear_flame',value:0},null,null,null,null,null],loot:[],xp:0,log:[],stage:'battle'};
  await saveProfile(db,profile);
