@@ -250,6 +250,18 @@ try{
  assert.equal(firstUi.get('googleDriveConflictDialog').open,false,'naming never reopens the restore/new chooser');
  assert.ok(firstDrive.downloads>=2,'both uploads were verified with Drive downloads');
 
+ // Muse #10: rechecking an unchanged cloud save should not flash "saving".
+ const releaseUnchangedList=firstDrive.pauseNextList();
+ const unchangedPass=firstController.syncNow();
+ await wait(()=>firstUi.status.textContent==='同期中…','unchanged recheck reached Drive');
+ try{
+  assert.equal(firstUi.get('googleDriveSpinner').hidden,true,
+   'REPRO Muse #10: no new local save must not display the saving spinner during Drive recheck');
+  assert.equal(firstUi.get('driveSyncActivity').hidden,true,
+   'REPRO Muse #10: no upload means no global saving activity');
+ }finally{releaseUnchangedList();}
+ await unchangedPass;
+
  // Real autosave, not just an explicit syncNow(): a local edit schedules
  // a nonblocking backup after the 1.8s debounce and the spinner stays visible.
  const autoProfile=await getProfile(firstDb);
