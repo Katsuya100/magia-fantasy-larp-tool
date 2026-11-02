@@ -70,6 +70,8 @@ try{
   await wait(()=>get('heroFxText').textContent.includes('🌪目眩'),
    'a zero-damage flame strike displays the dizziness active during the attack');
   await missClick;
+  await wait(async()=>(await getProfile(db)).run?.battleTurns===3,
+   'the missed flame cast must finish and persist before its result is checked');
  }finally{Math.random=randomBeforeMiss;}
  const afterMiss=await getProfile(db);
  assert.equal(afterMiss.run.enemy.hp,enemyHpBeforeMiss,
