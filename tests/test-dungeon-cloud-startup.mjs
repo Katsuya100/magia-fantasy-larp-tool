@@ -483,9 +483,10 @@ try{
  // 2. Fresh local browser + existing named cloud backup: require an explicit
  // choice, never a name form until the user chooses a new game or local save.
  const recoveringDb=await newDb(),recoveringUi=fakeUi(),recoveringDrive=remoteApi(firstDrive.current);
- let recoveringNames=0,reloads=0;
+ let recoveringNames=0,rehydrations=0,finishRehydration;
+ const viewReady=new Promise(resolve=>{finishRehydration=resolve;});
  start(recoveringDb,recoveringUi,recoveringDrive.fetchImpl,{
-  onInitialReady:()=>recoveringNames++,onRestore:()=>reloads++
+  onInitialReady:()=>recoveringNames++,onRestore:async()=>{rehydrations++;await viewReady;}
  });
  await connect(recoveringUi);
  await wait(()=>recoveringUi.get('googleDriveConflictDialog').open,'existing remote opens restore/new chooser');
@@ -505,9 +506,17 @@ try{
  assert.equal(recoveringUi.get('setupWithoutBackup').hidden,true,'skip option disappears synchronously BEFORE chooser closes');
  assert.equal(recoveringUi.get('setupWithoutBackup').disabled,true,'no mis-tap can bypass chosen restoration');
  assert.equal(recoveringUi.get('googleDriveConflictDialog').open,false);
- await wait(()=>reloads===1,'existing player restored');
- assert.equal(recoveringUi.get('setupWithoutBackup').hidden,true,'skip option cannot flash before reload');
+ await wait(()=>rehydrations===1,'same-page restore callback is called');
+ assert.notEqual(recoveringUi.status.textContent,'GoogleDrive同期済み','sync completion waits for the screen to hydrate');
  assert.equal((await readDungeonSnapshot(recoveringDb)).profile.name,'星の魔導士');
+ const liveRestoreEdit=await getProfile(recoveringDb);
+ liveRestoreEdit.magicStones=(liveRestoreEdit.magicStones||0)+2;
+ await saveProfile(recoveringDb,liveRestoreEdit);
+ finishRehydration();
+ await wait(()=>recoveringUi.status.textContent==='GoogleDrive同期済み','sync resumes after on-screen restoration');
+ assert.equal(deserializeDungeonSnapshot(recoveringDrive.current).profile.magicStones,liveRestoreEdit.magicStones,
+  'a legitimate save during in-place recovery must reach Drive after the screen is ready');
+ assert.equal(recoveringUi.get('setupWithoutBackup').hidden,true,'skip option stays hidden after the live restore');
  assert.equal(recoveringNames,0,'restoration does not open a new name dialog');
 
  // Case 5 cancellation: both players remain intact, and local play can continue

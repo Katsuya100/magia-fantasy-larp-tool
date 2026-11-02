@@ -57,7 +57,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return {ready:false};
  }
  let client=null,drive=null,accessToken='',expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
- let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false,initialRetryQueued=false;
+ let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false,initialRetryQueued=false,restoredInSession=false;
  let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,renewalPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
  let disconnectPending=false,disconnectPromise=null,resolveDisconnect=null;
  let renewalAttemptedExpiry=0,renewalGestureAttemptedExpiry=0,tokenIssuedAt=0;
@@ -121,7 +121,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   // can consider the backup connected.
   if(outcome==='deferred'&&initialRetryQueued)return;
   if(outcome!=='deferred')initialRetryQueued=false;
-  if(outcome==='ready'||outcome==='start-new')onInitialReady();
+  if((outcome==='ready'||outcome==='start-new')&&!restoredInSession)onInitialReady();
   else if(outcome!=='restored'&&!initialChoiceCommitted)lockLocalOnly(false);
  }
  const show=message=>{const lines=message.replace(/。(?!$)/g,'。\n');status.textContent=lines;const setup=doc?.getElementById('backupSetupStatus');if(setup)setup.textContent=lines;};
@@ -313,11 +313,20 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    throw error;
   }
   restoring=true;
-  await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
-  await saveDriveSyncIntent(db,true);
-  show('Google Driveの正常なセーブを復元しました。画面を読み込み直します。');
-  onRestore();
-  return 'restored';
+  try{
+   await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
+   await onRestore();
+   ensureCurrent(activeSyncEpoch);
+   restoredInSession=true;
+   // If the player saved while the screen was hydrating, queue that newer save.
+   const latest=await readDungeonSnapshot(db);
+   ensureCurrent(activeSyncEpoch);
+   if(latest.savedAt!==remote.data.savedAt){again=true;show('同期中…');return 'deferred';}
+   again=false;
+   await syncedPresentation();
+   return 'restored';
+  }catch(error){again=false;throw error;}
+  finally{restoring=false;}
  }
  async function upload(snapshot,file,{allowInitial=false}={}){
   // The exact serialized, inspected bytes are uploaded; do not recompute
