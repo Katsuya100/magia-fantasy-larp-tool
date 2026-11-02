@@ -220,6 +220,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  function chooseCloud({local,remote,mode='different',allowLocal=true,canStartLocal=true}){
   return new Promise(resolve=>{
    if(!conflictDialog?.showModal){resolve('cancel');return;}
+   // This is a decision wait, not an in-flight Drive transfer.
+   // An actual restore/upload will resume the activity indicator itself.
+   setSyncing(false);
+   show('バックアップを選択してください');
    choicePending=true;
    const fresh=mode==='fresh';
    const remoteName=String(remote?.profile?.name||'').trim()||'バックアップ';

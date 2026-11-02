@@ -360,6 +360,12 @@ try{
  const writesBeforeMismatch=separateDrive.uploads;
  const mismatchSync=separateController.syncNow();
  await wait(()=>separateUi.get('googleDriveConflictDialog').open,'different play immediately offers the chooser');
+ assert.equal(separateUi.get('driveSyncActivity').hidden,true,
+  'Muse #10: waiting for a choice is not presented as an endless Drive transfer');
+ assert.equal(separateUi.get('googleDriveSpinner').hidden,true,
+  'Muse #10: there is no upload spinner while awaiting a human decision');
+ assert.equal(separateUi.status.textContent,'バックアップを選択してください',
+  'the sync status makes the pending choice clear');
  assert.equal(separateDrive.uploads,writesBeforeMismatch,'different players cannot overwrite without selection');
  separateUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
  assert.equal(await mismatchSync,'deferred');
