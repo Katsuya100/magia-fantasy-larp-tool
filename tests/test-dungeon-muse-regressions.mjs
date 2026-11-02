@@ -46,6 +46,32 @@ for(const layer of [28,29,47,48,49]){
   assert.ok(hit?.amount>0,layer+'F '+row.id+': combat timeline keeps a nonzero actual flame hit');
  }
 }
+// #12a: an enemy defense spell executes first, but cannot turn a real 681-power
+// elemental hit into a silent zero. Test the actual 25 row spell loadouts.
+for(const layer of [28,29,47,48,49]){
+ const rows=enemies.filter(row=>new RegExp('^(foe|boss)_l'+String(layer).padStart(3,'0')+'(?:_|$)').test(row.id));
+ for(const row of rows){
+  const defenderSpell=G.fromEnemy(row,Number(row.min_level)).spells.findIndex(spell=>spell.role==='defense');
+  if(defenderSpell<0)continue;
+  const hero=G.makeUnit({hp:110,mag:12,def:10,res:10},Number(row.min_level),{},[flameSpell],'player');
+  const target=G.fromEnemy(row,Number(row.min_level));
+  const effects=[];
+  G.round(hero,target,0,defenderSpell,buffs,()=>.99,event=>effects.push(event));
+  const hit=effects.find(event=>event.side==='hero'&&event.role==='attack');
+  assert.ok(hit?.amount>0,layer+'F '+row.id+': a defense cast does not silently erase a 681-power flame hit');
+ }
+}
+// The only intentional instant 0 on a viable attack is a successful dizziness
+// miscast. Verify both the miss and the same spell's unblocked counterpart.
+{
+ const hero=G.makeUnit({hp:110,mag:12,def:10,res:10},86,{},[flameSpell],'player');
+ const enemy=G.fromEnemy(enemies.find(row=>row.id==='boss_l049'),86);
+ const clean=G.damage(hero,enemy,flameSpell,()=>0);
+ assert.ok(clean>0,'a viable flame spell does not miss without a debuff');
+ G.addStatus(hero,{id:'debuff_storm',kind:'debuff',attribute:'storm',effect:'dizzy',value:.45,turns:2});
+ assert.equal(G.damage(hero,enemy,flameSpell,()=>0),0,'an actual dizziness miss deals exactly zero');
+ assert.equal(G.damage(hero,enemy,flameSpell,()=>.99),clean,'the same spell hits when the dizziness roll fails');
+}
 // #12b: support/healing phases are distinct from the subsequent attack phase.
 {
  const attacker=G.makeUnit({hp:110,mag:12,def:10,res:10},86,{},[flameSpell],'player');
