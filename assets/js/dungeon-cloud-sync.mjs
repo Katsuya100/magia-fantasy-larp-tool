@@ -2,18 +2,43 @@ import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
 import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
-import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,getProfile,saveProfile} from './dungeon-store.mjs?v=20261101.310';
+import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,onDungeonDataChange,putCircle,getProfile,saveProfile} from './dungeon-store.mjs?v=20261102.311';
 import {verifyLocalSnapshot,digestPhoto,recordFingerprint} from './dungeon-cloud-integrity.mjs';
+import {nextXp} from './dungeon-core.mjs?v=20261102.311';
+import {highestRankLayer} from './dungeon-ranks.mjs';
+import {deepestReturnedLayer,deepestReachedLayer} from './dungeon-progress.mjs';
 
-// Last-write-wins: the timestamp belongs to the game save, not Drive metadata.
-// Equal timestamps with different contents require selection; identical bytes are a no-op.
-export function decideCloudSync({file,localHash,remoteHash,localSavedAt=0,remoteSavedAt=0}){
+// profile.xp is only EXP remaining after level-ups; reconstruct earned EXP
+// from the same level thresholds used by the actual game.
+export function cumulativeDungeonXp(profile){
+ const level=Number(profile?.level);
+ let earned=Math.max(0,Number(profile?.xp)||0);
+ if(!Number.isSafeInteger(level)||level<1)return earned;
+ for(let current=1;current<level;current++)earned+=nextXp(current);
+ return earned;
+}
+
+// Compare the SAME play history lexicographically: rank, earned EXP,
+// deepest successful return, deepest reach. Timestamp is checked last.
+export function compareDungeonProgress(local,remote){
+ const measures=[highestRankLayer,cumulativeDungeonXp,deepestReturnedLayer,deepestReachedLayer];
+ for(const measure of measures){
+  const left=measure(local),right=measure(remote);
+  if(left!==right)return left>right?1:-1;
+ }
+ return 0;
+}
+export function decideCloudSync({file,localHash,remoteHash,localProfile=null,remoteProfile=null,localSavedAt=0,remoteSavedAt=0}){
  if(!file)return 'upload';
  if(localHash&&remoteHash&&localHash===remoteHash)return 'synced';
- // A missing timestamp has no defined ordering, even for the same player.
- if(!(Number(localSavedAt)>0)||!(Number(remoteSavedAt)>0))return 'choose';
- if(Number(localSavedAt)===Number(remoteSavedAt))return 'choose';
- return Number(localSavedAt)>Number(remoteSavedAt)?'upload':'download';
+ const progress=compareDungeonProgress(localProfile,remoteProfile);
+ if(progress!==0)return progress>0?'upload':'download';
+ const localTime=Number(localSavedAt),remoteTime=Number(remoteSavedAt);
+ if(Number.isFinite(localTime)&&Number.isFinite(remoteTime)&&localTime>0&&remoteTime>0&&localTime!==remoteTime)
+  return localTime>remoteTime?'upload':'download';
+ // When all progress measures and timestamps tie (or time is unavailable),
+ // either copy is acceptable. Choose local deterministically; no extra dialog.
+ return 'upload';
 }
 // Never infer game continuity from player name, level or timestamps.
 export function canAutoSyncPlay({localPlayId,remotePlayId,identical=false}){
@@ -421,10 +446,12 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return result;
    }
 
-   // Case 4: same play. Repair missing images before uploading, but never
-   // advance the local timestamp to defeat a newer verified Drive save.
+   // Case 4: same play. Resolve actual progress before image repair;
+   // a newer timestamp must never beat a more advanced adventurer.
    if(verification.status==='badImages'){
-    if(Number(remote.data.savedAt)>Number(local.savedAt))return await restore(remote,file,{expectedLocal:local});
+    if(decideCloudSync({file,localProfile:local.profile,remoteProfile:remote.data.profile,
+     localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt})==='download')
+     return await restore(remote,file,{expectedLocal:local});
     const restored=[];
     for(const id of verification.badImageIds){
      const localCircle=local.circles.find(c=>c.id===id);
@@ -460,6 +487,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    const localHash=await snapshotHash(localText);
    ensureCurrent(activeSyncEpoch);
    const decision=decideCloudSync({file,localHash,remoteHash:remote.hash,
+    localProfile:local.profile,remoteProfile:remote.data.profile,
     localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt});
    if(decision==='synced'){
     await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
@@ -467,15 +495,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return 'ready';
    }
    if(decision==='download')return await restore(remote,file,{expectedLocal:local});
-   if(decision==='upload')return await upload(local,file);
-   // Equal timestamps with different content cannot be ordered safely.
-   const choice=await chooseCloud({local,remote:remote.data});
-   if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
-   if(choice==='overwrite'){
-    const outcome=await upload(local,file,{allowInitial:true});
-    return outcome==='ready'?'start-new':outcome;
-   }
-   return result;
+   return await upload(local,file);
   }catch(error){
    if(!isCurrent(activeSyncEpoch))return 'deferred';
    if(error instanceof DriveAuthError)expireConnection();

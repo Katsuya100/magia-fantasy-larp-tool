@@ -247,7 +247,7 @@ assert.equal(page.split(copyWarning).length-1,2,'unbacked save loss is declared 
 assert.match(page,/id="backupRiskWarning" class="backup-sync-warning"/,'profile risk notice can disappear after confirmed backup');
 assert.match(page,/id="backupRollbackWarning" class="backup-sync-warning" hidden/,'concurrent-browser warning only appears once connected');
 assert.doesNotMatch(page,/id="setupCreatePlayer"|id="setupSwitchGoogleDrive"/,'no redundant no-backup chooser appears');
-assert.match(page,/<dialog id="googleDriveConflictDialog" class="name-dialog"/,'one player chooser handles case 3, case 5, and timestamp ties');
+assert.match(page,/<dialog id="googleDriveConflictDialog" class="name-dialog"/,'one player chooser handles case 3 and case 5 only');
 assert.match(page,/data-action="restore"><\/button>/,'Drive player button is named from the actual backup');
 assert.match(page,/data-action="overwrite"><\/button>/,'local or new player button is named dynamically');
 assert.match(page,/data-action="later">キャンセル<\/button>/,'different players can cancel without changing either save');
