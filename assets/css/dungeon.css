@@ -277,7 +277,9 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 .magic-details-dialog::backdrop{background:#040612da;backdrop-filter:blur(3px)}
 .magic-details-content{padding:clamp(17px,4vw,30px)}
 .magic-details-content img{display:block;width:min(100%,320px);aspect-ratio:1 / 1;object-fit:cover;margin:12px auto;border:1px solid var(--border)}
-.magic-details-stats{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 14px;align-items:baseline;font-size:clamp(16px,3vw,21px);line-height:1.65}
+.magic-details-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;align-items:start;font-size:clamp(16px,3vw,21px);line-height:1.65}
+.magic-details-stat{min-width:0}
+.magic-details-stat--full{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 14px;align-items:baseline}
 .magic-details-stats dt{color:var(--gold);font-size:clamp(13px,2.5vw,16px);font-weight:600;white-space:nowrap}
 .magic-details-stats dd{margin:0;overflow-wrap:anywhere}
 .magic-expand{min-height:40px!important;touch-action:manipulation;cursor:zoom-in}
@@ -407,7 +409,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 /* Magic stones, confirmation and ritual feedback. */
 .magic-stone-balance{margin:18px 0 4px;color:var(--gold);font-weight:700;font-size:14px}
 .circle-grid .card-actions .upgrade-action{grid-column:1/-1}
-.magic-upgrade-controls{border-top:1px solid var(--border);margin-top:16px;padding-top:14px;text-align:center}
+.magic-upgrade-controls{border-bottom:1px solid var(--border);margin:12px 0 16px;padding-bottom:14px;text-align:center}
 .magic-upgrade-controls p{color:var(--gold);font-size:13px;line-height:1.5}
 .magic-upgrade-controls button{width:100%;max-width:350px}
 .magic-upgrade-controls button:disabled,.circle-grid .upgrade-action:disabled{opacity:.5;cursor:not-allowed}
