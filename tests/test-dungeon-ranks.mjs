@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {ADVENTURER_RANKS,rankAt,rankTitle,rankBadgeName,highestRankLayer,
- unlockedStartLayers,allowedStartLayer,RANK_LEGACY_RESERVE_PERCENT,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeEligible,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
+ unlockedStartLayers,allowedStartLayer,RANK_LEGACY_RESERVE_PERCENT,RANK_SUPERIOR_BOSS_OFFSET_LAYERS,RANK_EARLY_NORMAL_FIGHTS,RANK_EARLY_FAST_WINS_REQUIRED,RANK_FINAL_BOSS_MAX_ROUNDS,recordRankCombat,rankBadgeEligible,rankBadgeDrop,acquireAdventurerRank} from '../assets/js/dungeon-ranks.mjs';
 
 const names=['鉛','鉄','鋼','銅','銀','金','白金','ミスリル','アダマンタイト','オリハルコン'];
 assert.deepEqual(ADVENTURER_RANKS.map(r=>r.name),names);
@@ -19,6 +19,7 @@ assert.equal(allowedStartLayer(p,11),1,'cannot jump to an unearned layer');
 assert.equal(allowedStartLayer(p,'bogus'),1);
 assert.equal(allowedStartLayer(p,0),1);
 assert.equal(RANK_LEGACY_RESERVE_PERCENT,80);
+assert.equal(RANK_SUPERIOR_BOSS_OFFSET_LAYERS,10);
 assert.equal(RANK_EARLY_NORMAL_FIGHTS,20);
 assert.equal(RANK_EARLY_FAST_WINS_REQUIRED,18);
 assert.equal(RANK_FINAL_BOSS_MAX_ROUNDS,3);
@@ -65,6 +66,35 @@ assert.equal(rankBadgeDrop(5,h,p,[],mastery),null,'ordinary floor boss fails');
 assert.equal(rankBadgeDrop(505,h,p,[],mastery),null,'endless floor fails');
 assert.equal(rankBadgeDrop(50,h,p,[{type:'rank',layer:10}],mastery),null,'duplicate pending chapter');
 assert.equal(rankBadgeDrop(50,h,p,[{type:'rank',layer:20}],mastery),null,'pending higher chapter suppresses lower');
+// A higher decade boss earns only the previous rank, still as unbanked loot.
+for(let bossLayer=20;bossLayer<=100;bossLayer+=10){
+ const previousRank=bossLayer-10;
+ const missed={end:bossLayer,nextFight:bossLayer*5+1,
+  earlyMobs:20,earlyFastWins:0,bossRounds:8};
+ assert.deepEqual(rankBadgeDrop(bossLayer*5,h,{adventurerRank:0},[],missed),
+  {type:'rank',layer:previousRank});
+ assert.equal(rankBadgeDrop(bossLayer*5,h,{adventurerRank:previousRank},[],missed),null,
+  'no duplicate when the lower rank is owned');
+ assert.equal(rankBadgeDrop(bossLayer*5,h,{adventurerRank:0},
+  [{type:'rank',layer:previousRank}],missed),null,
+  'no duplicate provisional lower rank');
+}
+const returning={adventurerRank:0};
+const missedIron={end:20,nextFight:101,earlyMobs:20,earlyFastWins:0,bossRounds:8};
+const provisional=rankBadgeDrop(100,h,returning,[],missedIron);
+assert.deepEqual(provisional,{type:'rank',layer:10});
+assert.equal(highestRankLayer(returning),0,'boss victory does not immediately bank a rank');
+const lost=[provisional];
+lost.length=0; // Losing the expedition discards its unbanked rank loot.
+assert.equal(highestRankLayer(returning),0,'defeat cannot grant a provisional rank');
+assert.equal(lost.length,0);
+assert.equal(acquireAdventurerRank(returning,provisional.layer),true,
+ 'the successful return settlement acquires the chapter');
+assert.deepEqual(unlockedStartLayers(returning),[1,11]);
+assert.equal(rankBadgeDrop(100,{...h,hp:0},{adventurerRank:0},[],missedIron),null);
+assert.equal(rankBadgeDrop(101,h,{adventurerRank:0},[],missedIron),null);
+assert.equal(rankBadgeDrop(505,h,{adventurerRank:0},[],missedIron),null,
+ '101F and beyond cannot award the final rank automatically');
 const jumped={};
 recordRankCombat(jumped,49,1);
 assert.equal(jumped.rankCombat,null,'starting mid-band cannot invent earlier fights');
