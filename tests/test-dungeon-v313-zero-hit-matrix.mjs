@@ -33,7 +33,7 @@ for(const layer of reported){
   // Guarding can reduce a hit, but may not silently remove all damage.
   const defender=G.fromEnemy(row,level);
   const defenseIndex=defender.spells.findIndex(spell=>spell.role==='defense');
-  assert.ok(defenseIndex>=0,row.id+': test includes the enemy's real defense spell');
+  assert.ok(defenseIndex>=0,row.id+": test includes the enemy's real defense spell");
   const defended=[];
   G.round(G.makeUnit(starting,level,{},[flame],'player'),defender,0,defenseIndex,buffs,()=>.99,
    event=>defended.push(event));
