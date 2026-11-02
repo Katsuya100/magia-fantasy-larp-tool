@@ -4,28 +4,45 @@ const API='https://www.googleapis.com/drive/v3/files';
 const UPLOAD='https://www.googleapis.com/upload/drive/v3/files';
 const FILE_NAME='magia-dungeon-save-v1.json';
 export class DriveAuthError extends Error{}
-export function createDungeonDrive(token,fetchImpl=globalThis.fetch,{signal}={}){
+export function createDungeonDrive(token,fetchImpl=globalThis.fetch,{signal,timeoutMs=90000}={}){
  if(!token)throw Error('Google認証が必要です。');
  const headers={Authorization:'Bearer '+token};
- async function request(url,options={}){
-  const response=await fetchImpl(url,{...options,signal,headers:{...headers,...options.headers}});
-  if(response.status===401)throw new DriveAuthError('Google認証の期限が切れました。再接続してください。');
-  if(!response.ok)throw Error('Google Driveへの通信に失敗しました (HTTP '+response.status+')');
-  return response;
+ async function request(url,options={},format='headers'){
+  // A stalled upload, download or response body must not keep 「保存中…」
+  // forever. Preserve explicit user disconnects as separate aborts.
+  const controller=new AbortController();
+  const cancel=()=>controller.abort(signal?.reason);
+  if(signal?.aborted)cancel();else signal?.addEventListener('abort',cancel,{once:true});
+  let timedOut=false;
+  const timer=setTimeout(()=>{timedOut=true;controller.abort();},timeoutMs);
+  try{
+   const response=await fetchImpl(url,{...options,signal:controller.signal,headers:{...headers,...options.headers}});
+   if(response.status===401)throw new DriveAuthError('Google認証の期限が切れました。再接続してください。');
+   if(!response.ok)throw Error('Google Driveへの通信に失敗しました (HTTP '+response.status+')');
+   if(format==='json')return await response.json();
+   if(format==='text')return await response.text();
+   return response.headers;
+  }catch(error){
+   if(timedOut)throw Error('Google Driveへの通信がタイムアウトしました。');
+   throw error;
+  }finally{
+   clearTimeout(timer);
+   signal?.removeEventListener('abort',cancel);
+  }
  }
  async function list(){
   const search=new URLSearchParams({spaces:'appDataFolder',q:"name = '"+FILE_NAME+"' and trashed = false",fields:'nextPageToken,files(id,name,modifiedTime)',pageSize:'100'});
   let page,files=[];
   do{
    if(page)search.set('pageToken',page);else search.delete('pageToken');
-   const result=await (await request(API+'?'+search)).json();
+   const result=await request(API+'?'+search,{},'json');
    files.push(...(result.files||[]));
    page=result.nextPageToken;
   }while(page&&files.length<1000);
   return files.filter(file=>file.name===FILE_NAME).sort((a,b)=>String(b.modifiedTime).localeCompare(String(a.modifiedTime)));
  }
  async function download(id){
-  return (await request(API+'/'+encodeURIComponent(id)+'?alt=media')).text();
+  return request(API+'/'+encodeURIComponent(id)+'?alt=media',{},'text');
  }
  async function upload(text,id=null){
   // Resumable upload handles large photos; simple/multipart uploads are size-limited.
@@ -36,15 +53,14 @@ export function createDungeonDrive(token,fetchImpl=globalThis.fetch,{signal}={})
    headers:{'Content-Type':'application/json','X-Upload-Content-Type':'application/json','X-Upload-Content-Length':String(bytes.size)},
    body:JSON.stringify(id?{mimeType:'application/json'}:{name:FILE_NAME,mimeType:'application/json',parents:['appDataFolder']})
   });
-  const session=init.headers.get('Location');
+  const session=init.get('Location');
   if(!session||new URL(session).origin!=='https://www.googleapis.com')throw Error('Google Driveのアップロード先を取得できませんでした。');
-  const done=await request(session,{method:'PUT',headers:{'Content-Type':'application/json'},body:bytes});
-  const file=await done.json();
+  const file=await request(session,{method:'PUT',headers:{'Content-Type':'application/json'},body:bytes},'json');
   if(!file?.id||!file.modifiedTime)throw Error('保存完了の確認ができませんでした。');
   return file;
  }
  async function metadata(id){
-  return (await request(API+'/'+encodeURIComponent(id)+'?fields=id,name,modifiedTime')).json();
+  return request(API+'/'+encodeURIComponent(id)+'?fields=id,name,modifiedTime',{},'json');
  }
  return {list,download,upload,metadata};
 }

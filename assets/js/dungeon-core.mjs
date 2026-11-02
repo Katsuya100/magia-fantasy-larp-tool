@@ -228,6 +228,9 @@ export function chooseEnemySpell(unit,r=Math.random){
 }
 
 export function prepare(u,i,r=Math.random){if(i===-1)return {role:'basic',attribute:'law',power:0};const confused=status(u,'debuff_chaos');if(confused){const choices=available(u);if(choices.length)i=choices[roll(0,choices.length-1,r)];}if(!canCast(u,i))throw Error('Spell unavailable');const sp=u.spells[i];u.mp-=spellMpCost(sp);u.cooldowns[i]=num('spell_cooldown');const shock=status(u,'debuff_bolt');if(shock){u.cooldowns[i]+=shock.shockExtra??num('shock_cooldown_extra');}return {...sp};}
+// Legacy saves may keep a recognizable debuff ID without its newer kind field.
+// Use the same identification as the status icon renderer for item usability.
+const isDebuffStatus=s=>s.kind==='debuff'||String(s.id||'').startsWith('debuff_');
 // Whether a carried item currently has a usable primary effect (or bonus).
 // Escape scrolls are always usable; revival can only be armed once per fight.
 export function canUseBattleItem(hero,item,items,buffs=[]){
@@ -241,8 +244,8 @@ export function canUseBattleItem(hero,item,items,buffs=[]){
  if(row.kind==='heal')return (strength&&hero.hp<hero.stats.hp)||hasBonus;
  if(row.kind==='mana')return (strength&&hero.mp<hero.maxMp)||hasBonus;
  if(row.kind==='elixir')return (strength&&(hero.hp<hero.stats.hp||hero.mp<hero.maxMp))||hasBonus;
- if(row.kind==='clear')return hero.statuses.some(s=>s.kind==='debuff'&&s.attribute===row.attribute)||hasBonus;
- if(row.kind==='clear_all')return hero.statuses.some(s=>s.kind==='debuff');
+ if(row.kind==='clear')return hero.statuses.some(s=>isDebuffStatus(s)&&s.attribute===row.attribute)||hasBonus;
+ if(row.kind==='clear_all')return hero.statuses.some(isDebuffStatus);
  return false;
 }
 export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.id);if(!row)throw Error('Unknown potion');let amount=0;if(row.kind==='heal'){amount=Math.min(u.stats.hp-u.hp,item.value);u.hp+=amount;}else if(row.kind==='mana'){amount=Math.min(u.maxMp-u.mp,item.value);u.mp+=amount;}else if(row.kind==='elixir'){
@@ -250,8 +253,8 @@ export function potion(u,item,items,buffs){const row=items.find(x=>x.id===item.i
  const hp=Math.max(0,Math.min(u.stats.hp-u.hp,Math.ceil(u.stats.hp*rate)));
  const mp=Math.max(0,Math.min(u.maxMp-u.mp,Math.ceil(u.maxMp*rate)));
  u.hp+=hp;u.mp+=mp;amount=hp+mp;
- }else if(row.kind==='clear')u.statuses=u.statuses.filter(s=>s.kind!=='debuff'||s.attribute!==row.attribute);
- else if(row.kind==='clear_all')u.statuses=u.statuses.filter(s=>s.kind!=='debuff');
+ }else if(row.kind==='clear')u.statuses=u.statuses.filter(s=>!isDebuffStatus(s)||s.attribute!==row.attribute);
+ else if(row.kind==='clear_all')u.statuses=u.statuses.filter(s=>!isDebuffStatus(s));
  else if(row.kind==='revive'){
   if(u.reviveArmed||u.reviveUsed||u.hp<=0)throw Error('生命の紅石はこの戦闘ですでに使用済みです');
   u.reviveArmed=true;
@@ -287,7 +290,7 @@ export function cast(src,tgt,spell,buffs,r=Math.random){
  }
  if(spell.role==='support'){
   const heal=Math.max(0,Math.min(src.stats.hp-src.hp,Math.round(B*factor(src,'heal')*factor(src,'output'))));
-  src.hp+=heal;src.statuses=src.statuses.filter(x=>x.kind!=='debuff'||x.attribute!==a);
+  src.hp+=heal;src.statuses=src.statuses.filter(x=>!isDebuffStatus(x)||x.attribute!==a);
   return 'HP '+heal+'回復・'+a+'解除'+legacy;
  }
  if(spell.role==='defense'){

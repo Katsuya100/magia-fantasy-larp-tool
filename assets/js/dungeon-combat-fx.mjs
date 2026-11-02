@@ -98,7 +98,7 @@ export async function playCombatSequence(steps,paint,{
   const phase=phases[i];
   paint(phase);
   const phaseDuration=combatPhaseAdvanceDuration(phase,duration);
-  const fatal=onFatal&&!death?fatalSide(phase):null;
+  const fatal=onFatal&&!death&&i===phases.length-1?fatalSide(phase):null;
   const last=phase.at(-1);
   const canQueue=i===phases.length-1&&!fatal&&last?.hero?.hp>0&&last?.enemy?.hp>0;
   const early=canQueue?onLastPhase?.(phase,phaseDuration):null;
