@@ -616,6 +616,7 @@ async function animateBattle(steps){
  playingEffects=true;
  battleInput.start();
  let lastEcho=null;
+ const activeEchoes=[];
  $('battleSpells').setAttribute('aria-busy','true');
  $('battleItems').setAttribute('aria-busy','true');
  try{
@@ -659,9 +660,12 @@ async function animateBattle(steps){
    $('heroStats').innerHTML=rowUnit({...final.hero,statuses:resolved?.hero.statuses||final.hero.statuses});
    $('enemyStats').innerHTML=rowUnit({...final.enemy,statuses:resolved?.enemy.statuses||final.enemy.statuses});
    lastEcho=captureCombatFxEcho($('battleArena'),combatPhaseDuration(phase,effectDuration()));
+   if(lastEcho)activeEchoes.push(lastEcho);
   },{overlap:125,onLastPhase:(_phase,duration)=>battleInput.begin(duration),onFatal:side=>{
-   // A fatal attack must not leave WEAK/RESIST over the death ceremony.
-   lastEcho?.dispose();
+   // Prior combat phases may still have live WEAK/RESIST echo layers.
+   // Discard every one before the death ceremony, not just the last phase.
+   for(const echo of activeEchoes)echo.dispose();
+   activeEchoes.length=0;
    lastEcho=null;
    clearCombatEffects();
    return ceremony(side==='hero'?'hero-death':'enemy-death',
