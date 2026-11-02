@@ -1459,20 +1459,26 @@ function openMagicDetails(id){
  $('upgradeHint').textContent=!isRevealed(circle)?'威力は初回使用後に強化できます。':profile.magicStones<stoneCost?'次の強化には魔導石が'+stoneCost+'個必要です。':'初期威力の10%分アップします。強化段階に応じて必要な魔導石が増えます。';
  const d=circleDetails(circle,masters.buffs,G.mpCost);
  const info=circleEffectDetails(circle,masters.buffs,G.statusDuration);
- const rows=[['作成方法',circle.origin==='drawn'?'簡易（手書き）':'本格（撮影）'],['属性',d.attribute],['種別',d.role],['効果の詳細',info.effect]];
- if(circle.creationInk){const count=Number.isInteger(circle.creationInk)?circle.creationInk:1;rows.push(['🖋️ 魔導墨',count+'個使用（基礎威力＋'+count*10+'%）']);}
- if(info.statusName)rows.push(['追加効果名',info.statusName],['追加効果の詳細',info.statusDescription],['持続時間',info.duration]);
- rows.push(['MP',d.mp],['威力',d.power]);
- if(isRevealed(circle)&&circle.upgradeLevel)rows.push(['強化', '+'+(circle.upgradeLevel*10)+'%']);
- if(isRelic)rows.push(['🔵🔥 継承',(circle.analysis?.role==='support'||circle.analysis?.role==='defense'?'自分の最大HP+':'敵の最大HP-')+inheritedLevel+'（合計Lv.'+inheritedLevel+'）']);
- $('magicDetailsStats').innerHTML=rows.map(([key,value])=>'<dt>'+esc(key)+'</dt><dd>'+esc(oneSentencePerLine(value))+'</dd>').join('')
-  +(isRelic?'<dt class="legacy-heirs-label">過去の継承者達</dt><dd class="legacy-heirs-value">'
+ const groups=[
+  [['属性',d.attribute],['種別',d.role]],
+  [['MP',d.mp],['威力',d.power]]
+ ];
+ if(isRevealed(circle)&&circle.upgradeLevel)groups.push([['強化','+'+(circle.upgradeLevel*10)+'%']]);
+ groups.push([['効果の詳細',info.effect]]);
+ if(info.statusName)groups.push([['追加効果名',info.statusName]],[['追加効果の詳細',info.statusDescription]],[['持続時間',info.duration]]);
+ groups.push([['作成方法',circle.origin==='drawn'?'簡易（手書き）':'本格（撮影）']]);
+ if(circle.creationInk){const count=Number.isInteger(circle.creationInk)?circle.creationInk:1;groups.push([['🖋️ 魔導墨',count+'個使用（基礎威力＋'+count*10+'%）']]);}
+ if(isRelic)groups.push([['🔵🔥 継承',(circle.analysis?.role==='support'||circle.analysis?.role==='defense'?'自分の最大HP+':'敵の最大HP-')+inheritedLevel+'（合計Lv.'+inheritedLevel+'）']]);
+ $('magicDetailsStats').innerHTML=groups.map(group=>group.map(([key,value])=>
+  '<div class="magic-details-stat'+(group.length===1?' magic-details-stat--full':'')+'"><dt>'+esc(key)+'</dt><dd>'+esc(oneSentencePerLine(value))+'</dd></div>'
+ ).join('')).join('')
+  +(isRelic?'<div class="magic-details-stat magic-details-stat--full"><dt class="legacy-heirs-label">過去の継承者達</dt><dd class="legacy-heirs-value">'
    +[...new Set([history.originName,...history.heirNames,...sources.map(source=>source.name)].filter(Boolean))]
     .map(name=>{
      const level=sources.find(source=>source.name===name)?.level;
      return '<span class="legacy-heir-name">'+esc(name)+(level?' Lv.'+level:'')+'</span>';
     }).join('')
-   +'</dd>':'');
+   +'</dd></div>':'');
  if(!$('magicDetailsDialog').open)showDungeonDialog($('magicDetailsDialog'));
  $('magicDetailsImage').dataset.photoRetried='false';
  $('magicDetailsImage').src=circleImages.get(circle.image);
