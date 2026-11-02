@@ -160,6 +160,16 @@ try{
  assert.equal(arena.appended.dataset.active,'true','old FX remains shown while new FX can start');
  echo.dispose();
  assert.equal(arena.appended.removed,true);
+ // Reproduce #15: an earlier WEAK layer can still be alive when a later
+ // RESIST/attack phase kills the enemy. Disposing only the newest leaks WEAK.
+ const earlier=captureCombatFxEcho(arena,720),earlierLayer=arena.appended;
+ const newest=captureCombatFxEcho(arena,720),newestLayer=arena.appended;
+ earlier.reveal();
+ newest.reveal();
+ assert.equal(earlierLayer.removed,undefined,'older effect would otherwise linger');
+ for(const active of [earlier,newest])active.dispose();
+ assert.equal(earlierLayer.removed,true,'fatal cleanup removes prior-phase WEAK');
+ assert.equal(newestLayer.removed,true,'fatal cleanup removes last-phase RESIST');
 }finally{globalThis.document=originalDocument;}
 
 console.log('PASS synchronized fatal FX, final-phase 70% input overlap, nonblocking affinity and retained visual tails');
