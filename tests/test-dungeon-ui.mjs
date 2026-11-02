@@ -232,10 +232,13 @@ try{
  const sourceUrl=failedPhoto.src;
  assert.ok(beforeRepair.image instanceof Blob&&beforeRepair.image.size>0,'an intact Blob can still fail to decode');
  doc.emit('error',failedPhoto);
- assert.equal($('repairSelectedCircleImage').hidden,false,'one real image error exposes repair');
+ const retryUrl=failedPhoto.src;
+ assert.notEqual(retryUrl,sourceUrl,'first decode failure uses a newly created URL');
+ assert.equal($('repairSelectedCircleImage').hidden,true,'a temporary URL failure does not immediately demand recapture');
  doc.emit('error',failedPhoto);
- assert.equal(failedPhoto.src,sourceUrl,'photo failure does not retry or overwrite the saved Blob');
- assert.equal($('repairSelectedCircleImage').hidden,false,'retake appears after two display failures');
+ assert.equal(failedPhoto.src,retryUrl,'genuinely bad photo does not retry endlessly');
+ assert.equal($('repairSelectedCircleImage').hidden,false,'retake appears after the bounded retry also fails');
+ assert.deepEqual(new Uint8Array(await (await allCircles(db)).find(c=>c.id===circles[0].id).image.arrayBuffer()),new Uint8Array(await beforeRepair.image.arrayBuffer()),'display URL retry does not change stored image');
  void $('repairSelectedCircleImage').fire('click');
  await wait(()=>$('imageRepairDialog').open&&!$('imageRepairCapture').hidden,'repair camera opens immediately');
  assert.equal(env.opened,8,'retake opens the direct camera without a file picker');

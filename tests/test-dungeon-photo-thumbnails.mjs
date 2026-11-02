@@ -104,6 +104,12 @@ try{
  while(!photo.src&&Date.now()<until)await new Promise(r=>setTimeout(r,10));
  assert.match(photo.src,/^blob:test-/,'visible card displays a thumbnail');
  assert.equal(made[0].blob.size,4,'card URL points to reduced bytes');
+
+ const brokenThumbnailUrl=photo.src;
+ assert.equal(manager.recoverBrokenThumbnail(photo),true,'browser decode failure falls back to the intact original');
+ assert.notEqual(photo.src,brokenThumbnailUrl,'fallback must replace the failing image URL');
+ assert.equal(made.at(-1).blob,original,'fallback uses the unmodified original photo');
+ assert.equal(manager.recoverBrokenThumbnail(photo),false,'a failed original never triggers an infinite retry');
  assert.equal(canvasSize,448,'grimoire thumbnails follow actual rendered size times DPR');
  manager.refresh([]);
  assert.equal(photo.src,'','leaving view detaches image source');

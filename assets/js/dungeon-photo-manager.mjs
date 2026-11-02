@@ -1,6 +1,6 @@
 import {createCircleImageUrls} from './dungeon-image-urls.mjs';
-import {createCircleThumbnail} from './dungeon-thumbnails.mjs?v=20261031.270';
-import {getCircleThumbnail} from './dungeon-store.mjs?v=20261031.270';
+import {createCircleThumbnail} from './dungeon-thumbnails.mjs?v=20261102.313';
+import {getCircleThumbnail} from './dungeon-store.mjs?v=20261102.313';
 
 // Match the grimoire card's CSS width and device density; do not enlarge other UI.
 export function grimoireThumbnailSize(cssWidth,pixelRatio=globalThis.devicePixelRatio||1){
@@ -12,9 +12,10 @@ export function grimoireThumbnailSize(cssWidth,pixelRatio=globalThis.devicePixel
 // UI thumbnails are disposable, never part of the signed game save.
 export function createDungeonPhotoManager(getDatabase,findCircle){
  const originals=createCircleImageUrls(),thumbUrls=createCircleImageUrls();
- const displayed=new Map(),pending=new Map();
+ const displayed=new Map(),pending=new Map(),failedThumbnails=new Set();
  let queue=Promise.resolve(),observer=null,visible=new Set();
  function thumbnail(circle,size=192){
+  if(failedThumbnails.has(circle.id))return Promise.resolve(circle.image);
   const cached=displayed.get(circle.id);
   if(cached&&cached.size>=size)return Promise.resolve(cached.blob);
   const inFlight=pending.get(circle.id);
@@ -35,6 +36,7 @@ export function createDungeonPhotoManager(getDatabase,findCircle){
    const old=displayed.get(circle.id);
    if(old?.blob&&old.blob!==blob)thumbUrls.release(old.blob);
    displayed.set(circle.id,{blob,size:old?.blob===blob?Math.max(old.size,size):size});
+   img.dataset.circlePhotoOriginal=blob===circle.image?'true':'false';
    img.src=thumbUrls.get(blob);
   }catch(error){
    if(visible.has(img)&&img.isConnected!==false){
@@ -45,21 +47,41 @@ export function createDungeonPhotoManager(getDatabase,findCircle){
      const old=displayed.get(circle.id);
      if(old?.blob&&old.blob!==circle.image)thumbUrls.release(old.blob);
      displayed.set(circle.id,{blob:circle.image,size:0});
+     failedThumbnails.add(circle.id);
+     img.dataset.circlePhotoOriginal='true';
      img.src=thumbUrls.get(circle.image);
     }catch{img.alt='縮小画像を表示できません。';}
    }
    console.warn('縮小画像を読み込めませんでした',error);
   }
  }
+ // Decode failures are reported by <img>, not by the thumbnail Blob promise.
+ // Use the verified original photo once; a second failure remains visible.
+ function recoverBrokenThumbnail(img){
+  const id=img?.dataset?.circlePhotoId,circle=id&&findCircle(id);
+  if(!visible.has(img)||img.isConnected===false||!circle?.image||
+   !(circle.image instanceof Blob)||!circle.image.size||
+   img.dataset.circlePhotoOriginal==='true')return false;
+  failedThumbnails.add(id);
+  const previous=displayed.get(id),url=thumbUrls.get(circle.image);
+  for(const node of visible){
+   if(node.dataset.circlePhotoId!==id||!node.getAttribute?.('src'))continue;
+   node.dataset.circlePhotoOriginal='true';
+   node.src=url;
+  }
+  displayed.set(id,{blob:circle.image,size:0});
+  if(previous?.blob&&previous.blob!==circle.image)thumbUrls.release(previous.blob);
+  return true;
+ }
  function refresh(roots){
   observer?.disconnect();
   const images=roots.flatMap(root=>[...(root?.querySelectorAll?.('img[data-circle-photo-id]')||[])]);
   const next=new Set(images);
-  for(const img of visible)if(!next.has(img))img.removeAttribute?.('src');
+  for(const img of visible)if(!next.has(img)){img.removeAttribute?.('src');delete img.dataset.circlePhotoOriginal;}
   visible=next;
   const ids=new Set(images.map(img=>img.dataset.circlePhotoId));
   for(const [id,entry] of displayed)if(!ids.has(id)){
-   thumbUrls.release(entry.blob);displayed.delete(id);
+   thumbUrls.release(entry.blob);displayed.delete(id);failedThumbnails.delete(id);
   }
   const load=img=>{
    const circle=findCircle(img.dataset.circlePhotoId);
@@ -77,15 +99,15 @@ export function createDungeonPhotoManager(getDatabase,findCircle){
  function forget(id,original){
   const thumb=displayed.get(id);
   if(thumb)thumbUrls.release(thumb.blob);
-  displayed.delete(id);
-  for(const img of visible)if(img.dataset.circlePhotoId===id)img.removeAttribute?.('src');
+  displayed.delete(id);failedThumbnails.delete(id);
+  for(const img of visible)if(img.dataset.circlePhotoId===id){img.removeAttribute?.('src');delete img.dataset.circlePhotoOriginal;}
   originals.release(original);
  }
  function releaseAll(){
   observer?.disconnect();observer=null;
   for(const img of visible)img.removeAttribute?.('src');
-  visible.clear();displayed.clear();pending.clear();
+  visible.clear();displayed.clear();pending.clear();failedThumbnails.clear();
   originals.releaseAll();thumbUrls.releaseAll();
  }
- return {get:blob=>originals.get(blob),release:blob=>originals.release(blob),thumbnail,refresh,forget,releaseAll};
+ return {get:blob=>originals.get(blob),release:blob=>originals.release(blob),thumbnail,refresh,recoverBrokenThumbnail,forget,releaseAll};
 }
