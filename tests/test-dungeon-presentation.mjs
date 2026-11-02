@@ -306,7 +306,7 @@ const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 const sharedModuleVersion=app.match(/from '\.\/dungeon-core\.mjs\?v=(\d{8}\.\d+)'/)?.[1];
 assert.ok(sharedModuleVersion,'gameplay has one stable shared core version');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- const expected=specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+(specifier[1]==='dungeon-cloud-sync.mjs'?currentRelease:sharedModuleVersion);
+ const expected=specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+(['dungeon-cloud-sync.mjs','dungeon-battle-input.mjs'].includes(specifier[1])?currentRelease:sharedModuleVersion);
  assert.equal(specifier[2],expected,'OAuth module cache bust must preserve shared gameplay module identity: '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
@@ -342,7 +342,7 @@ assert.ok(app.includes('for(const step of phase)'),'both fighters are painted wi
 assert.ok(app.includes("treasureChestMarkup(drops)"),'drop count controls number of chests');
 assert.ok(app.includes("dropCount?dropCount+'個 · 未確定':'次の戦いへ',dropCount"),'loot ceremony counts ordinary rewards and recovered legacies');
 assert.ok(app.includes("await ceremony('encounter'"),'battle begins with an encounter');
-assert.ok(app.includes("onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death'"),'fatal ceremony overlaps the last attack');
+assert.match(app,/onFatal:side=>\{[\s\S]*?return ceremony\(side==='hero'\?'hero-death':'enemy-death'/,'fatal ceremony overlaps the last attack after clearing old FX');
 assert.match(app,/const step=\(role,amount\)=>/,'consumable effect animation');
 
 

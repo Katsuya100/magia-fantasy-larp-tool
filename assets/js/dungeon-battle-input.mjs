@@ -6,6 +6,11 @@ export function createBattleInputBuffer({
 }={}){
  let open=false,ready=false,pending=null,wake=null,timer=null;
  return {
+  // Accept one follow-up during any nonfatal combat phase, not only the last.
+  start(){
+   if(timer!==null){clearTimer(timer);timer=null;}
+   open=true;ready=false;pending=null;wake=null;
+  },
   begin(duration){
    if(timer!==null)clearTimer(timer);
    open=true;ready=duration<=0;
