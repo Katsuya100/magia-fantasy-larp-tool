@@ -425,10 +425,12 @@ try{
  await connect(detachingUi);
  await wait(()=>detachingReady===1,'in-flight wait starts connected');
  const releaseStaleList=detachingDrive.pauseNextList();
+ const beforeDetachLists=detachingDrive.listRequests;
  const detachingRequest=detachingController.syncNow();
- await wait(()=>!detachingUi.get('googleDriveSpinner').hidden,'network sync has begun');
+ await wait(()=>detachingDrive.listRequests>beforeDetachLists,'read-only Drive request has begun');
+ assert.equal(detachingUi.get('googleDriveSpinner').hidden,true,'a read-only recheck does not show saving');
  detachingUi.get('disconnectGoogleDrive').click();
- assert.equal(detachingUi.get('googleDriveSpinner').hidden,false,'spinner remains visible until the Drive request settles');
+ assert.equal(detachingUi.get('googleDriveSpinner').hidden,true,'read-only recheck stays visually idle while unlink waits');
  assert.equal(detachingUi.get('disconnectGoogleDrive').disabled,true,'button cannot issue repeated unlink actions');
  assert.match(detachingUi.doc.cookie,/__Secure-magiaDungeonDriveToken/,'access cookie is retained until transfer finishes');
  assert.match(detachingUi.status.textContent,/完了後に解除/,'status explains unlink is waiting');
