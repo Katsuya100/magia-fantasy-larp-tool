@@ -95,6 +95,10 @@ try{
   await wait(async()=>!(await getProfile(collectionDb)).run,'return banks the collection reward');
   const returned=await getProfile(collectionDb);
   assert.equal(returned.collection[bonus.id],1,'the actual collection item is saved on return');
+  assert.match(c('collectionProgress').innerHTML,/<strong>1 \/ \d+<\/strong>/,
+   'the collection progress header counts the returned reward immediately');
+  assert.equal((c('collectionGrid').innerHTML.match(/relic-card discovered/g)||[]).length,1,
+   'the discovery grid and summary use the same current collection after return');
   assert.equal(c('returnSceneTitle').textContent,'コレクション報酬',
    'the player sees the earned collection on the return screen');
  }finally{collectionEnv.restore();}
