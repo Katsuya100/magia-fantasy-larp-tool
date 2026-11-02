@@ -2,7 +2,7 @@ import * as G from './dungeon-core.mjs?v=20261102.320';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261102.320';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261102.320';
 import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261102.320';
-import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261103.323';
+import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261103.324';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261102.320';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261102.320';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261102.320';
@@ -15,7 +15,7 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261102.320';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261102.320';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261102.320';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261103.323';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261103.324';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261102.320';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261102.320';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261102.320';
@@ -226,39 +226,8 @@ function failStartup(error){
  $('startupRetry').focus();
  note('起動できません：'+String(error?.message||error));
 }
-async function load(){
- $('startupMask').focus();
- startupStage('冒険の記録を確かめている…');
- db=await openStore();
- const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};
- const entries=Object.entries(files);
- for(const [index,[key,file]] of entries.entries()){
-  startupStage('迷宮の資料を読み込んでいる… '+(index+1)+' / '+entries.length);
-  const res=await fetch('assets/data/'+file+'?v='+$('dungeonApp').dataset.release);
-  if(!res.ok)throw Error(file+' の取得に失敗');
-  masters[key]=G.parseCsv(await res.text());
- }
- startupStage('迷宮の掟を読み解いている…');
- configure(masters);
- G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);
- startupStage('冒険者の記録を整えている…');
- profile=await getProfile(db);
- const initialSnapshot=await readDungeonSnapshot(db);
- const initialHealth=await verifyLocalSnapshot(initialSnapshot);
- if(initialHealth.status==='corrupt'){
-  // Do not start the game or create new integrity evidence from corrupt data.
-  // Require a healthy Drive recovery before any player interaction is allowed.
-  startupStage('セーブの破損を検出しました。Driveからの復元が必要です。');
-  wire();
-  cloudSyncController=initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),
-   onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages,onImagesRestored:handleDriveImageRepair});
-  $('backupSetupTitle').textContent='セーブの破損を検出しました';
-  $('setupWithoutBackup').disabled=true;
-  finishStartup();
-  showDungeonDialog($('backupSetupDialog'));
-  return;
- }
-
+async function hydrateSavedGame(reuseProfile=false){
+ if(!reuseProfile)profile=await getProfile(db);
  profile.legacies??=[];
  returnFlow=Array.isArray(profile.pendingReturn?.steps)&&profile.pendingReturn.steps.length?profile.pendingReturn:null;
  if(!Array.isArray(profile.obtainedItemIds))profile.obtainedItemIds=[...new Set([...(profile.inventory||[]),...(profile.run?.carry||[])].filter(Boolean).map(item=>item.id).filter(Boolean))];
@@ -292,11 +261,60 @@ async function load(){
  ensureItemInstances(profile);
  if(!profile.run)profile.carrySlots=validCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
  carry=profile.run?prepareItems([],profile.inventory.length,G.capacity(profile.level)):restoreCarrySlots(profile.carrySlots,profile.inventory,G.capacity(profile.level));
+}
+// Apply an already validated Drive snapshot without reloading or keeping stale photos.
+export async function refreshDungeonViewFromBackup(){
+ circleImages.releaseAll();
+ failedPhotoIds.clear();
+ await hydrateSavedGame();
+ for(const id of ['backupSetupDialog','nameDialog','circleFirstChoiceDialog','magicDetailsDialog','loadoutDialog'])if($(id).open)closeDungeonDialog($(id));
+ render();
+ if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}
+ if(returnFlow)renderReturnStep();
+ show(returnFlow?'returnShowcase':profile.run?(profile.run.stage==='checkpoint'?'checkpoint':'battle'):'prepare');
+ await refreshRepairStatus();
+ if(profile.awaitingHeir)openNameDialog(true);
+ else if(!profile.name)openBackupSetup();
+}
+async function load(){
+ $('startupMask').focus();
+ startupStage('冒険の記録を確かめている…');
+ db=await openStore();
+ const files={enemies:'dungeon-enemies.csv',items:'dungeon-consumables.csv',collections:'dungeon-collections.csv',buffs:'dungeon-buffs.csv',balance:'dungeon-balance.csv',levels:'dungeon-levels.csv',floors:'dungeon-floors.csv',playerBase:'dungeon-player-base.csv'};
+ const entries=Object.entries(files);
+ for(const [index,[key,file]] of entries.entries()){
+  startupStage('迷宮の資料を読み込んでいる… '+(index+1)+' / '+entries.length);
+  const res=await fetch('assets/data/'+file+'?v='+$('dungeonApp').dataset.release);
+  if(!res.ok)throw Error(file+' の取得に失敗');
+  masters[key]=G.parseCsv(await res.text());
+ }
+ startupStage('迷宮の掟を読み解いている…');
+ configure(masters);
+ G.validateMasters(masters.enemies,masters.items,masters.collections,masters.buffs);
+ startupStage('冒険者の記録を整えている…');
+ profile=await getProfile(db);
+ const initialSnapshot=await readDungeonSnapshot(db);
+ const initialHealth=await verifyLocalSnapshot(initialSnapshot);
+ if(initialHealth.status==='corrupt'){
+  // Do not start the game or create new integrity evidence from corrupt data.
+  // Require a healthy Drive recovery before any player interaction is allowed.
+  startupStage('セーブの破損を検出しました。Driveからの復元が必要です。');
+  wire();
+  cloudSyncController=initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),
+   onRestore:refreshDungeonViewFromBackup,onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages,onImagesRestored:handleDriveImageRepair});
+  $('backupSetupTitle').textContent='セーブの破損を検出しました';
+  $('setupWithoutBackup').disabled=true;
+  finishStartup();
+  showDungeonDialog($('backupSetupDialog'));
+  return;
+ }
+
+ await hydrateSavedGame(true);
  startupStage('迷宮の扉を開いている…');
  // Reading the game must not advance savedAt or conceal a damaged prior seal.
  wire();
  cloudSyncController=initDungeonCloudSync({db,button:$('connectGoogleDrive'),status:$('googleDriveStatus'),
-  onRestore:()=>location.reload(),onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages,onImagesRestored:handleDriveImageRepair});
+  onRestore:refreshDungeonViewFromBackup,onInitialReady:finishBackupSetup,onRepairImages:recaptureMissingImages,onImagesRestored:handleDriveImageRepair});
  render();
  if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}
  if(returnFlow)renderReturnStep();
