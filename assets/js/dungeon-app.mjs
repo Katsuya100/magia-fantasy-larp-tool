@@ -640,7 +640,12 @@ async function animateBattle(steps){
      projectile.dataset.effect='attack';
      projectile.dataset.tier=actor.dataset.tier;
     }
-    $(step.side+'FxText').textContent=effectCaption(step);
+    // Show the still-active dizziness beside a zero hit, even if its last turn
+    // expires before the resolved status badges are drawn.
+    const caster=step.side==='hero'?step.hero:step.enemy;
+    const dizzyZero=['attack','basic'].includes(step.role)&&step.amount===0&&
+     caster?.statuses?.some(status=>status.effect==='dizzy'&&status.turns>0);
+    $(step.side+'FxText').textContent=effectCaption(step)+(dizzyZero?' 🌪目眩':'');
    }
    for(const step of phase){
     if(!['attack','basic','debuff'].includes(step.role))continue;
