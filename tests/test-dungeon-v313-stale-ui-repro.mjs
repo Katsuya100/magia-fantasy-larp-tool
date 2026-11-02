@@ -68,6 +68,11 @@ try{
   assert.equal((await getProfile(db)).magicStones,20,
    'an unowned circle cannot spend the restored account magic stones');
   assert.equal((await allCircles(db)).length,1);
+  await doc.click(btn({openSlot:'0'}));
+  assert.equal(get('loadoutDialog').open,true,
+   'a valid first click immediately after Drive restore opens the new owner\'s loadout');
+  await get('closeLoadoutDialog').fire('click');
+  assert.equal(get('loadoutDialog').open,false);
  }catch(error){defects.push('ownership display: '+error.message);}
  if(defects.length)throw Error('Reproduced stale account state: '+defects.join(' | '));
  console.log('PASS live restore rejects old-account upgrade and picker actions');
