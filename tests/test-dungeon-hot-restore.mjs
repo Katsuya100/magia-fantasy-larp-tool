@@ -46,6 +46,10 @@ try{
 
  assert.equal(get('backupSetupDialog').open,false,'backup setup closes without a page reload');
  assert.equal(get('circleActionDialog').open,false,'restoring ownership closes the old circle action dialog');
+ await get('confirmCircleAction').fire('click');
+ assert.deepEqual((await allCircles(localDb)).map(circle=>circle.id),['drive-magic'],
+  'confirming a stale pre-restore deletion cannot remove a newly owned spell');
+
  await browser.document.click({dataset:{upgrade:'obsolete-local-circle'},closest(){return this;}});
  assert.equal(get('circleActionDialog').open,false,'stale upgrade click cannot target an unowned circle');
  assert.match(get('libraryCards').innerHTML,/drive-magic/,'the restored grimoire is rendered immediately');
