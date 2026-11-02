@@ -43,7 +43,7 @@ try{
  assert.ok(G.canCast(hero,0),'support spell usable in the saved battle');
  const button={dataset:{cast:'0'},disabled:false,closest(){return this;}};
  await doc.click(button);
- assert.ok(labels.length,'aqua healing FX was shown');
+ await wait(()=>labels.length>0,'aqua healing FX was shown');
  const healedLabel=Number(labels[0].text.match(/\+(\d+)$/)?.[1]);
  const firstFrame=displays[labels[0].frame];
  assert.equal(healedLabel,firstFrame-before,
