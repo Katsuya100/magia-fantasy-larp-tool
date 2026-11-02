@@ -25,6 +25,7 @@ const actor=id=>({
 });
 const arena={
  append(node){nodes.push(node);},
+ querySelectorAll(sel){return sel==='.combat-fx-echo'?nodes.filter(node=>!node.removed):[];},
  querySelector(sel){if(sel==='#heroCombatant')return actor('heroCombatant');
   if(sel==='#enemyCombatant')return actor('enemyCombatant');
   return null;}
@@ -50,9 +51,16 @@ try{
  // but an ordinary hit must still retain its independent 720ms visual tail.
  assert.equal(typeof Echo.discardCombatEchoesOnMiss,'function',
   'reproduction gate: an attack miss needs explicit previous-echo disposal');
+ // A previous turn can leave an orphaned ghost after the 70% early-input
+ // overlap. Its handle is no longer in the new turn's activeEchoes array.
+ const priorTurn=Echo.captureCombatFxEcho(arena,720);
+ const priorTurnNode=nodes.at(-1);
+ priorTurn.reveal();
  const echoes=[echo];
- assert.equal(Echo.discardCombatEchoesOnMiss([missed],echoes),true);
+ assert.equal(Echo.discardCombatEchoesOnMiss([missed],echoes,arena),true);
  assert.equal(oldResistNode.removed,true,'prior RESIST is gone before the -0 phase paints');
+ assert.equal(priorTurnNode.removed,true,
+  'REPRO: even a prior-turn RESIST ghost outside this turn array must disappear on a 0 hit');
  assert.deepEqual(echoes,[]);
  const hit={...missed,amount:5};
  const kept=Echo.captureCombatFxEcho(arena,720);
