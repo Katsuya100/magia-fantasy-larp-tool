@@ -1049,6 +1049,24 @@ try{
  await new Promise(resolve=>setTimeout(resolve,200));
  assert.equal(auth.requests.length,requestsAfterDisconnect,'disconnect stops renewing');
 
+ // A renewal during a resumable PUT must not abort the transfer.
+ const transferDb=await newDb(),transferUi=fakeUi(),transferDrive=remoteApi(),transferHeaders=[];
+ const releaseUpload=transferDrive.pauseNextUpload();
+ let transferReady=0;
+ const transferController=start(transferDb,transferUi,(url,options)=>{
+  transferHeaders.push(options.headers.Authorization);
+  return transferDrive.fetchImpl(url,options);
+ },{onInitialReady:()=>transferReady++});
+ await connect(transferUi);
+ await wait(()=>transferDrive.putRequests===1,'resumable upload is in flight');
+ await wait(()=>transferUi.doc.cookie.includes('test-token-renewed'),'in-flight upload overlaps renewal');
+ assert.ok(transferDrive.signals.every(signal=>!signal.aborted),'renewal does not cancel the active upload');
+ releaseUpload();
+ await wait(()=>transferReady===1,'upload and Drive readback finish after renewal');
+ assert.ok(transferDrive.signals.every(signal=>!signal.aborted),'renewal never aborts Drive requests');
+ assert.equal(transferHeaders.at(-1),'Bearer test-token-renewed','readback uses refreshed credentials');
+ await transferController.disconnect();
+
  // 16. If the browser blocks automatic renewal, fallback to expiry notification.
  auth.setRenewalError(true);
  // 15. An idle tab proactively notifies at token expiry without waiting
