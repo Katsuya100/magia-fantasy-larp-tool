@@ -63,7 +63,10 @@ try{
   assert.doesNotMatch(get('libraryCards').innerHTML,/previous-circle/,
    'unowned circle must not be displayed in the current grimoire');
   await doc.click(btn({upgrade:'previous-circle'}));
-  assert.equal(get('circleActionTitle').textContent,'魔法陣を強化しますか？');
+  assert.equal(get('circleActionDialog').open,false,
+   'clicks referencing a deleted unowned circle cannot reopen the upgrade dialog');
+  assert.equal((await getProfile(db)).magicStones,20,
+   'an unowned circle cannot spend the restored account magic stones');
   assert.equal((await allCircles(db)).length,1);
  }catch(error){defects.push('ownership display: '+error.message);}
  if(defects.length)throw Error('Reproduced stale account state: '+defects.join(' | '));
