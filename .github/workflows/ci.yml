@@ -16,7 +16,12 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - name: Fetch main for dungeon release rollback guard
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags --depth=1 origin main
       - run: npm test
+        env:
+          DUNGEON_BASE_REF: ${{ github.event_name == 'pull_request' && 'origin/main' || '' }}
       - run: node tests/test-dungeon-canonical-contract.mjs
       - run: npm run simulate:dungeon-stones -- 512
       - run: npm run check
