@@ -53,6 +53,28 @@ check('Dizziness can create a real 0-damage miss without fake RESIST',()=>{
  assert.equal(attackHitAffinity(missed),'none');
 });
 
+check('47–49F enemy healing and a landed flame attack occupy separate phases',()=>{
+ for(const layer of [47,48,49]){
+  const boss=enemies.find(row=>row.id==='boss_l'+String(layer).padStart(3,'0'));
+  assert.ok(boss,layer+'F boss data exists');
+  const level=Number(boss.min_level);
+  const hero=G.makeUnit({hp:110,mag:12,def:10,res:10},level,{},[flame],'player');
+  const enemy=G.fromEnemy(boss,level);
+  const supportIndex=enemy.spells.findIndex(spell=>spell?.role==='support');
+  assert.ok(supportIndex>=0,layer+'F real boss can heal');
+  enemy.hp=Math.floor(enemy.hp/2);
+  const before=enemy.hp,steps=[];
+  G.round(hero,enemy,0,supportIndex,buffs,()=>.99,step=>steps.push(step));
+  const heal=steps.find(step=>step.side==='enemy'&&step.role==='support');
+  const strike=steps.find(step=>step.side==='hero'&&step.role==='attack');
+  assert.ok(heal?.amount>0,layer+'F support phase actually heals');
+  assert.ok(strike?.amount>0,layer+'F flame still deals real damage');
+  assert.ok(steps.indexOf(heal)<steps.indexOf(strike),'support action resolves before attack');
+  assert.equal(enemy.hp,Math.max(0,Math.min(enemy.stats.hp,before+heal.amount)-strike.amount),
+   layer+'F enemy HP is the independent sum of heal and damage');
+ }
+});
+
 // #17: the first tap during active battle animations must not be silently lost.
 check('First-phase combat input is retained for the last-phase window',()=>{
  const timers=[];
