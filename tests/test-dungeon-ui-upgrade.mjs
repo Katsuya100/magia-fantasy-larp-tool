@@ -66,6 +66,10 @@ try{
  assert.equal(($('magicDetailsStats').innerHTML.match(/class="magic-details-stat">/g)||[]).length,4,'two paired rows contain four half-width stats');
  assert.match($('magicDetailsStats').innerHTML,/<div class="magic-details-stat magic-details-stat--full"><dt>追加効果の詳細<\/dt>/,'status description spans both columns');
  assert.match($('magicStoneStock').textContent,new RegExp('次の強化：'+upgradeStoneCost(1)+'個'),'details display actual next upgrade cost');
+ assert.equal($('upgradeHint').textContent,'','unnecessary upgrade power/rate explanation is not displayed');
+ assert.equal($('upgradeFeedback').textContent,'','empty feedback leaves no placeholder');
+ assert.match(css,/\.magic-upgrade-controls p:empty\{display:none\}/,'empty hint and feedback do not occupy space');
+ assert.doesNotMatch(css,/#upgradeFeedback\{min-height:/,'empty feedback has no reserved height');
  assert.equal($('magicDetailsDialog').dataset.enhancing,'true','ritual begins');
  const originalMpMarkup='<dt>MP</dt><dd>'+mpCost(100)+'</dd>';
  assert.ok($('magicDetailsStats').innerHTML.includes(originalMpMarkup),'upgraded detail still shows the original MP cost');
