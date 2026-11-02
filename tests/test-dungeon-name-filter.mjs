@@ -24,7 +24,7 @@ try {
   await import('../assets/js/dungeon-app.mjs?integration=ng-name-initial');
   await wait(()=>$('backupSetupDialog').open,'backup setup');
   await $('setupWithoutBackup').fire('click');
-  assert.equal($('nameDialog').open,true);
+  await wait(()=>$('nameDialog').open,'name dialog after async Drive opt-out');
   $('playerNameInput').value='異界のキチガイ';
   await $('nameForm').fire('submit');
   assert.match($('nameError').textContent,/使用できません/);
