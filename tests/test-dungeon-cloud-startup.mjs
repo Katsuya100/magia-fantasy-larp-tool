@@ -862,6 +862,29 @@ try{
   'the user-selected full collection remains intact on Drive');
 
  
+ // Also protect a more advanced local level from silently erasing
+ // discoveries that exist only in the Drive copy (opposite direction).
+ const reverseDb=await newDb(),reverseUi=fakeUi();
+ const reverseProfile=await getProfile(reverseDb);
+ reverseProfile.name='図鑑件数の逆方向';reverseProfile.level=31;
+ reverseProfile.collection=Object.fromEntries(relicIds.slice(0,216).map(id=>[id,1]));
+ await saveProfile(reverseDb,reverseProfile);
+ const reverseLocal=await readDungeonSnapshot(reverseDb);
+ const richerDrive=remoteApi(await serializeDungeonSnapshot({...reverseLocal,
+  profile:{...reverseLocal.profile,level:30,collection:Object.fromEntries(relicIds.map(id=>[id,1]))},
+  savedAt:reverseLocal.savedAt-1000}));
+ let reverseRestores=0;
+ start(reverseDb,reverseUi,richerDrive.fetchImpl,{onRestore:()=>reverseRestores++});
+ await connect(reverseUi);
+ await wait(()=>reverseUi.get('googleDriveConflictDialog').open||richerDrive.uploads>0,
+  'a richer Drive discovery set conflicts with a higher level local save');
+ assert.equal(richerDrive.uploads,0,'a 216-discovery local save cannot silently overwrite 220 in Drive');
+ assert.equal(reverseUi.get('googleDriveConflictDialog').open,true);
+ reverseUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ await wait(()=>reverseRestores===1,'the player may explicitly choose the 220-discovery Drive save');
+ const restoredDiscoveries=(await getProfile(reverseDb)).collection;
+ assert.equal(relicIds.filter(id=>Number(restoredDiscoveries[id])>0).length,220);
+
  // Perfectly tied progression and timestamp may use either record.
  // The implementation picks local and never asks for a redundant choice.
  const equalDb=await newDb(),equalUi=fakeUi();
