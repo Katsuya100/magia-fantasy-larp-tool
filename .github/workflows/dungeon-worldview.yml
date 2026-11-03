@@ -1,31 +1,8 @@
 name: Dungeon worldview unit tests
+# Standalone targeted run is opt-in; the same tests are also part of the
+# required manual CI's dungeon-regression-suites job.
 on:
-  push:
-    paths:
-      - 'assets/data/dungeon-enemies.csv'
-      - 'assets/data/dungeon-element-plan.csv'
-      - 'assets/data/dungeon-layer-concepts.csv'
-      - 'scripts/dungeon-element-distribution.mjs'
-      - 'scripts/dungeon-enemy-spell-flavor.mjs'
-      - 'scripts/dungeon-enemy-flavor-rules.mjs'
-      - 'scripts/dungeon-enemy-element-consistency.mjs'
-      - 'tests/test-dungeon-enemy-*.mjs'
-      - 'tests/test-dungeon-normal-affinity.mjs'
-      - 'docs/DUNGEON-ENEMY-WORLDVIEW-REVIEW.md'
-      - 'docs/DUNGEON-ENEMY-ELEMENT-CONSISTENCY.md'
-  pull_request:
-    paths:
-      - 'assets/data/dungeon-enemies.csv'
-      - 'assets/data/dungeon-element-plan.csv'
-      - 'assets/data/dungeon-layer-concepts.csv'
-      - 'scripts/dungeon-element-distribution.mjs'
-      - 'scripts/dungeon-enemy-spell-flavor.mjs'
-      - 'scripts/dungeon-enemy-flavor-rules.mjs'
-      - 'scripts/dungeon-enemy-element-consistency.mjs'
-      - 'tests/test-dungeon-enemy-*.mjs'
-      - 'tests/test-dungeon-normal-affinity.mjs'
-      - 'docs/DUNGEON-ENEMY-WORLDVIEW-REVIEW.md'
-      - 'docs/DUNGEON-ENEMY-ELEMENT-CONSISTENCY.md'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
