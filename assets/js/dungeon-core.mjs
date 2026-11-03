@@ -191,7 +191,7 @@ export function resist(actor,attr){
 }
 export function factor(actor,effect){return clamp(actor.statuses.filter(x=>x.effect===effect).reduce((n,x)=>n*(1+x.value),1),num('modifier_min'),num('modifier_max'));}
 export const armor=actor=>Math.ceil(Math.max(0,actor.stats.def+actor.statuses.filter(x=>x.effect==='def').reduce((n,x)=>n+x.value,0)));
-export function damage(src,tgt,spell,r=Math.random){const dizzy=status(src,'debuff_storm');if(dizzy&&r()<clamp(dizzy.value,0,num('dizzy_max_rate')))return 0;return Math.max(0,Math.round(effectivePower(src,spell)*resist(tgt,spell.attribute)*factor(src,'attack')*factor(src,'output')*factor(tgt,'incoming')*num('def_divisor')/(num('def_divisor')+armor(tgt))));}
+export function damage(src,tgt,spell,r=Math.random,outcome=null){const dizzy=status(src,'debuff_storm');if(dizzy&&r()<clamp(dizzy.value,0,num('dizzy_max_rate'))){if(outcome)outcome.missedByDizziness=true;return 0;}return Math.max(0,Math.round(effectivePower(src,spell)*resist(tgt,spell.attribute)*factor(src,'attack')*factor(src,'output')*factor(tgt,'incoming')*num('def_divisor')/(num('def_divisor')+armor(tgt))));}
 export function isSpellSealed(u,s){return Boolean(s&&u.statuses.some(x=>x.effect==='seal'&&(x.sealedRoles?x.sealedRoles.includes(s.role):x.sealedRole===s.role)));}
 export function canCast(u,i){const s=u.spells[i];return Boolean(s&&u.mp>=spellMpCost(s)&&!u.cooldowns[i]&&!isSpellSealed(u,s));}
 export const available=u=>u.spells.map((_,i)=>i).filter(i=>canCast(u,i));
@@ -280,12 +280,12 @@ export function applyLegacyHp(src,tgt,spell){
  const changed=Math.abs(unit.stats.hp-oldMax);
  return changed?'・最大HP'+(self?'+':'-')+changed:'';
 }
-export function cast(src,tgt,spell,buffs,r=Math.random){
+export function cast(src,tgt,spell,buffs,r=Math.random,outcome=null){
  const a=spell.attribute,B=effectivePower(src,spell),q=strength(src,spell);
  if(!ATTRS.includes(a)||!ROLES.includes(spell.role))throw Error('Bad magic');
  const legacy=applyLegacyHp(src,tgt,spell);
  if(spell.role==='attack'){
-  const d=damage(src,tgt,spell,r);tgt.hp=Math.max(0,tgt.hp-d);
+  const d=damage(src,tgt,spell,r,outcome);tgt.hp=Math.max(0,tgt.hp-d);
   return 'ダメージ '+d+legacy;
  }
  if(spell.role==='support'){
@@ -352,9 +352,9 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  }
  const actions=[{u:player,t:enemy,sp:ps,name:'自分',side:'hero'},{u:enemy,t:player,sp:es,name:'敵',side:'enemy'}],log=[];
  const snapshot=u=>({...u,statuses:u.statuses.map(x=>({...x})),cooldowns:[...u.cooldowns]});
- const publish=(a,role,attribute,message,amount=0)=>{
+ const publish=(a,role,attribute,message,amount=0,missedByDizziness=false)=>{
   if(!onStep)return;
-  const event={side:a.side,role,attribute,text:message,amount};
+  const event={side:a.side,role,attribute,text:message,amount,missedByDizziness};
   // Combat-only accounting needs the resolved values, not copied animation frames.
   if(onStep.metricsOnly===true){onStep(event);return;}
   onStep({...event,
@@ -367,7 +367,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
    if(a.sp.role!==role)continue;
    const oldHp=role==='support'?a.u.hp:a.t.hp;
    if(role==='debuff')mark(a.t,s=>s.id==='buff_law'||s.effect==='soak'||s.id==='resist_'+a.sp.attribute);
-   let message;
+   let message,missedByDizziness=false;
    if(role==='basic'){
     // HP scaling approximates one fifth of an ordinary enemy in the recommended level band.
      // It does not adapt to the current target, so bosses keep their HP advantage.
@@ -375,13 +375,18 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
      // high-level defense growth makes ordinary attacks obsolete.
      const relativeArmor=armor(a.t)/Math.max(1,a.t.stats.hp/Math.max(1,a.t.base.hp));
      const dizzy=status(a.u,'debuff_storm');
-     const missed=dizzy&&r()<clamp(dizzy.value,0,num('dizzy_max_rate'));
+     const missed=Boolean(dizzy)&&r()<clamp(dizzy.value,0,num('dizzy_max_rate'));
+     missedByDizziness=missed;
      const d=missed?0:Math.max(1,Math.round(num('basic_attack')*a.u.stats.hp*
       factor(a.u,'attack')*factor(a.u,'output')*factor(a.t,'incoming')*
       num('def_divisor')/(num('def_divisor')+relativeArmor)));
     a.t.hp=Math.max(0,a.t.hp-d);
     message=a.name+'：通常攻撃 '+d;
-   }else message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r);
+   }else{
+    const outcome={};
+    message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r,outcome);
+    missedByDizziness=outcome.missedByDizziness===true;
+   }
    log.push(message);
    const amount=role==='support'?a.u.hp-oldHp:oldHp-a.t.hp;
    if(role==='attack'||role==='basic'){
@@ -395,7 +400,7 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
     mark(a.u,s=>s.effect==='heal'||s.effect==='output');
    }
    const revived=reviveOnFatal(a.t);
-   publish(a,role,a.sp.attribute,message,amount);
+   publish(a,role,a.sp.attribute,message,amount,missedByDizziness);
    if(revived){
     const revival='生命の紅石：復活！ HP '+revived;
     log.push(revival);
