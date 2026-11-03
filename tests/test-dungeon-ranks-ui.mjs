@@ -80,6 +80,7 @@ try{
   assert.doesNotMatch($('startLayer').innerHTML,/value="21"/);
   $('startLayer').value='11';await $('startLayer').fire('change');
   await $('startAttack').fire('click');
+  if($('emptyCarryDepartureDialog').open)await $('confirmEmptyCarryDeparture').fire('click');
   saved=await getProfile(db);
   assert.equal(saved.run.floor,51,'鉛級 shortcuts to layer 11 first encounter');
   assert.equal($('floorLabel').textContent,'11層 獣牙の山道');
