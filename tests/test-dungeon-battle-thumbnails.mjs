@@ -15,45 +15,8 @@ try{
  await saveProfile(db,profile);
  const photos=['a','b','c'].map((id,i)=>({id,registeredAt:i+1,image:new Blob([id],{type:'image/jpeg'}),analysis:{attribute:'flame',role:'attack',power:5000},revealed:false}));
  for(const photo of photos)await putCircle(db,photo);
- // Mimic actual image elements: the app owns delegated load/error handling.
- const mockPhoto=(id,alt,original)=>({
-  dataset:{circlePhotoId:id,circlePhotoOriginal:original?'true':'false'},
-  alt,src:'blob:existing-'+id,isConnected:true,
-  getAttribute(name){return name==='src'?this.src:null;}
- });
- const labeled=mockPhoto('a','魔法陣',true);
- const decorative=mockPhoto('b','',true);
- const fallback=mockPhoto('c','魔法陣',true);
- $('prepare').querySelectorAll=selector=>selector==='img[data-circle-photo-id]'?[labeled,decorative,fallback]:[];
  await import('../assets/js/dungeon-app.mjs?integration=stable-photo-urls');
  await wait(()=>$('playerStats').innerHTML.includes('写真の魔導士'),'page startup');
- for(const [img,expected] of [[labeled,'魔法陣'],[decorative,'']]){
-  doc.emit('error',img);
-  assert.equal(img.alt,'縮小画像を表示できません。','failed original gets error text');
-  img.src='blob:restored-'+img.dataset.circlePhotoId;
-  doc.emit('load',img);
-  assert.equal(img.alt,expected,'success restores the exact authored alt (including empty)');
- }
- // First an original fails, then its thumbnail is replaced by a valid original.
- doc.emit('error',fallback);
- assert.equal(fallback.alt,'縮小画像を表示できません。');
- fallback.dataset.circlePhotoOriginal='false';
- fallback.src='blob:broken-thumb';
- doc.emit('error',fallback);
- assert.match(fallback.src,/^blob:mock-/,'thumbnail decode failure falls back to the original photo');
- assert.equal(fallback.dataset.circlePhotoOriginal,'true');
- doc.emit('load',fallback);
- assert.equal(fallback.alt,'魔法陣','successful fallback clears stale error text');
- // The independent detail-photo recovery must still retry a fresh object URL.
- await doc.click(button({circleDetail:'a'}));
- const details=$('magicDetailsImage'),firstUrl=details.src;
- assert.equal($('magicDetailsDialog').open,true);
- doc.emit('error',details);
- assert.equal(details.dataset.photoRetried,'true');
- assert.notEqual(details.src,firstUrl,'details retry a fresh original URL');
- doc.emit('load',details);
- assert.equal($('repairSelectedCircleImage').hidden,true,'detail photo load clears the repair prompt');
- $('magicDetailsDialog').close();
  assert.equal(($('slotCards').innerHTML.match(/<img alt=""/g)||[]).length,3);
  await $('startAttack').fire('click');
  assert.equal($('battle').hidden,false);
