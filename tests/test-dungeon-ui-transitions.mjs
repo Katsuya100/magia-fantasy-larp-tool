@@ -215,7 +215,15 @@ for(const [id,[buttonId,label]] of Object.entries(overlayFlows)){
  assert.ok(content.includes('id="'+buttonId+'"')&&content.includes('>'+label+'</button>'),'original overlay label: '+id);
 }
 const drawingLessons=['circleDrawingLessonDialog'];
-assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+drawingLessons.length,dialogs.length,'all 24 native dialogs accounted for; obsolete Drive confirmation removed');
+const compactConfirmations=['emptyCarryDepartureDialog'];
+for(const id of compactConfirmations){
+ assert.match(tagOf(id),/data-dungeon-frame="closable"/,'compact confirmation uses native close transitions');
+ const content=dialogMarkup(id);
+ assert.match(content,/<div class="[^"]* dungeon-dialog-frame">/,'compact confirmation shares the frame');
+ assert.match(content,/id="cancelEmptyCarryDeparture"[^>]*>戻る<\/button>/,'carry confirmation has its back action');
+ assert.match(content,/id="confirmEmptyCarryDeparture"[^>]*>そのまま出発<\/button>/,'carry confirmation has its departure action');
+}
+assert.equal(Object.keys(closable).length+fixed.length+Object.keys(overlayFlows).length+drawingLessons.length+compactConfirmations.length,dialogs.length,'all 24 native dialogs accounted for; obsolete Drive confirmation removed');
 for(const id of drawingLessons){
  assert.match(tagOf(id),/data-dungeon-frame="fixed"/,'drawing lesson is a fixed frame without close rail');
  const content=dialogMarkup(id);
