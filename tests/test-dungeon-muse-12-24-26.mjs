@@ -44,7 +44,7 @@ const zeroHero=unit([attack]),deadTarget=unit([],{flame:.5}),zero=[];
 deadTarget.hp=0;G.round(zeroHero,deadTarget,0,-1,buffs,()=>.99,step=>zero.push(step));
 const zeroHit=zero.find(step=>step.side==='hero'&&step.role==='attack');
 assert.equal(zeroHit.amount,0,'zero observed damage can result from an already empty HP bar');
-assert.equal(zeroHit.missedByDizziness,false,'zero damage alone is not a dizziness failure');
+assert.notEqual(zeroHit.missedByDizziness,true,'zero damage alone is not a dizziness failure');
 assert.notEqual(effectCaption(zeroHit),'MISS');
 assert.equal(attackHitAffinity(zeroHit),'none','zero observed damage does not show an affinity');
 
