@@ -67,7 +67,7 @@ try{
  Math.random=()=>0;
  try{
   const missClick=doc.click(button({cast:'2'}));
-  await wait(()=>get('heroFxText').textContent.includes('🌪目眩'),
+  await wait(()=>get('heroFxText').textContent.includes('MISS'),
    'a zero-damage flame strike displays the dizziness active during the attack');
   await missClick;
   await wait(async()=>(await getProfile(db)).run?.battleTurns===3,

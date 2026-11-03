@@ -40,7 +40,8 @@ export function disposeCombatEchoes(arena,echoes){
  for(const node of arena?.querySelectorAll?.('.combat-fx-echo')||[])node.remove();
 }
 export function discardCombatEchoesOnMiss(phase,echoes,arena){
- if(!phase.some(step=>step.role==='attack'&&step.amount===0))return false;
+ if(!phase.some(step=>(step.role==='attack'&&(step.amount===0||step.missedByDizziness===true))||
+  (step.role==='basic'&&step.missedByDizziness===true)))return false;
  disposeCombatEchoes(arena,echoes);
  return true;
 }

@@ -85,6 +85,7 @@ jobs:
       - run: |
           failed=0
           for suite in \
+            dungeon-muse-12-24-26 \
             dungeon-deep-cleanse-simulation \
             dungeon-debuff-role-distribution \
             dungeon-boss-layer-audit \

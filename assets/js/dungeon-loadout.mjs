@@ -27,6 +27,9 @@ export function prepareItems(values,inventoryLength,capacity){
  return normalizeSlots(values,Math.max(GRID_COLUMNS,capacity),value=>Number.isInteger(value)&&value>=0&&value<inventoryLength);
 }
 export function pickedValues(values){return values.filter(value=>value!==null&&value!==undefined);}
+export function needsEmptyCarryConfirmation(inventory,slots){
+ return Array.isArray(inventory)&&inventory.some(Boolean)&&pickedValues(Array.isArray(slots)?slots:[]).length===0;
+}
 export function isFull(values){return values.length>0&&values.every(value=>value!==null&&value!==undefined);}
 
 // Persist individual consumable instances (not type IDs or mutable inventory offsets).
