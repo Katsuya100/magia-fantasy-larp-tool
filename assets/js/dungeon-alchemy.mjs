@@ -84,11 +84,26 @@ export function alchemyMilestones(profile){
  return {count,stoneIn:5-count%5,inkIn:20-count%20};
 }
 
-export function craftAlchemy(profile,relic,indexes,rows,buffs=[],random=Math.random,newId=()=>crypto.randomUUID()){
- if(profile?.run)throw Error('探索中は錬金できません');
- if(!relic||Number(profile?.collection?.[relic.id]||0)<2)throw Error('コレクションが不足しています');
+// The entry button, material selection and actual crafting share these rules.
+// Recipe matching is not an entry condition: unmatched combinations yield a scroll.
+export function alchemyEntryError(profile,relic){
+ if(profile?.run)return '探索中は錬金できません';
+ if(!relic||Number(profile?.collection?.[relic.id]||0)<2)return 'コレクションが不足しています';
+ return '';
+}
+export function alchemyCraftError(profile,relic,indexes,rows){
+ const entryError=alchemyEntryError(profile,relic);
+ if(entryError)return entryError;
+ if(!Array.isArray(profile.inventory)||profile.inventory.length<5)return '携行品が5個必要です';
  if(!Array.isArray(indexes)||indexes.length!==5||new Set(indexes).size!==5||
-  indexes.some(i=>!Number.isInteger(i)||i<0||i>=profile.inventory.length))throw Error('錬金素材を5個選択してください');
+  indexes.some(i=>!Number.isInteger(i)||i<0||i>=profile.inventory.length))return '錬金素材を5個選択してください';
+ if(!rows?.length||indexes.some(i=>!rows.some(row=>row.id===profile.inventory[i]?.id)))return '錬金素材が不正です';
+ return '';
+}
+
+export function craftAlchemy(profile,relic,indexes,rows,buffs=[],random=Math.random,newId=()=>crypto.randomUUID()){
+ const error=alchemyCraftError(profile,relic,indexes,rows);
+ if(error)throw Error(error);
  const ingredients=indexes.map(i=>profile.inventory[i]);
  const outcome=alchemyRecipe(relic,ingredients,rows);
  const created={...outcome,instanceId:newId()};

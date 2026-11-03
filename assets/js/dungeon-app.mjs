@@ -1,12 +1,12 @@
 import * as G from './dungeon-core.mjs?v=20261102.321';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261102.321';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261102.321';
-import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261103.326';
-import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261103.326';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261103.327';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261103.327';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261102.321';
 import {prepareCircles,prepareItems,setSlot,pickedValues,needsEmptyCarryConfirmation,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261102.321';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261102.321';
-import {alchemyRecipe,alchemyAutoSelect,craftAlchemy} from './dungeon-alchemy.mjs?v=20261102.321';
+import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261103.327';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261102.321';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261102.321';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261102.321';
@@ -15,7 +15,7 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261102.321';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261102.321';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261102.321';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261103.326';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261103.327';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261102.321';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261102.321';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261102.321';
@@ -480,13 +480,15 @@ function render(){
   const count=Number(profile.collection[item.id]||0),found=count>0;
   const rarity=['common','uncommon','rare','epic','legendary'].includes(item.rarity)?item.rarity:'common';
   const mark=relicSymbolSvg(i,found);
+  const alchemyError=alchemyEntryError(profile,item);
+  const alchemyLabel=profile.run&&count>=2?'探索中':count===1?'あと1個':'錬金';
   return '<article class="relic-card '+(found?'discovered':'locked')+'" data-rarity="'+(found?rarity:'unknown')+'" role="listitem" aria-label="'+(found?esc(item.name)+'・'+rarityNames[rarity]:'未発見の収集品')+'">'
    +(found?'<span class="relic-count">×'+count+'</span>':'')
    +'<div class="relic-art" aria-hidden="true">'+mark+'</div>'
    +(found?'<span class="relic-rarity" aria-hidden="true">'+collectionRarityMarks(rarity)+'</span>':'')
    +'<div class="relic-name">'+(found?esc(item.name):'？？？')+'</div>'
    +'<p class="relic-detail">'+(found?esc(item.description):'未発見')+'</p>'
-    +'<button type="button" class="subtle relic-alchemy" data-alchemy="'+esc(item.id)+'" '+(count<2||profile.run?'disabled':'')+'>錬金</button></article>';
+    +'<button type="button" class="subtle relic-alchemy" data-alchemy="'+esc(item.id)+'" title="'+esc(alchemyError||'錬金')+'" '+(alchemyError?'disabled':'')+'>'+alchemyLabel+'</button></article>';
  }).join('')||'<p class="collection-empty">該当するコレクションはありません。</p>';
  $('magicStoneBalance').textContent='✦ 魔導石：'+profile.magicStones+'個';
  
@@ -1599,14 +1601,13 @@ function renderAlchemy(){
  $('alchemyBaseName').textContent=relic.name;
  $('alchemySlots').innerHTML=alchemyItemGrid(choices,profile.inventory,itemName,esc);
  const indexes=choices.filter(Number.isInteger);
- let valid=indexes.length===5;
- if(valid)try{alchemyRecipe(relic,indexes.map(index=>profile.inventory[index]),masters.items);}
- catch{valid=false;}
- $('alchemyCraft').disabled=!valid;
+ const error=alchemyCraftError(profile,relic,indexes,masters.items);
+ $('alchemyCraft').disabled=Boolean(error);
+ $('alchemyError').textContent=error;
 }
 function openAlchemy(id){
  const relic=masters.collections.find(row=>row.id===id);
- if(!relic||profile.run||Number(profile.collection[id]||0)<2)return;
+ if(alchemyEntryError(profile,relic))return;
  alchemy={relic,slots:Array(5).fill(null)};
  $('alchemyInputs').hidden=false;
  $('alchemyReveal').hidden=true;
@@ -1673,9 +1674,9 @@ async function confirmAlchemy(){
   $('alchemyInputs').hidden=true;
   $('alchemyReveal').hidden=false;
  }catch(error){
+  renderAlchemy();
   $('alchemyError').textContent='錬金に失敗しました：'+error.message;
   note('錬金に失敗しました：'+error.message);
-  renderAlchemy();
  }
 }
 
