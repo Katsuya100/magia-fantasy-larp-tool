@@ -354,7 +354,8 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
  const snapshot=u=>({...u,statuses:u.statuses.map(x=>({...x})),cooldowns:[...u.cooldowns]});
  const publish=(a,role,attribute,message,amount=0,missedByDizziness=false)=>{
   if(!onStep)return;
-  const event={side:a.side,role,attribute,text:message,amount,missedByDizziness};
+  const event={side:a.side,role,attribute,text:message,amount};
+  if(missedByDizziness)event.missedByDizziness=true;
   // Combat-only accounting needs the resolved values, not copied animation frames.
   if(onStep.metricsOnly===true){onStep(event);return;}
   onStep({...event,
