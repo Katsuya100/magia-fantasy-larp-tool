@@ -388,6 +388,8 @@ export function round(player,enemy,pickPlayer,pickEnemy,buffs,r=Math.random,onSt
     message=a.name+'：'+cast(a.u,a.t,a.sp,buffs,r,outcome);
     missedByDizziness=outcome.missedByDizziness===true;
    }
+   // Only an actual dizziness failure changes the battle-log wording.
+   if(missedByDizziness&&(role==='attack'||role==='basic'))message=a.name+'：MISS';
    log.push(message);
    const amount=role==='support'?a.u.hp-oldHp:oldHp-a.t.hp;
    if(role==='attack'||role==='basic'){
