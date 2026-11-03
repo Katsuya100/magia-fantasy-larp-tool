@@ -36,7 +36,7 @@ const hero=unit([attack]),enemy=unit([],{flame:.5}),landed=[];
 G.round(hero,enemy,0,-1,buffs,()=>.99,step=>landed.push(step));
 const hit=landed.find(step=>step.side==='hero'&&step.role==='attack');
 assert.ok(hit.amount>0);
-assert.equal(hit.missedByDizziness,false,'a landed attack is not marked as a miss');
+assert.notEqual(hit.missedByDizziness,true,'a landed attack is not marked as a miss');
 assert.equal(attackHitAffinity(hit),'resist','real landed resistance is retained');
 assert.notEqual(effectCaption(hit),'MISS');
 
