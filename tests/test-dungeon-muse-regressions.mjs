@@ -29,6 +29,81 @@ const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-
 const [balance,levels,floors,playerBase,enemies,items,buffs]=await Promise.all(
  ['balance','levels','floors','player-base','enemies','consumables','buffs'].map(csv));
 configure({balance,levels,floors,playerBase});
+// v313 #12: exercise the exact reported floor bands against every real enemy.
+const flameSpell={role:'attack',attribute:'flame',power:681};
+for(const layer of [28,29,47,48,49]){
+ const rows=enemies.filter(row=>new RegExp('^(foe|boss)_l'+String(layer).padStart(3,'0')+'(?:_|$)').test(row.id));
+ assert.ok(rows.length>=5,'all reported layer '+layer+' enemies are present');
+ for(const row of rows){
+  const level=Number(row.min_level);
+  const attacker=G.makeUnit({hp:110,mag:12,def:10,res:10},level,{},[flameSpell],'player');
+  const target=G.fromEnemy(row,level);
+  assert.ok(G.damage(attacker,target,flameSpell,()=>.99)>0,
+   layer+'F '+row.id+': flame magic cannot silently do zero damage without a hit-blocking status');
+  const steps=[];
+  G.round(attacker,target,0,-1,buffs,()=>.99,step=>steps.push(step));
+  const hit=steps.find(step=>step.side==='hero'&&step.role==='attack');
+  assert.ok(hit?.amount>0,layer+'F '+row.id+': combat timeline keeps a nonzero actual flame hit');
+ }
+}
+// #12a: an enemy defense spell executes first, but cannot turn a real 681-power
+// elemental hit into a silent zero. Test the actual 25 row spell loadouts.
+for(const layer of [28,29,47,48,49]){
+ const rows=enemies.filter(row=>new RegExp('^(foe|boss)_l'+String(layer).padStart(3,'0')+'(?:_|$)').test(row.id));
+ for(const row of rows){
+  const defenderSpell=G.fromEnemy(row,Number(row.min_level)).spells.findIndex(spell=>spell.role==='defense');
+  if(defenderSpell<0)continue;
+  const hero=G.makeUnit({hp:110,mag:12,def:10,res:10},Number(row.min_level),{},[flameSpell],'player');
+  const target=G.fromEnemy(row,Number(row.min_level));
+  const effects=[];
+  G.round(hero,target,0,defenderSpell,buffs,()=>.99,event=>effects.push(event));
+  const hit=effects.find(event=>event.side==='hero'&&event.role==='attack');
+  assert.ok(hit?.amount>0,layer+'F '+row.id+': a defense cast does not silently erase a 681-power flame hit');
+ }
+}
+// The only intentional instant 0 on a viable attack is a successful dizziness
+// miscast. Verify both the miss and the same spell's unblocked counterpart.
+{
+ const hero=G.makeUnit({hp:110,mag:12,def:10,res:10},86,{},[flameSpell],'player');
+ const enemy=G.fromEnemy(enemies.find(row=>row.id==='boss_l049'),86);
+ const clean=G.damage(hero,enemy,flameSpell,()=>0);
+ assert.ok(clean>0,'a viable flame spell does not miss without a debuff');
+ G.addStatus(hero,{id:'debuff_storm',kind:'debuff',attribute:'storm',effect:'dizzy',value:.45,turns:2});
+ assert.equal(G.damage(hero,enemy,flameSpell,()=>0),0,'an actual dizziness miss deals exactly zero');
+ assert.equal(G.damage(hero,enemy,flameSpell,()=>.99),clean,'the same spell hits when the dizziness roll fails');
+}
+// #12b: support/healing phases are distinct from the subsequent attack phase.
+{
+ const attacker=G.makeUnit({hp:110,mag:12,def:10,res:10},86,{},[flameSpell],'player');
+ const healer=G.fromEnemy(enemies.find(row=>row.id==='boss_l049'),86);
+ healer.hp=Math.floor(healer.hp/2);
+ const steps=[];
+ G.round(attacker,healer,0,2,buffs,()=>.99,step=>steps.push(step));
+ assert.ok(steps.some(step=>step.side==='enemy'&&step.role==='support'&&step.amount>0),
+  '49F healing is a legitimate enemy support action, not negative player damage');
+ assert.ok(steps.some(step=>step.side==='hero'&&step.role==='attack'&&step.amount>0),
+  'healing enemy still receives flame damage in its own phase');
+}
+// #13: confusion selects the actual spent spell, with that spell's cooldown.
+{
+ const spells=[flameSpell,{role:'attack',attribute:'bolt',power:681}];
+ const hero=G.makeUnit({hp:110,mag:12,def:10,res:10},30,{},spells,'player');
+ G.addStatus(hero,{id:'debuff_chaos',kind:'debuff',attribute:'chaos',effect:'confused',value:1,turns:2});
+ const cast=G.prepare(hero,1,()=>0);
+ assert.equal(cast.attribute,'flame');
+ assert.ok(hero.cooldowns[0]>0);
+ assert.equal(hero.cooldowns[1],0,'confusion consumes the redirected circle only');
+}
+// #14: inherited HP reduction is clamped to one, never wraps below zero.
+{
+ const hero=G.makeUnit({hp:110,mag:12,def:10,res:10},1,{},[],'player');
+ const target=G.makeUnit({hp:181,mag:12,def:10,res:10},1,{},[],'enemy');
+ const before=target.stats.hp;
+ const message=G.applyLegacyHp(hero,target,{role:'attack',legacyHp:before+100});
+ assert.equal(target.stats.hp,1);
+ assert.equal(target.hp,1);
+ assert.match(message,/最大HP-/);
+}
 const env=fakeDungeonBrowser(),doc=env.document,$=id=>doc.getElementById(id);
 const button=data=>({dataset:data,disabled:false,closest(){return this;}});
 const wait=async(check,label)=>{

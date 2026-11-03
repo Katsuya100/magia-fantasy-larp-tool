@@ -1,8 +1,8 @@
 import * as G from './dungeon-core.mjs?v=20261102.320';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261102.320';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261102.320';
-import {createBattleInputBuffer} from './dungeon-battle-input.mjs?v=20261102.320';
-import {captureCombatFxEcho} from './dungeon-combat-fx-echo.mjs?v=20261103.324';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261103.325';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261103.325';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261102.320';
 import {prepareCircles,prepareItems,setSlot,pickedValues,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261102.320';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261102.320';
@@ -15,7 +15,7 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261102.320';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261102.320';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261102.320';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261103.324';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261103.325';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261102.320';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261102.320';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261102.320';
@@ -101,9 +101,9 @@ async function exclusive(fn){if(busyAction)return;busyAction=true;try{return awa
 async function battleAction(kind,index){
  const run=profile?.run;
  if(busyAction){
-  // Buffer only during the final, still-living combat phase; not during ceremonies.
+  // Buffer one input during combat FX, never during a death or loot ceremony.
   if(playingEffects&&run?.stage==='battle'&&run.hero.hp>0&&run.enemy.hp>0)
-   battleInput.offer({kind,index,floor:run.floor});
+   battleInput.offer({kind,index,floor:run.floor,run});
   return;
  }
  try{
@@ -112,7 +112,7 @@ async function battleAction(kind,index){
   const next=battleInput.take();
   // A buffered action must never spill into the next encounter or after a defeat.
   const current=profile?.run;
-  if(next&&current?.stage==='battle'&&current.floor===next.floor&&current.hero.hp>0&&current.enemy.hp>0)
+  if(canReplayBufferedBattleCommand(next,current))
    void battleAction(next.kind,next.index).catch(error=>note('戦闘操作に失敗しました：'+String(error?.message||error)));
  }
 }
@@ -266,8 +266,11 @@ async function hydrateSavedGame(reuseProfile=false){
 export async function refreshDungeonViewFromBackup(){
  circleImages.releaseAll();
  failedPhotoIds.clear();
+ // A restored account must not inherit old confirmations or picker choices.
+ pendingCircleAction=null;
+ picker=null;
  await hydrateSavedGame();
- for(const id of ['backupSetupDialog','nameDialog','circleFirstChoiceDialog','magicDetailsDialog','loadoutDialog'])if($(id).open)closeDungeonDialog($(id));
+ for(const id of ['backupSetupDialog','nameDialog','circleFirstChoiceDialog','magicDetailsDialog','circleActionDialog','loadoutDialog'])if($(id).open)closeDungeonDialog($(id));
  render();
  if(profile.run){if(profile.run.stage==='checkpoint')renderCheckpoint();else renderRun();}
  if(returnFlow)renderReturnStep();
@@ -611,12 +614,15 @@ function clearCombatEffects(){
 async function animateBattle(steps){
  if(!steps.length)return;
  playingEffects=true;
+ battleInput.start();
  let lastEcho=null;
+ const activeEchoes=[];
  $('battleSpells').setAttribute('aria-busy','true');
  $('battleItems').setAttribute('aria-busy','true');
  try{
   await playCombatSequence(steps,phase=>{
-   lastEcho?.reveal();
+   if(discardCombatEchoesOnMiss(phase,activeEchoes,$('battleArena')))lastEcho=null;
+   else lastEcho?.reveal();
    clearCombatEffects();
    // Force a new CSS animation cycle even after consecutive turns with the same role.
    void $('battleArena').offsetWidth;
@@ -634,7 +640,12 @@ async function animateBattle(steps){
      projectile.dataset.effect='attack';
      projectile.dataset.tier=actor.dataset.tier;
     }
-    $(step.side+'FxText').textContent=effectCaption(step);
+    // Show the still-active dizziness beside a zero hit, even if its last turn
+    // expires before the resolved status badges are drawn.
+    const caster=step.side==='hero'?step.hero:step.enemy;
+    const dizzyZero=['attack','basic'].includes(step.role)&&step.amount===0&&
+     caster?.statuses?.some(status=>status.effect==='dizzy'&&status.turns>0);
+    $(step.side+'FxText').textContent=effectCaption(step)+(dizzyZero?' 🌪目眩':'');
    }
    for(const step of phase){
     if(!['attack','basic','debuff'].includes(step.role))continue;
@@ -655,9 +666,17 @@ async function animateBattle(steps){
    $('heroStats').innerHTML=rowUnit({...final.hero,statuses:resolved?.hero.statuses||final.hero.statuses});
    $('enemyStats').innerHTML=rowUnit({...final.enemy,statuses:resolved?.enemy.statuses||final.enemy.statuses});
    lastEcho=captureCombatFxEcho($('battleArena'),combatPhaseDuration(phase,effectDuration()));
-  },{overlap:125,onLastPhase:(_phase,duration)=>battleInput.begin(duration),onFatal:side=>ceremony(side==='hero'?'hero-death':'enemy-death',
-   side==='hero'?'探索失敗':'討伐成功',
-   side==='hero'?(profile.name||'冒険者'):(profile.run?.enemyName||''))});
+   if(lastEcho)activeEchoes.push(lastEcho);
+  },{overlap:125,onLastPhase:(_phase,duration)=>battleInput.begin(duration),onFatal:side=>{
+   // Prior combat phases may still have live WEAK/RESIST echo layers.
+   // Discard every one before the death ceremony, not just the last phase.
+   disposeCombatEchoes($('battleArena'),activeEchoes);
+   lastEcho=null;
+   clearCombatEffects();
+   return ceremony(side==='hero'?'hero-death':'enemy-death',
+    side==='hero'?'探索失敗':'討伐成功',
+    side==='hero'?(profile.name||'冒険者'):(profile.run?.enemyName||''));
+  }});
  }finally{
   battleInput.close();
   lastEcho?.reveal();

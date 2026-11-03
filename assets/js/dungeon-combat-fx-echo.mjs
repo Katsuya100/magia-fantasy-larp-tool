@@ -15,8 +15,6 @@ export function captureCombatFxEcho(arena,visualDuration){
   copy.style.cssText='left:'+actor.offsetLeft+'px;top:'+actor.offsetTop+'px;width:'+actor.offsetWidth+'px;height:'+actor.offsetHeight+'px';
   const fx=actor.querySelector('.combatant-fx')?.cloneNode(true);
   if(fx){
-   // Preserve the outgoing particles, not the obsolete healing/damage text.
-   // Its old caption would otherwise overlap the next resolved HP snapshot.
    for(const node of fx.querySelectorAll('[id]')){node.removeAttribute('id');node.textContent='';}
    copy.append(fx);
   }
@@ -30,4 +28,19 @@ export function captureCombatFxEcho(arena,visualDuration){
  arena.append(echo);
  const timer=setTimeout(()=>echo.remove(),visualDuration);
  return {reveal(){echo.dataset.active='true';},dispose(){clearTimeout(timer);echo.remove();}};
+}
+
+// Do not let a prior successful RESIST/WEAK hit masquerade as feedback for
+// the next, genuinely zero-damage magic attack. Other hits retain full FX.
+export function disposeCombatEchoes(arena,echoes){
+ for(const echo of echoes)echo.dispose();
+ echoes.length=0;
+ // Previous-turn FX echoes outlive their original animateBattle handles
+ // when an input starts at the 70% overlap point.
+ for(const node of arena?.querySelectorAll?.('.combat-fx-echo')||[])node.remove();
+}
+export function discardCombatEchoesOnMiss(phase,echoes,arena){
+ if(!phase.some(step=>step.role==='attack'&&step.amount===0))return false;
+ disposeCombatEchoes(arena,echoes);
+ return true;
 }

@@ -222,6 +222,8 @@ assert.ok(sharedRelease,'the unchanged dungeon modules retain a shared cache ver
 assert.ok(appSource.includes('dungeon-combat-fx.mjs?v='+sharedRelease),'FX JavaScript import matches the unchanged dungeon modules');
 assert.match(appSource,/projectile\.dataset\.tier=actor\.dataset\.tier/,'attack projectiles use caster investment');
 assert.match(appSource,/target\.dataset\.affinity='none'/,'affinity resets');
+assert.match(appSource,/onFatal:side=>\{[\s\S]*?disposeCombatEchoes\(\$\('battleArena'\),activeEchoes\);[\s\S]*?clearCombatEffects\(\);[\s\S]*?return ceremony\(/,
+ 'a fatal result destroys echoes from all phases and previous turns before death ceremony');
 assert.match(appSource,/victim\.dataset\.affinity=attackHitAffinity\(step\)/,'attack uses true resistance');
 assert.match(appSource,/victim\.dataset\.incomingAttribute=/,'dual casts keep the incoming attribute independent');
 assert.match(cinematicCss,/--impact-color/,'incoming projectile controls impact hue');
