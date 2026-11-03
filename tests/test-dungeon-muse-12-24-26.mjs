@@ -127,7 +127,7 @@ async function scenario({name,stock,selected=false,upgrade=0,level=35,invalid=fa
    name+': other spell details remain unchanged');
   $('magicDetailsDialog').close();
 
-  $('startAttack').fire('click');
+  const launched=$('startAttack').fire('click');
   if(stock&&!selected&&!invalid){
    assert.equal($('emptyCarryDepartureDialog').open,true,name+': warns for an owned but unequipped item');
    $('startAttack').fire('click');
@@ -141,6 +141,7 @@ async function scenario({name,stock,selected=false,upgrade=0,level=35,invalid=fa
    $('confirmEmptyCarryDeparture').fire('click');
    await confirmed;
   }else{
+   await launched;
    assert.equal($('emptyCarryDepartureDialog').open,false,
     name+': no warning without stock, with a prepared item, or with invalid spell setup');
   }
