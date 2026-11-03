@@ -1,12 +1,12 @@
 import * as G from './dungeon-core.mjs?v=20261102.321';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261102.321';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261102.321';
-import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261103.327';
-import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261103.327';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261103.328';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261103.328';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261102.321';
 import {prepareCircles,prepareItems,setSlot,pickedValues,needsEmptyCarryConfirmation,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261102.321';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261102.321';
-import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261103.327';
+import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261103.328';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261102.321';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261102.321';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261102.321';
@@ -15,7 +15,7 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261102.321';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261102.321';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261102.321';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261103.327';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261103.328';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261102.321';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261102.321';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261102.321';
@@ -46,8 +46,12 @@ let alchemy=null,alchemyPickerSlot=-1;
 const alchemyPickerView={filter:'all',sort:'kind',previousSort:'default'};
 const circleImages=createDungeonPhotoManager(()=>db,id=>circles.find(c=>c.id===id));
 function refreshCirclePhotos(){
- circleImages.refresh([...sceneIds.filter(id=>!$(id).hidden).map(id=>$(id)),
-  ...($('loadoutDialog').open?[$('loadoutDialog')]:[])]);
+ const roots=[...sceneIds.filter(id=>!$(id).hidden).map(id=>$(id)),
+  ...($('loadoutDialog').open?[$('loadoutDialog')]:[])];
+ // Remember each thumbnail's authored alt before loading or fallback changes it.
+ for(const root of roots)for(const img of root.querySelectorAll?.('img[data-circle-photo-id]')||[])
+  if(img.dataset.originalCircleAlt===undefined)img.dataset.originalCircleAlt=img.alt;
+ circleImages.refresh(roots);
 }
 async function revealOriginal(circle,failed=false){
  // Full-resolution photo Blob is the same one used by the magic details screen.
@@ -65,6 +69,7 @@ function onCirclePhotoError(event){
  const src=img.getAttribute?.('src')||img.src;
  if(!src)return;
  if(img!==$('magicDetailsImage')){
+  if(img.dataset.originalCircleAlt===undefined)img.dataset.originalCircleAlt=img.alt;
   if(circleImages.recoverBrokenThumbnail(img))return;
   img.alt='縮小画像を表示できません。';return;
  }
@@ -83,7 +88,14 @@ function onCirclePhotoError(event){
 }
 function onCirclePhotoLoad(event){
  const img=event.target;
- if(img!==$('magicDetailsImage')||!$('magicDetailsDialog').open)return;
+ if(img!==$('magicDetailsImage')){
+  if(img?.dataset?.originalCircleAlt!==undefined){
+   img.alt=img.dataset.originalCircleAlt;
+   delete img.dataset.originalCircleAlt;
+  }
+  return;
+ }
+ if(!$('magicDetailsDialog').open)return;
  const id=img.dataset?.circlePhotoId,circle=id&&circles.find(item=>item.id===id);
  if(!circle||img.src!==circleImages.get(circle.image))return;
  failedPhotoIds.delete(id);
