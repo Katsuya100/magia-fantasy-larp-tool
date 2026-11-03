@@ -142,7 +142,7 @@ async function scenario({name,stock,selected=false,upgrade=0,level=35,invalid=fa
  }finally{browser.restore();}
 }
 
-const low=await scenario({name:'stock-empty',stock:1,upgrade:0,level:19});
+const low=await scenario({name:'stock-empty',stock:1,upgrade:0,level:1});
 const high=await scenario({name:'stock-selected',stock:1,selected:true,upgrade:15,level:100});
 await scenario({name:'no-stock',stock:0});
 await scenario({name:'invalid',stock:1,invalid:true});
