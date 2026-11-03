@@ -1,11 +1,31 @@
 name: CI
+# The ci:run PR label is the sole trigger for this required test suite.
+# No push/synchronize automation: the latest PR commit needs its own manual run.
 on:
-  push:
   pull_request:
+    types: [labeled]
+concurrency:
+  group: manual-ci-${{ github.event.pull_request.number }}-${{ github.event.label.name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
+  # A required, non-skippable guard prevents other PR labels from satisfying
+  # status checks via the GitHub Actions 'skipped == success' behavior.
+  manual-ci-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require explicit ci:run label
+        env:
+          REQUESTED_LABEL: ${{ github.event.label.name }}
+        run: |
+          if [ "$REQUESTED_LABEL" != 'ci:run' ]; then
+            echo "::error::Apply ci:run to this PR to request required tests."
+            exit 1
+          fi
+
   offline:
+    needs: manual-ci-request
     runs-on: ubuntu-latest
     env:
       ONNXRUNTIME_NODE_INSTALL_CUDA: skip
@@ -27,6 +47,7 @@ jobs:
       - run: npm run check
       - run: npm run build
   dungeon-fixed-deck-combat-strict:
+    needs: manual-ci-request
     # The original five-spell fixed loadout owns the 256-seed win and MP target.
     # Journey win rates are diagnostic, never constrained to fixed-deck rates.
     runs-on: ubuntu-latest
@@ -52,6 +73,7 @@ jobs:
           if-no-files-found: warn
 
   dungeon-regression-suites:
+    needs: manual-ci-request
     # Independently execute every combat regression while progression and
     # Strict 256-seed balance requires observed wins inside the interior target margin. No tests are skipped.
     runs-on: ubuntu-latest
@@ -84,6 +106,7 @@ jobs:
           exit "$failed"
 
   dungeon-journey-economy:
+    needs: manual-ci-request
     # Journey economics and ink strategy are measured independently of the common combat target.
     runs-on: ubuntu-latest
     env:
@@ -127,6 +150,7 @@ jobs:
           if-no-files-found: warn
 
   dungeon-economy-combat-diagnostic:
+    needs: manual-ci-request
     # The unapproved first-entry baseline remains a measured comparison ONLY.
     # It cannot block or certify the actual 256-owner, 60-case acceptance gate.
     runs-on: ubuntu-latest
@@ -148,6 +172,7 @@ jobs:
           if-no-files-found: warn
 
   dungeon-foundation-256-accounts:
+    needs: manual-ci-request
     # Simulator integrity and resource conservation form the design gate.
     # All balance target misses remain UNMET in reports.
     runs-on: ubuntu-latest
@@ -203,8 +228,8 @@ jobs:
   dungeon-journey-strength-strict:
     # Run even if an independent foundation unit test fails, so that
     # all 60 strict results are measured; failures remain hard failures.
-    needs: dungeon-foundation-256-accounts
-    if: always()
+    needs: [manual-ci-request, dungeon-foundation-256-accounts]
+    if: ${{ always() && needs.manual-ci-request.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
