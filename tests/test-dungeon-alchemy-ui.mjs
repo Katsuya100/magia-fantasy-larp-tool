@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
+import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {openStore,getProfile,saveProfile} from '../assets/js/dungeon-store.mjs';
 
 const csv=async name=>G.parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
-const [relics,enemies]=await Promise.all([csv('collections'),csv('enemies')]);
+const [relics,enemies,balance,levels,floors,playerBase]=await Promise.all(
+ ['collections','enemies','balance','levels','floors','player-base'].map(csv));
+configure({balance,levels,floors,playerBase});
 const [relicA,relicB,relicC]=relics.slice(0,3);
 const item=(id,index,value=20)=>({id,value,instanceId:'muse25-item-'+index});
 const clickButton=dataset=>({dataset,disabled:false,closest(){return this;}});
@@ -42,7 +45,7 @@ async function makeSave(env){
   await wait(()=>$('playerStats').innerHTML.includes('Muse錬金検証'),'loaded saved character');
   await doc.click(clickButton({view:'collection'}));
 
-  assert.match(buttonMarkup($('collectionGrid').innerHTML,relicA.id),/>錬金<\\/button>/);
+  assert.match(buttonMarkup($('collectionGrid').innerHTML,relicA.id),/>錬金<\/button>/);
   await doc.click(clickButton({alchemy:relicA.id}));
   assert.equal($('alchemyDialog').open,true,'two copies of the saved relic open alchemy');
   assert.equal($('alchemyCraft').disabled,true,'no ingredients are initially selected');
@@ -68,7 +71,7 @@ async function makeSave(env){
 
   await $('alchemyRevealDone').fire('click');
   assert.match(buttonMarkup($('collectionGrid').innerHTML,relicA.id),/disabled/);
-  assert.match(buttonMarkup($('collectionGrid').innerHTML,relicA.id),/>あと1個<\\/button>/);
+  assert.match(buttonMarkup($('collectionGrid').innerHTML,relicA.id),/>あと1個<\/button>/);
   await doc.click(clickButton({alchemy:relicA.id}));
   assert.equal($('alchemyDialog').open,false,'a single remaining relic cannot reopen the dialog');
 
@@ -111,7 +114,7 @@ async function makeSave(env){
   await import('../assets/js/dungeon-app.mjs?integration=muse25-alchemy-exploring');
   await wait(()=>$('playerStats').innerHTML.includes('Muse錬金検証'),'active expedition loaded');
   assert.match(buttonMarkup($('collectionGrid').innerHTML,relicA.id),/disabled/);
-  assert.match(buttonMarkup($('collectionGrid').innerHTML,relicA.id),/>探索中<\\/button>/);
+  assert.match(buttonMarkup($('collectionGrid').innerHTML,relicA.id),/>探索中<\/button>/);
   await doc.click(clickButton({alchemy:relicA.id}));
   assert.equal($('alchemyDialog').open,false,'entry cannot bypass the saved expedition guard');
   assert.equal((await getProfile(db)).collection[relicA.id],2);
