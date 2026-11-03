@@ -644,7 +644,7 @@ async function animateBattle(steps){
     $(step.side+'FxText').textContent=effectCaption(step);
    }
    for(const step of phase){
-    if(!['attack','basic','debuff'].includes(step.role))continue;
+    if(!['attack','basic','debuff'].includes(step.role)||step.missedByDizziness===true)continue;
     const opponent=step.side==='hero'?'enemy':'hero';
     const victim=$(opponent+'Combatant');
     victim.dataset.hit='true';

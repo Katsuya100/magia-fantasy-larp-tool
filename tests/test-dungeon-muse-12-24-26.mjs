@@ -4,6 +4,7 @@ import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {combatSpell,strengthenedPower} from '../assets/js/dungeon-upgrades.mjs';
 import {effectCaption,attackHitAffinity} from '../assets/js/dungeon-combat-fx.mjs';
+import {discardCombatEchoesOnMiss} from '../assets/js/dungeon-combat-fx-echo.mjs';
 import {needsEmptyCarryConfirmation} from '../assets/js/dungeon-loadout.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
 import {openStore,getProfile,saveProfile,putCircle} from '../assets/js/dungeon-store.mjs';
@@ -32,6 +33,14 @@ for(const role of ['attack','basic']){
   assert.equal(attackHitAffinity(miss),'none','RESIST and WEAK never accompany MISS');
  }
 }
+let disposed=0;
+const ghosts=[{dispose(){disposed++;}}];
+assert.equal(discardCombatEchoesOnMiss([missedByStorm('basic')],ghosts,{querySelectorAll:()=>[]}),true,
+ 'dizzy basic MISS clears an earlier RESIST/WEAK echo');
+assert.equal(disposed,1);
+assert.deepEqual(ghosts,[]);
+assert.equal(discardCombatEchoesOnMiss([{role:'basic',amount:0}],[],{querySelectorAll:()=>[]}),false,
+ 'zero basic damage without dizziness is not a MISS');
 const hero=unit([attack]),enemy=unit([],{flame:.5}),landed=[];
 G.round(hero,enemy,0,-1,buffs,()=>.99,step=>landed.push(step));
 const hit=landed.find(step=>step.side==='hero'&&step.role==='attack');
