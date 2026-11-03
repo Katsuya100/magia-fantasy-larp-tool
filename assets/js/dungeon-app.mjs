@@ -2119,7 +2119,7 @@ function wire(){
   const dialog=$('emptyCarryDepartureDialog');
   if(!dialog.open)return;
   closeDungeonDialog(dialog);
-  void exclusive(begin).catch(error=>note('出発に失敗しました：'+String(error?.message||error)));
+  return exclusive(begin).catch(error=>note('出発に失敗しました：'+String(error?.message||error)));
  });
  $('returnHome').addEventListener('click',()=>exclusive(leave).catch(error=>note('帰還に失敗しました：'+String(error?.message||error))));
   $('returnNext').addEventListener('click',()=>exclusive(advanceReturnStep).catch(error=>note('保存に失敗しました：'+String(error?.message||error))));

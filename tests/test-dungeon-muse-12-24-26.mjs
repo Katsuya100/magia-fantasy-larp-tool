@@ -137,8 +137,9 @@ async function scenario({name,stock,selected=false,upgrade=0,level=35,invalid=fa
    assert.equal((await getProfile(db)).attempts,initialAttempts);
    $('startAttack').fire('click');
    assert.equal($('emptyCarryDepartureDialog').open,true,'retry opens one confirmation');
+   const confirmed=$('confirmEmptyCarryDeparture').fire('click');
    $('confirmEmptyCarryDeparture').fire('click');
-   $('confirmEmptyCarryDeparture').fire('click');
+   await confirmed;
   }else{
    assert.equal($('emptyCarryDepartureDialog').open,false,
     name+': no warning without stock, with a prepared item, or with invalid spell setup');
