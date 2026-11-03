@@ -35,6 +35,35 @@ for(const role of ['attack','basic']){
    'even an unrelated HP change during a missed legacy spell must not show RESIST');
  }
 }
+// Exact battle-log text must follow the same explicit dizziness outcome as FX.
+for(const role of ['attack','basic'])for(const side of ['hero','enemy']){
+ const attacker=unit(role==='basic'?[]:[attack]);
+ const defender=unit([],{flame:.5});
+ G.addStatus(attacker,{id:'debuff_storm',kind:'debuff',attribute:'storm',effect:'dizzy',value:1,turns:1});
+ const firstMp=attacker.mp,firstHp=defender.hp,events=[];
+ const logs=side==='hero'
+  ?G.round(attacker,defender,role==='basic'?-1:0,-1,buffs,()=>0,e=>events.push(e))
+  :G.round(defender,attacker,-1,role==='basic'?-1:0,buffs,()=>0,e=>events.push(e));
+ const label=side==='hero'?'自分':'敵';
+ assert.ok(logs.includes(label+'：MISS'),role+' '+side+': exact battle log');
+ assert.equal(logs.some(text=>text.startsWith(label+'：ダメージ 0')||
+  text.startsWith(label+'：通常攻撃 0')),false,'not a fake zero-damage hit');
+ assert.equal(defender.hp,firstHp,'MISS never changes target HP');
+ assert.equal(attacker.mp,firstMp-(role==='attack'?G.spellMpCost(attack):0),
+  'MISS keeps the existing MP cost');
+ if(role==='attack')assert.ok(attacker.cooldowns[0]>0,'MISS keeps cooldown');
+ const event=events.find(e=>e.side===side&&e.role===role);
+ assert.equal(event.missedByDizziness,true);
+ assert.equal(event.text,label+'：MISS','timeline and log use identical text');
+ assert.equal(effectCaption(event),'MISS','floating MISS still works');
+ assert.equal(attackHitAffinity(event),'none','MISS has no RESIST/WEAK');
+}
+const noDizzy=unit([{role:'attack',attribute:'flame',power:0}]);
+const noDizzyTarget=unit([],{flame:.5}),zeroEvents=[];
+const zeroLogs=G.round(noDizzy,noDizzyTarget,0,-1,buffs,()=>.99,e=>zeroEvents.push(e));
+assert.ok(zeroLogs.includes('自分：ダメージ 0'),'ordinary zero damage keeps normal wording');
+assert.notEqual(zeroEvents.find(e=>e.role==='attack'&&e.side==='hero')?.missedByDizziness,true);
+assert.notEqual(effectCaption(zeroEvents.find(e=>e.role==='attack'&&e.side==='hero')),'MISS');
 let disposed=0;
 const ghosts=[{dispose(){disposed++;}}];
 assert.equal(discardCombatEchoesOnMiss([missedByStorm('basic')],ghosts,{querySelectorAll:()=>[]}),true,
@@ -51,6 +80,7 @@ const hero=unit([attack]),enemy=unit([],{flame:.5}),landed=[];
 G.round(hero,enemy,0,-1,buffs,()=>.99,step=>landed.push(step));
 const hit=landed.find(step=>step.side==='hero'&&step.role==='attack');
 assert.ok(hit.amount>0);
+assert.match(hit.text,/^自分：ダメージ [1-9]/,'landed attack keeps its original log');
 assert.notEqual(hit.missedByDizziness,true,'a landed attack is not marked as a miss');
 assert.equal(attackHitAffinity(hit),'resist','real landed resistance is retained');
 assert.notEqual(effectCaption(hit),'MISS');
