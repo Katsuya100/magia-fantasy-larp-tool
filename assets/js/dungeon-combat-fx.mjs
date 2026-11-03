@@ -5,6 +5,7 @@ import {resist} from './dungeon-core.mjs';
 export const EFFECT_LABELS={attack:'⚔️攻撃',basic:'⚔️通常攻撃',defense:'🛡️防御',debuff:'🕸️弱体',support:'✚回復',buff:'強化',burn:'火傷',item:'道具',revive:'復活'};
 export const ELEMENT_GLYPHS={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪',gravity:'⬤',law:'⚖',chaos:'☄'};
 export function effectCaption(step){
+ if(step.missedByDizziness===true&&['attack','basic'].includes(step.role))return 'MISS';
  const tag=EFFECT_LABELS[step.role]||'術式';
  const symbol=ELEMENT_GLYPHS[step.attribute]||'✦';
  const n=Number(step.amount)||0;
