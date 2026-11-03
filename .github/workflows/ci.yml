@@ -229,7 +229,7 @@ jobs:
     # Run even if an independent foundation unit test fails, so that
     # all 60 strict results are measured; failures remain hard failures.
     needs: [manual-ci-request, dungeon-foundation-256-accounts]
-    if: ${{ always() && needs.manual-ci-request.result == 'success' }}
+    if: ${{ always() && needs['manual-ci-request'].result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
