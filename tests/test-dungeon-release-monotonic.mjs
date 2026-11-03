@@ -37,7 +37,8 @@ const shared=app.match(/from '\.\/dungeon-core\.mjs\?v=(\d{8}\.\d+)'/)?.[1];
 assert.ok(shared,'the common dungeon core import is required');
 for(const part of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
  const [ ,module,query]=part;
- const separate=['dungeon-cloud-sync.mjs','dungeon-battle-input.mjs','dungeon-combat-fx-echo.mjs'].includes(module);
+ // Pure alchemy rules can be refreshed independently of shared save/core module identity.
+ const separate=['dungeon-cloud-sync.mjs','dungeon-battle-input.mjs','dungeon-combat-fx-echo.mjs','dungeon-alchemy.mjs'].includes(module);
  const expected=module==='dungeon-tuning.mjs'?undefined:'?v='+(separate?current:shared);
  assert.equal(query,expected,'module identity/cache version mismatch: '+module);
 }

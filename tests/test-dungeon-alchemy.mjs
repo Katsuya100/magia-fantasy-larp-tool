@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {alchemyRecipe,alchemyAutoSelect,craftAlchemy,alchemyByproductRates,alchemyMilestones} from '../assets/js/dungeon-alchemy.mjs';
+import {alchemyRecipe,alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy,alchemyByproductRates,alchemyMilestones} from '../assets/js/dungeon-alchemy.mjs';
 import {alchemyItemGrid,itemGrid} from '../assets/js/dungeon-preparation-ui.mjs';
 
 const csv=readFileSync(new URL('../assets/data/dungeon-consumables.csv',import.meta.url),'utf8').trim().split(/\r?\n/);
@@ -70,6 +70,27 @@ assert.throws(()=>craftAlchemy(profile,common,[0,0,1,2,3],rows),/5個/);
 assert.throws(()=>craftAlchemy({...profile,collection:{relic:1}},common,[0,1,2,3,4],rows),/不足/);
 assert.throws(()=>craftAlchemy({...profile,run:{}},common,[0,1,2,3,4],rows),/探索中/);
 assert.throws(()=>recipe('common',five('heal_s').slice(0,4)),/5個/);
+
+// Muse #25: saved inventory count, relic count and expedition state govern the UI.
+// Both defined recipes and unmatched combinations must remain craftable.
+const ready={collection:{relic:2},inventory:five('heal_s',20)};
+const allIndexes=[0,1,2,3,4];
+assert.equal(alchemyEntryError(ready,common),'');
+assert.equal(alchemyCraftError(ready,common,allIndexes,rows),'');
+assert.equal(craftAlchemy(ready,common,allIndexes,rows,[],()=>.99,()=>'ok').inventory[0].id,'heal_s');
+const unmatched={...ready,inventory:five('clear_flame')};
+assert.equal(alchemyCraftError(unmatched,common,allIndexes,rows),'',
+ 'the absence of a special recipe never blocks the craft button');
+assert.equal(craftAlchemy(unmatched,common,allIndexes,rows,[],()=>.99,()=>'scroll').inventory[0].id,'escape_scroll');
+assert.match(alchemyCraftError({...ready,inventory:ready.inventory.slice(0,4)},common,allIndexes,rows),/5個/);
+assert.match(alchemyCraftError(ready,common,[0,1,2,3],rows),/5個/);
+assert.match(alchemyCraftError(ready,common,[0,1,2,3,3],rows),/5個/);
+assert.match(alchemyEntryError({...ready,collection:{relic:1}},common),/不足/);
+assert.match(alchemyCraftError({...ready,collection:{relic:1}},common,allIndexes,rows),/不足/);
+assert.match(alchemyEntryError({...ready,run:{}},common),/探索中/);
+assert.match(alchemyCraftError({...ready,run:{}},common,allIndexes,rows),/探索中/);
+assert.match(alchemyCraftError({...ready,inventory:[...ready.inventory.slice(0,4),make('invalid_legacy')]},common,allIndexes,rows),/不正/,
+ 'an item without master data must fail visibly rather than silently disabling');
 
 // Rarity bonuses: common none; uncommon/rare chance; epic/legendary guaranteed.
 const bonusProfile={...profile,inventory:five('heal_s',20)};
