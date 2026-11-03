@@ -57,6 +57,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return {ready:false};
  }
  let client=null,drive=null,accessToken='',expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
+ let lastVerifiedLocalSavedAt=null,syncIndicatorVisible=false;
  let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false,initialRetryQueued=false,restoredInSession=false;
  let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,renewalPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
  let disconnectPending=false,disconnectPromise=null,resolveDisconnect=null;
@@ -104,6 +105,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  const localOnlyButton=doc?.getElementById('setupWithoutBackup');
  const syncingIcons=[doc?.getElementById('backupSetupSpinner'),doc?.getElementById('googleDriveSpinner')];
  function setSyncing(active){
+  syncIndicatorVisible=Boolean(active);
   for(const spinner of syncingIcons)if(spinner)spinner.hidden=!active;
   const activity=doc?.getElementById('driveSyncActivity');
   if(activity)activity.hidden=!active;
@@ -141,9 +143,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(rollbackWarning)rollbackWarning.hidden=true;
   if(message)show(message);
  }
- async function syncedPresentation(){
+ async function syncedPresentation(savedAt){
   await saveDriveSyncIntent(db,true);
   if(disconnectPending)return;
+  if(Number.isFinite(Number(savedAt)))lastVerifiedLocalSavedAt=Number(savedAt);
   connectedPresentation();
   show('GoogleDrive同期済み');
  }
@@ -217,6 +220,10 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  function chooseCloud({local,remote,mode='different',allowLocal=true,canStartLocal=true}){
   return new Promise(resolve=>{
    if(!conflictDialog?.showModal){resolve('cancel');return;}
+   // This is a decision wait, not an in-flight Drive transfer.
+   // An actual restore/upload will resume the activity indicator itself.
+   setSyncing(false);
+   show('バックアップを選択してください');
    choicePending=true;
    const fresh=mode==='fresh';
    const remoteName=String(remote?.profile?.name||'').trim()||'バックアップ';
@@ -290,6 +297,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   }
  }
  async function restore(remote,file,{expectedLocal=null}={}){
+  if(!syncIndicatorVisible){setSyncing(true);show('同期中…');}
   if(!remote.valid)throw Error('破損したDriveバックアップは復元できません。');
   ensureCurrent(activeSyncEpoch);
   // The selected source was compared against this particular local snapshot.
@@ -318,17 +326,18 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    await onRestore();
    ensureCurrent(activeSyncEpoch);
    restoredInSession=true;
-   // If the player saved while the screen was hydrating, queue that newer save.
+   // Save made during view hydration still must reach Drive.
    const latest=await readDungeonSnapshot(db);
    ensureCurrent(activeSyncEpoch);
    if(latest.savedAt!==remote.data.savedAt){again=true;show('同期中…');return 'deferred';}
    again=false;
-   await syncedPresentation();
+   await syncedPresentation(latest.savedAt);
    return 'restored';
   }catch(error){again=false;throw error;}
   finally{restoring=false;}
  }
  async function upload(snapshot,file,{allowInitial=false}={}){
+  if(!syncIndicatorVisible){setSyncing(true);show('同期中…');}
   // The exact serialized, inspected bytes are uploaded; do not recompute
   // a new checksum from damaged IndexedDB data after verification.
   ensureCurrent(activeSyncEpoch);
@@ -366,7 +375,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
    show('同期中…');
    return 'deferred';
   }
-  await syncedPresentation();
+  await syncedPresentation(snapshot.savedAt);
   return 'ready';
  }
  async function sync(initial=false){
@@ -375,11 +384,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(Date.now()>=expires){expireConnection();return 'deferred';}
   busy=true;
   activeSyncEpoch=connectionEpoch;
-  setSyncing(true);
-  show('同期中…');
   let result='deferred';
   try{
    let local=await readDungeonSnapshot(db);
+   // A read-only cloud recheck does not represent a new save.
+   if(initial||lastVerifiedLocalSavedAt===null||local.savedAt!==lastVerifiedLocalSavedAt){
+    setSyncing(true);show('同期中…');
+   }
    let verification=await verifyLocalSnapshot(local);
    const files=await drive.list();
    ensureCurrent(activeSyncEpoch);
@@ -425,7 +436,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      const localHash=await snapshotHash(await serializeDungeonSnapshot(local));
      if(localHash===remote.hash){
       await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
-      await syncedPresentation();
+      await syncedPresentation(local.savedAt);
       return 'ready';
      }
      return await upload(local,file,{allowInitial:true});
@@ -477,11 +488,20 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     return result;
    }
 
+   // Same play does not mean interchangeable discovery histories: a higher
+   // level on another device must not silently erase locally found relics.
+   const preferred=decideCloudSync({file,localProfile:local.profile,remoteProfile:remote.data.profile,
+    localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt});
+   const losesDiscovered=(discarded,winner)=>Object.entries(discarded?.collection||{}).some(
+    ([id,count])=>Number(count)>0&&!(Number(winner?.collection?.[id])>0));
+   const losesRelics=preferred==='download'
+    ?losesDiscovered(local.profile,remote.data.profile)
+    :preferred==='upload'&&losesDiscovered(remote.data.profile,local.profile);
    // Case 4: same play. Resolve actual progress before image repair;
    // a newer timestamp must never beat a more advanced adventurer.
    if(verification.status==='badImages'){
-    if(decideCloudSync({file,localProfile:local.profile,remoteProfile:remote.data.profile,
-     localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt})==='download')
+    // Preserve local unique discoveries; repair photos before offering a source choice.
+    if(!losesRelics&&preferred==='download')
      return await restore(remote,file,{expectedLocal:local});
     const restored=[];
     for(const id of verification.badImageIds){
@@ -510,10 +530,26 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     }
    }
 
+   // A legacy local seal cannot be uploaded, but an explicitly selected
+   // verified Drive restore must remain possible. Photo repair runs above.
+   if(losesRelics&&verification.status!=='valid'){
+    const choice=await chooseCloud({local,remote:remote.data,allowLocal:false,canStartLocal:false});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
+    return result;
+   }
    if(verification.status!=='valid'){
     show('端末セーブを検証できません。同期を停止しました。');
     return result;
    }
+   // A photo-repairable local save must retain the keep-local option.
+   if(losesRelics){
+    const choice=await chooseCloud({local,remote:remote.data,
+     allowLocal:verification.status==='valid',canStartLocal:verification.status==='valid'});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
+    if(choice==='overwrite'&&verification.status==='valid')return await upload(local,file,{allowInitial:true});
+    return result;
+   }
+
    const localText=await serializeDungeonSnapshot(local);
    const localHash=await snapshotHash(localText);
    ensureCurrent(activeSyncEpoch);
@@ -522,7 +558,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt});
    if(decision==='synced'){
     await saveCloudSyncState(db,{fileId:file.id,hash:remote.hash,modifiedTime:file.modifiedTime});
-    await syncedPresentation();
+    await syncedPresentation(local.savedAt);
     return 'ready';
    }
    if(decision==='download')return await restore(remote,file,{expectedLocal:local});
@@ -540,7 +576,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     again=false;
     const retryInitial=initial||initialRetryQueued;
     if(retryInitial)initialRetryQueued=true;
-    show('同期中…');
+    // A queued read-only recheck must not flash a save-in-progress label.
+    if(syncIndicatorVisible)show('同期中…');
     queueMicrotask(()=>{
      if(drive&&!stopped&&!restoring){
       void sync(retryInitial).then(outcome=>{if(retryInitial)completeInitialCheck(outcome);});

@@ -103,13 +103,14 @@ function mockGoogle(){
 }
 function remoteApi(initial=null,{tamperReadback=false}={}){
  const id='backup-1',modified=()=>new Date(Date.UTC(2026,9,19,10,0,version)).toISOString();
- let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null,putPause=null,metadataPause=null,metadataRequests=0,putRequests=0;
+ let version=1,value=initial,expired=false,uploads=0,downloads=0,failUpload=false,listPause=null,putPause=null,metadataPause=null,metadataRequests=0,putRequests=0,listRequests=0;
  const operations=[],signals=[];
  const fetchImpl=async (url,options={})=>{
   if(options.signal)signals.push(options.signal);
   if(expired)return new Response('',{status:401});
   const u=String(url),method=options.method||'GET';
   if(u.includes('spaces=appDataFolder')){
+   listRequests++;
    if(listPause)await listPause;
    return Response.json({files:value===null?[]:[{id,name:'magia-dungeon-save-v1.json',modifiedTime:modified()}]});
   }
@@ -152,6 +153,7 @@ function remoteApi(initial=null,{tamperReadback=false}={}){
   get uploads(){return uploads;},
   get putRequests(){return putRequests;},
   get metadataRequests(){return metadataRequests;},
+  get listRequests(){return listRequests;},
   get downloads(){return downloads;},
   get operations(){return [...operations];},
   get signals(){return [...signals];},
@@ -250,6 +252,44 @@ try{
  assert.equal(firstUi.get('googleDriveConflictDialog').open,false,'naming never reopens the restore/new chooser');
  assert.ok(firstDrive.downloads>=2,'both uploads were verified with Drive downloads');
 
+ // Muse #10: an unchanged cloud recheck must never show a saving indicator.
+ // Record every temporary transition, not only the final synced state.
+ const unchangedSpinner=firstUi.get('googleDriveSpinner');
+ let spinnerHidden=unchangedSpinner.hidden;
+ const transientSaves=[];
+ Object.defineProperty(unchangedSpinner,'hidden',{
+  configurable:true,get(){return spinnerHidden;},
+  set(value){spinnerHidden=value;if(!value)transientSaves.push('spinner');}
+ });
+ const unchangedActivity=firstUi.get('driveSyncActivity');
+ let activityHidden=unchangedActivity.hidden;
+ Object.defineProperty(unchangedActivity,'hidden',{
+  configurable:true,get(){return activityHidden;},
+  set(value){activityHidden=value;if(!value)transientSaves.push('activity');}
+ });
+ const oldStatus=firstUi.status.textContent;
+ const statusTransitions=[];
+ let syncStatus=oldStatus;
+ Object.defineProperty(firstUi.status,'textContent',{
+  configurable:true,get(){return syncStatus;},
+  set(value){syncStatus=String(value);statusTransitions.push(syncStatus);}
+ });
+ const previousUnchangedLists=firstDrive.listRequests;
+ let unchangedOutcome='deferred';
+ for(let attempt=0;attempt<8;attempt++){
+  unchangedOutcome=await firstController.syncNow();
+  if(unchangedOutcome==='ready')break;
+  await new Promise(resolve=>setTimeout(resolve,30));
+ }
+ assert.equal(unchangedOutcome,'ready','unchanged snapshot revalidation eventually finishes');
+ assert.ok(firstDrive.listRequests>previousUnchangedLists,
+  'the unchanged snapshot was verified with an actual Drive request');
+ assert.deepEqual(transientSaves,[],
+  'REPRO Muse #10: no upload should flash a saving spinner during verification');
+ assert.ok(statusTransitions.every(value=>value!=='同期中…'),
+  'REPRO Muse #10: read-only verification must not flicker the synced label');
+ assert.equal(firstUi.status.textContent,'GoogleDrive同期済み');
+
  // Real autosave, not just an explicit syncNow(): a local edit schedules
  // a nonblocking backup after the 1.8s debounce and the spinner stays visible.
  const autoProfile=await getProfile(firstDb);
@@ -320,6 +360,12 @@ try{
  const writesBeforeMismatch=separateDrive.uploads;
  const mismatchSync=separateController.syncNow();
  await wait(()=>separateUi.get('googleDriveConflictDialog').open,'different play immediately offers the chooser');
+ assert.equal(separateUi.get('driveSyncActivity').hidden,true,
+  'Muse #10: waiting for a choice is not presented as an endless Drive transfer');
+ assert.equal(separateUi.get('googleDriveSpinner').hidden,true,
+  'Muse #10: there is no upload spinner while awaiting a human decision');
+ assert.equal(separateUi.status.textContent,'バックアップを選択してください',
+  'the sync status makes the pending choice clear');
  assert.equal(separateDrive.uploads,writesBeforeMismatch,'different players cannot overwrite without selection');
  separateUi.get('googleDriveConflictDialog').querySelector('[data-action="later"]').click();
  assert.equal(await mismatchSync,'deferred');
@@ -408,10 +454,12 @@ try{
  await connect(detachingUi);
  await wait(()=>detachingReady===1,'in-flight wait starts connected');
  const releaseStaleList=detachingDrive.pauseNextList();
+ const beforeDetachLists=detachingDrive.listRequests;
  const detachingRequest=detachingController.syncNow();
- await wait(()=>!detachingUi.get('googleDriveSpinner').hidden,'network sync has begun');
+ await wait(()=>detachingDrive.listRequests>beforeDetachLists,'read-only Drive request has begun');
+ assert.equal(detachingUi.get('googleDriveSpinner').hidden,true,'a read-only recheck does not show saving');
  detachingUi.get('disconnectGoogleDrive').click();
- assert.equal(detachingUi.get('googleDriveSpinner').hidden,false,'spinner remains visible until the Drive request settles');
+ assert.equal(detachingUi.get('googleDriveSpinner').hidden,true,'read-only recheck stays visually idle while unlink waits');
  assert.equal(detachingUi.get('disconnectGoogleDrive').disabled,true,'button cannot issue repeated unlink actions');
  assert.match(detachingUi.doc.cookie,/__Secure-magiaDungeonDriveToken/,'access cookie is retained until transfer finishes');
  assert.match(detachingUi.status.textContent,/完了後に解除/,'status explains unlink is waiting');
@@ -819,6 +867,128 @@ try{
  assert.equal(tieDrive.uploads,0,'the higher EXP Drive copy is preserved');
  assert.equal(tieUi.get('googleDriveConflictDialog').open,false);
  assert.equal((await getProfile(tieDb)).level,tieLocal.profile.level+1);
+
+
+ // Muse #14: two saves from the same play can carry different discoveries.
+ // Progress precedence must not silently replace 220 locally discovered types
+ // with a Drive copy holding only 216, even if the Drive character is higher Lv.
+ const allRelics=parseCsv(await readFile(new URL('../assets/data/dungeon-collections.csv',import.meta.url),'utf8'));
+ const relicIds=allRelics.slice(0,220).map(item=>item.id);
+ assert.equal(relicIds.length,220);
+ const discoveryDb=await newDb(),discoveryUi=fakeUi();
+ const discoveryProfile=await getProfile(discoveryDb);
+ discoveryProfile.name='図鑑件数の再現';discoveryProfile.level=30;
+ discoveryProfile.collection=Object.fromEntries(relicIds.map(id=>[id,1]));
+ await saveProfile(discoveryDb,discoveryProfile);
+ const richerLocal=await readDungeonSnapshot(discoveryDb);
+ const poorerDrive=remoteApi(await serializeDungeonSnapshot({...richerLocal,
+  profile:{...richerLocal.profile,level:31,collection:Object.fromEntries(relicIds.slice(0,216).map(id=>[id,1]))},
+  savedAt:richerLocal.savedAt+1000}));
+ let discoveryRestores=0;
+ start(discoveryDb,discoveryUi,poorerDrive.fetchImpl,{onRestore:()=>discoveryRestores++});
+ await connect(discoveryUi);
+ await wait(()=>discoveryUi.get('googleDriveConflictDialog').open||discoveryRestores>0,
+  'a cross-progress collection conflict is noticed');
+ assert.equal(discoveryRestores,0,
+  'REPRO Muse #14: higher level on Drive must not silently discard four locally discovered relics');
+ const retainedDiscoveries=(await getProfile(discoveryDb)).collection;
+ assert.equal(relicIds.filter(id=>Number(retainedDiscoveries[id])>0).length,220,
+  'all 220 locally discovered relics are preserved until a conflict decision');
+ assert.equal(discoveryUi.get('googleDriveConflictDialog').open,true,'relic mismatch requires an explicit source choice');
+ discoveryUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').click();
+ await wait(()=>poorerDrive.uploads===1,'choosing the local copy uploads the 220 discoveries');
+ const chosenDiscoveries=deserializeDungeonSnapshot(poorerDrive.current).profile.collection;
+ assert.equal(relicIds.filter(id=>Number(chosenDiscoveries[id])>0).length,220,
+  'the user-selected full collection remains intact on Drive');
+
+ 
+ // Also protect a more advanced local level from silently erasing
+ // discoveries that exist only in the Drive copy (opposite direction).
+ const reverseDb=await newDb(),reverseUi=fakeUi();
+ const reverseProfile=await getProfile(reverseDb);
+ reverseProfile.name='図鑑件数の逆方向';reverseProfile.level=31;
+ reverseProfile.collection=Object.fromEntries(relicIds.slice(0,216).map(id=>[id,1]));
+ await saveProfile(reverseDb,reverseProfile);
+ const reverseLocal=await readDungeonSnapshot(reverseDb);
+ const richerDrive=remoteApi(await serializeDungeonSnapshot({...reverseLocal,
+  profile:{...reverseLocal.profile,level:30,collection:Object.fromEntries(relicIds.map(id=>[id,1]))},
+  savedAt:reverseLocal.savedAt-1000}));
+ let reverseRestores=0;
+ start(reverseDb,reverseUi,richerDrive.fetchImpl,{onRestore:()=>reverseRestores++});
+ await connect(reverseUi);
+ await wait(()=>reverseUi.get('googleDriveConflictDialog').open||richerDrive.uploads>0,
+  'a richer Drive discovery set conflicts with a higher level local save');
+ assert.equal(richerDrive.uploads,0,'a 216-discovery local save cannot silently overwrite 220 in Drive');
+ assert.equal(reverseUi.get('googleDriveConflictDialog').open,true);
+ reverseUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ await wait(()=>reverseRestores===1,'the player may explicitly choose the 220-discovery Drive save');
+ const restoredDiscoveries=(await getProfile(reverseDb)).collection;
+ assert.equal(relicIds.filter(id=>Number(restoredDiscoveries[id])>0).length,220);
+
+ // A legacy local integrity seal cannot be uploaded, but a valid Drive
+ // snapshot must still be recoverable by explicit choice.
+ const legacyFactory=fakeIndexedDB(),legacyDb=await openStore(legacyFactory);
+ const legacyProfile=await getProfile(legacyDb);
+ legacyProfile.name='旧版図鑑の復旧';legacyProfile.level=30;
+ legacyProfile.collection=Object.fromEntries(relicIds.map(id=>[id,1]));
+ await saveProfile(legacyDb,legacyProfile);
+ const legacyBefore=await readDungeonSnapshot(legacyDb);
+ const legacyRemote=remoteApi(await serializeDungeonSnapshot({...legacyBefore,
+  profile:{...legacyBefore.profile,level:31,
+   collection:Object.fromEntries(relicIds.slice(0,216).map(id=>[id,1]))},
+  savedAt:legacyBefore.savedAt+1000}));
+ const legacySettings=legacyFactory.databases.get('magia-dungeon-v1').get('settings');
+ legacySettings.set('integrity',{...legacySettings.get('integrity'),legacy:true});
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(legacyDb))).status,'legacy');
+ const legacyUi=fakeUi();
+ let legacyRestores=0;
+ start(legacyDb,legacyUi,legacyRemote.fetchImpl,{onRestore:()=>legacyRestores++});
+ await connect(legacyUi);
+ await wait(()=>legacyUi.get('googleDriveConflictDialog').open||legacyRestores>0,
+  'legacy integrity still permits selecting an intact Drive backup');
+ assert.equal(legacyRestores,0,'no auto restore across conflicting discoveries');
+ assert.equal(legacyUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]').hidden,true,
+  'unverified local data cannot overwrite Drive');
+ legacyUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ await wait(()=>legacyRestores===1,'explicit Drive recovery is possible');
+ assert.equal((await getProfile(legacyDb)).level,31,'chosen verified Drive save restores safely');
+
+ // Muse #14: a corrupt local photo must be repaired before the conflict
+ // chooser, so the player can still preserve all locally found species.
+ const photoFactory=fakeIndexedDB(),photoDb=await openStore(photoFactory);
+ const photoProfile=await getProfile(photoDb);
+ photoProfile.name='写真修復と図鑑保持';photoProfile.level=30;
+ photoProfile.collection=Object.fromEntries(relicIds.map(id=>[id,1]));
+ await saveProfile(photoDb,photoProfile);
+ await putCircle(photoDb,{id:'muse-discovery-photo',name:'再現写真',
+  image:new Blob(['original-photo'],{type:'image/png'}),registeredAt:1,
+  basePower:500,analysis:{role:'attack',attribute:'flame',power:500},revealed:true});
+ const photoBefore=await readDungeonSnapshot(photoDb);
+ const photoDrive=remoteApi(await serializeDungeonSnapshot({...photoBefore,
+  profile:{...photoBefore.profile,level:31,
+   collection:Object.fromEntries(relicIds.slice(0,216).map(id=>[id,1]))},
+  savedAt:photoBefore.savedAt+1000}));
+ const storedCircles=photoFactory.databases.get('magia-dungeon-v1').get('circles');
+ storedCircles.set('muse-discovery-photo',{...storedCircles.get('muse-discovery-photo'),
+  image:new Blob(['damaged-photo'],{type:'image/png'})});
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(photoDb))).status,'badImages',
+  'only the local photo proof is damaged, not the collection');
+ const photoUi=fakeUi();
+ let photoRestores=0;
+ start(photoDb,photoUi,photoDrive.fetchImpl,{onRestore:()=>photoRestores++});
+ await connect(photoUi);
+ await wait(()=>photoUi.get('googleDriveConflictDialog').open||photoRestores>0,
+  'repairable local discoveries prompt a source choice');
+ assert.equal(photoRestores,0,'no automatic restore loses four locally discovered species');
+ assert.equal((await verifyLocalSnapshot(await readDungeonSnapshot(photoDb))).status,'valid',
+  'remote image repairs the local photo before the collection chooser');
+ const keepLocal=photoUi.get('googleDriveConflictDialog').querySelector('[data-action="overwrite"]');
+ assert.equal(keepLocal.disabled,false,'the repaired local source remains selectable');
+ keepLocal.click();
+ await wait(()=>photoDrive.uploads===1,'keeping the local discovered species updates Drive');
+ const afterPhotoRepair=deserializeDungeonSnapshot(photoDrive.current).profile.collection;
+ assert.equal(relicIds.filter(id=>Number(afterPhotoRepair[id])>0).length,220,
+  'the chosen repaired source retains all 220 discovered species');
 
  // Perfectly tied progression and timestamp may use either record.
  // The implementation picks local and never asks for a redundant choice.

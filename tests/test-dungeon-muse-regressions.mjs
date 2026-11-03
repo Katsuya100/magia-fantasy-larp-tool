@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {playCombatSequence} from '../assets/js/dungeon-combat-fx.mjs';
+import {playCombatSequence,attackHitAffinity} from '../assets/js/dungeon-combat-fx.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 import {fakeDungeonBrowser} from './helpers/fake-dungeon-browser.mjs';
@@ -191,6 +191,46 @@ try{
   const log=G.round(hero,enemy,0,0,buffs,()=>.9);
   assert.ok(log.some(x=>x.includes('敵：aqua弱体付与')));
   assert.ok(hero.statuses.some(x=>x.id==='debuff_aqua'));
+ });
+ await verify('boss 50 self-heal uses normal shared spell formula and HP threshold',()=>{
+  const row=enemies.find(item=>item.id==='boss_l050');
+  assert.ok(row,'actual 50F boss data exists');
+  const boss=G.fromEnemy(row,Number(row.min_level));
+  const healIndex=boss.spells.findIndex(spell=>spell.role==='support');
+  assert.ok(healIndex>=0,'50F boss has a heal spell');
+  boss.hp=1;
+  assert.equal(G.chooseEnemySpell(boss,()=>0.9),healIndex,
+   'low-HP boss chooses its own healing spell if it can cast');
+  const heal=boss.spells[healIndex];
+  const expected=Math.min(boss.stats.hp-boss.hp,
+   Math.round(G.effectivePower(boss,heal)*G.factor(boss,'heal')*G.factor(boss,'output')));
+  assert.ok(expected>0,'boss 50 heal must have nonzero power');
+  const before=boss.hp;
+  const result=G.cast(boss,G.makeUnit(profile.base,Number(row.min_level)),heal,buffs,()=>0.9);
+  assert.equal(boss.hp-before,expected,'enemy healing uses the same calculation as player healing');
+  assert.match(result,new RegExp('HP '+expected+'回復'));
+  boss.hp=1;
+  assert.equal(G.cast(boss,G.makeUnit(profile.base,Number(row.min_level)),heal,buffs,()=>0.5),
+   result,'unchanged stats and missing HP give the same repeated heal amount');
+ });
+ await verify('RESIST/WEAK derives from true attribute multiplier and only landed attacks',()=>{
+  const row=enemies.find(item=>item.id==='boss_l050');
+  const boss=G.fromEnemy(row,Number(row.min_level));
+  const baseline=G.resist(boss,'law');
+  assert.ok(baseline<1,'real 50F boss starts resistant to law');
+  assert.equal(attackHitAffinity({role:'attack',side:'hero',amount:32,attribute:'law',enemy:boss}),
+   'resist','a landed law attack reports RESIST');
+  assert.equal(attackHitAffinity({role:'attack',side:'hero',amount:0,attribute:'law',enemy:boss}),
+   'none','missed spells must not report RESIST');
+  assert.equal(attackHitAffinity({role:'support',side:'hero',amount:32,attribute:'law',enemy:boss}),
+   'none','healing is not an affinity hit');
+  const weak=G.fromEnemy(row,Number(row.min_level));
+  assert.ok(G.resist(weak,'chaos')>1,'real boss has chaos weakness');
+  assert.equal(attackHitAffinity({role:'attack',side:'hero',amount:32,attribute:'chaos',enemy:weak}),
+   'weak','a landed chaos attack reports WEAK');
+  G.cast(boss,G.makeUnit(profile.base,Number(row.min_level)),
+   {role:'defense',attribute:'law',power:136},buffs,()=>0.5);
+  assert.ok(G.resist(boss,'law')<baseline,'law defense reduces true effective resistance');
  });
 }finally{env.restore();}
 if(checks.length)throw Error('Muse reproduced regressions: '+checks.join(', '));
