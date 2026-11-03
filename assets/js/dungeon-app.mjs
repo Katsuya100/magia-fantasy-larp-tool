@@ -626,7 +626,7 @@ async function animateBattle(steps){
    clearCombatEffects();
    // Force a new CSS animation cycle even after consecutive turns with the same role.
    void $('battleArena').offsetWidth;
-   $('battleArena').dataset.shake=phase.some(step=>['attack','basic'].includes(step.role)&&step.amount>0)?'true':'false';
+   $('battleArena').dataset.shake=phase.some(step=>['attack','basic'].includes(step.role)&&step.amount>0&&!step.missedByDizziness)?'true':'false';
    for(const step of phase){
     const actor=$(step.side+'Combatant');
     actor.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';

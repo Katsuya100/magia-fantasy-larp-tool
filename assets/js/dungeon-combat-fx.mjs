@@ -16,7 +16,7 @@ export function effectCaption(step){
 // Classify only landed magic attacks. The combat core already uses the same
 // effective multiplier (including temporary resistance and vulnerability).
 export function attackHitAffinity(step){
- if(step?.role!=='attack'||!(step.amount>0))return 'none';
+ if(step?.role!=='attack'||step.missedByDizziness===true||!(step.amount>0))return 'none';
  const target=step.side==='hero'?step.enemy:step.side==='enemy'?step.hero:null;
  if(!target?.resists)return 'none';
  const value=resist(target,step.attribute);

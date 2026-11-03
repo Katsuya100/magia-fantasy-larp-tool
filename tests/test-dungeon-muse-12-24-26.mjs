@@ -31,13 +31,19 @@ for(const role of ['attack','basic']){
   assert.equal(miss?.missedByDizziness,true,'only the resolved RNG failure creates MISS');
   assert.equal(effectCaption(miss),'MISS','combat FX displays MISS rather than damage zero');
   assert.equal(attackHitAffinity(miss),'none','RESIST and WEAK never accompany MISS');
+  if(role==='attack')assert.equal(attackHitAffinity({...miss,amount:12}),'none',
+   'even an unrelated HP change during a missed legacy spell must not show RESIST');
  }
 }
 let disposed=0;
 const ghosts=[{dispose(){disposed++;}}];
 assert.equal(discardCombatEchoesOnMiss([missedByStorm('basic')],ghosts,{querySelectorAll:()=>[]}),true,
  'dizzy basic MISS clears an earlier RESIST/WEAK echo');
-assert.equal(disposed,1);
+const legacyEcho=[{dispose(){disposed++;}}];
+assert.equal(discardCombatEchoesOnMiss(
+ [{role:'attack',amount:12,missedByDizziness:true}],legacyEcho,{querySelectorAll:()=>[]}),true,
+ 'inherited HP changes on a missed spell still clear prior affinity visuals');
+assert.equal(disposed,2);
 assert.deepEqual(ghosts,[]);
 assert.equal(discardCombatEchoesOnMiss([{role:'basic',amount:0}],[],{querySelectorAll:()=>[]}),false,
  'zero basic damage without dizziness is not a MISS');
