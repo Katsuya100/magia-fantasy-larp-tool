@@ -24,10 +24,8 @@ export function cumulativeDungeonXp(profile){
 export function compareDungeonProgress(local,remote){
  // Each death resets rank, EXP and discoveries. An heir is newer progress,
  // not a weaker copy of the adventurer who died.
- if(local?.permadeath&&remote?.permadeath){
-  const generations=permadeathGeneration(local)-permadeathGeneration(remote);
-  if(generations)return generations>0?1:-1;
- }
+ const generations=permadeathGeneration(local)-permadeathGeneration(remote);
+ if(generations)return generations>0?1:-1;
  const measures=[highestRankLayer,cumulativeDungeonXp,deepestReturnedLayer,deepestReachedLayer];
  for(const measure of measures){
   const left=measure(local),right=measure(remote);
@@ -501,13 +499,11 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt});
    const losesDiscovered=(discarded,winner)=>Object.entries(discarded?.collection||{}).some(
     ([id,count])=>Number(count)>0&&!(Number(winner?.collection?.[id])>0));
-   const differentHeirs=local.profile?.permadeath&&remote.data.profile?.permadeath
-    &&permadeathGeneration(local.profile)!==permadeathGeneration(remote.data.profile);
-   // The successor's collection reset is intentional and must never become
-   // a cloud conflict that can resurrect the deceased adventurer.
-   const losesRelics=!differentHeirs&&(preferred==='download'
+   // Collections survive permadeath, so a missing discovery is still a
+   // conflict even if the newer snapshot belongs to a later generation.
+   const losesRelics=preferred==='download'
     ?losesDiscovered(local.profile,remote.data.profile)
-    :preferred==='upload'&&losesDiscovered(remote.data.profile,local.profile));
+    :preferred==='upload'&&losesDiscovered(remote.data.profile,local.profile);
    // Case 4: same play. Resolve actual progress before image repair;
    // a newer timestamp must never beat a more advanced adventurer.
    if(verification.status==='badImages'){
