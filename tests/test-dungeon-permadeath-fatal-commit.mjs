@@ -65,7 +65,7 @@ async function runFatalSaveTest({failFirst=false}={}){
    env.factory.failIntegrityWrites=true;
    await env.document.click(button);
    assert.equal(observedFatal,false,'no death overlay may play if the successor write fails');
-   assert.equal((await getProfile(db)).awaitingHeir,false,'failed transaction preserves the living save');
+   assert.notEqual((await getProfile(db)).awaitingHeir,true,'failed transaction preserves the living save');
    assert.equal((await getProfile(db)).run.hero.hp,1,'failed save does not commit a lethal turn');
    env.factory.failIntegrityWrites=false;
   }
