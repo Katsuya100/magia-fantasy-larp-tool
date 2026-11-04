@@ -28,6 +28,10 @@ assert.equal((await verifyLocalSnapshot(original)).status,'valid');
 assert.match(original.profile.playId,/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i,'a cryptographically random play ID is stored');
 const successor=createSuccessorProfile(original.profile,{slotIds:[],enemy:{id:'test'}},[],original.profile.base);
 assert.equal(successor.playId,original.profile.playId,'permadeath keeps the same play lineage even after the adventurer is replaced');
+assert.equal(successor.permadeathGeneration,1);
+const laterSuccessor=createSuccessorProfile({...successor,name:'後継者二代目',level:35},
+ {slotIds:[],enemy:{id:'test-2'}},[],original.profile.base);
+assert.equal(laterSuccessor.permadeathGeneration,2,'the lineage keeps a monotonically increasing generation');
 const postDeath={...successor,name:'後継者二代目',level:1,xp:0};
 assert.equal(postDeath.playId,original.profile.playId,'name, level and XP do not define play identity');
 const encoded=await serializeDungeonSnapshot(original);
@@ -46,6 +50,8 @@ assert.throws(()=>deserializeDungeonSnapshot(encoded.replace('"冒険者"','"改
 assert.equal(isPristineDungeonSnapshot(original),false);
 assert.equal(isPristineDungeonSnapshot({profile:{name:'新規冒険者',tutorialDone:true,level:1,attempts:0,returns:0,run:null},circles:[]}),false,'a player name is valuable progress that must be backed up');
 assert.equal(isPristineDungeonSnapshot({profile:{name:'',attempts:0,returns:0,run:null},circles:[]}),true);
+assert.equal(isPristineDungeonSnapshot({profile:{...successor,collection:{},legacies:[]},circles:[]}),false,
+ 'a pending successor is never mistaken for an untouched save even if discoveries and local photos are absent');
 await assert.rejects(serializeDungeonSnapshot({profile:null,circles:[]}),/形式/);
 assert.throws(()=>deserializeDungeonSnapshot('{"format":"unsupported","profile":{},"circles":[]}'),/未対応/);
 const signedPayload=payload=>JSON.stringify({...payload,checksum:quickFingerprint(payload)});
@@ -92,6 +98,17 @@ const rankHigh={adventurerRank:50,level:1,xp:0,deepestReturnedLayer:0,deepestRea
 const rankLow={adventurerRank:40,level:120,xp:900000,deepestReturnedLayer:100,deepestReachedLayer:120};
 assert.equal(score(rankHigh,rankLow),'upload','higher adventurer badge wins even when every other field and timestamp is lower');
 assert.equal(score(rankLow,rankHigh),'download','the badge takes precedence in either direction');
+const deadGeneration={...rankHigh,permadeath:true,permadeathGeneration:0,
+ name:'先代',collection:{discovered:1}};
+const livingGeneration={...rankLow,permadeath:true,permadeathGeneration:1,
+ name:'',awaitingHeir:true,collection:{discovered:1}};
+assert.equal(score(livingGeneration,deadGeneration),'upload','newer death generation beats old rank, XP and floors');
+assert.equal(score(deadGeneration,livingGeneration),'download','older champion on Drive cannot replace newer local successor');
+const twiceReborn={...livingGeneration,permadeathGeneration:2,adventurerRank:0,level:1,xp:0};
+assert.equal(score(twiceReborn,livingGeneration),'upload','generation beats higher rank from an earlier heir');
+assert.equal(score(livingGeneration,twiceReborn),'download');
+assert.equal(score({...rankLow,permadeathGeneration:0},rankHigh),'download',
+ 'same-generation regular saves keep the existing rank-first comparison');
 const xpHigh={adventurerRank:30,level:25,xp:3,deepestReturnedLayer:10,deepestReachedLayer:12};
 const xpLow={adventurerRank:30,level:24,xp:0,deepestReturnedLayer:100,deepestReachedLayer:120};
 assert.ok(cumulativeDungeonXp(xpHigh)>cumulativeDungeonXp(xpLow));

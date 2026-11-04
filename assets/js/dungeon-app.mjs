@@ -1,12 +1,12 @@
 import * as G from './dungeon-core.mjs?v=20261102.321';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261102.321';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261102.321';
-import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261103.328';
-import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261103.328';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261104.329';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261104.329';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261102.321';
 import {prepareCircles,prepareItems,setSlot,pickedValues,needsEmptyCarryConfirmation,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261102.321';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261102.321';
-import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261103.328';
+import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261104.329';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261102.321';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261102.321';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261102.321';
@@ -15,7 +15,7 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261102.321';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261102.321';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261102.321';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261103.328';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261104.329';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261102.321';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261102.321';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261102.321';
@@ -246,7 +246,10 @@ async function hydrateSavedGame(reuseProfile=false){
  G.repairInvalidMp(profile.run?.hero);
  profile.adventurerRank=highestRankLayer(profile);
  profile.defeatedBosses??={};
- for(const relic of masters.collections)if(relic.boss_enemy_id&&Number(profile.collection?.[relic.id]||0)>0)profile.defeatedBosses[relic.boss_enemy_id]=true;
+ // A newly born heir keeps the collection, not the former owner's boss wins.
+ // Old saves retain their original boss-collection migration behavior.
+ if(!(profile.permadeath&&Number(profile.permadeathGeneration)>0))
+  for(const relic of masters.collections)if(relic.boss_enemy_id&&Number(profile.collection?.[relic.id]||0)>0)profile.defeatedBosses[relic.boss_enemy_id]=true;
  profile.magicStones=Math.max(0,Number(profile.magicStones)||0);
  profile.magicInk=Math.max(0,Math.trunc(Number(profile.magicInk)||0));
  profile.deepestReturnedLayer=deepestReturnedLayer(profile);
@@ -857,13 +860,18 @@ async function takeTurn(index){
  if(circle?.analysis&&!isRevealed(circle)){
   Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);
  }
+ // Fatal combat is already resolved: commit the successor before showing
+ // a death animation that the player could navigate away from.
+ let successor=null;
+ if(run.hero.hp<=0&&profile.permadeath){
+  successor=createSuccessorProfile(profile,run,circles,G.startingBase());
+  try{await loadoutSaveQueue;await saveProfile(db,successor);}
+  catch(error){profile.run=beforeTurn;renderRun();note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
+ }
  await animateBattle(steps);
 if(run.hero.hp<=0){
-  if(profile.permadeath){
-   const successor=createSuccessorProfile(profile,run,circles,G.startingBase());
+  if(successor){
    const lost=successor.legacies.at(-1);
-   try{await saveProfile(db,successor);}
-   catch(error){profile.run=beforeTurn;renderRun();note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
    profile=successor;
    for(const circle of lost.circles)circleImages.forget(circle.id,circle.image);
    const removed=new Set(lost.circles.map(circle=>circle.id));

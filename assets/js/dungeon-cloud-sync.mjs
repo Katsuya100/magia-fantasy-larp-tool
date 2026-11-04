@@ -7,6 +7,7 @@ import {verifyLocalSnapshot,digestPhoto,recordFingerprint} from './dungeon-cloud
 import {nextXp} from './dungeon-core.mjs?v=20261102.321';
 import {highestRankLayer} from './dungeon-ranks.mjs';
 import {deepestReturnedLayer,deepestReachedLayer} from './dungeon-progress.mjs';
+import {permadeathGeneration} from './dungeon-permadeath.mjs';
 
 // profile.xp is only EXP remaining after level-ups; reconstruct earned EXP
 // from the same level thresholds used by the actual game.
@@ -18,9 +19,13 @@ export function cumulativeDungeonXp(profile){
  return earned;
 }
 
-// Compare the SAME play history lexicographically: rank, earned EXP,
-// deepest successful return, deepest reach. Timestamp is checked last.
+// Compare one play lineage by generation, then rank, earned EXP, deepest
+// successful return and reach. Timestamp is checked last.
 export function compareDungeonProgress(local,remote){
+ // Death resets rank and EXP, not the collection. An heir is newer
+ // progress, not a weaker copy of the adventurer who died.
+ const generations=permadeathGeneration(local)-permadeathGeneration(remote);
+ if(generations)return generations>0?1:-1;
  const measures=[highestRankLayer,cumulativeDungeonXp,deepestReturnedLayer,deepestReachedLayer];
  for(const measure of measures){
   const left=measure(local),right=measure(remote);
@@ -494,6 +499,8 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt});
    const losesDiscovered=(discarded,winner)=>Object.entries(discarded?.collection||{}).some(
     ([id,count])=>Number(count)>0&&!(Number(winner?.collection?.[id])>0));
+   // Collections survive permadeath, so a missing discovery is still a
+   // conflict even if the newer snapshot belongs to a later generation.
    const losesRelics=preferred==='download'
     ?losesDiscovered(local.profile,remote.data.profile)
     :preferred==='upload'&&losesDiscovered(remote.data.profile,local.profile);
