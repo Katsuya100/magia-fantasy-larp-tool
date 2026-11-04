@@ -821,6 +821,46 @@ try{
   assert.equal(compareUi.get('googleDriveConflictDialog').open,false,spec.label+' never opens a player chooser');
  }
 
+ // The successor is a later generation of the SAME play. An older
+ // high-level, high-rank champion must never overwrite that death on reconnect.
+ const inheritedCollection=(parseCsv(await readFile(new URL('../assets/data/dungeon-collections.csv',import.meta.url),'utf8')))[0].id;
+ for(const spec of [
+  {label:'local heir is newer than old Drive champion',winner:'upload'},
+  {label:'Drive heir is newer than old local champion',winner:'restore'}
+ ]){
+  const deathDb=await newDb(),deathUi=fakeUi();
+  const founder=await getProfile(deathDb);
+  await saveProfile(deathDb,{...founder,name:'先代',permadeath:true,level:119,adventurerRank:60,
+   deepestReturnedLayer:60,deepestReachedLayer:70,collection:{[inheritedCollection]:3}});
+  const champion=await readDungeonSnapshot(deathDb);
+  const heir=createSuccessorProfile(champion.profile,
+   {enemy:{id:'foe_l070'},slotIds:[],carry:[],loot:[]},[],champion.profile.base);
+  assert.equal(heir.permadeathGeneration,1);
+  assert.deepEqual(heir.collection,champion.profile.collection);
+  let remoteData;
+  if(spec.winner==='upload'){
+   await saveProfile(deathDb,heir);
+   remoteData=champion;
+  }else remoteData={...champion,profile:heir,savedAt:champion.savedAt+1000};
+  const deathDrive=remoteApi(await serializeDungeonSnapshot(remoteData));
+  let deathRestored=0;
+  start(deathDb,deathUi,deathDrive.fetchImpl,{onRestore:()=>deathRestored++});
+  await connect(deathUi);
+  if(spec.winner==='upload'){
+   await wait(()=>deathDrive.uploads===1,spec.label+' uploads successor over old champion');
+   assert.equal(deserializeDungeonSnapshot(deathDrive.current).profile.permadeathGeneration,1);
+   assert.equal(deathRestored,0);
+  }else{
+   await wait(()=>deathRestored===1,spec.label+' restores successor from Drive');
+   assert.equal(deathDrive.uploads,0);
+  }
+  const final=await getProfile(deathDb);
+  assert.equal(final.awaitingHeir,true,spec.label);
+  assert.equal(final.permadeathGeneration,1,spec.label);
+  assert.deepEqual(final.collection,{[inheritedCollection]:3},spec.label+' keeps discoveries');
+  assert.equal(deathUi.get('googleDriveConflictDialog').open,false,spec.label);
+ }
+
  // A local save made during an in-flight Drive restore must not disappear.
  // This exercises the IndexedDB transaction guard, not just a preflight check.
  const inFlightDb=await newDb(),inFlightUi=fakeUi();
