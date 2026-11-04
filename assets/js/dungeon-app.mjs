@@ -857,13 +857,18 @@ async function takeTurn(index){
  if(circle?.analysis&&!isRevealed(circle)){
   Object.assign(circle,revealOnUse(circle));rememberCircleMetadata(circle);
  }
+ // Fatal combat is already resolved: commit the successor before showing
+ // a death animation that the player could navigate away from.
+ let successor=null;
+ if(run.hero.hp<=0&&profile.permadeath){
+  successor=createSuccessorProfile(profile,run,circles,G.startingBase());
+  try{await loadoutSaveQueue;await saveProfile(db,successor);}
+  catch(error){profile.run=beforeTurn;renderRun();note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
+ }
  await animateBattle(steps);
 if(run.hero.hp<=0){
-  if(profile.permadeath){
-   const successor=createSuccessorProfile(profile,run,circles,G.startingBase());
+  if(successor){
    const lost=successor.legacies.at(-1);
-   try{await saveProfile(db,successor);}
-   catch(error){profile.run=beforeTurn;renderRun();note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
    profile=successor;
    for(const circle of lost.circles)circleImages.forget(circle.id,circle.image);
    const removed=new Set(lost.circles.map(circle=>circle.id));

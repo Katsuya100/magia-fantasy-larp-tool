@@ -62,11 +62,16 @@ export function createLostLegacy(profile,run,circles){
   rank:profile.adventurerRank||0
  };
 }
+export function permadeathGeneration(profile){
+ const count=Number(profile?.permadeathGeneration);
+ return Number.isSafeInteger(count)&&count>=0?count:0;
+}
 export function createSuccessorProfile(profile,run,circles,newBase){
  const legacy=createLostLegacy(profile,run,circles);
  const lost=new Set(legacy.circles.map(circle=>circle.id));
  return {
   ...profile,name:'',level:1,xp:0,base:newBase,returns:0,attempts:0,
+  permadeathGeneration:permadeathGeneration(profile)+1,
   adventurerRank:0,deepestReachedLayer:0,deepestReturnedLayer:0,defeatedBosses:{},collection:{},
   obtainedItemIds:[...new Set((profile.inventory||[]).map(item=>item.id))],
   slots:(profile.slots||[]).map(id=>lost.has(id)?null:id),

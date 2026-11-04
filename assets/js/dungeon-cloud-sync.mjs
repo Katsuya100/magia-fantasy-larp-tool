@@ -7,6 +7,7 @@ import {verifyLocalSnapshot,digestPhoto,recordFingerprint} from './dungeon-cloud
 import {nextXp} from './dungeon-core.mjs?v=20261102.321';
 import {highestRankLayer} from './dungeon-ranks.mjs';
 import {deepestReturnedLayer,deepestReachedLayer} from './dungeon-progress.mjs';
+import {permadeathGeneration} from './dungeon-permadeath.mjs';
 
 // profile.xp is only EXP remaining after level-ups; reconstruct earned EXP
 // from the same level thresholds used by the actual game.
@@ -21,6 +22,12 @@ export function cumulativeDungeonXp(profile){
 // Compare the SAME play history lexicographically: rank, earned EXP,
 // deepest successful return, deepest reach. Timestamp is checked last.
 export function compareDungeonProgress(local,remote){
+ // Each death resets rank, EXP and discoveries. An heir is newer progress,
+ // not a weaker copy of the adventurer who died.
+ if(local?.permadeath&&remote?.permadeath){
+  const generations=permadeathGeneration(local)-permadeathGeneration(remote);
+  if(generations)return generations>0?1:-1;
+ }
  const measures=[highestRankLayer,cumulativeDungeonXp,deepestReturnedLayer,deepestReachedLayer];
  for(const measure of measures){
   const left=measure(local),right=measure(remote);
@@ -494,9 +501,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
     localSavedAt:local.savedAt,remoteSavedAt:remote.data.savedAt});
    const losesDiscovered=(discarded,winner)=>Object.entries(discarded?.collection||{}).some(
     ([id,count])=>Number(count)>0&&!(Number(winner?.collection?.[id])>0));
-   const losesRelics=preferred==='download'
+   const differentHeirs=local.profile?.permadeath&&remote.data.profile?.permadeath
+    &&permadeathGeneration(local.profile)!==permadeathGeneration(remote.data.profile);
+   // The successor's collection reset is intentional and must never become
+   // a cloud conflict that can resurrect the deceased adventurer.
+   const losesRelics=!differentHeirs&&(preferred==='download'
     ?losesDiscovered(local.profile,remote.data.profile)
-    :preferred==='upload'&&losesDiscovered(remote.data.profile,local.profile);
+    :preferred==='upload'&&losesDiscovered(remote.data.profile,local.profile));
    // Case 4: same play. Resolve actual progress before image repair;
    // a newer timestamp must never beat a more advanced adventurer.
    if(verification.status==='badImages'){
