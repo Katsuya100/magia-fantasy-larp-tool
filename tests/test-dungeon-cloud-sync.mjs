@@ -50,6 +50,8 @@ assert.throws(()=>deserializeDungeonSnapshot(encoded.replace('"冒険者"','"改
 assert.equal(isPristineDungeonSnapshot(original),false);
 assert.equal(isPristineDungeonSnapshot({profile:{name:'新規冒険者',tutorialDone:true,level:1,attempts:0,returns:0,run:null},circles:[]}),false,'a player name is valuable progress that must be backed up');
 assert.equal(isPristineDungeonSnapshot({profile:{name:'',attempts:0,returns:0,run:null},circles:[]}),true);
+assert.equal(isPristineDungeonSnapshot({profile:{...successor,collection:{},legacies:[]},circles:[]}),false,
+ 'a pending successor is never mistaken for an untouched save even if discoveries and local photos are absent');
 await assert.rejects(serializeDungeonSnapshot({profile:null,circles:[]}),/形式/);
 assert.throws(()=>deserializeDungeonSnapshot('{"format":"unsupported","profile":{},"circles":[]}'),/未対応/);
 const signedPayload=payload=>JSON.stringify({...payload,checksum:quickFingerprint(payload)});

@@ -80,7 +80,7 @@ export function isPristineDungeonSnapshot(snapshot){
  const p=snapshot.profile;
  // A player name is valuable progress. Only a genuinely unnamed, unused
  // profile can be treated as an unstarted game.
- return !String(p.name||'').trim()&&!p.attempts&&!p.returns&&!p.run&&!p.pendingReturn
+ return !String(p.name||'').trim()&&!p.attempts&&!p.returns&&!p.run&&!p.pendingReturn&&!p.awaitingHeir&&!p.permadeathGeneration
   &&Number(p.level||1)===1&&!p.xp&&!p.magicStones
   &&!p.deepestReturnedLayer&&!p.adventurerRank
   &&(!p.inventory||p.inventory.length===0)&&!snapshot.circles.length

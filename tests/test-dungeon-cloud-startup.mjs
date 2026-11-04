@@ -7,6 +7,7 @@ import {openStore,getProfile,saveProfile,putCircle,readDungeonSnapshot,saveCloud
 import {verifyLocalSnapshot} from '../assets/js/dungeon-cloud-integrity.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {initDungeonCloudSync} from '../assets/js/dungeon-cloud-sync.mjs';
+import {createSuccessorProfile} from '../assets/js/dungeon-permadeath.mjs';
 
 const csv=async name=>parseCsv(await readFile(new URL('../assets/data/dungeon-'+name+'.csv',import.meta.url),'utf8'));
 const [balance,levels,floors,playerBase]=await Promise.all(['balance','levels','floors','player-base'].map(csv));
