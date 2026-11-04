@@ -19,11 +19,11 @@ export function cumulativeDungeonXp(profile){
  return earned;
 }
 
-// Compare the SAME play history lexicographically: rank, earned EXP,
-// deepest successful return, deepest reach. Timestamp is checked last.
+// Compare one play lineage by generation, then rank, earned EXP, deepest
+// successful return and reach. Timestamp is checked last.
 export function compareDungeonProgress(local,remote){
- // Each death resets rank, EXP and discoveries. An heir is newer progress,
- // not a weaker copy of the adventurer who died.
+ // Death resets rank and EXP, not the collection. An heir is newer
+ // progress, not a weaker copy of the adventurer who died.
  const generations=permadeathGeneration(local)-permadeathGeneration(remote);
  if(generations)return generations>0?1:-1;
  const measures=[highestRankLayer,cumulativeDungeonXp,deepestReturnedLayer,deepestReachedLayer];

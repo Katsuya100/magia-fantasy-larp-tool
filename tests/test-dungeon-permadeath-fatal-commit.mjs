@@ -10,6 +10,9 @@ const [balance,levels,floors,playerBase,collections]=await Promise.all(
  ['balance','levels','floors','player-base','collections'].map(csv));
 configure({balance,levels,floors,playerBase});
 const collectible=collections[0].id;
+const bossCollectible=collections.find(row=>row.boss_enemy_id==='boss_l100')?.id;
+assert.ok(bossCollectible,'the 100F crown-producing collection exists');
+const inheritedCollection={[collectible]:3,[bossCollectible]:1};
 const button={disabled:false,dataset:{cast:'-1'},closest(){return this;}};
 const wait=async predicate=>{
  for(let i=0;i<400;i++){
@@ -32,7 +35,7 @@ async function runFatalSaveTest({failFirst=false}={}){
   profile.adventurerRank=60;
   profile.deepestReturnedLayer=60;
   profile.deepestReachedLayer=70;
-  profile.collection={[collectible]:3};
+  profile.collection={...inheritedCollection};
   profile.slots=[circle.id,null,null,null,null];
   const hero=G.makeUnit(profile.base,profile.level,{},[spell,null,null,null,null],'player');
   hero.hp=1;
@@ -53,12 +56,12 @@ async function runFatalSaveTest({failFirst=false}={}){
    assert.equal(stored.awaitingHeir,true,'the next generation is committed before the death overlay');
    assert.equal(stored.run,null,'the dead expedition cannot be restored');
    assert.equal(stored.permadeathGeneration,1);
-   assert.deepEqual(stored.collection,{[collectible]:3},'confirmed collection survives the death');
+   assert.deepEqual(stored.collection,inheritedCollection,'confirmed collection survives the death');
    assert.equal(stored.legacies.length,1);
    assert.equal(stored.legacies[0].circles[0].id,circle.id);
   }});
 
-  await import('../assets/js/dungeon-app.mjs?integration=fatal-commit-'+(failFirst?'retry':'success'));
+  const app=await import('../assets/js/dungeon-app.mjs?integration=fatal-commit-'+(failFirst?'retry':'success'));
   await wait(()=>env.document.getElementById('startupMask').hidden===true);
   assert.equal((await getProfile(db)).run.hero.hp,1,'the combat snapshot starts before the fatal hit');
   if(failFirst){
@@ -74,9 +77,13 @@ async function runFatalSaveTest({failFirst=false}={}){
   const stored=await getProfile(db);
   assert.equal(stored.level,1);
   assert.equal(stored.awaitingHeir,true);
-  assert.deepEqual(stored.collection,{[collectible]:3});
+  assert.deepEqual(stored.collection,inheritedCollection);
   assert.equal(stored.legacies[0].enemyId,'foe_l070_fatal_regression');
   assert.equal(env.document.getElementById('nameDialog').open,true);
+  await app.refreshDungeonViewFromBackup();
+  assert.doesNotMatch(env.document.getElementById('playerStats').innerHTML,/hundred-floor-crown/,
+   'reloading the heir must not recreate the former owner\'s 100F boss trophy from retained collectibles');
+  assert.deepEqual((await getProfile(db)).collection,inheritedCollection);
  }finally{
   env.factory.failIntegrityWrites=false;
   env.restore();

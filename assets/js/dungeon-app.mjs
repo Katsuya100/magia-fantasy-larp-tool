@@ -246,7 +246,10 @@ async function hydrateSavedGame(reuseProfile=false){
  G.repairInvalidMp(profile.run?.hero);
  profile.adventurerRank=highestRankLayer(profile);
  profile.defeatedBosses??={};
- for(const relic of masters.collections)if(relic.boss_enemy_id&&Number(profile.collection?.[relic.id]||0)>0)profile.defeatedBosses[relic.boss_enemy_id]=true;
+ // A newly born heir keeps the collection, not the former owner's boss wins.
+ // Old saves retain their original boss-collection migration behavior.
+ if(!(profile.permadeath&&Number(profile.permadeathGeneration)>0))
+  for(const relic of masters.collections)if(relic.boss_enemy_id&&Number(profile.collection?.[relic.id]||0)>0)profile.defeatedBosses[relic.boss_enemy_id]=true;
  profile.magicStones=Math.max(0,Number(profile.magicStones)||0);
  profile.magicInk=Math.max(0,Math.trunc(Number(profile.magicInk)||0));
  profile.deepestReturnedLayer=deepestReturnedLayer(profile);
