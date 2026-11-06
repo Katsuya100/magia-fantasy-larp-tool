@@ -1,12 +1,12 @@
 import * as G from './dungeon-core.mjs?v=20261106.339';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261106.339';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261106.339';
-import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261106.344';
-import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261106.344';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261106.350';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261106.350';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261106.350';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261106.339';
 import {prepareCircles,prepareItems,setSlot,pickedValues,needsEmptyCarryConfirmation,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261106.339';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261106.339';
-import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261106.344';
+import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261106.350';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261106.339';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261106.339';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261106.339';
@@ -15,13 +15,13 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261106.339';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261106.339';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261106.339';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261106.344';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261106.350';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261106.339';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261106.339';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261106.339';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261106.344';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261106.350';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,recordRankCombat,rankBadgeDrop,pendingRankBadgeNames,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261106.339';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261106.344';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261106.350';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261106.339';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261106.339';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261106.339';
@@ -612,6 +612,26 @@ function refreshBattleRecord(visibleLog=null){
   ?run.encounterLogStart:Math.max(0,run.log.findLastIndex(line=>String(line).includes('が現れた')));
  $('battleLog').innerHTML=(visibleLog||run.log).slice(start).slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');
 }
+/* Visual randomness uses browser crypto so combat/drop random rolls stay untouched.
+   Each part gets its own wave phase and initial direction for each scene. */
+let shakeSceneNonce=0;
+function randomizeCombatShake(arena){
+ const parts=arena.querySelectorAll?.('.versus,.hero-unit,.enemy-unit,.affinity-hit')||[];
+ const seeds=new Uint32Array(parts.length*2);
+ if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(seeds);
+ else{
+  const base=(Date.now()^(Math.floor((globalThis.performance?.now?.()||0)*1000))^++shakeSceneNonce)>>>0;
+  for(let i=0;i<seeds.length;i++){
+   let value=(base+Math.imul(i+1,0x9e3779b9))>>>0;
+   value^=value<<13;value^=value>>>17;value^=value<<5;
+   seeds[i]=value>>>0;
+  }
+ }
+ for(let i=0;i<parts.length;i++){
+  parts[i].style.setProperty('--shake-phase',(-Math.floor(seeds[i*2]/0x100000000*180))+'ms');
+  parts[i].style.setProperty('--shake-direction',seeds[i*2+1]&1?'1':'-1');
+ }
+}
 function clearCombatEffects(){
  $('battleArena').dataset.shake='false';
  for(const side of ['hero','enemy']){
@@ -644,6 +664,7 @@ async function animateBattle(steps,{logPrefix=null,initialMp=null}={}){
    if(discardCombatEchoesOnMiss(phase,activeEchoes,$('battleArena')))lastEcho=null;
    else lastEcho?.reveal();
    clearCombatEffects();
+   randomizeCombatShake($('battleArena'));
    // Force a new CSS animation cycle even after consecutive turns with the same role.
    void $('battleArena').offsetWidth;
    $('battleArena').dataset.shake=phase.some(step=>['attack','basic'].includes(step.role)&&step.amount>0&&!step.missedByDizziness)?'true':'false';
@@ -696,7 +717,11 @@ async function animateBattle(steps,{logPrefix=null,initialMp=null}={}){
    clearCombatEffects();
    return ceremony(side==='hero'?'hero-death':'enemy-death',
     side==='hero'?'探索失敗':'討伐成功',
-    side==='hero'?(profile.name||'冒険者'):(profile.run?.enemyName||''));
+    side==='hero'?(profile.name||'冒険者'):(profile.run?.enemyName||'')).then(()=>{
+     // Only 100F: the full 4.5s defeat completes before the separate CLEAR cue.
+     if(side==='enemy'&&bossCeremonyTier(profile.run?.floor)==='final')
+      return ceremony('final-clear','100層 完全制覇');
+    });
   }});
  }finally{
   battleInput.close();
@@ -717,6 +742,7 @@ async function ceremony(event,title,detail='',drops=0){
  const tier=(entering||event==='enemy-death')?bossCeremonyTier(run?.floor):'none';
  const layer=Math.ceil((run?.floor||0)/5);
  const arena=$('battleArena');
+ if(tier!=='none')randomizeCombatShake(arena);
  arena.dataset.bossCeremony=tier;
  arena.dataset.ceremonyEvent=event;
  stage.dataset.bossTier=tier;
