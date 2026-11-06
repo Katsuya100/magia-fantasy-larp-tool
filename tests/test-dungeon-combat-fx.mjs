@@ -330,7 +330,7 @@ for(const [part,motion] of [
  const selector='#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .'+part;
  assert.match(shakeRule(selector),new RegExp('animation:'+motion+' var\\(--ceremony-duration,4\\.5s\\)'),'finale-only special effect for '+part);
  const frames=orientationFrame(motion);
- assert.match(frames,/100%\{opacity:0/,'finale special effect fades out before the original scene ends: '+motion);
+ assert.match(frames,/(?:^|,|\s)100%\{opacity:0/,'finale special effect fades out before the original scene ends: '+motion);
 }
 const implosion=orientationFrame('boss-final-implosion');
 assert.match(implosion,/56%\{opacity:1;transform:scale\(\.38\)/,'boss contracts in the first half');
@@ -341,7 +341,7 @@ assert.match(halo,/63%\{opacity:1;transform:translate\(-50%,-50%\) scale\(\.13\)
 assert.match(halo,/85%\{opacity:\.4;transform:translate\(-50%,-50%\) scale\(1\.5\)/,'halo spreads out after the implosion');
 for(const name of ['boss-final-ring-burst-outer','boss-final-ring-burst-inner','boss-final-ring-burst-wheel']){
  const ring=orientationFrame(name);
- assert.match(ring,/6[45]%\{opacity:1;transform:translate\(-50%,-50%\) scale\(\.1[023]\)/,'ring contracts before expansion: '+name);
+ assert.match(ring,/6[45]%\{opacity:1;transform:translate\(-50%,-50%\) scale\(\.1(?:2|3)?\)/,'ring contracts before expansion: '+name);
  assert.match(ring,/100%\{opacity:0;transform:translate\(-50%,-50%\) scale\([34]\.\d\)/,'ring expands and fades within the original 4.5s: '+name);
 }
 const ceremonyMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleCeremony"'),cinematicPage.indexOf('id="heroCombatant"'));
