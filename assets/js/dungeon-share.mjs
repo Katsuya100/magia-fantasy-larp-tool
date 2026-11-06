@@ -21,7 +21,7 @@ export function adventurerShareText(data){
   '冒険者等級：'+data.rank,
   'Lv.'+data.level,
   '最深到達階層：'+(data.deepestReached?data.deepestReached+'層':'未到達'),
-  '最深帰還階層：'+(data.deepestReturned?data.deepestReturned+'層':'未到達')
+  '最深踏破・帰還階層：'+(data.deepestReturned?data.deepestReturned+'層':'未到達')
  ].join('\n');
 }
 export function adventurerXUrl(data){
@@ -97,7 +97,7 @@ export function paintAdventurerCard(canvas,data,artwork=null){
 
  label('冒険者等級',rankX,381);
  label('最深到達階層',reachedX,381);
- label('最深帰還階層',returnedX,381);
+ label('最深踏破・帰還階層',returnedX,381);
  // Use subtle vertical dividers: between name and level, and between the depth records.
  // No horizontal partition or individual frames; the metallic rank plaque stays unchanged.
  ctx.strokeStyle='#c9a46b99';ctx.lineWidth=2;ctx.beginPath();
