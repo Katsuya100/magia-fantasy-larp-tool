@@ -589,7 +589,7 @@ try{
  assert.equal(p.inventory.length+collectibleCount+p.magicStones,loot);
  assert.equal(p.deepestReturnedLayer,1);
  await doc.click(btn({view:'home'}));
- assert.match($('playerStats').innerHTML,/最深帰還階層：<strong>1層<\/strong>/,'profile reports deepest successfully returned layer');
+ assert.match($('playerStats').innerHTML,/帰還済み踏破層：<strong>1層<\/strong>/,'profile reports deepest successfully returned layer');
  await doc.click(btn({view:'collection'}));
  assert.equal($('collection').hidden,false);
  assert.doesNotMatch($('collectionGrid').innerHTML,/赤角鬼王の霊石/,'undropped boss trophy remains hidden');
