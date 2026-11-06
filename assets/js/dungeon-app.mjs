@@ -479,7 +479,7 @@ function render(){
  +'<div class="level-line"><strong>Lv.'+profile.level+'</strong><span>EXP '+G.formatXp(profile.xp)+' / '+G.formatXp(experienceNeeded)+'</span></div><div class="xp-track" role="progressbar" aria-label="経験値" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(xpProgress)+'"><div class="xp-fill" style="width:'+xpProgress+'%"></div></div>'
  +'<div class="stat-grid">'+['hp','mp','mag','def','res'].map(k=>'<div class="stat-cell"><small>'+k.toUpperCase()+'</small><strong>'+(k==='mp'?maxMp:s[k])+'</strong></div>').join('')+'</div>'
  +'<p class="adventure-record">携行品上限：'+G.capacity(profile.level)+'個 ｜ 帰還 '+profile.returns+'</p>'
- +'<div class="adventure-depth-record"><span>最深到達階層：<strong>'+(reached?reached+'層':'-')+'</strong></span><span>最深踏破・帰還階層：<strong>'+(returned?returned+'層':'-')+'</strong></span></div>'
+ +'<div class="adventure-depth-record"><span>最深到達階層：<strong>'+(reached?reached+'層':'-')+'</strong></span><span>帰還済み踏破層：<strong>'+(returned?returned+'層':'-')+'</strong></span></div>'
   +'<p class="adventurer-grade" title="冒険者章の取得条件は準備・戦闘画面のアイコン一覧で確認できます">冒険者等級：<strong data-rank="'+highestRankLayer(profile)+'"><span>'+rankTitle(highestRankLayer(profile))+'</span></strong></p>';
  const obtained=masters.collections.filter(item=>Number(profile.collection[item.id]||0)>0).length;
  $('collectionProgress').innerHTML='<strong>'+obtained+' / '+masters.collections.length+'</strong><small>DISCOVERED</small><div class="collection-track"><div class="collection-fill" style="width:'+(100*obtained/masters.collections.length)+'%"></div></div>';
