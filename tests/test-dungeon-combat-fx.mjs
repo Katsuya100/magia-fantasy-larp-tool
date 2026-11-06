@@ -373,6 +373,11 @@ for(const element of ['>.ceremony-glyph','>strong','>span']){
 }
 assert.match(clearStyle,/animation:boss-final-clear-reveal var\(--ceremony-duration,4\.5s\)/,
  '100F clear title animates after all particles');
+const clearStage=shakeRule('#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]');
+assert.match(clearStage,/animation:boss-final-ceremony-veil var\(--ceremony-duration,4\.5s\)/,
+ 'the final-boss backdrop remains visible during the late clear reveal');
+assert.match(orientationFrame('boss-final-ceremony-veil'),/13%,97%\{opacity:1\}/,
+ 'the clear display is not concealed by an early full-stage fade');
 assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong'),/animation:boss-title-pulse/,
  'ordinary boss clear titles retain existing animation');
 assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'particle and clear sequence together take only 4.5 seconds');
