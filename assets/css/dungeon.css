@@ -620,18 +620,18 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
  animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both
 }
-/* Every combat hit vibrates on the same 160ms cycle, independent of recoil. */
+/* Independent impact frequencies; shake gain dampens over the final 10% of 440ms. */
 #battleArena .unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
- --shake-x:3px;--shake-y:-1px;
- animation:snappy-impact .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .16s linear .12s 2 both
+ --shake-x:3px;--shake-y:1px;
+ animation:snappy-impact .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .095s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
 }
 #battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
- --shake-x:-3px;--shake-y:-1px;
- animation:snappy-rush-hero .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .16s linear .12s 2 both
+ --shake-x:3px;--shake-y:1px;
+ animation:snappy-rush-hero .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .085s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
 }
 #battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
- --shake-x:3px;--shake-y:-1px;
- animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .16s linear .12s 2 both
+ --shake-x:3px;--shake-y:1px;
+ animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .105s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
 }
 #battleArena .unit:is([data-effect="attack"],[data-effect="basic"]) .combatant-burst{
  animation:snappy-burst .44s cubic-bezier(.12,.8,.25,1) both
@@ -671,8 +671,8 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 }
 /* A hit received by the left-side hero recoils left, not toward the enemy. */
 #battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
- --shake-x:-3px;--shake-y:-1px;
- animation:snappy-impact-hero-left .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .16s linear .12s 2 both
+ --shake-x:3px;--shake-y:1px;
+ animation:snappy-impact-hero-left .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .085s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
 }
 @keyframes snappy-impact-hero-left{
  0%,38%{transform:none;filter:none}
@@ -685,17 +685,27 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  46%,55%{opacity:1;transform:rotate(28deg) scale(1.5)}
  100%{opacity:0;transform:rotate(110deg) scale(.35)}
 }
-/* One sinusoidal-style wave for all combat: 160ms period, scene-specific amplitude.
-   Individual translate composes with independent transform/scale scene motion. */
+/* Phase and direction are randomized independently per part by dungeon-app.
+   The wave's translate composes with each existing transform animation. */
+@property --shake-gain{
+ syntax:"<number>";
+ inherits:false;
+ initial-value:1
+}
 @keyframes combat-sine-shake{
  0%,50%,100%{translate:0 0}
- 25%{translate:var(--shake-x) var(--shake-y)}
- 75%{translate:calc(var(--shake-x) * -1) calc(var(--shake-y) * -1)}
+ 25%{translate:calc(var(--shake-x) * var(--shake-direction,1) * var(--shake-gain)) calc(var(--shake-y) * var(--shake-direction,1) * var(--shake-gain))}
+ 75%{translate:calc(var(--shake-x) * var(--shake-direction,1) * var(--shake-gain) * -1) calc(var(--shake-y) * var(--shake-direction,1) * var(--shake-gain) * -1)}
 }
-/* Standard hit vibration starts with contact and finishes within the 440ms phase. */
+/* Gain is 1 through 90%; damp to zero within the original scene duration. */
+@keyframes combat-shake-envelope{
+ 0%,90%{--shake-gain:1}
+ 100%{--shake-gain:0}
+}
+/* Ordinary impact badge has its own 100ms period, without extending the hit. */
 #battleArena[data-shake="true"] .versus{
- --shake-x:7px;--shake-y:-3px;
- animation:combat-sine-shake .16s linear .12s 2 both
+ --shake-x:7px;--shake-y:3px;
+ animation:combat-sine-shake .1s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
 }
 /* Encounter title: quick slide in, short readable hold, quick slide out.
    Enemy remains on stage after its own fast entrance. Fatal animation unchanged. */
@@ -1410,19 +1420,22 @@ html,body{overflow-x:clip}
 #battleArena .battle-ceremony[data-boss-tier="final"] .boss-vfx-halo{
  box-shadow:0 0 90px 25px var(--boss-aura),0 0 36px 13px #fff4da
 }
-/* All boss tiers and both boss scenes use the same 160ms oscillation as hits.
-   A longer ceremony adds cycles without slowing the frequency. */
+/* Different parts have independent vibration speeds. Boss ceremony times are unchanged. */
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .versus{
- --shake-x:var(--boss-jolt);--shake-y:calc(var(--boss-jolt) * -.35);
- animation:combat-sine-shake .16s linear infinite
+ --shake-x:var(--boss-jolt);--shake-y:calc(var(--boss-jolt) * .35);
+ animation:combat-sine-shake .13s linear var(--shake-phase,0ms) infinite,combat-shake-envelope var(--boss-time,2s) linear both
+}
+/* Arrival is deliberately subtle: only a fraction of the tier's normal amplitude. */
+#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"])[data-ceremony-event="encounter"] .versus{
+ --shake-x:calc(var(--boss-jolt) * .22);--shake-y:calc(var(--boss-jolt) * .09)
 }
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]{
- --shake-x:calc(var(--boss-jolt) * .5);--shake-y:calc(var(--boss-jolt) * -.18);
- animation:boss-cinematic-rise var(--boss-time,2s) cubic-bezier(.2,.8,.2,1) both,combat-sine-shake .16s linear infinite
+ --shake-x:calc(var(--boss-jolt) * .16);--shake-y:calc(var(--boss-jolt) * .06);
+ animation:boss-cinematic-rise var(--boss-time,2s) cubic-bezier(.2,.8,.2,1) both,combat-sine-shake .18s linear var(--shake-phase,0ms) infinite,combat-shake-envelope var(--boss-time,2s) linear both
 }
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]{
- --shake-x:calc(var(--boss-jolt) * .5);--shake-y:calc(var(--boss-jolt) * -.18);
- animation:boss-cinematic-collapse var(--boss-time,2s) ease-in both,combat-sine-shake .16s linear infinite
+ --shake-x:calc(var(--boss-jolt) * .48);--shake-y:calc(var(--boss-jolt) * .17);
+ animation:boss-cinematic-collapse var(--boss-time,2s) ease-in both,combat-sine-shake .09s linear var(--shake-phase,0ms) infinite,combat-shake-envelope var(--boss-time,2s) linear both
 }
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .enemy-portrait,
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .unit-info{
@@ -2316,8 +2329,8 @@ html,body{overflow-x:clip}
 #battleArena .unit[data-affinity="weak"] .affinity-hit::after{
  content:"WEAK";background:linear-gradient(120deg,#42102ae8,#190b19ef);
  box-shadow:0 0 21px 4px var(--affinity-glow),inset 0 0 16px var(--affinity-glow);
- --shake-x:7px;--shake-y:-3px;
- animation:weak-damped-shudder .72s linear both,combat-sine-shake .16s linear .08s 3 both
+ --shake-x:7px;--shake-y:3px;
+ animation:weak-damped-shudder .72s linear both,combat-sine-shake .08s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .72s linear both
 }
 /* Impact glows end with their matching shield/wave, not the longer word. */
 #battleArena .unit[data-affinity="resist"] .combatant-fx::before{
