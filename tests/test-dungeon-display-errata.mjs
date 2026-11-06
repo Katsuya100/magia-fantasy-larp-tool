@@ -57,6 +57,9 @@ assert.match(circleEffectDetails(law).statusDescription,/秩序属性への耐�
 assert.deepEqual(pendingRankBadgeNames([{type:'rank',layer:10},{type:'rank',layer:20},{type:'stone'}]),['鉛級冒険者章','鉄級冒険者章']);
 assert.deepEqual(pendingRankBadgeNames([{type:'rank',layer:10}]),['鉛級冒険者章']);
 assert.deepEqual(pendingRankBadgeNames([]),[]);
+assert.deepEqual(pendingRankBadgeNames([{type:'rank',layer:10}],20),[],'a prior boss badge must not repeat');
+assert.deepEqual(pendingRankBadgeNames([{type:'rank',layer:10}],null),[],'no new badge means no notice');
+assert.deepEqual(pendingRankBadgeNames([{type:'rank',layer:10}],10),['鉛級冒険者章']);
 
 const html=readFileSync(new URL('../dungeon.html',import.meta.url),'utf8');
 const app=readFileSync(new URL('../assets/js/dungeon-app.mjs',import.meta.url),'utf8');
@@ -66,7 +69,7 @@ for(const sentence of ['10層ごとのボス撃破時にHP・MP各80%以上','�
  assert.ok(guide.includes(sentence),'the in-game guide explains: '+sentence);
 }
 assert.match(guide,/🕸️🛡️↑/);
-assert.match(app,/pendingRankBadgeNames\(run\.loot\)/,'checkpoint displays the awarded tier instead of the defeated boss tier');
+assert.match(app,/pendingRankBadgeNames\(run\.loot,run\.checkpointBadgeLayer===undefined\?layer:run\.checkpointBadgeLayer\)/,'checkpoint shows only the newly awarded tier');
 assert.match(app,/帰還済み踏破層/);
 assert.match(share,/帰還済み踏破層/);
 assert.match(readFileSync(new URL('../assets/data/dungeon-consumables.csv',import.meta.url),'utf8'),/clear_chaos,暴走の浄化薬/);
