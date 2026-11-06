@@ -67,7 +67,7 @@ for(const sentence of ['10層ごとのボス撃破時にHP・MP各80%以上','�
 }
 assert.match(guide,/🕸️🛡️↑/);
 assert.match(app,/pendingRankBadgeNames\(run\.loot\)/,'checkpoint displays the awarded tier instead of the defeated boss tier');
-assert.match(app,/最深踏破・帰還階層/);
-assert.match(share,/最深踏破・帰還階層/);
+assert.match(app,/帰還済み踏破層/);
+assert.match(share,/帰還済み踏破層/);
 assert.match(readFileSync(new URL('../assets/data/dungeon-consumables.csv',import.meta.url),'utf8'),/clear_chaos,暴走の浄化薬/);
 console.log('PASS display errata: alchemy, icons, magic details, badges, depth and cleanser');
