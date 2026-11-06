@@ -612,6 +612,18 @@ function refreshBattleRecord(visibleLog=null){
   ?run.encounterLogStart:Math.max(0,run.log.findLastIndex(line=>String(line).includes('が現れた')));
  $('battleLog').innerHTML=(visibleLog||run.log).slice(start).slice(-15).map(x=>'<p>'+esc(roleText(x))+'</p>').join('');
 }
+/* Visual randomness uses browser crypto so combat/drop random rolls stay untouched.
+   Each part gets its own wave phase and initial direction for each scene. */
+function randomizeCombatShake(arena){
+ const parts=arena.querySelectorAll?.('.versus,.hero-unit,.enemy-unit,.affinity-hit')||[];
+ const seeds=new Uint32Array(parts.length*2);
+ if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(seeds);
+ else for(let i=0;i<seeds.length;i++)seeds[i]=Math.floor(Math.random()*0x100000000);
+ for(let i=0;i<parts.length;i++){
+  parts[i].style.setProperty('--shake-phase',(-Math.floor(seeds[i*2]/0x100000000*180))+'ms');
+  parts[i].style.setProperty('--shake-direction',seeds[i*2+1]&1?'1':'-1');
+ }
+}
 function clearCombatEffects(){
  $('battleArena').dataset.shake='false';
  for(const side of ['hero','enemy']){
@@ -644,6 +656,7 @@ async function animateBattle(steps,{logPrefix=null,initialMp=null}={}){
    if(discardCombatEchoesOnMiss(phase,activeEchoes,$('battleArena')))lastEcho=null;
    else lastEcho?.reveal();
    clearCombatEffects();
+   randomizeCombatShake($('battleArena'));
    // Force a new CSS animation cycle even after consecutive turns with the same role.
    void $('battleArena').offsetWidth;
    $('battleArena').dataset.shake=phase.some(step=>['attack','basic'].includes(step.role)&&step.amount>0&&!step.missedByDizziness)?'true':'false';
@@ -717,6 +730,7 @@ async function ceremony(event,title,detail='',drops=0){
  const tier=(entering||event==='enemy-death')?bossCeremonyTier(run?.floor):'none';
  const layer=Math.ceil((run?.floor||0)/5);
  const arena=$('battleArena');
+ if(tier!=='none')randomizeCombatShake(arena);
  arena.dataset.bossCeremony=tier;
  arena.dataset.ceremonyEvent=event;
  stage.dataset.bossTier=tier;
