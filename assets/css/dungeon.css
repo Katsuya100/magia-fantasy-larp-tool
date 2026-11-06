@@ -1404,6 +1404,11 @@ html,body{overflow-x:clip}
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .versus{
  animation:boss-cinematic-shake var(--boss-time,2s) ease-in-out both
 }
+/* The 100F victory keeps its 4.5s ceremony; two 2.15s shakes match ordinary boss cadence. */
+#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .versus{
+ animation-duration:2.15s;
+ animation-iteration-count:2
+}
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]{
  animation:boss-cinematic-rise var(--boss-time,2s) cubic-bezier(.2,.8,.2,1) both
 }
