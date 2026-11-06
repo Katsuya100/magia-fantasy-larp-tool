@@ -19,6 +19,12 @@ export function createDungeonDrive(token,fetchImpl=globalThis.fetch,{signal,time
   try{
    const response=await fetchImpl(url,{...options,signal:controller.signal,headers:{Authorization:'Bearer '+getToken(),...options.headers}});
    if(response.status===401)throw new DriveAuthError('Google認証の期限が切れました。再接続してください。');
+   if(response.status===403){
+    // AppData permission revocation can be 403; quota failures are transient.
+    const body=await response.text().catch(()=>'');
+    if(!/rateLimitExceeded|userRateLimitExceeded|quotaExceeded|dailyLimitExceeded/i.test(body))
+     throw new DriveAuthError('Google Driveの権限が切れました。再接続してください。');
+   }
    if(!response.ok)throw Error('Google Driveへの通信に失敗しました (HTTP '+response.status+')');
    if(format==='json')return await response.json();
    if(format==='text')return await response.text();

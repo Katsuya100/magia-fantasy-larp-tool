@@ -45,8 +45,13 @@ try{
  await wait(()=>get('battle').hidden===false,'existing 49F encounter renders');
  // A real non-reduced-motion phase makes the first click genuinely asynchronous.
  window.matchMedia=()=>({matches:false});
+ const enemyMpBefore=enemy.mp;
  const first=doc.click(button({cast:'0'}));
- await Promise.resolve();
+ await wait(()=>get('heroCombatant').dataset.effect==='defense',
+  'the hero defense phase begins before the enemy attack');
+ assert.match(get('enemyStats').innerHTML,
+  new RegExp('MP '+enemyMpBefore+'/'+enemy.maxMp),
+  'enemy MP must not drop during the earlier hero defense animation');
  const second=doc.click(button({cast:'1'}));
  await first;
  await second;

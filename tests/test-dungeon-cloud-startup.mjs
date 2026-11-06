@@ -1291,6 +1291,39 @@ try{
  assert.deepEqual(await readDungeonSnapshot(damagedDb),damagedBefore,'corrupt local stays unmodified');
  assert.deepEqual(damagedDrive.operations,[],'corrupt later never writes Drive');
 
+ // Muse 100F: another device's deeper in-progress battle must not
+ // silently replace the local active encounter merely because playId matches.
+ const museDb=await newDb(),museProfile=await getProfile(museDb);
+ museProfile.name='同一プレイ';
+ museProfile.run={stage:'battle',floor:496,battleTurns:0,hero:{hp:200,mp:50},enemy:{hp:1118},
+  carry:[{id:'luna_stone',value:0}],loot:[],xp:42,log:['496戦目']};
+ await saveProfile(museDb,museProfile);
+ const museBefore=await readDungeonSnapshot(museDb);
+ const advanced={...museBefore,profile:{...museBefore.profile,
+  run:{...museProfile.run,floor:498,battleTurns:2,hero:{hp:155,mp:23},enemy:{hp:1654},log:['498戦目']}},
+  savedAt:museBefore.savedAt+1000};
+ const museDrive=remoteApi(await serializeDungeonSnapshot(advanced)),museUi=fakeUi();
+ let museRestores=0;
+ const museController=start(museDb,museUi,museDrive.fetchImpl,{onRestore:()=>museRestores++});
+ await connect(museUi);
+ await wait(()=>museUi.get('googleDriveConflictDialog').open,
+  'same-play divergent active runs require an explicit choice');
+ assert.equal((await getProfile(museDb)).run.floor,496,'local battle does not jump to Drive on authentication');
+ assert.equal(museDrive.uploads,0,'neither side is overwritten before player choice');
+ museUi.get('googleDriveConflictDialog').querySelector('[data-action="restore"]').click();
+ await wait(()=>museRestores===1,'explicit Drive choice restores the advanced battle');
+ assert.equal((await getProfile(museDb)).run.floor,498,'chosen battle state is preserved');
+ const nextMuse=await getProfile(museDb);
+ nextMuse.run.floor=499;
+ nextMuse.run.hero.hp=144;
+ await saveProfile(museDb,nextMuse);
+ assert.equal(await museController.syncNow(),'ready',
+  'continuing locally uploads over the last verified Drive ancestor');
+ assert.equal(deserializeDungeonSnapshot(museDrive.current).profile.run.floor,499);
+ assert.equal(museUi.get('googleDriveConflictDialog').open,false,
+  'safe local continuation does not reopen a conflict dialog');
+ await museController.disconnect();
+
  // 15. An active session should refresh its token before the old one expires.
  auth.setExpiresIn(61.5);
  auth.setRenewalExpiresIn(3600);
