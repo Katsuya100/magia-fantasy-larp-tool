@@ -336,7 +336,7 @@ assert.match(app,/run\.carry\.findLastIndex\(Boolean\)\+1/,'combat shows capacit
 assert.match(app,/itemEffectIcons\(reward.item\)/,'return cards use the same item-effect icons');
 assert.match(app,/statusBadges\(unit\.statuses,masters\.buffs,esc\)/,'combat statuses render as icons');
 assert.match(app,/step=>steps\.push\(step\)/,'game engine steps are captured for sequential playback');
-assert.match(app,/await animateBattle\(steps\)/);
+assert.match(app,/await animateBattle\(steps(?:,|\))/,'combat sequence plays with optional phase-log context');
 assert.ok(app.includes('await playCombatSequence(steps,phase=>'));
 assert.ok(app.includes('for(const step of phase)'),'both fighters are painted within one phase');
 assert.ok(app.includes("treasureChestMarkup(drops)"),'drop count controls number of chests');
