@@ -209,6 +209,8 @@ try{
  assert.match($('magicDetailsStats').innerHTML,/<dt>威力<\/dt><dd>\?<\/dd>/);
  await $('closeMagicDetails').fire('click');
  const page=await readFile(new URL('../dungeon.html',import.meta.url),'utf8');
+ assert.match(page,/<meta\s+name="format-detection"\s+content="telephone=no"\s*\/?\s*>/,
+  'iOS must not auto-link combat HP/MP values as phone numbers');
  const libraryStructureMarkup=page.split('<section id="library"')[1].split('</section>')[0];
  assert.doesNotMatch(libraryStructureMarkup,/魔法陣の描き方・登録規則|class="regulations"/);
  assert.doesNotMatch(libraryStructureMarkup,/useMagicInk|magicInkBalance/,'old selector is absent from grimoire');
