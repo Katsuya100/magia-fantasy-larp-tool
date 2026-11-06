@@ -311,8 +311,9 @@ assert.match(orientationFrame('enemy-snap-slide'),/83%\{opacity:1;transform:tran
 assert.doesNotMatch(shakeRule('#battleArena .enemy-unit[data-entering="true"]'),/combat-sine-shake/,'normal enemies enter with no vibration');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]'),/combat-sine-shake \.18s/,'bosses vibrate subtly as they rise');
 
-// The finale uniquely contracts boss and halo, then bursts three existing rings.
-// Other bosses retain their shared defeat animation and all entrances stay shared.
+// The finale uniquely contracts the boss, bursts existing particle rings, and then
+// reveals the 100F clear text. All three stages fit inside the original 4.5 seconds.
+// Other bosses retain their shared title and defeat animations.
 const finalDefeat='#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"]';
 const finalBossRule=shakeRule(finalDefeat);
 assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,4\.5s\)/,'100F defeat uses a unique implosion');
@@ -330,20 +331,47 @@ for(const [part,motion] of [
  const selector='#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .'+part;
  assert.match(shakeRule(selector),new RegExp('animation:'+motion+' var\\(--ceremony-duration,4\\.5s\\)'),'finale-only special effect for '+part);
  const frames=orientationFrame(motion);
- assert.match(frames,/(?:^|,|\s)100%\{opacity:0/,'finale special effect fades out before the original scene ends: '+motion);
+ assert.match(frames,/(?:\d+%,)?100%\{opacity:0/,'finale particles are fully transparent at the scene end: '+motion);
 }
 const implosion=orientationFrame('boss-final-implosion');
-assert.match(implosion,/56%\{opacity:1;transform:scale\(\.38\)/,'boss contracts in the first half');
-assert.match(implosion,/66%\{opacity:1;transform:scale\(\.13\)/,'boss collapses to a bright point');
-assert.match(implosion,/73%\{opacity:0;transform:scale\(0\)/,'boss disappears as the ring blast begins');
+assert.match(implosion,/42%\{opacity:1;transform:scale\(\.38\)/,'boss contracts before the particle release');
+assert.match(implosion,/50%\{opacity:1;transform:scale\(\.13\)/,'boss concentrates into a bright point');
+assert.match(implosion,/55%\{opacity:0;transform:scale\(0\)/,'boss disappears as particles erupt');
 const halo=orientationFrame('boss-final-halo-implosion');
-assert.match(halo,/63%\{opacity:1;transform:translate\(-50%,-50%\) scale\(\.13\)/,'halo contracts with the boss');
-assert.match(halo,/85%\{opacity:\.4;transform:translate\(-50%,-50%\) scale\(1\.5\)/,'halo spreads out after the implosion');
-for(const name of ['boss-final-ring-burst-outer','boss-final-ring-burst-inner','boss-final-ring-burst-wheel']){
+assert.match(halo,/49%\{opacity:1;transform:translate\(-50%,-50%\) scale\(\.13\)/,'halo contracts with the boss');
+assert.match(halo,/66%\{opacity:\.4;transform:translate\(-50%,-50%\) scale\(1\.5\)/,'halo expands with the particle blast');
+for(const [name,collapse] of [
+ ['boss-final-ring-burst-outer','51%'],['boss-final-ring-burst-inner','52%'],['boss-final-ring-burst-wheel','53%']
+]){
  const ring=orientationFrame(name);
- assert.match(ring,/6[45]%\{opacity:1;transform:translate\(-50%,-50%\) scale\(\.1(?:2|3)?\)/,'ring contracts before expansion: '+name);
- assert.match(ring,/100%\{opacity:0;transform:translate\(-50%,-50%\) scale\([34]\.\d\)/,'ring expands and fades within the original 4.5s: '+name);
+ assert.ok(ring.includes(collapse+'{opacity:1;transform:translate(-50%,-50%) scale('),'ring contracts before bursting: '+name);
+ assert.match(ring,/7[6-8]%,100%\{opacity:0;transform:translate\(-50%,-50%\) scale\([34]\.\d\)/,
+  'ring spreads and disappears before the clear text: '+name);
 }
+const particleParts=['boss-final-halo-implosion','boss-final-ring-burst-outer',
+ 'boss-final-ring-burst-inner','boss-final-ring-burst-wheel','boss-final-flash',
+ 'boss-final-beam-collapse','boss-final-sparks'];
+const finalClearFrames=orientationFrame('boss-final-clear-reveal');
+const clearStart=Number(finalClearFrames.match(/0%,(\d+)%\{opacity:0/)?.[1]);
+assert.equal(clearStart,79,'the clear display stays hidden until after the particles');
+assert.match(finalClearFrames,/85%\{opacity:1;transform:translateY\(0\) scale\(1\.05\)/,'victory display appears following particles');
+assert.match(finalClearFrames,/90%,97%\{opacity:1;transform:none\}/,'victory display stays visible after its entrance');
+assert.match(finalClearFrames,/100%\{opacity:0/,'victory display fades within 4.5 seconds');
+for(const name of particleParts){
+ const particles=orientationFrame(name);
+ const particleEnd=Number(particles.match(/(\d+)%,100%\{opacity:0/)?.[1]);
+ assert.ok(Number.isFinite(particleEnd)&&particleEnd<clearStart,
+  'all particles must finish before clear text begins: '+name);
+}
+const clearRule='#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]';
+for(const element of ['>.ceremony-glyph','>strong','>span']){
+ assert.match(shakeRule(clearRule+element),/animation:boss-final-clear-reveal var\(--ceremony-duration,4\.5s\)/,
+  'only 100F complete victory text and emblem follow particles: '+element);
+}
+assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong'),/animation:boss-title-pulse/,
+ 'ordinary boss clear titles retain existing animation');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'particle and clear sequence together take only 4.5 seconds');
+
 const ceremonyMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleCeremony"'),cinematicPage.indexOf('id="heroCombatant"'));
 for(const part of ['boss-vfx-ring-outer','boss-vfx-ring-inner','boss-vfx-wheel'])
  assert.match(ceremonyMarkup,new RegExp('class="[^"]*'+part),'each independently bursting ring is already in the scene: '+part);
