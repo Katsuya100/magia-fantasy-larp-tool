@@ -1348,6 +1348,15 @@ html,body{overflow-x:clip}
 #battleArena .battle-ceremony[data-boss-tier="final"]{
  background:radial-gradient(ellipse at center,#593251f2 0%,#170d2cf2 62%,#070915d9 100%)
 }
+/* Hold the final-boss stage through the post-particle clear reveal. */
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]{
+ animation:boss-final-ceremony-veil var(--ceremony-duration,4.5s) linear both
+}
+@keyframes boss-final-ceremony-veil{
+ 0%{opacity:0}
+ 13%,97%{opacity:1}
+ 100%{opacity:0}
+}
 #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>.ceremony-glyph,
 #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong,
 #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>span{position:relative;z-index:2}
