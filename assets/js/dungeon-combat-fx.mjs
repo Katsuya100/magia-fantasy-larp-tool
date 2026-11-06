@@ -35,12 +35,12 @@ export const AFFINITY_EFFECT_MS=720;
 export const ENCOUNTER_EFFECT_MS=820;
 /* Only every fifth encounter is a layer boss; every tenth layer gains a
    second VFX tier and the designed 100th-layer boss gets the finale. */
-// Appearance and defeat are separate events, divided into a 4.5s total per boss tier.
-// The deeper the boss, the longer the defeat finale; neither scene waits for shakes.
+// The 100F final defeat's complete implosion sequence uses 4.5 seconds.
+// Appearance and defeat are separate events with their original durations.
 export const BOSS_CEREMONY_MS=Object.freeze({
- boss:Object.freeze({encounter:2000,'enemy-death':2500}),
- milestone:Object.freeze({encounter:1800,'enemy-death':2700}),
- final:Object.freeze({encounter:1500,'enemy-death':3000})
+ boss:Object.freeze({encounter:1800,'enemy-death':2150}),
+ milestone:Object.freeze({encounter:2650,'enemy-death':3100}),
+ final:Object.freeze({encounter:3800,'enemy-death':4500})
 });
 export function bossCeremonyTier(fight){
  if(!isLayerBoss(fight))return 'none';
