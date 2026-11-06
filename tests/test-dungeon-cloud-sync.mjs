@@ -134,6 +134,11 @@ const activeFirst={run:{stage:'battle',floor:496,hero:{hp:200,mp:80},enemy:{hp:5
 const activeLater={run:{stage:'battle',floor:498,hero:{hp:150,mp:65},enemy:{hp:300},battleTurns:2}};
 assert.equal(requiresActiveRunChoice(activeFirst,activeLater,{remoteHash:'new',verifiedRemoteHash:'old'}),true);
 assert.equal(requiresActiveRunChoice(activeFirst,activeLater,{remoteHash:'old',verifiedRemoteHash:'old'}),false);
+assert.equal(requiresActiveRunChoice(
+ {...activeFirst,magicStones:1762,inventory:[{instanceId:'a'},{instanceId:'b'}]},
+ {...activeFirst,magicStones:1761,inventory:[{instanceId:'b'},{instanceId:'a'}]},
+ {remoteHash:'new',verifiedRemoteHash:'old'}),true,
+ 'an active expedition must not silently lose one stone or reorder items across devices');
 assert.equal(requiresActiveRunChoice(activeFirst,activeFirst,{remoteHash:'new'}),false);
 assert.equal(requiresActiveRunChoice({run:null},activeLater,{remoteHash:'new',verifiedRemoteHash:'old'}),true);
 assert.equal(requiresActiveRunChoice({run:null},{run:null},{remoteHash:'new'}),false);
