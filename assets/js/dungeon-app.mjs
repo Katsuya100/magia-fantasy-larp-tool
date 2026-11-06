@@ -785,7 +785,8 @@ function renderCheckpoint(){
  narrativeLines('checkpointInfo',[
   layer+'層の階層ボスを撃破！',
   layer+'層踏破。',
-  ...pendingRankBadgeNames(run.loot).map(name=>name+'を発見！ 帰還で獲得が確定。'),
+  ...pendingRankBadgeNames(run.loot,run.checkpointBadgeLayer===undefined?layer:run.checkpointBadgeLayer)
+    .map(name=>name+'を発見！ 帰還で獲得が確定。'),
   ...(run.bonusNotice?[run.bonusNotice]:isBonusLayer(layer)&&!run.bonusClaimed?['利益を選んでください']:[])
  ]);
  $('checkpointLedger').innerHTML=rewardLedgerMarkup(run);
@@ -848,6 +849,8 @@ async function takeTurn(index){
    if(firstHundredClear)renderHeroName(run.hero);
   recordRankCombat(run,run.floor,run.battleTurns);
   const badge=rankBadgeDrop(run.floor,run.hero,profile,run.loot,run.rankCombat);
+  // A previous chapter's unbanked badge must not be announced at later bosses.
+  if(isLayerBoss(run.floor))run.checkpointBadgeLayer=badge?.layer??null;
    if(badge)rewards.push(badge);
    const recovered=reclaimLegacies(profile,run.enemy.id,run);
    run.loot.push(...rewards);
