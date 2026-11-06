@@ -67,14 +67,11 @@ const btn=data=>({dataset:data,disabled:false,closest(){return this;}});
   assert.equal(deepestReturnedLayer(saved),0,'not yet returned');
 
   await $('creatorCongratulationsClose').fire('click');
-  await wait(()=>$('milestoneChoiceDialog').open,'sharing follows the greeting');
+  await wait(async()=>!(await getProfile(db)).run.creatorCongratulationsPending,'greeting acknowledgment is persisted');
   assert.equal($('creatorCongratulationsDialog').open,false);
+  assert.equal($('milestoneChoiceDialog').open,false,'defeating 100F alone does not solicit sharing or support');
   saved=await getProfile(db);
   assert.equal(saved.run.creatorCongratulationsPending,false,'acknowledgment is persisted');
-  assert.equal($('milestoneChoiceTitle').textContent,'100層のボス撃破！');
-  await $('milestoneShare').fire('click');
-  assert.equal($('supportPromptDialog').open,true,'user can open the existing share flow');
-  await $('supportPromptClose').fire('click');
   await $('bonus-restore').fire('click');
   await $('deeper').fire('click');
   saved=await getProfile(db);
@@ -103,7 +100,8 @@ const btn=data=>({dataset:data,disabled:false,closest(){return this;}});
   assert.equal($('checkpoint').hidden,false);
   assert.equal($('milestoneChoiceDialog').open,false);
   await $('creatorCongratulationsClose').fire('click');
-  await wait(()=>$('milestoneChoiceDialog').open,'share follows recovered greeting');
+  await wait(async()=>!(await getProfile(db)).run.creatorCongratulationsPending,'recovered greeting acknowledgment persists');
+  assert.equal($('milestoneChoiceDialog').open,false,'no promotional dialog before a confirmed return');
   assert.equal((await getProfile(db)).run.creatorCongratulationsPending,false);
  }finally{env.restore();}
  const env2=fakeDungeonBrowser({factory}),el=id=>env2.document.getElementById(id);
@@ -123,9 +121,28 @@ const btn=data=>({dataset:data,disabled:false,closest(){return this;}});
   await import('../assets/js/dungeon-app.mjs?integration=creator-100-repeat-boss');
   await wait(()=>$('battle').hidden===false,'repeat boss loads');
   await env.document.click(btn({cast:'-1'}));
-  await wait(()=>$('milestoneChoiceDialog').open,'normal milestone sharing remains');
+  await wait(()=>$('checkpoint').hidden===false,'repeat clear reaches checkpoint');
+  assert.equal($('milestoneChoiceDialog').open,false,'repeat clear does not solicit before return');
   assert.equal($('creatorCongratulationsDialog').open,false,'first-clear greeting is not repeated');
   assert.equal((await getProfile(db)).run.creatorCongratulationsPending,undefined);
  }finally{env.restore();}
 }
-console.log('PASS 100F luxurious greeting, first-clear crown, share order, reload safety and separate depths');
+// The first successfully returned 100F record schedules the optional prompt.
+{
+ const {factory,db}=await fixture({defeated:true,atCheckpoint:true});
+ const profile=await getProfile(db);
+ profile.deepestReturnedLayer=90;
+ await saveProfile(db,profile);
+ const env=fakeDungeonBrowser({factory}),$=id=>env.document.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=creator-100-first-return');
+  await wait(()=>$('checkpoint').hidden===false,'100F checkpoint resumes');
+  assert.equal($('milestoneChoiceDialog').open,false);
+  await $('returnHome').fire('click');
+  await wait(()=>$('milestoneChoiceDialog').open,'first confirmed 100F return offers support');
+  assert.equal($('milestoneChoiceTitle').textContent,'100層の踏破記録を更新！');
+  assert.equal(deepestReturnedLayer(await getProfile(db)),100);
+ }finally{env.restore();}
+}
+
+console.log('PASS 100F greeting, no early promotion, first confirmed return, reload safety and separate depths');

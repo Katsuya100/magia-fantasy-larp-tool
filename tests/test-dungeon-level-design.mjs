@@ -260,11 +260,24 @@ for(const fight of [501,502,503,504,506,507,508,509,2501,2502,2503,2504])
  assert.equal(enemyForFight(enemies,fight,()=>.99999).boss_only,'0','normal slot never draws a boss at fight '+fight);
 for(const fight of [505,510,2505])
  assert.equal(enemyForFight(enemies,fight,()=>.99999).boss_only,'1','fifth fight always draws a boss');
-for(let i=0;i<100;i++){
- const boss=enemyForFight(enemies,505,()=>(i+.5)/100);
- assert.equal(boss.boss_only,'1');
- const number=Number(boss.id.slice(6));
- assert.equal(bossUniqueCollection(collections,boss.id).rarity,number%10===0?'legendary':'epic');
+// The 100F final boss returns at 200F, 300F, ... but never in other
+// endless boss slots, regardless of the random draw.
+assert.equal(enemyForFight(enemies,500).id,'boss_l100','designed 100F retains its fixed boss');
+for(const layer of [200,300,400,500,1000]){
+ const fight=layer*5;
+ for(const random of [0,.5,.999999])
+  assert.equal(enemyForFight(enemies,fight,()=>random).id,'boss_l100','great demon lord at '+layer+'F');
+}
+const ordinaryEndlessBosses=enemies.filter(e=>e.boss_only==='1'&&e.id!=='boss_l100');
+assert.equal(ordinaryEndlessBosses.length,99);
+for(const layer of [101,102,199,201,299,301,499,501]){
+ for(let i=0;i<ordinaryEndlessBosses.length;i++){
+  const boss=enemyForFight(enemies,layer*5,()=>(i+.5)/ordinaryEndlessBosses.length);
+  assert.equal(boss.id,ordinaryEndlessBosses[i].id,'only ordinary bosses at '+layer+'F');
+  assert.equal(boss.boss_only,'1');
+  const number=Number(boss.id.slice(6));
+  assert.equal(bossUniqueCollection(collections,boss.id).rarity,number%10===0?'legendary':'epic');
+ }
 }
 for(const [fight,expectedLevel,boss] of [[501,151,'0'],[505,151,'1'],[506,152,'0'],[550,160,'1'],[1000,250,'1'],[2500,550,'1']]){
  const generated=floor(fight);

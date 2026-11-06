@@ -936,14 +936,10 @@ if(run.hero.hp<=0){
 if(run.enemy.hp<=0){
    await ceremony('loot',dropCount?'戦利品の発見':'戦利品なし',dropCount?dropCount+'個 · 未確定':'次の戦いへ',dropCount);
    run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero,layerForFight(run.floor));if(isLayerBoss(run.floor)){
- const completed=clearedLayer(run.floor);
- const promptForBoss=completed>0&&completed%10===0&&Number(run.lastMilestoneChoiceLayer)!==completed;
- if(promptForBoss)run.lastMilestoneChoiceLayer=completed;
  if(firstHundredClear)run.creatorCongratulationsPending=true;
  run.checkpointBattleScrollY=window.scrollY??window.pageYOffset??0;
  run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();
  if(run.creatorCongratulationsPending)showCreatorCongratulations();
- else if(promptForBoss)showMilestoneChoice({title:completed+'層のボス撃破！',message:completed+'層の階層ボスを倒しました。'});
  return;
 }run.floor++;enterFight();renderRun();
 // Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
@@ -1072,7 +1068,6 @@ async function acknowledgeCreatorCongratulations(){
   showCreatorCongratulations();
   return;
  }
- showMilestoneChoice({title:'100層のボス撃破！',message:'100層の階層ボスを倒しました。'});
 }
 function showMilestoneChoice(prompt){
  if(!prompt)return;
@@ -1253,7 +1248,9 @@ async function leave(mode='checkpoint'){
  G.experience(profile,run.xp);
  const previousDepth=deepestReturnedLayer(profile);
  recordReturnedLayer(profile,mode==='escape'?Math.floor((run.floor-1)/FIGHTS_PER_LAYER)*FIGHTS_PER_LAYER:run.floor);
- const supportPrompt=run.lastMilestoneChoiceLayer?null:supportPromptForReturn(previousDepth,deepestReturnedLayer(profile),badges.length?highestRankLayer(profile):0);
+ const returnedDepth=deepestReturnedLayer(profile);
+ const firstDecadeReturn=Math.floor(returnedDepth/10)>Math.floor(previousDepth/10);
+ const supportPrompt=supportPromptForReturn(previousDepth,returnedDepth,firstDecadeReturn&&badges.length?highestRankLayer(profile):0);
  profile.returns++;
  profile.obtainedItemIds=[...new Set([...knownItems,...[...items.values()].map(({item})=>item.id),...recoveredItemIds])];
  profile.run=null;
