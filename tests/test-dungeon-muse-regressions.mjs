@@ -170,6 +170,11 @@ try{
   await Promise.resolve();
   assert.match($('battleSpells').innerHTML,/tile-cooldown">待機 1</);
   await pending;
+  const resolved=(await getProfile(db)).run;
+  assert.match($('heroStats').innerHTML,new RegExp('HP '+resolved.hero.hp+'/'+resolved.hero.stats.hp),
+   'after combat, hero HP is the committed value');
+  assert.match($('enemyStats').innerHTML,new RegExp('HP '+resolved.enemy.hp+'/'+resolved.enemy.stats.hp),
+   'after combat, enemy HP is the committed value');
  });
  // The cleanse predicate itself is sound; the reported disabled button
  // must be investigated at the UI snapshot/animation boundary.
