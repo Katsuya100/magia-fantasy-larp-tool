@@ -1,12 +1,12 @@
 import * as G from './dungeon-core.mjs?v=20261102.321';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261102.321';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261102.321';
-import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261106.338';
-import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261106.338';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261106.339';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261106.339';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261102.321';
 import {prepareCircles,prepareItems,setSlot,pickedValues,needsEmptyCarryConfirmation,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261102.321';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261102.321';
-import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261106.338';
+import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261106.339';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261102.321';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261102.321';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261102.321';
@@ -15,13 +15,13 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261102.321';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261102.321';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261102.321';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261106.338';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261106.339';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261102.321';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261102.321';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261102.321';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261102.321';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261106.339';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,recordRankCombat,rankBadgeDrop,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261102.321';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261106.338';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261106.339';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261102.321';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261102.321';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261102.321';
@@ -946,7 +946,7 @@ async function useItem(index){
 }
 function paintReturnXp(elapsed){
  if(!returnFlow)return;
- const frame=returnXpFrame(returnFlow.before,returnFlow.gained,elapsed,G.nextXp,num('level_max'));
+ const frame=returnXpFrame(returnFlow.before,returnFlow.gained,elapsed,G.nextXp);
  const label=$('returnLevel'),next='Lv.'+frame.level;
  if(label.textContent!==next){
   const levelUp=label.textContent!==''&&frame.level>Number(label.textContent.replace('Lv.',''));

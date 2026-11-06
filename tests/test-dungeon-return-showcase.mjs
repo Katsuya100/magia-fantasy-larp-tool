@@ -167,5 +167,25 @@ try{
   assert.equal($4('tab-dungeon').hidden,true);
   assert.equal((await getProfile(xpOnly.db)).pendingReturn,null);
  }finally{replay.restore();}
- console.log('PASS return bonus reward, NEW sorting, sticky dungeon tabs, reload-resumable stages, empty-stage skipping and completion');
+ // EXP ceremonies must show the same level reached by the persisted progression beyond the authored Lv150 rows.
+ const deepXp=Array.from({length:10},(_,i)=>G.nextXp(181+i)).reduce((sum,xp)=>sum+xp,0);
+ const highLevel=await create(deepXp,true),highProfile=await getProfile(highLevel.db);
+ highProfile.level=181;
+ highProfile.xp=0;
+ highProfile.run.hero=G.makeUnit(highProfile.base,181,{},[attack,attack,attack,null,null],'player');
+ await saveProfile(highLevel.db,highProfile);
+ const highEnv=fakeDungeonBrowser({factory:highLevel.factory}),$high=id=>highEnv.document.getElementById(id);
+ try{
+  await import('../assets/js/dungeon-app.mjs?integration=return-xp-above-150');
+  await wait(()=>$high('checkpoint').hidden===false);
+  await $high('returnHome').fire('click');
+  assert.equal($high('returnShowcase').hidden,false);
+  assert.equal($high('returnSceneTitle').textContent,'EXP');
+  assert.equal($high('returnLevel').textContent,'Lv.191','level animation must reach the persisted level, not stop at 181');
+  assert.equal($high('returnXpTrack').attributes['aria-valuenow'],'0','XP bar must reset after ten level thresholds');
+  assert.equal((await getProfile(highLevel.db)).level,191,'actual progression and ceremony agree');
+  await $high('returnNext').fire('click');
+  assert.equal($high('home').hidden,false);
+ }finally{highEnv.restore();}
+ console.log('PASS return bonus reward, NEW sorting, sticky dungeon tabs, reload-resumable stages, empty-stage skipping, high-level EXP and completion');
 }finally{Math.random=originalRandom;}

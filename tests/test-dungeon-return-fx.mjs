@@ -3,13 +3,18 @@ import {RETURN_XP_DURATION_MS,returnXpFrame} from '../assets/js/dungeon-return-f
 const nextXp=level=>level===1?100:200;
 const before={level:1,xp:25};
 assert.equal(RETURN_XP_DURATION_MS,1000);
-assert.deepEqual(returnXpFrame(before,200,0,nextXp,9),{level:1,xp:25,percent:25});
-assert.deepEqual(returnXpFrame(before,200,375,nextXp,9),{level:2,xp:0,percent:0});
-assert.deepEqual(returnXpFrame(before,200,500,nextXp,9),{level:2,xp:25,percent:12.5});
-assert.deepEqual(returnXpFrame(before,200,1000,nextXp,9),{level:2,xp:125,percent:62.5});
-assert.deepEqual(returnXpFrame(before,200,1500,nextXp,9),{level:2,xp:125,percent:62.5});
-assert.deepEqual(returnXpFrame(before,0,1000,nextXp,9),{level:1,xp:25,percent:25});
-const big=returnXpFrame(before,550,1000,nextXp,4);
+assert.deepEqual(returnXpFrame(before,200,0,nextXp),{level:1,xp:25,percent:25});
+assert.deepEqual(returnXpFrame(before,200,375,nextXp),{level:2,xp:0,percent:0});
+assert.deepEqual(returnXpFrame(before,200,500,nextXp),{level:2,xp:25,percent:12.5});
+assert.deepEqual(returnXpFrame(before,200,1000,nextXp),{level:2,xp:125,percent:62.5});
+assert.deepEqual(returnXpFrame(before,200,1500,nextXp),{level:2,xp:125,percent:62.5});
+assert.deepEqual(returnXpFrame(before,0,1000,nextXp),{level:1,xp:25,percent:25});
+const big=returnXpFrame(before,550,1000,nextXp);
 assert.equal(big.level,4);
 assert.equal(big.xp,75);
-console.log('PASS fixed-duration return EXP and level thresholds');
+// The authored growth table ends at 150, but player levels and return effects do not.
+const beyondTable={level:181,xp:0};
+assert.deepEqual(returnXpFrame(beyondTable,1000,250,()=>100),{level:183,xp:50,percent:50});
+assert.deepEqual(returnXpFrame(beyondTable,1000,1000,()=>100),{level:191,xp:0,percent:0});
+assert.deepEqual(returnXpFrame({level:149,xp:0},300,1000,()=>100),{level:152,xp:0,percent:0});
+console.log('PASS fixed-duration return EXP and level thresholds, including levels beyond 150');
