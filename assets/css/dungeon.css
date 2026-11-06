@@ -1509,10 +1509,17 @@ html,body{overflow-x:clip}
  70%{opacity:.6;filter:brightness(2)}
  100%{opacity:0;filter:blur(6px)}
 }
-/* Only the 100F kill: compress the boss and halo, then burst three rings
-   outward in a staggered scale-fade. All stages fit inside the same 4.5s. */
+/* Only the 100F kill: implosion, ring/particle burst, then the clear reveal.
+   Particle art ends by 78%; the clear card appears after 79%, all within 4.5s. */
 #battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"]{
  animation:boss-final-implosion var(--boss-time,4.5s) ease-in-out both,combat-sine-shake .09s linear var(--shake-phase,0ms) infinite,combat-shake-envelope var(--boss-time,4.5s) linear both
+}
+/* The final clear title appears only after all particles have disappeared.
+   Other bosses keep their original title timing. */
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]>.ceremony-glyph,
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]>strong,
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]>span{
+ animation:boss-final-clear-reveal var(--ceremony-duration,4.5s) cubic-bezier(.2,.7,.2,1) both
 }
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-halo{
  animation:boss-final-halo-implosion var(--ceremony-duration,4.5s) linear both
@@ -1536,62 +1543,68 @@ html,body{overflow-x:clip}
  animation:boss-final-sparks var(--ceremony-duration,4.5s) linear both
 }
 @keyframes boss-final-implosion{
- 0%,12%{opacity:1;transform:scale(1);filter:none}
- 35%{opacity:1;transform:scale(.78);filter:brightness(1.4)}
- 56%{opacity:1;transform:scale(.38);filter:brightness(2)}
- 66%{opacity:1;transform:scale(.13);filter:brightness(3)}
- 73%{opacity:0;transform:scale(0);filter:brightness(4)}
+ 0%,8%{opacity:1;transform:scale(1);filter:none}
+ 25%{opacity:1;transform:scale(.78);filter:brightness(1.4)}
+ 42%{opacity:1;transform:scale(.38);filter:brightness(2)}
+ 50%{opacity:1;transform:scale(.13);filter:brightness(3)}
+ 55%{opacity:0;transform:scale(0);filter:brightness(4)}
  100%{opacity:0;transform:scale(0);filter:none}
 }
 @keyframes boss-final-halo-implosion{
  0%{opacity:.6;transform:translate(-50%,-50%) scale(1)}
- 35%{opacity:.85;transform:translate(-50%,-50%) scale(.62)}
- 63%{opacity:1;transform:translate(-50%,-50%) scale(.13)}
- 69%{opacity:1;transform:translate(-50%,-50%) scale(.07)}
- 85%{opacity:.4;transform:translate(-50%,-50%) scale(1.5)}
- 100%{opacity:0;transform:translate(-50%,-50%) scale(2.7)}
+ 26%{opacity:.85;transform:translate(-50%,-50%) scale(.62)}
+ 49%{opacity:1;transform:translate(-50%,-50%) scale(.13)}
+ 54%{opacity:1;transform:translate(-50%,-50%) scale(.07)}
+ 66%{opacity:.4;transform:translate(-50%,-50%) scale(1.5)}
+ 78%,100%{opacity:0;transform:translate(-50%,-50%) scale(2.7)}
 }
-/* Each ring first contracts toward the same center, then blows outward
-   on its own beat and fades by 100% (no extra animation wait). */
+/* Three distinct ring pulses finish before the clear banner. */
 @keyframes boss-final-ring-burst-outer{
  0%{opacity:.6;transform:translate(-50%,-50%) scale(1)}
- 40%{opacity:.95;transform:translate(-50%,-50%) scale(.53)}
- 64%{opacity:1;transform:translate(-50%,-50%) scale(.1)}
- 70%{opacity:1;transform:translate(-50%,-50%) scale(.24)}
- 86%{opacity:.65;transform:translate(-50%,-50%) scale(2.1)}
- 100%{opacity:0;transform:translate(-50%,-50%) scale(3.7)}
+ 31%{opacity:.95;transform:translate(-50%,-50%) scale(.53)}
+ 51%{opacity:1;transform:translate(-50%,-50%) scale(.1)}
+ 56%{opacity:1;transform:translate(-50%,-50%) scale(.24)}
+ 68%{opacity:.65;transform:translate(-50%,-50%) scale(2.1)}
+ 76%,100%{opacity:0;transform:translate(-50%,-50%) scale(3.7)}
 }
 @keyframes boss-final-ring-burst-inner{
  0%{opacity:.5;transform:translate(-50%,-50%) scale(1)}
- 42%{opacity:.92;transform:translate(-50%,-50%) scale(.5)}
- 64%{opacity:1;transform:translate(-50%,-50%) scale(.13)}
- 73%{opacity:1;transform:translate(-50%,-50%) scale(.22)}
- 89%{opacity:.6;transform:translate(-50%,-50%) scale(2.7)}
- 100%{opacity:0;transform:translate(-50%,-50%) scale(4.6)}
+ 33%{opacity:.92;transform:translate(-50%,-50%) scale(.5)}
+ 52%{opacity:1;transform:translate(-50%,-50%) scale(.13)}
+ 59%{opacity:1;transform:translate(-50%,-50%) scale(.22)}
+ 70%{opacity:.6;transform:translate(-50%,-50%) scale(2.7)}
+ 77%,100%{opacity:0;transform:translate(-50%,-50%) scale(4.6)}
 }
 @keyframes boss-final-ring-burst-wheel{
  0%{opacity:.55;transform:translate(-50%,-50%) scale(1)}
- 44%{opacity:.95;transform:translate(-50%,-50%) scale(.56)}
- 65%{opacity:1;transform:translate(-50%,-50%) scale(.12)}
- 76%{opacity:1;transform:translate(-50%,-50%) scale(.25)}
- 91%{opacity:.5;transform:translate(-50%,-50%) scale(3)}
- 100%{opacity:0;transform:translate(-50%,-50%) scale(4.8)}
+ 35%{opacity:.95;transform:translate(-50%,-50%) scale(.56)}
+ 53%{opacity:1;transform:translate(-50%,-50%) scale(.12)}
+ 61%{opacity:1;transform:translate(-50%,-50%) scale(.25)}
+ 71%{opacity:.5;transform:translate(-50%,-50%) scale(3)}
+ 78%,100%{opacity:0;transform:translate(-50%,-50%) scale(4.8)}
 }
 @keyframes boss-final-flash{
- 0%,59%{opacity:0}
- 69%{opacity:1}
- 78%{opacity:.55}
- 100%{opacity:0}
+ 0%,47%{opacity:0}
+ 56%{opacity:1}
+ 66%{opacity:.55}
+ 78%,100%{opacity:0}
 }
 @keyframes boss-final-beam-collapse{
  0%{opacity:.5;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(1)}
- 52%{opacity:.42;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.35)}
- 69%,100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.05)}
+ 40%{opacity:.42;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.35)}
+ 54%,100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.05)}
 }
 @keyframes boss-final-sparks{
- 0%,59%{opacity:0;transform:scale(.4)}
- 72%{opacity:1;transform:scale(.7)}
- 100%{opacity:0;transform:scale(2.7)}
+ 0%,47%{opacity:0;transform:scale(.4)}
+ 56%{opacity:1;transform:scale(.7)}
+ 78%,100%{opacity:0;transform:scale(2.7)}
+}
+/* Victory text and emblem arrive after the last particle fades (78%). */
+@keyframes boss-final-clear-reveal{
+ 0%,79%{opacity:0;transform:translateY(12px) scale(.86)}
+ 85%{opacity:1;transform:translateY(0) scale(1.05)}
+ 90%,97%{opacity:1;transform:none}
+ 100%{opacity:0;transform:translateY(-5px)}
 }
 
 @media(max-width:630px){
