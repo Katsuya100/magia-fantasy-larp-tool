@@ -620,8 +620,18 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
  animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both
 }
+/* Every combat hit vibrates on the same 160ms cycle, independent of recoil. */
 #battleArena .unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
- animation:snappy-impact .44s cubic-bezier(.15,.85,.24,1) both
+ --shake-x:3px;--shake-y:-1px;
+ animation:snappy-impact .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .16s linear .12s 2 both
+}
+#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
+ --shake-x:-3px;--shake-y:-1px;
+ animation:snappy-rush-hero .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .16s linear .12s 2 both
+}
+#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
+ --shake-x:3px;--shake-y:-1px;
+ animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .16s linear .12s 2 both
 }
 #battleArena .unit:is([data-effect="attack"],[data-effect="basic"]) .combatant-burst{
  animation:snappy-burst .44s cubic-bezier(.12,.8,.25,1) both
@@ -655,18 +665,19 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 }
 @keyframes snappy-impact{
  0%,38%{transform:none;filter:none}
- 46%,55%{transform:translateX(7px) scale(.94) rotate(2deg);filter:brightness(2.5)}
- 68%{transform:translateX(-4px) scale(1.035) rotate(-1deg);filter:brightness(1.25)}
+ 46%,55%{transform:scale(.94) rotate(2deg);filter:brightness(2.5)}
+ 68%{transform:scale(1.035) rotate(-1deg);filter:brightness(1.25)}
  100%{transform:none;filter:none}
 }
 /* A hit received by the left-side hero recoils left, not toward the enemy. */
 #battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
- animation:snappy-impact-hero-left .44s cubic-bezier(.15,.85,.24,1) both
+ --shake-x:-3px;--shake-y:-1px;
+ animation:snappy-impact-hero-left .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .16s linear .12s 2 both
 }
 @keyframes snappy-impact-hero-left{
  0%,38%{transform:none;filter:none}
- 46%,55%{transform:translateX(-7px) scale(.94) rotate(-2deg);filter:brightness(2.5)}
- 68%{transform:translateX(4px) scale(1.035) rotate(1deg);filter:brightness(1.25)}
+ 46%,55%{transform:scale(.94) rotate(-2deg);filter:brightness(2.5)}
+ 68%{transform:scale(1.035) rotate(1deg);filter:brightness(1.25)}
  100%{transform:none;filter:none}
 }
 @keyframes snappy-burst{
@@ -674,19 +685,17 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  46%,55%{opacity:1;transform:rotate(28deg) scale(1.5)}
  100%{opacity:0;transform:rotate(110deg) scale(.35)}
 }
-/* Camera jolt peaks at the same moment as the frozen hit keyframes. */
-#battleArena[data-shake="true"] .versus{
- /* Shake only the VS badge, never the entire panel or screen. */
- animation:snappy-screen-shake .44s cubic-bezier(.22,.74,.28,1) both;
- transform-origin:50% 50%
+/* One sinusoidal-style wave for all combat: 160ms period, scene-specific amplitude.
+   Individual translate composes with independent transform/scale scene motion. */
+@keyframes combat-sine-shake{
+ 0%,50%,100%{translate:0 0}
+ 25%{translate:var(--shake-x) var(--shake-y)}
+ 75%{translate:calc(var(--shake-x) * -1) calc(var(--shake-y) * -1)}
 }
-@keyframes snappy-screen-shake{
- 0%,39%{transform:none}
- 45%,53%{transform:translate(6px,-3px) rotate(.38deg)}
- 57%{transform:translate(-7px,4px) rotate(-.42deg)}
- 65%{transform:translate(4px,-2px) rotate(.24deg)}
- 73%{transform:translate(-2px,1px) rotate(-.12deg)}
- 100%{transform:none}
+/* Standard hit vibration starts with contact and finishes within the 440ms phase. */
+#battleArena[data-shake="true"] .versus{
+ --shake-x:7px;--shake-y:-3px;
+ animation:combat-sine-shake .16s linear .12s 2 both
 }
 /* Encounter title: quick slide in, short readable hold, quick slide out.
    Enemy remains on stage after its own fast entrance. Fatal animation unchanged. */
@@ -1401,19 +1410,19 @@ html,body{overflow-x:clip}
 #battleArena .battle-ceremony[data-boss-tier="final"] .boss-vfx-halo{
  box-shadow:0 0 90px 25px var(--boss-aura),0 0 36px 13px #fff4da
 }
+/* All boss tiers and both boss scenes use the same 160ms oscillation as hits.
+   A longer ceremony adds cycles without slowing the frequency. */
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .versus{
- animation:boss-cinematic-shake var(--boss-time,2s) ease-in-out both
-}
-/* The 100F victory keeps its 4.5s ceremony; two 2.15s shakes match ordinary boss cadence. */
-#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .versus{
- animation-duration:2.15s;
- animation-iteration-count:2
+ --shake-x:var(--boss-jolt);--shake-y:calc(var(--boss-jolt) * -.35);
+ animation:combat-sine-shake .16s linear infinite
 }
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]{
- animation:boss-cinematic-rise var(--boss-time,2s) cubic-bezier(.2,.8,.2,1) both
+ --shake-x:calc(var(--boss-jolt) * .5);--shake-y:calc(var(--boss-jolt) * -.18);
+ animation:boss-cinematic-rise var(--boss-time,2s) cubic-bezier(.2,.8,.2,1) both,combat-sine-shake .16s linear infinite
 }
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]{
- animation:boss-cinematic-collapse var(--boss-time,2s) ease-in both
+ --shake-x:calc(var(--boss-jolt) * .5);--shake-y:calc(var(--boss-jolt) * -.18);
+ animation:boss-cinematic-collapse var(--boss-time,2s) ease-in both,combat-sine-shake .16s linear infinite
 }
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .enemy-portrait,
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .unit-info{
@@ -1460,27 +1469,18 @@ html,body{overflow-x:clip}
  30%,72%{opacity:1}
  100%{opacity:0;transform:scale(1.25) rotate(18deg)}
 }
-@keyframes boss-cinematic-shake{
- 0%,9%,40%,59%,85%,100%{transform:none}
- 16%{transform:translate(calc(var(--boss-jolt)*.6),-2px) rotate(.6deg)}
- 20%{transform:translate(calc(var(--boss-jolt)*-1),3px) rotate(-.7deg)}
- 24%{transform:translate(calc(var(--boss-jolt)*.7),-2px)}
- 66%{transform:translate(calc(var(--boss-jolt)*-1),3px)}
- 70%{transform:translate(calc(var(--boss-jolt)*.7),-2px)}
- 74%{transform:none}
-}
 @keyframes boss-cinematic-rise{
  0%{opacity:0;transform:translateX(35px) translateY(10px);filter:brightness(.3)}
- 20%{opacity:1;transform:translateX(-8px) translateY(-4px);filter:brightness(2)}
- 27%,44%,68%{transform:translateX(0);filter:brightness(1.6)}
- 32%,72%{transform:translateX(5px);filter:brightness(2.15)}
+ 20%{opacity:1;transform:translateX(0);filter:brightness(2)}
+ 27%,44%,68%{filter:brightness(1.6)}
+ 32%,72%{filter:brightness(2.15)}
  100%{opacity:1;transform:none;filter:none}
 }
 @keyframes boss-cinematic-collapse{
  0%{opacity:1;transform:none;filter:none}
- 22%{transform:translateX(5px);filter:brightness(2.1)}
- 28%{transform:translateX(-7px);filter:brightness(2.6)}
- 36%,54%{transform:translateX(3px);filter:brightness(1.8)}
+ 22%{filter:brightness(2.1)}
+ 28%{filter:brightness(2.6)}
+ 36%,54%{filter:brightness(1.8)}
  63%{opacity:1;transform:scale(1.05);filter:brightness(3)}
  90%{opacity:.17;transform:scale(.85) translateY(22px);filter:brightness(2)}
  100%{opacity:0;transform:scale(.65) translateY(40px);filter:brightness(0)}
@@ -2316,7 +2316,8 @@ html,body{overflow-x:clip}
 #battleArena .unit[data-affinity="weak"] .affinity-hit::after{
  content:"WEAK";background:linear-gradient(120deg,#42102ae8,#190b19ef);
  box-shadow:0 0 21px 4px var(--affinity-glow),inset 0 0 16px var(--affinity-glow);
- animation:weak-damped-shudder .72s linear both
+ --shake-x:7px;--shake-y:-3px;
+ animation:weak-damped-shudder .72s linear both,combat-sine-shake .16s linear .08s 3 both
 }
 /* Impact glows end with their matching shield/wave, not the longer word. */
 #battleArena .unit[data-affinity="resist"] .combatant-fx::before{
@@ -2333,17 +2334,12 @@ html,body{overflow-x:clip}
  72%{opacity:.44;transform:translate(-50%,-50%) scale(2.5)}
  100%{opacity:0;transform:translate(-50%,-50%) scale(3.2)}
 }
-/* Alternating displacement loses amplitude until the word settles. */
+/* WEAK's fade/scale animation is independent of shared-frequency vibration. */
 @keyframes weak-damped-shudder{
  0%{opacity:0;transform:translate(-50%,-50%) scale(1.4)}
- 10%{opacity:1;transform:translate(-50%,-50%) translate(-9px,4px) rotate(-5deg) scale(1.14)}
- 18%{opacity:1;transform:translate(-50%,-50%) translate(7px,-3px) rotate(4deg) scale(1.08)}
- 26%{opacity:1;transform:translate(-50%,-50%) translate(-5px,2px) rotate(-3deg)}
- 34%{opacity:1;transform:translate(-50%,-50%) translate(3px,-1.5px) rotate(2deg)}
- 42%{opacity:1;transform:translate(-50%,-50%) translate(-2px,1px) rotate(-1.2deg)}
- 50%{opacity:1;transform:translate(-50%,-50%) translate(1px,-.5px) rotate(.7deg)}
- 58%{opacity:1;transform:translate(-50%,-50%) translate(-.5px,0px) rotate(-.3deg)}
- 66%,86%{opacity:1;transform:translate(-50%,-50%) rotate(0deg)}
+ 10%{opacity:1;transform:translate(-50%,-50%) scale(1.14)}
+ 42%{opacity:1;transform:translate(-50%,-50%) scale(1.03)}
+ 66%,86%{opacity:1;transform:translate(-50%,-50%)}
  100%{opacity:0;transform:translate(-50%,-66%) scale(.94)}
 }
 @keyframes affinity-ring{
