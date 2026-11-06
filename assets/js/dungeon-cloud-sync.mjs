@@ -1,6 +1,6 @@
 import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261102.321';
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
-import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs?v=20261102.321';
+import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs?v=20261106.338';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
 import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,getDriveSyncIntent,saveDriveSyncIntent,onDungeonDataChange,putCircle,getProfile,saveProfile} from './dungeon-store.mjs?v=20261102.321';
 import {verifyLocalSnapshot,digestPhoto,recordFingerprint} from './dungeon-cloud-integrity.mjs';
@@ -46,6 +46,14 @@ export function decideCloudSync({file,localHash,remoteHash,localProfile=null,rem
  return 'upload';
 }
 // Never infer game continuity from player name, level or timestamps.
+// Switching to a separately advanced battle must be explicit, even within
+// the same lineage. An unchanged verified remote is a safe upload ancestor.
+export function requiresActiveRunChoice(localProfile,remoteProfile,{remoteHash,verifiedRemoteHash}={}){
+ const local=localProfile?.run,remote=remoteProfile?.run;
+ if(!local&&!remote)return false;
+ if(JSON.stringify(local)===JSON.stringify(remote))return false;
+ return !verifiedRemoteHash||verifiedRemoteHash!==remoteHash;
+}
 export function canAutoSyncPlay({localPlayId,remotePlayId,identical=false}){
  if(localPlayId&&remotePlayId)return localPlayId===remotePlayId;
  // Missing lineage is not an existing player's permission to overwrite:
@@ -559,6 +567,15 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      allowLocal:verification.status==='valid',canStartLocal:verification.status==='valid'});
     if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
     if(choice==='overwrite'&&verification.status==='valid')return await upload(local,file,{allowInitial:true});
+    return result;
+   }
+
+   const lastVerified=await getCloudSyncState(db);
+   if(requiresActiveRunChoice(local.profile,remote.data.profile,
+    {remoteHash:remote.hash,verifiedRemoteHash:lastVerified?.hash})){
+    const choice=await chooseCloud({local,remote:remote.data});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
+    if(choice==='overwrite')return await upload(local,file);
     return result;
    }
 
