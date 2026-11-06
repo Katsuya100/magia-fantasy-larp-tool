@@ -7,7 +7,7 @@ import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,saveProfile,putCircle,allCircles,readDungeonSnapshot,replaceDungeonSnapshot,saveCloudSyncState,getCloudSyncState,onDungeonDataChange,clearDungeonData} from '../assets/js/dungeon-store.mjs';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from '../assets/js/dungeon-cloud-snapshot.mjs';
 import {createDungeonDrive,DRIVE_SCOPE,DriveAuthError} from '../assets/js/dungeon-cloud-drive.mjs';
-import {decideCloudSync,compareDungeonProgress,cumulativeDungeonXp,canAutoSyncPlay} from '../assets/js/dungeon-cloud-sync.mjs';
+import {decideCloudSync,compareDungeonProgress,cumulativeDungeonXp,canAutoSyncPlay,requiresActiveRunChoice} from '../assets/js/dungeon-cloud-sync.mjs';
 import {createSuccessorProfile} from '../assets/js/dungeon-permadeath.mjs';
 import {verifyLocalSnapshot,quickFingerprint} from '../assets/js/dungeon-cloud-integrity.mjs';
 
@@ -130,6 +130,13 @@ assert.equal(score(reachedLow,reachedLow,0,0),'upload','unknown time cannot bloc
 assert.equal(decideCloudSync({file,localHash:'identical',remoteHash:'identical',
  localProfile:rankLow,remoteProfile:rankHigh}),'synced','byte identical saves never rewrite either side');
 
+const activeFirst={run:{stage:'battle',floor:496,hero:{hp:200,mp:80},enemy:{hp:500},battleTurns:0}};
+const activeLater={run:{stage:'battle',floor:498,hero:{hp:150,mp:65},enemy:{hp:300},battleTurns:2}};
+assert.equal(requiresActiveRunChoice(activeFirst,activeLater,{remoteHash:'new',verifiedRemoteHash:'old'}),true);
+assert.equal(requiresActiveRunChoice(activeFirst,activeLater,{remoteHash:'old',verifiedRemoteHash:'old'}),false);
+assert.equal(requiresActiveRunChoice(activeFirst,activeFirst,{remoteHash:'new'}),false);
+assert.equal(requiresActiveRunChoice({run:null},activeLater,{remoteHash:'new',verifiedRemoteHash:'old'}),true);
+assert.equal(requiresActiveRunChoice({run:null},{run:null},{remoteHash:'new'}),false);
 const playOne='00000000-0000-4000-8000-000000000001',playTwo='00000000-0000-4000-8000-000000000002';
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playOne}),true,'one play permits automatic backup regardless of adventurer');
 assert.equal(canAutoSyncPlay({localPlayId:playOne,remotePlayId:playTwo}),false,'different play IDs prevent automatic overwrite and restore regardless of timestamps');
@@ -192,5 +199,7 @@ assert.equal(calls.filter(c=>c.url.includes('uploadType=resumable')).length,1);
 assert.ok(calls.some(c=>c.options.method==='PUT'),'photo-inclusive backup uses resumable transfer');
 assert.ok(calls.every(c=>!c.url.includes('test-ephemeral-token')),'token must not enter URLs');
 await assert.rejects(createDungeonDrive('expired',async()=>new Response('',{status:401})).list(),DriveAuthError);
+await assert.rejects(createDungeonDrive('revoked',async()=>Response.json({error:{message:'insufficient permissions'}},{status:403})).list(),DriveAuthError);
+await assert.rejects(createDungeonDrive('quota',async()=>Response.json({error:{errors:[{reason:'rateLimitExceeded'}]}},{status:403})).list(),/HTTP 403/);
 assert.equal(DRIVE_SCOPE,'https://www.googleapis.com/auth/drive.appdata');
 console.log('PASS dungeon cloud snapshot photos, atomic restore, conflict rules, safe Drive requests and write hooks');
