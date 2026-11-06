@@ -364,10 +364,15 @@ for(const name of particleParts){
   'all particles must finish before clear text begins: '+name);
 }
 const clearRule='#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]';
+const clearStyleStart=cinematicCss.indexOf('/* The final clear title appears only after all particles');
+const clearStyleEnd=cinematicCss.indexOf('#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-halo{',clearStyleStart);
+assert.ok(clearStyleStart>=0&&clearStyleEnd>clearStyleStart,'final clear timing style exists');
+const clearStyle=cinematicCss.slice(clearStyleStart,clearStyleEnd);
 for(const element of ['>.ceremony-glyph','>strong','>span']){
- assert.match(shakeRule(clearRule+element),/animation:boss-final-clear-reveal var\(--ceremony-duration,4\.5s\)/,
-  'only 100F complete victory text and emblem follow particles: '+element);
+ assert.ok(clearStyle.includes(clearRule+element),'100F-only clear timing includes '+element);
 }
+assert.match(clearStyle,/animation:boss-final-clear-reveal var\(--ceremony-duration,4\.5s\)/,
+ '100F clear title animates after all particles');
 assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong'),/animation:boss-title-pulse/,
  'ordinary boss clear titles retain existing animation');
 assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'particle and clear sequence together take only 4.5 seconds');
