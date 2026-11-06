@@ -236,6 +236,12 @@ for(const name of ['boss-vfx-flash','boss-vfx-wheel','boss-vfx-ring','boss-vfx-b
 for(const tier of ['boss','milestone','final'])
  assert.ok(cinematicCss.includes('[data-boss-tier="'+tier+'"]'),'tier styling exists: '+tier);
 assert.match(cinematicCss,/boss-cinematic-shake/,'boss quake is visible');
+const finaleShake=cinematicCss.match(/#battleArena\[data-boss-ceremony="final"\]\[data-ceremony-event="enemy-death"\] \.versus\{([^}]+)\}/)?.[1];
+assert.ok(finaleShake,'100F victory shake has a scoped override');
+assert.match(finaleShake,/animation-duration:2\.15s/,'100F quake uses the same cadence as an ordinary boss victory');
+assert.match(finaleShake,/animation-iteration-count:2/,'100F quake cycles twice without extending its ceremony');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'100F victory remains 4.5 seconds');
+assert.match(cinematicCss,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.versus\{\s*animation:boss-cinematic-shake var\(--boss-time,2s\)/,'other boss shake rules remain unchanged');
 assert.match(cinematicCss,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.versus/,'quake only moves arena badge');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.boss-ceremony-art\{display:none!important\}/,'boss VFX respect reduced motion');
 
