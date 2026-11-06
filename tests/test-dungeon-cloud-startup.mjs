@@ -189,7 +189,8 @@ function start(db,ui,fetchImpl,callbacks={}){
   db,button:ui.button,status:ui.status,fetchImpl,windowImpl:ui.win,
   onRestore:callbacks.onRestore||(()=>{}),
   onInitialReady:callbacks.onInitialReady||(()=>{}),
-  onRepairImages:async()=>false
+  onRepairImages:async()=>false,
+  autoSyncMaxWaitMs:callbacks.autoSyncMaxWaitMs??10000
  });
 }
 async function connect(ui,button='setupGoogleDrive'){
@@ -304,6 +305,45 @@ try{
  await wait(()=>firstDrive.uploads===beforeAutoUploads+1,'automatic backup uploads after local edit');
  await wait(()=>firstUi.get('driveSyncActivity').hidden&&firstUi.status.textContent==='GoogleDrive同期済み','automatic progress disappears only after verification');
  assert.equal(deserializeDungeonSnapshot(firstDrive.current).profile.magicStones,autoProfile.magicStones,'automatic backup preserves the changed resource');
+
+ // Continuous battles produce saves faster than the 1.8s idle debounce.
+ // Those active-run snapshots still need to reach Drive before a pause.
+ const activeDb=await newDb(),activeUi=fakeUi(),activeDrive=remoteApi();
+ let activeReady=0;
+ start(activeDb,activeUi,activeDrive.fetchImpl,{
+  onInitialReady:()=>activeReady++,autoSyncMaxWaitMs:130
+ });
+ await connect(activeUi);
+ await wait(()=>activeReady===1,'active-run test starts with verified Drive backup');
+ const originalActiveUploads=activeDrive.uploads;
+ let uploadedWhilePlaying=false;
+ for(let turn=1;turn<=15;turn++){
+  const state=await getProfile(activeDb);
+  state.name='探索中の冒険者';
+  state.attempts=1;
+  state.run={
+   floor:turn+10,stage:'battle',xp:turn*8,
+   hero:{hp:40-turn,mp:50-turn},
+   enemy:{id:'foe_l003',hp:10},
+   loot:[{type:'stone'},{type:'collection',id:'dungeon-test-relic'}],
+   carry:[{id:'potion'}]
+  };
+  await saveProfile(activeDb,state);
+  await new Promise(resolve=>setTimeout(resolve,30));
+  if(turn<15&&activeDrive.uploads>originalActiveUploads)uploadedWhilePlaying=true;
+ }
+ assert.ok(uploadedWhilePlaying,'continuous dungeon saves must upload before a 1.8s idle gap');
+ const endOfRun=await readDungeonSnapshot(activeDb);
+ await wait(()=>activeDrive.current!==null
+  &&deserializeDungeonSnapshot(activeDrive.current).savedAt===endOfRun.savedAt,
+  'final pending battle turn eventually reaches Drive');
+ const backedUpRun=deserializeDungeonSnapshot(activeDrive.current).profile.run;
+ assert.equal(backedUpRun.floor,25,'active battle floor is backed up');
+ assert.equal(backedUpRun.xp,120,'unbanked dungeon EXP is backed up');
+ assert.deepEqual(backedUpRun.loot,[{type:'stone'},{type:'collection',id:'dungeon-test-relic'}],
+  'unbanked loot is backed up without being awarded early');
+ assert.equal(backedUpRun.hero.hp,25,'current battle HP is backed up');
+ assert.equal(backedUpRun.carry[0].id,'potion','carried dungeon items are backed up');
 
  // Queued autosave: while a real upload PUT is in-flight, several local
  // name changes must commit immediately and reserve only one follow-up upload.
