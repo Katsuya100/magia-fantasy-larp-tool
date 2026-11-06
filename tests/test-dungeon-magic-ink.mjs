@@ -40,7 +40,7 @@ assert.match(css,/@keyframes enemy-snap-slide\{\s*0%\{opacity:0;transform:transl
 assert.match(css,/@keyframes boss-cinematic-rise\{\s*0%\{opacity:0;transform:translateX\(35px\)/,'boss enters from right');
 assert.match(css,/@keyframes snappy-rush-hero\{[\s\S]*?translateX\(34px\)/,'hero charges toward right');
 assert.match(css,/@keyframes snappy-rush-enemy\{[\s\S]*?translateX\(-34px\)/,'enemy charges toward left');
-assert.match(css,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.enemy-unit\[data-dying="true"\]\{[\s\S]*?animation:boss-cinematic-collapse var\(--boss-time,2s\)[^\n]*,combat-sine-shake \.16s linear infinite/,'defeated boss vibrates at normal combat frequency without slow horizontal recoil');
+assert.match(css,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.enemy-unit\[data-dying="true"\]\{[\s\S]*?animation:boss-cinematic-collapse var\(--boss-time,2s\)[^\n]*,combat-sine-shake \.09s linear var\(--shake-phase,0ms\) infinite,combat-shake-envelope var\(--boss-time,2s\) linear both/,'defeated boss vibration keeps its duration and dampens on the final 10 percent');
 assert.match(html,/id="magicInkDialog"/,'ink is selected in a dedicated dialog');
 assert.match(html,/<button type="button" id="cancelMagicInk" class="subtle" autofocus>戻る<\/button>/,'opening the dialog focuses the back button instead of expanding the dropdown');
 assert.doesNotMatch(html,/<select id="magicInkCount"[^>]*autofocus/,'ink dropdown must open only on user interaction');
