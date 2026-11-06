@@ -8,7 +8,7 @@ assert.equal(itemEffectIcons({id:'clear_flame',value:0}),'🧼🔥');
 assert.equal(itemEffectIcons({id:'clear_law',value:0}),'🧼🔒');
 assert.equal(itemEffectIcons({id:'escape_scroll',value:0}),'↩️');
 assert.equal(itemEffectIcons({id:'life_ruby',value:0}),'🪽50%');
-assert.equal(itemEffectIcons({id:'heal_s',value:24,bonus:'buff_flame'}),'❤️+24 ⚔️↑');
+assert.equal(itemEffectIcons({id:'heal_s',value:24,bonus:'buff_flame'}),'❤️+24 🔥↑');
 assert.equal(itemEffectIcons({id:'mana_s',value:12,bonus:'buff_storm'}),'💠+12 🛡️↑');
 assert.equal(itemEffectIcons({id:'clear_aqua',value:0,bonus:'resist_aqua'}),'🧼💧 💧🛡️↑');
 assert.deepEqual(itemBonusEffect({bonus:'buff_law'}),{icons:'🕸️🛡️↑',text:'弱体耐性上昇'});
@@ -83,7 +83,7 @@ assert.match(afterReturn,/<span class="tile-item-effect item-effect-icons" aria-
 assert.match(afterReturn,/<span class="tile-item-effect item-effect-icons" aria-hidden="true">🧼🔥<\/span>/,'cleansing effect uses a compact icon');
 assert.match(afterReturn,/aria-label="携行品 1枠目 heal_s・効果 24"/,'screen readers also receive the numerical effect');
 const withBonus=itemGrid([0],[{id:'heal_s',value:24,bonus:'buff_flame'}],1,true,itemName,esc);
-assert.match(withBonus,/❤️\+24 ⚔️↑/);
+assert.match(withBonus,/❤️\+24 🔥↑/);
 assert.match(withBonus,/追加効果：攻撃上昇/,'bonus is described to screen readers');
 const maxItemGrid=itemGrid(prepareItems([],3,15),inventory,15,true,itemName,esc);
 assert.equal((maxItemGrid.match(/data-open-item=/g)||[]).length,15,'later item slots become additional rows');
@@ -133,7 +133,7 @@ assert.equal((groupedHtml.match(/class="item-picker-options"/g)||[]).length,2,'e
 assert.equal((groupedHtml.match(/data-choose-item=/g)||[]).length,5,'each instance stays individually selectable');
 assert.match(groupedHtml,/data-choose-item="2" aria-pressed="true"[^>]*選択中 1枠目/);
 assert.match(groupedHtml,/data-choose-item="4" aria-pressed="true"[^>]*選択中 3枠目/);
-assert.match(groupedHtml,/class="picker-label">heal_s<small>効果量 50 ⚔️↑<\/small>/,
+assert.match(groupedHtml,/class="picker-label">heal_s<small>効果量 50 🔥↑<\/small>/,
  'original item cell keeps its visible name, effect value and bonus icons');
 assert.match(groupedHtml,/class="picker-label">mana_s<small>効果量 24<\/small>/,
  'regular item cards retain their original text, not icon-only summaries');
