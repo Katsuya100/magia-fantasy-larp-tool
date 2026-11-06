@@ -1,12 +1,12 @@
 import * as G from './dungeon-core.mjs?v=20261102.321';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261102.321';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261102.321';
-import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261104.329';
-import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261104.329';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261106.337';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261106.337';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261102.321';
 import {prepareCircles,prepareItems,setSlot,pickedValues,needsEmptyCarryConfirmation,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261102.321';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261102.321';
-import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261104.329';
+import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261106.337';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261102.321';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261102.321';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261102.321';
@@ -15,7 +15,7 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261102.321';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261102.321';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261102.321';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261104.329';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261106.337';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261102.321';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261102.321';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261102.321';
