@@ -303,7 +303,13 @@ assert.ok(cinematicCss.includes('[data-side="enemy"] .enemy-unit{animation:fx-ru
 assert.ok(cinematicCss.includes('.hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-right'),'hero dual-hit faces right');
 assert.ok(cinematicCss.includes('.enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-left'),'enemy dual-hit faces left');
 assert.ok(orientationFrame('enemy-snap-slide').includes('translateX(48px)'),'ordinary enemy enters from right');
-assert.ok(orientationFrame('boss-cinematic-rise').includes('translateX(35px)'),'boss enters from right');
+assert.ok(orientationFrame('boss-cinematic-rise').includes('translateY(38px)'),'boss fades and rises from below');
+assert.doesNotMatch(orientationFrame('boss-cinematic-rise'),/translateX\(/,'boss entrance has no horizontal slide');
+assert.match(orientationFrame('boss-cinematic-rise'),/18%\{opacity:\.55;transform:translateY\(13px\)/,'boss gradually fades in while ascending');
+assert.match(orientationFrame('enemy-snap-slide'),/66%\{opacity:1;transform:translateX\(-7px\)/,'ordinary enemies slightly overshoot');
+assert.match(orientationFrame('enemy-snap-slide'),/83%\{opacity:1;transform:translateX\(3px\)/,'ordinary enemies rebound once');
+assert.doesNotMatch(shakeRule('#battleArena .enemy-unit[data-entering="true"]'),/combat-sine-shake/,'normal enemies enter with no vibration');
+assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]'),/combat-sine-shake \.18s/,'bosses vibrate subtly as they rise');
 assert.ok(cinematicCss.includes('transform:translate(36px,-110px) rotate(32deg)'),'enemy-side loot flies from right');
 const flightStart=cinematicCss.indexOf('/* Magic attack travels from the center');
 const flightEnd=cinematicCss.indexOf('/* Layer boss cinematics',flightStart);
