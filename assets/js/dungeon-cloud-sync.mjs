@@ -1,6 +1,6 @@
 import {showDungeonDialog,closeDungeonDialog} from './dungeon-ui-transitions.mjs?v=20261106.339';
 import {GOOGLE_CLIENT_ID} from './dungeon-google-config.mjs';
-import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs?v=20261106.339';
+import {createDungeonDrive,DriveAuthError,DRIVE_SCOPE} from './dungeon-cloud-drive.mjs?v=20261106.340';
 import {serializeDungeonSnapshot,deserializeDungeonSnapshot,isPristineDungeonSnapshot,snapshotHash} from './dungeon-cloud-snapshot.mjs';
 import {readDungeonSnapshot,replaceDungeonSnapshot,getCloudSyncState,saveCloudSyncState,getDriveSyncIntent,saveDriveSyncIntent,onDungeonDataChange,putCircle,getProfile,saveProfile} from './dungeon-store.mjs?v=20261106.339';
 import {verifyLocalSnapshot,digestPhoto,recordFingerprint} from './dungeon-cloud-integrity.mjs';
@@ -46,6 +46,19 @@ export function decideCloudSync({file,localHash,remoteHash,localProfile=null,rem
  return 'upload';
 }
 // Never infer game continuity from player name, level or timestamps.
+// Never silently switch to another device's independently advanced battle.
+export function requiresActiveRunChoice(localProfile,remoteProfile,{remoteHash,verifiedRemoteHash}={}){
+ const local=localProfile?.run,remote=remoteProfile?.run;
+ if(!local&&!remote)return false;
+ const changed=JSON.stringify(local)!==JSON.stringify(remote)
+  ||Number(localProfile?.magicStones||0)!==Number(remoteProfile?.magicStones||0)
+  ||Number(localProfile?.magicInk||0)!==Number(remoteProfile?.magicInk||0)
+  ||JSON.stringify(localProfile?.inventory||[])!==JSON.stringify(remoteProfile?.inventory||[])
+  ||JSON.stringify(localProfile?.carrySlots||[])!==JSON.stringify(remoteProfile?.carrySlots||[]);
+ if(!changed)return false;
+ // The last verified backup may safely be overwritten by the local sequel.
+ return !verifiedRemoteHash||verifiedRemoteHash!==remoteHash;
+}
 export function canAutoSyncPlay({localPlayId,remotePlayId,identical=false}){
  if(localPlayId&&remotePlayId)return localPlayId===remotePlayId;
  // Missing lineage is not an existing player's permission to overwrite:
@@ -559,6 +572,15 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
      allowLocal:verification.status==='valid',canStartLocal:verification.status==='valid'});
     if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
     if(choice==='overwrite'&&verification.status==='valid')return await upload(local,file,{allowInitial:true});
+    return result;
+   }
+
+   const lastVerified=await getCloudSyncState(db);
+   if(requiresActiveRunChoice(local.profile,remote.data.profile,
+    {remoteHash:remote.hash,verifiedRemoteHash:lastVerified?.hash})){
+    const choice=await chooseCloud({local,remote:remote.data});
+    if(choice==='restore')return await restore(remote,file,{expectedLocal:local});
+    if(choice==='overwrite')return await upload(local,file);
     return result;
    }
 

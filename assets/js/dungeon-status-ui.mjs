@@ -12,7 +12,8 @@ export function statusBadges(statuses,buffs=[],escapeText=x=>String(x)){
   const name=resist?(ATTRIBUTE_NAMES[attr]||attr)+'耐性上昇':row?.name||status.id||kind;
   const remaining=Number(status.turns);
   const turns=Number.isFinite(remaining)?Math.max(0,Math.floor(remaining)):0;
-  const detail=String(name)+'・'+kind+'・残り'+turns+'ターン';
+  // Counts represent effective status uses, not elapsed combat rounds.
+  const detail=String(name)+'・'+kind+'・効果残り'+turns+'回';
   return '<span class="status-badge status-'+(debuff?'debuff':'buff')+(resist?' status-resist':'')+'" role="img" title="'+escapeText(detail)+'" aria-label="'+escapeText(detail)+'">'
    +'<span class="status-glyph" aria-hidden="true">'+(status.id==='buff_law'?'🕸️🛡️':(resist?'🛡️':'')+glyph)+'</span>'
    +'<span class="status-arrow" aria-hidden="true">'+(debuff?'↓':'↑')+'</span>'
