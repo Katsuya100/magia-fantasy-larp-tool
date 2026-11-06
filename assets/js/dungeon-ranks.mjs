@@ -88,6 +88,11 @@ export function rankBadgeDrop(fight,hero,profile,pendingLoot=[],record){
   ||pendingLoot.some(item=>item.type==='rank'&&Number(item.layer)>=awardLayer))return null;
  return {type:'rank',layer:awardLayer};
 }
+export function pendingRankBadgeNames(loot=[]){
+ return (Array.isArray(loot)?loot:[])
+  .filter(item=>item?.type==='rank'&&rankAt(item.layer))
+  .map(item=>rankBadgeName(item.layer));
+}
 export function acquireAdventurerRank(profile,layer){
  const rank=rankAt(layer);
  if(!rank||highestRankLayer(profile)>=rank.layer)return false;
