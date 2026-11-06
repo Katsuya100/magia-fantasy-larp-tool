@@ -939,7 +939,7 @@ async function useItem(index){
 }
 function paintReturnXp(elapsed){
  if(!returnFlow)return;
- const frame=returnXpFrame(returnFlow.before,returnFlow.gained,elapsed,G.nextXp,num('level_max'));
+ const frame=returnXpFrame(returnFlow.before,returnFlow.gained,elapsed,G.nextXp);
  const label=$('returnLevel'),next='Lv.'+frame.level;
  if(label.textContent!==next){
   const levelUp=label.textContent!==''&&frame.level>Number(label.textContent.replace('Lv.',''));
