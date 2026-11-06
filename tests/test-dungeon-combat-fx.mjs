@@ -310,6 +310,46 @@ assert.match(orientationFrame('enemy-snap-slide'),/66%\{opacity:1;transform:tran
 assert.match(orientationFrame('enemy-snap-slide'),/83%\{opacity:1;transform:translateX\(3px\)/,'ordinary enemies rebound once');
 assert.doesNotMatch(shakeRule('#battleArena .enemy-unit[data-entering="true"]'),/combat-sine-shake/,'normal enemies enter with no vibration');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]'),/combat-sine-shake \.18s/,'bosses vibrate subtly as they rise');
+
+// The finale uniquely contracts boss and halo, then bursts three existing rings.
+// Other bosses retain their shared defeat animation and all entrances stay shared.
+const finalDefeat='#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"]';
+const finalBossRule=shakeRule(finalDefeat);
+assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,4\.5s\)/,'100F defeat uses a unique implosion');
+assert.match(finalBossRule,/combat-sine-shake \.09s linear var\(--shake-phase,0ms\) infinite,combat-shake-envelope var\(--boss-time,4\.5s\)/,'the contracting boss vibrates and damps within 4.5s');
+assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/animation:boss-cinematic-collapse/,'other bosses keep the original defeat animation');
+for(const [part,motion] of [
+ ['boss-vfx-halo','boss-final-halo-implosion'],
+ ['boss-vfx-ring-outer','boss-final-ring-burst-outer'],
+ ['boss-vfx-ring-inner','boss-final-ring-burst-inner'],
+ ['boss-vfx-wheel','boss-final-ring-burst-wheel'],
+ ['boss-vfx-flash','boss-final-flash'],
+ ['boss-vfx-beam','boss-final-beam-collapse'],
+ ['boss-vfx-sparks','boss-final-sparks']
+]){
+ const selector='#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .'+part;
+ assert.match(shakeRule(selector),new RegExp('animation:'+motion+' var\\(--ceremony-duration,4\\.5s\\)'),'finale-only special effect for '+part);
+ const frames=orientationFrame(motion);
+ assert.match(frames,/100%\{opacity:0/,'finale special effect fades out before the original scene ends: '+motion);
+}
+const implosion=orientationFrame('boss-final-implosion');
+assert.match(implosion,/56%\{opacity:1;transform:scale\(\.38\)/,'boss contracts in the first half');
+assert.match(implosion,/66%\{opacity:1;transform:scale\(\.13\)/,'boss collapses to a bright point');
+assert.match(implosion,/73%\{opacity:0;transform:scale\(0\)/,'boss disappears as the ring blast begins');
+const halo=orientationFrame('boss-final-halo-implosion');
+assert.match(halo,/63%\{opacity:1;transform:translate\(-50%,-50%\) scale\(\.13\)/,'halo contracts with the boss');
+assert.match(halo,/85%\{opacity:\.4;transform:translate\(-50%,-50%\) scale\(1\.5\)/,'halo spreads out after the implosion');
+for(const name of ['boss-final-ring-burst-outer','boss-final-ring-burst-inner','boss-final-ring-burst-wheel']){
+ const ring=orientationFrame(name);
+ assert.match(ring,/6[45]%\{opacity:1;transform:translate\(-50%,-50%\) scale\(\.1[023]\)/,'ring contracts before expansion: '+name);
+ assert.match(ring,/100%\{opacity:0;transform:translate\(-50%,-50%\) scale\([34]\.\d\)/,'ring expands and fades within the original 4.5s: '+name);
+}
+const ceremonyMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleCeremony"'),cinematicPage.indexOf('id="heroCombatant"'));
+for(const part of ['boss-vfx-ring-outer','boss-vfx-ring-inner','boss-vfx-wheel'])
+ assert.match(ceremonyMarkup,new RegExp('class="[^"]*'+part),'each independently bursting ring is already in the scene: '+part);
+assert.equal(BOSS_CEREMONY_MS.final['encounter'],3800,'final boss entrance duration stays unchanged');
+assert.equal(BOSS_CEREMONY_MS.milestone['enemy-death'],3100,'milestone boss defeat duration stays unchanged');
+
 assert.ok(cinematicCss.includes('transform:translate(36px,-110px) rotate(32deg)'),'enemy-side loot flies from right');
 const flightStart=cinematicCss.indexOf('/* Magic attack travels from the center');
 const flightEnd=cinematicCss.indexOf('/* Layer boss cinematics',flightStart);
