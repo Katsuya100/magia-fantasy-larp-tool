@@ -36,7 +36,7 @@ export const ENCOUNTER_EFFECT_MS=820;
 export const FINAL_CLEAR_EFFECT_MS=850; // After 3.65s defeat, this .85s CLEAR completes 4.5s total.
 /* Only every fifth encounter is a layer boss; every tenth layer gains a
    second VFX tier and the designed 100th-layer boss gets the finale. */
-// 100F defeat phases total 4.5s; a separate 0.85s CLEAR follows particles.
+// 100F defeat phases total 3.65s; a separate 0.85s CLEAR makes 4.5s.
 // Other boss durations stay unchanged.
 export const BOSS_CEREMONY_MS=Object.freeze({
  boss:Object.freeze({encounter:1800,'enemy-death':2150}),

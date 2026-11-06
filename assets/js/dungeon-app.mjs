@@ -1,6 +1,6 @@
 import * as G from './dungeon-core.mjs?v=20261106.339';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261106.339';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261106.346';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261106.347';
 import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261106.346';
 import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261106.346';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261106.339';
@@ -710,7 +710,7 @@ async function animateBattle(steps,{logPrefix=null,initialMp=null}={}){
    return ceremony(side==='hero'?'hero-death':'enemy-death',
     side==='hero'?'探索失敗':'討伐成功',
     side==='hero'?(profile.name||'冒険者'):(profile.run?.enemyName||'')).then(()=>{
-     // Only 100F: the 4.5s defeat finishes before the separate CLEAR cue.
+     // Only 100F: the 3.65s defeat precedes the .85s CLEAR cue.
      if(side==='enemy'&&bossCeremonyTier(profile.run?.floor)==='final')
       return ceremony('final-clear','100層 完全制覇');
     });
