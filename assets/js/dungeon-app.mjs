@@ -628,9 +628,12 @@ function clearCombatEffects(){
   $(side+'FxText').textContent='';
  }
 }
-async function animateBattle(steps,{logPrefix=null}={}){
+async function animateBattle(steps,{logPrefix=null,initialMp=null}={}){
  if(!steps.length)return;
  const animatedLog=logPrefix?[...logPrefix]:null;
+ // Round resolution spends both actors' MP before the animation. For the
+ // visual only, reveal each cost at that actor's actual spell phase.
+ const displayedMp=initialMp?{...initialMp}:null;
  playingEffects=true;
  battleInput.start();
  let lastEcho=null;
@@ -675,12 +678,16 @@ async function animateBattle(steps,{logPrefix=null}={}){
    // Reveal only the log through the phase currently painted.
    if(animatedLog){for(const step of phase)if(step.text)animatedLog.push(step.text);refreshBattleRecord(animatedLog);}
    const final=phase.at(-1),resolved=profile.run;
-   // HP/MP animate through phase snapshots, but status badges must reflect
+   if(displayedMp)for(const step of phase){
+    if(['support','defense','debuff','attack','basic'].includes(step.role))
+     displayedMp[step.side]=step.side==='hero'?step.hero.mp:step.enemy.mp;
+   }
+   // HP and MP animate through phase snapshots, but status badges must reflect
    // the resolved state used by the cleanser and other action buttons.
    // Otherwise an expired burn remains visible while its cure is disabled.
    renderHeroName(final.hero);
-   $('heroStats').innerHTML=rowUnit({...final.hero,statuses:resolved?.hero.statuses||final.hero.statuses});
-   $('enemyStats').innerHTML=rowUnit({...final.enemy,statuses:resolved?.enemy.statuses||final.enemy.statuses});
+   $('heroStats').innerHTML=rowUnit({...final.hero,mp:displayedMp?.hero??final.hero.mp,statuses:resolved?.hero.statuses||final.hero.statuses});
+   $('enemyStats').innerHTML=rowUnit({...final.enemy,mp:displayedMp?.enemy??final.enemy.mp,statuses:resolved?.enemy.statuses||final.enemy.statuses});
    lastEcho=captureCombatFxEcho($('battleArena'),combatPhaseDuration(phase,effectDuration()));
    if(lastEcho)activeEchoes.push(lastEcho);
   },{overlap:125,onLastPhase:(_phase,duration)=>battleInput.begin(duration),onFatal:side=>{
@@ -875,7 +882,8 @@ async function takeTurn(index){
   try{await loadoutSaveQueue;await saveProfile(db,successor);}
   catch(error){profile.run=beforeTurn;renderRun();note('後継者への引き継ぎ保存に失敗しました：'+String(error?.message||error));throw error;}
  }
- await animateBattle(steps,{logPrefix:run.log.slice(0,turnLogStart)});
+ await animateBattle(steps,{logPrefix:run.log.slice(0,turnLogStart),
+  initialMp:{hero:beforeTurn.hero.mp,enemy:beforeTurn.enemy.mp}});
 if(run.hero.hp<=0){
   if(successor){
    const lost=successor.legacies.at(-1);
