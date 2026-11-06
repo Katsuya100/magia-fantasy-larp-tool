@@ -694,7 +694,9 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 }
 @keyframes combat-sine-shake{
  0%,50%,100%{translate:0 0}
+ 12.5%,37.5%{translate:calc(var(--shake-x) * var(--shake-direction,1) * var(--shake-gain) * .7071) calc(var(--shake-y) * var(--shake-direction,1) * var(--shake-gain) * .7071)}
  25%{translate:calc(var(--shake-x) * var(--shake-direction,1) * var(--shake-gain)) calc(var(--shake-y) * var(--shake-direction,1) * var(--shake-gain))}
+ 62.5%,87.5%{translate:calc(var(--shake-x) * var(--shake-direction,1) * var(--shake-gain) * -.7071) calc(var(--shake-y) * var(--shake-direction,1) * var(--shake-gain) * -.7071)}
  75%{translate:calc(var(--shake-x) * var(--shake-direction,1) * var(--shake-gain) * -1) calc(var(--shake-y) * var(--shake-direction,1) * var(--shake-gain) * -1)}
 }
 /* Gain is 1 through 90%; damp to zero within the original scene duration. */

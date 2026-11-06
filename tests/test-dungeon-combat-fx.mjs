@@ -239,6 +239,8 @@ assert.ok(sineShake,'sine-like common wave exists');
 assert.match(sineShake,/0%,50%,100%\{translate:0 0\}/,'wave crosses zero twice per period');
 assert.match(sineShake,/25%\{translate:calc\(var\(--shake-x\) \* var\(--shake-direction,1\) \* var\(--shake-gain\)\)/,'direction and gain control positive peak');
 assert.match(sineShake,/75%\{translate:calc\(var\(--shake-x\) \* var\(--shake-direction,1\) \* var\(--shake-gain\) \* -1\)/,'reverse wave peak');
+assert.match(sineShake,/12\.5%,37\.5%\{translate:calc\([\s\S]*?\* \.7071\)/,'sine-like rounded positive half-cycle');
+assert.match(sineShake,/62\.5%,87\.5%\{translate:calc\([\s\S]*?\* -\.7071\)/,'sine-like rounded negative half-cycle');
 assert.match(cinematicCss,/@property --shake-gain\{\s*syntax:"<number>";\s*inherits:false;\s*initial-value:1/,'gain interpolates as a number');
 const envelope=cinematicCss.match(/@keyframes combat-shake-envelope\{([\s\S]*?)\n\}/)?.[1];
 assert.ok(envelope,'all waves use a damping envelope');
@@ -271,6 +273,9 @@ assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]'),/--shake-x:calc\(var\(--boss-jolt\) \* \.16\)/,'boss appearance body has reduced amplitude');
 assert.match(appSource,/function randomizeCombatShake\(arena\)\{[\s\S]*?\.versus,\.hero-unit,\.enemy-unit,\.affinity-hit/,'each part randomized individually');
 assert.match(appSource,/crypto\?\.getRandomValues/,'visual randomization does not disturb combat RNG');
+const shakeRandomSource=appSource.slice(appSource.indexOf('function randomizeCombatShake('),appSource.indexOf('function clearCombatEffects('));
+assert.doesNotMatch(shakeRandomSource,/Math\.random\(/,'visual-only phase fallback never consumes combat/drop RNG');
+assert.match(shakeRandomSource,/shakeSceneNonce/,'visual-only fallback varies between scenes');
 assert.match(appSource,/setProperty\('--shake-phase'/,'part wave starting phase randomized');
 assert.match(appSource,/setProperty\('--shake-direction'/,'part wave starting direction randomized');
 assert.match(appSource,/clearCombatEffects\(\);\s*randomizeCombatShake\(\$\('battleArena'\)\)/,'per-attack phase randomization');
@@ -316,7 +321,7 @@ assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony
 // Only 100F defeat has four strictly timed phases, followed by a separate CLEAR.
 const finalDefeat='#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"]';
 const finalBossRule=shakeRule(finalDefeat);
-assert.match(shakeRule('#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"]'),/--boss-time:4\.5s/,'CSS boss timeline matches the 3.65s JS death');
+assert.match(shakeRule('#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"]'),/--boss-time:4\.5s/,'CSS boss timeline matches the full 4.5s JS defeat');
 assert.equal(2000+500+1000+1000,4500,'four final boss defeat stages last 4.5s independently of CLEAR');
 assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,4\.5s\)/,'4.5s defeat uses the special scale animation');
 assert.match(finalBossRule,/boss-final-shake-envelope var\(--boss-time,4\.5s\)/,'shake envelope stays within the first defeat phase');

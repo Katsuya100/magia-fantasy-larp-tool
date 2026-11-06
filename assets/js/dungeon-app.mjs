@@ -1,6 +1,6 @@
 import * as G from './dungeon-core.mjs?v=20261106.339';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261106.339';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261106.348';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261106.349';
 import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261106.346';
 import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261106.346';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261106.339';
@@ -614,11 +614,19 @@ function refreshBattleRecord(visibleLog=null){
 }
 /* Visual randomness uses browser crypto so combat/drop random rolls stay untouched.
    Each part gets its own wave phase and initial direction for each scene. */
+let shakeSceneNonce=0;
 function randomizeCombatShake(arena){
  const parts=arena.querySelectorAll?.('.versus,.hero-unit,.enemy-unit,.affinity-hit')||[];
  const seeds=new Uint32Array(parts.length*2);
  if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(seeds);
- else for(let i=0;i<seeds.length;i++)seeds[i]=Math.floor(Math.random()*0x100000000);
+ else{
+  const base=(Date.now()^(Math.floor((globalThis.performance?.now?.()||0)*1000))^++shakeSceneNonce)>>>0;
+  for(let i=0;i<seeds.length;i++){
+   let value=(base+Math.imul(i+1,0x9e3779b9))>>>0;
+   value^=value<<13;value^=value>>>17;value^=value<<5;
+   seeds[i]=value>>>0;
+  }
+ }
  for(let i=0;i<parts.length;i++){
   parts[i].style.setProperty('--shake-phase',(-Math.floor(seeds[i*2]/0x100000000*180))+'ms');
   parts[i].style.setProperty('--shake-direction',seeds[i*2+1]&1?'1':'-1');
