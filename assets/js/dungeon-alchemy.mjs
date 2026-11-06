@@ -109,12 +109,14 @@ export function craftAlchemy(profile,relic,indexes,rows,buffs=[],random=Math.ran
  const created={...outcome,instanceId:newId()};
  const chance=Math.max(0,Math.min(1,Number(random())||0));
  if(relic.rarity==='epic'||relic.rarity==='uncommon'&&chance<.5){
-  created.value=Math.round(created.value*1.25);
-  // Elixirs use percentages and cannot exceed a full heal.
-  if(created.id.startsWith('elixir_'))created.value=Math.min(100,created.value);
-  created.alchemyBoost=true;
+  // Fixed-effect items have no recovery potency to multiply.
+  if(/^(heal_|mana_|elixir_)/.test(created.id)){
+   const candidate=Math.round(created.value*1.25);
+   const effective=created.id.startsWith('elixir_')?Math.min(100,candidate):candidate;
+   if(effective>created.value){created.value=effective;created.alchemyBoost=true;}
+  }
  }
- if(relic.rarity==='legendary'||relic.rarity==='rare'&&chance<.5){
+ if(created.id!=='escape_scroll'&&(relic.rarity==='legendary'||relic.rarity==='rare'&&chance<.5)){
   const choices=buffs.filter(row=>row.kind==='buff'&&row.id?.startsWith('buff_'));
   if(choices.length)created.bonus=choices[Math.min(choices.length-1,Math.floor(Math.max(0,Math.min(.999999,Number(random())||0))*choices.length))].id;
  }
