@@ -33,15 +33,15 @@ export function magicEffectTier(upgradeLevel,role='attack'){
 export const COMBAT_EFFECT_MS=440;
 export const AFFINITY_EFFECT_MS=720;
 export const ENCOUNTER_EFFECT_MS=820;
-export const FINAL_CLEAR_EFFECT_MS=850; // After 3.65s defeat, this .85s CLEAR completes 4.5s total.
+export const FINAL_CLEAR_EFFECT_MS=850; // Separate from the full 4.5s final defeat.
 /* Only every fifth encounter is a layer boss; every tenth layer gains a
    second VFX tier and the designed 100th-layer boss gets the finale. */
-// 100F defeat phases total 3.65s; a separate 0.85s CLEAR makes 4.5s.
+// 100F defeat phases total 4.5s; the separate 0.85s CLEAR follows afterward.
 // Other boss durations stay unchanged.
 export const BOSS_CEREMONY_MS=Object.freeze({
  boss:Object.freeze({encounter:1800,'enemy-death':2150}),
  milestone:Object.freeze({encounter:2650,'enemy-death':3100}),
- final:Object.freeze({encounter:3800,'enemy-death':3650})
+ final:Object.freeze({encounter:3800,'enemy-death':4500})
 });
 export function bossCeremonyTier(fight){
  if(!isLayerBoss(fight))return 'none';
