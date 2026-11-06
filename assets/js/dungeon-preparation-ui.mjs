@@ -16,37 +16,43 @@ export function itemSymbol(item){return item?.id==='luna_stone'?'🌙':item?.id=
 // Show compact bonus effects consistently in loadout, battle and rewards.
 const elementIcons={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪️',gravity:'🪨',law:'⚖️',chaos:'🌀'};
 const bonusEffects={
- attack:['⚔️↑','攻撃上昇'],output:['✨↑','威力上昇'],
- heal:['✚↑','回復量上昇'],incoming:['🛡️↑','被ダメージ軽減'],
- def:['🛡️↑','防御上昇'],resistance:['🕸️🛡️↑','弱体耐性上昇'],
- resist:['🛡️↑','属性耐性上昇']
+ attack:'攻撃上昇',output:'魔法の出力上昇',
+ heal:'回復量上昇',incoming:'被ダメージ軽減',
+ def:'防御力上昇',resistance:'弱体耐性上昇',resist:'属性耐性上昇'
 };
+export function itemHasEffectiveAlchemyBoost(item){
+ const id=String(item?.id||'');
+ return Boolean(item?.alchemyBoost)&&(id.startsWith('heal_')||id.startsWith('mana_')||
+  id.startsWith('elixir_')&&Number(item.value)<100);
+}
 export function itemBonusEffect(item){
+ // Escape scrolls exit before potion() applies stored bonus effects.
+ if(item?.id==='escape_scroll')return null;
  const id=item?.bonus;
  if(!id)return null;
  const [kind,attribute]=String(id).split('_');
  const effect=kind==='resist'?'resist':({flame:'attack',bolt:'output',aqua:'heal',storm:'incoming',gravity:'def',law:'resistance',chaos:'output'}[attribute]);
  const info=bonusEffects[effect];
  if(!info)return {icons:'✦↑',text:'追加強化'};
- if(kind==='resist')return {icons:(elementIcons[attribute]||'')+info[0],text:(elementIcons[attribute]||'')+info[1]};
- return {icons:info[0],text:info[1]};
+ if(kind==='resist')return {icons:'🛡️'+(elementIcons[attribute]||'✦')+'↑',text:(elementIcons[attribute]||'')+info};
+ return {icons:attribute==='law'?'🕸️🛡️↑':(elementIcons[attribute]||'✦')+'↑',text:info};
 }
 export function itemEffectText(item){
- const primary=item?.id==='life_ruby'?'死亡時に1回だけHP50%で復活':item?.id?.startsWith('elixir_')?'HP/MP各'+item.value+'%回復':item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.id==='luna_stone'?'全状態異常解除':item?.value?'効果 '+item.value:'状態異常解除';
+ const primary=item?.id==='life_ruby'?'死亡時に1回だけHP50%で復活':item?.id?.startsWith('elixir_')?'HP/MP各'+item.value+'%回復':item?.id==='escape_scroll'?'経験値・戦利品を持ち帰って脱出':item?.id==='luna_stone'?'全状態異常解除':item?.id?.startsWith('heal_')?'HPを'+item.value+'回復':item?.id?.startsWith('mana_')?'MPを'+item.value+'回復':item?.value?'効果 '+item.value:'状態異常解除';
  const bonus=itemBonusEffect(item);
- return primary+(item?.alchemyBoost?'・効果量アップ':'')+(bonus?'・追加効果：'+bonus.text:'');
+ return primary+(itemHasEffectiveAlchemyBoost(item)?'・効果量アップ':'')+(bonus?'・追加効果：'+bonus.text:'');
 }
 // Short visible effect shared by the battle item slot and the return reward card.
 // Absolute HP/MP potions use raw recovery values; elixirs and revival use percent.
 export function itemEffectIcons(item){
  const id=item?.id||'',numeric=Number(item?.value);
  const value=Number.isFinite(numeric)&&numeric>=0?String(numeric):'?';
- const effect=itemBonusEffect(item);const extra=(item?.alchemyBoost?' ✨↑':'')+(effect?' '+effect.icons:'');
+ const effect=itemBonusEffect(item);const extra=(itemHasEffectiveAlchemyBoost(item)?' ✨↑':'')+(effect?' '+effect.icons:'');
  if(id.startsWith('heal_'))return '❤️+'+value+extra;
  if(id.startsWith('mana_'))return '💠+'+value+extra;
  if(id.startsWith('elixir_'))return '❤️💠'+value+'%'+extra;
  if(id.startsWith('clear_')){
-  const elements={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪️',gravity:'🪨',law:'🔒',chaos:'🌀'};
+  const elements={flame:'🔥',bolt:'⚡',aqua:'💧',storm:'🌪️',gravity:'🪨',law:'⚖️',chaos:'🌀'};
   return '🧼'+(elements[id.slice(6)]||'')+extra;
  }
  if(id==='luna_stone')return '🌙全解除'+extra;
