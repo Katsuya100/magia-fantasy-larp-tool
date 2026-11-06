@@ -1328,13 +1328,13 @@ html,body{overflow-x:clip}
 #battleArena[data-boss-ceremony="boss"]{--boss-color:#ffbc83;--boss-aura:#db755db3;--boss-jolt:5px}
 #battleArena[data-boss-ceremony="milestone"]{--boss-color:#ffe1a4;--boss-aura:#ad72e8e0;--boss-jolt:8px}
 #battleArena[data-boss-ceremony="final"]{--boss-color:#fff6c4;--boss-aura:#fbadf4ef;--boss-jolt:12px}
-/* The 100F victory lasts 4.5s total: 3.65s defeat particles + .85s clear. */
+/* 100F defeat uses the full 4.5s for its four stages; CLEAR follows. */
 #battleArena[data-boss-ceremony="boss"][data-ceremony-event="encounter"]{--boss-time:1.8s}
 #battleArena[data-boss-ceremony="boss"][data-ceremony-event="enemy-death"]{--boss-time:2.15s}
 #battleArena[data-boss-ceremony="milestone"][data-ceremony-event="encounter"]{--boss-time:2.65s}
 #battleArena[data-boss-ceremony="milestone"][data-ceremony-event="enemy-death"]{--boss-time:3.1s}
 #battleArena[data-boss-ceremony="final"][data-ceremony-event="encounter"]{--boss-time:3.8s}
-#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"]{--boss-time:3.65s}
+#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"]{--boss-time:4.5s}
 #battleArena .boss-ceremony-art{display:none;position:absolute;inset:0;overflow:hidden;pointer-events:none;isolation:isolate}
 #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"]) .boss-ceremony-art{display:block}
 #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"]){
@@ -1350,7 +1350,7 @@ html,body{overflow-x:clip}
 }
 /* Hold the final-boss stage through the post-particle clear reveal. */
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]{
- animation:boss-final-ceremony-veil var(--ceremony-duration,3.65s) linear both
+ animation:boss-final-ceremony-veil var(--ceremony-duration,4.5s) linear both
 }
 @keyframes boss-final-ceremony-veil{
  0%{opacity:0}
@@ -1518,11 +1518,10 @@ html,body{overflow-x:clip}
  70%{opacity:.6;filter:brightness(2)}
  100%{opacity:0;filter:blur(6px)}
 }
-/* 100F victory: 3.65s shared by vibration/fade, shrink/halo,
-   ring burst/whiteout, and final particles, then .85s separate CLEAR.
-   Combined total: 4.5s. */
+/* 100F defeat: 2s vibration/fade, .5s shrink/halo,
+   1s 2x burst/whiteout, 1s white-in/particles; then separate CLEAR. */
 #battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"]{
- animation:boss-final-implosion var(--boss-time,3.65s) linear both,combat-sine-shake .09s linear var(--shake-phase,0ms) infinite,boss-final-shake-envelope var(--boss-time,3.65s) linear both
+ animation:boss-final-implosion var(--boss-time,4.5s) linear both,combat-sine-shake .09s linear var(--shake-phase,0ms) infinite,boss-final-shake-envelope var(--boss-time,4.5s) linear both
 }
 /* Keep the model visible until the twofold burst; ordinary death's child
    dissolve must not erase the finale's expanding model. */
@@ -1533,7 +1532,7 @@ html,body{overflow-x:clip}
 /* Arena-only whiteout, not a full-screen flash. */
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]::after{
  content:"";position:absolute;inset:0;z-index:5;pointer-events:none;background:#fff;
- animation:boss-final-whiteout var(--ceremony-duration,3.65s) linear both
+ animation:boss-final-whiteout var(--ceremony-duration,4.5s) linear both
 }
 /* Hide CLEAR during the defeat; its own reveal follows the particles. */
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]>.ceremony-glyph,
@@ -1542,27 +1541,27 @@ html,body{overflow-x:clip}
  visibility:hidden
 }
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-halo{
- animation:boss-final-halo-pulse var(--ceremony-duration,3.65s) linear both
+ animation:boss-final-halo-pulse var(--ceremony-duration,4.5s) linear both
 }
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-ring-outer{
- animation:boss-final-ring-burst-outer var(--ceremony-duration,3.65s) linear both
+ animation:boss-final-ring-burst-outer var(--ceremony-duration,4.5s) linear both
 }
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-ring-inner{
- animation:boss-final-ring-burst-inner var(--ceremony-duration,3.65s) linear both;animation-delay:0s
+ animation:boss-final-ring-burst-inner var(--ceremony-duration,4.5s) linear both;animation-delay:0s
 }
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-wheel{
- animation:boss-final-ring-burst-wheel var(--ceremony-duration,3.65s) linear both
+ animation:boss-final-ring-burst-wheel var(--ceremony-duration,4.5s) linear both
 }
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-flash{
- animation:boss-final-flash var(--ceremony-duration,3.65s) linear both
+ animation:boss-final-flash var(--ceremony-duration,4.5s) linear both
 }
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-beam{
- animation:boss-final-beam-collapse var(--ceremony-duration,3.65s) linear both
+ animation:boss-final-beam-collapse var(--ceremony-duration,4.5s) linear both
 }
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-sparks{
- animation:boss-final-particles var(--ceremony-duration,3.65s) linear both
+ animation:boss-final-particles var(--ceremony-duration,4.5s) linear both
 }
-/* The first phase ends at 44.444%; its last 10% damps to zero. */
+/* The first 2s phase ends at 44.444%; its last 10% damps to zero. */
 @keyframes boss-final-shake-envelope{
  0%,40%{--shake-gain:1}
  44.444%,100%{--shake-gain:0}
@@ -1600,7 +1599,7 @@ html,body{overflow-x:clip}
  73%{opacity:.85;transform:translate(-50%,-50%) scale(2)}
  77.778%,100%{opacity:0;transform:translate(-50%,-50%) scale(4.8)}
 }
-/* The third phase ends at 77.778%, followed by final particles. */
+/* The third phase ends at 3.5s (77.778%), followed by particles. */
 @keyframes boss-final-whiteout{
  0%,55.556%{opacity:0}
  71%{opacity:.25}
@@ -1620,7 +1619,7 @@ html,body{overflow-x:clip}
  0%,44.444%{opacity:.5;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(1)}
  55.556%,100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.05)}
 }
-/* Fourth stage: particles end with the 3.65s scene, before the .85s CLEAR. */
+/* Fourth stage: particles end at 4.5s, before the separate .85s CLEAR. */
 @keyframes boss-final-particles{
  0%,77.778%{opacity:0;transform:scale(.2) rotate(-20deg)}
  84%{opacity:1;transform:scale(.8) rotate(-4deg)}
