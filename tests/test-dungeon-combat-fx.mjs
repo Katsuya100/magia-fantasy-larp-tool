@@ -287,7 +287,7 @@ const weakWaits=[];
 await playCombatSequence([weakSample],()=>{}, {duration:COMBAT_EFFECT_MS,wait:async ms=>weakWaits.push(ms)});
 assert.deepEqual(weakWaits,[440],'WEAK effect does not cause an extra wait even with damping');
 assert.doesNotMatch(cinematicCss,/@keyframes boss-cinematic-shake|@keyframes snappy-screen-shake/,'old slow/irregular shake keyframes are removed');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,4500,'100F victory from first shake through CLEAR lasts 4.5s');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,5350,'full 4.5s defeat finishes before the separate CLEAR');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.boss-ceremony-art\{display:none!important\}/,'boss VFX respect reduced motion');
 
 // Scene orientation is presentation-only: actor IDs and their effect targets remain stable.
@@ -336,7 +336,7 @@ for(const [part,motion] of [
  ['boss-vfx-sparks','boss-final-particles']
 ]){
  const selector='#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .'+part;
- assert.match(shakeRule(selector),new RegExp('animation:'+motion+' var\\(--ceremony-duration,3\\.65s\\)'),'finale particles stay within the 4.5s defeat segment: '+part);
+ assert.match(shakeRule(selector),new RegExp('animation:'+motion+' var\\(--ceremony-duration,4\\.5s\\)'),'finale particles stay within the 4.5s defeat segment: '+part);
 }
 const finalFrames=orientationFrame('boss-final-implosion');
 assert.match(finalFrames,/44\.444%\{opacity:\.5;transform:scale\(1\)/,'phase 1: at 2s boss is half-transparent');
