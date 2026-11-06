@@ -282,7 +282,7 @@ const weakWaits=[];
 await playCombatSequence([weakSample],()=>{}, {duration:COMBAT_EFFECT_MS,wait:async ms=>weakWaits.push(ms)});
 assert.deepEqual(weakWaits,[440],'WEAK effect does not cause an extra wait even with damping');
 assert.doesNotMatch(cinematicCss,/@keyframes boss-cinematic-shake|@keyframes snappy-screen-shake/,'old slow/irregular shake keyframes are removed');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,4500,'100F defeat and post-particle clear together last 4.5 seconds');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'100F defeat's four stages last 4.5s');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.boss-ceremony-art\{display:none!important\}/,'boss VFX respect reduced motion');
 
 // Scene orientation is presentation-only: actor IDs and their effect targets remain stable.
@@ -314,8 +314,8 @@ assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony
 // Only 100F defeat has four strictly timed phases, followed by a separate CLEAR.
 const finalDefeat='#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"]';
 const finalBossRule=shakeRule(finalDefeat);
-assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,3\.65s\)/,'3.65s defeat uses the special scale animation');
-assert.match(finalBossRule,/boss-final-shake-envelope var\(--boss-time,3\.65s\)/,'shake envelope stays within the first defeat phase');
+assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,4\.5s\)/,'4.5s defeat uses the special scale animation');
+assert.match(finalBossRule,/boss-final-shake-envelope var\(--boss-time,4\.5s\)/,'shake envelope stays within the first defeat phase');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/animation:boss-cinematic-collapse/,'regular and milestone bosses retain shared defeat animation');
 for(const [part,motion] of [
  ['boss-vfx-halo','boss-final-halo-pulse'],
@@ -327,7 +327,7 @@ for(const [part,motion] of [
  ['boss-vfx-sparks','boss-final-particles']
 ]){
  const selector='#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .'+part;
- assert.match(shakeRule(selector),new RegExp('animation:'+motion+' var\\(--ceremony-duration,3\\.65s\\)'),'finale particles stay within the 3.65s segment: '+part);
+ assert.match(shakeRule(selector),new RegExp('animation:'+motion+' var\\(--ceremony-duration,4\\.5s\\)'),'finale particles stay within the 4.5s segment: '+part);
 }
 const finalFrames=orientationFrame('boss-final-implosion');
 assert.match(finalFrames,/44\.444%\{opacity:\.5;transform:scale\(1\)/,'phase 1: at 2s boss is half-transparent');
@@ -351,14 +351,14 @@ assert.match(whiteout,/100%\{opacity:0\}/,'white-in completes before CLEAR');
 const particles=orientationFrame('boss-final-particles');
 assert.match(particles,/0%,77\.778%\{opacity:0/,'particles only begin after whiteout peaks');
 assert.match(particles,/100%\{opacity:0/,'particles finish at 3.65 seconds before CLEAR');
-assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]::after'),/boss-final-whiteout var\(--ceremony-duration,3\.65s\)/,'whiteout stays inside the defeat segment and arena');
+assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]::after'),/boss-final-whiteout var\(--ceremony-duration,4\.5s\)/,'whiteout stays inside the defeat segment and arena');
 assert.match(shakeRule('#battleArena .battle-ceremony[data-event="final-clear"]'),/animation:boss-final-clear-veil/,'CLEAR uses a distinct scene after the finale');
 assert.match(shakeRule('#battleArena .battle-ceremony[data-event="final-clear"]>strong'),/animation:boss-final-clear-title/,'CLEAR title has an independent appearance animation');
 assert.match(cinematicCss,/data-boss-tier="final"\]\[data-event="enemy-death"\]>strong,[\s\S]*?visibility:hidden/,'CLEAR text is hidden during all four defeat phases');
 assert.match(appSource,/onFatal:side=>\{[\s\S]*?return ceremony\([\s\S]*?\)\.then\(\(\)=>\{[\s\S]*?if\(side==='enemy'&&bossCeremonyTier\(profile\.run\?\.floor\)==='final'\)[\s\S]*?return ceremony\('final-clear','100層 完全制覇'\)/,'only a 100F victory chains CLEAR after the full defeat');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],3650,'four defeat phases total 3.65s');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'four exact phases total 4.5 seconds');
 assert.equal(FINAL_CLEAR_EFFECT_MS,850,'CLEAR cue lasts .85s after particles');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,4500,'full 100F victory animation stays exactly 4.5s');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,5350,'CLEAR follows 4.5s defeat without shortening its four phases');
 assert.equal(ceremonyDuration('final-clear',500),FINAL_CLEAR_EFFECT_MS,'separate CLEAR uses its own duration');
 assert.equal(ceremonyDuration('final-clear',500,{animated:false}),0,'reduced motion does not wait for CLEAR');
 assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong'),/animation:boss-title-pulse/,'ordinary bosses retain their original victory title');
