@@ -1439,11 +1439,12 @@ html,body{overflow-x:clip}
 /* Different parts have independent vibration speeds. Boss ceremony times are unchanged. */
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .versus{
  --shake-x:var(--boss-jolt);--shake-y:calc(var(--boss-jolt) * .35);
- animation:combat-sine-shake .13s linear var(--shake-phase,0ms) infinite,combat-shake-envelope var(--boss-time,2s) linear both
+ animation:combat-sine-shake .1s linear var(--shake-phase,0ms) infinite,combat-shake-envelope var(--boss-time,2s) linear both
 }
 /* Arrival is deliberately subtle: only a fraction of the tier's normal amplitude. */
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"])[data-ceremony-event="encounter"] .versus{
- --shake-x:calc(var(--boss-jolt) * .22);--shake-y:calc(var(--boss-jolt) * .09)
+ --shake-x:calc(var(--boss-jolt) * .22);--shake-y:calc(var(--boss-jolt) * .09);
+ animation:combat-sine-shake .17s linear var(--shake-phase,0ms) infinite,combat-shake-envelope var(--boss-time,2s) linear both
 }
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]{
  --shake-x:calc(var(--boss-jolt) * .16);--shake-y:calc(var(--boss-jolt) * .06);

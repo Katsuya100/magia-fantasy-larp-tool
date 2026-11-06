@@ -259,7 +259,8 @@ for(const [selector,period,duration] of [
  ['#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]','.085s','.44s'],
  ['#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]','.105s','.44s'],
  ['#battleArena .unit[data-affinity="weak"] .affinity-hit::after','.08s','.72s'],
- ['#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .versus','.13s','var(--boss-time,2s)'],
+ ['#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .versus','.1s','var(--boss-time,2s)'],
+ ['#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"])[data-ceremony-event="encounter"] .versus','.17s','var(--boss-time,2s)'],
  ['#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]','.18s','var(--boss-time,2s)'],
  ['#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]','.09s','var(--boss-time,2s)']
 ]){
@@ -287,7 +288,8 @@ const weakWaits=[];
 await playCombatSequence([weakSample],()=>{}, {duration:COMBAT_EFFECT_MS,wait:async ms=>weakWaits.push(ms)});
 assert.deepEqual(weakWaits,[440],'WEAK effect does not cause an extra wait even with damping');
 assert.doesNotMatch(cinematicCss,/@keyframes boss-cinematic-shake|@keyframes snappy-screen-shake/,'old slow/irregular shake keyframes are removed');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,5350,'full 4.5s defeat finishes before the separate CLEAR');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'100F defeat alone lasts the full 4.5s');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,5350,'independent CLEAR follows the full 4.5s defeat');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.boss-ceremony-art\{display:none!important\}/,'boss VFX respect reduced motion');
 
 // Scene orientation is presentation-only: actor IDs and their effect targets remain stable.
@@ -307,7 +309,7 @@ assert.ok(cinematicCss.includes('[data-side="hero"] .hero-unit{animation:fx-rush
 assert.ok(cinematicCss.includes('[data-side="enemy"] .enemy-unit{animation:fx-rush-left'),'legacy enemy rush faces left');
 assert.ok(cinematicCss.includes('.hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-right'),'hero dual-hit faces right');
 assert.ok(cinematicCss.includes('.enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{animation:fx-rush-left'),'enemy dual-hit faces left');
-assert.ok(orientationFrame('enemy-snap-slide').includes('translateX(48px)'),'ordinary enemy enters from right');
+assert.ok(orientationFrame('enemy-snap-slide').includes('translate(48px,0)'),'ordinary enemy enters from right');
 assert.ok(orientationFrame('boss-cinematic-rise').includes('translateY(38px)'),'boss fades and rises from below');
 assert.doesNotMatch(orientationFrame('boss-cinematic-rise'),/translateX\(/,'boss entrance has no horizontal slide');
 assert.match(orientationFrame('boss-cinematic-rise'),/18%\{opacity:\.4;transform:translateY\(26px\)/,'boss gradually fades in while ascending');
@@ -371,6 +373,11 @@ assert.match(appSource,/side==='hero'\?'探索失敗':'討伐成功'/,'pre-loot 
 assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'four defeat phases end when particles finish at 4.5s');
 assert.equal(FINAL_CLEAR_EFFECT_MS,850,'CLEAR cue lasts .85s after particles');
 assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,5350,'CLEAR begins only after the full four-and-a-half-second defeat');
+const finaleOrder=[];
+for(const event of ['enemy-death','final-clear']){
+ await playBattleCeremony(event,type=>finaleOrder.push(type),{duration:ceremonyDuration(event,500),wait:async ms=>finaleOrder.push(ms)});
+}
+assert.deepEqual(finaleOrder,['enemy-death',4500,'final-clear',850],'defeat ends before CLEAR begins without an extra wait');
 assert.equal(ceremonyDuration('final-clear',500),FINAL_CLEAR_EFFECT_MS,'separate CLEAR uses its own duration');
 assert.equal(ceremonyDuration('final-clear',500,{animated:false}),0,'reduced motion does not wait for CLEAR');
 assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong'),/animation:boss-title-pulse/,'ordinary bosses retain their original victory title');
