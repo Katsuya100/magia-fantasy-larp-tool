@@ -51,7 +51,14 @@ export function decideCloudSync({file,localHash,remoteHash,localProfile=null,rem
 export function requiresActiveRunChoice(localProfile,remoteProfile,{remoteHash,verifiedRemoteHash}={}){
  const local=localProfile?.run,remote=remoteProfile?.run;
  if(!local&&!remote)return false;
- if(JSON.stringify(local)===JSON.stringify(remote))return false;
+ // Combat location, consumable order and resources belong to the same
+ // in-progress snapshot; silently changing any of them can lose progress.
+ const changed=JSON.stringify(local)!==JSON.stringify(remote)
+  ||Number(localProfile?.magicStones||0)!==Number(remoteProfile?.magicStones||0)
+  ||Number(localProfile?.magicInk||0)!==Number(remoteProfile?.magicInk||0)
+  ||JSON.stringify(localProfile?.inventory||[])!==JSON.stringify(remoteProfile?.inventory||[])
+  ||JSON.stringify(localProfile?.carrySlots||[])!==JSON.stringify(remoteProfile?.carrySlots||[]);
+ if(!changed)return false;
  return !verifiedRemoteHash||verifiedRemoteHash!==remoteHash;
 }
 export function canAutoSyncPlay({localPlayId,remotePlayId,identical=false}){
