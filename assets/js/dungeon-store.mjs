@@ -1,4 +1,4 @@
-import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261102.321';
+import {startingBase,XP_SCALE,nextXp} from './dungeon-core.mjs?v=20261106.338';
 import {applySavedUpgrade} from './dungeon-upgrades.mjs';
 import {recordFingerprint,photoDescriptors,photoEvidence,profilePhotoEvidence,digestPhoto,verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs';
 import {prepareProfilePhotoRefs,restoreProfilePhotoRefs} from './dungeon-profile-photo-refs.mjs';
