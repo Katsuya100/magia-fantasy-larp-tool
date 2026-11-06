@@ -37,7 +37,10 @@ assert.ok(arena.indexOf('id="heroCombatant"')<arena.indexOf('id="enemyCombatant"
 assert.match(css,/\.spell-projectile\[data-side="hero"\]\{\s*--flight-from:calc\(25%/,'hero projectile begins at left desktop');
 assert.match(css,/@media\(max-width:630px\)\{\s*#battleArena \.spell-projectile\{\s*--flight-from:calc\(75%/,'enemy projectile begins at right mobile');
 assert.match(css,/@keyframes enemy-snap-slide\{\s*0%\{opacity:0;transform:translateX\(48px\)/,'enemy enters from right');
-assert.match(css,/@keyframes boss-cinematic-rise\{\s*0%\{opacity:0;transform:translateX\(35px\)/,'boss enters from right');
+assert.match(css,/@keyframes boss-cinematic-rise\{\s*0%\{opacity:0;transform:translateY\(38px\)/,'boss rises from below with fade');
+const bossEntrance=css.match(/@keyframes boss-cinematic-rise\{([\s\S]*?)\n\}/)?.[1];
+assert.ok(bossEntrance,'boss entrance animation exists');
+assert.doesNotMatch(bossEntrance,/translateX\(/,'boss appearance has no horizontal slide');
 assert.match(css,/@keyframes snappy-rush-hero\{[\s\S]*?translateX\(34px\)/,'hero charges toward right');
 assert.match(css,/@keyframes snappy-rush-enemy\{[\s\S]*?translateX\(-34px\)/,'enemy charges toward left');
 assert.match(css,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.enemy-unit\[data-dying="true"\]\{[\s\S]*?animation:boss-cinematic-collapse var\(--boss-time,2s\)[^\n]*,combat-sine-shake \.09s linear var\(--shake-phase,0ms\) infinite,combat-shake-envelope var\(--boss-time,2s\) linear both/,'defeated boss vibration keeps its duration and dampens on the final 10 percent');
