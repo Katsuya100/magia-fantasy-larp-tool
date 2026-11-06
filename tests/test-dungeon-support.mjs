@@ -104,7 +104,7 @@ try{
 
 // A newly obtained rank presents the optional dialog AFTER the reward showcase,
 // including a page reload while the showcase is pending.
-const badge=await fixture(10,50,[{type:'rank',layer:10}]);
+const badge=await fixture(9,50,[{type:'rank',layer:10}]);
 const env3=fakeDungeonBrowser({factory:badge.factory}),$3=id=>env3.document.getElementById(id);
 try{
  await import('../assets/js/dungeon-app.mjs?integration=support-badge-before-reload');
@@ -130,4 +130,18 @@ try{
  assert.equal($4('milestoneChoiceDialog').open,false);
 }finally{env4.restore();}
 
-console.log('PASS optional boss/rank action choice, explicit card opening, reload and no-pressure dismissal');
+// Gaining a missed rank after the ten-layer record was already returned is not a first clear.
+const laterRank=await fixture(10,50,[{type:'rank',layer:10}]);
+const rankEnv=fakeDungeonBrowser({factory:laterRank.factory}),$r=id=>rankEnv.document.getElementById(id);
+try{
+ await import('../assets/js/dungeon-app.mjs?integration=support-later-rank');
+ await wait(()=>$r('checkpoint').hidden===false);
+ await $r('returnHome').fire('click');
+ assert.equal($r('returnShowcase').hidden,false,'new rank reward remains visible');
+ assert.equal((await getProfile(laterRank.db)).pendingReturn.supportPrompt,null,'later rank alone cannot schedule a promotional prompt');
+ await $r('returnNext').fire('click');
+ assert.equal($r('home').hidden,false);
+ assert.equal($r('milestoneChoiceDialog').open,false,'no repeated solicitation after an already confirmed 10F return');
+}finally{rankEnv.restore();}
+
+console.log('PASS optional first-return milestone choice, explicit card opening, reload and no-pressure dismissal');

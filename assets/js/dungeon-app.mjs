@@ -1,12 +1,12 @@
 import * as G from './dungeon-core.mjs?v=20261106.339';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261106.339';
 import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261106.339';
-import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261106.343';
-import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261106.343';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261106.344';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261106.344';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261106.339';
 import {prepareCircles,prepareItems,setSlot,pickedValues,needsEmptyCarryConfirmation,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261106.339';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261106.339';
-import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261106.343';
+import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261106.344';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261106.339';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261106.339';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261106.339';
@@ -15,13 +15,13 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261106.339';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261106.339';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261106.339';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261106.343';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261106.344';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261106.339';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261106.339';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261106.339';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261106.343';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261106.344';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,recordRankCombat,rankBadgeDrop,pendingRankBadgeNames,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261106.339';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261106.343';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261106.344';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261106.339';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261106.339';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261106.339';
@@ -910,14 +910,10 @@ if(run.hero.hp<=0){
 if(run.enemy.hp<=0){
    await ceremony('loot',dropCount?'戦利品の発見':'戦利品なし',dropCount?dropCount+'個 · 未確定':'次の戦いへ',dropCount);
    run.hero.statuses=[];run.hero.cooldowns=run.hero.cooldowns.map(()=>0);G.recoverVictoryMp(run.hero,layerForFight(run.floor));if(isLayerBoss(run.floor)){
- const completed=clearedLayer(run.floor);
- const promptForBoss=completed>0&&completed%10===0&&Number(run.lastMilestoneChoiceLayer)!==completed;
- if(promptForBoss)run.lastMilestoneChoiceLayer=completed;
  if(firstHundredClear)run.creatorCongratulationsPending=true;
  run.checkpointBattleScrollY=window.scrollY??window.pageYOffset??0;
  run.stage='checkpoint';renderCheckpoint();show('checkpoint');await persist();
  if(run.creatorCongratulationsPending)showCreatorCongratulations();
- else if(promptForBoss)showMilestoneChoice({title:completed+'層のボス撃破！',message:completed+'層の階層ボスを倒しました。'});
  return;
 }run.floor++;enterFight();renderRun();
 // Start the next enemy immediately; IndexedDB writes used to leave a neutral frame
@@ -1046,7 +1042,6 @@ async function acknowledgeCreatorCongratulations(){
   showCreatorCongratulations();
   return;
  }
- showMilestoneChoice({title:'100層のボス撃破！',message:'100層の階層ボスを倒しました。'});
 }
 function showMilestoneChoice(prompt){
  if(!prompt)return;
@@ -1227,7 +1222,9 @@ async function leave(mode='checkpoint'){
  G.experience(profile,run.xp);
  const previousDepth=deepestReturnedLayer(profile);
  recordReturnedLayer(profile,mode==='escape'?Math.floor((run.floor-1)/FIGHTS_PER_LAYER)*FIGHTS_PER_LAYER:run.floor);
- const supportPrompt=run.lastMilestoneChoiceLayer?null:supportPromptForReturn(previousDepth,deepestReturnedLayer(profile),badges.length?highestRankLayer(profile):0);
+ const returnedDepth=deepestReturnedLayer(profile);
+ const firstDecadeReturn=Math.floor(returnedDepth/10)>Math.floor(previousDepth/10);
+ const supportPrompt=supportPromptForReturn(previousDepth,returnedDepth,firstDecadeReturn&&badges.length?highestRankLayer(profile):0);
  profile.returns++;
  profile.obtainedItemIds=[...new Set([...knownItems,...[...items.values()].map(({item})=>item.id),...recoveredItemIds])];
  profile.run=null;
