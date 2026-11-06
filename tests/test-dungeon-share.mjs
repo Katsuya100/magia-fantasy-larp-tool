@@ -15,7 +15,7 @@ const profile={name:'秘密の冒険者名',level:21,adventurerRank:10,deepestRe
 const data=adventurerShareData(profile);
 assert.deepEqual(data,{rank:'鉛級',rankLayer:10,level:21,name:profile.name,crowned:true,deepestReached:12,deepestReturned:10});
 const text=adventurerShareText(data);
-assert.equal(text,'マギアサークル-ダンジョンアタック\n冒険者等級：鉛級\nLv.21\n最深到達階層：12層\n最深帰還階層：10層');
+assert.equal(text,'マギアサークル-ダンジョンアタック\n冒険者等級：鉛級\nLv.21\n最深到達階層：12層\n帰還済み踏破層：10層');
 assert.ok(!text.includes(profile.name),"never share the player name");
 const url=new URL(adventurerXUrl(data));
 assert.equal(url.hostname,'x.com');
@@ -23,7 +23,7 @@ assert.equal(url.pathname,'/intent/tweet');
 assert.equal(url.searchParams.get('text'),text);
 assert.equal(url.searchParams.get('url'),DUNGEON_SHARE_URL);
 assert.deepEqual(adventurerShareData({level:0}),{rank:'未取得',rankLayer:0,level:1,name:'名もなき冒険者',crowned:false,deepestReached:0,deepestReturned:0});
-assert.match(adventurerShareText(adventurerShareData({})),/最深帰還階層：未到達/);
+assert.match(adventurerShareText(adventurerShareData({})),/帰還済み踏破層：未到達/);
 
 const drawTexts=[],stops=[],drawOps=[];
 const gradient=()=>({addColorStop(offset,color){stops.push([offset,color]);}});
@@ -47,7 +47,7 @@ const nameLabel=findText('冒険者名');
 const levelLabel=findText('LEVEL');
 const rankLabel=findText('冒険者等級');
 const reachedLabel=findText('最深到達階層');
-const returnedLabel=findText('最深帰還階層');
+const returnedLabel=findText('帰還済み踏破層');
 const namePaint=findText(profile.name);
 const crownPaint=findText('👑');
 const levelPaint=findText('21');

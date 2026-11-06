@@ -306,7 +306,7 @@ const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 const sharedModuleVersion=app.match(/from '\.\/dungeon-core\.mjs\?v=(\d{8}\.\d+)'/)?.[1];
 assert.ok(sharedModuleVersion,'gameplay has one stable shared core version');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- const expected=specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+(['dungeon-cloud-sync.mjs','dungeon-battle-input.mjs','dungeon-combat-fx-echo.mjs','dungeon-alchemy.mjs','dungeon-status-ui.mjs','dungeon-return-fx.mjs'].includes(specifier[1])?currentRelease:sharedModuleVersion);
+ const expected=specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+(['dungeon-cloud-sync.mjs','dungeon-battle-input.mjs','dungeon-combat-fx-echo.mjs','dungeon-alchemy.mjs','dungeon-return-fx.mjs','dungeon-status-ui.mjs'].includes(specifier[1])?currentRelease:sharedModuleVersion);
  assert.equal(specifier[2],expected,'OAuth module cache bust must preserve shared gameplay module identity: '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);
@@ -336,7 +336,7 @@ assert.match(app,/run\.carry\.findLastIndex\(Boolean\)\+1/,'combat shows capacit
 assert.match(app,/itemEffectIcons\(reward.item\)/,'return cards use the same item-effect icons');
 assert.match(app,/statusBadges\(unit\.statuses,masters\.buffs,esc\)/,'combat statuses render as icons');
 assert.match(app,/step=>steps\.push\(step\)/,'game engine steps are captured for sequential playback');
-assert.match(app,/await animateBattle\(steps(?:,|\))/,'combat sequence plays with optional phase-log context');
+assert.match(app,/await animateBattle\(steps(?:,|\))/,'combat timeline may pass phase context');
 assert.ok(app.includes('await playCombatSequence(steps,phase=>'));
 assert.ok(app.includes('for(const step of phase)'),'both fighters are painted within one phase');
 assert.ok(app.includes("treasureChestMarkup(drops)"),'drop count controls number of chests');
