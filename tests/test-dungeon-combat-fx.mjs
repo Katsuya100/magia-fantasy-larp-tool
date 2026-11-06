@@ -192,12 +192,11 @@ assert.equal((arenaMarkup.match(/class="affinity-hit"/g)||[]).length,2,'one hit 
 assert.match(cinematicCss,/data-affinity="resist"/,'resistance shield styling');
 assert.match(cinematicCss,/data-affinity="weak"/,'weakness burst styling');
 assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::before\{[\s\S]*?radial-gradient\(circle[\s\S]*?animation:weak-shockwave \.45s/,'weakness shockwave finishes in 450ms');
-assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::after\{[\s\S]*?animation:weak-damped-shudder \.72s/,'only WEAK uses damped vibration');
+assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::after\{[\s\S]*?animation:weak-damped-shudder \.72s linear both,combat-sine-shake \.16s linear \.08s 3 both/,'WEAK uses the same 160ms vibration as other hits');
 const weakShake=cinematicCss.match(/@keyframes weak-damped-shudder\{([\s\S]*?)\n\}/)?.[1];
-assert.ok(weakShake,'damped WEAK keyframes exist');
-const alternatingOffsets=[...weakShake.matchAll(/translate\((-?(?:\d+\.?\d*|\.\d+))px,(-?(?:\d+\.?\d*|\.\d+))px\)/g)].map(x=>Number(x[1]));
-assert.deepEqual(alternatingOffsets,[-9,7,-5,3,-2,1,-.5],'vibration alternates and decays steadily to zero');
-assert.match(weakShake,/66%,86%\{opacity:1;transform:translate\(-50%,-50%\) rotate\(0deg\)/,'WEAK settles completely before fading');
+assert.ok(weakShake,'WEAK opacity/scale envelope exists');
+assert.doesNotMatch(weakShake,/translate\(-?\d+px/,'WEAK has no extra slow horizontal vibration');
+assert.match(weakShake,/66%,86%\{opacity:1;transform:translate\(-50%,-50%\)\}/,'WEAK settles completely before fading');
 assert.match(cinematicCss,/@keyframes weak-shockwave\{[\s\S]*?scale\(\.2\)[\s\S]*?scale\(3\.2\)/,'shockwave expands as it fades');
 assert.match(cinematicCss,/\.affinity-hit::before\{\s*animation:affinity-ring \.6s/,'resistance shield lasts 600ms');
 assert.match(cinematicCss,/\.affinity-hit::after\{\s*animation:affinity-word \.72s/,'resistance text remains visible for 720ms');
@@ -235,14 +234,22 @@ for(const name of ['boss-vfx-flash','boss-vfx-wheel','boss-vfx-ring','boss-vfx-b
  assert.match(cinematicPage,new RegExp('class="[^"]*'+name),'boss ceremony artwork exists: '+name);
 for(const tier of ['boss','milestone','final'])
  assert.ok(cinematicCss.includes('[data-boss-tier="'+tier+'"]'),'tier styling exists: '+tier);
-assert.match(cinematicCss,/boss-cinematic-shake/,'boss quake is visible');
-const finaleShake=cinematicCss.match(/#battleArena\[data-boss-ceremony="final"\]\[data-ceremony-event="enemy-death"\] \.versus\{([^}]+)\}/)?.[1];
-assert.ok(finaleShake,'100F victory shake has a scoped override');
-assert.match(finaleShake,/animation-duration:2\.15s/,'100F quake uses the same cadence as an ordinary boss victory');
-assert.match(finaleShake,/animation-iteration-count:2/,'100F quake cycles twice without extending its ceremony');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'100F victory remains 4.5 seconds');
-assert.match(cinematicCss,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.versus\{\s*animation:boss-cinematic-shake var\(--boss-time,2s\)/,'other boss shake rules remain unchanged');
-assert.match(cinematicCss,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.versus/,'quake only moves arena badge');
+const sineShake=cinematicCss.match(/@keyframes combat-sine-shake\{([\s\S]*?)\n\}/)?.[1];
+assert.ok(sineShake,'one common combat wave exists');
+assert.match(sineShake,/0%,50%,100%\{translate:0 0\}/,'wave crosses zero every half cycle');
+assert.match(sineShake,/25%\{translate:var\(--shake-x\) var\(--shake-y\)\}/,'positive peak');
+assert.match(sineShake,/75%\{translate:calc\(var\(--shake-x\) \* -1\) calc\(var\(--shake-y\) \* -1\)\}/,'negative peak');
+assert.match(cinematicCss,/#battleArena\[data-shake="true"\] \.versus\{[\s\S]*?animation:combat-sine-shake \.16s linear \.12s 2 both/,'normal hit uses 160ms vibration');
+const impactAnimations=[...cinematicCss.matchAll(/animation:(snappy-impact|snappy-impact-hero-left|snappy-rush-hero|snappy-rush-enemy) \.44s[^\n]*/g)].map(match=>match[0]);
+for(const animation of ['snappy-impact','snappy-impact-hero-left','snappy-rush-hero','snappy-rush-enemy']){
+ assert.ok(impactAnimations.some(line=>line.startsWith('animation:'+animation+' ')&&line.includes('combat-sine-shake .16s linear')),
+  'all hit units use the common frequency: '+animation);
+}
+assert.match(cinematicCss,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.versus\{[\s\S]*?animation:combat-sine-shake \.16s linear infinite/,'all boss tiers shake at the common frequency');
+assert.match(cinematicCss,/animation:boss-cinematic-rise var\(--boss-time,2s\)[^\n]*,combat-sine-shake \.16s linear infinite/,'boss entrance keeps duration and shares frequency');
+assert.match(cinematicCss,/animation:boss-cinematic-collapse var\(--boss-time,2s\)[^\n]*,combat-sine-shake \.16s linear infinite/,'boss defeat keeps duration and shares frequency');
+assert.doesNotMatch(cinematicCss,/@keyframes boss-cinematic-shake|@keyframes snappy-screen-shake/,'old slow/irregular shake keyframes are removed');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'100F victory still lasts 4.5 seconds');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.boss-ceremony-art\{display:none!important\}/,'boss VFX respect reduced motion');
 
 // Scene orientation is presentation-only: actor IDs and their effect targets remain stable.

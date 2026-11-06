@@ -407,7 +407,7 @@ assert.match(app,/clearDungeonData\(db\)/,'save reset clears both persistent sto
 assert.match(app,/applyView\(name,before\)/,'tabs crossfade while preserving the outgoing scene');
 assert.match(css,/@keyframes snappy-rush-hero/,'hero attacks have accelerated easing');
 assert.match(css,/@keyframes snappy-rush-enemy/,'enemy attacks have accelerated easing');
-assert.match(css,/@keyframes snappy-screen-shake/,'attacks shake the arena');
+assert.match(css,/@keyframes combat-sine-shake/,'attacks use the shared 160ms sine-like vibration');
 assert.match(css,/@keyframes encounter-slide/,'encounter banner fades in, pauses and fades out');
 const encounterKeyframes=css.match(/@keyframes encounter-slide\{([\s\S]*?)\n\}/)?.[1];
 assert.ok(encounterKeyframes&&!encounterKeyframes.includes('transform:'),'full-width encounter overlay cannot translate or scale the viewport');
