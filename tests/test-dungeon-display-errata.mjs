@@ -69,6 +69,8 @@ for(const sentence of ['10層ごとのボス撃破時にHP・MP各80%以上','�
  assert.ok(guide.includes(sentence),'the in-game guide explains: '+sentence);
 }
 assert.match(guide,/🕸️🛡️↑/);
+assert.match(guide,/✨↑<\/td><td>錬金による回復量アップ/);
+assert.match(html,/帰還済み踏破層のカード/,'shared card accessibility uses the current label');
 assert.match(app,/pendingRankBadgeNames\(run\.loot,run\.checkpointBadgeLayer===undefined\?layer:run\.checkpointBadgeLayer\)/,'checkpoint shows only the newly awarded tier');
 assert.match(app,/帰還済み踏破層/);
 assert.match(share,/帰還済み踏破層/);
