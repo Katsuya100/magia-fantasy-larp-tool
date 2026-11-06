@@ -9,7 +9,7 @@ import {pendingRankBadgeNames} from '../assets/js/dungeon-ranks.mjs';
 const csv=readFileSync(new URL('../assets/data/dungeon-consumables.csv',import.meta.url),'utf8').trim().split(/\r?\n/);
 const columns=csv.shift().split(',');
 const itemRows=csv.map(line=>Object.fromEntries(line.split(',').map((cell,i)=>[columns[i],cell])));
-const ingredients=ids=>ids.map((id,i)=>({id,instanceId:'item-'+i,value:id.startsWith('elixir_')?35:10}));
+const ingredients=ids=>ids.map((id,i)=>({id,instanceId:'item-'+i,value:id==='elixir_l'?100:id==='elixir_m'?65:id.startsWith('elixir_')?35:10}));
 const craft=(rarity,ids,random=()=>0)=>craftAlchemy({
  collection:{relic:2},inventory:ingredients(ids),carrySlots:[],obtainedItemIds:[]
 },{id:'relic',rarity},[0,1,2,3,4],itemRows,
@@ -34,7 +34,7 @@ const potion=craft('epic',['heal_s','heal_s','heal_s','heal_s','heal_s']);
 assert.equal(potion.value,63);
 assert.equal(potion.alchemyBoost,true,'actual HP healing gains are labeled');
 assert.equal(itemHasEffectiveAlchemyBoost(potion),true);
-const capped=craft('epic',['elixir_l','heal_s','mana_s','clear_flame','clear_bolt']);
+const capped=craft('epic',['elixir_l','clear_flame','clear_bolt','clear_aqua','clear_storm']);
 assert.equal(capped.id,'elixir_l');
 assert.equal(capped.value,100);
 assert.equal(capped.alchemyBoost,undefined,'already-full recovery must not show fake growth');
