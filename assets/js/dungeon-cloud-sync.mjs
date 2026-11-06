@@ -52,7 +52,7 @@ export function canAutoSyncPlay({localPlayId,remotePlayId,identical=false}){
  // only byte-identical saves with both IDs absent are automatically the same.
  return !localPlayId&&!remotePlayId&&identical;
 }
-export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=()=>{},onRepairImages=async()=>false,onImagesRestored=async()=>{},fetchImpl=globalThis.fetch,windowImpl=globalThis.window}){
+export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=()=>{},onRepairImages=async()=>false,onImagesRestored=async()=>{},fetchImpl=globalThis.fetch,windowImpl=globalThis.window,autoSyncMaxWaitMs=10000}){
  if(!GOOGLE_CLIENT_ID){
   windowImpl?.document?.getElementById('setupGoogleDrive')?.setAttribute('disabled','');
   status.textContent='GoogleDriveを利用できません。';
@@ -62,6 +62,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   return {ready:false};
  }
  let client=null,drive=null,accessToken='',expires=0,busy=false,again=false,timer=null,expiryTimer=null,restoring=false,stopped=false;
+ let firstPendingSaveAt=null;
  let lastVerifiedLocalSavedAt=null,syncIndicatorVisible=false;
  let expiryNoticeShown=false,choicePending=false,validatedDrive=null,initialChoiceCommitted=false,initialRetryQueued=false,restoredInSession=false;
  let connectionEpoch=0,activeSyncEpoch=0,requestController=null,oauthPending=false,renewalPending=false,manuallyDisconnected=false,pendingChoiceCancel=null;
@@ -206,11 +207,14 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  }
  function schedule(){
   if(!drive||stopped||restoring||choicePending||disconnectPending)return;
-  // One upload at a time; changes made during network IO only reserve one
-  // follow-up pass, which will read the latest IndexedDB snapshot.
+  // One upload at a time; changes made during network IO reserve a follow-up.
   if(busy){again=true;return;}
+  // Idle debounce must not postpone backups indefinitely during dungeon battles.
+  const now=Date.now();
+  if(firstPendingSaveAt===null)firstPendingSaveAt=now;
+  const maxWait=Math.max(0,autoSyncMaxWaitMs-(now-firstPendingSaveAt));
   clearTimeout(timer);
-  timer=setTimeout(()=>{void sync(false);},1800);
+  timer=setTimeout(()=>{timer=null;firstPendingSaveAt=null;void sync(false);},Math.min(1800,maxWait));
  }
  function saveDetails(label,snapshot){
   const name=snapshot?.profile?.name;
@@ -388,6 +392,7 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
   if(busy){again=true;return 'deferred';}
   if(Date.now()>=expires){expireConnection();return 'deferred';}
   busy=true;
+  clearTimeout(timer);timer=null;firstPendingSaveAt=null;
   activeSyncEpoch=connectionEpoch;
   let result='deferred';
   try{
@@ -735,7 +740,13 @@ export function initDungeonCloudSync({db,button,status,onRestore,onInitialReady=
  disconnectButton?.addEventListener('click',()=>{void disconnect();});
  const unsubscribe=onDungeonDataChange(db,schedule);
  windowImpl?.addEventListener?.('online',()=>{watchTokenExpiry();schedule();});
- doc?.addEventListener?.('visibilitychange',()=>{if(!doc.hidden){watchTokenExpiry();schedule();}});
+ doc?.addEventListener?.('visibilitychange',()=>{
+  if(doc.hidden){
+   // Attempt a final upload before mobile suspension (best-effort).
+   clearTimeout(timer);timer=null;firstPendingSaveAt=null;
+   void sync(false);
+  }else{watchTokenExpiry();schedule();}
+ });
  // GIS recommends token acquisition from a user gesture. If a timed attempt
  // was blocked, the next actual game-button click offers one more chance.
  doc?.addEventListener?.('click',event=>{
