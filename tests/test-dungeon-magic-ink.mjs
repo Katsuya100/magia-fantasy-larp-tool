@@ -36,7 +36,7 @@ const arena=html.slice(html.indexOf('id="battleArena"'),html.indexOf('id="battle
 assert.ok(arena.indexOf('id="heroCombatant"')<arena.indexOf('id="enemyCombatant"'),'hero on left and enemy on right');
 assert.match(css,/\.spell-projectile\[data-side="hero"\]\{\s*--flight-from:calc\(25%/,'hero projectile begins at left desktop');
 assert.match(css,/@media\(max-width:630px\)\{\s*#battleArena \.spell-projectile\{\s*--flight-from:calc\(75%/,'enemy projectile begins at right mobile');
-assert.match(css,/@keyframes enemy-snap-slide\{\s*0%\{opacity:0;transform:translateX\(48px\)/,'enemy enters from right');
+assert.match(css,/@keyframes enemy-snap-slide\{\s*0%\{opacity:0;transform:translate\(48px,0\)/,'enemy enters from right');
 assert.match(css,/@keyframes boss-cinematic-rise\{\s*0%\{opacity:0;transform:translateY\(38px\)/,'boss rises from below with fade');
 const bossEntrance=css.match(/@keyframes boss-cinematic-rise\{([\s\S]*?)\n\}/)?.[1];
 assert.ok(bossEntrance,'boss entrance animation exists');
