@@ -14,7 +14,7 @@ export function statusBadges(statuses,buffs=[],escapeText=x=>String(x)){
   const turns=Number.isFinite(remaining)?Math.max(0,Math.floor(remaining)):0;
   const detail=String(name)+'・'+kind+'・残り'+turns+'ターン';
   return '<span class="status-badge status-'+(debuff?'debuff':'buff')+(resist?' status-resist':'')+'" role="img" title="'+escapeText(detail)+'" aria-label="'+escapeText(detail)+'">'
-   +'<span class="status-glyph" aria-hidden="true">'+(resist?'🛡️':'')+glyph+'</span>'
+   +'<span class="status-glyph" aria-hidden="true">'+(status.id==='buff_law'?'🕸️🛡️':(resist?'🛡️':'')+glyph)+'</span>'
    +'<span class="status-arrow" aria-hidden="true">'+(debuff?'↓':'↑')+'</span>'
    +'<small class="status-turns" aria-hidden="true">'+turns+'</small></span>';
  }).join('');

@@ -89,7 +89,7 @@ const btn=data=>({dataset:data,disabled:false,closest(){return this;}});
   await doc.click(btn({view:'home'}));
   assert.match($('playerStats').innerHTML,/百層の勇者<span class="hundred-floor-crown"/);
   assert.match($('playerStats').innerHTML,/最深到達階層：<strong>101層<\/strong>/);
-  assert.match($('playerStats').innerHTML,/最深帰還階層：<strong>-<\/strong>/);
+  assert.match($('playerStats').innerHTML,/帰還済み踏破層：<strong>-<\/strong>/);
  }finally{env.restore();}
 }
 
