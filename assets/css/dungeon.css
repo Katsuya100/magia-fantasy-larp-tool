@@ -1508,6 +1508,91 @@ html,body{overflow-x:clip}
  70%{opacity:.6;filter:brightness(2)}
  100%{opacity:0;filter:blur(6px)}
 }
+/* Only the 100F kill: compress the boss and halo, then burst three rings
+   outward in a staggered scale-fade. All stages fit inside the same 4.5s. */
+#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"]{
+ animation:boss-final-implosion var(--boss-time,4.5s) ease-in-out both,combat-sine-shake .09s linear var(--shake-phase,0ms) infinite,combat-shake-envelope var(--boss-time,4.5s) linear both
+}
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-halo{
+ animation:boss-final-halo-implosion var(--ceremony-duration,4.5s) linear both
+}
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-ring-outer{
+ animation:boss-final-ring-burst-outer var(--ceremony-duration,4.5s) linear both
+}
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-ring-inner{
+ animation:boss-final-ring-burst-inner var(--ceremony-duration,4.5s) linear both
+}
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-wheel{
+ animation:boss-final-ring-burst-wheel var(--ceremony-duration,4.5s) linear both
+}
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-flash{
+ animation:boss-final-flash var(--ceremony-duration,4.5s) linear both
+}
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-beam{
+ animation:boss-final-beam-collapse var(--ceremony-duration,4.5s) linear both
+}
+#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-sparks{
+ animation:boss-final-sparks var(--ceremony-duration,4.5s) linear both
+}
+@keyframes boss-final-implosion{
+ 0%,12%{opacity:1;transform:scale(1);filter:none}
+ 35%{opacity:1;transform:scale(.78);filter:brightness(1.4)}
+ 56%{opacity:1;transform:scale(.38);filter:brightness(2)}
+ 66%{opacity:1;transform:scale(.13);filter:brightness(3)}
+ 73%{opacity:0;transform:scale(0);filter:brightness(4)}
+ 100%{opacity:0;transform:scale(0);filter:none}
+}
+@keyframes boss-final-halo-implosion{
+ 0%{opacity:.6;transform:translate(-50%,-50%) scale(1)}
+ 35%{opacity:.85;transform:translate(-50%,-50%) scale(.62)}
+ 63%{opacity:1;transform:translate(-50%,-50%) scale(.13)}
+ 69%{opacity:1;transform:translate(-50%,-50%) scale(.07)}
+ 85%{opacity:.4;transform:translate(-50%,-50%) scale(1.5)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(2.7)}
+}
+/* Each ring first contracts toward the same center, then blows outward
+   on its own beat and fades by 100% (no extra animation wait). */
+@keyframes boss-final-ring-burst-outer{
+ 0%{opacity:.6;transform:translate(-50%,-50%) scale(1)}
+ 40%{opacity:.95;transform:translate(-50%,-50%) scale(.53)}
+ 64%{opacity:1;transform:translate(-50%,-50%) scale(.1)}
+ 70%{opacity:1;transform:translate(-50%,-50%) scale(.24)}
+ 86%{opacity:.65;transform:translate(-50%,-50%) scale(2.1)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(3.7)}
+}
+@keyframes boss-final-ring-burst-inner{
+ 0%{opacity:.5;transform:translate(-50%,-50%) scale(1)}
+ 42%{opacity:.92;transform:translate(-50%,-50%) scale(.5)}
+ 64%{opacity:1;transform:translate(-50%,-50%) scale(.13)}
+ 73%{opacity:1;transform:translate(-50%,-50%) scale(.22)}
+ 89%{opacity:.6;transform:translate(-50%,-50%) scale(2.7)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(4.6)}
+}
+@keyframes boss-final-ring-burst-wheel{
+ 0%{opacity:.55;transform:translate(-50%,-50%) scale(1)}
+ 44%{opacity:.95;transform:translate(-50%,-50%) scale(.56)}
+ 65%{opacity:1;transform:translate(-50%,-50%) scale(.12)}
+ 76%{opacity:1;transform:translate(-50%,-50%) scale(.25)}
+ 91%{opacity:.5;transform:translate(-50%,-50%) scale(3)}
+ 100%{opacity:0;transform:translate(-50%,-50%) scale(4.8)}
+}
+@keyframes boss-final-flash{
+ 0%,59%{opacity:0}
+ 69%{opacity:1}
+ 78%{opacity:.55}
+ 100%{opacity:0}
+}
+@keyframes boss-final-beam-collapse{
+ 0%{opacity:.5;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(1)}
+ 52%{opacity:.42;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.35)}
+ 69%,100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.05)}
+}
+@keyframes boss-final-sparks{
+ 0%,59%{opacity:0;transform:scale(.4)}
+ 72%{opacity:1;transform:scale(.7)}
+ 100%{opacity:0;transform:scale(2.7)}
+}
+
 @media(max-width:630px){
  #battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"]){padding:0 6px;gap:5px}
  #battleArena .boss-vfx-ring{border-width:2px}
