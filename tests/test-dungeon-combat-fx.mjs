@@ -192,7 +192,7 @@ assert.equal((arenaMarkup.match(/class="affinity-hit"/g)||[]).length,2,'one hit 
 assert.match(cinematicCss,/data-affinity="resist"/,'resistance shield styling');
 assert.match(cinematicCss,/data-affinity="weak"/,'weakness burst styling');
 assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::before\{[\s\S]*?radial-gradient\(circle[\s\S]*?animation:weak-shockwave \.45s/,'weakness shockwave finishes in 450ms');
-assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::after\{[\s\S]*?animation:weak-damped-shudder \.72s linear both,combat-sine-shake \.16s linear \.08s 3 both/,'WEAK uses the same 160ms vibration as other hits');
+assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::after\{[\s\S]*?animation:weak-damped-shudder \.72s linear both,combat-sine-shake \.08s linear var\(--shake-phase,0ms\) infinite,combat-shake-envelope \.72s linear both/,'WEAK retains its 720ms visual duration and gains 10% damping');
 const weakShake=cinematicCss.match(/@keyframes weak-damped-shudder\{([\s\S]*?)\n\}/)?.[1];
 assert.ok(weakShake,'WEAK opacity/scale envelope exists');
 assert.doesNotMatch(weakShake,/translate\(-?\d+px/,'WEAK has no extra slow horizontal vibration');
@@ -235,19 +235,51 @@ for(const name of ['boss-vfx-flash','boss-vfx-wheel','boss-vfx-ring','boss-vfx-b
 for(const tier of ['boss','milestone','final'])
  assert.ok(cinematicCss.includes('[data-boss-tier="'+tier+'"]'),'tier styling exists: '+tier);
 const sineShake=cinematicCss.match(/@keyframes combat-sine-shake\{([\s\S]*?)\n\}/)?.[1];
-assert.ok(sineShake,'one common combat wave exists');
-assert.match(sineShake,/0%,50%,100%\{translate:0 0\}/,'wave crosses zero every half cycle');
-assert.match(sineShake,/25%\{translate:var\(--shake-x\) var\(--shake-y\)\}/,'positive peak');
-assert.match(sineShake,/75%\{translate:calc\(var\(--shake-x\) \* -1\) calc\(var\(--shake-y\) \* -1\)\}/,'negative peak');
-assert.match(cinematicCss,/#battleArena\[data-shake="true"\] \.versus\{[\s\S]*?animation:combat-sine-shake \.16s linear \.12s 2 both/,'normal hit uses 160ms vibration');
-const impactAnimations=[...cinematicCss.matchAll(/animation:(snappy-impact|snappy-impact-hero-left|snappy-rush-hero|snappy-rush-enemy) \.44s[^\n]*/g)].map(match=>match[0]);
-for(const animation of ['snappy-impact','snappy-impact-hero-left','snappy-rush-hero','snappy-rush-enemy']){
- assert.ok(impactAnimations.some(line=>line.startsWith('animation:'+animation+' ')&&line.includes('combat-sine-shake .16s linear')),
-  'all hit units use the common frequency: '+animation);
+assert.ok(sineShake,'sine-like common wave exists');
+assert.match(sineShake,/0%,50%,100%\{translate:0 0\}/,'wave crosses zero twice per period');
+assert.match(sineShake,/25%\{translate:calc\(var\(--shake-x\) \* var\(--shake-direction,1\) \* var\(--shake-gain\)\)/,'direction and gain control positive peak');
+assert.match(sineShake,/75%\{translate:calc\(var\(--shake-x\) \* var\(--shake-direction,1\) \* var\(--shake-gain\) \* -1\)/,'reverse wave peak');
+assert.match(cinematicCss,/@property --shake-gain\{\s*syntax:"<number>";\s*inherits:false;\s*initial-value:1/,'gain interpolates as a number');
+const envelope=cinematicCss.match(/@keyframes combat-shake-envelope\{([\s\S]*?)\n\}/)?.[1];
+assert.ok(envelope,'all waves use a damping envelope');
+assert.match(envelope,/0%,90%\{--shake-gain:1\}/,'full strength until final 10%');
+assert.match(envelope,/100%\{--shake-gain:0\}/,'vibration decays to zero at end');
+const shakeRule=selector=>{
+ const i=cinematicCss.indexOf(selector+'{');
+ assert.ok(i>=0,'expected shake component: '+selector);
+ return cinematicCss.slice(i,cinematicCss.indexOf('}',i)+1);
+};
+for(const [selector,period,duration] of [
+ ['#battleArena[data-shake="true"] .versus','.1s','.44s'],
+ ['#battleArena .unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"])','.095s','.44s'],
+ ['#battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"])','.085s','.44s'],
+ ['#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]','.085s','.44s'],
+ ['#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]','.105s','.44s'],
+ ['#battleArena .unit[data-affinity="weak"] .affinity-hit::after','.08s','.72s'],
+ ['#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .versus','.13s','var(--boss-time,2s)'],
+ ['#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]','.18s','var(--boss-time,2s)'],
+ ['#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]','.09s','var(--boss-time,2s)']
+]){
+ const rule=shakeRule(selector);
+ assert.ok(rule.includes('combat-sine-shake '+period+' linear var(--shake-phase,0ms) infinite'),
+   'independent period and initial phase for '+selector);
+ assert.ok(rule.includes('combat-shake-envelope '+duration+' linear both'),
+   'final 10% damping within original duration for '+selector);
 }
-assert.match(cinematicCss,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\) \.versus\{[\s\S]*?animation:combat-sine-shake \.16s linear infinite/,'all boss tiers shake at the common frequency');
-assert.match(cinematicCss,/animation:boss-cinematic-rise var\(--boss-time,2s\)[^\n]*,combat-sine-shake \.16s linear infinite/,'boss entrance keeps duration and shares frequency');
-assert.match(cinematicCss,/animation:boss-cinematic-collapse var\(--boss-time,2s\)[^\n]*,combat-sine-shake \.16s linear infinite/,'boss defeat keeps duration and shares frequency');
+assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"])[data-ceremony-event="encounter"] .versus'),/--shake-x:calc\(var\(--boss-jolt\) \* \.22\)/,'boss appearance badge has reduced amplitude');
+assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]'),/--shake-x:calc\(var\(--boss-jolt\) \* \.16\)/,'boss appearance body has reduced amplitude');
+assert.match(appSource,/function randomizeCombatShake\(arena\)\{[\s\S]*?\.versus,\.hero-unit,\.enemy-unit,\.affinity-hit/,'each part randomized individually');
+assert.match(appSource,/crypto\?\.getRandomValues/,'visual randomization does not disturb combat RNG');
+assert.match(appSource,/setProperty\('--shake-phase'/,'part wave starting phase randomized');
+assert.match(appSource,/setProperty\('--shake-direction'/,'part wave starting direction randomized');
+assert.match(appSource,/clearCombatEffects\(\);\s*randomizeCombatShake\(\$\('battleArena'\)\)/,'per-attack phase randomization');
+assert.match(appSource,/if\(tier!=='none'\)randomizeCombatShake\(arena\)/,'boss scene randomization');
+assert.equal(COMBAT_EFFECT_MS,440,'original base duration preserved');
+assert.equal(AFFINITY_EFFECT_MS,720,'WEAK visual duration preserved');
+const weakSample={...affinityHit,enemy:G.makeUnit(base,1,{flame:1.5},[],'enemy')};
+const weakWaits=[];
+await playCombatSequence([weakSample],()=>{}, {duration:COMBAT_EFFECT_MS,wait:async ms=>weakWaits.push(ms)});
+assert.deepEqual(weakWaits,[440],'WEAK effect does not cause an extra wait even with damping');
 assert.doesNotMatch(cinematicCss,/@keyframes boss-cinematic-shake|@keyframes snappy-screen-shake/,'old slow/irregular shake keyframes are removed');
 assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'100F victory still lasts 4.5 seconds');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.boss-ceremony-art\{display:none!important\}/,'boss VFX respect reduced motion');
