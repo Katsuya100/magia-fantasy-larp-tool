@@ -245,7 +245,8 @@ assert.ok(envelope,'all waves use a damping envelope');
 assert.match(envelope,/0%,90%\{--shake-gain:1\}/,'full strength until final 10%');
 assert.match(envelope,/100%\{--shake-gain:0\}/,'vibration decays to zero at end');
 const shakeRule=selector=>{
- const i=cinematicCss.indexOf(selector+'{');
+ // Prefer the later override when a generic selector precedes its hit-specific rule.
+ const i=cinematicCss.lastIndexOf(selector+'{');
  assert.ok(i>=0,'expected shake component: '+selector);
  return cinematicCss.slice(i,cinematicCss.indexOf('}',i)+1);
 };
