@@ -63,8 +63,14 @@ export function enemyForFight(enemies,fight,r=Math.random){
   return enemy;
  }
  // Post-100 regular fights draw only normal enemies, never bosses.
- // The fifth encounter still picks a named boss, with a first-defeat trophy.
- const pool=enemies.filter(e=>e.boss_only===(slot===5?'1':'0'));
+ // Only every hundredth layer summons the great demon lord; all other
+ // fifth encounters draw from the remaining named bosses.
+ if(slot===5&&layer%DESIGNED_LAYERS===0){
+  const finalBoss=enemies.find(e=>e.id==='boss_l100');
+  if(!finalBoss)throw Error('Missing great demon lord boss_l100');
+  return finalBoss;
+ }
+ const pool=enemies.filter(e=>e.boss_only===(slot===5?'1':'0')&&(slot!==5||e.id!=='boss_l100'));
  if(!pool.length)throw Error('Empty enemy pool');
  return pool[Math.min(pool.length-1,Math.floor(Math.max(0,r())*pool.length))];
 }
