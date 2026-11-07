@@ -263,7 +263,6 @@ for(const [selector,period,duration] of [
  ['#battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"])','.085s','.44s'],
  ['#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]','.085s','.44s'],
  ['#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]','.105s','.44s'],
- ['#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]','.18s','var(--boss-time,2s)'],
 ]){
  const rule=shakeRule(selector);
  assert.ok(rule.includes('combat-sine-shake '+period+' linear var(--shake-phase,0ms) infinite'),
@@ -291,8 +290,8 @@ const weakWaits=[];
 await playCombatSequence([weakSample],()=>{}, {duration:COMBAT_EFFECT_MS,wait:async ms=>weakWaits.push(ms)});
 assert.deepEqual(weakWaits,[440],'WEAK effect does not cause an extra wait even with damping');
 assert.doesNotMatch(cinematicCss,/@keyframes boss-cinematic-shake|@keyframes snappy-screen-shake/,'old slow/irregular shake keyframes are removed');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'100F defeat alone lasts the full 4.5s');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,5350,'independent CLEAR follows the full 4.5s defeat');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],5700,'100F defeat holds the whiteout and slow motes for 5.7s');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,8100,'the independent 2.4s CLEAR follows the full 5.7s defeat');
 assert.match(cinematicCss,/@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.boss-ceremony-art\{display:none!important\}/,'boss VFX respect reduced motion');
 
 // Scene orientation is presentation-only: actor IDs and their effect targets remain stable.
@@ -321,76 +320,91 @@ assert.match(cinematicCss,/#battleArena \.enemy-unit\[data-entering="true"\]\{\s
 assert.match(orientationFrame('enemy-snap-slide'),/100%\{opacity:1;transform:translate\(0,0\)/,'ordinary enemies settle without sideways rebound');
 assert.doesNotMatch(orientationFrame('enemy-snap-slide'),/translateX\(-|translate\(-/,'ordinary enemy never overshoots sideways');
 assert.doesNotMatch(shakeRule('#battleArena .enemy-unit[data-entering="true"]'),/combat-sine-shake/,'normal enemies enter with no vibration');
-assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]'),/combat-sine-shake \.18s/,'bosses vibrate subtly as they rise');
+const bossArrival=shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]');
+assert.match(bossArrival,/combat-sine-shake \.08s linear var\(--shake-phase,0ms\) infinite/,'every boss vibrates at the same 12.5Hz');
+assert.match(bossArrival,/boss-entrance-shake-envelope \.9s linear both/,'entrance vibration ends in 0.9s at every tier');
+assert.match(bossArrival,/--shake-y:0px/,'boss entrance vibrates horizontally only');
+const entranceDecay=orientationFrame('boss-entrance-shake-envelope');
+assert.match(entranceDecay,/0%,15%\{--shake-gain:1\}/,'arrival begins at full vibration strength');
+assert.match(entranceDecay,/100%\{--shake-gain:0\}/,'arrival vibration fades smoothly to zero');
 
-// Only 100F defeat has four strictly timed phases, followed by a separate CLEAR.
+// Only 100F defeat has a held full-white interval, drifting scales and separate CLEAR.
 const finalDefeat='#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"]';
 const finalBossRule=shakeRule(finalDefeat);
-assert.match(shakeRule('#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"]'),/--boss-time:4\.5s/,'CSS boss timeline matches the full 4.5s JS defeat');
-assert.equal(1500+500+1500+1000,4500,'earlier final shrink retains the original 4.5s cinematic');
-assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,4\.5s\)/,'4.5s defeat uses the special scale animation');
-assert.match(finalBossRule,/boss-final-shake-envelope var\(--boss-time,4\.5s\)/,'shake envelope stays within the first defeat phase');
-assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/animation:boss-cinematic-collapse/,'regular and milestone bosses retain shared defeat animation');
+assert.match(shakeRule('#battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"]'),/--boss-time:5\.7s/,'CSS and JS agree on the final defeat duration');
+assert.equal(1400+500+900+600+2300,5700,'final defeat includes a short shake, collapse, burst, white hold and drifting scales');
+assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,5\.7s\)/,'final enemy card itself collapses');
+assert.match(finalBossRule,/boss-final-shake-envelope var\(--boss-time,5\.7s\)/,'final shake has a proper envelope');
+assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/animation:boss-cinematic-collapse/,'other boss defeats retain their shared animation');
 for(const [part,motion] of [
- ['boss-vfx-halo','boss-final-halo-pulse'],
- ['boss-vfx-ring-outer','boss-final-ring-burst-outer'],
- ['boss-vfx-ring-inner','boss-final-ring-burst-inner'],
- ['boss-vfx-wheel','boss-final-ring-burst-wheel'],
- ['boss-vfx-flash','boss-final-flash'],
- ['boss-vfx-beam','boss-final-beam-collapse'],
- ['boss-vfx-sparks','boss-final-particles']
+ ['boss-vfx-halo','boss-final-halo-pulse'],['boss-vfx-ring-outer','boss-final-ring-burst-outer'],
+ ['boss-vfx-ring-inner','boss-final-ring-burst-inner'],['boss-vfx-wheel','boss-final-ring-burst-wheel'],
+ ['boss-vfx-flash','boss-final-flash'],['boss-vfx-beam','boss-final-beam-collapse'],
+ ['boss-vfx-mote','boss-final-mote-fall']
 ]){
  const selector='#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .'+part;
- assert.match(shakeRule(selector),new RegExp('animation:'+motion+' var\\(--ceremony-duration,4\\.5s\\)'),'finale particles stay within the 4.5s defeat segment: '+part);
+ assert.match(shakeRule(selector),new RegExp('animation:'+motion+' var\\(--ceremony-duration,5\\.7s\\)'),'all final VFX follow the 5.7s timeline: '+part);
 }
 const finalFrames=orientationFrame('boss-final-implosion');
-assert.match(finalFrames,/33\.333%\{opacity:\.5;transform:scale\(1\)/,'boss is half-transparent by 1.5s');
-assert.match(finalFrames,/44\.444%\{opacity:\.5;transform:scale\(0\)/,'final boss shrinks out by 2s');
-assert.match(finalFrames,/77\.778%\{opacity:0;transform:scale\(2\)/,'phase 3: at 3.5s boss expands to twofold scale');
-const shakeEnd=orientationFrame('boss-final-shake-envelope');
-assert.match(shakeEnd,/0%,30%\{--shake-gain:1\}/,'final shake stays full until 1.35s');
-assert.match(shakeEnd,/33\.333%,100%\{--shake-gain:0\}/,'final shake stops by 1.5s');
-const halo=orientationFrame('boss-final-halo-pulse');
-assert.match(halo,/0%,33\.333%\{opacity:0/,'halo starts with earlier shrink');
-assert.match(halo,/38\.889%\{opacity:1/,'halo peaks during shrink');
-assert.match(halo,/44\.444%,100%\{opacity:0/,'halo ends at 2s');
+assert.match(finalFrames,/24\.561%\{opacity:\.65;transform:scale\(1\)/,'final shake finishes at 1.4s');
+assert.match(finalFrames,/33\.333%\{opacity:\.42;transform:scale\(0\)/,'boss is shrunken to zero by 1.9s');
+assert.match(finalFrames,/49\.123%\{opacity:0;transform:scale\(2\)/,'burst reaches twofold scale by 2.8s');
+const finalShake=orientationFrame('boss-final-shake-envelope');
+assert.match(finalShake,/0%,20%\{--shake-gain:1\}/,'defeat shake retains its initial intensity briefly');
+assert.match(finalShake,/24\.561%,100%\{--shake-gain:0\}/,'defeat shake decays to zero by 1.4s');
+const finalHalo=orientationFrame('boss-final-halo-pulse');
+assert.match(finalHalo,/0%,24\.561%\{opacity:0/,'halo begins with shrinking');
+assert.match(finalHalo,/28\.947%\{opacity:\.8/,'halo peaks during shrinking');
+assert.match(finalHalo,/33\.333%,100%\{opacity:0/,'halo fades out by 1.9s');
 for(const name of ['boss-final-ring-burst-outer','boss-final-ring-burst-inner','boss-final-ring-burst-wheel']){
- const ring=orientationFrame(name);
- assert.match(ring,/0%,44\.444%\{opacity:0/,'ring starts at the earlier third phase: '+name);
- assert.match(ring,/77\.778%,100%\{opacity:0/,'ring has vanished by the beginning of phase 4: '+name);
+ const frame=orientationFrame(name);
+ assert.match(frame,/0%,33\.333%\{opacity:0/,'rings begin after shrink: '+name);
+ assert.match(frame,/49\.123%,100%\{opacity:0/,'rings stop before full whiteout: '+name);
 }
-const whiteout=orientationFrame('boss-final-whiteout');
-assert.match(whiteout,/77\.778%\{opacity:1\}/,'whiteout peaks at 3.5 seconds');
-assert.match(whiteout,/100%\{opacity:0\}/,'white-in completes before CLEAR');
-const particles=orientationFrame('boss-final-particles');
-assert.match(particles,/0%,77\.778%\{opacity:0/,'particles only begin after whiteout peaks');
-assert.match(particles,/100%\{opacity:0/,'particles finish at 4.5 seconds before CLEAR');
-assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]::after'),/boss-final-whiteout var\(--ceremony-duration,4\.5s\)/,'whiteout stays inside the defeat segment and arena');
-assert.match(shakeRule('#battleArena .battle-ceremony[data-event="final-clear"]'),/animation:boss-final-clear-veil/,'CLEAR uses a distinct scene after the finale');
-assert.match(shakeRule('#battleArena .battle-ceremony[data-event="final-clear"]>strong'),/animation:boss-final-clear-title/,'CLEAR title has an independent appearance animation');
-assert.match(cinematicCss,/data-boss-tier="final"\]\[data-event="enemy-death"\]>strong,[\s\S]*?visibility:hidden/,'CLEAR text is hidden during all four defeat phases');
-assert.match(appSource,/onFatal:side=>\{[\s\S]*?return ceremony\([\s\S]*?\)\.then\(\(\)=>\{[\s\S]*?if\(side==='enemy'&&bossCeremonyTier\(profile\.run\?\.floor\)==='final'\)[\s\S]*?return ceremony\('final-clear','100層 完全制覇'\)/,'only a 100F victory chains CLEAR after the full defeat');
-assert.match(appSource,/await animateBattle\(steps,[\s\S]*?if\(run\.enemy\.hp<=0\)\{[\s\S]*?await ceremony\('loot'/,'battle death and CLEAR finish before the existing loot sequence');
-assert.match(appSource,/if\(firstHundredClear\)run\.creatorCongratulationsPending=true;[\s\S]*?if\(run\.creatorCongratulationsPending\)showCreatorCongratulations\(\)/,'preexisting 100F congratulation message remains available');
-assert.match(appSource,/side==='hero'\?'探索失敗':'討伐成功'/,'pre-loot victory message is preserved');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],4500,'four defeat phases end when particles finish at 4.5s');
-assert.equal(FINAL_CLEAR_EFFECT_MS,850,'CLEAR cue lasts .85s after particles');
-assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,5350,'CLEAR begins only after the full four-and-a-half-second defeat');
+const finalOverlay='#battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"]';
+assert.match(shakeRule(finalOverlay),/background:transparent/,'dark overlay does not wash out the battlefield');
+assert.match(cinematicCss,/left:var\(--boss-origin-x,75%\);top:var\(--boss-origin-y,50%\)/,'final rings and beams are boss-centered');
+assert.match(shakeRule(finalOverlay+' .boss-vfx-flash'),/inset:auto;left:var\(--boss-origin-x,75%\);top:var\(--boss-origin-y,50%\)/,'central glow stays on the enemy');
+assert.match(appSource,/const arenaBox=arena\.getBoundingClientRect\(\);[\s\S]*?const bossBox=\$\('enemyCombatant'\)\.getBoundingClientRect\(\)/,'final burst measures live enemy card center');
+assert.match(appSource,/stage\.style\.setProperty\('--boss-origin-x'/,'final explosion X uses live enemy center');
+assert.match(appSource,/stage\.style\.setProperty\('--boss-origin-y'/,'final explosion Y uses live enemy center');
+const finalWhiteout=orientationFrame('boss-final-whiteout');
+assert.match(finalWhiteout,/49\.123%,59\.649%\{opacity:1\}/,'whiteout is entirely opaque for 0.6s');
+assert.match(finalWhiteout,/70%,100%\{opacity:0\}/,'whiteout gives way to scales');
+assert.match(shakeRule(finalOverlay+'::after'),/background:#fff;animation:boss-final-whiteout var\(--ceremony-duration,5\.7s\)/,'opaque white covers the arena');
+assert.match(shakeRule(finalOverlay+' .boss-vfx-sparks'),/display:none/,'old expanding graphic is disabled');
+assert.equal((cinematicPage.match(/class="boss-vfx-mote"/g)||[]).length,16,'16 individual powder scales replace burst graphic');
+assert.match(shakeRule(finalOverlay+' .boss-vfx-mote'),/boss-final-mote-fall var\(--ceremony-duration,5\.7s\)/,'powder scales have individual fall animation');
+const powder=orientationFrame('boss-final-mote-fall');
+assert.match(powder,/0%,59%\{opacity:0/,'scales emerge only after the whiteout');
+assert.match(powder,/82%\{opacity:\.76;transform:translate/,'scales float gently rather than exploding');
+assert.match(powder,/100%\{opacity:0;transform:translate\(var\(--mote-drift,20px\),var\(--mote-fall,90px\)\)/,'scales drift down and disappear');
+assert.match(shakeRule('#battleArena .battle-ceremony[data-event="final-clear"]'),/boss-final-clear-veil var\(--ceremony-duration,2\.4s\)/,'CLEAR overlay lasts 2.4s');
+assert.match(shakeRule('#battleArena .battle-ceremony[data-event="final-clear"]>strong'),/boss-final-clear-title var\(--ceremony-duration,2\.4s\)/,'CLEAR title also lasts 2.4s');
+assert.match(orientationFrame('boss-final-clear-title'),/35%,86%\{opacity:1/,'CLEAR title stays visible most of the time');
+assert.match(cinematicCss,/data-boss-tier="final"\]\[data-event="enemy-death"\]>strong,[\s\S]*?visibility:hidden/,'CLEAR title is hidden during defeat');
+assert.match(appSource,/onFatal:side=>\{[\s\S]*?return ceremony\([\s\S]*?\)\.then\(\(\)=>\{[\s\S]*?if\(side==='enemy'&&bossCeremonyTier\(profile\.run\?\.floor\)==='final'\)[\s\S]*?return ceremony\('final-clear','100層 完全制覇'\)/,'only a 100F win triggers CLEAR');
+assert.match(appSource,/await animateBattle\(steps,[\s\S]*?if\(run\.enemy\.hp<=0\)\{[\s\S]*?await ceremony\('loot'/,'loot starts only after death and CLEAR');
+assert.match(appSource,/if\(firstHundredClear\)run\.creatorCongratulationsPending=true;[\s\S]*?if\(run\.creatorCongratulationsPending\)showCreatorCongratulations\(\)/,'original congratulations still follow');
+assert.match(appSource,/side==='hero'\?'探索失敗':'討伐成功'/,'original victory text remains');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death'],5700,'final defeat lasts 5.7s');
+assert.equal(FINAL_CLEAR_EFFECT_MS,2400,'CLEAR title lasts 2.4s');
+assert.equal(BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS,8100,'finale plus CLEAR lasts 8.1s');
 const finaleOrder=[];
 for(const event of ['enemy-death','final-clear']){
  await playBattleCeremony(event,type=>finaleOrder.push(type),{duration:ceremonyDuration(event,500),wait:async ms=>finaleOrder.push(ms)});
 }
-assert.deepEqual(finaleOrder,['enemy-death',4500,'final-clear',850],'defeat ends before CLEAR begins without an extra wait');
-assert.equal(ceremonyDuration('final-clear',500),FINAL_CLEAR_EFFECT_MS,'separate CLEAR uses its own duration');
-assert.equal(ceremonyDuration('final-clear',500,{animated:false}),0,'reduced motion does not wait for CLEAR');
-assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong'),/animation:boss-title-pulse/,'ordinary bosses retain their original victory title');
+assert.deepEqual(finaleOrder,['enemy-death',5700,'final-clear',2400],'the original sequencing adds no artificial waits');
+assert.equal(ceremonyDuration('final-clear',500),FINAL_CLEAR_EFFECT_MS,'CLEAR has its own duration');
+assert.equal(ceremonyDuration('final-clear',500,{animated:false}),0,'reduced-motion users are not delayed');
+assert.match(shakeRule('#battleArena .battle-ceremony[data-boss-tier]:not([data-boss-tier="none"])>strong'),/animation:boss-title-pulse/,'other bosses retain their title');
 const ceremonyMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleCeremony"'),cinematicPage.indexOf('id="heroCombatant"'));
 for(const part of ['boss-vfx-ring-outer','boss-vfx-ring-inner','boss-vfx-wheel'])
- assert.match(ceremonyMarkup,new RegExp('class="[^"]*'+part),'each independently bursting ring is already in the scene: '+part);
-assert.equal(BOSS_CEREMONY_MS.final['encounter'],3800,'final boss entrance duration stays unchanged');
-assert.equal(BOSS_CEREMONY_MS.milestone['enemy-death'],3100,'milestone boss defeat duration stays unchanged');
-assert.equal(BOSS_CEREMONY_MS.boss.encounter,1650,'regular boss entrance is 1.65s');
-assert.match(cinematicCss,/\[data-boss-ceremony="boss"\]\[data-ceremony-event="encounter"\]\{--boss-time:1\.65s\}/,'CSS boss entrance timing matches JS');
+ assert.match(ceremonyMarkup,new RegExp('class="[^"]*'+part),'existing boss artwork still exists: '+part);
+assert.equal(BOSS_CEREMONY_MS.final['encounter'],3800,'final boss arrival still lasts 3.8s');
+assert.equal(BOSS_CEREMONY_MS.milestone['enemy-death'],3100,'milestone defeat stays 3.1s');
+assert.equal(BOSS_CEREMONY_MS.boss.encounter,1650,'ordinary boss arrival stays 1.65s');
+assert.match(cinematicCss,/\[data-boss-ceremony="boss"\]\[data-ceremony-event="encounter"\]\{--boss-time:1\.65s\}/,'ordinary arrival CSS matches JS');
 
 assert.ok(cinematicCss.includes('transform:translate(36px,-110px) rotate(32deg)'),'enemy-side loot flies from right');
 const flightStart=cinematicCss.indexOf('/* Magic attack travels from the center');
