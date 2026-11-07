@@ -126,7 +126,7 @@ assert.equal(fatalWindow,0,'death never opens the follow-up window');
 
 // The previous FX receives an independent DOM layer before new FX resets it.
 const originalDocument=globalThis.document;
-const copies=[],removedIds=[];
+const copies=[],captionCopies=[],removedIds=[];
 const element=()=>({
  dataset:{},style:{},children:[],setAttribute(){},remove(){this.removed=true;},
  removeAttribute(name){removedIds.push(name);},
@@ -138,13 +138,18 @@ const actors=new Map(['enemyCombatant','heroCombatant'].map(id=>[id,{
  cloneNode(){const copy=element();copies.push(copy);return copy;},
  querySelector(){return {cloneNode:()=>element()};}
 }]));
+const captions=new Map(['heroAffinityWord','enemyAffinityWord'].map((id,i)=>[id,{
+ dataset:{affinity:i?'resist':'weak'},
+ offsetLeft:i?180:0,offsetTop:0,offsetWidth:152,offsetHeight:200,
+ cloneNode(){const copy=element();copy.className='affinity-caption';copy.dataset.affinity=this.dataset.affinity;captionCopies.push(copy);return copy;}
+}]));
 const flight={cloneNode:()=>element()};
 const arena={
  appended:null,
  append(node){this.appended=node;},
  querySelector(selector){
   if(selector==='.spell-flight')return flight;
-  return actors.get(selector.slice(1))||null;
+  return actors.get(selector.slice(1))||captions.get(selector.slice(1))||null;
  }
 };
 globalThis.document={createElement:()=>element()};
@@ -154,6 +159,9 @@ try{
  assert.ok(echo,'the visual-only echo is retained');
  assert.equal(arena.appended.dataset.active,'false','the old FX is initially hidden to avoid double brightness');
  assert.equal(copies.length,2,'both fighter FX keep their previous independent visuals');
+ assert.equal(captionCopies.length,2,'RESIST and WEAK retain separate motionless word layers');
+ assert.ok(captionCopies.every(x=>x.style.cssText?.includes('width:152px')),'word overlays keep their grid positions when echoed');
+ assert.ok(arena.appended.children.some(x=>x.className==='affinity-caption'),'a stable word is copied without its shaking parent');
  assert.ok(copies.every(x=>!x.children.some(child=>child.className==='unit-info')),'no stateful HP panels duplicated');
  assert.ok(removedIds.includes('id'),'cloned animation parts never duplicate live element IDs');
  echo.reveal();

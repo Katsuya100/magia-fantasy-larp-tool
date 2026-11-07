@@ -461,7 +461,7 @@ assert.match(css,/\.scene-stack > \.panel\[data-entering="true"\]/,'incoming pan
 assert.doesNotMatch(css, /::view-transition-old\(root\)/,'never zoom a full-screen snapshot');
 assert.match(css,/#battleArena \.unit\{\s*box-sizing:border-box;height:280px/,'fighters do not stretch with status effects');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{/,'fighter stats share consistent fixed rows');
-assert.match(css,/@keyframes enemy-snap-slide/,'ordinary enemy leaps without scaling');
+assert.match(css,/@keyframes enemy-snap-slide\{[\s\S]*?scale\(\.78\)[\s\S]*?scale\(1\)/,'ordinary enemy scales in while leaping');
 assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-dying="true"\]\{animation:duel-defeat/,'ordinary enemy shrinks as one framed card');
 assert.doesNotMatch(css,/#battleArena \.enemy-unit\[data-dying="true"\] \.unit-info\{animation:duel-defeat/,'enemy info does not animate separately');
 assert.match(css,/@keyframes loot-ceremony-arrive/,'loot animation restarts without an empty death frame');

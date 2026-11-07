@@ -960,9 +960,9 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  animation:enemy-snap-slide .28s cubic-bezier(.16,.78,.25,1) both
 }
 @keyframes enemy-snap-slide{
- 0%{opacity:0;transform:translate(64px,14px)}
- 45%{opacity:1;transform:translate(16px,-34px)}
- 100%{opacity:1;transform:translate(0,0)}
+ 0%{opacity:0;transform:translate(64px,14px) scale(.78)}
+ 45%{opacity:1;transform:translate(16px,-34px) scale(.94)}
+ 100%{opacity:1;transform:translate(0,0) scale(1)}
 }
 /* The death overlay remains mounted until the reward overlay starts.
    Give reward a distinct animation name so its motion restarts on handoff. */
@@ -1433,6 +1433,10 @@ html,body{overflow-x:clip}
  --shake-x:calc(var(--boss-jolt) * .16);--shake-y:0px;
  animation:boss-cinematic-rise var(--boss-time,2s) cubic-bezier(.2,.8,.2,1) both,combat-sine-shake .08s linear var(--shake-phase,0ms) infinite,boss-entrance-shake-envelope .9s linear both
 }
+/* Normal and milestone bosses grow into view; the final boss retains its rise. */
+#battleArena[data-boss-ceremony]:is([data-boss-ceremony="boss"],[data-boss-ceremony="milestone"]) .enemy-unit[data-entering="true"]{
+ animation-name:boss-cinematic-rise-scale,combat-sine-shake,boss-entrance-shake-envelope
+}
 @keyframes boss-entrance-shake-envelope{
  0%,15%{--shake-gain:1}
  100%{--shake-gain:0}
@@ -1494,6 +1498,13 @@ html,body{overflow-x:clip}
  38%{opacity:.75;transform:translateY(12px);filter:brightness(1.7)}
  65%{opacity:1;transform:translateY(3px);filter:brightness(1.2)}
  100%{opacity:1;transform:translateY(0);filter:none}
+}
+@keyframes boss-cinematic-rise-scale{
+ 0%{opacity:0;transform:translateY(38px) scale(.76);filter:brightness(.3)}
+ 18%{opacity:.4;transform:translateY(26px) scale(.83);filter:brightness(1.1)}
+ 38%{opacity:.75;transform:translateY(12px) scale(.92);filter:brightness(1.7)}
+ 65%{opacity:1;transform:translateY(3px) scale(.98);filter:brightness(1.2)}
+ 100%{opacity:1;transform:translateY(0) scale(1);filter:none}
 }
 @keyframes boss-defeat-shake-envelope{
  0%,36%{--shake-gain:1}
@@ -1573,17 +1584,25 @@ html,body{overflow-x:clip}
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-beam{
  animation:boss-final-beam-collapse var(--ceremony-duration,5.7s) linear both
 }
-/* Replace the expanding starburst with small individual powder-like motes. */
+/* Diverse, separately timed scales spread across the arena. No explosive zoom. */
 #battleArena .boss-vfx-mote{display:none}
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-sparks{display:none}
 #battleArena .battle-ceremony[data-boss-tier="final"][data-event="enemy-death"] .boss-vfx-mote{
- display:block;left:calc(var(--boss-origin-x,75%) + var(--mote-x,0px));
- top:calc(var(--boss-origin-y,50%) + var(--mote-y,0px));
- width:var(--mote-size,5px);height:calc(var(--mote-size,5px) * 1.6);
- border-radius:55% 45% 60% 40%;
- background:radial-gradient(ellipse at 35% 35%,#fffef2,#fce9b1 55%,#e5bbdf91 90%);
- box-shadow:0 0 7px 2px #f3d9c08c;
- animation:boss-final-mote-fall var(--ceremony-duration,5.7s) ease-in-out both
+ display:block;left:var(--mote-x,65%);top:var(--mote-y,35%);
+ width:var(--mote-size,6px);height:calc(var(--mote-size,6px) * 1.45);
+ background:linear-gradient(135deg,#fffdef,#f4d9a2 55%,#c99ebc);
+ filter:drop-shadow(0 0 3px #ffe9bd9e);
+ transform-origin:center;
+ animation:boss-final-mote-fall var(--mote-duration,2.2s) linear var(--mote-delay,3.1s) both
+}
+#battleArena .boss-vfx-mote--scale{
+ clip-path:polygon(50% 0,91% 29%,84% 75%,50% 100%,16% 75%,9% 29%)
+}
+#battleArena .boss-vfx-mote--leaf{
+ clip-path:polygon(24% 0,74% 8%,100% 49%,62% 100%,4% 82%,0 34%)
+}
+#battleArena .boss-vfx-mote--flake{
+ clip-path:polygon(50% 0,62% 34%,100% 50%,64% 66%,50% 100%,36% 66%,0 50%,36% 34%)
 }
 @keyframes boss-final-shake-envelope{
  0%,20%{--shake-gain:1}
@@ -1631,15 +1650,19 @@ html,body{overflow-x:clip}
  49.123%{opacity:.18}
  55%,100%{opacity:0}
 }
+/* Four light axes form eight rays; gently expand, then contract on defeat. */
 @keyframes boss-final-beam-collapse{
- 0%,24.561%{opacity:.45;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(1)}
- 33.333%,100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.05)}
+ 0%{opacity:.28;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.72)}
+ 13%{opacity:.56;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(1.14)}
+ 24.561%{opacity:.45;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(1.02)}
+ 33.333%,100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.08)}
 }
+/* Constant fall speed. Opacity fades by elapsed time, before reaching the end. */
 @keyframes boss-final-mote-fall{
- 0%,59%{opacity:0;transform:translate(0,-12px) rotate(-20deg) scale(.7)}
- 67%{opacity:.94;transform:translate(calc(var(--mote-drift,20px) * .1),2px) rotate(13deg) scale(1)}
- 82%{opacity:.76;transform:translate(calc(var(--mote-drift,20px) * .52),calc(var(--mote-fall,90px) * .45)) rotate(-16deg) scale(.9)}
- 100%{opacity:0;transform:translate(var(--mote-drift,20px),var(--mote-fall,90px)) rotate(37deg) scale(.6)}
+ 0%{opacity:0;transform:translate(0,0) rotate(var(--mote-angle,0deg))}
+ 12%,52%{opacity:var(--mote-alpha,.8)}
+ 74%{opacity:0}
+ 100%{opacity:0;transform:translate(var(--mote-drift,16px),var(--mote-fall,180px)) rotate(var(--mote-end-angle,60deg))}
 }
 /* CLEAR is its own deliberate 2.4s hold, after all motes have faded. */
 #battleArena .battle-ceremony[data-event="final-clear"]{
@@ -2446,7 +2469,17 @@ html,body{overflow-x:clip}
 }
 .legacy-heirs-empty{color:var(--soft);font-size:13px}
 
-/* Elemental affinity appears only on a landed magic hit. */
+/* Keep all three combatants in their cells even with overlapping grid captions. */
+#battleArena>.hero-unit{grid-column:1;grid-row:1}
+#battleArena>.versus{grid-column:2;grid-row:1}
+#battleArena>.enemy-unit{grid-column:3;grid-row:1}
+/* The target card still shakes; an independent grid overlay keeps its word still. */
+#battleArena>.affinity-caption{
+ position:relative;grid-row:1;align-self:stretch;min-width:0;height:100%;
+ z-index:6;pointer-events:none
+}
+#battleArena>#heroAffinityWord{grid-column:1}
+#battleArena>#enemyAffinityWord{grid-column:3}
 #battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .combatant-fx{opacity:1}
 #battleArena .affinity-hit{position:absolute;inset:0;pointer-events:none;z-index:5}
 #battleArena .affinity-hit::before,#battleArena .affinity-hit::after{
@@ -2463,7 +2496,7 @@ html,body{overflow-x:clip}
 #battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .affinity-hit::before{
  animation:affinity-ring .6s ease-out both
 }
-#battleArena .affinity-hit::after{
+#battleArena .affinity-hit::after,#battleArena .affinity-caption::after{
  padding:6px 11px;min-width:70px;text-align:center;
  font:900 clamp(13px,2.2vw,19px)/1.1 Impact,"Arial Black",system-ui,sans-serif;
  letter-spacing:.11em;color:#fff;white-space:nowrap;
@@ -2472,8 +2505,14 @@ html,body{overflow-x:clip}
  box-shadow:0 0 18px var(--affinity-color),inset 0 0 13px var(--affinity-glow);
  text-shadow:0 0 9px var(--affinity-color),0 1px 2px #000
 }
-#battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .affinity-hit::after{
- animation:affinity-word .72s cubic-bezier(.16,1,.32,1) both
+#battleArena .affinity-caption::after{
+ content:"";position:absolute;left:50%;top:42%;pointer-events:none;opacity:0
+}
+#battleArena .affinity-caption[data-affinity="resist"]{
+ --affinity-color:#70ddff;--affinity-glow:#238bc955
+}
+#battleArena .affinity-caption[data-affinity="resist"]::after{
+ content:"RESIST";animation:affinity-word .72s cubic-bezier(.16,1,.32,1) both
 }
 #battleArena .unit[data-affinity="resist"] .affinity-hit{
  --affinity-color:#70ddff;--affinity-glow:#238bc955
@@ -2484,12 +2523,7 @@ html,body{overflow-x:clip}
  -webkit-mask:radial-gradient(circle,transparent 0 54%,#000 58% 100%);
  mask:radial-gradient(circle,transparent 0 54%,#000 58% 100%)
 }
-#battleArena .unit[data-affinity="resist"] .affinity-hit::after{content:"RESIST"}
-/* A resisted impact must not shake its card; preserve independent attack lunges. */
-#battleArena .unit[data-affinity="resist"][data-hit="true"]{--shake-x:0px;--shake-y:0px}
-#battleArena .unit[data-affinity="resist"][data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){animation:none}
-/* WEAK's text has its own short shudder; don't stack the card's full hit vibration. */
-#battleArena .unit[data-affinity="weak"][data-hit="true"]{--shake-x:0px;--shake-y:0px}
+/* The RESIST word no longer inherits the shaking card's transform. */
 #battleArena .unit[data-affinity="weak"] .affinity-hit{
  --affinity-color:#ff5b8b;--affinity-glow:#ff42755c
 }
@@ -2503,11 +2537,14 @@ html,body{overflow-x:clip}
  box-shadow:0 0 0 2px #ffd7da,0 0 20px 4px #ff438a7d,inset 0 0 18px #ffb3c8;
  animation:weak-shockwave .45s cubic-bezier(.15,.75,.25,1) both
 }
-#battleArena .unit[data-affinity="weak"] .affinity-hit::after{
+#battleArena .affinity-caption[data-affinity="weak"]{
+ --affinity-color:#ff5b8b;--affinity-glow:#ff42755c
+}
+#battleArena .affinity-caption[data-affinity="weak"]::after{
  content:"WEAK";background:linear-gradient(120deg,#42102ae8,#190b19ef);
  box-shadow:0 0 21px 4px var(--affinity-glow),inset 0 0 16px var(--affinity-glow);
  --shake-x:2px;--shake-y:1px;
- animation:weak-damped-shudder .72s linear both,combat-sine-shake .11s linear var(--shake-phase,0ms) infinite,weak-shake-envelope .72s linear both
+ animation:weak-damped-shudder .72s linear both,combat-sine-shake .08s linear var(--shake-phase,0ms) 4 both,weak-shake-envelope .32s linear both
 }
 /* Impact glows end with their matching shield/wave, not the longer word. */
 #battleArena .unit[data-affinity="resist"] .combatant-fx::before{
@@ -2524,17 +2561,17 @@ html,body{overflow-x:clip}
  72%{opacity:.44;transform:translate(-50%,-50%) scale(2.5)}
  100%{opacity:0;transform:translate(-50%,-50%) scale(3.2)}
 }
-/* WEAK only shudders briefly, while the full label remains readable. */
+/* Four finite waves decay to zero in 320ms; the last 400ms are motionless. */
 @keyframes weak-shake-envelope{
- 0%,25%{--shake-gain:1}
- 36%,100%{--shake-gain:0}
+ 0%,30%{--shake-gain:1}
+ 100%{--shake-gain:0}
 }
 @keyframes weak-damped-shudder{
  0%{opacity:0;transform:translate(-50%,-50%) scale(1.4)}
  10%{opacity:1;transform:translate(-50%,-50%) scale(1.14)}
- 42%{opacity:1;transform:translate(-50%,-50%) scale(1.03)}
- 66%,86%{opacity:1;transform:translate(-50%,-50%)}
- 100%{opacity:0;transform:translate(-50%,-66%) scale(.94)}
+ 42%{opacity:1;transform:translate(-50%,-50%)}
+ 50%,90%{opacity:1;transform:translate(-50%,-50%)}
+ 100%{opacity:0;transform:translate(-50%,-50%)}
 }
 @keyframes affinity-ring{
  0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(-35deg)}
@@ -2548,7 +2585,8 @@ html,body{overflow-x:clip}
 }
 @media(prefers-reduced-motion:reduce){
  #battleArena .affinity-hit::before{animation:none!important;opacity:0}
- #battleArena .unit:is([data-affinity="resist"],[data-affinity="weak"]) .affinity-hit::after{
+ #battleArena .affinity-caption[data-affinity="resist"]::after,
+ #battleArena .affinity-caption[data-affinity="weak"]::after{
   animation:none!important;opacity:1;transform:translate(-50%,-50%)
  }
 }
@@ -2661,6 +2699,9 @@ button.creator-congratulations-close{
  position:absolute;box-sizing:border-box;min-width:0;margin:0;padding:0!important;
  background:transparent!important;border:0!important;box-shadow:none!important;
  transition:none!important;pointer-events:none
+}
+#battleArena .combat-fx-echo>.affinity-caption{
+ position:absolute;pointer-events:none
 }
 
 /* The dungeon magic-circle controls use the same 86%-diameter guide as the camera.

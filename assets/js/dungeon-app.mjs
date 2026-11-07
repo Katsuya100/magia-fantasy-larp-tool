@@ -1,12 +1,12 @@
 import * as G from './dungeon-core.mjs?v=20261106.339';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261106.339';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261107.352';
-import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261107.352';
-import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261107.352';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261107.353';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261107.353';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261107.353';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261106.339';
 import {prepareCircles,prepareItems,setSlot,pickedValues,needsEmptyCarryConfirmation,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261106.339';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261106.339';
-import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261107.352';
+import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261107.353';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261106.339';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261106.339';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261106.339';
@@ -15,13 +15,13 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261106.339';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261106.339';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261106.339';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261107.352';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261107.353';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261106.339';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261106.339';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261106.339';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261107.352';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261107.353';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,recordRankCombat,rankBadgeDrop,pendingRankBadgeNames,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261106.339';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261107.352';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261107.353';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261106.339';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261106.339';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261106.339';
@@ -616,7 +616,7 @@ function refreshBattleRecord(visibleLog=null){
    Each part gets its own wave phase and initial direction for each scene. */
 let shakeSceneNonce=0;
 function randomizeCombatShake(arena){
- const parts=arena.querySelectorAll?.('.hero-unit,.enemy-unit,.affinity-hit')||[];
+ const parts=arena.querySelectorAll?.('.hero-unit,.enemy-unit,.affinity-caption')||[];
  const seeds=new Uint32Array(parts.length*2);
  if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(seeds);
  else{
@@ -640,6 +640,7 @@ function clearCombatEffects(){
   target.dataset.tier='1';
   target.dataset.hit='false';
   target.dataset.affinity='none';
+  $(side+'AffinityWord').dataset.affinity='none';
   target.dataset.incoming='none';
   target.dataset.incomingAttribute='law';
   target.dataset.incomingTier='1';
@@ -685,11 +686,16 @@ async function animateBattle(steps,{logPrefix=null,initialMp=null}={}){
     $(step.side+'FxText').textContent=effectCaption(step);
    }
    for(const step of phase){
-    if(!['attack','basic','debuff'].includes(step.role)||step.missedByDizziness===true)continue;
+    // MISS and any zero-damage attack must not jolt its target.
+    if(!['attack','basic','debuff'].includes(step.role)||step.missedByDizziness===true||
+     (['attack','basic'].includes(step.role)&&!(step.amount>0)))continue;
     const opponent=step.side==='hero'?'enemy':'hero';
     const victim=$(opponent+'Combatant');
     victim.dataset.hit='true';
-    if(step.role==='attack')victim.dataset.affinity=attackHitAffinity(step);
+    if(step.role==='attack'){
+     victim.dataset.affinity=attackHitAffinity(step);
+     $(opponent+'AffinityWord').dataset.affinity=victim.dataset.affinity;
+    }
     victim.dataset.incoming=step.role;
     victim.dataset.incomingAttribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
     victim.dataset.incomingTier=String(magicEffectTier(step.upgradeLevel,step.role));
