@@ -31,6 +31,7 @@ export function magicEffectTier(upgradeLevel,role='attack'){
  return count>=55?4:count>=20?3:2;
 }
 export const COMBAT_EFFECT_MS=440;
+export const ENEMY_FINISH_HIT_STOP_MS=110;
 export const AFFINITY_EFFECT_MS=720;
 export const ENCOUNTER_EFFECT_MS=820;
 export const FINAL_CLEAR_EFFECT_MS=2400; // Separate 2.4s victory title after the 5.7s final defeat.
@@ -95,7 +96,7 @@ export function combatPhaseAdvanceDuration(phase,duration=effectDuration()){
 // Only the final nonfatal phase can release early for a queued command.
 export async function playCombatSequence(steps,paint,{
  duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
- onFatal=null,overlap=125,onLastPhase=null
+ onFatal=null,overlap=125,onLastPhase=null,onHitStop=null,hitStopMs=0
 }={}){
  let death=null;
  const phases=simultaneousPhases(steps);
@@ -109,7 +110,16 @@ export async function playCombatSequence(steps,paint,{
   const early=canQueue?onLastPhase?.(phase,phaseDuration):null;
   if(fatal){
    const lead=Math.max(0,phaseDuration-overlap);
-   if(lead>0)await wait(lead);
+   // Pause the current contact frame only when an actual enemy is defeated.
+   // Keep the original phase/ceremony overlap and add only the brief freeze.
+   if(fatal==='enemy'&&phaseDuration>0&&hitStopMs>0&&onHitStop){
+    const contact=Math.min(lead,Math.round(phaseDuration*.5));
+    if(contact>0)await wait(contact);
+    onHitStop(true);
+    try{await wait(hitStopMs);}
+    finally{onHitStop(false);}
+    if(lead>contact)await wait(lead-contact);
+   }else if(lead>0)await wait(lead);
    death=Promise.resolve(onFatal(fatal,phase));
    if(phaseDuration-lead>0)await wait(phaseDuration-lead);
   }else if(phaseDuration>0){
