@@ -190,6 +190,8 @@ const cinematicPage=await readFile(new URL('../dungeon.html',import.meta.url),'u
 const arenaMarkup=cinematicPage.slice(cinematicPage.indexOf('id="battleArena"'),cinematicPage.indexOf('id="battleInfo"'));
 assert.equal((arenaMarkup.match(/class="affinity-hit"/g)||[]).length,2,'one hit FX per combatant');
 assert.equal((arenaMarkup.match(/class="affinity-caption"/g)||[]).length,2,'one stable affinity word overlay per combatant');
+for(const [klass,column] of [['hero-unit',1],['versus',2],['enemy-unit',3]])
+ assert.match(cinematicCss,new RegExp('#battleArena>\\.'+klass+'\\{grid-column:'+column+';grid-row:1\\}'),'grid cell placement remains stable beneath independent word overlays');
 assert.match(cinematicCss,/data-affinity="resist"/,'resistance shield styling');
 assert.match(cinematicCss,/data-affinity="weak"/,'weakness burst styling');
 assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::before\{[\s\S]*?radial-gradient\(circle[\s\S]*?animation:weak-shockwave \.45s/,'weakness shockwave finishes in 450ms');
@@ -197,7 +199,8 @@ assert.match(cinematicCss,/\.affinity-caption\[data-affinity="weak"\]::after\{[\
 const weakShake=cinematicCss.match(/@keyframes weak-damped-shudder\{([\s\S]*?)\n\}/)?.[1];
 assert.ok(weakShake,'WEAK opacity/scale envelope exists');
 assert.doesNotMatch(weakShake,/translate\(-?\d+px/,'WEAK has no extra slow horizontal vibration');
-assert.match(weakShake,/66%,86%\{opacity:1;transform:translate\(-50%,-50%\)\}/,'WEAK settles completely before fading');
+assert.match(weakShake,/50%,90%\{opacity:1;transform:translate\(-50%,-50%\)\}/,'WEAK holds still across its readable final half');
+assert.match(weakShake,/100%\{opacity:0;transform:translate\(-50%,-50%\)\}/,'WEAK fades away without shifting its word');
 const weakEnvelope=cinematicCss.match(/@keyframes weak-shake-envelope\{([\s\S]*?)\n\}/)?.[1];
 assert.match(weakEnvelope,/0%,30%\{--shake-gain:1\}/,'WEAK begins at full vibration and damps early');
 assert.match(weakEnvelope,/100%\{--shake-gain:0\}/,'WEAK vibration settles before the final 400ms');
@@ -328,7 +331,7 @@ assert.match(bossArrival,/--shake-y:0px/,'boss entrance vibrates horizontally on
 const bossScale=orientationFrame('boss-cinematic-rise-scale');
 assert.match(bossScale,/0%\{opacity:0;transform:translateY\(38px\) scale\(\.76\)/,'normal and milestone bosses begin small and faded');
 assert.match(bossScale,/100%\{opacity:1;transform:translateY\(0\) scale\(1\)/,'normal and milestone bosses finish at normal scale');
-assert.match(cinematicCss,/#battleArena:is\(\[data-boss-ceremony="boss"\],\[data-boss-ceremony="milestone"\]\) \.enemy-unit\[data-entering="true"\]\{\s*animation-name:boss-cinematic-rise-scale,combat-sine-shake,boss-entrance-shake-envelope/,'both boss tiers retain fixed-frequency shake and fading as they scale in');
+assert.match(cinematicCss,/#battleArena\[data-boss-ceremony\]:is\(\[data-boss-ceremony="boss"\],\[data-boss-ceremony="milestone"\]\) \.enemy-unit\[data-entering="true"\]\{\s*animation-name:boss-cinematic-rise-scale,combat-sine-shake,boss-entrance-shake-envelope/,'both boss tiers retain fixed-frequency shake while scaling in');
 assert.match(appSource,/if\(!\['attack','basic','debuff'\]\.includes\(step\.role\)\|\|step\.missedByDizziness===true\|\|[\s\S]*?\(\['attack','basic'\]\.includes\(step\.role\)&&!\(step\.amount>0\)\)\)continue/,'MISS and zero damage cannot mark the target as hit');
 assert.match(appSource,/\$\(opponent\+'AffinityWord'\)\.dataset\.affinity=victim\.dataset\.affinity/,'only the target word overlay receives the resolved affinity');
 assert.match(cinematicCss,/#battleArena \.combat-fx-echo>\.affinity-caption\{\s*position:absolute/,'old affinity words remain independent in visual echoes');
