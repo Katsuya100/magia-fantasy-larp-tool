@@ -622,15 +622,15 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 }
 /* Independent impact frequencies; shake gain dampens over the final 10% of 440ms. */
 #battleArena .unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
- --shake-x:3px;--shake-y:1px;
+ --shake-x:4.5px;--shake-y:1.5px;
  animation:snappy-impact .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .095s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
 }
 #battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
- --shake-x:3px;--shake-y:1px;
+ --shake-x:4.5px;--shake-y:1.5px;
  animation:snappy-rush-hero .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .085s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
 }
 #battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
- --shake-x:3px;--shake-y:1px;
+ --shake-x:4.5px;--shake-y:1.5px;
  animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .105s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
 }
 #battleArena .unit:is([data-effect="attack"],[data-effect="basic"]) .combatant-burst{
@@ -671,7 +671,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 }
 /* A hit received by the left-side hero recoils left, not toward the enemy. */
 #battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
- --shake-x:3px;--shake-y:1px;
+ --shake-x:4.5px;--shake-y:1.5px;
  animation:snappy-impact-hero-left .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .085s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
 }
 @keyframes snappy-impact-hero-left{
@@ -699,6 +699,11 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
  62.5%,87.5%{translate:calc(var(--shake-x) * var(--shake-direction,1) * var(--shake-gain) * -.7071) calc(var(--shake-y) * var(--shake-direction,1) * var(--shake-gain) * -.7071)}
  75%{translate:calc(var(--shake-x) * var(--shake-direction,1) * var(--shake-gain) * -1) calc(var(--shake-y) * var(--shake-direction,1) * var(--shake-gain) * -1)}
 }
+/* Freeze the contact frame for a lethal hit, without pausing combat rules.
+   The flag is set only for a successful finishing blow against an enemy. */
+#battleArena[data-hit-stop="true"] *,
+#battleArena[data-hit-stop="true"] *::before,
+#battleArena[data-hit-stop="true"] *::after{animation-play-state:paused!important}
 /* Gain is 1 through 90%; damp to zero within the original scene duration. */
 @keyframes combat-shake-envelope{
  0%,90%{--shake-gain:1}
@@ -2522,6 +2527,14 @@ html,body{overflow-x:clip}
  clip-path:polygon(50% 0,92% 25%,92% 75%,50% 100%,8% 75%,8% 25%);
  -webkit-mask:radial-gradient(circle,transparent 0 54%,#000 58% 100%);
  mask:radial-gradient(circle,transparent 0 54%,#000 58% 100%)
+}
+/* Only the enemy body gets the extra weakness jolt. Resistance retains its
+   previous hit amplitude, even though the ordinary hit is stronger now. */
+#battleArena .enemy-unit[data-hit="true"][data-affinity="weak"]{
+ --shake-x:7px;--shake-y:2.5px
+}
+#battleArena .enemy-unit[data-hit="true"][data-affinity="resist"]{
+ --shake-x:3px;--shake-y:1px
 }
 /* The RESIST word no longer inherits the shaking card's transform. */
 #battleArena .unit[data-affinity="weak"] .affinity-hit{

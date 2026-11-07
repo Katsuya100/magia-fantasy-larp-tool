@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {playCombatSequence,fatalSide,simultaneousPhases} from '../assets/js/dungeon-combat-fx.mjs';
+import {playCombatSequence,fatalSide,simultaneousPhases,ENEMY_FINISH_HIT_STOP_MS} from '../assets/js/dungeon-combat-fx.mjs';
 import {LAST_PHASE_OVERLAP_RATIO,createBattleInputBuffer,canReplayBufferedBattleCommand} from '../assets/js/dungeon-battle-input.mjs';
 import {captureCombatFxEcho} from '../assets/js/dungeon-combat-fx-echo.mjs';
 const step=(role,side,h=60,e=0)=>({role,side,hero:{hp:h},enemy:{hp:e}});
@@ -14,6 +14,53 @@ await playCombatSequence(same.flat(),p=>order.push('attack-'+p.length),{
  onFatal:async side=>order.push('death-'+side)
 });
 assert.deepEqual(order,['attack-2','wait-520','death-enemy','wait-260'],'fatal ceremony begins while attacks are finishing');
+assert.equal(ENEMY_FINISH_HIT_STOP_MS,110,'finishing blow gets a short but visible 110ms pause');
+const finisher=[];
+await playCombatSequence([step('attack','hero',60,0)],()=>finisher.push('paint'),{
+ duration:440,overlap:125,hitStopMs:ENEMY_FINISH_HIT_STOP_MS,
+ wait:async ms=>finisher.push('wait-'+ms),
+ onHitStop:active=>finisher.push('freeze-'+active),
+ onFatal:side=>finisher.push('death-'+side)
+});
+assert.deepEqual(finisher,[
+ 'paint','wait-220','freeze-true','wait-110','freeze-false',
+ 'wait-95','death-enemy','wait-125'
+],'only lethal enemy contact pauses at the hit frame, then resumes before the death animation');
+const heroDefeat=[];
+await playCombatSequence([step('attack','enemy',0,60)],()=>heroDefeat.push('paint'),{
+ duration:440,overlap:125,hitStopMs:ENEMY_FINISH_HIT_STOP_MS,
+ wait:async ms=>heroDefeat.push('wait-'+ms),
+ onHitStop:active=>heroDefeat.push('freeze-'+active),
+ onFatal:side=>heroDefeat.push('death-'+side)
+});
+assert.deepEqual(heroDefeat,['paint','wait-315','death-hero','wait-125'],
+ 'hero defeat retains its existing timing without the enemy finisher effect');
+const noMotion=[];
+await playCombatSequence([step('attack','hero',60,0)],()=>noMotion.push('paint'),{
+ duration:0,hitStopMs:ENEMY_FINISH_HIT_STOP_MS,
+ wait:async ms=>noMotion.push('wait-'+ms),
+ onHitStop:active=>noMotion.push('freeze-'+active),
+ onFatal:side=>noMotion.push('death-'+side)
+});
+assert.deepEqual(noMotion,['paint','death-enemy'],'reduced-motion skips hit stop entirely');
+const interruptedStop=[];
+await assert.rejects(
+ playCombatSequence([step('attack','hero',60,0)],()=>interruptedStop.push('paint'),{
+  duration:440,overlap:125,hitStopMs:ENEMY_FINISH_HIT_STOP_MS,
+  wait:async ms=>{if(ms===ENEMY_FINISH_HIT_STOP_MS)throw Error('hit stop interrupted');},
+  onHitStop:active=>interruptedStop.push('freeze-'+active),
+  onFatal:side=>interruptedStop.push('death-'+side)
+ }),/hit stop interrupted/);
+assert.deepEqual(interruptedStop,['paint','freeze-true','freeze-false'],
+ 'a failed wait still releases frozen animation state before propagating');
+const neverHitStop=[];
+await playCombatSequence([step('attack','hero',60,10)],()=>neverHitStop.push('paint'),{
+ duration:440,hitStopMs:ENEMY_FINISH_HIT_STOP_MS,
+ wait:async ms=>neverHitStop.push('wait-'+ms),
+ onHitStop:active=>neverHitStop.push('freeze-'+active),
+ onFatal:side=>neverHitStop.push('death-'+side)
+});
+assert.deepEqual(neverHitStop,['paint','wait-440'],'ordinary nonlethal hit keeps its original tempo');
 const alive=step('defense','hero',30,30),seen=[];
 await playCombatSequence([alive],()=>seen.push('defense'),{duration:0,onFatal:()=>seen.push('death')});
 assert.deepEqual(seen,['defense']);
