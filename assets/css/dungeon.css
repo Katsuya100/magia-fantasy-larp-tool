@@ -2466,6 +2466,8 @@ html,body{overflow-x:clip}
 /* A resisted impact must not shake its card; preserve independent attack lunges. */
 #battleArena .unit[data-affinity="resist"][data-hit="true"]{--shake-x:0px;--shake-y:0px}
 #battleArena .unit[data-affinity="resist"][data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){animation:none}
+/* WEAK's text has its own short shudder; don't stack the card's full hit vibration. */
+#battleArena .unit[data-affinity="weak"][data-hit="true"]{--shake-x:0px;--shake-y:0px}
 #battleArena .unit[data-affinity="weak"] .affinity-hit{
  --affinity-color:#ff5b8b;--affinity-glow:#ff42755c
 }
