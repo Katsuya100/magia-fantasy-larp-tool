@@ -764,14 +764,15 @@ async function ceremony(event,title,detail='',drops=0){
  const side=event==='hero-death'?'hero':event==='enemy-death'?'enemy':null;
  const duration=ceremonyDuration(event,run?.floor,{animated:effectDuration()>0,drops});
  stage.dataset.event=event;
- stage.setAttribute('style','--ceremony-duration:'+(duration/1000)+'s');
+ let ceremonyStyle='--ceremony-duration:'+(duration/1000)+'s';
  if(tier==='final'&&event==='enemy-death'){
-  // Use the real enemy card center; the arena columns differ on mobile.
+  // Use the actual enemy card center; grid columns differ on mobile.
   const arenaBox=arena.getBoundingClientRect();
   const bossBox=$('enemyCombatant').getBoundingClientRect();
-  stage.style.setProperty('--boss-origin-x',bossBox.left+bossBox.width/2-arenaBox.left+'px');
-  stage.style.setProperty('--boss-origin-y',bossBox.top+bossBox.height/2-arenaBox.top+'px');
+  ceremonyStyle+=';--boss-origin-x:'+(bossBox.left+bossBox.width/2-arenaBox.left)+'px';
+  ceremonyStyle+=';--boss-origin-y:'+(bossBox.top+bossBox.height/2-arenaBox.top)+'px';
  }
+ stage.setAttribute('style',ceremonyStyle);
  $('ceremonyTitle').textContent=title;
  $('ceremonyDetail').textContent=detail;
  $('lootChests').innerHTML=event==='loot'?treasureChestMarkup(drops):'';
