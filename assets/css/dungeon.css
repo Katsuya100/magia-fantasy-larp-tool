@@ -1661,8 +1661,8 @@ html,body{overflow-x:clip}
 @keyframes boss-final-mote-fall{
  0%{opacity:0;transform:translate(0,0) rotate(var(--mote-angle,0deg))}
  12%,52%{opacity:var(--mote-alpha,.8)}
- 74%,100%{opacity:0}
- 100%{transform:translate(var(--mote-drift,16px),var(--mote-fall,180px)) rotate(var(--mote-end-angle,60deg))}
+ 74%{opacity:0}
+ 100%{opacity:0;transform:translate(var(--mote-drift,16px),var(--mote-fall,180px)) rotate(var(--mote-end-angle,60deg))}
 }
 /* CLEAR is its own deliberate 2.4s hold, after all motes have faded. */
 #battleArena .battle-ceremony[data-event="final-clear"]{
