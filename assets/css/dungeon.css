@@ -1609,7 +1609,7 @@ html,body{overflow-x:clip}
 }
 @keyframes boss-final-beam-collapse{
  0%,33.333%{opacity:.5;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(1)}
- 44.444%,100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.05)
+ 44.444%,100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--beam-angle)) scaleY(.05)}
 }
 /* Fourth stage: particles finish at 4.5s, before the separate .85s CLEAR. */
 @keyframes boss-final-particles{
