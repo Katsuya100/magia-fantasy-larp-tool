@@ -20,6 +20,16 @@ export function captureCombatFxEcho(arena,visualDuration){
   }
   echo.append(copy);
  }
+ // Affinity words live outside the shaking fighters, so their 720ms
+ // presentation must be echoed separately as a stable arena overlay.
+ for(const side of ['hero','enemy']){
+  const caption=arena.querySelector('#'+side+'AffinityWord');
+  if(!caption?.cloneNode||caption.dataset.affinity==='none')continue;
+  const copy=caption.cloneNode(false);
+  copy.removeAttribute('id');
+  copy.style.cssText='left:'+caption.offsetLeft+'px;top:'+caption.offsetTop+'px;width:'+caption.offsetWidth+'px;height:'+caption.offsetHeight+'px';
+  echo.append(copy);
+ }
  const flight=arena.querySelector('.spell-flight')?.cloneNode(true);
  if(flight){
   for(const node of flight.querySelectorAll('[id]'))node.removeAttribute('id');
