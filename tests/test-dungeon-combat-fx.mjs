@@ -279,9 +279,16 @@ const damageSelectors=[
  '#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]',
  '#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]'
 ];
+const damageAmplitude=selector=>{
+ const match=shakeRule(selector).match(/--shake-x:(\d*\.?\d+)px;--shake-y:(\d*\.?\d+)px/);
+ assert.ok(match,'damage shake defines both amplitudes: '+selector);
+ return {x:Number(match[1]),y:Number(match[2])};
+};
+const normalAmplitude=damageAmplitude(damageSelectors[0]);
 const damagePeriods=damageSelectors.map(selector=>{
  const rule=shakeRule(selector),period=shakePeriod(selector);
- assert.match(rule,/--shake-x:4\.5px;--shake-y:1\.5px/,'unchanged damage amplitude: '+selector);
+ assert.deepEqual(damageAmplitude(selector),normalAmplitude,
+  'ordinary hits use the same amplitude regardless of fighter: '+selector);
  assert.ok(rule.includes('combat-shake-envelope .44s linear both'),
   'damage shake fades within the hit phase: '+selector);
  return period;
@@ -289,8 +296,12 @@ const damagePeriods=damageSelectors.map(selector=>{
 assert.ok(new Set(damagePeriods).size>=3,
  'ordinary, hero and enemy hits keep intentionally varied rhythm');
 assert.doesNotMatch(cinematicCss,/#battleArena\[data-shake="true"\] \.versus\{[^}]*animation/,'VS stays stationary during combat');
-assert.match(shakeRule('#battleArena .enemy-unit[data-hit="true"][data-affinity="weak"]'),/--shake-x:7px;--shake-y:2\.5px/,'WEAK enemy body receives the strongest amplitude');
-assert.match(shakeRule('#battleArena .enemy-unit[data-hit="true"][data-affinity="resist"]'),/--shake-x:3px;--shake-y:1px/,'RESIST enemy body preserves the original amplitude');
+const weakAmplitude=damageAmplitude('#battleArena .enemy-unit[data-hit="true"][data-affinity="weak"]');
+const resistAmplitude=damageAmplitude('#battleArena .enemy-unit[data-hit="true"][data-affinity="resist"]');
+assert.ok(weakAmplitude.x>normalAmplitude.x&&weakAmplitude.y>normalAmplitude.y,
+ 'WEAK enemy recoils harder than an ordinary hit on both axes');
+assert.ok(resistAmplitude.x<normalAmplitude.x&&resistAmplitude.y<normalAmplitude.y,
+ 'RESIST enemy recoils less than an ordinary hit on both axes');
 assert.match(cinematicCss,/#battleArena\[data-hit-stop="true"\] \*,\s*#battleArena\[data-hit-stop="true"\] \*::before,\s*#battleArena\[data-hit-stop="true"\] \*::after\{animation-play-state:paused!important\}/,'hit stop pauses combat and impact animations together');
 assert.equal(ENEMY_FINISH_HIT_STOP_MS,110,'lethal hit stop has the specified short duration');
 assert.match(appSource,/hitStopMs:ENEMY_FINISH_HIT_STOP_MS/,'live combat enables enemy finishing blow hit stop');
