@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
-import {magicEffectTier,effectCaption,attackHitAffinity,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,combatPhaseDuration,combatPhaseAdvanceDuration,COMBAT_EFFECT_MS,AFFINITY_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS,FINAL_CLEAR_EFFECT_MS} from '../assets/js/dungeon-combat-fx.mjs';
+import {magicEffectTier,effectCaption,attackHitAffinity,playCombatSequence,playBattleCeremony,simultaneousPhases,effectDuration,combatPhaseDuration,combatPhaseAdvanceDuration,COMBAT_EFFECT_MS,ENEMY_FINISH_HIT_STOP_MS,AFFINITY_EFFECT_MS,ENCOUNTER_EFFECT_MS,treasureChestMarkup,lootCeremonyDuration,bossCeremonyTier,ceremonyDuration,BOSS_CEREMONY_MS,FINAL_CLEAR_EFFECT_MS} from '../assets/js/dungeon-combat-fx.mjs';
 import {captureCombatFxEcho} from '../assets/js/dungeon-combat-fx-echo.mjs';
 
 // Muse #8: an old "+118" healing caption must not linger as a visible echo
@@ -269,12 +269,20 @@ for(const [selector,period,duration] of [
  ['#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]','.105s','.44s'],
 ]){
  const rule=shakeRule(selector);
+ assert.match(rule,/--shake-x:4\.5px;--shake-y:1\.5px/,'all ordinary hits have a slightly stronger amplitude: '+selector);
  assert.ok(rule.includes('combat-sine-shake '+period+' linear var(--shake-phase,0ms) infinite'),
    'independent period and initial phase for '+selector);
  assert.ok(rule.includes('combat-shake-envelope '+duration+' linear both'),
    'final 10% damping within original duration for '+selector);
 }
 assert.doesNotMatch(cinematicCss,/#battleArena\[data-shake="true"\] \.versus\{[^}]*animation/,'VS stays stationary during combat');
+assert.match(shakeRule('#battleArena .enemy-unit[data-hit="true"][data-affinity="weak"]'),/--shake-x:7px;--shake-y:2\.5px/,'WEAK enemy body receives the strongest amplitude');
+assert.match(shakeRule('#battleArena .enemy-unit[data-hit="true"][data-affinity="resist"]'),/--shake-x:3px;--shake-y:1px/,'RESIST enemy body preserves the original amplitude');
+assert.match(cinematicCss,/#battleArena\[data-hit-stop="true"\] \*,\s*#battleArena\[data-hit-stop="true"\] \*::before,\s*#battleArena\[data-hit-stop="true"\] \*::after\{animation-play-state:paused!important\}/,'hit stop pauses combat and impact animations together');
+assert.equal(ENEMY_FINISH_HIT_STOP_MS,110,'lethal hit stop has the specified short duration');
+assert.match(appSource,/hitStopMs:ENEMY_FINISH_HIT_STOP_MS/,'live combat enables enemy finishing blow hit stop');
+assert.match(appSource,/onHitStop:active=>\{ \$\('battleArena'\)\.dataset\.hitStop=active\?'true':'false'; \}/,'live combat freezes and unfreezes the arena only during a hit stop');
+assert.match(appSource,/\}finally\{\s*\$\('battleArena'\)\.dataset\.hitStop='false'/,'hit stop cannot leak across turns or exceptions');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]'),/--shake-x:calc\(var\(--boss-jolt\) \* \.16\);--shake-y:0px/,'boss arrival shakes horizontally only');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/boss-defeat-shake-envelope var\(--boss-time,2s\)/,'boss death shakes for a shorter portion');
 assert.match(cinematicCss,/@keyframes boss-defeat-shake-envelope\{\s*0%,36%\{--shake-gain:1\}\s*44%,100%\{--shake-gain:0\}/,'boss death begins shrinking earlier');
