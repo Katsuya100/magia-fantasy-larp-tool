@@ -395,7 +395,8 @@ assert.match(finalBeams,/33\.333%,100%\{opacity:0;transform:[^\n]*?scaleY\(\.08\
 const powder=orientationFrame('boss-final-mote-fall');
 assert.match(powder,/0%\{opacity:0;transform:translate\(0,0\) rotate\(var\(--mote-angle,0deg\)\)/,'powder starts without teleport or a scale pop');
 assert.match(powder,/12%,52%\{opacity:var\(--mote-alpha,\.8\)\}/,'powder is readable early in its independent lifetime');
-assert.match(powder,/74%,100%\{opacity:0\}/,'powder fades out by time, before it finishes falling');
+assert.match(powder,/74%\{opacity:0\}/,'powder fades out by time, before it finishes falling');
+assert.match(powder,/100%\{opacity:0;transform:translate\(var\(--mote-drift,16px\),var\(--mote-fall,180px\)\)/,'powder keeps falling at constant speed after becoming transparent');
 assert.match(shakeRule('#battleArena .battle-ceremony[data-event="final-clear"]'),/boss-final-clear-veil var\(--ceremony-duration,2\.4s\)/,'CLEAR overlay lasts 2.4s');
 assert.match(shakeRule('#battleArena .battle-ceremony[data-event="final-clear"]>strong'),/boss-final-clear-title var\(--ceremony-duration,2\.4s\)/,'CLEAR title also lasts 2.4s');
 assert.match(orientationFrame('boss-final-clear-title'),/35%,86%\{opacity:1/,'CLEAR title stays visible most of the time');
