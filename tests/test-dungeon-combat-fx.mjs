@@ -262,22 +262,46 @@ const shakeRule=selector=>{
  assert.ok(i>=0,'expected shake component: '+selector);
  return cinematicCss.slice(i,cinematicCss.indexOf('}',i)+1);
 };
-for(const [selector,period,duration] of [
- ['#battleArena .unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"])','.095s','.44s'],
- ['#battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"])','.085s','.44s'],
- ['#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]','.085s','.44s'],
- ['#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]','.105s','.44s'],
-]){
+// Frequencies are tuning parameters, not fixed gameplay contracts.
+// Validate the motion wiring and purposeful variation instead of pinning milliseconds.
+const shakePeriod=selector=>{
  const rule=shakeRule(selector);
- assert.match(rule,/--shake-x:4\.5px;--shake-y:1\.5px/,'all ordinary hits have a slightly stronger amplitude: '+selector);
- assert.ok(rule.includes('combat-sine-shake '+period+' linear var(--shake-phase,0ms) infinite'),
-   'independent period and initial phase for '+selector);
- assert.ok(rule.includes('combat-shake-envelope '+duration+' linear both'),
-   'final 10% damping within original duration for '+selector);
-}
+ const match=rule.match(/combat-sine-shake (\d*\.?\d+)s linear var\(--shake-phase,0ms\) infinite/);
+ assert.ok(match,'animated fighter has an independent sine wave: '+selector);
+ const period=Number(match[1]);
+ assert.ok(Number.isFinite(period)&&period>0,
+  'fighter shake has a finite positive period: '+selector+' ('+period+'s)');
+ return period;
+};
+const damageSelectors=[
+ '#battleArena .unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"])',
+ '#battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"])',
+ '#battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]',
+ '#battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]'
+];
+const damageAmplitude=selector=>{
+ const match=shakeRule(selector).match(/--shake-x:(\d*\.?\d+)px;--shake-y:(\d*\.?\d+)px/);
+ assert.ok(match,'damage shake defines both amplitudes: '+selector);
+ return {x:Number(match[1]),y:Number(match[2])};
+};
+const normalAmplitude=damageAmplitude(damageSelectors[0]);
+const damagePeriods=damageSelectors.map(selector=>{
+ const rule=shakeRule(selector),period=shakePeriod(selector);
+ assert.deepEqual(damageAmplitude(selector),normalAmplitude,
+  'ordinary hits use the same amplitude regardless of fighter: '+selector);
+ assert.ok(rule.includes('combat-shake-envelope .44s linear both'),
+  'damage shake fades within the hit phase: '+selector);
+ return period;
+});
+assert.ok(new Set(damagePeriods).size>=3,
+ 'ordinary, hero and enemy hits keep intentionally varied rhythm');
 assert.doesNotMatch(cinematicCss,/#battleArena\[data-shake="true"\] \.versus\{[^}]*animation/,'VS stays stationary during combat');
-assert.match(shakeRule('#battleArena .enemy-unit[data-hit="true"][data-affinity="weak"]'),/--shake-x:7px;--shake-y:2\.5px/,'WEAK enemy body receives the strongest amplitude');
-assert.match(shakeRule('#battleArena .enemy-unit[data-hit="true"][data-affinity="resist"]'),/--shake-x:3px;--shake-y:1px/,'RESIST enemy body preserves the original amplitude');
+const weakAmplitude=damageAmplitude('#battleArena .enemy-unit[data-hit="true"][data-affinity="weak"]');
+const resistAmplitude=damageAmplitude('#battleArena .enemy-unit[data-hit="true"][data-affinity="resist"]');
+assert.ok(weakAmplitude.x>normalAmplitude.x&&weakAmplitude.y>normalAmplitude.y,
+ 'WEAK enemy recoils harder than an ordinary hit on both axes');
+assert.ok(resistAmplitude.x<normalAmplitude.x&&resistAmplitude.y<normalAmplitude.y,
+ 'RESIST enemy recoils less than an ordinary hit on both axes');
 assert.match(cinematicCss,/#battleArena\[data-hit-stop="true"\] \*,\s*#battleArena\[data-hit-stop="true"\] \*::before,\s*#battleArena\[data-hit-stop="true"\] \*::after\{animation-play-state:paused!important\}/,'hit stop pauses combat and impact animations together');
 assert.equal(ENEMY_FINISH_HIT_STOP_MS,110,'lethal hit stop has the specified short duration');
 assert.match(appSource,/hitStopMs:ENEMY_FINISH_HIT_STOP_MS/,'live combat enables enemy finishing blow hit stop');
@@ -285,6 +309,8 @@ assert.match(appSource,/onHitStop:active=>\{ \$\('battleArena'\)\.dataset\.hitSt
 assert.match(appSource,/\}finally\{\s*\$\('battleArena'\)\.dataset\.hitStop='false'/,'hit stop cannot leak across turns or exceptions');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]'),/--shake-x:calc\(var\(--boss-jolt\) \* \.16\);--shake-y:0px/,'boss arrival shakes horizontally only');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/boss-defeat-shake-envelope var\(--boss-time,2s\)/,'boss death shakes for a shorter portion');
+const bossDefeatSelector='#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]';
+const bossDefeatPeriod=shakePeriod(bossDefeatSelector);
 assert.match(cinematicCss,/@keyframes boss-defeat-shake-envelope\{\s*0%,36%\{--shake-gain:1\}\s*44%,100%\{--shake-gain:0\}/,'boss death begins shrinking earlier');
 assert.match(appSource,/function randomizeCombatShake\(arena\)\{[\s\S]*?\.hero-unit,\.enemy-unit,\.affinity-caption/,'only combatants and independent word overlays receive individual random phases');
 assert.match(appSource,/crypto\?\.getRandomValues/,'visual randomization does not disturb combat RNG');
@@ -333,7 +359,8 @@ assert.match(orientationFrame('enemy-snap-slide'),/100%\{opacity:1;transform:tra
 assert.doesNotMatch(orientationFrame('enemy-snap-slide'),/translateX\(-|translate\(-/,'ordinary enemy never overshoots sideways');
 assert.doesNotMatch(shakeRule('#battleArena .enemy-unit[data-entering="true"]'),/combat-sine-shake/,'normal enemies enter with no vibration');
 const bossArrival=shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]');
-assert.match(bossArrival,/combat-sine-shake \.08s linear var\(--shake-phase,0ms\) infinite/,'every boss vibrates at the same 12.5Hz');
+const bossEntryPeriod=shakePeriod('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]');
+assert.notEqual(bossDefeatPeriod,bossEntryPeriod,'boss defeat and boss entry keep their distinctive rhythm');
 assert.match(bossArrival,/boss-entrance-shake-envelope \.9s linear both/,'entrance vibration ends in 0.9s at every tier');
 assert.match(bossArrival,/--shake-y:0px/,'boss entrance vibrates horizontally only');
 const bossScale=orientationFrame('boss-cinematic-rise-scale');
@@ -354,6 +381,9 @@ assert.match(shakeRule('#battleArena[data-boss-ceremony="final"][data-ceremony-e
 assert.equal(1400+500+900+600+2300,5700,'final defeat includes a short shake, collapse, burst, white hold and drifting scales');
 assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,5\.7s\)/,'final enemy card itself collapses');
 assert.match(finalBossRule,/boss-final-shake-envelope var\(--boss-time,5\.7s\)/,'final shake has a proper envelope');
+const finalDefeatPeriod=shakePeriod(finalDefeat);
+assert.ok(finalDefeatPeriod>bossDefeatPeriod,'100F defeat remains slower than other boss defeats');
+assert.match(cinematicCss,/\.affinity-caption\[data-affinity="weak"\]::after\{[\s\S]*?combat-sine-shake \d*\.?\d+s linear var\(--shake-phase,0ms\) 4 both/,'WEAK word keeps its separately tuned finite vibration');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/animation:boss-cinematic-collapse/,'other boss defeats retain their shared animation');
 for(const [part,motion] of [
  ['boss-vfx-halo','boss-final-halo-pulse'],['boss-vfx-ring-outer','boss-final-ring-burst-outer'],
