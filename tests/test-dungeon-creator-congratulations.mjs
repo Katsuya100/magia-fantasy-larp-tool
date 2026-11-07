@@ -5,6 +5,7 @@ import {fakeIndexedDB} from './helpers/fake-indexeddb.mjs';
 import {openStore,getProfile,putCircle,saveProfile} from '../assets/js/dungeon-store.mjs';
 import {adventurerShareData} from '../assets/js/dungeon-share.mjs';
 import {deepestReachedLayer,deepestReturnedLayer} from '../assets/js/dungeon-progress.mjs';
+import {BOSS_CEREMONY_MS,FINAL_CLEAR_EFFECT_MS} from '../assets/js/dungeon-combat-fx.mjs';
 import * as G from '../assets/js/dungeon-core.mjs';
 import {configure} from '../assets/js/dungeon-tuning.mjs';
 
@@ -23,7 +24,8 @@ assert.match(css,/\.creator-congratulations-dialog\{/,'distinct golden dialog st
 assert.match(css,/\.creator-congratulations-crest\{/,'special 100F emblem is styled');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)\{\s*\.creator-congratulations-stars/,'motion preferences are respected');
 const wait=async(fn,label)=>{
- const deadline=Date.now()+9000;
+ // The 100F defeat and CLEAR have their own long timelines before loot/checkpoint.
+ const deadline=Date.now()+Math.max(9000,BOSS_CEREMONY_MS.final['enemy-death']+FINAL_CLEAR_EFFECT_MS+7000);
  while(!(await fn())&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,25));
  assert.ok(await fn(),label);
 };

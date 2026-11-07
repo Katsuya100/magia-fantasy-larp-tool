@@ -421,7 +421,7 @@ assert.match(css,/#battleArena\{overflow-x:clip;min-width:0;max-width:100%\}/,'e
 assert.match(app,/scrollIntoView\?\.\(\{behavior:'instant',block:'start'\}\)/,'starting exploration cannot animate scrolling during the enemy entrance');
 assert.match(css,/@keyframes sanctuary-gentle-arrival/,'return shrine eases and fades in slowly');
 
-assert.match(css,/#battleArena\[data-shake="true"\] \.versus/,'attack camera jolt stays inside the arena');
+assert.doesNotMatch(css,/#battleArena\[data-shake="true"\] \.versus\{[^}]*animation/,'VS badge is stationary during attacks');
 assert.doesNotMatch(css,/#battle\.battle-panel\[data-shake="true"\]/,'whole battle panel must never shake');
 assert.match(app,/\$\('battleArena'\)\.dataset\.shake/,'combat shake JS only targets arena');
 assert.doesNotMatch(app,/\$\('battle'\)\.dataset\.shake/,'battle scene is never transformed by attack shake');
@@ -461,7 +461,9 @@ assert.match(css,/\.scene-stack > \.panel\[data-entering="true"\]/,'incoming pan
 assert.doesNotMatch(css, /::view-transition-old\(root\)/,'never zoom a full-screen snapshot');
 assert.match(css,/#battleArena \.unit\{\s*box-sizing:border-box;height:280px/,'fighters do not stretch with status effects');
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{/,'fighter stats share consistent fixed rows');
-assert.match(css,/@keyframes enemy-snap-slide/,'enemy only slides, never shrinks');
+assert.match(css,/@keyframes enemy-snap-slide/,'ordinary enemy leaps without scaling');
+assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-dying="true"\]\{animation:duel-defeat/,'ordinary enemy shrinks as one framed card');
+assert.doesNotMatch(css,/#battleArena \.enemy-unit\[data-dying="true"\] \.unit-info\{animation:duel-defeat/,'enemy info does not animate separately');
 assert.match(css,/@keyframes loot-ceremony-arrive/,'loot animation restarts without an empty death frame');
 assert.match(app,/if\(event!=='enemy-death'\)\{/,'death overlay remains during handoff');
 assert.doesNotMatch(app,/document\.startViewTransition/,'no root View Transition flicker');
