@@ -200,6 +200,7 @@ assert.match(weakShake,/66%,86%\{opacity:1;transform:translate\(-50%,-50%\)\}/,'
 const weakEnvelope=cinematicCss.match(/@keyframes weak-shake-envelope\{([\s\S]*?)\n\}/)?.[1];
 assert.match(weakEnvelope,/0%,25%\{--shake-gain:1\}/,'WEAK shakes only for its opening');
 assert.match(weakEnvelope,/36%,100%\{--shake-gain:0\}/,'WEAK stops vibrating before it fades');
+assert.match(cinematicCss,/#battleArena \.unit\[data-affinity="weak"\]\[data-hit="true"\]\{--shake-x:0px;--shake-y:0px\}/,'WEAK label does not inherit a longer card shake');
 assert.match(cinematicCss,/#battleArena \.unit\[data-affinity="resist"\]\[data-hit="true"\]\{--shake-x:0px;--shake-y:0px\}/,'RESIST shake has zero amplitude');
 assert.match(cinematicCss,/#battleArena \.unit\[data-affinity="resist"\]\[data-hit="true"\]:not\(\[data-effect="attack"\]\):not\(\[data-effect="basic"\]\)\{animation:none\}/,'RESIST removes card shake while preserving simultaneous attack rush');
 assert.match(cinematicCss,/@keyframes weak-shockwave\{[\s\S]*?scale\(\.2\)[\s\S]*?scale\(3\.2\)/,'shockwave expands as it fades');
