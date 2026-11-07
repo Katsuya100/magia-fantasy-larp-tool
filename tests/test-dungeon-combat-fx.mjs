@@ -316,7 +316,7 @@ assert.ok(orientationFrame('boss-cinematic-rise').includes('translateY(38px)'),'
 assert.doesNotMatch(orientationFrame('boss-cinematic-rise'),/translateX\(/,'boss entrance has no horizontal slide');
 assert.match(orientationFrame('boss-cinematic-rise'),/18%\{opacity:\.4;transform:translateY\(26px\)/,'boss gradually fades in while ascending');
 assert.match(orientationFrame('enemy-snap-slide'),/45%\{opacity:1;transform:translate\(16px,-34px\)/,'ordinary enemies leap higher');
-assert.match(shakeRule('#battleArena .enemy-unit[data-entering="true"]'),/animation:enemy-snap-slide \.28s/,'ordinary enemies arrive in 280ms');
+assert.match(cinematicCss,/#battleArena \.enemy-unit\[data-entering="true"\]\{\s*animation:enemy-snap-slide \.28s/,'ordinary enemies arrive in 280ms');
 assert.match(orientationFrame('enemy-snap-slide'),/100%\{opacity:1;transform:translate\(0,0\)/,'ordinary enemies settle without sideways rebound');
 assert.doesNotMatch(orientationFrame('enemy-snap-slide'),/translateX\(-|translate\(-/,'ordinary enemy never overshoots sideways');
 assert.doesNotMatch(shakeRule('#battleArena .enemy-unit[data-entering="true"]'),/combat-sine-shake/,'normal enemies enter with no vibration');
