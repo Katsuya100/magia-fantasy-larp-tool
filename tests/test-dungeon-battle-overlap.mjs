@@ -43,6 +43,16 @@ await playCombatSequence([step('attack','hero',60,0)],()=>noMotion.push('paint')
  onFatal:side=>noMotion.push('death-'+side)
 });
 assert.deepEqual(noMotion,['paint','death-enemy'],'reduced-motion skips hit stop entirely');
+const interruptedStop=[];
+await assert.rejects(
+ playCombatSequence([step('attack','hero',60,0)],()=>interruptedStop.push('paint'),{
+  duration:440,overlap:125,hitStopMs:ENEMY_FINISH_HIT_STOP_MS,
+  wait:async ms=>{if(ms===ENEMY_FINISH_HIT_STOP_MS)throw Error('hit stop interrupted');},
+  onHitStop:active=>interruptedStop.push('freeze-'+active),
+  onFatal:side=>interruptedStop.push('death-'+side)
+ }),/hit stop interrupted/);
+assert.deepEqual(interruptedStop,['paint','freeze-true','freeze-false'],
+ 'a failed wait still releases frozen animation state before propagating');
 const neverHitStop=[];
 await playCombatSequence([step('attack','hero',60,10)],()=>neverHitStop.push('paint'),{
  duration:440,hitStopMs:ENEMY_FINISH_HIT_STOP_MS,
