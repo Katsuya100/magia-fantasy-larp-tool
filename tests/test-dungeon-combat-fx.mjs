@@ -366,8 +366,8 @@ assert.match(shakeRule(finalOverlay),/background:transparent/,'dark overlay does
 assert.match(cinematicCss,/left:var\(--boss-origin-x,75%\);top:var\(--boss-origin-y,50%\)/,'final rings and beams are boss-centered');
 assert.match(shakeRule(finalOverlay+' .boss-vfx-flash'),/inset:auto;left:var\(--boss-origin-x,75%\);top:var\(--boss-origin-y,50%\)/,'central glow stays on the enemy');
 assert.match(appSource,/const arenaBox=arena\.getBoundingClientRect\(\);[\s\S]*?const bossBox=\$\('enemyCombatant'\)\.getBoundingClientRect\(\)/,'final burst measures live enemy card center');
-assert.match(appSource,/stage\.style\.setProperty\('--boss-origin-x'/,'final explosion X uses live enemy center');
-assert.match(appSource,/stage\.style\.setProperty\('--boss-origin-y'/,'final explosion Y uses live enemy center');
+assert.match(appSource,/ceremonyStyle\+=';--boss-origin-x:'\+\(bossBox\.left\+bossBox\.width\/2-arenaBox\.left\)/,'final explosion X uses live enemy center');
+assert.match(appSource,/ceremonyStyle\+=';--boss-origin-y:'\+\(bossBox\.top\+bossBox\.height\/2-arenaBox\.top\)/,'final explosion Y uses live enemy center');
 const finalWhiteout=orientationFrame('boss-final-whiteout');
 assert.match(finalWhiteout,/49\.123%,59\.649%\{opacity:1\}/,'whiteout is entirely opaque for 0.6s');
 assert.match(finalWhiteout,/70%,100%\{opacity:0\}/,'whiteout gives way to scales');
