@@ -2556,8 +2556,8 @@ html,body{overflow-x:clip}
 #battleArena .affinity-caption[data-affinity="weak"]::after{
  content:"WEAK";background:linear-gradient(120deg,#42102ae8,#190b19ef);
  box-shadow:0 0 21px 4px var(--affinity-glow),inset 0 0 16px var(--affinity-glow);
- --shake-x:2px;--shake-y:1px;
- animation:weak-damped-shudder .72s linear both,combat-sine-shake .08s linear var(--shake-phase,0ms) 4 both,weak-shake-envelope .32s linear both
+ --shake-x:3px;--shake-y:1.5px;
+ animation:weak-damped-shudder .72s linear both,combat-sine-shake .08s linear 0ms 4 both
 }
 /* Impact glows end with their matching shield/wave, not the longer word. */
 #battleArena .unit[data-affinity="resist"] .combatant-fx::before{
@@ -2574,11 +2574,7 @@ html,body{overflow-x:clip}
  72%{opacity:.44;transform:translate(-50%,-50%) scale(2.5)}
  100%{opacity:0;transform:translate(-50%,-50%) scale(3.2)}
 }
-/* Four finite waves decay to zero in 320ms; the last 400ms are motionless. */
-@keyframes weak-shake-envelope{
- 0%,30%{--shake-gain:1}
- 100%{--shake-gain:0}
-}
+/* Keep all four WEAK word oscillations at full strength before the 400ms hold. */
 @keyframes weak-damped-shudder{
  0%{opacity:0;transform:translate(-50%,-50%) scale(1.4)}
  10%{opacity:1;transform:translate(-50%,-50%) scale(1.14)}
