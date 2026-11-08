@@ -1471,6 +1471,24 @@ html,body{overflow-x:clip}
  0%,15%{--shake-gain:1}
  100%{--shake-gain:0}
 }
+/* Boss entrance dust wells up from the card's ground line for exactly the
+   existing 0.9s vibration; no extra animation wait or combat delay. */
+#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"])[data-ceremony-event="encounter"] .enemy-unit[data-entering="true"]::after{
+ content:"";position:absolute;left:-20%;bottom:-14px;width:140%;height:40px;
+ z-index:-1;pointer-events:none;opacity:0;transform-origin:center bottom;
+ background:
+  radial-gradient(ellipse 37% 56% at 28% 72%,#c4a47b9e,transparent 100%),
+  radial-gradient(ellipse 39% 60% at 74% 74%,#aa856b9e,transparent 100%),
+  radial-gradient(ellipse 42% 38% at 51% 84%,#dcc18f9e,transparent 100%);
+ filter:blur(3px);
+ animation:boss-ground-dust .3s ease-out 3 both
+}
+@keyframes boss-ground-dust{
+ 0%{opacity:0;transform:translateY(5px) scale(.48,.42)}
+ 20%{opacity:.88;transform:translateY(0) scale(.85,.72)}
+ 58%{opacity:.68;transform:translateY(-10px) scale(1.22,1)}
+ 100%{opacity:0;transform:translateY(-22px) scale(1.5,1.22)}
+}
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]{
  --shake-x:calc(var(--boss-jolt) * .48);--shake-y:calc(var(--boss-jolt) * .17);
  animation:boss-cinematic-collapse var(--boss-time,2s) ease-in both,combat-sine-shake .13s linear var(--shake-phase,0ms) infinite,boss-defeat-shake-envelope var(--boss-time,2s) linear both
