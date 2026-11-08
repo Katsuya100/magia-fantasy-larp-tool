@@ -405,6 +405,18 @@ const bossArrival=shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-cer
 const bossEntryPeriod=shakePeriod('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]');
 assert.ok(bossDefeatPeriod<bossEntryPeriod,'boss defeat is faster and finer than the heavy boss entrance');
 assert.match(bossArrival,/boss-entrance-shake-envelope \.9s linear both/,'entrance vibration ends in 0.9s at every tier');
+const bossDustSelector='#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"])[data-ceremony-event="encounter"] .enemy-unit[data-entering="true"]::after';
+const bossDust=shakeRule(bossDustSelector);
+assert.match(bossDust,/content:"";position:absolute;left:-20%;bottom:-14px;width:140%;height:40px/,'boss dust comes from the bottom of the full card');
+assert.match(bossDust,/animation:boss-ground-dust \.3s ease-out 3 both/,'dust wells up continuously during the entrance vibration');
+assert.match(orientationFrame('boss-ground-dust'),/0%\{opacity:0;transform:translateY\(5px\)/,'dust originates below the floor line');
+assert.match(orientationFrame('boss-ground-dust'),/100%\{opacity:0;transform:translateY\(-22px\)/,'dust rises and disperses above the floor line');
+const dustCycle=bossDust.match(/boss-ground-dust ([\d.]+)s ease-out (\d+) both/);
+assert.ok(Math.abs(Number(dustCycle[1])*Number(dustCycle[2])-.9)<1e-9,'three dust waves finish with the existing 0.9s vibration');
+assert.doesNotMatch(bossDustSelector,/data-dying/,'boss dust is only an arrival effect');
+assert.equal(BOSS_CEREMONY_MS.boss.encounter,1650,'ordinary boss entrance timing is unchanged');
+assert.equal(BOSS_CEREMONY_MS.milestone.encounter,2650,'milestone entrance timing is unchanged');
+assert.equal(BOSS_CEREMONY_MS.final.encounter,3800,'final boss entrance timing is unchanged');
 assert.match(bossArrival,/--shake-y:0px/,'boss entrance vibrates horizontally only');
 const bossScale=orientationFrame('boss-cinematic-rise-scale');
 assert.match(bossScale,/0%\{opacity:0;transform:translateY\(38px\) scale\(\.76\)/,'normal and milestone bosses begin small and faded');
