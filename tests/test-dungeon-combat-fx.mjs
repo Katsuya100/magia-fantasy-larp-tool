@@ -299,8 +299,8 @@ const damagePeriods=damageSelectors.map(selector=>{
   'damage shake fades within the hit phase: '+selector);
  return period;
 });
-assert.ok(new Set(damagePeriods).size>=3,
- 'ordinary, hero and enemy hits keep intentionally varied rhythm');
+assert.equal(new Set(damagePeriods).size,1,
+ 'hero and enemy receive identical hit vibration frequency, regardless of attack or basic state');
 assert.doesNotMatch(cinematicCss,/#battleArena\[data-shake="true"\] \.versus\{[^}]*animation/,'VS stays stationary during combat');
 const weakAmplitude=damageAmplitude('#battleArena .enemy-unit[data-hit="true"][data-affinity="weak"]');
 const resistAmplitude=damageAmplitude('#battleArena .enemy-unit[data-hit="true"][data-affinity="resist"]');
