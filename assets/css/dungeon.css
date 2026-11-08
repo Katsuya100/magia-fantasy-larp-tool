@@ -1432,11 +1432,11 @@ html,body{overflow-x:clip}
 #battleArena .battle-ceremony[data-boss-tier="final"] .boss-vfx-halo{
  box-shadow:0 0 90px 25px var(--boss-aura),0 0 36px 13px #fff4da
 }
-/* Every boss enters at 6.25Hz for the same 0.9s, with a smooth decay.
+/* Bosses enter with a heavier low-frequency vibration for 0.9s, with a smooth decay.
    Longer encounter cinematics do not slow or lengthen the vibration. */
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]{
  --shake-x:calc(var(--boss-jolt) * .16);--shake-y:0px;
- animation:boss-cinematic-rise var(--boss-time,2s) cubic-bezier(.2,.8,.2,1) both,combat-sine-shake .16s linear var(--shake-phase,0ms) infinite,boss-entrance-shake-envelope .9s linear both
+ animation:boss-cinematic-rise var(--boss-time,2s) cubic-bezier(.2,.8,.2,1) both,combat-sine-shake .20s linear var(--shake-phase,0ms) infinite,boss-entrance-shake-envelope .9s linear both
 }
 /* Normal and milestone bosses grow into view; the final boss retains its rise. */
 #battleArena[data-boss-ceremony]:is([data-boss-ceremony="boss"],[data-boss-ceremony="milestone"]) .enemy-unit[data-entering="true"]{
@@ -1448,7 +1448,7 @@ html,body{overflow-x:clip}
 }
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]{
  --shake-x:calc(var(--boss-jolt) * .48);--shake-y:calc(var(--boss-jolt) * .17);
- animation:boss-cinematic-collapse var(--boss-time,2s) ease-in both,combat-sine-shake .18s linear var(--shake-phase,0ms) infinite,boss-defeat-shake-envelope var(--boss-time,2s) linear both
+ animation:boss-cinematic-collapse var(--boss-time,2s) ease-in both,combat-sine-shake .13s linear var(--shake-phase,0ms) infinite,boss-defeat-shake-envelope var(--boss-time,2s) linear both
 }
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .enemy-portrait,
 #battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"] .unit-info{
@@ -1533,7 +1533,7 @@ html,body{overflow-x:clip}
 /* 100F defeat: 1.4s damped shake, .5s collapse, burst and held
    full-white flash, then slow drifting scales. CLEAR follows separately. */
 #battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"]{
- animation:boss-final-implosion var(--boss-time,5.7s) linear both,combat-sine-shake .20s linear var(--shake-phase,0ms) infinite,boss-final-shake-envelope var(--boss-time,5.7s) linear both
+ animation:boss-final-implosion var(--boss-time,5.7s) linear both,combat-sine-shake .12s linear var(--shake-phase,0ms) infinite,boss-final-shake-envelope var(--boss-time,5.7s) linear both
 }
 #battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"] .enemy-portrait,
 #battleArena[data-boss-ceremony="final"][data-ceremony-event="enemy-death"] .enemy-unit[data-dying="true"] .unit-info{

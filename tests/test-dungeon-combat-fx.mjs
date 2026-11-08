@@ -360,7 +360,7 @@ assert.doesNotMatch(orientationFrame('enemy-snap-slide'),/translateX\(-|translat
 assert.doesNotMatch(shakeRule('#battleArena .enemy-unit[data-entering="true"]'),/combat-sine-shake/,'normal enemies enter with no vibration');
 const bossArrival=shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]');
 const bossEntryPeriod=shakePeriod('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]');
-assert.notEqual(bossDefeatPeriod,bossEntryPeriod,'boss defeat and boss entry keep their distinctive rhythm');
+assert.ok(bossDefeatPeriod<bossEntryPeriod,'boss defeat is faster and finer than the heavy boss entrance');
 assert.match(bossArrival,/boss-entrance-shake-envelope \.9s linear both/,'entrance vibration ends in 0.9s at every tier');
 assert.match(bossArrival,/--shake-y:0px/,'boss entrance vibrates horizontally only');
 const bossScale=orientationFrame('boss-cinematic-rise-scale');
@@ -382,7 +382,7 @@ assert.equal(1400+500+900+600+2300,5700,'final defeat includes a short shake, co
 assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,5\.7s\)/,'final enemy card itself collapses');
 assert.match(finalBossRule,/boss-final-shake-envelope var\(--boss-time,5\.7s\)/,'final shake has a proper envelope');
 const finalDefeatPeriod=shakePeriod(finalDefeat);
-assert.ok(finalDefeatPeriod>bossDefeatPeriod,'100F defeat remains slower than other boss defeats');
+assert.ok(finalDefeatPeriod<bossDefeatPeriod&&finalDefeatPeriod<bossEntryPeriod,'100F defeat vibrates even finer than ordinary boss defeat and entrance');
 assert.match(cinematicCss,/\.affinity-caption\[data-affinity="weak"\]::after\{[\s\S]*?combat-sine-shake \d*\.?\d+s linear var\(--shake-phase,0ms\) 4 both/,'WEAK word keeps its separately tuned finite vibration');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/animation:boss-cinematic-collapse/,'other boss defeats retain their shared animation');
 for(const [part,motion] of [
