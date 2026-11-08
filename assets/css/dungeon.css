@@ -963,7 +963,7 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 /* Ordinary foes land with weight; boss entrances keep their own cinematics. */
 #battleArena[data-boss-ceremony="none"] .enemy-unit[data-entering="true"]{
  transform-origin:center bottom;
- animation:enemy-snap-slide .68s linear both
+ animation:enemy-snap-slide .28s linear both
 }
 @keyframes enemy-snap-slide{
  0%{opacity:0;transform:translate(48px,-72px) scale(.78)}
@@ -984,7 +984,7 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  filter:blur(3px)
 }
 #battleArena[data-boss-ceremony="none"] .enemy-unit[data-entering="true"] .enemy-portrait::after{
- animation:enemy-landing-dust .68s ease-out both
+ animation:enemy-landing-dust .28s ease-out both
 }
 @keyframes enemy-landing-dust{
  0%,36%{opacity:0;transform:translateY(7px) scale(.35,.45)}
