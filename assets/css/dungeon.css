@@ -967,10 +967,10 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 }
 @keyframes enemy-snap-slide{
  0%{opacity:0;transform:translate(48px,-72px) scale(.78)}
- 25%{opacity:1;transform:translate(10px,-27px) scale(.96,1.1)}
- 42%{opacity:1;transform:translate(0,0) scale(1.08,.76)}
- 59%{opacity:1;transform:translate(0,-6px) scale(.97,1.08)}
- 77%{opacity:1;transform:translate(0,0) scale(1.02,.97)}
+ 25%{opacity:1;transform:translate(10px,-27px) scale(.98,1.02)}
+ 42%{opacity:1;transform:translate(0,0) scale(1.025,.92)}
+ 59%{opacity:1;transform:translate(0,-2px) scale(.995,1.015)}
+ 77%{opacity:1;transform:translate(0,0) scale(1.005,.995)}
  100%{opacity:1;transform:translate(0,0) scale(1)}
 }
 /* Dust belongs to the foe's portrait, not the arena or player card. */
