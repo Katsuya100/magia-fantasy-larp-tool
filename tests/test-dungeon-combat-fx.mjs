@@ -397,7 +397,7 @@ assert.match(cinematicCss,/#battleArena\[data-boss-ceremony="none"\] \.enemy-uni
 assert.match(orientationFrame('enemy-snap-slide'),/100%\{opacity:1;transform:translate\(0,0\) scale\(1\)/,'ordinary enemies settle full-sized');
 assert.doesNotMatch(orientationFrame('enemy-snap-slide'),/translateX\(-|translate\(-/,'ordinary enemy never overshoots sideways');
 assert.doesNotMatch(shakeRule('#battleArena[data-boss-ceremony="none"] .enemy-unit[data-entering="true"]'),/combat-sine-shake/,'normal enemies enter without shake');
-assert.match(cinematicCss,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\] \.enemy-portrait::after\{\s*animation:enemy-landing-dust \.72s/,'normal enemy landing triggers a longer synchronized dust cloud');
+assert.match(cinematicCss,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\]::after\{\s*animation:enemy-landing-dust \.72s/,'normal enemy landing triggers a longer dust cloud at the card base');
 assert.ok(ENCOUNTER_EFFECT_MS>=720,'lingering dust finishes within the existing encounter playback, without added waits');
 assert.match(orientationFrame('enemy-landing-dust'),/17%\{opacity:\.9/,'landing dust appears when the enemy reaches its feet');
 assert.match(orientationFrame('enemy-landing-dust'),/100%\{opacity:0;transform:translateY\(-6px\)/,'landing dust stays near the feet while fading');
