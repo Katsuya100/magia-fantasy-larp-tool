@@ -322,12 +322,17 @@ const damagePeriods=damageSelectors.map(selector=>{
  const rule=shakeRule(selector),period=shakePeriod(selector);
  assert.deepEqual(damageAmplitude(selector),normalAmplitude,
   'ordinary hits use the same amplitude regardless of fighter: '+selector);
- assert.ok(rule.includes('combat-shake-envelope .44s linear both'),
-  'damage shake fades within the hit phase: '+selector);
+ assert.ok(rule.includes('combat-shake-envelope .308s linear both'),
+  'damage shake fades after 70% of the original 440ms hit phase: '+selector);
  return period;
 });
 assert.equal(new Set(damagePeriods).size,1,
  'hero and enemy receive identical hit vibration frequency, regardless of attack or basic state');
+assert.equal(0.308,0.44*0.7,'ordinary damage shake lasts exactly 70% of its previous duration');
+for(const selector of damageSelectors){
+ const rule=shakeRule(selector);
+ assert.match(rule,/\.44s cubic-bezier/,'the rush and recoil scene still lasts 440ms: '+selector);
+}
 assert.doesNotMatch(cinematicCss,/#battleArena\[data-shake="true"\] \.versus\{[^}]*animation/,'VS stays stationary during combat');
 const weakAmplitude=damageAmplitude('#battleArena .enemy-unit[data-hit="true"][data-affinity="weak"]');
 const resistAmplitude=damageAmplitude('#battleArena .enemy-unit[data-hit="true"][data-affinity="resist"]');
