@@ -463,7 +463,7 @@ assert.match(css,/#battleArena \.unit\{\s*box-sizing:border-box;height:280px/,'f
 assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{/,'fighter stats share consistent fixed rows');
 assert.match(css,/@keyframes enemy-snap-slide\{[\s\S]*?scale\(\.78\)[\s\S]*?scale\(1\)/,'ordinary enemy scales in while leaping');
 assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\]\{[\s\S]*?animation:enemy-snap-slide \.28s/,'only normal enemies use the landing animation');
-assert.match(css,/@keyframes enemy-snap-slide\{[\s\S]*?scale\(1\.08,\.76\)[\s\S]*?scale\(\.97,1\.08\)/,'landing squashes vertically and rebounds');
+assert.match(css,/@keyframes enemy-snap-slide\{[\s\S]*?scale\(1\.025,\.92\)[\s\S]*?scale\(\.995,1\.015\)/,'landing squashes vertically and rebounds');
 assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\] \.enemy-portrait::after\{\s*animation:enemy-landing-dust \.28s/,'dust rises only with normal enemy entry');
 assert.match(css,/@keyframes enemy-landing-dust\{[\s\S]*?43%\{opacity:\.9[\s\S]*?100%\{opacity:0/,'dust blooms at impact and vanishes');
 assert.match(css,/#battleArena \.enemy-unit\[data-entering="true"\] \.enemy-portrait::after\{animation:none!important\}/,'reduced-motion disables landing dust');
