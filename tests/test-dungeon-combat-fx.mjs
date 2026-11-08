@@ -195,15 +195,21 @@ for(const [klass,column] of [['hero-unit',1],['versus',2],['enemy-unit',3]])
 assert.match(cinematicCss,/data-affinity="resist"/,'resistance shield styling');
 assert.match(cinematicCss,/data-affinity="weak"/,'weakness burst styling');
 assert.match(cinematicCss,/\.unit\[data-affinity="weak"\] \.affinity-hit::before\{[\s\S]*?radial-gradient\(circle[\s\S]*?animation:weak-shockwave \.45s/,'weakness shockwave finishes in 450ms');
-assert.match(cinematicCss,/\.affinity-caption\[data-affinity="weak"\]::after\{[\s\S]*?--shake-x:2px;--shake-y:1px;[\s\S]*?animation:weak-damped-shudder \.72s linear both,combat-sine-shake \.08s linear var\(--shake-phase,0ms\) 4 both,weak-shake-envelope \.32s linear both/,'WEAK shakes only the first 320ms, keeping 400ms still');
+const weakWordRule=cinematicCss.match(/#battleArena \.affinity-caption\[data-affinity="weak"\]::after\{([\s\S]*?)\n\}/)?.[1];
+assert.ok(weakWordRule,'WEAK word animation exists');
+const weakWordAmplitude=weakWordRule.match(/--shake-x:(\d*\.?\d+)px;--shake-y:(\d*\.?\d+)px/);
+assert.ok(weakWordAmplitude&&Number(weakWordAmplitude[1])>Number(weakWordAmplitude[2])&&Number(weakWordAmplitude[2])>0,
+ 'WEAK text has nonzero horizontal and vertical vibration');
+assert.match(weakWordRule,/animation:weak-damped-shudder \.72s linear both,combat-sine-shake \d*\.?\d+s linear 0ms [1-9]\d* both/,
+ 'WEAK has finite, complete shake cycles starting at zero delay');
+assert.doesNotMatch(weakWordRule,/shake-envelope/,'WEAK word keeps full vibration strength without damping');
+assert.doesNotMatch(cinematicCss,/@keyframes weak-shake-envelope\{/,'removed weak damping is not left as dead CSS');
 const weakShake=cinematicCss.match(/@keyframes weak-damped-shudder\{([\s\S]*?)\n\}/)?.[1];
 assert.ok(weakShake,'WEAK opacity/scale envelope exists');
 assert.doesNotMatch(weakShake,/translate\(-?\d+px/,'WEAK has no extra slow horizontal vibration');
 assert.match(weakShake,/50%,90%\{opacity:1;transform:translate\(-50%,-50%\)\}/,'WEAK holds still across its readable final half');
 assert.match(weakShake,/100%\{opacity:0;transform:translate\(-50%,-50%\)\}/,'WEAK fades away without shifting its word');
-const weakEnvelope=cinematicCss.match(/@keyframes weak-shake-envelope\{([\s\S]*?)\n\}/)?.[1];
-assert.match(weakEnvelope,/0%,30%\{--shake-gain:1\}/,'WEAK begins at full vibration and damps early');
-assert.match(weakEnvelope,/100%\{--shake-gain:0\}/,'WEAK vibration settles before the final 400ms');
+
 assert.match(cinematicCss,/#battleArena>\.affinity-caption\{\s*position:relative;grid-row:1/,'affinity words are in a separate stationary grid layer');
 assert.doesNotMatch(cinematicCss,/\.unit\[data-affinity="resist"\]\[data-hit="true"\]\{--shake-x:0px/,'RESIST cannot suppress the card hit shake');
 assert.doesNotMatch(cinematicCss,/\.unit\[data-affinity="resist"\]\[data-hit="true"\][^\n]*\{animation:none\}/,'RESIST enemy remains eligible for normal shake');
@@ -387,7 +393,6 @@ assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,5\.7
 assert.match(finalBossRule,/boss-final-shake-envelope var\(--boss-time,5\.7s\)/,'final shake has a proper envelope');
 const finalDefeatPeriod=shakePeriod(finalDefeat);
 assert.ok(finalDefeatPeriod<bossDefeatPeriod&&finalDefeatPeriod<bossEntryPeriod,'100F defeat vibrates even finer than ordinary boss defeat and entrance');
-assert.match(cinematicCss,/\.affinity-caption\[data-affinity="weak"\]::after\{[\s\S]*?combat-sine-shake \d*\.?\d+s linear var\(--shake-phase,0ms\) 4 both/,'WEAK word keeps its separately tuned finite vibration');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/animation:boss-cinematic-collapse/,'other boss defeats retain their shared animation');
 for(const [part,motion] of [
  ['boss-vfx-halo','boss-final-halo-pulse'],['boss-vfx-ring-outer','boss-final-ring-burst-outer'],
