@@ -702,17 +702,17 @@ async function animateBattle(steps,{logPrefix=null,initialMp=null}={}){
     if(victim.dataset.effect==='idle')victim.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
    }
    if(animatedLog){for(const step of phase)if(step.text)animatedLog.push(step.text);refreshBattleRecord(animatedLog);}
-   const final=phase.at(-1),resolved=profile.run;
+   const final=phase.at(-1);
    if(displayedMp)for(const step of phase){
     if(['support','defense','debuff','attack','basic'].includes(step.role))
      displayedMp[step.side]=step.side==='hero'?step.hero.mp:step.enemy.mp;
    }
-   // HP/MP animate through phase snapshots, but status badges must reflect
-   // the resolved state used by the cleanser and other action buttons.
-   // Otherwise an expired burn remains visible while its cure is disabled.
+   // Display badges from this visual phase, not the already-resolved whole round:
+   // a debuff applied before an attack appears when their shared FX begins.
+   // renderRun() restores final/expired statuses after playback finishes.
    renderHeroName(final.hero);
-   $('heroStats').innerHTML=rowUnit({...final.hero,mp:displayedMp?.hero??final.hero.mp,statuses:resolved?.hero.statuses||final.hero.statuses});
-   $('enemyStats').innerHTML=rowUnit({...final.enemy,mp:displayedMp?.enemy??final.enemy.mp,statuses:resolved?.enemy.statuses||final.enemy.statuses});
+   $('heroStats').innerHTML=rowUnit({...final.hero,mp:displayedMp?.hero??final.hero.mp});
+   $('enemyStats').innerHTML=rowUnit({...final.enemy,mp:displayedMp?.enemy??final.enemy.mp});
    lastEcho=captureCombatFxEcho($('battleArena'),combatPhaseDuration(phase,effectDuration()));
    if(lastEcho)activeEchoes.push(lastEcho);
   },{

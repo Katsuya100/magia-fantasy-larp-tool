@@ -66,6 +66,19 @@ assert.deepEqual(frames.map(x=>x.role),['defense','debuff'],'barrier precedes he
 assert.ok(frames[0].hero.statuses.some(x=>x.kind==='buff'),'defense visual receives its fresh buff snapshot');
 assert.equal(frames[0].hero.statuses.some(x=>x.kind==='debuff'),false);
 assert.ok(frames[1].hero.statuses.some(x=>x.kind==='debuff'),'hex snapshot shows new status');
+const debuffHero=unit([s('debuff','gravity')]),attackingEnemy=unit([s('attack','flame')]);
+const debuffFirst=ordered(debuffHero,attackingEnemy,0,0);
+assert.deepEqual(debuffFirst.map(x=>x.role),['debuff','attack'],
+ 'debuff still resolves before the enemy attack in combat math');
+const concurrentOffense=simultaneousPhases(debuffFirst);
+assert.equal(concurrentOffense.length,1,'debuff and attack use one visual phase');
+assert.ok(concurrentOffense[0].at(-1).enemy.statuses.some(x=>x.kind==='debuff'),
+ 'new debuff badge is present in the phase snapshot at visual start');
+const healingHero=unit([s('support','aqua')]),guardEnemy=unit([s('defense','law')]);
+healingHero.hp=30;
+const concurrentGuard=simultaneousPhases(ordered(healingHero,guardEnemy,0,0));
+assert.deepEqual(concurrentGuard.map(phase=>phase.map(step=>step.role)),[['support','defense']],
+ 'healing resolves before defense but their animations share a phase');
 const z=unit([s('attack')]),v=unit([s('attack')]);
 G.addStatus(z,{id:'test-burning',kind:'debuff',attribute:'flame',effect:'burn',value:.8,turns:2});
 frames=ordered(z,v,0,0);
@@ -145,11 +158,21 @@ await playCombatSequence(frames,phase=>history.push('paint '+phase.map(s=>s.side
 assert.deepEqual(history,['paint hero+enemy','wait'],'both sides paint before one shared wait');
 const mixed=[{role:'support',side:'hero'},{role:'defense',side:'enemy'},{role:'attack',side:'hero'},{role:'attack',side:'enemy'},{role:'burn',side:'hero'}];
 assert.deepEqual(simultaneousPhases(mixed).map(x=>x.map(s=>s.role+':'+s.side)),[
- ['support:hero'],['defense:enemy'],['attack:hero','attack:enemy'],['burn:hero']
-],'combat resolution order is retained and equal priority actions overlap');
+ ['support:hero','defense:enemy'],['attack:hero','attack:enemy'],['burn:hero']
+],'healing and defense share one visual phase without changing core order');
+const mixedOffense=[{role:'debuff',side:'hero'},{role:'attack',side:'enemy'}];
+assert.deepEqual(simultaneousPhases(mixedOffense).map(x=>x.map(s=>s.role+':'+s.side)),[
+ ['debuff:hero','attack:enemy']
+],'weakening and magic attack start their visuals together');
+const basicOffense=[{role:'debuff',side:'enemy'},{role:'basic',side:'hero'}];
+assert.deepEqual(simultaneousPhases(basicOffense).map(x=>x.map(s=>s.role+':'+s.side)),[
+ ['debuff:enemy','basic:hero']
+],'weakening and normal attack also start together');
+assert.deepEqual(simultaneousPhases([{role:'debuff',side:'hero'},{role:'attack',side:'hero'}]).map(x=>x.length),[1,1],
+ 'one actor cannot animate multiple actions simultaneously');
 const progress=[];
-await playCombatSequence(mixed,phase=>progress.push(phase[0].role),{duration:1,wait:async()=>progress.push('wait')});
-assert.deepEqual(progress,['support','wait','defense','wait','attack','wait','burn','wait']);
+await playCombatSequence(mixed,phase=>progress.push(phase.map(s=>s.role).join('+')),{duration:1,wait:async()=>progress.push('wait')});
+assert.deepEqual(progress,['support+defense','wait','attack+attack','wait','burn','wait']);
 const ceremonyOrder=[];
 await playBattleCeremony('loot',event=>ceremonyOrder.push(event),{duration:1,wait:async()=>ceremonyOrder.push('finished')});
 assert.deepEqual(ceremonyOrder,['loot','finished']);
@@ -235,6 +258,10 @@ assert.ok(liveRelease,'the release marker exists in HTML');
 const sharedRelease=appSource.match(/dungeon-core\.mjs\?v=(\d{8}\.\d+)/)?.[1];
 assert.ok(sharedRelease,'the unchanged dungeon modules retain a shared cache version');
 assert.ok(appSource.includes('dungeon-combat-fx.mjs?v='+liveRelease),'changed FX module uses the release cache version');
+assert.match(appSource,/rowUnit\(\{\.\.\.final\.hero,mp:displayedMp\?\.hero\?\?final\.hero\.mp\}\)/,
+ 'hero status icons reflect the current phase snapshot, not the resolved future');
+assert.match(appSource,/rowUnit\(\{\.\.\.final\.enemy,mp:displayedMp\?\.enemy\?\?final\.enemy\.mp\}\)/,
+ 'enemy debuff icons appear with the debuff/attack FX phase');
 assert.match(appSource,/projectile\.dataset\.tier=actor\.dataset\.tier/,'attack projectiles use caster investment');
 assert.match(appSource,/target\.dataset\.affinity='none'/,'affinity resets');
 assert.match(appSource,/onFatal:side=>\{[\s\S]*?disposeCombatEchoes\(\$\('battleArena'\),activeEchoes\);[\s\S]*?clearCombatEffects\(\);[\s\S]*?return ceremony\(/,
@@ -483,4 +510,4 @@ assert.ok(normalizedFlight.includes('[data-side="hero"]{--flight-from:calc(25%-2
 assert.ok(normalizedFlight.includes('--flight-from:calc(75%+11.25px);--flight-to:calc(25%-11.25px)'),'mobile enemy projectile flies left');
 assert.ok(normalizedFlight.includes('[data-side="hero"]{--flight-from:calc(25%-11.25px);--flight-to:calc(75%+11.25px)'),'mobile hero projectile flies right');
 
-console.log('PASS concurrent elemental fighter phases, ordered actions, encounter/death/loot and exact number of flying treasure chests');
+console.log('PASS grouped guard/offense FX, ordered combat actions, phase-timed status badges and encounter/death/loot');

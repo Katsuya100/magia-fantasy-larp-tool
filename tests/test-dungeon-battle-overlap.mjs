@@ -142,29 +142,27 @@ const staged=[step('support','hero',60,30),step('defense','enemy',60,30),step('d
 const painted=[],waits=[];
 let acceptNext;
 const queued=new Promise(resolve=>{acceptNext=resolve;});
-const playback=playCombatSequence(staged,phase=>painted.push(phase[0].role),{
+const playback=playCombatSequence(staged,phase=>painted.push(phase.map(s=>s.role).join('+')),{
  duration:440,
  wait:ms=>new Promise(resolve=>{waits.push({ms,resolve});}),
  onLastPhase:(phase,duration)=>{
-  assert.deepEqual(painted,['support','defense','debuff','attack'],'final phase gate begins after all earlier roles');
-  assert.equal(phase[0].role,'attack');
+  assert.deepEqual(painted,['support+defense','debuff+attack'],
+   'queued action is gated until the grouped offensive FX begins');
+  assert.deepEqual(phase.map(s=>s.role),['debuff','attack']);
   assert.equal(duration,440);
   return queued;
  }
 });
-for(const role of ['support','defense','debuff']){
- assert.equal(painted.at(-1),role);
- const current=waits.at(-1);
- assert.equal(current.ms,440);
- current.resolve();
- await new Promise(resolve=>setImmediate(resolve));
-}
-assert.equal(painted.at(-1),'attack');
-assert.equal(waits.length,4,'last phase still starts a complete 440ms wait');
+assert.equal(painted.at(-1),'support+defense');
+assert.equal(waits[0].ms,440);
+waits[0].resolve();
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(painted.at(-1),'debuff+attack');
+assert.equal(waits.length,2,'the round has two shared visual phases');
 acceptNext(); // as if the final phase reached 70% with a buffered command
 await playback;
-assert.equal(waits[3].ms,440,'early release does not change the original effect duration');
-waits[3].resolve();
+assert.equal(waits[1].ms,440,'early release does not change the original effect duration');
+waits[1].resolve();
 let fatalWindow=0;
 await playCombatSequence([step('attack','hero',60,0)],()=>{},{
  duration:0,onLastPhase:()=>{fatalWindow++;},onFatal:()=>{}

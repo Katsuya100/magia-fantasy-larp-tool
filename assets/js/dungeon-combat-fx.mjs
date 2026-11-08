@@ -69,13 +69,15 @@ export function combatPhaseDuration(phase,duration=effectDuration()){
  return duration===COMBAT_EFFECT_MS&&phase.some(step=>attackHitAffinity(step)!=='none')
   ?AFFINITY_EFFECT_MS:duration;
 }
-// Resolve order is fixed by the combat core. The two sides animate together
-// if they acted in the same priority phase, without skipping later phases.
+// Combat resolution stays in core priority order. Only presentation groups
+// healing with defense, and debuffs with magic/basic attacks.
+const visualPhase=role=>['support','defense'].includes(role)?'guard'
+ :['debuff','attack','basic'].includes(role)?'offense':role;
 export function simultaneousPhases(steps){
  const phases=[];
  for(const step of steps){
   const last=phases.at(-1);
-  if(last&&last[0].role===step.role&&last.every(s=>s.side!==step.side))last.push(step);
+  if(last&&visualPhase(last[0].role)===visualPhase(step.role)&&last.every(s=>s.side!==step.side))last.push(step);
   else phases.push([step]);
  }
  return phases;
