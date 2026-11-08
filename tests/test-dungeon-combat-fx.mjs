@@ -355,11 +355,11 @@ assert.doesNotMatch(orientationFrame('boss-cinematic-rise'),/translateX\(/,'boss
 assert.match(orientationFrame('boss-cinematic-rise'),/18%\{opacity:\.4;transform:translateY\(26px\)/,'boss gradually fades in while ascending');
 assert.match(orientationFrame('enemy-snap-slide'),/42%\{opacity:1;transform:translate\(0,0\) scale\(1\.08,\.76\)/,'ordinary enemies squash vertically on impact');
 assert.match(orientationFrame('enemy-snap-slide'),/59%\{opacity:1;transform:translate\(0,-6px\) scale\(\.97,1\.08\)/,'ordinary enemies recoil after landing');
-assert.match(cinematicCss,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\]\{[\s\S]*?animation:enemy-snap-slide \.68s/,'normal enemies land in 680ms without changing bosses');
+assert.match(cinematicCss,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\]\{[\s\S]*?animation:enemy-snap-slide \.28s/,'normal enemies land in 280ms without changing bosses');
 assert.match(orientationFrame('enemy-snap-slide'),/100%\{opacity:1;transform:translate\(0,0\) scale\(1\)/,'ordinary enemies settle full-sized');
 assert.doesNotMatch(orientationFrame('enemy-snap-slide'),/translateX\(-|translate\(-/,'ordinary enemy never overshoots sideways');
 assert.doesNotMatch(shakeRule('#battleArena[data-boss-ceremony="none"] .enemy-unit[data-entering="true"]'),/combat-sine-shake/,'normal enemies enter without shake');
-assert.match(cinematicCss,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\] \.enemy-portrait::after\{\s*animation:enemy-landing-dust \.68s/,'normal enemy landing triggers a synchronized dust cloud');
+assert.match(cinematicCss,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\] \.enemy-portrait::after\{\s*animation:enemy-landing-dust \.28s/,'normal enemy landing triggers a synchronized dust cloud');
 assert.match(orientationFrame('enemy-landing-dust'),/43%\{opacity:\.9/,'landing dust appears at contact');
 assert.match(orientationFrame('enemy-landing-dust'),/100%\{opacity:0/,'landing dust dissipates after impact');
 const bossArrival=shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-entering="true"]');
