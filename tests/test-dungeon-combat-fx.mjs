@@ -412,7 +412,7 @@ assert.match(bossDust,/animation:boss-ground-dust \.3s ease-out 3 both/,'dust we
 assert.match(orientationFrame('boss-ground-dust'),/0%\{opacity:0;transform:translateY\(5px\)/,'dust originates below the floor line');
 assert.match(orientationFrame('boss-ground-dust'),/100%\{opacity:0;transform:translateY\(-22px\)/,'dust rises and disperses above the floor line');
 const dustCycle=bossDust.match(/boss-ground-dust ([\d.]+)s ease-out (\d+) both/);
-assert.equal(Number(dustCycle[1])*Number(dustCycle[2]),.9,'three dust waves finish with the existing 0.9s vibration');
+assert.ok(Math.abs(Number(dustCycle[1])*Number(dustCycle[2])-.9)<1e-9,'three dust waves finish with the existing 0.9s vibration');
 assert.doesNotMatch(bossDustSelector,/data-dying/,'boss dust is only an arrival effect');
 assert.equal(BOSS_CEREMONY_MS.boss.encounter,1650,'ordinary boss entrance timing is unchanged');
 assert.equal(BOSS_CEREMONY_MS.milestone.encounter,2650,'milestone entrance timing is unchanged');
