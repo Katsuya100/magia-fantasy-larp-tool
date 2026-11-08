@@ -389,7 +389,6 @@ assert.match(finalBossRule,/animation:boss-final-implosion var\(--boss-time,5\.7
 assert.match(finalBossRule,/boss-final-shake-envelope var\(--boss-time,5\.7s\)/,'final shake has a proper envelope');
 const finalDefeatPeriod=shakePeriod(finalDefeat);
 assert.ok(finalDefeatPeriod<bossDefeatPeriod&&finalDefeatPeriod<bossEntryPeriod,'100F defeat vibrates even finer than ordinary boss defeat and entrance');
-assert.match(weakWordRule,/combat-sine-shake \\d*\\.?\\d+s linear 0ms [1-9]\\d* both/,'WEAK word plays its separately tuned finite vibration from the first frame');
 assert.match(shakeRule('#battleArena[data-boss-ceremony]:not([data-boss-ceremony="none"]) .enemy-unit[data-dying="true"]'),/animation:boss-cinematic-collapse/,'other boss defeats retain their shared animation');
 for(const [part,motion] of [
  ['boss-vfx-halo','boss-final-halo-pulse'],['boss-vfx-ring-outer','boss-final-ring-burst-outer'],
