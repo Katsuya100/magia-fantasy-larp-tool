@@ -464,8 +464,9 @@ assert.match(css,/#battleArena #enemyStats,#battleArena #heroStats\{/,'fighter s
 assert.match(css,/@keyframes enemy-snap-slide\{[\s\S]*?scale\(\.78\)[\s\S]*?scale\(1\)/,'ordinary enemy scales in while leaping');
 assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\]\{[\s\S]*?animation:enemy-snap-slide \.28s/,'only normal enemies use the landing animation');
 assert.match(css,/@keyframes enemy-snap-slide\{[\s\S]*?scale\(1\.025,\.92\)[\s\S]*?scale\(\.995,1\.015\)/,'landing squashes vertically and rebounds');
-assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\] \.enemy-portrait::after\{\s*animation:enemy-landing-dust \.28s/,'dust rises only with normal enemy entry');
-assert.match(css,/@keyframes enemy-landing-dust\{[\s\S]*?43%\{opacity:\.9[\s\S]*?100%\{opacity:0/,'dust blooms at impact and vanishes');
+assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-entering="true"\] \.enemy-portrait::after\{\s*animation:enemy-landing-dust \.72s/,'foot-level dust lingers without changing enemy entry timing');
+assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit \.enemy-portrait::after\{\s*content:"";position:absolute;left:-10%;bottom:-5px;width:120%;height:24px;/,'dust is anchored to the bottom of the enemy icon on desktop and mobile');
+assert.match(css,/@keyframes enemy-landing-dust\{[\s\S]*?17%\{opacity:\.9[\s\S]*?100%\{opacity:0;transform:translateY\(-6px\)/,'dust expands outward near the feet and dissipates slowly');
 assert.match(css,/#battleArena \.enemy-unit\[data-entering="true"\] \.enemy-portrait::after\{animation:none!important\}/,'reduced-motion disables landing dust');
 assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-dying="true"\]\{animation:duel-defeat/,'ordinary enemy shrinks as one framed card');
 assert.doesNotMatch(css,/#battleArena \.enemy-unit\[data-dying="true"\] \.unit-info\{animation:duel-defeat/,'enemy info does not animate separately');
