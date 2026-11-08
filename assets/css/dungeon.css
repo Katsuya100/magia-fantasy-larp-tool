@@ -973,9 +973,9 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  77%{opacity:1;transform:translate(0,0) scale(1.005,.995)}
  100%{opacity:1;transform:translate(0,0) scale(1)}
 }
-/* Dust belongs to the foe's portrait, not the arena or player card. */
+/* Foot-level dust stays in the portrait track; it never changes battle timing. */
 #battleArena[data-boss-ceremony="none"] .enemy-unit .enemy-portrait::after{
- content:"";position:absolute;left:-28%;bottom:-18px;width:156%;height:42px;
+ content:"";position:absolute;left:-10%;bottom:-5px;width:120%;height:24px;
  z-index:-1;pointer-events:none;opacity:0;transform-origin:center bottom;
  background:
   radial-gradient(ellipse 37% 56% at 28% 72%,#c4a47b9e,transparent 100%),
@@ -984,13 +984,14 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
  filter:blur(3px)
 }
 #battleArena[data-boss-ceremony="none"] .enemy-unit[data-entering="true"] .enemy-portrait::after{
- animation:enemy-landing-dust .28s ease-out both
+ animation:enemy-landing-dust .72s ease-out both
 }
 @keyframes enemy-landing-dust{
- 0%,36%{opacity:0;transform:translateY(7px) scale(.35,.45)}
- 43%{opacity:.9;transform:translateY(2px) scale(.8,.7)}
- 65%{opacity:.72;transform:translateY(-7px) scale(1.25,1.1)}
- 100%{opacity:0;transform:translateY(-18px) scale(1.65,1.2)}
+ 0%,14%{opacity:0;transform:translateY(3px) scale(.35,.45)}
+ 17%{opacity:.9;transform:translateY(0) scale(.8,.7)}
+ 52%{opacity:.65;transform:translateY(-2px) scale(1.2,1.08)}
+ 78%{opacity:.32;transform:translateY(-4px) scale(1.4,1.16)}
+ 100%{opacity:0;transform:translateY(-6px) scale(1.55,1.2)}
 }
 /* The death overlay remains mounted until the reward overlay starts.
    Give reward a distinct animation name so its motion restarts on handoff. */
