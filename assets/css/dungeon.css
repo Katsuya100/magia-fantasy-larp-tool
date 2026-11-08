@@ -960,14 +960,37 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 @media(max-width:630px){
  #battleArena .unit{height:240px}
 }
-/* A single fast forward leap, without brightness flicker or a landing rebound. */
-#battleArena .enemy-unit[data-entering="true"]{
- animation:enemy-snap-slide .28s cubic-bezier(.16,.78,.25,1) both
+/* Ordinary foes land with weight; boss entrances keep their own cinematics. */
+#battleArena[data-boss-ceremony="none"] .enemy-unit[data-entering="true"]{
+ transform-origin:center bottom;
+ animation:enemy-snap-slide .28s linear both
 }
 @keyframes enemy-snap-slide{
- 0%{opacity:0;transform:translate(64px,14px) scale(.78)}
- 45%{opacity:1;transform:translate(16px,-34px) scale(.94)}
+ 0%{opacity:0;transform:translate(48px,-72px) scale(.78)}
+ 25%{opacity:1;transform:translate(10px,-27px) scale(.96,1.1)}
+ 42%{opacity:1;transform:translate(0,0) scale(1.08,.76)}
+ 59%{opacity:1;transform:translate(0,-6px) scale(.97,1.08)}
+ 77%{opacity:1;transform:translate(0,0) scale(1.02,.97)}
  100%{opacity:1;transform:translate(0,0) scale(1)}
+}
+/* Dust belongs to the foe's portrait, not the arena or player card. */
+#battleArena[data-boss-ceremony="none"] .enemy-unit .enemy-portrait::after{
+ content:"";position:absolute;left:-28%;bottom:-18px;width:156%;height:42px;
+ z-index:-1;pointer-events:none;opacity:0;transform-origin:center bottom;
+ background:
+  radial-gradient(ellipse 37% 56% at 28% 72%,#c4a47b9e,transparent 100%),
+  radial-gradient(ellipse 39% 60% at 74% 74%,#aa856b9e,transparent 100%),
+  radial-gradient(ellipse 42% 38% at 51% 84%,#dcc18f9e,transparent 100%);
+ filter:blur(3px)
+}
+#battleArena[data-boss-ceremony="none"] .enemy-unit[data-entering="true"] .enemy-portrait::after{
+ animation:enemy-landing-dust .28s ease-out both
+}
+@keyframes enemy-landing-dust{
+ 0%,36%{opacity:0;transform:translateY(7px) scale(.35,.45)}
+ 43%{opacity:.9;transform:translateY(2px) scale(.8,.7)}
+ 65%{opacity:.72;transform:translateY(-7px) scale(1.25,1.1)}
+ 100%{opacity:0;transform:translateY(-18px) scale(1.65,1.2)}
 }
 /* The death overlay remains mounted until the reward overlay starts.
    Give reward a distinct animation name so its motion restarts on handoff. */
@@ -983,6 +1006,7 @@ dialog[data-ui-closing="true"],dialog[data-ui-closing="true"]::backdrop{transiti
 }
 @media(prefers-reduced-motion:reduce){
  #battleArena .enemy-unit[data-entering="true"]{animation:none!important}
+ #battleArena .enemy-unit[data-entering="true"] .enemy-portrait::after{animation:none!important}
  .scene-stack > .panel[data-exiting="true"],.scene-stack > .panel[data-entering="true"]{animation:none!important}
 }
 
