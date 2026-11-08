@@ -620,18 +620,18 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
  animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both
 }
-/* All combatants share the same moderate hit frequency; shake gain damps over 440ms. */
+/* All combatants share the same hit frequency; shake gain damps over 308ms (70% of 440ms). */
 #battleArena .unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
  --shake-x:4.5px;--shake-y:1.5px;
- animation:snappy-impact .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .115s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
+ animation:snappy-impact .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .115s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .308s linear both
 }
 #battleArena .hero-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
  --shake-x:4.5px;--shake-y:1.5px;
- animation:snappy-rush-hero .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .115s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
+ animation:snappy-rush-hero .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .115s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .308s linear both
 }
 #battleArena .enemy-unit:is([data-effect="attack"],[data-effect="basic"])[data-hit="true"]{
  --shake-x:4.5px;--shake-y:1.5px;
- animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .115s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
+ animation:snappy-rush-enemy .44s cubic-bezier(.22,.8,.18,1) both,combat-sine-shake .115s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .308s linear both
 }
 #battleArena .unit:is([data-effect="attack"],[data-effect="basic"]) .combatant-burst{
  animation:snappy-burst .44s cubic-bezier(.12,.8,.25,1) both
@@ -672,7 +672,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 /* A hit received by the left-side hero recoils left, not toward the enemy. */
 #battleArena .hero-unit[data-hit="true"]:not([data-effect="attack"]):not([data-effect="basic"]){
  --shake-x:4.5px;--shake-y:1.5px;
- animation:snappy-impact-hero-left .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .115s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .44s linear both
+ animation:snappy-impact-hero-left .44s cubic-bezier(.15,.85,.24,1) both,combat-sine-shake .115s linear var(--shake-phase,0ms) infinite,combat-shake-envelope .308s linear both
 }
 @keyframes snappy-impact-hero-left{
  0%,38%{transform:none;filter:none}
@@ -704,7 +704,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);margin-top:25px;letter
 #battleArena[data-hit-stop="true"] *,
 #battleArena[data-hit-stop="true"] *::before,
 #battleArena[data-hit-stop="true"] *::after{animation-play-state:paused!important}
-/* Gain is 1 through 90%; damp to zero within the original scene duration. */
+/* Gain is 1 through 90%; damp to zero within the shortened hit-shake duration. */
 @keyframes combat-shake-envelope{
  0%,90%{--shake-gain:1}
  100%{--shake-gain:0}
