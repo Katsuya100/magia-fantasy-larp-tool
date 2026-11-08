@@ -469,6 +469,9 @@ assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit::after\
 assert.doesNotMatch(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit \.enemy-portrait::after\{/,'dust must not attach to the enemy portrait');
 assert.match(css,/@keyframes enemy-landing-dust\{[\s\S]*?17%\{opacity:\.9[\s\S]*?100%\{opacity:0;transform:translateY\(-6px\)/,'dust expands outward near the feet and dissipates slowly');
 assert.match(css,/#battleArena \.enemy-unit\[data-entering="true"\]::after\{animation:none!important\}/,'reduced-motion disables landing dust');
+assert.match(css,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\)\[data-ceremony-event="encounter"\] \.enemy-unit\[data-entering="true"\]::after\{\s*content:"";position:absolute;left:-20%;bottom:-14px;width:140%;height:40px/,'all boss tiers create dust at their card base');
+assert.match(css,/@keyframes boss-ground-dust\{[\s\S]*?translateY\(-10px\)[\s\S]*?translateY\(-22px\)/,'boss dust moves upward out of the ground');
+assert.doesNotMatch(css,/#battleArena\[data-boss-ceremony\]:not\(\[data-boss-ceremony="none"\]\)\[data-ceremony-event="enemy-death"\] \.enemy-unit\[data-entering="true"\]::after/,'dust does not play on boss death');
 assert.match(css,/#battleArena\[data-boss-ceremony="none"\] \.enemy-unit\[data-dying="true"\]\{animation:duel-defeat/,'ordinary enemy shrinks as one framed card');
 assert.doesNotMatch(css,/#battleArena \.enemy-unit\[data-dying="true"\] \.unit-info\{animation:duel-defeat/,'enemy info does not animate separately');
 assert.match(css,/@keyframes loot-ceremony-arrive/,'loot animation restarts without an empty death frame');
