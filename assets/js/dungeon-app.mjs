@@ -1,12 +1,12 @@
 import * as G from './dungeon-core.mjs?v=20261106.339';
 import {inkEnhancedAnalysis,MAGIC_INK_NAME} from './dungeon-ink.mjs?v=20261106.339';
-import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENEMY_FINISH_HIT_STOP_MS,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261108.358';
-import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261108.358';
-import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261108.358';
+import {playCombatSequence,playBattleCeremony,effectCaption,effectDuration,ENEMY_FINISH_HIT_STOP_MS,attackHitAffinity,magicEffectTier,bossCeremonyTier,ceremonyDuration,treasureChestMarkup,combatPhaseDuration} from './dungeon-combat-fx.mjs?v=20261108.359';
+import {createBattleInputBuffer,canReplayBufferedBattleCommand} from './dungeon-battle-input.mjs?v=20261108.359';
+import {captureCombatFxEcho,disposeCombatEchoes,discardCombatEchoesOnMiss} from './dungeon-combat-fx-echo.mjs?v=20261108.359';
 import {canDepartWithCircles,circleSummary,circleCardInfo,circleDetails,isRevealed,revealOnUse,newCapturedCircle,savePreanalysis,normalizeAnalysisResult,successfulDungeonAnalysis,failedDungeonAnalysis,circleEffectDetails} from './dungeon-magic-knowledge.mjs?v=20261106.339';
 import {prepareCircles,prepareItems,setSlot,pickedValues,needsEmptyCarryConfirmation,isFull,ensureItemInstances,saveCarrySlots,restoreCarrySlots,validCarrySlots} from './dungeon-loadout.mjs?v=20261106.339';
 import {spellGrid,itemGrid,alchemyItemGrid,circleChoices,itemChoices,circleEffectBadges,itemSymbol,itemEffectText,itemEffectIcons} from './dungeon-preparation-ui.mjs?v=20261106.339';
-import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261108.358';
+import {alchemyAutoSelect,alchemyEntryError,alchemyCraftError,craftAlchemy} from './dungeon-alchemy.mjs?v=20261108.359';
 import {circleListIndexes,itemListIndexes,collectionListIndexes,collectionRarityMarks} from './dungeon-list-view.mjs?v=20261106.339';
 import {relicSymbolSvg} from './dungeon-relic-symbols.mjs?v=20261106.339';
 import {newestCirclesFirst,nextCircleRegistration} from './dungeon-circle-order.mjs?v=20261106.339';
@@ -15,13 +15,13 @@ import {enemyForFight,layerForFight,shuffledLayerEnemyIds,isBonusLayer,bonusColl
 import {FIGHTS_PER_LAYER,isLayerBoss,encounterLabel,battleHeading,battleEncounter,clearedLayer,recordReturnedLayer,deepestReturnedLayer,recordReachedLayer,deepestReachedLayer,hasHundredFloorCrown,dungeonDepthBlend} from './dungeon-progress.mjs?v=20261106.339';
 import {upgradeCircle,savedUpgrade,combatSpell,upgradeStoneCost} from './dungeon-upgrades.mjs?v=20261106.339';
 import {openStore,allCircles,putCircle,deleteCircle,saveProfile,getProfile,readDungeonSnapshot,clearDungeonData,saveProfileWithCircles,saveHeirName} from './dungeon-store.mjs?v=20261106.339';
-import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261108.358';
+import {initDungeonCloudSync} from './dungeon-cloud-sync.mjs?v=20261108.359';
 import {verifyLocalSnapshot} from './dungeon-cloud-integrity.mjs?v=20261106.339';
 import {createDungeonPhotoManager} from './dungeon-photo-manager.mjs?v=20261106.339';
 import {clearLegacyThumbnailCache} from './dungeon-legacy-cache.mjs?v=20261106.339';
-import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261108.358';
+import {RETURN_XP_DURATION_MS,returnXpFrame} from './dungeon-return-fx.mjs?v=20261108.359';
 import {ADVENTURER_RANKS,highestRankLayer,rankTitle,rankBadgeName,unlockedStartLayers,allowedStartLayer,recordRankCombat,rankBadgeDrop,pendingRankBadgeNames,acquireAdventurerRank} from './dungeon-ranks.mjs?v=20261106.339';
-import {statusBadges} from './dungeon-status-ui.mjs?v=20261108.358';
+import {statusBadges} from './dungeon-status-ui.mjs?v=20261108.359';
 import {supportPromptForReturn} from './dungeon-support.mjs?v=20261106.339';
 import {adventurerShareData,adventurerShareText,adventurerXUrl,paintAdventurerCard,DUNGEON_SHARE_URL} from './dungeon-share.mjs?v=20261106.339';
 import {initCircleTutorial} from './dungeon-tutorial.mjs?v=20261106.339';
@@ -702,17 +702,17 @@ async function animateBattle(steps,{logPrefix=null,initialMp=null}={}){
     if(victim.dataset.effect==='idle')victim.dataset.attribute=G.ATTRS.includes(step.attribute)?step.attribute:'law';
    }
    if(animatedLog){for(const step of phase)if(step.text)animatedLog.push(step.text);refreshBattleRecord(animatedLog);}
-   const final=phase.at(-1),resolved=profile.run;
+   const final=phase.at(-1);
    if(displayedMp)for(const step of phase){
     if(['support','defense','debuff','attack','basic'].includes(step.role))
      displayedMp[step.side]=step.side==='hero'?step.hero.mp:step.enemy.mp;
    }
-   // HP/MP animate through phase snapshots, but status badges must reflect
-   // the resolved state used by the cleanser and other action buttons.
-   // Otherwise an expired burn remains visible while its cure is disabled.
+   // Display badges from this visual phase, not the already-resolved whole round:
+   // a debuff applied before an attack appears when their shared FX begins.
+   // renderRun() restores final/expired statuses after playback finishes.
    renderHeroName(final.hero);
-   $('heroStats').innerHTML=rowUnit({...final.hero,mp:displayedMp?.hero??final.hero.mp,statuses:resolved?.hero.statuses||final.hero.statuses});
-   $('enemyStats').innerHTML=rowUnit({...final.enemy,mp:displayedMp?.enemy??final.enemy.mp,statuses:resolved?.enemy.statuses||final.enemy.statuses});
+   $('heroStats').innerHTML=rowUnit({...final.hero,mp:displayedMp?.hero??final.hero.mp});
+   $('enemyStats').innerHTML=rowUnit({...final.enemy,mp:displayedMp?.enemy??final.enemy.mp});
    lastEcho=captureCombatFxEcho($('battleArena'),combatPhaseDuration(phase,effectDuration()));
    if(lastEcho)activeEchoes.push(lastEcho);
   },{
