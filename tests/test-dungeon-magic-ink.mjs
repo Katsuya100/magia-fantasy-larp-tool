@@ -37,7 +37,7 @@ assert.ok(arena.indexOf('id="heroCombatant"')<arena.indexOf('id="enemyCombatant"
 assert.match(css,/\.spell-projectile\[data-side="hero"\]\{\s*--flight-from:calc\(25%/,'hero projectile begins at left desktop');
 assert.match(css,/@media\(max-width:630px\)\{\s*#battleArena \.spell-projectile\{\s*--flight-from:calc\(75%/,'enemy projectile begins at right mobile');
 assert.match(css,/@keyframes enemy-snap-slide\{\s*0%\{opacity:0;transform:translate\(48px,-72px\) scale\(\.78\)/,'normal enemy descends from the upper right');
-assert.match(css,/@keyframes enemy-snap-slide\{[\s\S]*?42%\{opacity:1;transform:translate\(0,0\) scale\(1\.08,\.76\)/,'normal enemy compresses vertically on landing');
+assert.match(css,/@keyframes enemy-snap-slide\{[\s\S]*?42%\{opacity:1;transform:translate\(0,0\) scale\(1\.025,\.92\)/,'normal enemy compresses vertically on landing');
 assert.match(css,/@keyframes boss-cinematic-rise\{\s*0%\{opacity:0;transform:translateY\(38px\)/,'boss rises from below with fade');
 const bossEntrance=css.match(/@keyframes boss-cinematic-rise\{([\s\S]*?)\n\}/)?.[1];
 assert.ok(bossEntrance,'boss entrance animation exists');
