@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {playCombatSequence,fatalSide,simultaneousPhases,ENEMY_FINISH_HIT_STOP_MS} from '../assets/js/dungeon-combat-fx.mjs';
 import {LAST_PHASE_OVERLAP_RATIO,createBattleInputBuffer,canReplayBufferedBattleCommand} from '../assets/js/dungeon-battle-input.mjs';
+import {COMBAT_FX_ADVANCE_RATIO,combatFxAdvanceDelay} from '../assets/js/dungeon-combat-timing.mjs';
 import {captureCombatFxEcho} from '../assets/js/dungeon-combat-fx-echo.mjs';
 const step=(role,side,h=60,e=0)=>({role,side,hero:{hp:h},enemy:{hp:e}});
 assert.equal(fatalSide([step('attack','hero')]),'enemy');
@@ -65,7 +66,10 @@ const alive=step('defense','hero',30,30),seen=[];
 await playCombatSequence([alive],()=>seen.push('defense'),{duration:0,onFatal:()=>seen.push('death')});
 assert.deepEqual(seen,['defense']);
 // The follow-up window belongs to the LAST priority phase, not turn start.
-assert.equal(LAST_PHASE_OVERLAP_RATIO,.7);
+assert.equal(COMBAT_FX_ADVANCE_RATIO,.7);
+assert.equal(LAST_PHASE_OVERLAP_RATIO,COMBAT_FX_ADVANCE_RATIO,'buffer uses the same threshold as phase playback');
+assert.equal(combatFxAdvanceDelay(440),308);
+assert.equal(combatFxAdvanceDelay(125),88);
 const signals=[],timers=[];
 const input=createBattleInputBuffer({
  setTimer:(fn,ms)=>{const timer={fn,ms,cancelled:false};timers.push(timer);return timer;},
@@ -154,7 +158,7 @@ const playback=playCombatSequence(staged,phase=>painted.push(phase.map(s=>s.role
  }
 });
 assert.equal(painted.at(-1),'support+defense');
-assert.equal(waits[0].ms,440);
+assert.equal(waits[0].ms,combatFxAdvanceDelay(440),'guard hands off to offense at 70%');
 waits[0].resolve();
 await new Promise(resolve=>setImmediate(resolve));
 assert.equal(painted.at(-1),'debuff+attack');
@@ -168,6 +172,43 @@ await playCombatSequence([step('attack','hero',60,0)],()=>{},{
  duration:0,onLastPhase:()=>{fatalWindow++;},onFatal:()=>{}
 });
 assert.equal(fatalWindow,0,'death never opens the follow-up window');
+
+// Every guard-to-offense sequence blends at the shared threshold, even without a queued input.
+const phaseTimeline=[];
+const mixedPhaseSteps=[
+ step('support','hero',60,60),step('defense','enemy',60,60),
+ step('debuff','hero',60,60),step('attack','enemy',60,60)
+];
+await playCombatSequence(mixedPhaseSteps,p=>phaseTimeline.push('paint '+p.map(s=>s.role).join('+')),{
+ duration:440,wait:async ms=>phaseTimeline.push('wait '+ms)
+});
+assert.deepEqual(phaseTimeline,['paint support+defense','wait 308','paint debuff+attack','wait 440'],
+ 'guard tail overlaps offense, while no buffered next turn lets final offense finish normally');
+const isolated=[];
+await playCombatSequence([step('support','hero',60,60)],p=>isolated.push('paint '+p[0].role),{
+ duration:440,wait:async ms=>isolated.push('wait '+ms)
+});
+assert.deepEqual(isolated,['paint support','wait 440'],'guard alone retains full animation with no buffered input');
+const reordered=[];
+await playCombatSequence([step('attack','hero',60,60),step('defense','enemy',60,60)],p=>reordered.push('paint '+p[0].role),{
+ duration:440,wait:async ms=>reordered.push('wait '+ms)
+});
+assert.deepEqual(reordered,['paint attack','wait 440','paint defense','wait 440'],
+ 'unrelated phase boundaries do not overlap');
+const queueTimeline=[];
+let releaseQueued;
+const queuedAtSeventy=new Promise(resolve=>{releaseQueued=resolve;});
+const queuedPlayback=playCombatSequence(mixedPhaseSteps,p=>queueTimeline.push('paint '+p.map(s=>s.role).join('+')),{
+ duration:440,
+ wait:ms=>{queueTimeline.push('wait '+ms);return ms===440?new Promise(()=>{}):Promise.resolve();},
+ onLastPhase:()=>queuedAtSeventy
+});
+await new Promise(resolve=>setImmediate(resolve));
+assert.deepEqual(queueTimeline,['paint support+defense','wait 308','paint debuff+attack','wait 440'],
+ 'queued command is gated on the last offense, after the guard has already overlapped it');
+releaseQueued();
+await queuedPlayback;
+assert.equal(queueTimeline.at(-1),'wait 440','final offense may yield early when the buffered input is ready');
 
 // The previous FX receives an independent DOM layer before new FX resets it.
 const originalDocument=globalThis.document;
