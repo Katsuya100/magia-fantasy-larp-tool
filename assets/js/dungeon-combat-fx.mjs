@@ -1,5 +1,6 @@
 import {isLayerBoss,layerOfFight} from './dungeon-progress.mjs';
 import {resist} from './dungeon-core.mjs';
+import {combatFxAdvanceDelay} from './dungeon-combat-timing.mjs';
 // Visual playback follows the ordered snapshots emitted by dungeon-core.round.
 // Animations never alter combat math or determine turn outcomes.
 export const EFFECT_LABELS={attack:'⚔️攻撃',basic:'⚔️通常攻撃',defense:'🛡️防御',debuff:'🕸️弱体',support:'✚回復',buff:'強化',burn:'火傷',item:'道具',revive:'復活'};
@@ -95,7 +96,8 @@ export function combatPhaseAdvanceDuration(phase,duration=effectDuration()){
  return Math.min(combatPhaseDuration(phase,duration),duration);
 }
 // Start the death effect before the fatal attack animation ends.
-// Only the final nonfatal phase can release early for a queued command.
+// A guard-to-offense boundary advances at the shared ratio; the last
+// nonfatal phase can also release early for a queued command.
 export async function playCombatSequence(steps,paint,{
  duration=effectDuration(),wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
  onFatal=null,overlap=125,onLastPhase=null,onHitStop=null,hitStopMs=0
@@ -110,6 +112,10 @@ export async function playCombatSequence(steps,paint,{
   const last=phase.at(-1);
   const canQueue=i===phases.length-1&&!fatal&&last?.hero?.hp>0&&last?.enemy?.hp>0;
   const early=canQueue?onLastPhase?.(phase,phaseDuration):null;
+  // Preserve the guard's final 30% as a visual echo while offense starts.
+  // Other phase boundaries and all fatal/ceremony timing stay unchanged.
+  const next=phases[i+1];
+  const blendGuardIntoOffense=next&&visualPhase(phase[0].role)==='guard'&&visualPhase(next[0].role)==='offense';
   if(fatal){
    const lead=Math.max(0,phaseDuration-overlap);
    // Pause the current contact frame only when an actual enemy is defeated.
@@ -125,7 +131,8 @@ export async function playCombatSequence(steps,paint,{
    death=Promise.resolve(onFatal(fatal,phase));
    if(phaseDuration-lead>0)await wait(phaseDuration-lead);
   }else if(phaseDuration>0){
-   const full=wait(phaseDuration);
+   const visualWait=blendGuardIntoOffense?combatFxAdvanceDelay(phaseDuration):phaseDuration;
+   const full=wait(visualWait);
    if(early)await Promise.race([full,early]);
    else await full;
   }

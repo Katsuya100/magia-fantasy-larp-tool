@@ -1,6 +1,7 @@
-// Admit one buffered command during combat FX; execute it only after the final nonfatal phase reaches 70%.
+import {COMBAT_FX_ADVANCE_RATIO,combatFxAdvanceDelay} from './dungeon-combat-timing.mjs';
+// Admit one buffered command during combat FX; execute it only after the final nonfatal phase reaches the shared threshold.
 // No timer starts until the final phase.
-export const LAST_PHASE_OVERLAP_RATIO=0.7;
+export const LAST_PHASE_OVERLAP_RATIO=COMBAT_FX_ADVANCE_RATIO;
 export function canReplayBufferedBattleCommand(command,current){
  return Boolean(command&&current===command.run&&current?.stage==='battle'&&current.floor===command.floor&&current.hero.hp>0&&current.enemy.hp>0);
 }
@@ -22,7 +23,7 @@ export function createBattleInputBuffer({
    if(!ready)timer=setTimer(()=>{
     timer=null;ready=true;
     if(pending!==null)wake?.();
-   },Math.ceil(duration*LAST_PHASE_OVERLAP_RATIO));
+   },combatFxAdvanceDelay(duration));
    return signal;
   },
   offer(command){
