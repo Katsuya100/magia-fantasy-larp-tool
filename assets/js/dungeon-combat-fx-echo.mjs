@@ -40,18 +40,12 @@ export function captureCombatFxEcho(arena,visualDuration){
  return {reveal(){echo.dataset.active='true';},dispose(){clearTimeout(timer);echo.remove();}};
 }
 
-// Do not let a prior successful RESIST/WEAK hit masquerade as feedback for
-// the next, genuinely zero-damage magic attack. Other hits retain full FX.
+// Keep prior FX tails through subsequent phases, including MISS or zero hits.
+// Only a terminal battle transition explicitly disposes unfinished effects.
 export function disposeCombatEchoes(arena,echoes){
  for(const echo of echoes)echo.dispose();
  echoes.length=0;
  // Previous-turn FX echoes outlive their original animateBattle handles
  // when an input starts at the 70% overlap point.
  for(const node of arena?.querySelectorAll?.('.combat-fx-echo')||[])node.remove();
-}
-export function discardCombatEchoesOnMiss(phase,echoes,arena){
- if(!phase.some(step=>(step.role==='attack'&&(step.amount===0||step.missedByDizziness===true))||
-  (step.role==='basic'&&step.missedByDizziness===true)))return false;
- disposeCombatEchoes(arena,echoes);
- return true;
 }
