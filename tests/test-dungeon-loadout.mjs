@@ -99,6 +99,11 @@ assert.match(circleChoices(circles,['a'],makeImg,esc),/class="circle-card-symbol
 assert.match(circleChoices(circles,['a'],makeImg,esc),/class="circle-card-mp">MP:\?<\/span><span class="circle-card-power">威力:\?<\/span>/,'unknown spell strength is not invented');
 assert.doesNotMatch(circleChoices(circles,['a'],makeImg,esc),/魔法陣\s*0[1-9]|魔法陣0/,'picker shows no circle names');
 assert.equal((itemChoices(inventory,[0],itemName,esc).match(/data-choose-item=/g)||[]).length,3);
+const legacyScroll={id:'escape_scroll',value:0,bonus:'buff_flame'};
+assert.equal(itemBonusEffect(legacyScroll),null,'escape scroll bonuses do not apply');
+assert.doesNotThrow(()=>itemChoices([legacyScroll],[],itemName,esc),'invalid or legacy bonus must not prevent item selection');
+assert.match(itemChoices([legacyScroll],[],itemName,esc),/data-choose-item="0"/);
+assert.doesNotMatch(itemChoices([legacyScroll],[],itemName,esc),/🔥↑/,'inapplicable bonus is not displayed');
 assert.match(circleChoices([],[],makeImg,esc),/魔導書に魔法陣を登録/);
 assert.match(itemChoices([],[],itemName,esc),/携行品がありません/);
 const selectedSpells=circleChoices(circles,['a',null,'b',null,null],makeImg,esc,null,[],()=>null,[2,4,0,1,3],0);
