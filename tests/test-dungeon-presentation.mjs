@@ -306,7 +306,7 @@ const picker=await read('assets/js/dungeon-preparation-ui.mjs');
 const sharedModuleVersion=app.match(/from '\.\/dungeon-core\.mjs\?v=(\d{8}\.\d+)'/)?.[1];
 assert.ok(sharedModuleVersion,'gameplay has one stable shared core version');
 for(const specifier of app.matchAll(/from ['"]\.\/([^'"]+\.mjs)(\?[^'"]*)?['"]/g)){
- const expected=specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+(['dungeon-cloud-sync.mjs','dungeon-battle-input.mjs','dungeon-combat-fx.mjs','dungeon-combat-fx-echo.mjs','dungeon-alchemy.mjs','dungeon-return-fx.mjs','dungeon-status-ui.mjs'].includes(specifier[1])?currentRelease:sharedModuleVersion);
+ const expected=specifier[1]==='dungeon-tuning.mjs'?undefined:'?v='+(['dungeon-preparation-ui.mjs','dungeon-cloud-sync.mjs','dungeon-battle-input.mjs','dungeon-combat-fx.mjs','dungeon-combat-fx-echo.mjs','dungeon-alchemy.mjs','dungeon-return-fx.mjs','dungeon-status-ui.mjs'].includes(specifier[1])?currentRelease:sharedModuleVersion);
  assert.equal(specifier[2],expected,'OAuth module cache bust must preserve shared gameplay module identity: '+specifier[1]);
 }
 assert.match(core,/from '\.\/dungeon-tuning\.mjs'/);

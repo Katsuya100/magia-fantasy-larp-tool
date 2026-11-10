@@ -642,6 +642,15 @@ try{
   }
   await doc.click(btn({chooseItem:String(i)}));
  }
+ // An empty kind filter from a previous picker must recover on the next opening.
+ await doc.click(btn({openItem:'0'}));
+ $('pickerFilter').value='escape';await $('pickerFilter').fire('change');
+ assert.match($('loadoutOptions').innerHTML,/条件に合うアイテムはありません/);
+ await $('closeLoadoutDialog').fire('click');
+ await doc.click(btn({openItem:'0'}));
+ assert.equal($('pickerFilter').value,'all','stale filter resets when it hides every owned item');
+ assert.match($('loadoutOptions').innerHTML,/data-choose-item=/,'owned items are selectable again');
+ await $('closeLoadoutDialog').fire('click');
  assert.match($('gearCounter').textContent,/3 \/ 3/);
  assert.equal(($('gearCards').innerHTML.match(/class="loadout-tile equipped"/g)||[]).length,3);
  assert.equal(($('gearCards').innerHTML.match(/class="tile-item-effect item-effect-icons"/g)||[]).length,3,'equipped items show a compact numerical or icon-only effect in preparation');

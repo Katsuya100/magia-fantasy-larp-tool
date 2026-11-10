@@ -33,7 +33,7 @@ assert.ok(page.includes('dungeon.css?v='+release),'stylesheet uses current relea
 assert.ok(page.includes('dungeon-app.mjs?v='+release),'entry script uses current release');
 const sharedRelease=app.match(/dungeon-core\.mjs\?v=(\d{8}\.\d+)/)?.[1];
 assert.ok(sharedRelease,'unchanged dungeon modules keep a shared cache version');
-assert.ok(app.includes('dungeon-preparation-ui.mjs?v='+sharedRelease),'preparation module uses the unchanged shared cache version');
+assert.ok(app.includes('dungeon-preparation-ui.mjs?v='+release),'preparation picker module uses the current release when its contents change');
 const controls=css.slice(css.indexOf('.circle-photo-face{'),css.indexOf('/* Revelation only:'));
 assert.match(controls,/\.circle-photo-face\{[^}]*border-radius:50%;overflow:hidden/,
  'round photo frames never protrude beyond the button surface');
